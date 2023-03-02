@@ -86,18 +86,13 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     
 
     {% if IS_LINEAR is sameas True %}
-#if Dimensions==2
-    double centre[Dimensions] = {marker.x()[0], marker.x()[1]};
-#else
-    double centre[Dimensions] = {marker.x()[0], marker.x()[1], marker.x()[2]};  
-#endif
 
     {% if USE_POINT_SOURCE!="<none>" %}
     
     std::vector<int>* pointSources = generated::kernels::AderDG::linear::getPointSources(
       repositories::{{SOLVER_INSTANCE}},
-      centre,
-      marker.h()[0]
+      marker.x(),
+      marker.h()
     );
     
     int numberOfIterations = 0;
@@ -143,8 +138,6 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
           luh,
           marker.x(),
           marker.h(),
-          centre,
-          marker.h()[0], // Assume dx[0] == dx[1] == dx[2]
           timeStamp, // tStep, doesn't seem to ever get used
           timeStepSize,
           pointSources // will be deleted in the end if set
@@ -244,7 +237,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).setNewTimeStamp(0, timeStamp);      
     }
   
-
+    repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, marker.h()(0) );
   }
 
 """

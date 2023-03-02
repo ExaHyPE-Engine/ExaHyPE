@@ -104,7 +104,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 
     pCompType tn;
     double x1[{{nDim}}]; //position
-    const pCompType ivolume = 1.0/(dx * dx{{' * dx' if nDim==3}});
+    const pCompType ivolume = 1.0/(dx[0] * dx[1]{{' * dx[2]' if nDim==3}});
     pCompType forceVectorSource[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
     std::memset(forceVectorSource, 0, {{nVarPad}}*sizeof(pCompType));
 
@@ -113,12 +113,12 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
       t == 0 ? tn = timeStamp : tn = dt * nodes[t-1] + timeStamp; //First Point in time is current time, then use GL nodes in time
       for (int z = 0; z < {{nDof3D}}; z++) {   //z loop
 {% if nDim == 3 %}
-        x1[2] = volumeCentre[2] + dx * (nodes[z] - 0.5); //transform onto element
+        x1[2] = volumeCentre[2] + dx[2] * (nodes[z] - 0.5); //transform onto element
 {% endif %}
         for (int y = 0; y < {{nDof}}; y++) {  //y loop
-          x1[1] = volumeCentre[1] + dx * (nodes[y] - 0.5); //transform onto element
+          x1[1] = volumeCentre[1] + dx[1] * (nodes[y] - 0.5); //transform onto element
           for (int x = 0; x < {{nDof}}; x++) {  //x loop
-            x1[0] = volumeCentre[0] + dx * (nodes[x] - 0.5); //transform onto element
+            x1[0] = volumeCentre[0] + dx[0] * (nodes[x] - 0.5); //transform onto element
             //loop over all point sources
             for (int p : *pointSources) {
               // get the source vector located at quadrature node x at time tn

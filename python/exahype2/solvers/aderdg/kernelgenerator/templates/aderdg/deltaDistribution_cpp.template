@@ -22,16 +22,16 @@
 
 std::vector<int>* {{codeNamespace}}::getPointSources(
   {{solverName}}& solver,
-  const double* const center,
-  const double dx //Assume dx[0] == dx[1] == dx[2]
+  const tarch::la::Vector<Dimensions,double>& center,
+  const tarch::la::Vector<Dimensions,double>& dx
 ){
   std::vector<int>* pointSources=nullptr;
   for (int m =0 ; m < {{nPointSources}}; m++) {
     const double* const x_ps = solver.pointSourceLocation[m];
-    if(   center[0]-0.5*dx <= x_ps[0] && x_ps[0] <= center[0]+0.5*dx
-       && center[1]-0.5*dx <= x_ps[1] && x_ps[1] <= center[1]+0.5*dx
+    if(   center[0]-0.5*dx[0] <= x_ps[0] && x_ps[0] <= center[0]+0.5*dx[0]
+       && center[1]-0.5*dx[1] <= x_ps[1] && x_ps[1] <= center[1]+0.5*dx[1]
 {% if nDim == 3 %}
-       && center[2]-0.5*dx <= x_ps[2] && x_ps[2] <= center[2]+0.5*dx
+       && center[2]-0.5*dx[2] <= x_ps[2] && x_ps[2] <= center[2]+0.5*dx[2]
 {% endif %}
       ){
       
