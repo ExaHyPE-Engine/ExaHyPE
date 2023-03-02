@@ -31,6 +31,12 @@ args = parser.parse_args()
 project = petsc.Project(project_name = "Poisson", 
                         namespace = [ "multigrid", "petsc", "poisson" ]
                         ) 
+                        
+                        
+solver = petsc.solvers.CollocatedLowOrderDiscretisation(1)
+
+project.add_solver( solver )
+                        
 #
 # Configure build
 #

@@ -3,8 +3,7 @@
 from .Project import Project
 from .PETScMain import PETScMain
 
-#import swift2.input
-#import swift2.particle
+import petsc.solvers
 
 print( "PETSc backend" )
 

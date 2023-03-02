@@ -11,7 +11,6 @@ import sys
 from petsc.PETScMain import PETScMain
 
 
-from abc import abstractmethod
 
 
 class Project(object):
@@ -199,3 +198,9 @@ This yet has to be written.
 """ )
 
     return self._project
+
+  def add_solver( self, solver ):
+  
+    pass
+
+
