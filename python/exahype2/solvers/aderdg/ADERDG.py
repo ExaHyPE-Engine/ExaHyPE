@@ -191,7 +191,6 @@ class ADERDG( object ):
     self._start_time_step_implementation           = ""
     self._finish_time_step_implementation          = ""
     
-    #TODO: check, I think this can be removed.
     self._constructor_implementation = ""
     
     """
@@ -715,7 +714,7 @@ class ADERDG( object ):
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
     
     d["CFL_SAFETY_FACTOR"]  = self._cflSafetyFactor
-    d["CFL_ADER"]           = self._cflAder[self._order]/(2*(self._order+1)+1)
+    d["CFL_ADER"]           = self._cflAder[self._order] #/(2*(self._order+1)+1)
     
     d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._order+1) * (self._order+1);
     d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._order+1) * (self._order+1) * (self._order+1);
