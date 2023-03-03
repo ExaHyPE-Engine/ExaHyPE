@@ -266,7 +266,7 @@ tarch::mpi::Rank::Rank():
   _timeOutWarning(0),
   _deadlockTimeOut(0),
   _areTimeoutsEnabled(true),
-  _maxTasg(-1) {
+  _maxTags(-1) {
 }
 #endif
 
