@@ -452,10 +452,19 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 {% if nDim == 3 %}
         F[2]      = lFi+(i*{{nDof**nDim}}+xyz)*{{nVarPad}}+{{2*(nDof**nDim)*nDof*nVarPad}}; //z
 {% endif %}
+        for(int d=0; d<Dimensions; d++){
 #ifdef USE_IPO
         #pragma forceinline recursive
 #endif
-        solver.{{solverName}}::multiplyMaterialParameterMatrix(lQi+(i*{{nDof**nDim}}+xyz)*{{nDataPad}}, F);
+          solver.{{solverName}}::multiplyMaterialParameterMatrix(
+            lQi+(i*{{nDof**nDim}}+xyz)*{{nDataPad}}, 
+            volumeCentre,
+            dx,
+            timeStamp,
+            dt,
+            d,
+            F[d]);
+        }
       }
     }
 {% endif %}{# useMaterialParamVect #}
