@@ -79,7 +79,7 @@ def generate_aderdg_kernels(
     "usePointSources"       : usePointSources,
     "useMaterialParam"      : useMaterialParam or useMaterialParamVect,
     "useMaterialParamVect"  : useMaterialParamVect,
-    "quadratureType"        : ("Gauss-Lobatto" if useGaussLobatto==True else "Gauss-Legendre"),
+    "useGaussLobatto"       : useGaussLobatto,
     "useCERKGuess"          : useCERKGuess,
     "useSplitCK"            : useSplitCK,
     "useVectPDE"            : useVectPDE,
