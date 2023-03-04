@@ -29,6 +29,41 @@ def add_linear_speedup_trend_line():
     plt.plot( [1,max_x], [min_serial_y,min_serial_y/max_x], "--", color="#ababab" )
 
 
+def compute_min_max(x_data, y_data):
+    print( "determine global min/max data" )
+    
+    global max_x        
+    global max_serial_y
+    global min_serial_y
+
+    max_value    = 0 
+    min_value    = 65536
+    max_loc      = -1
+    min_loc      = -1
+    
+    for i in range(0,len(x_data)):
+      if max_value < y_data[i]:
+        max_value = y_data[i]
+        max_loc   = i
+      if min_value > y_data[i]:
+        min_value = y_data[i]
+        min_loc   = i
+
+    if len(x_data)>0:
+      min_value = min_value * x_data[min_loc]
+      max_value = max_value * x_data[max_loc]
+          
+      max_x        = max(max_x,x_data[-1])
+      
+      if max_value > max_serial_y:
+        print( "this dataset determines the global serial max value of {} (cores={})".format(max_value,x_data[max_loc]) )
+      if min_value < min_serial_y:
+        print( "this dataset determines the global serial min value of {} (cores={})".format(min_value,x_data[min_loc]) )
+      
+      max_serial_y = max(max_serial_y,max_value)
+      min_serial_y = min(min_serial_y,min_value)
+
+
 def visualise( data_points, symbol_counter, colour_counter):
     global max_x        
     global max_time         
@@ -36,12 +71,9 @@ def visualise( data_points, symbol_counter, colour_counter):
     global min_serial_y
     
     (x_data, y_data) = exahype2.postprocessing.extract_times_per_step( data_points, args.max_cores_per_rank )    
-    
-    if len(x_data)>0:
-      max_x        = max(max_x,x_data[-1])
-      max_serial_y = max(max_serial_y,y_data[0])
-      min_serial_y = min(min_serial_y,y_data[0])
-    
+
+    compute_min_max(x_data, y_data)
+        
     if args.plot_efficiency:
       normalised_fasted_time = y_data[0] * x_data[0]
       for i in range(0,len(x_data)):
