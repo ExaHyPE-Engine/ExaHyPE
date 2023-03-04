@@ -561,7 +561,6 @@ class tarch::logging::Log {
      */
     static void exception( const std::bad_alloc& exception, const std::string& file, const int lineNumber );
 
-
     /**
      * We could make the logMacroMessage passed into a log statement a string. However,
      * many codes write rather complicated strings and therefore spend a lot of
@@ -575,7 +574,6 @@ class tarch::logging::Log {
      * through a (lambda) function modelled via Message.
      */
     typedef std::function< std::string(void) >  Message;
-
 
     /**
      * Log Debug Information
@@ -596,7 +594,7 @@ class tarch::logging::Log {
      * @param logMacroMessage    log logMacroMessage
      */
     #if PeanoDebug>=4
-      void debug(const std::string& methodName, const std::string& message);
+      void debug(const std::string& methodName, Message logMacroMessage);
     #else
       inline void debug([[maybe_unused]] const std::string& methodName, [[maybe_unused]] Message logMacroMessage) const {}
     #endif

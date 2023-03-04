@@ -5,10 +5,8 @@
 
 #include "config.h"
 
-
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/CommandLineLogger.h"
-
 
 #if UseLogService==ChromeTraceFileLogger
 #include "ChromeTraceFileLogger.h"
@@ -38,19 +36,14 @@
 
 #include <time.h>
 
-
 #include "tarch/compiler/CompilerSpecificSettings.h"
-
 
 tarch::logging::Log::Log(const std::string& className):
   _className( className ) {
   _startupTime = std::chrono::system_clock::now();
 }
 
-
-tarch::logging::Log::~Log() {
-}
-
+tarch::logging::Log::~Log() {}
 
 #if PeanoDebug>=4
 void tarch::logging::Log::debug(const std::string& methodName, Message message) {
@@ -60,25 +53,21 @@ void tarch::logging::Log::debug(const std::string& methodName, Message message) 
 }
 #endif
 
-
 void tarch::logging::Log::info(const std::string& methodName, Message message) {
   if (LogFilter::getInstance().writeInfo( _className )) {
     UseLogService::getInstance().info(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
   }
 }
 
-
-void tarch::logging::Log::warning(const std::string& methodName, Message message message) {
+void tarch::logging::Log::warning(const std::string& methodName, Message message) {
   if (LogFilter::getInstance().writeWarning( _className )) {
     UseLogService::getInstance().warning(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
   }
 }
 
-
 void tarch::logging::Log::error(const std::string& methodName, Message message) {
   UseLogService::getInstance().error(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
 }
-
 
 #if PeanoDebug>=1
 void tarch::logging::Log::traceIn(const std::string& methodName, Message message) {
@@ -87,26 +76,20 @@ void tarch::logging::Log::traceIn(const std::string& methodName, Message message
   }
 }
 
-
 void tarch::logging::Log::traceOut(const std::string& methodName, Message message) {
   if (LogFilter::getInstance().writeTrace( _className )) {
     UseLogService::getInstance().traceOut(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
   }
 }
 #else
-void tarch::logging::Log::traceIn(const std::string& methodName, Message message) {
-}
+void tarch::logging::Log::traceIn(const std::string& methodName, Message message) {}
 
-
-void tarch::logging::Log::traceOut(const std::string& methodName, Message message) {
-}
+void tarch::logging::Log::traceOut(const std::string& methodName, Message message) {}
 #endif
-
 
 void tarch::logging::Log::indent( bool indent, const std::string& trace, Message message ) const {
   UseLogService::getInstance().indent( indent, trace, message() );
 }
-
 
 std::string tarch::logging::Log::getMachineInformation() {
   std::ostringstream message;
@@ -128,8 +111,7 @@ std::string tarch::logging::Log::getMachineInformation() {
   #ifdef Parallel
   if (tarch::mpi::Rank::getInstance().isInitialised()) {
     message << "rank:" << tarch::mpi::Rank::getInstance().getRank();
-  }
-  else {
+  } else {
     message << "rank:not-initialised-yet";
   }
   #else
@@ -139,11 +121,9 @@ std::string tarch::logging::Log::getMachineInformation() {
   return message.str();
 }
 
-
 void tarch::logging::Log::flushBeforeAssertion() {
   UseLogService::getInstance().close();
 }
-
 
 long int tarch::logging::Log::getTimeStamp() const {
   std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
@@ -152,8 +132,6 @@ long int tarch::logging::Log::getTimeStamp() const {
   return result;
 }
 
-
 std::string tarch::logging::Log::getTraceInformation( const std::string& methodName ) const {
   return _className + "::" + methodName;
 }
-
