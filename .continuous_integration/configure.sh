@@ -1,8 +1,22 @@
 #!/bin/bash
 
-read -p "Enter toolchain [gcc, llvm, nvidia, amd, intel]: " toolchain
+PS3="Select toolchain: "
+select toolchain in gcc llvm nvidia amd intel; do
+  case $toolchain in
+    "gcc")
+      break;;
+    "llvm")
+      break;;
+    "nvidia")
+      break;;
+    "amd")
+      break;;
+    "intel")
+      break;;
+  esac
+done
 
-if [ ! "$toolchain" = "amd" ]; then
+if [ "$toolchain" = "amd" ]; then
   read -p "Enter CC compiler [amdclang, hipcc]: " cc
   cc=${cc:-amdclang}
   read -p "Enter CXX compiler [amdclang++, hipcc]: " cxx
@@ -92,7 +106,7 @@ if [ ! "$toolchain" = "amd" ]; then
   fi
 fi
 
-if [ ! "$toolchain" = "nvidia" ]; then
+if [ "$toolchain" = "nvidia" ]; then
   read -p "Enter CC compiler [nvc]: " cc
   cc=${cc:-nvc}
   read -p "Enter CXX compiler [nvc++]: " cxx
@@ -213,7 +227,7 @@ if [ ! "$toolchain" = "nvidia" ]; then
   fi
 fi
 
-if [ ! "$toolchain" = "gcc" ]; then
+if [ "$toolchain" = "gcc" ]; then
   read -p "Enter CC compiler [gcc]:" cc
   cc=${cc:-gcc}
   read -p "Enter CXX compiler: [g++]" cxx
@@ -318,7 +332,7 @@ if [ ! "$toolchain" = "gcc" ]; then
   fi
 fi
 
-if [ ! "$toolchain" = "intel" ]; then
+if [ "$toolchain" = "intel" ]; then
   read -p "Enter CC compiler [icx]: " cc
   cc=${cc:-icx}
   read -p "Enter CXX compiler [icpx]: " cxx
@@ -377,7 +391,7 @@ if [ ! "$toolchain" = "intel" ]; then
   fi
 fi
 
-if [ ! "$toolchain" = "llvm" ]; then
+if [ "$toolchain" = "llvm" ]; then
   read -p "Enter CC compiler [clang]: " cc
   cc=${cc:-clang}
   read -p "Enter CXX compiler [clang++]: " cxx
