@@ -69,10 +69,9 @@ namespace applications {
         #endif
 
         #ifdef GPUOffloadingOff
-        nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+        nonCriticalAssertion9(  tarch::la::greaterEquals(p,0.0), Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
         #endif
-
-        const double c   = std::sqrt(gamma * p * irho);
+        const double c   = std::sqrt(gamma * std::abs(p) * irho);
 
         const double u_n = Q[normal + 1] * irho;
         const double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
