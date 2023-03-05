@@ -114,7 +114,7 @@ class SubcyclingFixedTimeStep( SingleSweep ):
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step = False, 
       solver_variant                           = SolverVariant.AcceleratorWithExplicitCopy,
-      kernel_variant         = KernelVariant.PatchWiseAoSHeap
+      kernel_variant         = KernelVariant.GenericAoS
     )
 
     solver_code_snippets = FixedSubcyclingTimeSteppingCodeSnippets(self._time_step_size,False,True)

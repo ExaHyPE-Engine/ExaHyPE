@@ -33,6 +33,9 @@ class KernelVariant(Enum):
   TaskGraphAoSHeap                 = 60
   TaskGraphAoSoAHeap               = 61
   TaskGraphSoAHeap                 = 62
+  GenericAoS                       = 70
+  GenericAoSoA                     = 71
+  GenericSoA                       = 72
 
 def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(solver):
   """

@@ -36,6 +36,9 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     KernelVariant.TaskGraphAoSHeap:               "timeStepWithRusanov_taskgraph_heap",
     KernelVariant.TaskGraphAoSoAHeap:             "timeStepWithRusanov_taskgraph_heap",
     KernelVariant.TaskGraphSoAHeap:               "timeStepWithRusanov_taskgraph_heap",
+    KernelVariant.GenericAoS:                     "timeStepWithRusanov_generic",
+    KernelVariant.GenericAoSoA:                   "timeStepWithRusanov_generic",
+    KernelVariant.GenericSoA:                     "timeStepWithRusanov_generic",
   }
   
   EnumeratorTemplateTypes = {
@@ -54,6 +57,9 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     KernelVariant.TaskGraphAoSHeap:               "::exahype2::enumerator::AoSLexicographicEnumerator",
     KernelVariant.TaskGraphAoSoAHeap:             "::exahype2::enumerator::AoSoALexicographicEnumerator",
     KernelVariant.TaskGraphSoAHeap:               "::exahype2::enumerator::SoALexicographicEnumerator",
+    KernelVariant.GenericAoS:                     "::exahype2::enumerator::AoSLexicographicEnumerator",
+    KernelVariant.GenericAoSoA:                   "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    KernelVariant.GenericSoA:                     "::exahype2::enumerator::SoALexicographicEnumerator",
   }
 
   template  = KernelCalls[kernel_variant]
