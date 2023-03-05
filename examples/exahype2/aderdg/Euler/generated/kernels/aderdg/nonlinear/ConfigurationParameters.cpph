@@ -1,0 +1,100 @@
+ 
+namespace generated {
+namespace kernels {
+namespace AderDG {
+namespace nonlinear {
+
+  // ADERDG configuration 
+  constexpr int getNumberOfVariable()        {return 4;}
+  constexpr int getNumberOfVariablePadded()  {return 4;}
+                                             
+  constexpr int getNumberOfParameter()       {return 0;}
+  constexpr int getNumberOfParameterPadded() {return 0;}
+  
+  constexpr int getNumberOfData()            {return 4;}
+  constexpr int getNumberOfDataPadded()      {return 4;}
+                                             
+  constexpr int getBasisSize()               {return 4;}
+  constexpr int getBasisSizePadded()         {return 4;}
+                                             
+  constexpr int getDimension()               {return 2;}
+                                             
+  constexpr bool isLinear()                  {return false;}
+
+  // Vect methods configuration
+  constexpr int getVectStride()              {return 4;}
+  constexpr int getVectLength()              {return 4;}
+
+  // Array sizes
+  constexpr int getlQiSize()     {return 256;}
+  constexpr int getlFiSize()     {return 512;} 
+  constexpr int getlSiSize()     {return -1;}
+  constexpr int getgradQSize()   {return -1;}
+  constexpr int getlQhiSize()    {return 64;}
+  constexpr int getlFhiSize()    {return 128;}
+  constexpr int getlShiSize()    {return -1;}
+  constexpr int getPSiSize()     {return -1;}
+  constexpr int getlPiSize()     {return -1;}
+  constexpr int getlQiNextSize() {return -1;}
+
+  constexpr int getBndFaceSize()      {return 16;} // == QR/QL size
+  constexpr int getBndFaceTotalSize() {return 64;} // == lQhbnd size
+  constexpr int getBndGradQSize()     {return 32;} // == gradQ size
+  constexpr int getBndGradQTotalSize(){return 128;} // == gradQhbnd size
+  constexpr int getBndFluxSize()      {return 16;} // == FR/FL size
+  constexpr int getBndFluxTotalSize() {return 64;} // == lFhbnd size
+  
+  constexpr int getUpdateSize() {return 64;} // == lduh size
+
+  //Shifts for fusedSTPVI local memory
+  constexpr int getlQiShift()   {return 0;}
+  constexpr int getlQhiShift()  {return 256;}
+  constexpr int getrhsShift()   {return 320;} //Same size as lQi
+  constexpr int getlFiShift()   {return 576;}
+  constexpr int getlFhiShift()  {return 1088;}
+
+  constexpr int getFusedSTPVISize() {return 1216;}
+  
+  //Shifts for BoundaryConditions
+  constexpr int getBndFaceShift() {return 0;}
+  constexpr int getBndFluxShift()  {return 16;}
+  
+  constexpr int getBoundaryConditionsSize() {return 32;}
+  
+  
+//approx Flops (only mat operations)
+  //amr (*leveldelta)
+  constexpr unsigned long faceUnknownsProlongation_flops = 256; // time leveldelta
+  constexpr unsigned long faceUnknowns__restrict__ion_flops = 256; // time leveldelta
+  constexpr unsigned long faceFlux__restrict__ion_flops = 0; //TODO JMG //256; // time leveldelta
+  constexpr unsigned long volumeUnknownsProlongation_flops = 2304; // time leveldelta
+  constexpr unsigned long volumeUnknowns__restrict__ion_flops = 2304; // time leveldelta
+  
+  constexpr unsigned long boundaryConditions_factor = 4; //flops of boundaryValue * this factor
+  constexpr unsigned long boundaryConditions_flops = 12; //other flops
+  
+  constexpr unsigned long getPointSources_flops = 0;
+  
+  constexpr unsigned long solutionAdjustment_flops = 60;
+  
+  constexpr unsigned long solutionUpdate_flops = 144;
+  
+  constexpr unsigned long stableTimeStepSize_factor = 32; //flops of eigenvalues * this factor
+  constexpr unsigned long stableTimeStepSize_flops = 96;
+  
+  constexpr unsigned long surfaceIntegral_flops = 648;
+  constexpr unsigned long faceIntegral_flops = 0; //TODO JMG //648;
+  
+  // fusedSTPVI, multiply by factor and sum
+  constexpr unsigned long fusedSTPVI_picard_flops = 8304; // time picardIteration
+  constexpr unsigned long fusedSTPVI_PDE_factor = 64; // flops of used PDE * this factor * picardIteration
+  constexpr unsigned long fusedSTPVI_other_flops = 3713; // other flops
+  
+  // RiemannSolver, also 2 eigenvalues cost
+  constexpr unsigned long riemannSolver_flops = 128;
+  constexpr unsigned long riemannSolver_factor = 0; // flops of NCP * this factor
+
+}
+}
+}
+}
