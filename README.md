@@ -59,7 +59,7 @@ docker run -it --rm --gpus=all --privileged peanoframework/<toolchain> /bin/bash
 
 where `<toolchain>` needs to replaced by the toolchain you want to use. When you run the Docker container interactively using the command above, you can quickly check whether GPU offloading is supported on your system by executing `./check_XXX_offload`.
 
-A collection of configuration commands using different toolchains can be found in the configure scripts [here](./.continuous_integration/).
+A collection of configuration commands using different toolchains can be found in the [configure script](./.continuous_integration/configure.sh).
 
 For CMake, it is recommended to use `ccmake`.
 
