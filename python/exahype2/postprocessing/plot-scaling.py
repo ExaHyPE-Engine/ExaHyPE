@@ -30,38 +30,17 @@ def add_linear_speedup_trend_line():
 
 
 def compute_min_max(x_data, y_data):
-    print( "determine global min/max data" )
-    
     global max_x        
     global max_serial_y
     global min_serial_y
 
-    max_value    = 0 
-    min_value    = 65536
-    max_loc      = -1
-    min_loc      = -1
+    if len(x_data)>0:
+      max_x        = max(max_x,x_data[-1])
     
     for i in range(0,len(x_data)):
-      if max_value < y_data[i]:
-        max_value = y_data[i]
-        max_loc   = i
-      if min_value > y_data[i]:
-        min_value = y_data[i]
-        min_loc   = i
-
-    if len(x_data)>0:
-      min_value = min_value * x_data[min_loc]
-      max_value = max_value * x_data[max_loc]
-          
-      max_x        = max(max_x,x_data[-1])
-      
-      if max_value > max_serial_y:
-        print( "this dataset determines the global serial max value of {} (cores={})".format(max_value,x_data[max_loc]) )
-      if min_value < min_serial_y:
-        print( "this dataset determines the global serial min value of {} (cores={})".format(min_value,x_data[min_loc]) )
-      
-      max_serial_y = max(max_serial_y,max_value)
-      min_serial_y = min(min_serial_y,min_value)
+      serialised_value = y_data[i] * x_data[i]
+      max_serial_y = max(max_serial_y,serialised_value)
+      min_serial_y = min(min_serial_y,serialised_value)
 
 
 def visualise( data_points, symbol_counter, colour_counter):
