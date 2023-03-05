@@ -258,6 +258,7 @@ class ADERDG(object):
 
     self.plot_description = ""
     self.plot_metadata    = ""
+    self.select_dofs_to_print = None
     
     self.create_data_structures()
     self.create_action_sets()
@@ -505,7 +506,8 @@ In-situ preprocessing:  """
       metadata=self.plot_metadata,
       mapping=mapping,
       plot_cell_data=False,
-      precision="PlotterPrecision"
+      precision="PlotterPrecision",
+      select_dofs = self.select_dofs_to_print
     ))
 
     if self._plot_grid_properties:    
