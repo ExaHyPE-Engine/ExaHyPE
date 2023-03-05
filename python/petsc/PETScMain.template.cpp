@@ -110,12 +110,15 @@ bool selectNextAlgorithmicStep() {
           peano4::parallel::Node::getInstance().setNextProgramStep(
             repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
           );
-          continueToSolve = false;
         }
         break;
       case repositories::StepRepository::Steps::Plot:
+        {
+          continueToSolve = false;
+        }
+        break;
       case repositories::StepRepository::Steps::Undef:
-         assertion(false);
+        assertion(false);
         break;
     }
   }

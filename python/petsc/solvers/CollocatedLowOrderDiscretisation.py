@@ -23,12 +23,34 @@ class CollocatedLowOrderDiscretisation(Solver):
     self._dof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(number_of_unknowns) ) )
     self._dof.data.add_attribute( peano4.dastgen2.Peano4IntegerArray( "number", "2" ) )
 
-    #self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
-    #self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-
     pass
 
+
   def add_to_plot(self, observer):
+    """
+    
+    Nothing fancy here. We add plotters from Peano's toolbox to visualise
+    solution and right-hand side. 
+    
+    """
+    observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
+      filename       = "solution-" + self._name,
+      vertex_unknown = self._dof,
+      getter         = "getValue().data()",
+      description    = "u",
+      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
+      number_of_unknows_per_vertex = self._number_of_unknowns,
+      guard_predicate              = "true", 
+      ))
+    observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
+      filename       = "rhs-" + self._name,
+      vertex_unknown = self._dof,
+      getter         = "getRhs().data()",
+      description    = "u",
+      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
+      number_of_unknows_per_vertex = self._number_of_unknowns,
+      guard_predicate              = "true", 
+      ))
     pass
 
 
@@ -49,10 +71,6 @@ class CollocatedLowOrderDiscretisation(Solver):
   
 
   def add_to_map_solution_onto_mesh(self, observer):
-    pass
-
-
-  def add_to_plot(self, observer):
     pass
   
   
