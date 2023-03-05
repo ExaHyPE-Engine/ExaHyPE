@@ -247,7 +247,6 @@ void runBenchmarksOnHost(int numberOfPatches) {
       false ,
       true   //computeCFL
     );
-    #pragma omp barrier
     watch.stop();
 
     if (currentThread==0) {
@@ -297,10 +296,10 @@ void runBenchmarksOnHost(int numberOfPatches) {
       ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
       "heap, patch-wise, SoA", thread, numberOfPatchesPerThread
     );
-    /*runStatelessVariantOnHost(
+    runStatelessVariantOnHost(
       ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables>,
       "heap, patch-wise, in-situ", thread, numberOfPatchesPerThread
-    );*/
+    );
 
     runStatelessVariantOnHost(
       ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
@@ -314,10 +313,10 @@ void runBenchmarksOnHost(int numberOfPatches) {
       ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
       "heap, batched, SoA", thread, numberOfPatchesPerThread
     );
-    /*runStatelessVariantOnHost(
+    runStatelessVariantOnHost(
       ::exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables>,
       "heap, batched, in-situ", thread, numberOfPatchesPerThread
-    );*/
+    );
   }
 }
 
@@ -583,7 +582,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     taskGroup.run(
       [=]() -> void {
-        submitSYCLKernels(fusedPatches, device, thread);
+        submitSYCLKernels(numberOfPatchesPerThread, device, thread);
       }
     );
   }
@@ -592,7 +591,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
       h.host_task([=]() {
-        submitSYCLKernels(fusedPatches, device, thread);
+        submitSYCLKernels(numberOfPatchesPerThread, device, thread);
       });
     }
   }
@@ -603,42 +602,42 @@ void runBenchmarksOnDevice(int numberOfPatches) {
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     taskGroup.run(
       [=]() -> void {
-        submitSYCLKernels(fusedPatches, device, thread);
+        submitSYCLKernels(numberOfPatchesPerThread, device, thread);
       }
     );
   }
 #elif defined(GPUOffloadingSYCL)
-  submitSYCLKernels(fusedPatches, device, 0);
+  submitSYCLKernels(numberOfPatchesPerThread, device, 0);
 #elif /*defined(SharedCPP) and*/ defined(GPUOffloadingCPP)
   // @TODO: Parallelise with C++ threads
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     runStatelessVariantOnDevice(
-      fusedPatches, device,
+      numberOfPatchesPerThread, device,
       ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
       "cpp, patch-wise, AoS", thread
     );
     runStatelessVariantOnDevice(
-      fusedPatches, device,
+      numberOfPatchesPerThread, device,
       ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "cpp, patch-wise, AoSoA", thread
     );
     runStatelessVariantOnDevice(
-      fusedPatches, device,
+      numberOfPatchesPerThread, device,
       ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
       "cpp, patch-wise, SoA", thread
     );
     runStatelessVariantOnDevice(
-      fusedPatches, device,
+      numberOfPatchesPerThread, device,
       ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
       "cpp, batched, AoS", thread
     );
     runStatelessVariantOnDevice(
-      fusedPatches, device,
+      numberOfPatchesPerThread, device,
       ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "cpp, batched, AoSoA", thread
     );
     runStatelessVariantOnDevice(
-      fusedPatches, device,
+      numberOfPatchesPerThread, device,
       ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
       "cpp, batched, SoA", thread
     );
