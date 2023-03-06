@@ -1,13 +1,12 @@
 #include "Generic.h"
 
-#include "../fv/PatchUtils.h"
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/multicore.h"
 
 #include "peano4/utils/Loop.h"
 
+#include "exahype2/fv/PatchUtils.h"
 #include "exahype2/NonCriticalAssertions.h"
-
 
 std::string exahype2::aderdg::plotNode(
   double Q[],
@@ -18,7 +17,6 @@ std::string exahype2::aderdg::plotNode(
   result += ")";
   return result;
 };
-
 
 void exahype2::aderdg::validatePatch(
   const double* __restrict__ UIn,
@@ -51,7 +49,7 @@ void exahype2::aderdg::validateSpacetimePatch(
     }
   }
 }
-    
+
 //#if defined(GPUOffloadingOMP)
 //#pragma omp declare target
 //#endif
