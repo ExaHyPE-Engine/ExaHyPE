@@ -73,6 +73,13 @@ Invoke `make -jX` to use `X` threads to build the code. Peano is mainly a
 library collection, i.e., you might want to skip the install command and
 work directly against the libraries built in the source directory.
 
+# Running a Benchmark
+```shell
+cd benchmarks/exahype2/euler/kernel-benchmarks
+python3 fv-rusanov-kernel-benchmarks.py
+./kernel-benchmark-fv-*
+```
+
 # Running a Simulation
 ```shell
 cd applications/exahype2/acoustic-wave
