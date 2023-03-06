@@ -107,7 +107,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::Vertex
   flushIfPatchIsComplete();
 }
 template void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, float* values );
-template void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, long double* values );
+template void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, double* values );
 
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::close() {
