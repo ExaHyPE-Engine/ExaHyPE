@@ -489,8 +489,9 @@ void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lobatto_body_AoS(
 #endif
 */
 
-#if defined(__HIPCC__) or defined(__NVCC__)
-#error HIP / CUDA kernels are currently not maintained
+//#if defined(__HIPCC__) or defined(__NVCC__)
+//#error HIP / CUDA kernels are currently not maintained
+#if 0
 
 // kernels
 __global__ void exahype2::aderdg::spaceTimePredictor_initialGuess_krnl_AoS(
@@ -687,7 +688,7 @@ __global__ void exahype2::aderdg::spaceTimePredictor_PicardLoop_invert_krnl_AoS(
     const int                         nodesPerAxis,
     const int                         unknowns,
     const int                         strideQ) {
-   const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * Dimensions*2;
+   const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis) * Dimensions*2 // nodesPerAxis^d ;
    
   const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
  

@@ -2,12 +2,10 @@
 # use, please see the copyright notice at www.peano-framework.org
 import peano4.output.ActionSet
 
-
 class StepToActionSet(object):
   def __init__(self,step):
     self.step = step
-    
-    
+
   def construct_output(self,output,action_set):
       """
         Construct one action_set
@@ -69,5 +67,5 @@ class StepToActionSet(object):
 
       output.artefacts.append( new_action_set )
       output.makefile.add_cpp_file( new_action_set.get_cpp_file_name() )
-      
+
       return subnamespace + "::" + action_set_name

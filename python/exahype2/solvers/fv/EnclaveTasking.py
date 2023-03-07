@@ -174,35 +174,31 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
       pass 
     return result
 
-
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
 
-
 class EnclaveTasking( FV ):
-  def __init__(self, 
-               name, 
-               patch_size, 
-               overlap, 
-               unknowns, 
-               auxiliary_variables, 
-               min_volume_h, 
-               max_volume_h, 
-               plot_grid_properties, 
+  def __init__(self,
+               name,
+               patch_size,
+               overlap,
+               unknowns,
+               auxiliary_variables,
+               min_volume_h,
+               max_volume_h,
+               plot_grid_properties,
                pde_terms_without_state: bool,
                kernel_namespace):
     """
-    
      Not so nice. I have to store this field as I later rely on get_name_of_global_instance()
-     which uses this field. 
-          
+     which uses this field.
     """
     self._name = name
-    
+
     self._fused_compute_kernel_call_cpu       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
     self._fused_compute_kernel_call_gpu       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
     self._pde_terms_without_state             = pde_terms_without_state
-    
+
     self._initialisation_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
@@ -258,51 +254,43 @@ class EnclaveTasking( FV ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
  
-    super(EnclaveTasking, self).__init__(name, 
-                                         patch_size, 
-                                         overlap, 
-                                         unknowns, 
-                                         auxiliary_variables, 
-                                         min_volume_h, 
-                                         max_volume_h, 
+    super(EnclaveTasking, self).__init__(name,
+                                         patch_size,
+                                         overlap,
+                                         unknowns,
+                                         auxiliary_variables,
+                                         min_volume_h,
+                                         max_volume_h,
                                          plot_grid_properties,
                                          kernel_namespace)
-     
-    self._solver_template_file_class_name     = "EnclaveTasking"
-      
+    self._solver_template_file_class_name = "EnclaveTasking"
+
     additional_includes= """
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
-"""    
+"""
 
     self.add_user_action_set_includes( additional_includes )
 #    self.add_user_solver_includes(     additional_includes )
 
-
-
-
   def create_data_structures(self):
     """
-    
     This routine does not really add new data, but it heavily tailors when data are
     stored, exchanged, ... Each generator has some guard attributes, i.e. some guards,
     which control when data is stored, sent, received. The routine takes these guards
     and rewires them to the local guards of this object. If you alter these guards
     further, you have to alter them before you invoke this class' create_data_structures().
-    
     """
     super(EnclaveTasking, self).create_data_structures()
-    
+
     self._patch_overlap_new.generator.send_condition               = self._secondary_sweep_or_grid_initialisation_or_plot_guard
     self._patch_overlap_new.generator.receive_and_merge_condition  = self._primary_sweep_or_plot_guard
 
     self._patch_overlap_old.generator.send_condition               = self._initialisation_sweep_guard
     self._patch_overlap_old.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_guard
 
-
   def _optimise_patch_storage_for_global_time_stepping(self):
     """
-  
     If you work with global time stepping, you know that each enclave cell will
     be updated per grid traversal duo. Consequently, every enclave cell's data
     doesn't have to be stored in-between two grid traversals - we know that it
@@ -315,19 +303,16 @@ class EnclaveTasking( FV ):
     If you want to have this optimisation, you have to call this routine 
     explicitly in create_data_structures(). By default, we always store the 
     patches all the time.
-  
     """
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard() + " and (" + \
       self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.willBeSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard() + " and (" + \
       self._primary_sweep_or_plot_guard + " or marker.hasBeenSkeletonCell())"
 
-
   def create_action_sets(self):
     """
-    
     Adaptive mesh handing
-    
+
     Adaptive meshes require us to clear the patch overlaps and to restrict/interpolate. 
     Obviously, there's no need to do this for a refined faces. So we can eliminate these
     cases a priori. Furthermore, we clear faces only in the primary sweep. We know that
@@ -349,25 +334,24 @@ class EnclaveTasking( FV ):
     next primary one will actually see them and trigger the update. That is, the 
     subsequent secondary switch will actually implement the grid changes, and we can 
     evaluate the criteria again.
-    
+
     For dynamic AMR, this implies that we have to ensure that all changed grid parts
     are labelled as skeleton cells. This way, we can implement the AMR properly, we 
     ensure that all the enclaves run in parallel, and we know that all data is held
     persistently on the stacks.
-        
     """
     super(EnclaveTasking, self).create_action_sets()
 
     self._action_set_update_cell                = UpdateCell(self)
     self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
-    
+
     self._action_set_initial_conditions.guard                       = self._action_set_initial_conditions.guard
     self._action_set_initial_conditions_for_grid_construction.guard = self._action_set_initial_conditions_for_grid_construction.guard
     self._action_set_AMR.guard                                      = self._secondary_sweep_guard
     self._action_set_AMR_commit_without_further_analysis.guard      = self._secondary_sweep_guard
     # We do not set the guard of the secondary sweep
     # self._action_set_postprocess_solution.guard                     = self._secondary_sweep_guard
-    
+
     self._action_set_handle_boundary.guard                          = self._store_face_data_default_guard() + " and " + self._primary_or_initialisation_sweep_guard
     self._action_set_project_patch_onto_faces.guard                 = self._store_cell_data_default_guard() + " and (" + \
          "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.willBeSkeletonCell() ) " + \
@@ -378,7 +362,6 @@ class EnclaveTasking( FV ):
     self._action_set_roll_over_update_of_faces.guard = self._store_face_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guard = self._store_cell_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
 
-    
   def set_implementation(self,
     boundary_conditions, refinement_criterion, initial_conditions,
     memory_location,
@@ -411,7 +394,6 @@ class EnclaveTasking( FV ):
       raise Exception( "only valid memory mode for enclave tasking is heap without a delete, as enclave tasks delete memory themselves through the tarch. Selected mode=" + str(solver._reconstructed_array_memory_location) )
 
     self.create_action_sets()
-    
 
   def add_entries_to_text_replacement_dictionary(self,d):
     """
@@ -426,29 +408,26 @@ class EnclaveTasking( FV ):
 
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D" ] = (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D" ] = (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
-    
+
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
     d[ "STATELESS_PDE_TERMS" ]  = self._pde_terms_without_state
-    
 
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     super(EnclaveTasking, self).add_actions_to_create_grid(step,evaluate_refinement_criterion)
     step.add_action_set( exahype2.grid.UpdateCellLabel( self._name ) )
 
-
   def add_actions_to_init_grid(self, step):
     super(EnclaveTasking, self).add_actions_to_init_grid(step)
     step.add_action_set( exahype2.grid.UpdateCellLabel( self._name ) )
 
-
   def add_actions_to_perform_time_step(self, step):
     """
       Add enclave aspect to time stepping
-      
+
       There's a bunch of different things to do to extend my standard solver
       into an enclave solver. In this operation, we add the runtime logic,
       i.e. what happens at which point.
-      
+
       We need additional action sets that are
       triggered throughout the traversal in every second time step. I call this
       one task_based_implementation_primary_iteration or secondary, 
@@ -457,11 +436,9 @@ class EnclaveTasking( FV ):
       additional labels within the cell. We therefore end up with three new 
       action sets: reconstruct_patch_and_apply_FV_kernel, exahype2.grid.UpdateCellLabel
       and roll_over_enclave_task_results.
- 
     """
     super(EnclaveTasking, self).add_actions_to_perform_time_step(step)
     step.add_action_set( self._action_set_merge_enclave_task_outcome, False )
- 
 
   def add_implementation_files_to_project(self,namespace,output, dimensions):
     """
@@ -500,5 +477,7 @@ class EnclaveTasking( FV ):
         output.makefile.d["PEANODIR"] = peanodir
         exahype2.gpu.add_exahype_objects(output.makefile)
 
-
   def _enclave_task_name(self): return "{}EnclaveTask".format(self._name)
+
+  def set_pde_terms_without_state(self, value):
+    self._pde_terms_without_state = value

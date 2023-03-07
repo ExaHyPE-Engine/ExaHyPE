@@ -23,7 +23,7 @@ parser.add_argument("-hs",      "--heap-storage",          dest="use_heap_storag
 args = parser.parse_args()
 
 #
-# This part si only for convenience. We could use these symbols to augment
+# This part is only for convenience. We could use these symbols to augment
 # the output files, but I don't use this feature here.
 #
 unknowns = {
@@ -57,12 +57,10 @@ def CoordListFromFile(file,scale):
   data=np.array(data)
   return data*scale
 
-
 #
 # Create solver class
 #
 my_solver = None
-
 
 #
 # I pick patches of 9x9x9 here, as I then can match stuff exactly with the DG solver of
@@ -154,7 +152,6 @@ for key, value in integer_constants.items():
   my_solver.add_solver_constants("static constexpr int {} = {};".format(key, value))
 for key, value in double_constants.items():   
   my_solver.add_solver_constants("static constexpr double {} = {};".format(key, value))
-
 
 #
 # All of our solver routines (events) will basically delegate to some 
@@ -252,7 +249,6 @@ for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0;
 """
         )    
 
-    
 # ===============
 # Postprocessing
 # ===============
@@ -304,11 +300,7 @@ if "rk" in args.solver and "dg" in args.solver:
   }
 """
 
-
-
 project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=args.solver + "-" + str(args.cell_size))
-
-
 
 ########################################################################################
 #parameter setting according to scenarios
@@ -317,8 +309,6 @@ project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executab
 #      intparams.update({k:eval("args.CCZ4{}".format(k))})
 #    for k, v in floatparams.items():
 #      floatparams.update({k:eval("args.CCZ4{}".format(k))})
-
-
 
 solverconstants=""
 
@@ -330,10 +320,8 @@ solverconstants=""
 
 project.add_solver(my_solver)
 
-
-
 ########################################################################################
-#Tracer setting 
+#Tracer setting
 ########################################################################################
 if args.tracer:
     tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
@@ -405,12 +393,9 @@ project.set_global_simulation_parameters(
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
-
 project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 
-
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
-
 
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/InitialValues.cpp" )
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp" )

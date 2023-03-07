@@ -383,8 +383,8 @@ fi
 # ===============================================================
 #
 
-AC_ARG_ENABLE(fenv,
-  AS_HELP_STRING([--enable-fenv],[enable floating-point exception handling [default=false]]),
+AC_ARG_WITH(fenv,
+  AS_HELP_STRING([--with-fenv],[build with floating-point exception handling [default=false]]),
   [ AC_MSG_CHECKING(for fenv)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    use_fenv=false ;;
@@ -392,6 +392,10 @@ AC_ARG_ENABLE(fenv,
     esac ],
   [ AC_MSG_CHECKING(for fenv); AC_MSG_RESULT(no); use_fenv=false ])
 AM_CONDITIONAL([UseFenv],[test "x$use_fenv" = xtrue])
+
+if test "$use_fenv" == true; then
+  AC_DEFINE([UseFenv], [UseFenv], [UseFenv])
+fi
 
 #
 # ===============================================================
@@ -889,18 +893,20 @@ AC_SUBST(LDADD_PEANO_3D_ASSERTS)
 AC_SUBST(LDADD_PEANO_3D_TRACE)
 AC_SUBST(LDADD_PEANO_3D_DEBUG)
 
-
 #
-# Kick out makefiles. I'm not sure but it seems that you have to add the directories to 
+# Kick out makefiles. I'm not sure but it seems that you have to add the directories to
 # Makefile.am in the src subdirectories, too
 #
-AC_CONFIG_FILES([Makefile 
-  src/Makefile 
-  src/toolbox/blockstructured/Makefile src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile src/toolbox/particles/Makefile
-  examples/grid/Makefile examples/regulargridupscaling/Makefile 
+AC_CONFIG_FILES([Makefile
+  src/Makefile
+  src/toolbox/blockstructured/Makefile
+  src/toolbox/multiprecision/Makefile
+  src/toolbox/finiteelements/Makefile
+  src/toolbox/loadbalancing/Makefile
+  src/toolbox/particles/Makefile
   src/convert/Makefile
-  src/exahype2/Makefile src/swift2/Makefile
+  src/exahype2/Makefile
+  src/swift2/Makefile
   src/unittests/Makefile
 ])
 AC_OUTPUT
-

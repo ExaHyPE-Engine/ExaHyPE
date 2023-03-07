@@ -7,26 +7,23 @@
 #include "topology/topologies.h"
 #endif
 
-
 void tarch::multicore::initSmartMPI() {
   #ifdef UseSmartMPI
-  using namespace smartmpi::topology;
-  typedef UseSmartMPI MyTopology;
-  smartmpi::topology::Topology* smartMPITopology = new MyTopology(
-    tarch::mpi::Rank::getInstance().getCommunicator()
-  );
-  smartmpi::init( smartMPITopology );
+    using namespace smartmpi::topology;
+    typedef UseSmartMPI MyTopology;
+    smartmpi::topology::Topology* smartMPITopology = new MyTopology(
+      tarch::mpi::Rank::getInstance().getCommunicator()
+    );
+    smartmpi::init( smartMPITopology );
 
-  smartmpi::appendToSchedulerChain( "HardcodedMigrationScheduler" );
+    smartmpi::appendToSchedulerChain( "HardcodedMigrationScheduler" );
 
-  tarch::mpi::Rank::getInstance().setCommunicator( smartMPITopology->computeNodeOrSmartServerCommunicator );
+    tarch::mpi::Rank::getInstance().setCommunicator( smartMPITopology->computeNodeOrSmartServerCommunicator );
   #endif
 }
-
 
 void tarch::multicore::shutdownSmartMPI() {
   #ifdef UseSmartMPI
-  smartmpi::shutdown();
+    smartmpi::shutdown();
   #endif
 }
-

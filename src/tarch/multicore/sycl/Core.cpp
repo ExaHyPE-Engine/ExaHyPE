@@ -5,23 +5,15 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-
 #ifdef CompilerHasSysinfo
 #include <sched.h>
 #endif
 
 #include <map>
 
-
-
-
 #if defined(SharedSYCL)
 #include <sstream>
 #include "config.h"
-
-
-#include <map>
-
 
 #pragma push_macro("Dimensions")
 #pragma push_macro("assertion")
@@ -31,9 +23,7 @@
 #pragma pop_macro("Dimensions")
 #pragma pop_macro("assertion")
 
-
 tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
-
 
 namespace {
   //sycl::queue  hostSyclQueue( sycl::device(sycl::cpu_selector()) );
@@ -41,11 +31,9 @@ namespace {
   sycl::queue  hostSyclQueue;
 }
 
-
 sycl::queue& tarch::multicore::getHostSYCLQueue() {
   return hostSyclQueue;
 }
-
 
 /**
  * The SYCL core object differs from other core objects in that is solely makes
@@ -56,23 +44,20 @@ tarch::multicore::Core::Core():
   internal::configureInternalTaskQueues(_numberOfThreads);
 
   #if PeanoDebug>0
-  std::cout << "host (CPU) device queue:" << hostSyclQueue.get_device().get_info<sycl::info::device::name>()
-            << " with " << _numberOfThreads << " threads" << std::endl;
+    std::cout << "host (CPU) device queue:" << hostSyclQueue.get_device().get_info<sycl::info::device::name>()
+              << " with " << _numberOfThreads << " threads" << std::endl;
   #endif
 
   assertion(_numberOfThreads>0);
 }
 
-
 tarch::multicore::Core::~Core() {
 }
-
 
 tarch::multicore::Core& tarch::multicore::Core::getInstance() {
   static Core instance;
   return instance;
 }
-
 
 void tarch::multicore::Core::configure( int numberOfThreads ) {
   if ( numberOfThreads!=tarch::multicore::Core::UseDefaultNumberOfThreads ) {
@@ -83,35 +68,28 @@ void tarch::multicore::Core::configure( int numberOfThreads ) {
   }
 }
 
-
-void tarch::multicore::Core::shutdown() {
-}
-
+void tarch::multicore::Core::shutdown() {}
 
 bool tarch::multicore::Core::isInitialised() const {
   return true;
 }
-
 
 int tarch::multicore::Core::getNumberOfThreads() const {
   assertion(_numberOfThreads>0);
   return _numberOfThreads;
 }
 
-
 int tarch::multicore::Core::getCoreNumber() const {
   #ifdef CompilerHasSysinfo
-  return sched_getcpu();
+    return sched_getcpu();
   #else
-  //  https://stackoverflow.com/questions/33745364/sched-getcpu-equivalent-for-os-x
-  return -1;
+    //  https://stackoverflow.com/questions/33745364/sched-getcpu-equivalent-for-os-x
+    return -1;
   #endif
 }
-
 
 int tarch::multicore::Core::getThreadNumber() const {
   return 0;
 }
-
 
 #endif

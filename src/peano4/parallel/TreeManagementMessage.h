@@ -14,6 +14,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "peano4/utils/Globals.h"
 #include "peano4/grid/TraversalObserver.h"
 
@@ -61,6 +62,8 @@ struct peano4::parallel::TreeManagementMessage {
     
 
     #ifdef Parallel
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -80,8 +83,8 @@ struct peano4::parallel::TreeManagementMessage {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    
-    
+    PRAGMA_POP
+
     /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
@@ -120,16 +123,15 @@ struct peano4::parallel::TreeManagementMessage {
     static void receive(   peano4::parallel::TreeManagementMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
-
     std::string toString() const;
   
   private:
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _masterSpacetreeId;
     [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _workerSpacetreeId;
     [[clang::pack]]  Action   _action;
-
-
-
+    PRAGMA_POP
 
     #ifdef Parallel
     private:
@@ -145,9 +147,6 @@ struct peano4::parallel::TreeManagementMessage {
       static MPI_Datatype  Datatype;
       #endif
     #endif
-
-
-
 };
 
   
