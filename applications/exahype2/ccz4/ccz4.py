@@ -888,7 +888,7 @@ if __name__ == "__main__":
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  gridCellH
         ) -> void {
-          for (int i=0; i<"""+str(my_solver.unknowns+my_solver.auxiliary_variables)+"""; i++) {
+          for (int i=0; i<"""+str(my_solver._unknowns+my_solver._auxiliary_variables)+"""; i++) {
             Q[i] = 0.0;
           }
           Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
@@ -980,6 +980,7 @@ if __name__ == "__main__":
     project.set_output_path(path)
     probe_point = [-6,-6,0.0]
     project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
+    my_solver.select_dofs_to_print = [0,3,5,12,16,17,18,54]
 
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
