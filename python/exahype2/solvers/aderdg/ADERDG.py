@@ -461,11 +461,8 @@ class ADERDG( object ):
       dataset_name=self._unknown_identifier(), 
       description=self.plot_description,
       mapping=mapping,
-<<<<<<< HEAD
       plot_cell_data=False,
-      precision="PlotterPrecision",
-      select_dofs = self.select_dofs_to_print
-=======
+      select_dofs = self.select_dofs_to_print,
       guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
       additional_includes="""
 #include "exahype2/PlotFilter.h"
