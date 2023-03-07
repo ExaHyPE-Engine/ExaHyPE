@@ -718,7 +718,8 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 #include "../repositories/SolverRepository.h"
 """,
       precision="PlotterPrecision",
-      time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())"
+      time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+      select_dofs = self.select_dofs_to_print
     ))
 
     if self._plot_grid_properties:    
