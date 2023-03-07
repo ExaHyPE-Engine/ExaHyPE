@@ -178,9 +178,9 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   
     dfor(k,{{DOFS_PER_AXIS}}) {
       {% if SELECT_DOFS==None %}
-      {DATATYPE}* data = fineGridCell{{NAME}}.value + currentDoF;
+      {{DATATYPE}}* data = fineGridCell{{NAME}}.value + currentDoF;
       {% else %}
-      {DATATYPE} data[] = { 
+      {{DATATYPE}} data[] = { 
           fineGridCell{{NAME}}.value[ currentDoF + {{SELECT_DOFS[0]}} ]
         {% for i in SELECT_DOFS[1:] %}
         , fineGridCell{{NAME}}.value[ currentDoF + {{i}} ]
@@ -216,9 +216,9 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   
     dfor(k,{{DOFS_PER_AXIS}}) {
       {% if SELECT_DOFS==None %}
-      {DATATYPE}* data = fineGridCell{{NAME}}.value + currentDoF;
+      {{DATATYPE}}* data = fineGridCell{{NAME}}.value + currentDoF;
       {% else %}
-      {DATATYPE} data[] = { 
+      {{DATATYPE}} data[] = { 
           fineGridCell{{NAME}}.value[ currentDoF + {{SELECT_DOFS[0]}} ]
         {% for i in SELECT_DOFS[1:] %}
         , fineGridCell{{NAME}}.value[ currentDoF + {{i}} ]
