@@ -212,12 +212,8 @@ class FV(object):
     self._solver_template_file_class_name = None
 
     self._plot_description = ""
-<<<<<<< HEAD
     self.select_dofs_to_print = None
-    
-=======
 
->>>>>>> refs/remotes/origin/p4
     self._action_set_initial_conditions                       = None
     self._action_set_initial_conditions_for_grid_construction = None
     self._action_set_AMR                                      = None

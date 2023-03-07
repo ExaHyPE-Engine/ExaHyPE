@@ -1,4 +1,4 @@
-# This file is part of the Peano project. For conditions of distribution and
+﻿# This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
@@ -30,15 +30,10 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
                metadata = "", 
                mapping = [], 
                guard="true", 
-<<<<<<< HEAD
                additional_includes="", 
                precision=3,
-               select_dofs = None
-               ):
-=======
-               additional_includes="", precision=3,
+               select_dofs = None,
                dataType="double"):
->>>>>>> refs/remotes/origin/p4
     """
     
       plot_cell_data: Boolean
@@ -181,22 +176,17 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     int cellIndex  = _dataWriter->getFirstCellWithinPatch(patchIndex);
     int currentDoF = 0;
   
-<<<<<<< HEAD
     dfor(k,{{DOFS_PER_AXIS}}) {
       {% if SELECT_DOFS==None %}
-      double* data = fineGridCell{{NAME}}.value + currentDoF;
+      {DATATYPE}* data = fineGridCell{{NAME}}.value + currentDoF;
       {% else %}
-      double data[] = { 
+      {DATATYPE} data[] = { 
           fineGridCell{{NAME}}.value[ currentDoF + {{SELECT_DOFS[0]}} ]
         {% for i in SELECT_DOFS[1:] %}
         , fineGridCell{{NAME}}.value[ currentDoF + {{i}} ]
         {% endfor %}
       };
       {% endif %}
-=======
-    dfor(k,{DOFS_PER_AXIS}) {{
-      {DATATYPE}* data = fineGridCell{NAME}.value + currentDoF;
->>>>>>> refs/remotes/origin/p4
       _dataWriter->plotCell( cellIndex, data );
       cellIndex++;
       currentDoF += {{UNKNOWNS}};
@@ -224,22 +214,17 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     int vertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
     int currentDoF = 0;
   
-<<<<<<< HEAD
     dfor(k,{{DOFS_PER_AXIS}}) {
       {% if SELECT_DOFS==None %}
-      double* data = fineGridCell{{NAME}}.value + currentDoF;
+      {DATATYPE}* data = fineGridCell{{NAME}}.value + currentDoF;
       {% else %}
-      double data[] = { 
+      {DATATYPE} data[] = { 
           fineGridCell{{NAME}}.value[ currentDoF + {{SELECT_DOFS[0]}} ]
         {% for i in SELECT_DOFS[1:] %}
         , fineGridCell{{NAME}}.value[ currentDoF + {{i}} ]
         {% endfor %}
       };
       {% endif %}
-=======
-    dfor(k,{DOFS_PER_AXIS}) {{
-      {DATATYPE}* data = fineGridCell{NAME}.value + currentDoF;
->>>>>>> refs/remotes/origin/p4
       _dataWriter->plotVertex( vertexIndex, data );
       vertexIndex++;
       currentDoF += {{UNKNOWNS}};
