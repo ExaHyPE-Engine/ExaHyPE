@@ -69,9 +69,9 @@ namespace tarch {
     void* allocateRawData(int size, MemoryLocation location);
   }
 
-  template <class T>
+  template <class T=double>
   T* allocateMemory( int size, MemoryLocation location, [[maybe_unused]] int device = -1 ) {
-    return reinterpret_cast<T*>( internal::allocateRawData(size * static_cast<int>(sizeof(T)), location ) );
+     return reinterpret_cast<T*>( internal::allocateRawData(size * static_cast<int>(sizeof(T)), location ) );
   }
   void freeMemory(void* data, MemoryLocation location);
 }
