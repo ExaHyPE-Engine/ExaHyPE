@@ -302,7 +302,7 @@ if __name__ == "__main__":
     }
   }
 """
-        self.switch_to_heap_storage(True, True)
+        self.switch_to_heap_storage(False,False)
 
    
       def create_action_sets(self):
@@ -874,6 +874,17 @@ if __name__ == "__main__":
         ) -> double {
           return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
         },
+        [&](
+          double * __restrict__                        Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  gridCellH
+        ) -> void {
+          for (int i=0; i<"""+str(my_solver._unknowns+my_solver._auxiliary_variables)+"""; i++) {
+            Q[i] = 0.0;
+          }
+          Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
+          Q[16] = 1.0; Q[54] = 1.0;
+        },
         marker.x(),
         marker.h(),
         {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
@@ -885,8 +896,7 @@ if __name__ == "__main__":
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
         fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
-        Qinf
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
       );
       """
 
@@ -961,9 +971,10 @@ if __name__ == "__main__":
     project.set_output_path(path)
     probe_point = [-6,-6,0.0]
     project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
+    my_solver.select_dofs_to_print = [0,3,5,12,16,17,18,54]
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
-    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
+    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
 
 ########################################################################################
 #Tracer setting 

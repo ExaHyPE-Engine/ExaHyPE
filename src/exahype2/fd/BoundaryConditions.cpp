@@ -4,6 +4,7 @@
 #include "peano4/utils/Loop.h"
 
 #include "tarch/logging/Log.h"
+#include "tarch/accelerator/accelerator.h"
 
 #include "exahype2/fd/PatchUtils.h"
 #include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
@@ -89,6 +90,11 @@ void exahype2::fd::applySommerfeldConditions(
     double                                       dt,
     int                                          normal
   ) >   maxEigenvalue,
+  std::function< void(
+    double* __restrict__                         Q,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  gridCellH
+  ) >   farFieldSolution,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   double                                       t,
@@ -100,8 +106,7 @@ void exahype2::fd::applySommerfeldConditions(
   int                                          faceNumber,
   const tarch::la::Vector<Dimensions,double>&  systemOrigin,
   double* __restrict__                         Qold,
-  double* __restrict__                         Qnew,
-  double* __restrict__                         Qinf
+  double* __restrict__                         Qnew
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
   logTraceInWith4Arguments( "applySommerfeldConditions(...)", faceCentre, patchSize, numberOfGridCellsPerPatchPerAxis, faceNumber);
@@ -113,6 +118,8 @@ void exahype2::fd::applySommerfeldConditions(
     numberOfUnknowns+numberOfAuxiliaryVariables,
     0
   );
+
+  double* QInf = tarch::allocateMemory<double>( numberOfUnknowns+numberOfAuxiliaryVariables, tarch::MemoryLocation::Heap );
 
   tarch::la::Vector<Dimensions,double> volumeH    = exahype2::fd::getGridCellSize(patchSize, numberOfGridCellsPerPatchPerAxis);
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * patchSize;
@@ -153,6 +160,12 @@ void exahype2::fd::applySommerfeldConditions(
         *(Qnew + enumerator(insideGridCell,0))
       );
 
+      farFieldSolution(
+        QInf,
+        xOnLayer,
+        volumeH
+      );
+
       //do something here, we have Qold, Qnew, waveSpeed, xOnLayer, rOnLayer, dt, volumeH, Qinf
       //we try the first approach first to see if it is already sufficient.
       double dtInverse=1/dt;
@@ -161,7 +174,7 @@ void exahype2::fd::applySommerfeldConditions(
       //  <<" xOnLayer "<<xOnLayer(faceNumber%Dimensions));
 
       for(int i=0; i<numberOfUnknowns; i++) {
-        double numerator=-(waveSpeed/rOnLayer)*((Qold + enumerator(outsideGridCell,0))[i]+(Qold+enumerator(insideGridCell,0))[i]-2*Qinf[i])
+        double numerator=-(waveSpeed/rOnLayer)*((Qold + enumerator(outsideGridCell,0))[i]+(Qold+enumerator(insideGridCell,0))[i]-2*QInf[i])
                           +(+dtInverse-spaceFactor)*(Qold + enumerator(outsideGridCell,0))[i]
                           +(-dtInverse+spaceFactor)*(Qnew + enumerator( insideGridCell,0))[i]
                           +(+dtInverse+spaceFactor)*(Qold + enumerator( insideGridCell,0))[i];
@@ -175,8 +188,58 @@ void exahype2::fd::applySommerfeldConditions(
     }
   }
 
-
-
+  tarch::freeMemory( QInf, tarch::MemoryLocation::Heap );
 
   logTraceOut( "applySommerfeldConditions(...)" );
 }
+
+
+void exahype2::fd::applySommerfeldConditions(
+  std::function< double(
+    const double* __restrict__                   Q,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  gridCellH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal
+  ) >   maxEigenvalue,
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  double                                       t,
+  double                                       dt,
+  int                                          numberOfGridCellsPerPatchPerAxis,
+  int                                          overlap,
+  int                                          numberOfUnknowns,
+  int                                          numberOfAuxiliaryVariables,
+  int                                          faceNumber,
+  const tarch::la::Vector<Dimensions,double>&  systemOrigin,
+  double* __restrict__                         Qold,
+  double* __restrict__                         Qnew
+) {
+  applySommerfeldConditions(
+    maxEigenvalue,
+    [&] (
+      double* __restrict__                         Q,
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  gridCellH
+    ) -> void {
+      for (int i=0; i<numberOfUnknowns+numberOfAuxiliaryVariables; i++) {
+        Q[i] = 0.0;
+      }
+    },
+    faceCentre,
+    patchSize,
+    t,
+    dt,
+    numberOfGridCellsPerPatchPerAxis,
+    overlap,
+    numberOfUnknowns,
+    numberOfAuxiliaryVariables,
+    faceNumber,
+    systemOrigin,
+    Qold,
+    Qnew
+  );
+}
+
+

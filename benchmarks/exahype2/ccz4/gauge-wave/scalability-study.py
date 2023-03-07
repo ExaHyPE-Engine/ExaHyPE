@@ -17,7 +17,7 @@ parser.add_argument("-j",   "--parallel-builds",   dest="j",                type
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",         default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-s",   "--solver",            dest="solver",           choices=["fv-legacy-no-heap", "fv-legacy", "fv-no-heap", "fv", "fv-tasks", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1",  "dg0-rk2",  "dg0-rk3",  "dg0-rk4", "dg1-rk1", "dg2-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
-parser.add_argument("-et",  "--end-time",          dest="end_time",         type=float, default=0.002, help="End of simulation" )
+parser.add_argument("-et",  "--end-time",          dest="end_time",         type=float, default=0.001, help="End of simulation" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.05,  help="Cell size (default 0.3)" )
 
 args = parser.parse_args()

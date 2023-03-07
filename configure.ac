@@ -608,6 +608,22 @@ if test "$use_otter" == true; then
 fi
 
 
+#
+# libxsmm
+#
+AC_ARG_WITH(libxsmm,
+  AS_HELP_STRING([--with-libxsmm],[enable libxsmm [default=false]]),
+  [ AC_MSG_CHECKING(for libxsmm)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_libxsmm=false ;;
+      *)     AC_MSG_RESULT(yes);   use_libxsmm=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for libxsmm); AC_MSG_RESULT(no); use_libxsmm=false ])
+AM_CONDITIONAL([UseLibXSMM],[test "x$use_libxsmm" = xtrue])
+
+if test "$use_libxsmm" == true; then
+  AC_DEFINE([UseLibXSMM], [UseLibXSMM], [UseLibXSMM])
+fi
 
 #
 # ===============================================================
@@ -769,7 +785,11 @@ if test "$toolbox_exahype" != false; then
   LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/exahype2 "
+fi
 
+
+
+if test "$use_libxsmm" != false; then
   #Libxsmm
   echo "Checking whether libxsmm needs to be installed or built"
   if @<:@ ! -d Submodules/libxsmm @:>@; then
