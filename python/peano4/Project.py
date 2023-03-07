@@ -70,7 +70,10 @@ class Project (object):
 
     self.constants  = peano4.output.Constants(self)
 
-  def generate(self, overwrite=peano4.output.Overwrite.Default):
+  def generate(self,
+               overwrite=peano4.output.Overwrite.Default, 
+               throw_away_data_after_generation=False
+               ):
     """
     Generate all code. If you add stuff to your project after a 
     build, you have to (re-)generate the code. If you compile only
@@ -82,6 +85,18 @@ class Project (object):
     call before you change parameter settings and call generate
     again. To do so, invoke cleanup(). If you forget this, two
     subsequent generate calls enrich the output twice.
+    
+    throw_away_data_after_generation: Bool
+      The Peano 4 memory footprint can become quite substantial 
+      effectively reducing the translation capabilities (as compilers
+      tend to require a lot of memory, too). So pass in True if you 
+      want the script to throw away the data structures (and run a 
+      garbage collection) after all files have been generated. Please
+      note that it invalidates both this object (and maybe another 
+      object that you've used to generate the present one - such as 
+      ExaHyPE). It really strips everything down to the stuff you 
+      absolutely need to translate and run the code.
+      
     """
     print( "generate all code ..." )
     self.is_generated = True
@@ -122,13 +137,15 @@ class Project (object):
         number_of_parallel_builds = multiprocessing.cpu_count()
 
     if not self.is_generated:
-      self.generate()
+      self.generate();
 
-    if make_clean_first:
+    if make_clean_first or make_dist_clean_first:
       print( "clean up project ..." )
       try:
         if make_clean_first:
           subprocess.check_call(["make", "clean"])
+        if make_dist_clean_first:
+          subprocess.check_call(["make", "distclean"])
         self.is_built = False
         print( "clean complete" )
       except Exception as e:
@@ -137,10 +154,9 @@ class Project (object):
     if not self.is_built:
       print( "start to compile with concurrency level of " + str(number_of_parallel_builds) + " ..." )
       try:
-        from peano4.output.Helper import find_cmake_build_dir
-        cmake_build_dir = find_cmake_build_dir()
-        if cmake_build_dir != "":
-          command = f"cd {cmake_build_dir} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
+        path = find_cmake_build_dir()
+        if path != "":
+          command = f"cd {path} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
           result = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
           result = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -159,13 +175,6 @@ class Project (object):
     else:
       print( "cannot build as code generation has not been successful" )
 
-    self.cleanup()
-    if throw_away_data_after_build:
-      self.datamodel    = None
-      self.solversteps  = None
-      self.output       = None
-      gc.collect()
-      print( "threw away all data and ran garbage collection" )
 
   def run(self, executable, args=[], prefix=None, pipefile=None, rebuild_if_required=True):
     """
@@ -212,19 +221,4 @@ class Project (object):
       print( "cannot run as code compilation has not been successful" )
     return success
 
-  def set_sph_sequence(self, hydroScheme='minimal'):
-    """
-    Change the DefaultSequence used to generate the main file template, to the
-    class that generates the main file of an SPH simulation. The effect will
-    take place when calling the generate method.
-    In the future, this might not be needed if we implement an ifdefSPH
-    directive into the default template, and encapsulate the SPH-specific steps
-    there.
-    """
-    self.main = peano4.runner.SPHSequence(self) 
-    if hydroScheme != 'minimal': 
-      warning_msg = """
-      This is not the minimal SPH scheme. Please double check that the
-      algorithmic steps in the main file are valid for your hydro scheme.
-      """
-      print( warning_msg )
+    
