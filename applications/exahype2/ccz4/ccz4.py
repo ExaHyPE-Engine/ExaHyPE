@@ -239,24 +239,33 @@ if __name__ == "__main__":
         self._patch_size = patch_size
         self._domain_r = domain_r
 
-        self.set_implementation(
-          boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          flux=exahype2.solvers.fv.PDETerms.None_Implementation,
-          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
-        )
 
         if SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
-          self._fused_compute_kernel_call_cpu = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4(
-            self._flux_implementation, 
-            self._ncp_implementation, 
-            self._source_term_implementation, 
-            compute_max_eigenvalue_of_next_time_step = True,
-            solver_variant                           = exahype2.solvers.rkfd.kernels.SolverVariant.Multicore,
-            kernel_variant                           = exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
-            KOSigma                                  = self._KO_Sigma
+          self.set_implementation(
+            boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+            ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+            source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+            refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+            eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          )
+          #self._fused_compute_kernel_call_cpu = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4(
+           # self._flux_implementation, 
+           # self._ncp_implementation, 
+           # self._source_term_implementation, 
+           # compute_max_eigenvalue_of_next_time_step = True,
+            #solver_variant                           = exahype2.solvers.rkfd.kernels.SolverVariant.Multicore,
+            #kernel_variant                           = exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
+           # KOSigma                                  = self._KO_Sigma
+          #)
+        else:
+          self.set_implementation(
+            boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+            ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+            source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+            refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+            eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
           )
 
         self.postprocess_updated_patch = """
@@ -302,7 +311,7 @@ if __name__ == "__main__":
     }
   }
 """
-        self.switch_to_heap_storage(True, True)
+        self.switch_to_heap_storage(False,False)
 
    
       def create_action_sets(self):
@@ -874,6 +883,17 @@ if __name__ == "__main__":
         ) -> double {
           return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
         },
+        [&](
+          double * __restrict__                        Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  gridCellH
+        ) -> void {
+          for (int i=0; i<"""+str(my_solver.unknowns+my_solver.auxiliary_variables)+"""; i++) {
+            Q[i] = 0.0;
+          }
+          Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
+          Q[16] = 1.0; Q[54] = 1.0;
+        },
         marker.x(),
         marker.h(),
         {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
@@ -885,8 +905,7 @@ if __name__ == "__main__":
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
         fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
-        Qinf
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
       );
       """
 
@@ -962,8 +981,8 @@ if __name__ == "__main__":
     probe_point = [-6,-6,0.0]
     project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
-    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0,32))" )
+    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
 
 ########################################################################################
 #Tracer setting 
