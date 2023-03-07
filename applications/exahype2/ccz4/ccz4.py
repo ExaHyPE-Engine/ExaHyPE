@@ -239,33 +239,24 @@ if __name__ == "__main__":
         self._patch_size = patch_size
         self._domain_r = domain_r
 
+        self.set_implementation(
+          boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+        )
 
         if SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
-          self.set_implementation(
-            boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-            ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
-            source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-            refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-            eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          )
-          #self._fused_compute_kernel_call_cpu = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4(
-           # self._flux_implementation, 
-           # self._ncp_implementation, 
-           # self._source_term_implementation, 
-           # compute_max_eigenvalue_of_next_time_step = True,
-            #solver_variant                           = exahype2.solvers.rkfd.kernels.SolverVariant.Multicore,
-            #kernel_variant                           = exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
-           # KOSigma                                  = self._KO_Sigma
-          #)
-        else:
-          self.set_implementation(
-            boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-            ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
-            source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-            refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-            eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          self._fused_compute_kernel_call_cpu = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4(
+            self._flux_implementation, 
+            self._ncp_implementation, 
+            self._source_term_implementation, 
+            compute_max_eigenvalue_of_next_time_step = True,
+            solver_variant                           = exahype2.solvers.rkfd.kernels.SolverVariant.Multicore,
+            kernel_variant                           = exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
+            KOSigma                                  = self._KO_Sigma
           )
 
         self.postprocess_updated_patch = """
