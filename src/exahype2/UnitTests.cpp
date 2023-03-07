@@ -2,7 +2,6 @@
 
 #include "tarch/tests/TreeTestCaseCollection.h"
 
-#include "exahype2/aderdg/tests/ADERDGTest.h"
 #include "exahype2/dg/tests/CellIntegralTest.h"
 #include "exahype2/dg/tests/DGUtilsTest.h"
 #include "exahype2/dg/tests/RiemannTest.h"

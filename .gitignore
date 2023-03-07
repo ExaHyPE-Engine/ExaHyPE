@@ -91,6 +91,8 @@ libtool
 configure~
 .deps
 .dirstamp
+config.h
+stamp-h2
 src/config.h
 src/config.h~
 src/config.h.in
@@ -280,5 +282,9 @@ cython_debug/
 # Misc
 .DS_Store
 /Debug/
-/documentatio.synctex.gz
+
+compile_commands.json
+
+UnitTests2d
+UnitTests3d
 /documentation/

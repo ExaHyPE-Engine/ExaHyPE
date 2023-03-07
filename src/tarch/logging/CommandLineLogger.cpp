@@ -226,8 +226,8 @@ void tarch::logging::CommandLineLogger::info(long int timestampNanoseconds, int 
 
 void tarch::logging::CommandLineLogger::warning(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
     std::string outputMessage = constructMessageString(
-      "warning",
-	  timestampNanoseconds, rank, threadId, trace, message
+      LogFilter::FilterListEntry::TargetWarning,
+      timestampNanoseconds, rank, threadId, trace, message
     );
 
     tarch::multicore::Lock lockCout( _semaphore );

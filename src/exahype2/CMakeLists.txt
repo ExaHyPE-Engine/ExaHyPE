@@ -1,47 +1,32 @@
-message(STATUS "Configuring ExaHype 2")
-
-file(GLOB_RECURSE EXAHYPE2_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB_RECURSE SOURCES "*")
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 foreach(mode IN LISTS BUILD_MODES)
-	string(TOUPPER ${mode} mode_upper)
-	foreach(dimension IN LISTS PEANO_DIMENSIONS)
-		message(STATUS "Adding the ExaHyPE2 target with dimension=${dimension} and build_mode=${mode}")
+  string(TOLOWER ${mode} mode_lower)
+  string(TOUPPER ${mode} mode_upper)
 
-		add_library(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} STATIC)
+  foreach(dimension IN LISTS WITH_DIMENSIONS)
+    add_library(ExaHyPE2Core${dimension}d_${mode_lower} STATIC)
+    display_header("Creating Makefile of ExaHyPE2Core${dimension}d_${mode_lower}")
 
-		target_sources(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE ${EXAHYPE2_SOURCES})
-		target_include_directories(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE ${CMAKE_SOURCE_DIR}/src  ${CMAKE_CURRENT_SOURCE_DIR})
-		
-		target_link_libraries(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE Tarch${SUFFIX_${mode}})
-		
-		target_compile_definitions(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE Dimensions=${dimension})
-		target_compile_options(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode_upper}_FLAGS})
-		target_compile_definitions(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode_upper}_DEFINITIONS})
-		target_link_options(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode_upper}_LDFLAGS})
+    target_sources(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ${SOURCES})
+    target_include_directories(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+    string(REPLACE " " ";" COMPILE_OPTIONS ${CMAKE_CXX_FLAGS_${mode_upper}})
+    target_compile_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${COMPILE_OPTIONS})
+    target_compile_definitions(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS} Dimensions=${dimension})
+    target_link_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
+    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC project_options project_warnings Peano4Core${dimension}d_${mode_lower})
+    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ToolboxLoadBalancing${dimension}d_${mode_lower})
+    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ToolboxBlockStructured${dimension}d_${mode_lower})
 
-		if(ENABLE_FINITE_ELEMENTS)
-			target_link_libraries(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE ToolboxFiniteElements${dimension}d${SUFFIX_${mode}})
-		endif()
-
-		if(ENABLE_MULTIPRECISION)
-			target_link_libraries(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE ToolboxMultiprecision${dimension}d${SUFFIX_${mode}})
-		endif()
-
-		if(ENABLE_LOADBALANCING)
-			target_link_libraries(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE ToolboxLoadBalancing${dimension}d${SUFFIX_${mode}})
-		endif()
-
-		if(ENABLE_PARTICLES)
-			target_link_libraries(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE ToolboxParticles${dimension}d${SUFFIX_${mode}})
-		endif()
-
-		if(ENABLE_BLOCKSTRUCTURED)
-			target_link_libraries(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE ToolboxBlockStructured${dimension}d${SUFFIX_${mode}})
-		endif()
-
-		if(WITH_OTTER)
-			target_link_libraries(ExaHyPE2Core${dimension}d${SUFFIX_${mode}} PRIVATE ${Otter_LIBRARIES})
-		endif()
-
-	endforeach()
+    install(TARGETS ExaHyPE2Core${dimension}d_${mode_lower}
+      RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
+              COMPONENT           ${PROJECT_NAME}_Runtime
+      LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
+              COMPONENT           ${PROJECT_NAME}_Runtime
+              NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
+      ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
+              COMPONENT           ${PROJECT_NAME}_Devel
+    )
+  endforeach()
 endforeach()

@@ -2,13 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <thread>
 #include <set>
 #include <string>
 
 #include "tarch/logging/Log.h"
-
 
 namespace tarch {
   namespace multicore {
@@ -34,7 +32,6 @@ namespace tarch {
     std::string printUnmaskedThreads();
   }
 }
-
 
 /**
  * Core
@@ -88,9 +85,6 @@ class tarch::multicore::Core {
      * are placed on one node. It is also a bad choice if hyperthreading
      * should not/can not be used. Use the helper function
      * getNumberOfUnmaskedThreads().
-     *
-     *
-     *
      *
      * @param numberOfThreads Number of threads that shall be used. This
      *        parameter either is greater than zero (which defines the number

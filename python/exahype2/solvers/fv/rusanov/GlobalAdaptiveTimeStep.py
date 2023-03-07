@@ -16,38 +16,36 @@ from exahype2.solvers.fv.kernels import KernelVariant
 
 from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
-
 class GlobalAdaptiveTimeStep( SingleSweep ):
-  def __init__(self, 
+  def __init__(self,
     name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, time_step_relaxation,
-    flux=PDETerms.User_Defined_Implementation, 
-    ncp=PDETerms.None_Implementation, 
-    eigenvalues=PDETerms.User_Defined_Implementation, 
+    flux=PDETerms.User_Defined_Implementation,
+    ncp=PDETerms.None_Implementation,
+    eigenvalues=PDETerms.User_Defined_Implementation,
     boundary_conditions=PDETerms.User_Defined_Implementation,
     refinement_criterion=PDETerms.Empty_Implementation,
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
     plot_grid_properties=False, overlap=1
   ):
-    super(GlobalAdaptiveTimeStep,self).__init__(name, 
-                                                patch_size, 
-                                                overlap, 
-                                                unknowns, 
-                                                auxiliary_variables, 
-                                                min_volume_h, 
-                                                max_volume_h, 
+    super(GlobalAdaptiveTimeStep,self).__init__(name,
+                                                patch_size,
+                                                overlap,
+                                                unknowns,
+                                                auxiliary_variables,
+                                                min_volume_h,
+                                                max_volume_h,
                                                 plot_grid_properties,
-                                                kernel_namespace="rusanov") 
-    
+                                                kernel_namespace="rusanov")
     self._time_step_relaxation = time_step_relaxation
 
     self._flux_implementation                 = PDETerms.None_Implementation
     self._ncp_implementation                  = PDETerms.None_Implementation
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
-    
+
     self._compute_eigenvalue                  = True
-    
+
     self.set_implementation(flux=flux, 
       ncp=ncp, 
       eigenvalues=eigenvalues, 
@@ -55,7 +53,6 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
       refinement_criterion=refinement_criterion, 
       initial_conditions=initial_conditions, 
       source_term=source_term )
-
 
   def set_implementation(self,
     flux=None,ncp=None,
@@ -106,9 +103,8 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
     self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
     self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
-    
-    super(GlobalAdaptiveTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
+    super(GlobalAdaptiveTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
   @property
   def user_action_set_includes(self):

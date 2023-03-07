@@ -5,4 +5,3 @@ class PDETerms():
   User_Defined_Implementation = "<user-defined>"
   None_Implementation         = "<none>"
   Empty_Implementation        = "<empty>"
-

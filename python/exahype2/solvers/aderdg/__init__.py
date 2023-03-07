@@ -4,4 +4,5 @@ from .PDETerms                                       import PDETerms
 
 from .ADERDG                                         import Polynomials
 
-from .NonFusedGenericRusanovFixedTimeStepSize        import NonFusedGenericRusanovFixedTimeStepSize
+import exahype2.solvers.aderdg.kernelgenerator
+import exahype2.solvers.aderdg.rusanov

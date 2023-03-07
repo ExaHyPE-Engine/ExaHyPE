@@ -146,6 +146,12 @@ struct peano4::datamanagement::FaceMarker {
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell(int i) const;
 
     /**
+     * Return relative position of a subface within its father face. The
+     * result is from (0,1,2)^(Dimensions-1)
+     */
+    tarch::la::Vector<Dimensions-1,int>  getRelativePositionWithinFatherFace() const;
+    
+    /**
      * The term patch here refers to a 3x3 or 3x3x3 refinement. The routine
      * determines whether the face is on the boundary of this patch of not.
      */

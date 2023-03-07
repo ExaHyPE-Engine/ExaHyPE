@@ -5,8 +5,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/multicore/otter.h"
 
-
-
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
@@ -26,7 +24,6 @@ void exahype2::fd::internal::copySolution_LoopBody(
 #pragma omp end declare target
 #endif
 
-
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
@@ -43,7 +40,6 @@ void exahype2::fd::internal::clearSolution_LoopBody(
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
-
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(

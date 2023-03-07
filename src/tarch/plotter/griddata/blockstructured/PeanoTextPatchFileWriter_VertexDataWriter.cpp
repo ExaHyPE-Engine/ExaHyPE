@@ -3,7 +3,6 @@
 
 #include <iomanip>
 
-
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::VertexDataWriter(
   const std::string& identifier,
   int                unknownsPerAxis,
@@ -30,10 +29,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataW
   _out << std::scientific;
 }
 
-
-tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::~VertexDataWriter() {
-}
-
+tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::~VertexDataWriter() {}
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::setPrecision(int precision) {
   if (precision>0) {
@@ -41,11 +37,9 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::Vertex
   }
 }
 
-
 int tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::getVerticesPerPatch() const {
   return tarch::la::aPowI(_writer._dimensions,_numberOfVerticesPerAxis);
 }
-
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, double value ) {
   for (int i=0; i<_numberOfUnknowns; i++) {
@@ -66,7 +60,6 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::Vertex
   flushIfPatchIsComplete();
 }
 
-
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, double* values ) {
   for (int i=0; i<_numberOfUnknowns; i++) {
     if ( std::isnan(values[i]) ) {
@@ -86,10 +79,33 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::Vertex
   flushIfPatchIsComplete();
 }
 
-
-void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::close() {
+template<typename T>
+void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, T* values ) {
+  for (int i=0; i<_numberOfUnknowns; i++) {
+    if ( std::isnan(values[i]) ) {
+      _out << " nan";
+    }
+    else {
+      if ( std::abs(values[i]) < std::numeric_limits<T>::min() ) values[i] = 0.0;
+      if (tarch::la::equals(values[i],0.0)) {
+        _out << " 0";
+      }
+      else {
+        _out << " " << values[i];
+      }
+    }
+    _entryCounter++;
+  }
+  flushIfPatchIsComplete();
 }
 
+template void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, float* values );
+
+#ifndef __NVCOMPILER
+template void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, long double* values );
+#endif
+
+void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::close() {}
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::assignRemainingVerticesDefaultValues() {
 /*
@@ -102,9 +118,8 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::Vertex
     _entryCounter = 0;
   }
 */
-	assertionMsg(false, "not yet implemented" );
+  assertionMsg(false, "not yet implemented" );
 }
-
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::flushIfPatchIsComplete() {
   if (_entryCounter>=getVerticesPerPatch()*_numberOfUnknowns) {
@@ -117,10 +132,6 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::Vertex
   }
 }
 
-
-
 int tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::getFirstVertexWithinPatch(int index) const {
   return index * getVerticesPerPatch();
 }
-
-

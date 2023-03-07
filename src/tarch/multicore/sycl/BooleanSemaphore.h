@@ -5,7 +5,6 @@
 #include <string>
 #include "tarch/multicore/multicore.h"
 
-
 namespace tarch {
   namespace multicore {
     class BooleanSemaphore;
@@ -13,10 +12,8 @@ namespace tarch {
   }
 }
 
-
 #if defined(SharedSYCL)
 #include <mutex>
-
 
 /**
  * According to the standard, SYCL mutexes should be of type std::mutex.
@@ -35,12 +32,13 @@ class tarch::multicore::BooleanSemaphore {
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore( const BooleanSemaphore& semaphore ) {}
+    inline BooleanSemaphore([[maybe_unused]] const BooleanSemaphore& semaphore) {}
 
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore& operator=( const BooleanSemaphore& semaphore ) {return *this;}
+    inline BooleanSemaphore& operator = ([[maybe_unused]] const BooleanSemaphore& semaphore) { return *this; }
+
   public:
     BooleanSemaphore();
     ~BooleanSemaphore();

@@ -14,14 +14,12 @@
 
 #include <string>
 
-
 namespace tarch {
   namespace multicore {
     class BooleanSemaphore;
     class Lock;
   }
 }
-
 
 /**
  * Boolean Semaphore
@@ -48,15 +46,12 @@ namespace tarch {
      static BooleanSemaphore _mySemaphore;
    };
 
-
-
    MyClass::foo() {
      ...
      Lock myLock( _mySemaphore );
      // critical Section A
      ...
    }
-
 
    MyClass::bar() {
      ...
@@ -93,7 +88,6 @@ namespace tarch {
  *   model chosen.
  * - The subdirectories of this directory hold the TBB- and OpenMP-specific
  *   implementations of the semaphore.
- *
  *
  * \section  Bugs due to the locks
  *
@@ -139,16 +133,16 @@ class tarch::multicore::BooleanSemaphore {
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore( const BooleanSemaphore& semaphore ) {}
+    inline BooleanSemaphore([[maybe_unused]] const BooleanSemaphore& semaphore) {}
 
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore& operator=( const BooleanSemaphore& semaphore ) {return *this;}
+    inline BooleanSemaphore& operator = ([[maybe_unused]] const BooleanSemaphore& semaphore) { return *this; }
+
   public:
     BooleanSemaphore();
     ~BooleanSemaphore();
 };
-
 
 #endif

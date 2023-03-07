@@ -8,10 +8,11 @@ import jinja2
 class PlotPatchesInPeanoBlockFormat(ActionSet):
   """
   Very simple plotter that should be used in combination with Patches.
-  At the moment, I only support plain double patches, i.e. you have to 
-  use the default source code generator for your stuff. This plotter 
-  works only for cell patches, i.e. patches associated with faces or 
-  vertices are not supported.
+  Patches with varying datatypes are supported via the "dataType" parameter,
+  but this defaults to doubles. This parameter should contain the C-style-
+  name of the type of the variable in the patch, e.g. float, double, etc.
+  This plotter works only for cell patches, i.e. patches associated with 
+  faces or vertices are not supported.
   
   At the moment, I can only plot one dataset (patch type) per plotter.
   In theory, the underlying Peano plotter however could dump multiple
@@ -19,7 +20,6 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   
   Also, this dump expects incoming data to be AoS.
   """
-  
   
   def __init__(self,
                filename,
@@ -30,10 +30,15 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
                metadata = "", 
                mapping = [], 
                guard="true", 
+<<<<<<< HEAD
                additional_includes="", 
                precision=3,
                select_dofs = None
                ):
+=======
+               additional_includes="", precision=3,
+               dataType="double"):
+>>>>>>> refs/remotes/origin/p4
     """
     
       plot_cell_data: Boolean
@@ -50,6 +55,9 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
         You can make the plotter only plot some of the dofs of interest
            
     """
+
+    valid_datatypes = {"float", "double", "long double"}
+
     self._plot_cell_data           = plot_cell_data
     
     self.d = {}
@@ -104,7 +112,11 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
       if i!=patch.dim[0]:
         print( "Error: patch plotter requires patch to have same dimension along all coordinate axes")
 
+    if dataType not in valid_datatypes:
+      raise Exception("Chosen datatype " + datatype + " for plotting of patches is not a recognized choice.")
+
     self.d[ "PRECISION" ]        = precision
+    self.d[ "DATATYPE"  ]        = dataType
     self.d[ "TIMESTAMP" ]        = time_stamp_evaluation
 
 
@@ -169,6 +181,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     int cellIndex  = _dataWriter->getFirstCellWithinPatch(patchIndex);
     int currentDoF = 0;
   
+<<<<<<< HEAD
     dfor(k,{{DOFS_PER_AXIS}}) {
       {% if SELECT_DOFS==None %}
       double* data = fineGridCell{{NAME}}.value + currentDoF;
@@ -180,6 +193,10 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
         {% endfor %}
       };
       {% endif %}
+=======
+    dfor(k,{DOFS_PER_AXIS}) {{
+      {DATATYPE}* data = fineGridCell{NAME}.value + currentDoF;
+>>>>>>> refs/remotes/origin/p4
       _dataWriter->plotCell( cellIndex, data );
       cellIndex++;
       currentDoF += {{UNKNOWNS}};
@@ -207,6 +224,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     int vertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
     int currentDoF = 0;
   
+<<<<<<< HEAD
     dfor(k,{{DOFS_PER_AXIS}}) {
       {% if SELECT_DOFS==None %}
       double* data = fineGridCell{{NAME}}.value + currentDoF;
@@ -218,6 +236,10 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
         {% endfor %}
       };
       {% endif %}
+=======
+    dfor(k,{DOFS_PER_AXIS}) {{
+      {DATATYPE}* data = fineGridCell{NAME}.value + currentDoF;
+>>>>>>> refs/remotes/origin/p4
       _dataWriter->plotVertex( vertexIndex, data );
       vertexIndex++;
       currentDoF += {{UNKNOWNS}};

@@ -1,18 +1,16 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from abc import abstractmethod
- 
 
 class ActionSet(object):
   """
-  
     Actions are triggered by the observer and represent the highest
     grid traversal view that I have implemented within Peano. They
     listen to the tree traversal through notifications alike "this 
     is the first time I see (touch) a vertex". A list of messages 
     that we can listen to is specified by this class through class
     attributes starting with OPERATION_.
-    
+
     Action sets are non-persistent, i.e. if you generate C++ code, 
     remind yourself that the class implementing a particular action
     set will be generated once per grid sweep per tree. As a logical
@@ -21,7 +19,7 @@ class ActionSet(object):
     However, there's a creational routine and a merge command, i.e.
     you can implement forks and joins (reductions) "natively". There
     are also functions to inject static data into an action set.
-    
+
     There will be one class per action set per context (observer) 
     it is used for. Oen object will be created per grid sweep, and 
     it will have the tree identifier -1 by default. The actual 
@@ -30,53 +28,45 @@ class ActionSet(object):
     role of the prototype object, i.e. the one tied to spacetree id
     -1, is to manage the grid traversal events. It is this object
     that is asked to hand out grid traversals.
-    
+
     BSP-like programming:
     ---------------------
-    
+
     If you want to realise BSP-like programming, then you typically
     realise the data sharing via the copy constructor. The 
     attributes of the action set then are all thread-local, i.e. 
     there's no need to be afraid of memory races. The join in turn
     should be done within OPERATION_END_TRAVERSAL. Here, you'll need a 
     semaphore, as the fusion of objects is not per se thread-safe. 
-    
   """
   def __init__(self):
     pass
-
 
   @abstractmethod
   def get_constructor_body(self):
     return "// @todo Should be overwritten\n"
 
-
   def get_static_initialisations(self,full_qualified_classname):
     return ""
-
 
   @abstractmethod
   def get_destructor_body(self):
     return "// @todo Should be overwritten\n"
 
-
   def get_body_of_getGridControlEvents(self):
-    return "return std::vector< peano4::grid::GridControlEvent >();\n" 
-
+    return "return std::vector< peano4::grid::GridControlEvent >();\n"
 
   @abstractmethod
   def get_body_of_prepareTraversal(self):
-    return "\n" 
+    return "\n"
 
-  
   @abstractmethod
   def get_body_of_unprepareTraversal(self):
-    return "\n" 
-
+    return "\n"
 
   OPERATION_BEGIN_TRAVERSAL           = "beginTraversal"
   OPERATION_END_TRAVERSAL             = "endTraversal"
-  
+
   OPERATION_CREATE_PERSISTENT_VERTEX  = "createPersistentVertex"
   OPERATION_DESTROY_PERSISTENT_VERTEX = "destroyPersistentVertex"
   OPERATION_CREATE_HANGING_VERTEX     = "createHangingVertex"
@@ -87,14 +77,13 @@ class ActionSet(object):
   OPERATION_DESTROY_HANGING_FACE      = "destroyHangingFace"
   OPERATION_CREATE_CELL               = "createCell"
   OPERATION_DESTROY_CELL              = "destroyCell"
-  
+
   OPERATION_TOUCH_VERTEX_FIRST_TIME   = "touchVertexFirstTime"
   OPERATION_TOUCH_VERTEX_LAST_TIME    = "touchVertexLastTime"
   OPERATION_TOUCH_FACE_FIRST_TIME     = "touchFaceFirstTime"
   OPERATION_TOUCH_FACE_LAST_TIME      = "touchFaceLastTime"
   OPERATION_TOUCH_CELL_FIRST_TIME     = "touchCellFirstTime"
   OPERATION_TOUCH_CELL_LAST_TIME      = "touchCellLastTime"
-
 
   @abstractmethod
   def get_body_of_operation(self,operation_name):
@@ -103,7 +92,6 @@ class ActionSet(object):
      of operation_name
     """
     return "// @todo Should be overwritten by mapping\n"
-
 
   @abstractmethod
   def get_action_set_name(self):
@@ -114,7 +102,6 @@ class ActionSet(object):
     """
     return "Dummy"
 
-
   @abstractmethod
   def user_should_modify_template(self):
     """
@@ -124,19 +111,15 @@ class ActionSet(object):
     """
     return True
 
-
   @abstractmethod
   def get_attributes(self):
     """
-
      Return attributes as copied and pasted into the generated class.
-     
+
      Please note that action sets are not persistent, i.e. there is one
      object creation per grid sweep per tree.
-     
     """
     return ""
-
 
   @abstractmethod
   def get_includes(self):
@@ -144,4 +127,3 @@ class ActionSet(object):
      Return include statements that you need.
     """
     return ""
-

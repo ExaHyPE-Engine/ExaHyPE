@@ -9,7 +9,6 @@
 #include <sstream>
 #include <functional>
 
-
 #ifdef __APPLE__
 #include <mach/mach_time.h>
 #include <mach/mach.h>
@@ -20,7 +19,6 @@
 #include <chrono>
 
 #include "config.h"
-
 
 namespace tarch {
   namespace logging {
@@ -50,7 +48,6 @@ namespace tarch {
 #else
 #define logDebug(methodName, logMacroMessageStream)
 #endif
-
 
 #if PeanoDebug>=1
 #define logTraceIn(methodName) \
@@ -390,7 +387,6 @@ namespace tarch {
 #define logTraceOutWith12Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5,argument6,argument7,argument8,argument9,argument10,argument11)
 #endif
 
-
 /**
  * @brief Wrapper macro around tarch::tarch::logging::Log to improve logging.
  *
@@ -423,10 +419,9 @@ namespace tarch {
 
 #define logExceptionAndQuit(exception) \
   { \
-    std::cerr << std::string("caught exception (file:)") << __FILE__ << std::string(",line:") << __LINE__ << std::string("): ") << std::string(exception.what()); \
+    std::cerr << std::string("caught exception (file:)") << __FILE__ << std::string(", line:") << __LINE__ << std::string("): ") << std::string(exception.what()); \
     exit(-1); \
   }
-
 
 /**
  * @brief Wrapper macro around tarch::tarch::logging::Log to improve logging.
@@ -476,8 +471,6 @@ namespace tarch {
       _log.error (methodName, logMacroMessage); \
    }
 
-
-
 /**
  * Log Device
  *
@@ -525,7 +518,6 @@ class tarch::logging::Log {
     typedef CommandLineLogger     UseLogService;
     #endif
 
-
     /**
      * Returns the time stamp in nanoseconds.
      */
@@ -549,7 +541,6 @@ class tarch::logging::Log {
      */
     static std::string getMachineInformation();
 
-
     /**
      * Constructor
      *
@@ -570,7 +561,6 @@ class tarch::logging::Log {
      */
     static void exception( const std::bad_alloc& exception, const std::string& file, const int lineNumber );
 
-
     /**
      * We could make the logMacroMessage passed into a log statement a string. However,
      * many codes write rather complicated strings and therefore spend a lot of
@@ -584,7 +574,6 @@ class tarch::logging::Log {
      * through a (lambda) function modelled via Message.
      */
     typedef std::function< std::string(void) >  Message;
-
 
     /**
      * Log Debug Information
@@ -605,10 +594,9 @@ class tarch::logging::Log {
      * @param logMacroMessage    log logMacroMessage
      */
     #if PeanoDebug>=4
-    void debug(const std::string& methodName, Message logMacroMessage);
+      void debug(const std::string& methodName, Message logMacroMessage);
     #else
-    void debug(const std::string& methodName, Message logMacroMessage) const {
-    }
+      inline void debug([[maybe_unused]] const std::string& methodName, [[maybe_unused]] Message logMacroMessage) const {}
     #endif
 
     /**
@@ -627,7 +615,6 @@ class tarch::logging::Log {
      * @param logMacroMessage    log logMacroMessage
      */
     void info(const std::string& methodName, Message logMacroMessage);
-
 
     /**
      * Log a Warning

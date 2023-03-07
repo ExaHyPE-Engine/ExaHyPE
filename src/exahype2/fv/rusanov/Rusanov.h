@@ -2,12 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
 #include "Functors.h"
 #include "LoopBody.h"
 
 #include "exahype2/CellData.h"
+
+#include "Rusanov_Helper.cpph"
 
 #if defined(GPUOffloadingOMP) or defined(SharedOMP)
 #include "exahype2/fv/rusanov/omp/Rusanov.h"
@@ -20,8 +20,6 @@
 #if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
 #include "exahype2/fv/rusanov/sycl/Rusanov.h"
 #endif
-
-
 
 /**
  * @page Rusanov ExaHyPE's Rusanov kernel implementation
@@ -678,8 +676,6 @@ namespace exahype2 {
   }
 }
 
-
-#include "Rusanov_Helper.cpph"
 #include "Rusanov_patchwise_functors.cpph"
 #include "Rusanov_patchwise_static_calls.cpph"
 #include "Rusanov_patchwise_in_situ_static_calls.cpph"
@@ -687,4 +683,3 @@ namespace exahype2 {
 #include "Rusanov_batched_functors.cpph"
 #include "Rusanov_batched_static_calls.cpph"
 #include "Rusanov_batched_in_situ_static_calls.cpph"
-
