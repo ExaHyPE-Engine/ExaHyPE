@@ -38,8 +38,6 @@ void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
   }
 }
 
-
-
 template <>
 double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
     const double* __restrict__                   QOut,
