@@ -9,30 +9,21 @@
 #pragma once
 
 #include <string>
-  
 
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
-
 
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
 
-
-  
 namespace tarch{
 namespace mpi{
-
   struct IntegerMessage;
 }
 }
-
-
 
 struct tarch::mpi::IntegerMessage {
   public:
@@ -54,6 +45,8 @@ struct tarch::mpi::IntegerMessage {
     
 
     #ifdef Parallel
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -73,8 +66,8 @@ struct tarch::mpi::IntegerMessage {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    
-    
+    PRAGMA_POP
+
     /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
@@ -117,10 +110,7 @@ struct tarch::mpi::IntegerMessage {
     std::string toString() const;
   
   private:
-      int   _value;
-
-
-
+    int   _value;
 
     #ifdef Parallel
     private:
@@ -136,9 +126,4 @@ struct tarch::mpi::IntegerMessage {
       static MPI_Datatype  Datatype;
       #endif
     #endif
-
-
-
 };
-
-  

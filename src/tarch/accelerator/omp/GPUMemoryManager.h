@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/multicore.h"
 
-#if !defined( _TARCH_MULTICORE_OMP_GPU_MEMORY_MANAGER_H_) && defined(GPUOffloadingOMP)
+#if !defined( _TARCH_MULTICORE_OMP_GPU_MEMORY_MANAGER_H_) and defined(GPUOffloadingOMP) and defined(_OPENMP) and not defined(__HIP_DEVICE_COMPILE__)
 #define _TARCH_MULTICORE_OMP_GPU_MEMORY_MANAGER_H_
 
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -13,7 +13,7 @@
 #include <vector>
 
 namespace tarch {
-  namespace multicore {
+  namespace accelerator {
     namespace omp {
       class GPUMemoryManager;
     }
@@ -31,7 +31,7 @@ namespace tarch {
  * It seems that memory allocation on GPUs is very slow with most OMP runtimes.
  * Therefore, it is reasonable to manage the GPU memory in the user space.
  */
-class tarch::multicore::omp::GPUMemoryManager {
+class tarch::accelerator::omp::GPUMemoryManager {
   private:
     static tarch::logging::Log          _log;
 
@@ -49,8 +49,8 @@ class tarch::multicore::omp::GPUMemoryManager {
     typedef std::map< void*, int >               UsedPages;
 
     struct DeviceMemory {
-      FreePages   freePages;
-      UsedPages   usedPages;
+      FreePages freePages;
+      UsedPages usedPages;
     };
 
     /**
@@ -73,10 +73,9 @@ class tarch::multicore::omp::GPUMemoryManager {
     /**
      * @param size Count of block, i.e. number of doubles
      *
-     * @return This pointer is a device pointer, i.e. do not use it on the
-     *   host.
+     * @return This pointer is a device pointer, i.e. do not use it on the host.
      */
-    template< typename T >
+    template <class T>
     T* allocate( int size, int device ) {
       return reinterpret_cast<T*>( allocateRawData(size * static_cast<int>(sizeof(T)), device ) );
     }
@@ -106,10 +105,10 @@ class tarch::multicore::omp::GPUMemoryManager {
      * rush is given by growth. Many codes acquire data that depends on the
      * Dimensions. Therefore, I use this magic default here.
      *
-     * @param growth Number greater than zero which tells code how many entries
-     *   (pages) to book whenever it runs out of memory.
+     * @param growth Number greater than zero which tells the code how many entries
+     * (pages) to book whenever it runs out of memory.
      */
-    void* allocateRawData( int size, int device, int growth=8);
+    void* allocateRawData( int size, int device );
 
     /**
      * Free does not actually free data, but instead hands the memory block
@@ -129,6 +128,5 @@ class tarch::multicore::omp::GPUMemoryManager {
      */
     void clear();
 };
-
 
 #endif

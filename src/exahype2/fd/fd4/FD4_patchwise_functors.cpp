@@ -1,9 +1,10 @@
 #include "FD4.h"
-#include "tarch/accelerator/accelerator.h"
-#include "tarch/multicore/otter.h"
+
 #include "exahype2/fd/LoopBody.h"
 #include "exahype2/fd/fd4/LoopBody.h"
 
+#include "tarch/multicore/otter.h"
+#include "tarch/accelerator/accelerator.h"
 
 void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   ::exahype2::CellData&   patchData,
@@ -31,16 +32,15 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1,numberOfGridCellsPerPatchPerAxis,0,       unknowns,0);
 
   logDebug( "timeStep_patchwise_heap_functors(...)", "size of temp flux field=" << QOutEnumerator.size() );
-  double* tempFluxX =  evaluateFlux                                                ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxY =  evaluateFlux                                                ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxZ = (evaluateFlux and Dimensions==3)                             ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempDifferentialSourceX =  evaluateDifferentialSource                    ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempDifferentialSourceY =  evaluateDifferentialSource                    ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempDifferentialSourceZ = (evaluateDifferentialSource and Dimensions==3) ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempKODissipationX      =  evaluateKODissipation                         ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempKODissipationY      =  evaluateKODissipation                         ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempKODissipationZ      = (evaluateKODissipation      and Dimensions==3) ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
-
+  double* tempFluxX =  evaluateFlux                                                ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxY =  evaluateFlux                                                ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxZ = (evaluateFlux and Dimensions==3)                             ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempDifferentialSourceX =  evaluateDifferentialSource                    ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempDifferentialSourceY =  evaluateDifferentialSource                    ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempDifferentialSourceZ = (evaluateDifferentialSource and Dimensions==3) ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempKODissipationX      =  evaluateKODissipation                         ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempKODissipationY      =  evaluateKODissipation                         ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempKODissipationZ      = (evaluateKODissipation      and Dimensions==3) ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
@@ -659,5 +659,4 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   if (tempKODissipationX!=nullptr)      tarch::freeMemory(tempKODissipationX,      tarch::MemoryLocation::Heap);
   if (tempKODissipationY!=nullptr)      tarch::freeMemory(tempKODissipationY,      tarch::MemoryLocation::Heap);
   if (tempKODissipationZ!=nullptr)      tarch::freeMemory(tempKODissipationZ,      tarch::MemoryLocation::Heap);
-
 }

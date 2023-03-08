@@ -2,26 +2,20 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <string>
 #include <map>
 #include <vector>
 #include <tuple>
 
-
 #include "Log.h"
 #include "tarch/timing/Watch.h"
 #include "tarch/multicore/BooleanSemaphore.h"
-
-
-
 
 namespace tarch {
   namespace logging {
     class Statistics;
   }
 }
-
 
 /**
  * Global statistics interface
@@ -46,13 +40,13 @@ class tarch::logging::Statistics {
      * @param identifier Unique name (string) for this event
      */
     #ifdef TrackStatistics
-    void log( const std::string& identifier, double value, bool disableSampling = false );
-    void log( const std::string& identifier, const std::string& value );
-    void inc( const std::string& identifier, double value = 1.0, bool disableSampling = false );
+      void log( const std::string& identifier, double value, bool disableSampling = false );
+      void log( const std::string& identifier, const std::string& value );
+      void inc( const std::string& identifier, double value = 1.0, bool disableSampling = false );
     #else
-    void log( const std::string& identifier, double value, bool disableSampling = false ) {}
-    void log( const std::string& identifier, const std::string& value ) {}
-    void inc( const std::string& identifier, double value = 1.0, bool disableSampling = false ) {}
+      inline void log( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] double value, [[maybe_unused]] bool disableSampling = false ) {}
+      inline void log( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] const std::string& value ) {}
+      inline void inc( [[maybe_unused]] const std::string& identifier, [[maybe_unused]] double value = 1.0, [[maybe_unused]] bool disableSampling = false ) {}
     #endif
 
     /**
@@ -61,6 +55,7 @@ class tarch::logging::Statistics {
     void writeToCSV( std::string  filename = "statistics" );
 
     void clear();
+
   private:
     static Statistics   _singleton;
 
@@ -138,6 +133,3 @@ class tarch::logging::Statistics {
      */
     void updateDataSnapshot(const std::string& identifier, double value);
 };
-
-
-

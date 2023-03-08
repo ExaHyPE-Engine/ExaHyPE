@@ -19,40 +19,40 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingCPP)
-  constexpr int solversHaloSize        = 1;
+  constexpr int solversHaloSize = 1;
 
   exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator(
-    1, 
-    numberOfVolumesPerAxisInPatch, 
-    haloSize, 
-    unknowns, 
+    1,
+    numberOfVolumesPerAxisInPatch,
+    haloSize,
+    unknowns,
     auxiliaryVariables
   );
   exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator(
-    1, 
+    1,
     numberOfVolumesPerAxisInPatch,
-    0, 
-    unknowns, 
+    0,
+    unknowns,
     auxiliaryVariables
   );
   TempDataEnumerator fluxHostEnumerator(
-    hostPatchData.numberOfCells, 
-    numberOfVolumesPerAxisInPatch,   
-    solversHaloSize, 
-    unknowns, 
+    hostPatchData.numberOfCells,
+    numberOfVolumesPerAxisInPatch,
+    solversHaloSize,
+    unknowns,
     0
   );
   TempDataEnumerator ncpHostEnumerator(
-    hostPatchData.numberOfCells, 
-    numberOfVolumesPerAxisInPatch+1, 
-    solversHaloSize, 
-    unknowns, 
+    hostPatchData.numberOfCells,
+    numberOfVolumesPerAxisInPatch+1,
+    solversHaloSize,
+    unknowns,
   0);
   TempDataEnumerator eigenvalueHostEnumerator(
-    hostPatchData.numberOfCells, 
-    numberOfVolumesPerAxisInPatch,   
-    solversHaloSize,        
-    1, 
+    hostPatchData.numberOfCells,
+    numberOfVolumesPerAxisInPatch,
+    solversHaloSize,
+    1,
     0
   );
 
@@ -70,25 +70,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   // The cartesian products have to be located on the heap so that they are accessible from the GPU.
   // Here we define types to able to allocated in heap.
   using cart_prod_2d = decltype(tl::views::cartesian_product(
-    std::views::iota(0,1), 
+    std::views::iota(0,1),
     std::views::iota(0,1)
   ));
   using cart_prod_3d = decltype(tl::views::cartesian_product(
-    std::views::iota(0,1), 
-    std::views::iota(0,1), 
+    std::views::iota(0,1),
+    std::views::iota(0,1),
     std::views::iota(0,1)
   ));
   using cart_prod_4d = decltype(tl::views::cartesian_product(
-    std::views::iota(0,1), 
-    std::views::iota(0,1), 
-    std::views::iota(0,1), 
+    std::views::iota(0,1),
+    std::views::iota(0,1),
+    std::views::iota(0,1),
     std::views::iota(0,1)
   ));
   using cart_prod_5d = decltype(tl::views::cartesian_product(
-    std::views::iota(0,1), 
-    std::views::iota(0,1), 
-    std::views::iota(0,1), 
-    std::views::iota(0,1), 
+    std::views::iota(0,1),
+    std::views::iota(0,1),
+    std::views::iota(0,1),
+    std::views::iota(0,1),
     std::views::iota(0,1)
   ));
 
@@ -188,21 +188,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
 
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
-    1, 
+    1,
     numberOfVolumesPerAxisInPatch,
     haloSize,
     unknowns,
     auxiliaryVariables
   );
   exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
-    1, 
+    1,
     numberOfVolumesPerAxisInPatch,
     0,
     unknowns,
     auxiliaryVariables
   );
   TempDataEnumerator fluxEnumerator(
-    hostPatchData.numberOfCells, 
+    hostPatchData.numberOfCells,
     numberOfVolumesPerAxisInPatch,
     haloSize,
     unknowns,
@@ -216,7 +216,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
     0
   );
   TempDataEnumerator eigenvalueEnumerator(
-    hostPatchData.numberOfCells, 
+    hostPatchData.numberOfCells,
     numberOfVolumesPerAxisInPatch,
     haloSize,
     1,
@@ -224,7 +224,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   );
 
   if (Dimensions==2 and evaluateSource) {
-    
     std::for_each(
       std::execution::par_unseq,
       range2d_cell->begin(),
@@ -252,7 +251,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           QOut[patchIndex],
           QOutEnumerator
         );
-
       }
     );
   }
@@ -284,7 +282,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           QOut[patchIndex],
           QOutEnumerator
         );
-
       }
     );
   }
@@ -309,11 +306,10 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           QOut[patchIndex],
           QOutEnumerator
         );
-
       }
     );
   }
-  else {  
+  else {
     std::for_each(
       std::execution::par_unseq,
       range3d_cell_unknown_aux->begin(),
@@ -334,13 +330,11 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           QOut[patchIndex],
           QOutEnumerator
         );
-
       }
     );
   }
 
   if (Dimensions==2) {
-    
     std::for_each(
       std::execution::par_unseq,
       range1d_cell_solvhalosize->begin(),
@@ -368,7 +362,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempEigenvalueX,
           eigenvalueEnumerator
         );
-
       }
     );
 
@@ -399,7 +392,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempEigenvalueY,
           eigenvalueEnumerator
         );
-
       }
     );
 
@@ -433,12 +425,10 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           QOut[patchIndex],
           QOutEnumerator
         );
-
       }
     );
   }
   else {
-
     std::for_each(
       std::execution::par_unseq,
       range2d_cell_solvhalosize->begin(),
@@ -466,7 +456,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempEigenvalueX,
           eigenvalueEnumerator
         );
-
       }
     );
 
@@ -497,7 +486,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempEigenvalueY,
           eigenvalueEnumerator
         );
-
       }
     );
 
@@ -514,7 +502,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
         dt=hostPatchData.dt
       ](auto ids){
         auto [y,x,patchIndex,z] = ids;
-    
+
         internal::computeMaxEigenvalue_LoopBody<Solver>(
           QIn[patchIndex],
           QInEnumerator,
@@ -528,7 +516,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempEigenvalueZ,
           eigenvalueEnumerator
         );
-
       }
     );
 
@@ -545,7 +532,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
         QOut=hostPatchData.QOut
       ](auto ids){
         auto [x,y,z,patchIndex,unknown] = ids;
-        
+
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
           QIn[patchIndex],
           QInEnumerator,
@@ -562,14 +549,10 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           QOut[patchIndex],
           QOutEnumerator
         );
-
       }
     );
-
   }
-
   if (evaluateFlux and Dimensions==2) {
-
     std::for_each(
       std::execution::par_unseq,
       range1d_cell_solvhalosize->begin(),
@@ -583,7 +566,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
         dt=hostPatchData.dt
       ](auto ids){
         auto [y,patchIndex,x] = ids;
-        
+
         internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           QIn[patchIndex],
           QInEnumerator,
@@ -597,7 +580,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempFluxX,
           fluxEnumerator
         );
-
       }
     );
 
@@ -614,7 +596,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
         dt=hostPatchData.dt
       ](auto ids){
         auto [x,patchIndex,y] = ids;
-        
+
         internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           QIn[patchIndex],
           QInEnumerator,
@@ -628,7 +610,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempFluxY,
           fluxEnumerator
         );
-
       }
     );
 
@@ -660,9 +641,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       }
     );
   }
-
   else if (evaluateFlux and Dimensions==3) {
-
     std::for_each(
       std::execution::par_unseq,
       range2d_cell_solvhalosize->begin(),
@@ -676,7 +655,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
         dt=hostPatchData.dt
       ](auto ids){
         auto [z,y,patchIndex,x] = ids;
-        
+
         internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           QIn[patchIndex],
           QInEnumerator,
@@ -690,7 +669,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempFluxX,
           fluxEnumerator
         );
-
       }
     );
 
@@ -707,7 +685,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
         dt=hostPatchData.dt
       ](auto ids){
         auto [z,x,patchIndex,y] = ids;
-        
+
         internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           QIn[patchIndex],
           QInEnumerator,
@@ -721,7 +699,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempFluxY,
           fluxEnumerator
         );
-
       }
     );
 
@@ -752,10 +729,8 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempFluxZ,
           fluxEnumerator
         );
-
       }
     );
-
     std::for_each(
       std::execution::par_unseq,
       range3d_cell_unknown->begin(),
@@ -781,13 +756,10 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           *(QOut + patchIndex),
           QOutEnumerator
         );
-
       }
     );
   }
-
   if (evaluateNonconservativeProduct and Dimensions==2) {
-    
     std::for_each(
       std::execution::par_unseq,
       range1d_cell_solvhalosize_m->begin(),
@@ -815,7 +787,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempNonconservativeProductX,
           ncpEnumerator
         );
-
       }
     );
 
@@ -846,7 +817,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempNonconservativeProductY,
           ncpEnumerator
         );
-
       }
     );
 
@@ -875,12 +845,10 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           *(QOut + patchIndex),
           QOutEnumerator
         );
-
       }
     );
   }
   else if (evaluateNonconservativeProduct and Dimensions==3) {
-
     std::for_each(
       std::execution::par_unseq,
       range2d_cell_solvhalosize_m->begin(),
@@ -908,7 +876,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempNonconservativeProductX,
           ncpEnumerator
         );
-
       }
     );
 
@@ -939,7 +906,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempNonconservativeProductY,
           ncpEnumerator
         );
-
       }
     );
 
@@ -970,7 +936,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           tempNonconservativeProductZ,
           ncpEnumerator
         );
-
       }
     );
 
@@ -999,15 +964,12 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           *(QOut + patchIndex),
           QOutEnumerator
         );
-
       }
     );
   }
 
-
   if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
     for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-
       double newMaxEigenvalue = 0.0;
 
       std::for_each(
@@ -1039,14 +1001,11 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           );
         }
       );
-
-
       hostPatchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
   }
   else if (evaluateMaximumEigenvalueAfterTimeStep) {
     for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-
       double newMaxEigenvalue = 0.0;
       std::for_each(
         std::execution::seq,
@@ -1077,8 +1036,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           );
         }
       );
-
-
       hostPatchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
   }

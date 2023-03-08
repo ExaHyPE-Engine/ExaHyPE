@@ -1,15 +1,14 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .Helper import Overwrite
-from .Helper import writeFile
-
 import os
 import re
 
+from .Helper import write_file
+
+from .Overwrite  import Overwrite
 
 class Constants(object):
   """
-
     Represents all constants that a Project exports from the Python
     script into C++. I do provide routines to export defines or
     constants (via constexpr). For the latter, I rely on the auto
@@ -22,10 +21,8 @@ class Constants(object):
     my_project.constants.export ...
 
     Constants also allows you to add defines (precompiler statements).
-
   """
   default_overwrite = True
-
 
   def __init__(self,project):
     self.defines = []
@@ -40,45 +37,33 @@ class Constants(object):
       self.d[ "CLOSE_NAMESPACE" ]       += "}\n"
       self.d[ "INCLUDE_GUARD" ]         += i + "_"
     self.d[ "INCLUDE_GUARD" ]           += "CONSTANTS_"
-
     self.d[ "INCLUDE_GUARD" ] = self.d[ "INCLUDE_GUARD" ].upper()
-
 
   def add_include(self, include_statement ):
     """
-
      Add a whole include statement.
-
     """
     self.d[ "INCLUDES" ] += include_statement + "\n"
 
-
   def export( self, name, value ):
     """
-
       Tell the C++ code underlying the project that a certain variable with a
       name has a certain value. The passed arguments are mapped onto an
       constexpr. Therefore, name has to be a string, while value can be an
       integer, a float or a string as well. If you want to export booleans
       or just define variants, you have to use the other routines.
-
-
     """
     new_entry = "constexpr auto " + str(name) + " = " + str(value) + ";"
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
     pass
 
-
   def export_boolean_sequence( self, name, value ):
     """
-
       Tell the C++ code underlying the project that a certain variable with a
       name has a certain value. The passed arguments are mapped onto an
       constexpr. Therefore, name has to be a string, while value can be an
       integer, a float or a string as well. If you want to export booleans
       or just define variants, you have to use the other routines.
-
-
     """
     new_entry = "const std::bitset<" + str(len(value)) + "> " + str(name) + " = 0";
     base = 1
@@ -90,41 +75,43 @@ class Constants(object):
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
     pass
 
-
   def export_string( self, name, value ):
     """
-
       Tell the C++ code underlying the project that a certain variable with a
       name has a certain value. The passed arguments are mapped onto an
       constexpr. Therefore, name has to be a string, while value can be an
       integer, a float or a string as well. If you want to export booleans
       or just define variants, you have to use the other routines.
-
-
     """
     self.export_const_with_type( name, "\"" + str(value) + "\"", "std::string" )
     pass
 
-
   def export_const_with_type( self, name, value, type ):
     """
-
       Tell the C++ code underlying the project that a certain variable with a
       name has a certain value. The passed arguments are mapped onto an
-      constexpr. Therefore, name has to be a string, while value can be an
+      const. Therefore, name has to be a string, while value can be an
       integer, a float or a string as well. If you want to export booleans
       or just define variants, you have to use the other routines.
-
-
     """
     new_entry = "const " + type + " " + str(name) + " = " + value + ";"
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
     pass
 
-
+  def export_constexpr_with_type( self, name, value, type ):
+    """
+      Tell the C++ code underlying the project that a certain variable with a
+      name has a certain value. The passed arguments are mapped onto an
+      constexpr. Therefore, name has to be a string, while value can be an
+      integer, a float or a string as well. If you want to export booleans
+      or just define variants, you have to use the other routines.
+    """
+    new_entry = "constexpr " + type + " " + str(name) + " = " + value + ";"
+    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
+    pass
 
   def clear(self):
-    self.d[ "ADD_CONSTANTS" ]            = ""
+    self.d[ "ADD_CONSTANTS" ] = ""
     pass
 
   def export_boolean( self, name, value ):
@@ -136,16 +123,14 @@ class Constants(object):
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + ";\n"
     pass
 
-
   def define( self, name ):
     new_entry = "#define " + name
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
     pass
 
-
   def generate(self, overwrite, directory):
-    filename = directory + "/Constants.h";
-    if writeFile(overwrite,self.default_overwrite,filename):
+    filename = directory + "/Constants.h"
+    if write_file(overwrite,self.default_overwrite,filename):
       print( "write " + filename )
 
       #for i in self.cppfiles:

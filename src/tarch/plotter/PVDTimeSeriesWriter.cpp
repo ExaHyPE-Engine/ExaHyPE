@@ -9,7 +9,7 @@
 namespace {
   tarch::logging::Log _log( "tarch::plotter::PVDTimeSeriesWriter" );
 
-  const std::string Tail = "</Collection>\n</VTKFile>\n\n";
+  //const std::string Tail = "</Collection>\n</VTKFile>\n\n";
 
   double TimeStampPrecision = 1e-5;
 }
