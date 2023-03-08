@@ -8,8 +8,6 @@ import dastgen2
 
 import shutil
 
-import swift2.particle.tests
-
 ########################################################################################
 # Parse user input
 ########################################################################################
@@ -19,14 +17,14 @@ parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=i
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False,       help="Verbose")
 parser.add_argument("-c",   "--clean",             dest="clean_temporary_directories",  action="store_true",        help="Remove temporary directories before script starts" )
 parser.add_argument("-d",   "--dimensions",        dest="dimensions",     type=int,   default=2,                    help="Spatial dimensions (default 2)" )
-parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=0.5,                  help="End of simulation" )
+parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0,                  help="End of simulation" )
 parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=float, default=1e-3,                 help="Global timestep size (initial value)" )
-parser.add_argument("-r",   "--cut-off",           dest="cut_off_radius", type=float, default=0.05,                 help="Radius guiding AMR around particle" )
+parser.add_argument("-plot",  "--plot-delta",      dest="plot_delta",     type=float, default=0.01,             help="Plot delta (0 switches off)" )
+#parser.add_argument("-r",   "--cut-off",           dest="cut_off_radius", type=float, default=0.05,                 help="Radius guiding AMR around particle" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3,                  help="Cell size (default 0.3)" )
-parser.add_argument("-hmin","--h-min",             dest="h_min",
-                    type=float, default=0.0001,                 help="Minimum value for refined cell size" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../..",                       help="Peano4 directory" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False,       help="Switch on assertions" )
+parser.add_argument("-integrator",  "--time-integrator", dest="time_integrator",  choices=[ "leapfrog", "euler", "euler-dynamic", "Euler", "Euler-dynamic" ], required=True,   help="Type of time integrator to use (default: leapfrog)" )
 args = parser.parse_args()
 
 
@@ -41,18 +39,50 @@ project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"],
                           executable="orbit-experiment" )
 
 
-# Declare the particle type
-particle   = swift2.particle.tests.testLeapfrogFixedTimeStepSize( name                   = "Planet", 
-                                                                  cfl_factor             = 0.2, 
-                                                                  constant_time_step_size= True,
-                                                                  initial_time_step_size = args.timestep_size,
-                                                                  particles_per_cell = 0,
-                                                                  min_h = args.h_min,
-                                                                  max_h = 0.3
-                                                                )
+"""
+Declare the particle type:
+We need to specify the time integration scheme that will be used to evolve
+this particle. Current choices include:
+  - Leapfrog (default)
+  - Explicit Euler with fixed interaction radius
+  - Explicit Euler with variable interaction radius
+
+These take the same input parameters as shown below. If you switch between
+these, do not forget to remove the previous main
+
+@TODO implement set methods for input parameters to use a single call below.
+"""
+
+if(args.time_integrator=='leapfrog'):
+  particle   = swift2.particle.LeapfrogFixedInteractionRadius( name                   = "Planet", 
+                                                               cfl_factor             = 0.2, 
+                                                               initial_time_step_size = args.timestep_size,
+                                                               particles_per_cell = 0,
+                                                               min_h = args.cell_size,
+                                                               max_h = 0.5
+                                                             )
+elif(args.time_integrator=='euler' or 'Euler'):
+  particle   = swift2.particle.ExplicitEulerFixedInteractionRadius( name                   = "Planet", 
+                                                               cfl_factor             = 0.2, 
+                                                               initial_time_step_size = args.timestep_size,
+                                                               particles_per_cell = 0,
+                                                               min_h = args.cell_size,
+                                                               max_h = 0.5
+                                                             )
+
+elif(args.time_integrator=='euler-dynamic' or 'Euler-dynamic'):
+  particle   = swift2.particle.ExplicitEulerDynamicInteractionRadius( name                   = "Planet", 
+                                                               cfl_factor             = 0.2, 
+                                                               initial_time_step_size = args.timestep_size,
+                                                               particles_per_cell = 0,
+                                                               min_h = args.cell_size,
+                                                               max_h = 0.5
+                                                             )
+else:
+  print('Time integrator not supported. Please check the list of options.')
 
 
-# Some attributes specific to this test
+# Declare some particle attributes useful for this test
 energy_kin_attr = dastgen2.attributes.Double("energyKin")
 energy_pot_attr = dastgen2.attributes.Double("energyPot")
 energy_tot_attr = dastgen2.attributes.Double("energyTot")
@@ -69,7 +99,6 @@ offset      = [ 0, 0, 0 ]
 domain_size = [ 1, 1, 1 ]
 periodic_boundary_conditions = [False,False,False]          # Periodic BC
 
-
 project.set_global_simulation_parameters(
   dimensions            = dimensions,
   offset                = offset,  
@@ -77,9 +106,11 @@ project.set_global_simulation_parameters(
   min_end_time          = args.end_time,
   max_end_time          = 0.0,
   first_plot_time_stamp = 0.0, 
-  time_in_between_plots = args.end_time/200, 
+  time_in_between_plots = args.plot_delta, 
   periodic_BC           = periodic_boundary_conditions,
+  plotter_precision     = 8  # plotter precision
 )
+
 
 # additional global constants (to be exported down below)
 
@@ -195,8 +226,6 @@ particle_force = """
     localParticle->setEnergyPot(-E_pot );
     localParticle->setEnergyTot( - ( E_kin + E_pot ) );
 
-    /* Initialize dummy SPH variables */
-    localParticle->setIsBoundaryParticle(false);
 
   }
 """
@@ -218,8 +247,7 @@ particle_set = project.add_particle_species( particle )
 # only the earth is given an initial velocity.
 #
 ###############################################################################
-cut_off_radius = args.cut_off_radius
-
+cut_off_radius = args.cell_size / 100.0
 initialisation_snippet = """
   /*
    * In this problem we will initialize just a single particle (Earth)
@@ -268,6 +296,8 @@ initialisation_snippet = """
   logInfo( "Init()", "Kinetic energy  :" << E_kin);
   logInfo( "Init()", "Potential energy:" << E_pot);
   logInfo( "Init()", "Total energy    :" << E_kin + E_pot);
+  logInfo( "Init()", "Cut off         :" << particle->getCutOffRadius() );
+  logInfo( "Init()", "Initial velocity:" << particle->getV() );
   logInfo( "Init()", " =====================================" );
 
 
@@ -276,7 +306,7 @@ initialisation_snippet = """
 #
 # I either insert sun and earth or only the earth
 #
-project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
+project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesByCoordinates(
   particle_set         = particle_set,
   initialisation_call  = initialisation_snippet,
   coordinates          = [ (EARTH_X_INI,EARTH_Y_INI,0) ] )
@@ -327,7 +357,6 @@ project.algorithm_step_plot.add_action_set( particle_plotter )
 # that's generated.
 #
 ###############################################################################
-
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
 # Export symbols and values for compilation (e.g. for SPH kernel)
