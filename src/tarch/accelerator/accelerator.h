@@ -65,7 +65,6 @@ namespace tarch {
     ManagedSharedAcceleratorDeviceMemory
   };
 
-  template <class T=double>
   double* allocateMemory( int size, MemoryLocation location );
   void freeMemory(double* data, MemoryLocation location);
 }

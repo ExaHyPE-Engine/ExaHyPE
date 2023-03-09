@@ -805,15 +805,15 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls(
   TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,solversHaloSize,unknowns,0);
   TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,solversHaloSize,1,0);
 
-  double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductX = evaluateNonconservativeProduct                     ? tarch::allocateMemory<double>( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductY = evaluateNonconservativeProduct                     ? tarch::allocateMemory<double>( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductZ = (evaluateNonconservativeProduct and Dimensions==3) ? tarch::allocateMemory<double>( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempEigenvalueX            =                                    tarch::allocateMemory<double>( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
-  double* tempEigenvalueY            =                                    tarch::allocateMemory<double>( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
-  double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory<double>( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductX = evaluateNonconservativeProduct                     ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductY = evaluateNonconservativeProduct                     ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductZ = (evaluateNonconservativeProduct and Dimensions==3) ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempEigenvalueX            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvalueY            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
   internal::timeStepWithRusanov_patchwise_static_calls<Solver, numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables, TempDataEnumerator>(
     patchData,
