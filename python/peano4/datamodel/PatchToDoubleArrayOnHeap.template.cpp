@@ -5,8 +5,7 @@
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _dataSmartPointer(
-    // tarch::allocateMemory< {{FLOAT_TYPE}} >( Cardinality, MemoryLocation::Heap );
-    tarch::allocateMemory( Cardinality, tarch::MemoryLocation::Heap ),
+    tarch::allocateMemory< {{FLOAT_TYPE}} >( Cardinality, MemoryLocation::Heap );
     [] (auto p) {
       tarch::freeMemory( p, tarch::MemoryLocation::Heap );
     }
