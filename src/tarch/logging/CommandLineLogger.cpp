@@ -294,21 +294,21 @@ void tarch::logging::CommandLineLogger::indent( bool indent, const std::string& 
      #endif
   }
   else {
-    #if !defined(SharedMemoryParallelisation)
-    assertionEquals2(
-      _indentTraces.top(),
-      trace,
-      message,
-      indent
-    );
-    _indentTraces.pop();
-    assertion5(
-      _indent >= NumberOfIndentSpaces,
-      _indent, NumberOfIndentSpaces,
-      "more logTraceOut calls than logTraceIn calls invoked before",
-      trace, message
-    );
-    #endif
+    if ( tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
+      assertionEquals2(
+        _indentTraces.top(),
+        trace,
+        message,
+        indent
+      );
+      _indentTraces.pop();
+      assertion5(
+        _indent >= NumberOfIndentSpaces,
+        _indent, NumberOfIndentSpaces,
+        "more logTraceOut calls than logTraceIn calls invoked before",
+        trace, message
+      );
+    }
     _indent-=NumberOfIndentSpaces;
   }
   #endif
