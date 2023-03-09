@@ -319,8 +319,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
     const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
     #endif
 
-    double* leftAdjacentPatchData  = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
-    double* rightAdjacentPatchData = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* leftAdjacentPatchData  = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* rightAdjacentPatchData = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
 
     tarch::la::Vector<Dimensions,int> leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
     tarch::la::Vector<Dimensions,int> rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
@@ -485,8 +485,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_ext
     const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
     #endif
 
-    double* leftAdjacentPatchData  = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
-    double* rightAdjacentPatchData = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* leftAdjacentPatchData  = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* rightAdjacentPatchData = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
 
     tarch::la::Vector<Dimensions,int> leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
     tarch::la::Vector<Dimensions,int> rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
@@ -617,8 +617,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extra
     const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
     #endif
 
-    double* leftAdjacentPatchData  = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
-    double* rightAdjacentPatchData = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* leftAdjacentPatchData  = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* rightAdjacentPatchData = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
 
     tarch::la::Vector<Dimensions,int> leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
     tarch::la::Vector<Dimensions,int> rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
@@ -749,8 +749,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_ext
     const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
     #endif
 
-    double* leftAdjacentPatchData  = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
-    double* rightAdjacentPatchData = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* leftAdjacentPatchData  = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* rightAdjacentPatchData = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
 
     tarch::la::Vector<Dimensions,int> leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
     tarch::la::Vector<Dimensions,int> rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
@@ -881,8 +881,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extra
     const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
     #endif
 
-    double* leftAdjacentPatchData  = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
-    double* rightAdjacentPatchData = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* leftAdjacentPatchData  = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* rightAdjacentPatchData = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
 
     tarch::la::Vector<Dimensions,int> leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
     tarch::la::Vector<Dimensions,int> rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();

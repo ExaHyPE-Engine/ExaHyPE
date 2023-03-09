@@ -23,7 +23,7 @@ namespace exahype2 {
          * scheme with a five-point stancil. This requires one to have access to at 
          * least two halo layers on each side of a given patch.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
@@ -95,7 +95,7 @@ namespace exahype2 {
 	 * QDiffSrcEnumerator, which is identical to QOutEnumerator, is aware that we
          * work with volume centres.
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -127,7 +127,7 @@ namespace exahype2 {
          * finite difference scheme used in other parts of the equations. It requires
 	 * us to have access to at least 3 halo layers on each side of a given patch.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
@@ -153,7 +153,7 @@ namespace exahype2 {
 	 * QKODspEnumerator, which is identical to QOutEnumerator, is aware that we
          * work with volume centres.
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -192,7 +192,7 @@ namespace exahype2 {
          * this temporary array, before we scatter it into the image.
          *
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
@@ -239,7 +239,7 @@ namespace exahype2 {
          * We therefore simply can take these flux components, scale them
          * with dt, and add them to the solution.
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -267,7 +267,6 @@ namespace exahype2 {
     }
   }
 }
-
 
 #include "LoopBody.cpph"
 

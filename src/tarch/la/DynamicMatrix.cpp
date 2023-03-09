@@ -18,7 +18,7 @@ tarch::la::DynamicMatrix::DynamicMatrix(const tarch::la::DynamicMatrix& lhs, con
     _rows = lhs._rows*rhs._rows;
     _cols = lhs._cols*rhs._cols;
 
-    _m = tarch::allocateMemory<double>(_rows*_cols,tarch::MemoryLocation::Heap);
+    _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
 
     for (int lhsRow=0; lhsRow<lhs._rows; lhsRow++)
     for (int rhsRow=0; rhsRow<rhs._rows; rhsRow++)
@@ -34,7 +34,7 @@ tarch::la::DynamicMatrix::DynamicMatrix(int rows, int cols, std::initializer_lis
   _cols(cols),
   _rows(rows),
   _m(nullptr) {
-  _m = tarch::allocateMemory<double>(rows*cols,tarch::MemoryLocation::Heap);
+  _m = tarch::allocateMemory(rows*cols,tarch::MemoryLocation::Heap);
 
   int index = 0;
   for (typename std::initializer_list< std::initializer_list<double> >::const_iterator p  = values.begin(); p!=values.end(); p++)
@@ -48,7 +48,7 @@ tarch::la::DynamicMatrix::DynamicMatrix(const DynamicMatrix& rhs):
   _cols(rhs._cols),
   _rows(rhs._rows),
   _m(nullptr) {
-  _m = tarch::allocateMemory<double>(_rows*_cols,tarch::MemoryLocation::Heap);
+  _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
   memcpy(_m, rhs._m, _cols*_rows*sizeof(double));
 }
 
@@ -76,7 +76,7 @@ tarch::la::DynamicMatrix::DynamicMatrix(int rows, int cols):
   _cols(cols),
   _rows(rows),
   _m(nullptr) {
-  _m = tarch::allocateMemory<double>(rows*cols,tarch::MemoryLocation::Heap);
+  _m = tarch::allocateMemory(rows*cols,tarch::MemoryLocation::Heap);
   std::fill_n(_m,rows*cols,0.0);
 }
 
@@ -235,7 +235,7 @@ void tarch::la::DynamicMatrix::insertEmptyColumns( int number, int where, int re
   const int numberOfInsertions = repeatEveryKColumns==0 ? number : (_cols/repeatEveryKColumns) * number;
   _cols+=numberOfInsertions;
 
-  _m = tarch::allocateMemory<double>(_rows*_cols,tarch::MemoryLocation::Heap);
+  _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
   std::fill_n(_m,_rows*_cols,0.0);
 
   int imageColumn = 0;
@@ -268,7 +268,7 @@ void tarch::la::DynamicMatrix::insertEmptyRows( int number, int where, int repea
   const int numberOfInsertions = repeatEveryKRows==0 ? number : (_rows/repeatEveryKRows) * number;
   _rows+=numberOfInsertions;
 
-  _m = tarch::allocateMemory<double>(_rows*_cols,tarch::MemoryLocation::Heap);
+  _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
   std::fill_n(_m,_rows*_cols,0.0);
 
   int imageRow = 0;
@@ -295,7 +295,7 @@ void tarch::la::DynamicMatrix::removeColumn( int number ) {
   _cols--;
 
 
-  _m = tarch::allocateMemory<double>(_rows*_cols,tarch::MemoryLocation::Heap);
+  _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
   std::fill_n(_m,_rows*_cols,0.0);
 
   for (int col=0; col<_cols; col++)
@@ -309,7 +309,7 @@ void tarch::la::DynamicMatrix::removeColumn( int number ) {
 
 void tarch::la::DynamicMatrix::shiftRowsDown(int shift,bool wrap) {
   double* oldData = _m;
-  _m = tarch::allocateMemory<double>(_rows*_cols,tarch::MemoryLocation::Heap);
+  _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
   std::fill_n(_m,_rows*_cols,0.0);
 
   for (int col=0; col<_cols; col++)
@@ -326,7 +326,7 @@ void tarch::la::DynamicMatrix::shiftRowsDown(int shift,bool wrap) {
 
 void tarch::la::DynamicMatrix::shiftColumnsRight(int shift,bool wrap) {
   double* oldData = _m;
-  _m = tarch::allocateMemory<double>(_rows*_cols,tarch::MemoryLocation::Heap);
+  _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
   std::fill_n(_m,_rows*_cols,0.0);
 
   for (int col=0; col<_cols; col++)
@@ -367,7 +367,7 @@ void tarch::la::DynamicMatrix::replicateRows( int blockSize, int numberOfReplica
     _cols = _cols+shiftAfterEveryReplication*(numberOfReplications-1);
   }
 
-  _m = tarch::allocateMemory<double>(_rows*_cols,tarch::MemoryLocation::Heap);
+  _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
 
   std::fill_n(_m,_rows*_cols,0.0);
 
@@ -407,7 +407,7 @@ void tarch::la::DynamicMatrix::replicateCols( int blockSize, int numberOfReplica
     _rows = _rows+shiftAfterEveryReplication*(numberOfReplications-1);
   }
 
-  _m = tarch::allocateMemory<double>(_rows*_cols,tarch::MemoryLocation::Heap);
+  _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
 
   std::fill_n(_m,_rows*_cols,0.0);
 
