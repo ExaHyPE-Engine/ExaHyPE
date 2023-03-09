@@ -290,9 +290,9 @@ void tarch::logging::CommandLineLogger::indent( bool indent, const std::string& 
   tarch::multicore::Lock lockCout( _semaphore );
   if (indent) {
     _indent+=NumberOfIndentSpaces;
-     #if !defined(SharedMemoryParallelisation)
-    _indentTraces.push(trace);
-     #endif
+    if ( tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
+      _indentTraces.push(trace);
+    }
   }
   else {
     if ( tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
