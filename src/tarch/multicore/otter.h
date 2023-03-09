@@ -2,7 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+
 #include "config.h"
+
 
 /**
  * @namespace otter
@@ -22,9 +24,11 @@
  * and macros here are always consistent with the latest Otter version.
  */
 namespace otter {
+
   #if !defined(UseOtter)
   #endif
 }
+
 
 #if defined(UseOtter)
 #include <otter/otter-serial.h>
@@ -49,3 +53,6 @@ namespace otter {
 #define otterPhaseEnd()
 #define otterPhaseSwitch(name)
 #endif
+
+
+

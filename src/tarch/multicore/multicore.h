@@ -1,20 +1,27 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+
 #include "config.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
+
 #include <string>
+
 
 #if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP) || defined(SharedSYCL)
   #define SharedMemoryParallelisation
 #endif
 
+
 #pragma once
+
 
 namespace tarch {
 
-/**
+
+  /**
+ 
  \namespace "tarch::multicore"
 
  <h1> Peano 4's multithreading layer </h1>
@@ -31,6 +38,7 @@ namespace tarch {
    though some of our routines use OpenMP target and thus are developed against
    OpenMP 5.
 
+
  <h2> Using multithreading (user view) </h2>
 
  See the guidebook and the configure script's help please. As a summary, it should
@@ -41,6 +49,7 @@ namespace tarch {
 
  You might furthermore want to use particular vendor toolchains or enable GPU
  support.
+
 
  <h2> Writing your own code with multithreading features </h2>
 
@@ -60,6 +69,7 @@ and
  implementation chosen. Indeed, Peano 4 itself does not contain any direct
  multithreading library calls. It solely relies on the classes and functions from
  this namespace.
+
 
  <h2> Multicore architecture </h2>
 
@@ -88,6 +98,7 @@ and
  objects. As they rely on the semaphore implementations, they are generic and work
  for any backend.
 
+
  <h3> Logical task model </h3>
 
  Peano models all of its interna as tasks. Each Peano 4 task is a subclass of
@@ -99,9 +110,10 @@ and
  of these features directly, i.e. we can map 1:1, but in Peano 4 this is hidden from
  the user. Our idea is that we can swap backends in and out.
 
+
  The user or Peano 4 core,
  respectively, create Peano 4 tasks and spawn them through tarch::multicore::spawnTask(),
- e.g., It is up to the backend to map these spawn routines and the task classes
+ e.g. It is up to the backend to map these spawn routines and the task classes
  onto a particular implementation/runtime.
 
  Peano 4 has two types of spawn mechanisms: spawn-and-wait and spawn (and forget).
@@ -135,6 +147,7 @@ and
  that have been spawned before.
  It waits for them and, while it waits, calls processPendingTasks().
 
+
  <h3> Native backends </h3>
 
  I provide a couple of native backends where the Peano's task architecture is mapped
@@ -147,6 +160,7 @@ and
  Tasks_plain.cpp. They are very simple and thus should be digestable without further
  comments. For C++ threads, I do not offer a plain implementation at the moment, but
  do offer solely a variant with its own tasking runtime layer (see below).
+
 
  <h3> Backends with additional runtime layer </h3>
 
@@ -176,6 +190,7 @@ and
 
  Consult the orchestration documentation for details.
 
+
   <h2> OpenMP backend </h2>
 
  If you want to use the OpenMP backend, you have to embed your whole main loop
@@ -194,8 +209,9 @@ and
  </pre>
 
  on some systems, as we rely heavily on nested parallelism.
-*/
-namespace multicore {
+
+ */
+  namespace multicore {
      /**
       * Switch on SmartMPI
       *
@@ -207,3 +223,4 @@ namespace multicore {
      void shutdownSmartMPI();
   }
 }
+
