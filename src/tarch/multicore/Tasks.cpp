@@ -235,7 +235,7 @@ bool tarch::multicore::internal::fusePendingTasks(const tarch::multicore::orches
       and
       (*pp)->getTaskType()==myTask->getTaskType()
       and
-      (*pp)->canFuse()
+      (*pp)->getTaskType()==myTask->canFuse()
       and
       tasksOfSameType.size()<fuseInstruction.maxTasks-1
     ) {

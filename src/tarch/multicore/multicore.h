@@ -1,6 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
 
 #include "config.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
@@ -10,6 +9,8 @@
 #if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP) || defined(SharedSYCL)
   #define SharedMemoryParallelisation
 #endif
+
+#pragma once
 
 namespace tarch {
 
