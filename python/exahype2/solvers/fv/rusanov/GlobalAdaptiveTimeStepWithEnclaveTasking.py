@@ -106,7 +106,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True, 
       solver_variant         = SolverVariant.AcceleratorWithExplicitCopy,
-      kernel_variant         = KernelVariant.PatchWiseAoSHeap
+      kernel_variant         = KernelVariant.GenericAoS
     )
 
     solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)

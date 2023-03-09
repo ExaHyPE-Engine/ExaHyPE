@@ -11,11 +11,11 @@
 
 #include "tarch/la/Vector.h"
 
-#include "exahype2/aderdg/KernelUtils.h"
-#include "exahype2/aderdg/PredictorAoS.h"
-#include "exahype2/aderdg/RiemannAoS.h"
-#include "exahype2/aderdg/RusanovNonlinearAoS.h"
-#include "exahype2/aderdg/CorrectorAoS.h"
+#include "exahype2/backups/old_aderdg/KernelUtils.h"
+#include "exahype2/backups/old_aderdg/PredictorAoS.h"
+#include "exahype2/backups/old_aderdg/RiemannAoS.h"
+#include "exahype2/backups/old_aderdg/RusanovNonlinearAoS.h"
+#include "exahype2/backups/old_aderdg/CorrectorAoS.h"
 
 exahype2::aderdg::tests::ADERDGTest::ADERDGTest():
   TestCase ("exahype2::aderdg::ADERDGTest"),

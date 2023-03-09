@@ -1,32 +1,28 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.fv.PDETerms  import PDETerms
-
 import jinja2
-import exahype2
-
 
 from enum import Enum
 
+from exahype2.solvers.fv.PDETerms import PDETerms
 
 class SolverVariant(Enum):
   WithVirtualFunctions = 0,
   Stateless            = 1,
   Accelerator          = 2
 
-
-def create_abstract_solver_declarations(flux_implementation, 
-                                        ncp_implementation, 
-                                        eigenvalues_implementation, 
-                                        source_term_implementation, 
-                                        point_source_implementation, 
+def create_abstract_solver_declarations(flux_implementation,
+                                        ncp_implementation,
+                                        eigenvalues_implementation,
+                                        source_term_implementation,
+                                        point_source_implementation,
                                         pde_terms_without_state):
   Template = jinja2.Template( """
   public:
     {% if EIGENVALUES_IMPLEMENTATION=="<none>" %}
     #error eigenvalue implementation cannot be none
     {% endif %}
-    
+
     {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
      * Depending on the implementation, this variant might be slow as it 
@@ -48,7 +44,7 @@ def create_abstract_solver_declarations(flux_implementation,
     #pragma omp end declare target
     #endif
     {% endif %}
-    
+
     /**
      * Determine max eigenvalue over Jacobian in a given point with solution values
      * (states) Q. All parameters are in.
@@ -63,7 +59,6 @@ def create_abstract_solver_declarations(flux_implementation,
       double                                       dt,
       int                                          normal
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
-
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
@@ -87,7 +82,7 @@ def create_abstract_solver_declarations(flux_implementation,
     #pragma omp end declare target
     #endif
     {% endif %}
-    
+
     {% if FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -98,7 +93,6 @@ def create_abstract_solver_declarations(flux_implementation,
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% else %} final {% endif %};
     {% endif %}
-
 
     {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
@@ -123,7 +117,7 @@ def create_abstract_solver_declarations(flux_implementation,
     #pragma omp end declare target
     #endif
     {% endif %}
-    
+
     {% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
       const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -135,11 +129,10 @@ def create_abstract_solver_declarations(flux_implementation,
       double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
     {% endif %}
-    
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
-     * Depending on the implementation, this variant might be slow as it 
+     * Depending on the implementation, this variant might be slow as it
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
@@ -158,7 +151,7 @@ def create_abstract_solver_declarations(flux_implementation,
     #pragma omp end declare target
     #endif
     {% endif %}
-    
+
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void sourceTerm(
       const double * __restrict__ Q,
@@ -190,7 +183,7 @@ def create_abstract_solver_declarations(flux_implementation,
     #pragma omp end declare target
     #endif
     {% endif %}
-    
+
     {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
     virtual void pointSource(
       const double * __restrict__ Q,
@@ -211,8 +204,12 @@ def create_abstract_solver_declarations(flux_implementation,
   d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
   return Template.render(**d)
 
-
-def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, pde_terms_without_state):
+def create_abstract_solver_definitions(flux_implementation,
+                                       ncp_implementation,
+                                       eigenvalues_implementation,
+                                       source_term_implementation,
+                                       point_source_implementation,
+                                       pde_terms_without_state):
   Template = jinja2.Template( """
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
@@ -225,7 +222,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   {{EIGENVALUES_IMPLEMENTATION}}
 }
 {% endif %}
-
 
 {% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
@@ -240,7 +236,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 }
 {% endif %}
 
-
 {% if NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -254,7 +249,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   {{NCP_IMPLEMENTATION}}
 }
 {% endif %}
-
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
@@ -272,7 +266,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 }
 {% endif %}
 
-
 {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and POINT_SOURCE_IMPLEMENTATION!="<none>" %}
 #error Point sources not yet implemented
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
@@ -289,7 +282,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   {% endif %}
 }
 {% endif %}
-
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 #if defined(OpenMPGPUOffloading)
@@ -309,7 +301,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 #pragma omp end declare target
 #endif
 {% endif %}
-
 
 {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 #if defined(OpenMPGPUOffloading)
@@ -334,7 +325,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 #pragma omp end declare target
 #endif
 {% endif %}
-
 
 {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 #if defined(OpenMPGPUOffloading)
@@ -361,7 +351,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 #endif
 {% endif %}
 
-
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -384,7 +373,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #pragma omp end declare target
 #endif
 {% endif %}
-
 
 {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 #if defined(OpenMPGPUOffloading)
@@ -417,11 +405,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
   d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state  
+  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
   return Template.render(**d)
 
-
-def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, pde_terms_without_state):
+def create_solver_declarations(flux_implementation,
+                               ncp_implementation,
+                               eigenvalues_implementation,
+                               source_term_implementation,
+                               point_source_implementation,
+                               pde_terms_without_state):
   Template = jinja2.Template( """
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
@@ -462,7 +454,6 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     ) override;
     {% endif %}
 
-
     {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     virtual void flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -473,8 +464,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
-     
-     
+
     {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     virtual void nonconservativeProduct(
       const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -486,8 +476,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       double * __restrict__                        BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
-    
-   
+
     {% if STATELESS_PDE_TERMS  and SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     /**
      * To obtain the best performance, I recommend to man inline command to 
@@ -520,12 +509,11 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #endif
     {% endif %}
 
-   
     {% if STATELESS_PDE_TERMS  and POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     /**
-     * To obtain the best performance, I recommend to man inline command to 
+     * To obtain the best performance, I recommend to man inline command to
      * this signature and to copy the implementation into the header. So it would
-     * read 
+     * read
      *
      * static inline void pointSource( ... ) {
      *  code here
@@ -585,12 +573,11 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #endif
     {% endif %}
 
-
     {% if STATELESS_PDE_TERMS  and FLUX_IMPLEMENTATION=="<user-defined>" %}
     /**
-     * To obtain the best performance, I recommend to man inline command to 
+     * To obtain the best performance, I recommend to man inline command to
      * this signature and to copy the implementation into the header. So it would
-     * read 
+     * read
      *
      * static inline void flux( ... ) {
      *  code here
@@ -617,8 +604,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #pragma omp end declare target
     #endif
     {% endif %}
-     
-   
+
     {% if STATELESS_PDE_TERMS  and NCP_IMPLEMENTATION=="<user-defined>" %}
     /**
      * To obtain the best performance, I recommend to man inline command to 
@@ -650,7 +636,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
-    {% endif %}    
+    {% endif %}
 """, undefined=jinja2.DebugUndefined)
   d= {}
   d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
@@ -658,11 +644,15 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
   d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state  
+  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
   return Template.render(**d)
 
-
-def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, pde_terms_without_state):
+def create_solver_definitions(flux_implementation,
+                              ncp_implementation,
+                              eigenvalues_implementation,
+                              source_term_implementation,
+                              point_source_implementation,
+                              pde_terms_without_state):
   Template = jinja2.Template( """
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
@@ -678,7 +668,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 }
 {% endif %}
 
-
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -693,7 +682,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   logTraceOut( "flux(...)" );
 }
 {% endif %}
-
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
@@ -711,7 +699,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 }
 {% endif %}
 
-
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -726,14 +713,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   for (int i=0; i<NumberOfUnknowns; i++) {
     S[i] = 0.0;
   }
-  
+
   logTraceOut( "sourceTerm(...)" );
 }
 {% endif %}
-
-
-
-
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
@@ -754,7 +737,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
     #endif
 {% endif %}
 
-
 {% if FLUX_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -774,7 +756,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
     #pragma omp end declare target
     #endif
 {% endif %}
-
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
@@ -797,7 +778,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
     #endif
 {% endif %}
 
-
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -816,7 +796,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
     #pragma omp end declare target
     #endif
 {% endif %}
-
 
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
@@ -837,8 +816,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
     #pragma omp end declare target
     #endif
 {% endif %}
-
-
 """, undefined=jinja2.DebugUndefined)
   d= {}
   d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
@@ -849,10 +826,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state  
   return Template.render(**d)
 
-
 def get_face_merge_implementation(patch_overlap):
   assert False, "I don't think this one is used anymore. @todo Remove"
-  
+
   d = {
     "OVERLAP": patch_overlap.dim[0]/2, #assumed to always be two, but present here anyway
     "DOFS_PER_AXIS": patch_overlap.dim[1],
@@ -881,14 +857,11 @@ def get_face_merge_implementation(patch_overlap):
 """
 
   return template.format(**d)
-  
 
 def create_start_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
   """
-  
   We roll over all reduced data after the last time step, and we 
   plot status info in the first step.
-  
   """
   return """
   if (
@@ -904,35 +877,29 @@ def create_start_time_step_implementation_for_fixed_time_stepping(normalised_tim
     logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
     logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
   }
-  
-  _timeStepSize  = """ + str(normalised_time_step_size) + """;  
+  _timeStepSize  = """ + str(normalised_time_step_size) + """;
 """
-  
-  
+
 def create_volumetric_solver_call(polynomial_basis, solver_variant):
   """
-  
   A set of default volumetric kernel calls. You might want to use different
   solver calls in your code depending on the context.
-  
-  
+
   ## Difference to Finite Volume (FV) implementation
-  
+
   In the FV code base, I need the implementation routines as argument: As we work
   with FV, the generic FV class does not know which implementations are around. If
-  you work with a domain-specific Rusanov solver, e.g., then there is no such 
-  thing as an ncp. 
-  
+  you work with a domain-specific Rusanov solver, e.g., then there is no such
+  thing as an ncp.
+
   For the DG schemes, things are different: Every DG solver in ExaHyPE 2 in principle
   supports the ncp. So the base Python class already instantiates the corresponding
   dictionary entries, and we can use them straightaway.
-  
-  
+
   ## Arguments
-  
+
   solver_variant: SolverVariant
     Picks different implementation variants
-  
   """
   if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and solver_variant==SolverVariant.WithVirtualFunctions:
     return """cellIntegral_patchwise_in_situ_GaussLegendre_functors(
@@ -1021,7 +988,6 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
   else:
     return "#solver variant not implemented yet"
 
-
 def create_add_solver_contributions_call(polynomial_basis):
   if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis):
     return """integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
@@ -1038,7 +1004,7 @@ def create_add_solver_contributions_call(polynomial_basis):
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).value, //front
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(5).value, //back
     #endif
-      {{ORDER}},                                                   
+      {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.h(),
@@ -1049,7 +1015,6 @@ def create_add_solver_contributions_call(polynomial_basis):
 """
   else:
     return "#error Not supported yet"
-
 
 def create_multiply_with_inverted_mass_matrix_call( polynomial_basis):
   if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis):
@@ -1063,5 +1028,3 @@ def create_multiply_with_inverted_mass_matrix_call( polynomial_basis):
 """
   else:
     return "#error Not supported yet"
-
-

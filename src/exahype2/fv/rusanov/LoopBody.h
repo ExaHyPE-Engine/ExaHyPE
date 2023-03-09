@@ -162,7 +162,6 @@ namespace exahype2 {
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
-
         /**
          * Specialisation of the other copySolutionAndAddSourceTerm_LoopBody()
          * which exploits knowledge that we do not have to gather input data,
@@ -191,7 +190,6 @@ namespace exahype2 {
           const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
         )  InlineMethod;
 
-
         #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
@@ -215,7 +213,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
@@ -238,7 +235,6 @@ namespace exahype2 {
         #if defined(GPUOffloadingOMP)
         #pragma omp end declare target
         #endif
-
 
         /**
          * Compute maximum eigenvalue for one voxel in one direction.
@@ -273,7 +269,6 @@ namespace exahype2 {
           QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
         )  InlineMethod;
 
-
         /**
          * Specialisation if input data is already in AoS format. This holds for
          * all of our kernels unless you explicitly reorder the input.
@@ -293,7 +288,6 @@ namespace exahype2 {
           double* __restrict__                         QMaxEigenvalue,
           QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
         ) InlineMethod;
-
 
         /**
          * Specialisation invoking the static eigenvalue variant (for GPUs).
@@ -322,7 +316,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Specialisation for static eigenvalue call plus AoS input data.
          */
@@ -350,7 +343,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * This is the actual eigenvalue loop which reduces the directional
          * eigenvalues.
@@ -375,7 +367,6 @@ namespace exahype2 {
           double                                       dt
         ) InlineMethod;
 
-
         /**
          * Specialisation anticipating that the ordering of the output
          * data will be AoS in almost all the cases. So it makes sense
@@ -393,7 +384,6 @@ namespace exahype2 {
           double                                       t,
           double                                       dt
         ) InlineMethod;
-
 
         /**
          * Specialised version for GPU. See generic variant for documentation.
@@ -418,7 +408,6 @@ namespace exahype2 {
         #if defined(GPUOffloadingOMP)
         #pragma omp end declare target
         #endif
-
 
         /**
          * Optimised version for the GPU which is furthermore optimised
@@ -447,7 +436,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Compute the flux in one direction for a volume and store it.
          * Computing the fluxes requires us to gather the input data, invoke
@@ -474,7 +462,6 @@ namespace exahype2 {
           QFluxEnumeratorType                 QFluxEnumerator
         ) InlineMethod;
 
-
         /**
          * This one does not have to be declared as simd. For whatever
          * reason ...
@@ -493,7 +480,6 @@ namespace exahype2 {
           double* __restrict__                                        QFlux,
           exahype2::enumerator::AoSLexicographicEnumerator  QFluxEnumerator
         ) InlineMethod;
-
 
         #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
@@ -580,7 +566,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Update one volume with the flux contribution
          *
@@ -613,7 +598,6 @@ namespace exahype2 {
         #if defined(GPUOffloadingOMP)
         #pragma omp end declare target
         #endif
-
 
         /**
          * Constructs the average of the flux and adds it to the left and right
@@ -650,10 +634,8 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Uses the eigenvalues to damp the solution update.
-         *
          *
          * ## Rationale for alternative realisations
          *
@@ -680,20 +662,20 @@ namespace exahype2 {
          * Along the same lines, all of these arguments motivate why we do not specialise
          * the template further. We need to do this scattering/gathering anyway, so
          * what's the point of specialising for particular data formats?
-	 *
-	 * ## OpenMP offloading flaws
-	 *
-	 * With NVC++, there are at least two flaws that you might run into. Both did 
-	 * not yield a compiler error on my system but resulted in a GPU crash, which 
-	 * is kind of frustrating:
-	 *
-	 * - The std::max() call cannot be resolved. Weirdly, my NVC++ does not 
-	 *   complain about this. In other places, it does complain. 
-	 * - The NVC++ seems to struggle with the auto reference if you capture 
-	 *   pointers via &. Actually, we 
-	 *   see that the tempMaxEigenvalue pointer is messed up. If we capture 
-	 *   via copy, everything is fine.
-	 *
+         *
+         * ## OpenMP offloading flaws
+         *
+         * With NVC++, there are at least two flaws that you might run into. Both did 
+         * not yield a compiler error on my system but resulted in a GPU crash, which 
+         * is kind of frustrating:
+         *
+         * - The std::max() call cannot be resolved. Weirdly, my NVC++ does not 
+         *   complain about this. In other places, it does complain. 
+         * - The NVC++ seems to struggle with the auto reference if you capture 
+         *   pointers via &. Actually, we 
+         *   see that the tempMaxEigenvalue pointer is messed up. If we capture 
+         *   via copy, everything is fine.
+         *
          */
         #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
@@ -721,7 +703,6 @@ namespace exahype2 {
         #if defined(GPUOffloadingOMP)
         #pragma omp end declare target
         #endif
-
 
         /**
          * Face-wise version of routine, i.e. it takes the eigenvalues and
@@ -753,7 +734,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * We count faces starting with zero, i.e. effectively shift the indices
          * not by 1/2 but one volume to the right: Let the leftmost volume have
@@ -780,7 +760,6 @@ namespace exahype2 {
           QNCPFaceEnumeratorType                         QNcpEnumerator,
           int                                            pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
-
 
         /**
          *
@@ -820,7 +799,6 @@ namespace exahype2 {
         #if defined(GPUOffloadingOMP)
         #pragma omp end declare target
         #endif
-
 
         /**
          * Add the non-conservative flux contributions to one volume.
@@ -864,7 +842,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Face-oriented flavour of ncp
          *
@@ -898,6 +875,4 @@ namespace exahype2 {
   }
 }
 
-
 #include "LoopBody.cpph"
-

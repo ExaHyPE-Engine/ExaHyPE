@@ -138,11 +138,16 @@ class ADERDG( object ):
     #whether or not to plot information about the grid as well as information about the content of the patches
     self._plot_grid_properties = plot_grid_properties
     self.plot_description = ""
+<<<<<<< HEAD
+    self.plot_metadata    = ""
+    self.select_dofs_to_print = None
+=======
 
     #used by children classes or setters in order to add constants or includes to the corresponding part
     self._solver_constants         = ""
     self.user_action_set_includes  = ""
     self.user_solver_includes      = ""
+>>>>>>> refs/remotes/origin/p4
     
     """
     these specify the time step, they must be set by child classes in order to advance the timestepping
@@ -458,6 +463,11 @@ class ADERDG( object ):
       dataset_name=self._unknown_identifier(), 
       description=self.plot_description,
       mapping=mapping,
+<<<<<<< HEAD
+      plot_cell_data=False,
+      precision="PlotterPrecision",
+      select_dofs = self.select_dofs_to_print
+=======
       guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
       additional_includes="""
 #include "exahype2/PlotFilter.h"
@@ -466,6 +476,7 @@ class ADERDG( object ):
       precision="PlotterPrecision",
       time_stamp_evaluation="repositories::getMinTimeStamp()", plot_cell_data=False,
       dataType=self._solution_persistent_storage_precision
+>>>>>>> refs/remotes/origin/p4
     ))
 
     if self._plot_grid_properties:    

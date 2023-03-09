@@ -1,10 +1,5 @@
-#if 0
-    set -ex
-    g++ -ltbb -lc++ -std=c++20  -x c++ -DBUILD_TEST -o $0.bin $0
-    ./bug_bin
-    exit 0
-#endif
-/* 
+#pragma once
+/*
 Adapted from TartanLlama/ranges: https://github.com/TartanLlama/ranges
 Original version License CC0 1.0 Universal (see below)
 
@@ -158,8 +153,6 @@ express Statement of Purpose.
     party to this document and has no duty or obligation with respect to
     this CC0 or use of the Work.
 */
-
-#pragma once
 
 #include <algorithm>
 #include <concepts>

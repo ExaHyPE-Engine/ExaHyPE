@@ -124,7 +124,7 @@ bool tarch::logging::LogFilterFileReader::parsePlainTextFile( const std::string&
   std::ifstream file;
   file.open(filename.c_str()); // open a file
   if (!file.good()) {
-    logError( "parsePlainTextFile(string)", "was not able to open input file " << filename );
+    logWarning( "parsePlainTextFile(string)", "was not able to open input file " << filename );
     result = false;
   }
 

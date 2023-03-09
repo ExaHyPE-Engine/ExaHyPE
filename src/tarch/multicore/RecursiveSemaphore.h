@@ -30,7 +30,6 @@ namespace tarch {
  * A recursive semaphore is a boolean semphore that one thread (the first one)
  * can lock an arbitrary number of times.
  *
- *
  * @author Tobias Weinzierl
  */
 class tarch::multicore::RecursiveSemaphore {
@@ -57,16 +56,16 @@ class tarch::multicore::RecursiveSemaphore {
     /**
      * You may not copy a semaphore
      */
-    RecursiveSemaphore( const RecursiveSemaphore& semaphore ) {}
+    inline RecursiveSemaphore([[maybe_unused]] const RecursiveSemaphore& semaphore) {}
 
     /**
      * You may not copy a semaphore
      */
-    RecursiveSemaphore& operator=( const RecursiveSemaphore& semaphore ) {return *this;}
+    inline RecursiveSemaphore& operator = ([[maybe_unused]] const RecursiveSemaphore& semaphore) { return *this; }
+
   public:
     RecursiveSemaphore();
     ~RecursiveSemaphore();
 };
-
 
 #endif

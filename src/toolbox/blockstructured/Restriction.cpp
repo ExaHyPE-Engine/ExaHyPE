@@ -8,9 +8,8 @@
 
 
 namespace {
-  tarch::logging::Log _log( "toolbox::blockstructured" );
+  [[maybe_unused]] tarch::logging::Log _log( "toolbox::blockstructured" );
 }
-
 
 void toolbox::blockstructured::restrictCell_AoS_tensor_product(
   const peano4::datamanagement::CellMarker& marker,
