@@ -15,4 +15,6 @@ void tarch::gpuAbort() {
   std::abort();
 }
 
+template double* tarch::allocateMemory(int size, MemoryLocation location);
+
 #endif
