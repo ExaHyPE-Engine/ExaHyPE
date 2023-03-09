@@ -1,0 +1,80 @@
+{# /**
+ * This file is part of the ExaHyPE project.
+ * Copyright (c) 2016  http://exahype.eu
+ * All rights reserved.
+ *
+ * The project has received funding from the European Union's Horizon
+ * 2020 research and innovation programme under grant agreement
+ * No 671698. For copyrights and licensing, please consult the webpage.
+ *
+ * Released under the BSD 3 Open Source License.
+ * For the full license text, see LICENSE.txt
+ **/ #}
+
+#include <limits>
+
+#include "{{pathToOptKernel}}/Kernels.h"
+
+#include "{{solverHeader}}"
+
+#include "exahype2/dg/DGUtils.h"
+#include "peano4/utils/Loop.h"
+
+double {{codeNamespace}}::stableTimeStepSize(
+  {{solverName}}& solver,
+  const double* __restrict__ const luh,
+  const tarch::la::Vector<Dimensions, double>& cellCentre,
+  const tarch::la::Vector<Dimensions, double>& dx,
+  const double t,
+  const double last_dt) {
+  constexpr double cflFactor = {{solverName}}::CFL;
+  constexpr double PNPM      = {{solverName}}::PNPM;
+  const double inverseDx = 1/dx[0]; //Assume dx[0] == dx[1] == dx[2]
+  
+  double dt = std::numeric_limits<double>::max();
+  
+  dfor(index, {{nDof}}){
+
+    int linearisedIndex = 0;
+    int stride = 1;
+    for(int d=0; d<Dimensions; d++){        
+      linearisedIndex += stride*index[d];
+      stride *= {{nDof}};
+    }
+
+    double denominator = 0.0;
+    for(int d=0; d<Dimensions; d++){
+      double maxEigenvalue = 
+        solver.maxEigenvalue(
+          &luh[linearisedIndex*{{nData}}],
+
+          ::exahype2::dg::getQuadraturePoint(
+            cellCentre,
+            dx,
+            index, //index
+            {{nDof-1}},
+            solver.QuadraturePoints1d
+          ), //faceCentre
+          dx,
+          t,
+          last_dt,
+          d
+        );
+      {% if useViscousFlux %}
+      double maxEigenvalueVisc = 0.0;
+      solver.{{solverName}}::viscousEigenvalues(luh+({{nData}}*xyz), d, lambda);
+      for (int n = 0; n < {{nVar}}; n++) {
+	maxEigenvalueVisc = std::max(std::abs(lambda[n]), maxEigenvalueVisc);
+      }
+      maxEigenvalue += maxEigenvalueVisc * (2.0/PNPM) * inverseDx;
+      {% endif %}
+      denominator += maxEigenvalue * inverseDx; //Assume dx[0] == dx[1] == dx[2]
+
+      }
+
+      dt = std::min(dt, cflFactor * PNPM / denominator);
+
+  }
+
+  return dt;
+}

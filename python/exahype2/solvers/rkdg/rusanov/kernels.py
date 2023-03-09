@@ -5,19 +5,16 @@ import exahype2
 from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
 from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import compute_number_of_face_projection_quantities
 
-
-
-def create_Riemann_solver_call(polynomial_basis, 
+def create_Riemann_solver_call(polynomial_basis,
                                face_projections: FaceProjections):
   """
-  
   number_of_face_projections: Integer
     How many quantities are to be projected onto the face. If you pass in one,
     this means that only the left and right values are projected onto the face.
     If you pass in two, we store the values plus the projections of the 
     derivative along the normal per face.
-    
   """
+
   if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and face_projections==FaceProjections.Solution:
     return """solveRiemannProblem_pointwise_in_situ(
       [&](
@@ -43,7 +40,7 @@ def create_Riemann_solver_call(polynomial_basis,
         ) -> void {
           {% if NCP_IMPLEMENTATION!="<none>" %}
           repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, t, dt, normal, F);
-          {% endif %}          
+          {% endif %}
       }, //ncp
       [&](
           const double * __restrict__                  Q,
@@ -58,7 +55,7 @@ def create_Riemann_solver_call(polynomial_basis,
       marker.h(),
       timeStamp,
       timeStepSize,
-      {{ORDER}},                                                   
+      {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.getSelectedFaceNumber(),
@@ -68,7 +65,7 @@ def create_Riemann_solver_call(polynomial_basis,
       fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
       fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value
     );
-""" 
+"""
   elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and number_of_face_projections==2:
     return """solveRiemannProblem_pointwise_in_situ_with_gradient_projection(
       [&](
@@ -109,7 +106,7 @@ def create_Riemann_solver_call(polynomial_basis,
       marker.h(),
       timeStamp,
       timeStepSize,
-      {{ORDER}},                                                   
+      {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.getSelectedFaceNumber(),
@@ -119,7 +116,7 @@ def create_Riemann_solver_call(polynomial_basis,
       fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
       fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value
     );
-""" 
+"""
   else:
     assert False, "not implemented"
     return "#not implemented"

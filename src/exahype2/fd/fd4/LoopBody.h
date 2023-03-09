@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
 #include "exahype2/fd/Functors.h"
 #include "KernelVariants.h"
 
@@ -12,7 +10,6 @@
 #include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
 
 #include "tarch/multicore/multicore.h"
-
 
 namespace exahype2 {
   namespace fd {

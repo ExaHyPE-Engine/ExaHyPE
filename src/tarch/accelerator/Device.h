@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <thread>
 #include <set>
 #include <string>
@@ -10,13 +9,11 @@
 #include "tarch/logging/Log.h"
 #include "accelerator.h"
 
-
 namespace tarch {
   namespace accelerator{
     class Device;
   }
 }
-
 
 /**
  * Core
@@ -72,9 +69,8 @@ class tarch::accelerator::Device {
      * By default, SYCL makes no device visible to the user. You have to call
      * configure() manually to make GPUs available to Peano.
      *
-     *
      */
-    void configure( const std::set<int>& devicesToUse = {} );
+    void configure(const std::set<int>& devicesToUse = {});
 
     /**
      * Shutdown parallel environment.
@@ -97,4 +93,3 @@ class tarch::accelerator::Device {
      */
     int getNumberOfDevices() const;
 };
-

@@ -2,22 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
 #include "tarch/Assertions.h"
 #include "ScalarOperations.h"
 
 #include <string>
-
 
 namespace tarch {
   namespace la {
     class DynamicMatrix;
   }
 }
-
-
-
 
 /**
  * My standard matrix is a matrix where the size is fixed at compile time.
@@ -29,7 +23,7 @@ class tarch::la::DynamicMatrix {
     int       _rows;
     double*   _m;
 
-    static inline int serialise( int row, int col, int Rows, int Cols ) {
+    static inline int serialise( int row, int col, [[maybe_unused]] int Rows, int Cols ) {
       return col + row * Cols;
     }
 
@@ -94,7 +88,6 @@ class tarch::la::DynamicMatrix {
       return *this;
     }
 */
-
 
     template <int Cols>
     bool operator==(double values[][Cols]) const {
@@ -203,15 +196,11 @@ class tarch::la::DynamicMatrix {
     int cols() const;
 };
 
-
 /**
  * Wrapper around static routine, so I don't have to use full-qualified name.
  */
 tarch::la::DynamicMatrix kroneckerProduct( const tarch::la::DynamicMatrix& lhs, const tarch::la::DynamicMatrix& rhs );
 
-
 tarch::la::DynamicMatrix operator*(const tarch::la::DynamicMatrix& A, const tarch::la::DynamicMatrix& B);
 
 //void multiply( double* result, double* x );
-
-

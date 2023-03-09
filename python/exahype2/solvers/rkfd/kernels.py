@@ -10,7 +10,7 @@ class SolverVariant(Enum):
   WithVirtualFunctions = 0,
   Stateless            = 1,
   Multicore            = 2,
-  Accelerator          = 3
+  AcceleratorWithExplicitCopy = 3
 
 
 class KernelVariant(Enum):

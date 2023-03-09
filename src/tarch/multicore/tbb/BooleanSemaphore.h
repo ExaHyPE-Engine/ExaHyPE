@@ -5,14 +5,12 @@
 #include <string>
 #include "tarch/multicore/multicore.h"
 
-
 namespace tarch {
   namespace multicore {
     class BooleanSemaphore;
     class Lock;
   }
 }
-
 
 #if defined(SharedTBB)
 
@@ -32,16 +30,16 @@ class tarch::multicore::BooleanSemaphore {
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore( const BooleanSemaphore& semaphore ) {}
+    inline BooleanSemaphore([[maybe_unused]] const BooleanSemaphore& semaphore) {}
 
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore& operator=( const BooleanSemaphore& semaphore ) {return *this;}
+    inline BooleanSemaphore& operator = ([[maybe_unused]] const BooleanSemaphore& semaphore) { return *this; }
+
   public:
     BooleanSemaphore();
     ~BooleanSemaphore();
 };
+
 #endif
-
-

@@ -265,7 +265,8 @@ class RungeKuttaDG(object):
 
     self._solver_template_file_class_name = None
 
-    self.plot_description = ""
+    self.plot_description                 = ""
+    self.select_dofs_to_print             = None
     
     self._action_set_postprocess_solution = None   
 
@@ -847,7 +848,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 #include "../repositories/SolverRepository.h"
 """,
       precision="PlotterPrecision",
-      time_stamp_evaluation="repositories::getMinTimeStamp()", plot_cell_data=False
+      time_stamp_evaluation="repositories::getMinTimeStamp()", 
+      plot_cell_data=False,
+      select_dofs = self.select_dofs_to_print
     ))
 
     if self._plot_grid_properties:    
@@ -919,7 +922,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     pass
 
 
-  def add_implementation_files_to_project(self,namespace,output):
+  def add_implementation_files_to_project(self,namespace,output, dimensions):
     """
     
      The ExaHyPE2 project will call this operation when it sets

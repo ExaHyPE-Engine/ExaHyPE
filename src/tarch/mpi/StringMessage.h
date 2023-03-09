@@ -9,28 +9,20 @@
 #pragma once
 
 #include <string>
-  
 
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
-#include "peano4/utils/Globals.h"
-
 
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
 
-
-  
 namespace tarch{
 namespace mpi{
-
   struct StringMessage;
 }
 }
-
-
 
 /**
  * The string message looks like the other messages which I generate through
@@ -115,5 +107,3 @@ struct tarch::mpi::StringMessage {
 
     int _senderDestinationRank;
 };
-
-  

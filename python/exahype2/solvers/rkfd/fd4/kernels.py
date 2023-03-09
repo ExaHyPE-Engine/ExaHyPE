@@ -12,21 +12,17 @@ from exahype2.solvers.rkfd.kernels import KernelVariant
 
    
 def create_compute_kernel_for_FD4(flux_implementation, 
-                                          ncp_implementation, 
-                                          source_implementation, 
-                                          compute_max_eigenvalue_of_next_time_step, 
-                                          solver_variant,
-                                          kernel_variant,
-                                          KOSigma):
+                                  ncp_implementation, 
+                                  source_implementation, 
+                                  compute_max_eigenvalue_of_next_time_step, 
+                                  solver_variant,
+                                  kernel_variant,
+                                  KOSigma):
   """
   
   I return only the unqualified function call, i.e. without any namespaces.
   So by setting the right namespace as prefix, you can direct it to particular
   implementations.
-  
-  solver_variant: SolverVariant
-  
-  riemann_kernel_variant: KernelVariant
   
   """  
   KernelCalls = {
@@ -109,40 +105,6 @@ def create_compute_kernel_for_FD4(flux_implementation,
   }
 );
   """
-  #elif solver_variant == SolverVariant.Stateless and EnumeratorTemplateTypes[kernel_variant]==None:
-  #  template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
-  #    patchData,
-  #    {{KOSIGMA}},
-  #    {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  #    {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  #    {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  #    false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
-  #    ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
-  #  );
-  #"""
-  #elif solver_variant == SolverVariant.Multicore and EnumeratorTemplateTypes[kernel_variant]==None:
-  #  template += """_multicore_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
-  #    patchData,
-  #    {{KOSIGMA}},
-  #    {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  #    {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  #    {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  #    false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
-  #    ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
-  #  );
-  #"""
-  #elif solver_variant == SolverVariant.Accelerator and EnumeratorTemplateTypes[kernel_variant]==None:
-  #  template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
-  #    targetDevice,
-  #    patchData,
-  #    {{KOSIGMA}},
-  #    {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  #    {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  #    {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  #    false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
-  #    ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
-  #  );
-  #"""
   elif solver_variant == SolverVariant.Stateless:
     template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
       patchData,
@@ -165,7 +127,7 @@ def create_compute_kernel_for_FD4(flux_implementation,
       ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
     );
   """
-  elif solver_variant == SolverVariant.Accelerator:
+  elif solver_variant == SolverVariant.AcceleratorWithExplicitCopy:
     template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
       targetDevice,
       patchData,

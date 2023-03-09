@@ -1,39 +1,71 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.fv.PDETerms  import PDETerms
-
 import jinja2
-from enum import Enum
+
+from exahype2.solvers.fv.kernels import SolverVariant    
+from exahype2.solvers.fv.kernels import KernelVariant    
+
     
 
-class SolverVariant(Enum):
-  WithVirtualFunctions = 0,
-  Stateless            = 1,
-  Accelerator          = 2
-    
-
-def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, 
-                                              ncp_implementation, 
-                                              source_implementation, 
+def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
+                                              ncp_implementation,
+                                              source_implementation,
                                               compute_max_eigenvalue_of_next_time_step,
                                               solver_variant: SolverVariant,
-                                              kernel_name ): 
+                                              kernel_variant: KernelVariant): 
   """
   
   I return only the unqualified function call, i.e. without any namespaces.
   So by setting the right namespace as prefix, you can direct it to particular
   implementations.
   
-  kernel_name: String
-    Pass in the kernel call such as 
-      timeStepWithRusanov_batched_map_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>
-  
   """  
+  KernelCalls = {
+    KernelVariant.PatchWiseAoSStack:               "timeStepWithRusanov_patchwise_call_stack",
+    KernelVariant.PatchWiseAoSoAStack:             "timeStepWithRusanov_patchwise_call_stack",
+    KernelVariant.PatchWiseSoAStack:               "timeStepWithRusanov_patchwise_call_stack",
+    KernelVariant.PatchWiseAoSHeap:               "timeStepWithRusanov_patchwise_heap",
+    KernelVariant.PatchWiseAoSoAHeap:             "timeStepWithRusanov_patchwise_heap",
+    KernelVariant.PatchWiseSoAHeap:               "timeStepWithRusanov_patchwise_heap",
+    KernelVariant.BatchedAoSStack:                 "timeStepWithRusanov_batched_call_stack",
+    KernelVariant.BatchedAoSoAStack:               "timeStepWithRusanov_batched_call_stack",
+    KernelVariant.BatchedSoAStack:                 "timeStepWithRusanov_batched_call_stack",
+    KernelVariant.BatchedAoSHeap:                 "timeStepWithRusanov_batched_heap",
+    KernelVariant.BatchedAoSoAHeap:               "timeStepWithRusanov_batched_heap",
+    KernelVariant.BatchedSoAHeap:                 "timeStepWithRusanov_batched_heap",
+    KernelVariant.TaskGraphAoSHeap:               "timeStepWithRusanov_taskgraph_heap",
+    KernelVariant.TaskGraphAoSoAHeap:             "timeStepWithRusanov_taskgraph_heap",
+    KernelVariant.TaskGraphSoAHeap:               "timeStepWithRusanov_taskgraph_heap",
+    KernelVariant.GenericAoS:                     "timeStepWithRusanov_generic",
+    KernelVariant.GenericAoSoA:                   "timeStepWithRusanov_generic",
+    KernelVariant.GenericSoA:                     "timeStepWithRusanov_generic",
+  }
+  
+  EnumeratorTemplateTypes = {
+    KernelVariant.PatchWiseAoSStack:               "::exahype2::enumerator::AoSLexicographicEnumerator",
+    KernelVariant.PatchWiseAoSoAStack:             "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    KernelVariant.PatchWiseSoAStack:               "::exahype2::enumerator::SoALexicographicEnumerator",
+    KernelVariant.PatchWiseAoSHeap:               "::exahype2::enumerator::AoSLexicographicEnumerator",
+    KernelVariant.PatchWiseAoSoAHeap:             "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    KernelVariant.PatchWiseSoAHeap:               "::exahype2::enumerator::SoALexicographicEnumerator",
+    KernelVariant.BatchedAoSStack:                 "::exahype2::enumerator::AoSLexicographicEnumerator",
+    KernelVariant.BatchedAoSoAStack:               "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    KernelVariant.BatchedSoAStack:                 "::exahype2::enumerator::SoALexicographicEnumerator",
+    KernelVariant.BatchedAoSHeap:                 "::exahype2::enumerator::AoSLexicographicEnumerator",
+    KernelVariant.BatchedAoSoAHeap:               "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    KernelVariant.BatchedSoAHeap:                 "::exahype2::enumerator::SoALexicographicEnumerator",
+    KernelVariant.TaskGraphAoSHeap:               "::exahype2::enumerator::AoSLexicographicEnumerator",
+    KernelVariant.TaskGraphAoSoAHeap:             "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    KernelVariant.TaskGraphSoAHeap:               "::exahype2::enumerator::SoALexicographicEnumerator",
+    KernelVariant.GenericAoS:                     "::exahype2::enumerator::AoSLexicographicEnumerator",
+    KernelVariant.GenericAoSoA:                   "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    KernelVariant.GenericSoA:                     "::exahype2::enumerator::SoALexicographicEnumerator",
+  }
 
-  template  = kernel_name
+  template  = KernelCalls[kernel_variant]
   
   if solver_variant == SolverVariant.WithVirtualFunctions:
-    template += """(
+    template += """_functors(
   patchData,
   {{NUMBER_OF_VOLUMES_PER_AXIS}},
   {{HALO_SIZE}},
@@ -95,7 +127,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
 );
   """
   elif solver_variant == SolverVariant.Stateless:
-    template += """(
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>(
       patchData,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
@@ -103,8 +135,17 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
       {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
     );
   """
-  elif solver_variant == SolverVariant.Accelerator:
-    template += """(
+  elif solver_variant == SolverVariant.Multicore:
+    template += """_multicore_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>(
+      patchData,
+      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+    );
+  """
+  elif solver_variant == SolverVariant.AcceleratorWithExplicitCopy:
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>(
       targetDevice,
       patchData,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
@@ -114,7 +155,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     );
   """
   else:
-    assert False, "no option applies"
+    assert False, "not supported combination: {} x {}".format( solver_variant, kernel_variant )
         
 
   result = jinja2.Template( template, undefined=jinja2.DebugUndefined)
@@ -123,16 +164,21 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   d[ "NCP_IMPLEMENTATION" ]          = ncp_implementation
   d[ "SOURCE_IMPLEMENTATION" ]       = source_implementation
   d[ "COMPUTE_MAX_EIGENVALUE" ]      = compute_max_eigenvalue_of_next_time_step
+  d[ "TEMP_DATA_ENUMERATOR" ]        = EnumeratorTemplateTypes[kernel_variant]
   return result.render(**d)
 
 
-def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
+def create_abstract_solver_declarations(flux_implementation,
+                                        ncp_implementation,
+                                        eigenvalues_implementation,
+                                        source_term_implementation,
+                                        pde_terms_without_state):
   Template = jinja2.Template( """
   public:
     {% if EIGENVALUES_IMPLEMENTATION=="<none>" %}
     #error eigenvalue implementation cannot be none
     {% endif %}
-    
+
     {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
      * Depending on the implementation, this variant might be slow as it 
@@ -166,7 +212,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #pragma omp end declare target
     #endif
     {% endif %}
-    
+
     /**
      * Determine max eigenvalue over Jacobian in a given point with solution values
      * (states) Q. All parameters are in.
@@ -182,7 +228,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double                                       dt,
       int                                          normal
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
-
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
@@ -226,7 +271,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% else %} final {% endif %};
     {% endif %}
 
-
     {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
      * Depending on the implementation, this variant might be slow as it 
@@ -257,7 +301,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #pragma omp end declare target
     #endif
     {% endif %}
-    
+
     {% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
       const double * __restrict__                  Q,      // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -270,7 +314,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__                        BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
     {% endif %}
-    
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
@@ -300,7 +343,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #pragma omp end declare target
     #endif
     {% endif %}
-    
+
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void sourceTerm(
       const double * __restrict__ Q,
@@ -311,7 +354,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__                        S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
-
 """, undefined=jinja2.DebugUndefined)
 
   d= {}
@@ -321,7 +363,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
   d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
   return Template.render(**d)
-
 
 def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
   Template = jinja2.Template( """
@@ -337,7 +378,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   {{EIGENVALUES_IMPLEMENTATION}}
 }
 {% endif %}
-
 
 {% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(

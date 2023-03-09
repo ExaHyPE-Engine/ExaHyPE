@@ -1,0 +1,43 @@
+
+template<int nVar, int leadingDimSize>
+inline void AoS2SoA(const double* const __restrict__ AoS, double* __restrict__ SoA) {
+  for(int n=0; n<nVar; n++) {
+    #pragma omp simd aligned(SoA,AoS:16)
+    for(int p=0; p<1; p++) {
+      SoA[p+1*n] = AoS[n+leadingDimSize*p];
+    }
+  }
+}
+
+template<int nVar, int leadingDimSize>
+inline void SoA2AoS(const double* const __restrict__ SoA, double* __restrict__ AoS) {
+  for(int p=0; p<1; p++) {
+    #pragma omp simd aligned(SoA,AoS:16)
+    for(int n=0; n<nVar; n++) {
+      AoS[n+leadingDimSize*p] = SoA[p+1*n];
+    }
+  }
+}
+
+template<int nVar, int leadingDimSize, int restSize>
+inline void AoS2SoA_rest(const double* const __restrict__ AoS, double* __restrict__ SoA) {
+  for(int n=0; n<nVar; n++) {
+    #pragma omp simd aligned(SoA,AoS:16)
+    for(int p=0; p<restSize; p++) {
+      SoA[p+1*n] = AoS[n+leadingDimSize*p];
+    }
+    for(int p=restSize; p<1; p++) { //pad missing point with valid values from first point
+      SoA[p+1*n] = AoS[n];
+    }
+  }
+}
+
+template<int nVar, int leadingDimSize, int restSize>
+inline void SoA2AoS_rest(const double* const __restrict__ SoA, double* __restrict__ AoS) {
+  for(int p=0; p<restSize; p++) { //ignore the padding
+    #pragma omp simd aligned(SoA,AoS:16)
+    for(int n=0; n<nVar; n++) {
+      AoS[n+leadingDimSize*p] = SoA[p+1*n];
+    }
+  }
+}
