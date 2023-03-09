@@ -1,0 +1,14 @@
+/**
+
+@page setupPage Initial Setup
+
+
+<h2>Initial Setup</h2>
+
+\section First Operations
+
+First, perform the holy trifecta of necessary operations:
+
+<code> libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing; </code>
+
+*/
