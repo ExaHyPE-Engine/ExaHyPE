@@ -230,7 +230,7 @@ particle_force = """
   }
 """
 #particle.particle_acceleration = particle_force
-particle.particle_particle_interaction_over_particle_sets_kernel = particle_force
+#particle.particle_particle_interaction_over_particle_sets_kernel = particle_force
 
 # Add particle to the SWIFT project
 particle_set = project.add_particle_species( particle )

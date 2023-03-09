@@ -126,15 +126,19 @@ class LeapfrogFixedInteractionRadius(Particle):
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
         touch_vertex_first_time_kernel = self.touch_particles_of_set_first_time_kernel,
-        cell_kernel                    = """
-                                         ::swift2::kernels::genericInteraction<globaldata::{}>( 
+                    #        cell_kernel                    = """
+                    #                                         ::swift2::kernels::genericInteraction<globaldata::{}>( 
+                    #                                           localParticles, 
+                    #                                           activeParticles,
+                    #                                           [&] (globaldata::{}* localParticle, const globaldata::{} * const globalParticle) -> void {{
+                    #                                             {}
+                    #                                           }}
+                    #                                         );
+                    #                                         """.format(self.name, self.name, self.name, self.particle_particle_interaction_over_particle_sets_kernel),
+        cell_kernel                    = """::swift2::kernels::computeGravitationalForce( 
                                            localParticles, 
-                                           activeParticles,
-                                           [&] (globaldata::{}* localParticle, const globaldata::{} * const globalParticle) -> void {{
-                                             {}
-                                           }}
-                                         );
-                                         """.format(self.name, self.name, self.name, self.particle_particle_interaction_over_particle_sets_kernel),
+                                           activeParticles
+                                         );""",
         touch_vertex_last_time_kernel  = self.touch_particles_of_set_last_time_kernel,
         includes                       = """
                                          #include "Constants.h"
@@ -180,15 +184,19 @@ class LeapfrogFixedInteractionRadius(Particle):
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
         touch_vertex_first_time_kernel = self.touch_particles_of_set_first_time_kernel,
-        cell_kernel                    = """
-                                         ::swift2::kernels::genericInteraction<globaldata::{}>( 
+                    #        cell_kernel                    = """
+                    #                                         ::swift2::kernels::genericInteraction<globaldata::{}>( 
+                    #                                           localParticles, 
+                    #                                           activeParticles,
+                    #                                           [&] (globaldata::{}* localParticle, const globaldata::{} * const globalParticle) -> void {{
+                    #                                             {}
+                    #                                           }}
+                    #                                         );
+                    #                                         """.format(self.name, self.name, self.name, self.particle_particle_interaction_over_particle_sets_kernel),
+        cell_kernel                    = """::swift2::kernels::computeGravitationalForce( 
                                            localParticles, 
-                                           activeParticles,
-                                           [&] (globaldata::{}* localParticle, const globaldata::{} * const globalParticle) -> void {{
-                                             {}
-                                           }}
-                                         );
-                                         """.format(self.name, self.name, self.name, self.particle_particle_interaction_over_particle_sets_kernel),
+                                           activeParticles
+                                         );""",
         touch_vertex_last_time_kernel  = self.touch_particles_of_set_last_time_kernel,
         includes                       = """
                                          #include "Constants.h"
