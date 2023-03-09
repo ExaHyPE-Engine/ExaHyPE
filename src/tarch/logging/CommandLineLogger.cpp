@@ -296,6 +296,12 @@ void tarch::logging::CommandLineLogger::indent( bool indent, const std::string& 
   }
   else {
     if ( tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
+      assertion3(
+        not _indentTraces.empty(),
+        trace,
+	message,
+        indent
+      );
       assertionEquals2(
         _indentTraces.top(),
         trace,
