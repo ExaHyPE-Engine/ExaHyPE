@@ -49,6 +49,16 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     tarch::la::Vector<Dimensions,double> _debugH;
     #endif
 
+    /**
+     * Pointer to array.
+     *
+     * We have to use double[] here for example to be C++ conformal. This still
+     * means that _dataSmartPointer is only one pointer. See
+     *
+     * https://www.nextptr.com/question/qa1348405750/dynamic-array-with-stdunique_ptr
+     *
+     * for an example.
+     */
     std::shared_ptr< {{FLOAT_TYPE}}[] > _dataSmartPointer;
   public:
     typedef {{FLOAT_TYPE}} DoFType;
@@ -85,6 +95,24 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
    *
    * This routine is used by all creational events, i.e. create a vertex for
    * example uses it as well as create a hanging vertex.
+   *
+   *
+   * ## Implementation
+   *
+   * The constructor requires us to pass in a pointer to the actual array, and
+   * then the constructor will wrap that in the smart pointer meta data structures.
+   *
+   * Since I use a user-defined allocator (which might take care of all
+   * alignment, e.g.), I also have to provide a user-defined free. These two
+   * should match. By default, the smart pointer uses
+   *
+   *       delete[] p;
+   *
+   * and that's not what we want here.
+   *
+   *
+   * Further information can be found at
+   * https://en.cppreference.com/w/cpp/memory/shared_ptr/shared_ptr.
    */
   {{CLASSNAME}}();
 
