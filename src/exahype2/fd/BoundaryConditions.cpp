@@ -119,7 +119,7 @@ void exahype2::fd::applySommerfeldConditions(
     0
   );
 
-  double* QInf = tarch::allocateMemory( numberOfUnknowns+numberOfAuxiliaryVariables, tarch::MemoryLocation::Heap );
+  double* QInf = tarch::allocateMemory<double>( numberOfUnknowns+numberOfAuxiliaryVariables, tarch::MemoryLocation::Heap );
 
   tarch::la::Vector<Dimensions,double> volumeH    = exahype2::fd::getGridCellSize(patchSize, numberOfGridCellsPerPatchPerAxis);
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * patchSize;

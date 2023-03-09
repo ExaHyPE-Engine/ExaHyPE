@@ -2,6 +2,7 @@
 
 #if defined(GPUOffloadingOff)
 
+template <class T>
 double* tarch::allocateMemory(int size, MemoryLocation location) {
   return new (std::align_val_t(AlignmentOnHeap)) double[size];
 }
@@ -13,5 +14,7 @@ void tarch::freeMemory(double* data, [[maybe_unused]] MemoryLocation location) {
 void tarch::gpuAbort() {
   std::abort();
 }
+
+template double* tarch::allocateMemory(int size, MemoryLocation location);
 
 #endif

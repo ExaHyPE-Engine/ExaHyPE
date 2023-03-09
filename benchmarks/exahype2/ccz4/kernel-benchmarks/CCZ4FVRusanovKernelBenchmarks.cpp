@@ -153,7 +153,7 @@ void runBenchmarksOnHost(int numberOfPatches) {
     std::vector<double*> inputData;
     std::vector<double*> outputData;
     for (int i=0; i<patches; i++) {
-      inputData.push_back( tarch::allocateMemory(NumberOfInputEntries, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory) );
+      inputData.push_back( tarch::allocateMemory<double>(NumberOfInputEntries, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory) );
       outputData.push_back( new double[ NumberOfOutputEntries ] );
       initInputData( inputData[i] );
     }
@@ -321,7 +321,7 @@ void runStatelessVariantOnDevice(
 ) {
   ::exahype2::CellData patchData(patches);
   for (int i=0; i<patches; i++) {
-    patchData.QIn[i]           = tarch::allocateMemory(NumberOfInputEntries, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    patchData.QIn[i]           = tarch::allocateMemory<double>(NumberOfInputEntries, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     patchData.t[i]             = TimeStamp;
     patchData.dt[i]            = TimeStepSize;
     patchData.QOut[i]          = new double[ NumberOfOutputEntries ];

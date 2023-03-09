@@ -20,8 +20,8 @@ void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testMe() {
    // This is really just testing the different ways to iterate throught he x,y grid
    // The input values are ad-hoc
 
-  double * numericalFluxL = ::tarch::allocateMemory(5, tarch::MemoryLocation::Heap);
-  double * numericalFluxR = ::tarch::allocateMemory(5, tarch::MemoryLocation::Heap);
+  double * numericalFluxL = ::tarch::allocateMemory<double>(5, tarch::MemoryLocation::Heap);
+  double * numericalFluxR = ::tarch::allocateMemory<double>(5, tarch::MemoryLocation::Heap);
   numericalFluxL[0]=1.0;
   numericalFluxL[1]=2.0;
   numericalFluxL[2]=3.0;
