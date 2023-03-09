@@ -313,6 +313,8 @@ class tarch::mpi::Rank {
      * has thus to be set before the log state operation is invoked.
      *
      * @return true if initialisation has been successful
+     *
+     * @see shutdown
      */
     bool init(int* argc, char*** argv);
 
