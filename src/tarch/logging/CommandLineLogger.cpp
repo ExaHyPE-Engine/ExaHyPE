@@ -4,6 +4,7 @@
 
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/Core.h"
 
 #include "LogFilter.h"
 
