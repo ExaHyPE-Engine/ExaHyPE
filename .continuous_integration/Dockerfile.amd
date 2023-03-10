@@ -1,30 +1,28 @@
+# https://hub.docker.com/r/rocm/dev-ubuntu-22.04
+# https://github.com/RadeonOpenCompute/ROCm-docker/blob/master/quick-start.md
+# https://repo.radeon.com/amdgpu/
 from rocm/dev-ubuntu-22.04
 
+ARG SPACK_ROOT=/usr/local \
+  AMD_DIR=/opt/rocm
 ENV FORCE_UNSAFE_CONFIGURE=1 \
-    SPACK_ROOT=/usr/local \
-    DEBIAN_FRONTEND=noninteractive \
-    TZ=Europe/Berlin \
-    DISPLAY=host.docker.internal:0.0 \
-    OMPI_ALLOW_RUN_AS_ROOT=1 \
-    OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+  DEBIAN_FRONTEND=noninteractive \
+  TZ=Europe/Berlin \
+  DISPLAY=host.docker.internal:0.0 \
+  OMPI_ALLOW_RUN_AS_ROOT=1 \
+  OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 \
+  PATH=${AMD_DIR}/bin:${PATH} \
+  LD_LIBRARY_PATH=${AMD_DIR}/lib:${LD_LIBRARY_PATH}
 
-COPY base-installation.sh /
-RUN chmod +x /base-installation.sh && ./base-installation.sh && rm ./base-installation.sh
-
-RUN mkdir -p /var/tmp && wget -q -nc --no-check-certificate -P /var/tmp https://github.com/Kitware/CMake/releases/download/v3.22.2/cmake-3.22.2-linux-x86_64.sh && \
-    mkdir -p /usr/local && \
-    /bin/sh /var/tmp/cmake-3.22.2-linux-x86_64.sh --prefix=/usr/local --skip-license && \
-    rm -rf /var/tmp/cmake-3.22.2-linux-x86_64.sh
-ENV PATH=/usr/local/bin:$PATH
+COPY install-packages.sh /
+RUN chmod +x /install-packages.sh && ./install-packages.sh && rm ./install-packages.sh
 
 RUN curl -s -L https://api.github.com/repos/spack/spack/tarball | tar xzC $SPACK_ROOT --strip 1 && \
-spack -L install environment-modules target=x86_64 && \
-spack -L install lmod target=x86_64 && \
+spack -L install environment-modules target=x86_64 lmod target=x86_64 && \
 spack -L clean -a && \
+echo "source $(spack location -i lmod)/lmod/lmod/init/bash" >> /etc/profile.d/spack.sh && \
+echo "source $(spack location -i environment-modules)/init/bash" >> /etc/profile.d/spack.sh && \
+echo "source $SPACK_ROOT/share/spack/setup-env.sh" >> /etc/profile.d/spack.sh && \
 rm -rf /tmp/root/spack-stage/
-
-RUN echo "source $(spack location -i lmod)/lmod/lmod/init/bash" >> /etc/profile.d/spack.sh && \
-    echo "source $(spack location -i environment-modules)/init/bash" >> /etc/profile.d/spack.sh && \
-    echo "source $SPACK_ROOT/share/spack/setup-env.sh" >> /etc/profile.d/spack.sh
 
 ENTRYPOINT ["/bin/bash", "-l", "-c"]

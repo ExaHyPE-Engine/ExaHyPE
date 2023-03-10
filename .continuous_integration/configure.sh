@@ -22,10 +22,8 @@ if [ "$toolchain" = "amd" ]; then
   read -p "Enter CXX compiler [amdclang++, hipcc]: " cxx
   cxx=${cxx:-amdclang++}
   #read -p "Enter Fortran compiler: " fcc
-
   CXXFLAGS="-std=c++20 -W -Wall -Wextra"
   LDFLAGS=""
-
   PS3="Select multithreading mode: "
   select shared in none omp; do
     case $shared in
@@ -35,11 +33,9 @@ if [ "$toolchain" = "amd" ]; then
         break;;
     esac
   done
-
   if [ ! "$shared" = "none" ]; then
     CXXFLAGS+=" -fopenmp"
     LDFLAGS+=" -fopenmp"
-
     PS3="Select GPU offloading mode: "
     select gpu in none omp; do
       case $gpu in
@@ -49,7 +45,6 @@ if [ "$toolchain" = "amd" ]; then
           break;;
       esac
     done
-
     if [ ! "$gpu" = "none" ]; then
       PS3="Select GPU compute capability: "
       select cap in gfx906 gfx908 gfx90a; do
@@ -62,14 +57,11 @@ if [ "$toolchain" = "amd" ]; then
             break;;
         esac
       done
-
-      CXXFLAGS+=" --offload-arch=$cap"
+      CXXFLAGS+=" --offload-arch=$cap" # -x hip -target amdgcn-amd-amdhsa
       LDFLAGS+=" --offload-arch=$cap -lstdc++fs"
-
       echo "$cc $CXXFLAGS"
       echo "$cxx $CXXFLAGS"
       echo "LDFLAGS: $LDFLAGS"
-
       libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
       ./configure \
         --enable-exahype \
@@ -88,7 +80,6 @@ if [ "$toolchain" = "amd" ]; then
       echo "$cc $CXXFLAGS"
       echo "$cxx $CXXFLAGS"
       echo "LDFLAGS: $LDFLAGS"
-
       libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
       ./configure \
         --enable-exahype \
@@ -103,6 +94,22 @@ if [ "$toolchain" = "amd" ]; then
         CXXFLAGS="$CXXFLAGS" \
         LDFLAGS="$LDFLAGS"
     fi
+  else
+    echo "$cc $CXXFLAGS"
+    echo "$cxx $CXXFLAGS"
+    echo "LDFLAGS: $LDFLAGS"
+    libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
+    ./configure \
+      --enable-exahype \
+      --enable-loadbalancing \
+      --enable-blockstructured \
+      --enable-particles \
+      --enable-fem \
+      --enable-swift \
+      --with-fenv \
+      CC=$cc CXX=$cxx \
+      CXXFLAGS="$CXXFLAGS" \
+      LDFLAGS="$LDFLAGS"
   fi
 fi
 
@@ -112,10 +119,8 @@ if [ "$toolchain" = "nvidia" ]; then
   read -p "Enter CXX compiler [nvc++]: " cxx
   cxx=${cxx:-nvc++}
   #read -p "Enter Fortran compiler: " fcc
-
   CXXFLAGS="-std=c++20 -W -Wall -Wextra"
   LDFLAGS=""
-
   PS3="Select multithreading mode: "
   select shared in none omp cpp; do
     case $shared in
@@ -127,7 +132,6 @@ if [ "$toolchain" = "nvidia" ]; then
         break;;
     esac
   done
-
   if [ ! "$shared" = "none" ]; then
     PS3="Select GPU offloading mode: "
     select gpu in none omp cpp; do
@@ -140,23 +144,10 @@ if [ "$toolchain" = "nvidia" ]; then
           break;;
       esac
     done
-
     if [ ! "$gpu" = "none" ]; then
       PS3="Select GPU compute capability: "
-      select cap in cc50 cc52 cc53 cc60 cc61 cc62 cc70 cc72 cc75 cc80 cc86 cc90; do
+      select cap in cc70 cc72 cc75 cc80 cc86 cc90; do
         case $cap in
-          "cc50")
-            break;;
-          "cc52")
-            break;;
-          "cc53")
-            break;;
-          "cc60")
-            break;;
-          "cc61")
-            break;;
-          "cc62")
-            break;;
           "cc70")
             break;;
           "cc72")
@@ -171,10 +162,8 @@ if [ "$toolchain" = "nvidia" ]; then
             break;;
         esac
       done
-
       CXXFLAGS+=" -mp=gpu -gpu=$cap"
       LDFLAGS+=" -mp=gpu -gpu=$cap"
-
       PS3="Do you want to enable CUDA?: "
       select cuda in yes no; do
           case $cuda in
@@ -186,11 +175,9 @@ if [ "$toolchain" = "nvidia" ]; then
             break;;
         esac
       done
-
       echo "$cc $CXXFLAGS"
       echo "$cxx $CXXFLAGS"
       echo "LDFLAGS: $LDFLAGS"
-
       libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
       ./configure \
         --enable-exahype \
@@ -209,7 +196,6 @@ if [ "$toolchain" = "nvidia" ]; then
       echo "$cc $CXXFLAGS"
       echo "$cxx $CXXFLAGS"
       echo "LDFLAGS: $LDFLAGS"
-
       libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
       ./configure \
         --enable-exahype \
@@ -224,6 +210,22 @@ if [ "$toolchain" = "nvidia" ]; then
         CXXFLAGS="$CXXFLAGS" \
         LDFLAGS="$LDFLAGS"
     fi
+  else
+    echo "$cc $CXXFLAGS"
+    echo "$cxx $CXXFLAGS"
+    echo "LDFLAGS: $LDFLAGS"
+    libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
+    ./configure \
+      --enable-exahype \
+      --enable-loadbalancing \
+      --enable-blockstructured \
+      --enable-particles \
+      --enable-fem \
+      --enable-swift \
+      --with-fenv \
+      CC=$cc CXX=$cxx \
+      CXXFLAGS="$CXXFLAGS" \
+      LDFLAGS="$LDFLAGS"
   fi
 fi
 
@@ -233,10 +235,8 @@ if [ "$toolchain" = "gcc" ]; then
   read -p "Enter CXX compiler: [g++]" cxx
   cxx=${cxx:-g++}
   #read -p "Enter Fortran compiler: " fcc
-
   CXXFLAGS="-std=c++20 -W -Wall -Wextra"
   LDFLAGS=""
-
   PS3="Select multithreading mode: "
   select shared in none omp; do
     case $shared in
@@ -246,12 +246,9 @@ if [ "$toolchain" = "gcc" ]; then
         break;;
     esac
   done
-
-  if [ ! "$shared" = "none" ]
-  then
+  if [ ! "$shared" = "none" ]; then
     CXXFLAGS+=" -fopenmp"
     LDFLAGS+=" -fopenmp"
-
     PS3="Select GPU offloading mode: "
     select gpu in none omp; do
       case $gpu in
@@ -261,24 +258,98 @@ if [ "$toolchain" = "gcc" ]; then
           break;;
       esac
     done
+    if [ ! "$gpu" = "none" ]; then
+      CXXFLAGS+=" -foffload=nvptx-none"
+      LDFLAGS+=" -foffload=nvptx-none"
+      echo "$cc $CXXFLAGS"
+      echo "$cxx $CXXFLAGS"
+      echo "LDFLAGS: $LDFLAGS"
+      libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
+      ./configure \
+        --enable-exahype \
+        --enable-loadbalancing \
+        --enable-blockstructured \
+        --enable-fem \
+        --with-fenv \
+        --with-gpu=$gpu \
+        --with-multithreading=$shared \
+        CC=$cc CXX=$cxx \
+        CXXFLAGS="$CXXFLAGS" \
+        LDFLAGS="$LDFLAGS"
+    else
+      echo "$cc $CXXFLAGS"
+      echo "$cxx $CXXFLAGS"
+      echo "LDFLAGS: $LDFLAGS"
+      libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
+      ./configure \
+        --enable-exahype \
+        --enable-loadbalancing \
+        --enable-blockstructured \
+        --enable-particles \
+        --enable-fem \
+        --enable-swift \
+        --with-fenv \
+        --with-multithreading=$shared \
+        CC=$cc CXX=$cxx \
+        CXXFLAGS="$CXXFLAGS" \
+        LDFLAGS="$LDFLAGS"
+    fi
+  else
+    echo "$cc $CXXFLAGS"
+    echo "$cxx $CXXFLAGS"
+    echo "LDFLAGS: $LDFLAGS"
+    libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
+    ./configure \
+      --enable-exahype \
+      --enable-loadbalancing \
+      --enable-blockstructured \
+      --enable-particles \
+      --enable-fem \
+      --enable-swift \
+      --with-fenv \
+      CC=$cc CXX=$cxx \
+      CXXFLAGS="$CXXFLAGS" \
+      LDFLAGS="$LDFLAGS"
+  fi
+fi
 
-    if [ ! "$gpu" = "none" ]
-    then
+if [ "$toolchain" = "intel" ]; then
+  read -p "Enter CC compiler [icx]: " cc
+  cc=${cc:-icx}
+  read -p "Enter CXX compiler [icpx]: " cxx
+  cxx=${cxx:-icpx}
+  #read -p "Enter Fortran compiler: " fcc
+  CXXFLAGS="-std=c++20 -W -Wall -Wextra"
+  LDFLAGS=""
+  PS3="Select multithreading mode: "
+  select shared in none omp sycl; do
+    case $shared in
+      "none")
+        break;;
+      "omp")
+        break;;
+      "sycl")
+        break;;
+    esac
+  done
+  if [ ! "$shared" = "none" ]; then
+    CXXFLAGS+=" -fiopenmp"
+    LDFLAGS+=" -fiopenmp"
+    PS3="Select GPU offloading mode: "
+    select gpu in none omp sycl; do
+      case $gpu in
+        "none")
+          break;;
+        "omp")
+          break;;
+        "sycl")
+          break;;
+      esac
+    done
+    if [ ! "$gpu" = "none" ]; then
       PS3="Select GPU compute capability: "
-      select cap in sm_50 sm_52 sm_53 sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_90; do
+      select cap in sm_70 sm_72 sm_75 sm_80 sm_86 sm_90 spir64; do
         case $cap in
-          "sm_50")
-            break;;
-          "sm_52")
-            break;;
-          "sm_53")
-            break;;
-          "sm_60")
-            break;;
-          "sm_61")
-            break;;
-          "sm_62")
-            break;;
           "sm_70")
             break;;
           "sm_72")
@@ -291,13 +362,15 @@ if [ "$toolchain" = "gcc" ]; then
             break;;
           "sm_90")
             break;;
+          "spir64")
+            break;;
         esac
       done
-
+      CXXFLAGS+="-Xsycl-target-frontend -fgpu-inline-threshold=100000 -Wno-unknown-cuda-version -Wno-deprecated-declarations -Wno-linker-warnings -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=$cap" \
+      LDFLAGS+="-Xsycl-target-frontend -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=$cap -lstdc++fs"
       echo "$cc $CXXFLAGS"
       echo "$cxx $CXXFLAGS"
       echo "LDFLAGS: $LDFLAGS"
-
       libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
       ./configure \
         --enable-exahype \
@@ -314,7 +387,6 @@ if [ "$toolchain" = "gcc" ]; then
       echo "$cc $CXXFLAGS"
       echo "$cxx $CXXFLAGS"
       echo "LDFLAGS: $LDFLAGS"
-
       libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
       ./configure \
         --enable-exahype \
@@ -329,52 +401,10 @@ if [ "$toolchain" = "gcc" ]; then
         CXXFLAGS="$CXXFLAGS" \
         LDFLAGS="$LDFLAGS"
     fi
-  fi
-fi
-
-if [ "$toolchain" = "intel" ]; then
-  read -p "Enter CC compiler [icx]: " cc
-  cc=${cc:-icx}
-  read -p "Enter CXX compiler [icpx]: " cxx
-  cxx=${cxx:-icpx}
-  #read -p "Enter Fortran compiler: " fcc
-
-  CXXFLAGS="-std=c++20 -W -Wall -Wextra"
-  LDFLAGS=""
-
-  PS3="Select multithreading mode: "
-  select shared in none omp sycl; do
-    case $shared in
-      "none")
-        break;;
-      "omp")
-        break;;
-      "sycl")
-        break;;
-    esac
-  done
-
-  if [ ! "$shared" = "none" ]
-  then
-    CXXFLAGS+=" -fiopenmp"
-    LDFLAGS+=" -fiopenmp"
-
-    PS3="Select GPU offloading mode: "
-    select gpu in none omp sycl; do
-      case $gpu in
-        "none")
-          break;;
-        "omp")
-          break;;
-        "sycl")
-          break;;
-      esac
-    done
-
-      echo "$cc $CXXFLAGS"
-      echo "$cxx $CXXFLAGS"
-      echo "LDFLAGS: $LDFLAGS"
-
+  else
+    echo "$cc $CXXFLAGS"
+    echo "$cxx $CXXFLAGS"
+    echo "LDFLAGS: $LDFLAGS"
     libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
     ./configure \
       --enable-exahype \
@@ -384,7 +414,6 @@ if [ "$toolchain" = "intel" ]; then
       --enable-fem \
       --enable-swift \
       --with-fenv \
-      --with-multithreading=$shared \
       CC=$cc CXX=$cxx \
       CXXFLAGS="$CXXFLAGS" \
       LDFLAGS="$LDFLAGS"
@@ -397,10 +426,8 @@ if [ "$toolchain" = "llvm" ]; then
   read -p "Enter CXX compiler [clang++]: " cxx
   cxx=${cxx:-clang++}
   #read -p "Enter Fortran compiler: " fcc
-
-  CXXFLAGS="-std=c++17 -W -Wall -Wextra"
+  CXXFLAGS="-std=c++17 -W -Wall -Wextra" #-flto"
   LDFLAGS=""
-
   PS3="Select multithreading mode: "
   select shared in none omp; do
     case $shared in
@@ -410,11 +437,8 @@ if [ "$toolchain" = "llvm" ]; then
         break;;
     esac
   done
-
-  if [ ! "$shared" = "none" ]
-  then
+  if [ ! "$shared" = "none" ]; then
     CXXFLAGS+=" -fopenmp"
-
     PS3="Select GPU offloading mode: "
     select gpu in none omp; do
       case $gpu in
@@ -424,24 +448,10 @@ if [ "$toolchain" = "llvm" ]; then
           break;;
       esac
     done
-
-    if [ ! "$gpu" = "none" ]
-    then
+    if [ ! "$gpu" = "none" ]; then
       PS3="Select GPU compute capability: "
-      select cap in sm_50 sm_52 sm_53 sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_90; do
+      select cap in sm_70 sm_72 sm_75 sm_80 sm_86 sm_90; do
         case $cap in
-          "sm_50")
-            break;;
-          "sm_52")
-            break;;
-          "sm_53")
-            break;;
-          "sm_60")
-            break;;
-          "sm_61")
-            break;;
-          "sm_62")
-            break;;
           "sm_70")
             break;;
           "sm_72")
@@ -456,13 +466,10 @@ if [ "$toolchain" = "llvm" ]; then
             break;;
         esac
       done
-
       CXXFLAGS+=" -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=$cap -Wno-unknown-cuda-version"
-
       echo "$cc $CXXFLAGS"
       echo "$cxx $CXXFLAGS"
       echo "LDFLAGS: $LDFLAGS"
-
       libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
       ./configure \
         --enable-exahype \
@@ -479,13 +486,11 @@ if [ "$toolchain" = "llvm" ]; then
       echo "$cc $CXXFLAGS"
       echo "$cxx $CXXFLAGS"
       echo "LDFLAGS: $LDFLAGS"
-
       libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
       ./configure \
         --enable-exahype \
         --enable-loadbalancing \
         --enable-blockstructured \
-        --enable-particles \
         --enable-fem \
         --enable-swift \
         --with-fenv \
@@ -494,5 +499,20 @@ if [ "$toolchain" = "llvm" ]; then
         CXXFLAGS="$CXXFLAGS" \
         LDFLAGS="$LDFLAGS"
     fi
+  else
+    echo "$cc $CXXFLAGS"
+    echo "$cxx $CXXFLAGS"
+    echo "LDFLAGS: $LDFLAGS"
+    libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
+    ./configure \
+      --enable-exahype \
+      --enable-loadbalancing \
+      --enable-blockstructured \
+      --enable-fem \
+      --enable-swift \
+      --with-fenv \
+      CC=$cc CXX=$cxx \
+      CXXFLAGS="$CXXFLAGS" \
+      LDFLAGS="$LDFLAGS"
   fi
 fi

@@ -1,30 +1,91 @@
 FROM ubuntu:22.04
 
+ARG SPACK_ROOT=/usr/local \
+  GCC_DIR=/opt/gcc
 ENV FORCE_UNSAFE_CONFIGURE=1 \
-    SPACK_ROOT=/usr/local \
-    DEBIAN_FRONTEND=noninteractive \
-    TZ=Europe/Berlin \
-    DISPLAY=host.docker.internal:0.0 \
-    OMPI_ALLOW_RUN_AS_ROOT=1 \
-    OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+  DEBIAN_FRONTEND=noninteractive \
+  TZ=Europe/Berlin \
+  DISPLAY=host.docker.internal:0.0 \
+  OMPI_ALLOW_RUN_AS_ROOT=1 \
+  OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 \
+  PATH=${GCC_DIR}/bin:${PATH} \
+  LD_LIBRARY_PATH=${GCC_DIR}/lib64:${GCC_DIR}/nvptx-none/lib:${LD_LIBRARY_PATH}
 
-COPY base-installation.sh /
-RUN chmod +x /base-installation.sh && ./base-installation.sh && rm ./base-installation.sh
-
-RUN mkdir -p /var/tmp && wget -q -nc --no-check-certificate -P /var/tmp https://github.com/Kitware/CMake/releases/download/v3.22.2/cmake-3.22.2-linux-x86_64.sh && \
-    mkdir -p /usr/local && \
-    /bin/sh /var/tmp/cmake-3.22.2-linux-x86_64.sh --prefix=/usr/local --skip-license && \
-    rm -rf /var/tmp/cmake-3.22.2-linux-x86_64.sh
-ENV PATH=/usr/local/bin:$PATH
+COPY install-packages.sh /
+RUN chmod +x /install-packages.sh && ./install-packages.sh && rm ./install-packages.sh
 
 RUN curl -s -L https://api.github.com/repos/spack/spack/tarball | tar xzC $SPACK_ROOT --strip 1 && \
-spack -L install environment-modules target=x86_64 && \
-spack -L install lmod target=x86_64 && \
+spack -L install environment-modules target=x86_64 lmod target=x86_64 && \
 spack -L clean -a && \
+echo "source $(spack location -i lmod)/lmod/lmod/init/bash" >> /etc/profile.d/spack.sh && \
+echo "source $(spack location -i environment-modules)/init/bash" >> /etc/profile.d/spack.sh && \
+echo "source $SPACK_ROOT/share/spack/setup-env.sh" >> /etc/profile.d/spack.sh && \
 rm -rf /tmp/root/spack-stage/
 
-RUN echo "source $(spack location -i lmod)/lmod/lmod/init/bash" >> /etc/profile.d/spack.sh && \
-    echo "source $(spack location -i environment-modules)/init/bash" >> /etc/profile.d/spack.sh && \
-    echo "source $SPACK_ROOT/share/spack/setup-env.sh" >> /etc/profile.d/spack.sh
+# https://gcc.gnu.org/install/specific.html#nvptx-x-none
+RUN git clone https://github.com/MentorEmbedded/nvptx-tools/ /nvptx-tools && \
+  cd nvptx-tools && ./configure --prefix=${GCC_DIR} && make -j`getconf _NPROCESSORS_ONLN` && make install && \
+  git clone git://gcc.gnu.org/git/gcc.git /gcc && \
+  git clone https://github.com/MentorEmbedded/nvptx-newlib/ /nvptx-newlib && \
+  cd /gcc && ln -s ../nvptx-newlib/newlib newlib && \
+  cd /gcc && contrib/download_prerequisites && \
+  mkdir /gcc/build-nvptx-gcc && cd /gcc/build-nvptx-gcc && \
+  ../configure \
+    --target=nvptx-none \
+    --enable-as-accelerator-for=x86_64-pc-linux-gnu \
+    --with-build-time-tools=${GCC_DIR}/bin \
+    --disable-sjlj-exceptions \
+    --with-newlib \
+     --with-arch=sm_70 \
+    --enable-newlib-io-long-long \
+    --enable-languages=c,c++,fortran,lto \
+    --prefix=${GCC_DIR} && \
+  make -j`getconf _NPROCESSORS_ONLN` && make install && \
+  mkdir /gcc/build-host-gcc && cd /gcc/build-host-gcc && \
+  ../configure \
+    --build=x86_64-pc-linux-gnu \
+    --host=x86_64-pc-linux-gnu \
+    --target=x86_64-pc-linux-gnu \
+    --disable-multilib \
+    --enable-offload-targets=nvptx-none=${GCC_DIR}/usr/local/bin/ \
+    --enable-languages=c,c++,fortran,lto \
+    --prefix=${GCC_DIR} && \
+  make -j`getconf _NPROCESSORS_ONLN` && make install && \
+  cd / && rm -rf /nvptx-tools && rm -rf /nvptx-newlib && rm -rf /gcc
+
+RUN echo '#include <iostream>' > check_openmp_offload.cpp && \
+echo '#include <omp.h>' >> check_openmp_offload.cpp && \
+echo 'int main() {' >> check_openmp_offload.cpp && \
+echo '  int canOffload = 1;' >> check_openmp_offload.cpp && \
+echo '  #pragma omp target map(tofrom : canOffload)' >> check_openmp_offload.cpp && \
+echo '  {' >> check_openmp_offload.cpp && \
+echo '    if (!omp_is_initial_device()) {' >> check_openmp_offload.cpp && \
+echo '      canOffload = 0;' >> check_openmp_offload.cpp && \
+echo '    }' >> check_openmp_offload.cpp && \
+echo '  }' >> check_openmp_offload.cpp && \
+echo '  if (canOffload == 0) {' >> check_openmp_offload.cpp && \
+echo '    std::cout << "OpenMP offloading is supported." << std::endl;' >> check_openmp_offload.cpp && \
+echo '  } else {' >> check_openmp_offload.cpp && \
+echo '    std::cout << "OpenMP offloading is NOT supported. Make sure your GPU supports at least compute capability 7.0." << std::endl;' >> check_openmp_offload.cpp && \
+echo '  }' >> check_openmp_offload.cpp && \
+echo '  return canOffload;' >> check_openmp_offload.cpp && \
+echo '}' >> check_openmp_offload.cpp && \
+g++ check_openmp_offload.cpp -o check_openmp_offload -fopenmp -foffload=nvptx-none
+
+RUN echo '#include <iostream>' > check_openacc_offload.cpp && \
+echo 'int main() {' >> check_openacc_offload.cpp && \
+echo '  int a = 2, b = 3, c = 0;' >> check_openacc_offload.cpp && \
+echo '  #pragma acc parallel copy(c) copyin(a, b) ' >> check_openacc_offload.cpp && \
+echo '  #pragma acc' >> check_openacc_offload.cpp && \
+echo '  c = a + b;' >> check_openacc_offload.cpp && \
+echo '  if (c == 5) {' >> check_openacc_offload.cpp && \
+echo '    std::cout << "OpenACC offloading is supported." << std::endl;' >> check_openacc_offload.cpp && \
+echo '    return 0;' >> check_openacc_offload.cpp && \
+echo '  } else {' >> check_openacc_offload.cpp && \
+echo '    std::cout << "OpenACC offloading is NOT supported. Make sure your GPU supports at least compute capability 7.0." << std::endl;' >> check_openacc_offload.cpp && \
+echo '    return 1;' >> check_openacc_offload.cpp && \
+echo '  }' >> check_openacc_offload.cpp && \
+echo '}' >> check_openacc_offload.cpp && \
+g++ check_openacc_offload.cpp -o check_openacc_offload -fopenmp -foffload=nvptx-none
 
 ENTRYPOINT ["/bin/bash", "-l", "-c"]

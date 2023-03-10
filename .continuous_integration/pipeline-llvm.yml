@@ -1,0 +1,125 @@
+stages:
+  - build
+  - test
+  - benchmark
+  - simulate
+
+llvm-build:
+  stage: build
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  image:
+    name: "${IMAGE_REGISTRY_USER}/llvm:${IMAGE_TAG}"
+    entrypoint: ["/bin/bash", "-l", "-c"]
+  script:
+    - pwd
+    - ls
+    - whoami
+    - hostname
+    - lscpu
+    - echo $CI_COMMIT_SHA
+    - echo $CI_COMMIT_BRANCH
+    - echo "Running CI with $(nproc) cores"
+    - bash .continuous_integration/configure.sh <<< $'2\n clang\n clang++\n 2\n 1\n'$
+    - make -j $(nproc)
+  artifacts:
+    paths:
+      - /*
+  retry: 2
+
+llvm-test:
+  stage: test
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  image:
+    name: "${IMAGE_REGISTRY_USER}/llvm:${IMAGE_TAG}"
+    entrypoint: ["/bin/bash", "-l", "-c"]
+  needs:
+    - job: llvm-build
+  script:
+    - src/unittests/UnitTests2d
+    - src/unittests/UnitTests3d
+  artifacts:
+    paths:
+      - /*
+  retry: 2
+
+llvm-benchmark-kernels:
+  stage: benchmark
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  image:
+    name: "${IMAGE_REGISTRY_USER}/llvm:${IMAGE_TAG}"
+    entrypoint: ["/bin/bash", "-l", "-c"]
+  needs:
+    - job: llvm-test
+  script:
+    - cd benchmarks/exahype2/euler/kernel-benchmarks
+    - python3 fv-rusanov-kernel-benchmarks.py
+    - ls
+  artifacts:
+    paths:
+      - /*
+  retry: 2
+
+llvm-benchmark-gauge-wave:
+  stage: benchmark
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  image:
+    name: "${IMAGE_REGISTRY_USER}/llvm:${IMAGE_TAG}"
+    entrypoint: ["/bin/bash", "-l", "-c"]
+  needs:
+    - job: llvm-test
+  script:
+    - cd benchmarks/exahype2/ccz4/gauge-wave
+    - python3 convergence-study.py -s fv
+    - ls
+  artifacts:
+    paths:
+      - /*
+  retry: 2
+
+llvm-simulate-acoustic-wave:
+  stage: simulate
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  image:
+    name: "${IMAGE_REGISTRY_USER}/llvm:${IMAGE_TAG}"
+    entrypoint: ["/bin/bash", "-l", "-c"]
+  needs:
+    - job: llvm-benchmark-kernels
+    - job: llvm-benchmark-gauge-wave
+  script:
+    - cd applications/exahype2/acoustic-wave
+    - python3 acoustic-wave.py -s FVRusanovGlobalAdaptiveEnclave
+    - ls
+  artifacts:
+    paths:
+      - /*
+  retry: 2
+
+llvm-simulate-elastic-wave:
+  stage: simulate
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  image:
+    name: "${IMAGE_REGISTRY_USER}/llvm:${IMAGE_TAG}"
+    entrypoint: ["/bin/bash", "-l", "-c"]
+  needs:
+    - job: llvm-benchmark-kernels
+    - job: llvm-benchmark-gauge-wave
+  script:
+    - cd applications/exahype2/elastic-wave
+    - python3 elastic-wave.py -s FVRusanovGlobalAdaptiveEnclave
+    - ls
+  artifacts:
+    paths:
+      - /*
+  retry: 2
