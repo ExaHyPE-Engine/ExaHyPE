@@ -2,14 +2,17 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+
 #include "multicore.h"
 #include "tarch/multicore/orchestration/Strategy.h"
+
 
 #include <functional>
 #include <vector>
 #include <list>
 #include <string>
 #include <limits>
+
 
 namespace tarch {
   /**
@@ -48,6 +51,7 @@ namespace tarch {
    * tasks on-the-fly. We need the thread-local queues to be fast. With only one global
    * queue, we found that a lot of codes basically compete for the locks to spanwn tasks
    * into this queue.
+   *
    *
    * @see tarch::multicore::orchestration::StrategyFactory
    */
@@ -190,6 +194,7 @@ namespace tarch {
         virtual bool isSmartMPITask() const;
     };
 
+
     /**
      * Helper class if you wanna administer tasks with in a queue
      *
@@ -218,6 +223,7 @@ namespace tarch {
         bool run() override;
     };
 
+
     /**
      * Frequently used implementation for job with a functor.
      */
@@ -234,12 +240,14 @@ namespace tarch {
         bool run() override;
     };
 
+
     /**
      * @param threadCount -1 if you are interested in global number of tasks or a
      *   non-negative integer if you are only interested in one particular thread
      *   and its specific tasks.
      */
     int getNumberOfPendingTasks(int threadCount);
+
 
     /**
      * Process a few tasks from my backlog of tasks
@@ -266,6 +274,7 @@ namespace tarch {
      */
     bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max(), bool fifo=true);
 
+
     /**
      * Spawns a single task in a non-blocking fashion
      *
@@ -280,10 +289,12 @@ namespace tarch {
      * task thus is mapped 1:1 to OpenMP, e.g. Otherwise, the routine does take the task and
      * enqueues is the local queue nonblockingTasks.
      *
+     *
      * <h2> SmartMPI </h2>
      *
      * If you compile with SmartMPI, this is the one and only point where the control flow
      * diverges: If a task is smart, the routine takes the task and forwards it to SmartMPI.
+     *
      *
      * @see tarch::multicore::spawnAndWait()
      * @see processPendingTasks(int)
@@ -335,6 +346,7 @@ namespace tarch {
        */
       void deferRunningThreadAndContinueWithOtherTasks();
     }
+
 
     namespace internal {
       /**
@@ -418,7 +430,7 @@ namespace tarch {
        * way better to work with one queue per thread, so we can spawn enclave
        * tasks without any additional locks.
        */
-      void configureInternalTaskQueues(int numerOfThreads);
+      void configureInternalTaskQueues(int numberOfTasks);
 
       /**
        * Commit local task queues into global queue
@@ -460,6 +472,7 @@ namespace tarch {
        * So I avoid repeated locks, lock once and then flush all of the task queues
        * in one go before I release the lock.
        *
+       *
        * @param threadNumber -1 if you want to flush all thread buffers
        */
       void copyInternalTaskQueuesOverIntoGlobalQueue(int threadNumber);
@@ -474,4 +487,8 @@ namespace tarch {
   }
 }
 
+
 bool operator<( const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs );
+
+
+

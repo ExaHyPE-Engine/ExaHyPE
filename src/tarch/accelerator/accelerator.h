@@ -65,7 +65,7 @@ namespace tarch {
     ManagedSharedAcceleratorDeviceMemory
   };
 
-  namespace internal {
+ namespace internal {
     void* allocateRawData(int size, MemoryLocation location);
   }
 
