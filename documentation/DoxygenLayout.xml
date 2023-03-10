@@ -4,7 +4,8 @@
   <navindex>
     <tab type="mainpage" visible="yes" title=""/>
     <!-- <tab type="pages" visible="yes" title="Test Page" intro=""/> -->
-    <tab type="user" visible="yes" title="Man Page" url="\ref setupPage" intro=""/> <!-- this creates a custom tab -->
+    <tab type="user" visible="yes" title="Manual" url="\ref setupPage" intro=""/> <!-- this creates a custom tab -->
+    <tab type="user" visible="yes" title="Solvers" url="\ref solvers" intro=""/> <!-- this creates a custom tab -->
     <tab type="modules" visible="yes" title="" intro=""/>
     <tab type="namespaces" visible="yes" title="">
       <tab type="namespacelist" visible="yes" title="" intro=""/>
