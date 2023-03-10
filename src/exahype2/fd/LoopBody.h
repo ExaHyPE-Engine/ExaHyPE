@@ -29,7 +29,7 @@ namespace exahype2 {
       );
 
       namespace internal {
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -52,7 +52,7 @@ namespace exahype2 {
         /**
          * The complicated way to write =0.
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -107,7 +107,6 @@ namespace exahype2 {
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
-
         /**
          * Overloaded version which uses static invocation instead of a
          * functor.
@@ -126,7 +125,6 @@ namespace exahype2 {
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
-
         /**
          * Specialised version.
          */
@@ -144,7 +142,6 @@ namespace exahype2 {
           const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator
         ) InlineMethod;
 
-
         template <class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
@@ -157,7 +154,6 @@ namespace exahype2 {
           double                                       t,
           double                                       dt
         ) InlineMethod;
-
 
         /**
          * Specialisation without the gather.
@@ -175,7 +171,6 @@ namespace exahype2 {
           double                                       dt
         ) InlineMethod;
 
-
         /**
          * Overloaded version with static function calls.
          */
@@ -190,7 +185,6 @@ namespace exahype2 {
           double                                       t,
           double                                       dt
         ) InlineMethod;
-
 
         /**
          * Overloaded version with static function calls.
