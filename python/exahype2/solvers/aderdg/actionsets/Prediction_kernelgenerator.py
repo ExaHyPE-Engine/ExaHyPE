@@ -138,7 +138,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
           luh,
           marker.x(),
           marker.h(),
-          timeStamp, // tStep, doesn't seem to ever get used
+          timeStamp,
           timeStepSize,
           pointSources // will be deleted in the end if set
         );
@@ -163,9 +163,9 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
       nullptr, // PSi, for pointSource
       nullptr, // PSderivatives, for pointSource
       luh,
-      centre,
-      marker.h()[0], // Assume dx[0] == dx[1] == dx[2]
-      timeStamp, // tStep, doesn't seem to ever get used
+      marker.x(),
+      marker.h(),
+      timeStamp,
       timeStepSize,
       nullptr // will be deleted in the end if set
     );    
