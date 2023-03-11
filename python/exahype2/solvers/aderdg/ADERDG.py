@@ -123,6 +123,7 @@ class ADERDG( object ):
     self._polynomials           = Polynomials.Gauss_Legendre
     self._basis                 = GaussLegendreBasis(order+1)
     self._use_kernel_generator  = True
+    self._use_libxsmm           = False    
     self._use_vectorized_PDE    = False
     self._architecture          = "noarch"
     self._use_CERK_Guess        = False
@@ -528,6 +529,7 @@ class ADERDG( object ):
         useMaterialParam      = (True if self._material_param_implementation != PDETerms.None_Implementation else False),
         useMaterialParamVect  = False,
         useGaussLobatto       = (True if self._polynomials is Polynomials.Gauss_Lobatto else False),
+        useLibxsmm            =self._use_libxsmm,
         useVectPDE            = self._use_vectorized_PDE,
         architecture=self._architecture,
         useCERKGuess=self._use_CERK_Guess,
@@ -546,26 +548,25 @@ class ADERDG( object ):
     #ifdef which is missing its corresponding #endif.
     This code just inserts that missing endif
      """
-    if self._architecture=="noarch":
-        file = open("generated/kernels/aderdg/" + is_linear + "/asm_fstpvi.c", 'r')
-        content = file.read()
-        file.close()
-        file = open("generated/kernels/aderdg/" + is_linear + "/asm_fstpvi.c", 'w')
-        content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
-        file.write(content)
-        file.close()
-        
-        file = open("generated/kernels/aderdg/" + is_linear + "/asm_amrRoutines.c", 'r')
-        content = file.read()
-        file.close()
-        file = open("generated/kernels/aderdg/" + is_linear + "/asm_amrRoutines.c", 'w')
-        content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
-        file.write(content)
-        file.close()
+    if (self._use_libxsmm and self._architecture=="noarch"):
+      file = open("generated/kernels/aderdg/" + is_linear + "/asm_fstpvi.c", 'r')
+      content = file.read()
+      file.close()
+      file = open("generated/kernels/aderdg/" + is_linear + "/asm_fstpvi.c", 'w')
+      content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
+      file.write(content)
+      file.close()
+      
+      file = open("generated/kernels/aderdg/" + is_linear + "/asm_amrRoutines.c", 'r')
+      content = file.read()
+      file.close()
+      file = open("generated/kernels/aderdg/" + is_linear + "/asm_amrRoutines.c", 'w')
+      content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
+      file.write(content)
+      file.close()
 
     
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/Quadrature.cpp")
-    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/gemmsCPP.cpp")
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/DGMatrices.cpp")
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/fusedSpaceTimePredictorVolumeIntegral.cpp")
     if self._point_sources_implementation!=PDETerms.None_Implementation:
@@ -576,6 +577,8 @@ class ADERDG( object ):
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/solutionUpdate.cpp")
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/boundaryConditions.cpp")
 
+    if self._use_libxsmm:
+      output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/gemmsCPP.cpp")
 
   """
   This tells peano to add the solver files to the project. It generates any files that are not
@@ -830,6 +833,7 @@ class ADERDG( object ):
     is_linear=False,
     polynomials=Polynomials.Gauss_Legendre,
     use_kernel_generator=True,
+    use_libxsmm=False,
     predictor_computation_precision="double",
     corrector_computation_precision="double",
     solution_persistent_storage_precision="double",
@@ -853,6 +857,7 @@ class ADERDG( object ):
     self._polynomials         = polynomials
 
     self._use_kernel_generator = use_kernel_generator
+    self._use_libxsmm          = use_libxsmm
 
     precisions = [predictor_computation_precision, corrector_computation_precision, solution_persistent_storage_precision, predictor_persistent_storage_precision]
     for value in precisions:
