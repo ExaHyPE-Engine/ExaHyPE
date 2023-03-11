@@ -1,14 +1,8 @@
 /**
-@page exahype_home Solvers
-TODO - add in the rest of the solvers, found in various .h files through src
+@page exahype_home ExaHyPE
 
-Please find below links to instruction on how the solvers works:
 
-<ul>
-
-  <li> \ref DG  </li>
-
-</ul>
+How can we have a table of contents here?
 
 
 */
