@@ -193,16 +193,6 @@ set_property(CACHE WITH_GPU PROPERTY STRINGS ${ACCELERATOR_BACKENDS})
 
 list(APPEND ACCELERATOR_ARCHITECTURES
   " "
-  "sm_20"
-  "sm_30"
-  "sm_35"
-  "sm_37"
-  "sm_50"
-  "sm_52"
-  "sm_53"
-  "sm_60"
-  "sm_61"
-  "sm_62"
   "sm_70"
   "sm_72"
   "sm_75"
@@ -212,6 +202,7 @@ list(APPEND ACCELERATOR_ARCHITECTURES
   "gfx906"
   "gfx908"
   "gfx90a"
+  "spir64"
 )
 set(WITH_GPU_ARCH "" CACHE STRING "GPU architecture sm_XX or gfxXXX")
 set_property(CACHE WITH_GPU_ARCH PROPERTY STRINGS ${ACCELERATOR_ARCHITECTURES})
