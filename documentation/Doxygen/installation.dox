@@ -1,0 +1,27 @@
+/**
+
+@page installation "Installation"
+
+There are two ways to obtain Peano: 
+You can either download one of the archives we provide on the webpage, or you
+can work directly against a repository clone (recommended).
+We recommend to work against the latest release of Peano which you can get through
+
+<pre>
+git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
+</pre>
+
+
+in the directory where you've stored your downloaded file.
+
+
+
+<code> libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing; </code>
+
+
+@todo Copy tex content over
+
+*/
+
+
+

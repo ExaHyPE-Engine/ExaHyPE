@@ -1,5 +1,5 @@
 /**
-@page solvers Solvers
+@page multigrid_home Solvers
 TODO - add in the rest of the solvers, found in various .h files through src
 
 Please find below links to instruction on how the solvers works:
