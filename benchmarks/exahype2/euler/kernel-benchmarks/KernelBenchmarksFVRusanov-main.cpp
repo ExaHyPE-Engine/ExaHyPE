@@ -1,4 +1,4 @@
-#include "EulerFVRusanovKernelBenchmarks-main.h"
+#include "KernelBenchmarksFVRusanov-main.h"
 #include "Constants.h"
 
 #include "observers/CreateGrid.h"
@@ -12,7 +12,7 @@
 #include "repositories/SolverRepository.h"
 #include "repositories/StepRepository.h"
 
-#include "tasks/EulerFVRusanovEnclaveTask.h"
+#include "tasks/FVRusanovSolverEnclaveTask.h"
 
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
@@ -33,15 +33,15 @@
 
 #include "config.h"
 
-#ifdef UseFenv
-#include "tarch/FenvWrapper.h"
-#endif
+//#ifdef UseFenv
+//#include "tarch/FenvWrapper.h"
+//#endif
 
 #if defined(SharedTBB)
 #include <tbb/task_group.h>
 #endif
 
-using namespace benchmarks::exahype2::euler;
+using namespace benchmarks::exahype2::kernelbenchmarks;
 
 static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 0.0);
 
@@ -55,13 +55,13 @@ double validMaxEigenvalue = 0;
 double* validOutcome = nullptr;
 
 #if Dimensions==2
-constexpr int NumberOfInputEntries  = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerFVRusanov::NumberOfUnknowns;
-constexpr int NumberOfOutputEntries = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0) * EulerFVRusanov::NumberOfUnknowns;
-constexpr int NumberOfFiniteVolumesPerPatch = EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch*EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch;
+constexpr int NumberOfInputEntries  = (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch+2)*(FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch+2) * FVRusanovSolver::NumberOfUnknowns;
+constexpr int NumberOfOutputEntries = (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch+0)*(FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch+0) * FVRusanovSolver::NumberOfUnknowns;
+constexpr int NumberOfFiniteVolumesPerPatch = FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch*FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch;
 #else
-constexpr int NumberOfInputEntries  = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerFVRusanov::NumberOfUnknowns;
-constexpr int NumberOfOutputEntries = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0) * EulerFVRusanov::NumberOfUnknowns;
-constexpr int NumberOfFiniteVolumesPerPatch = EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch*EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch**EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch;
+constexpr int NumberOfInputEntries  = (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch+2)*(FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch+2)*(FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch+2) * FVRusanovSolver::NumberOfUnknowns;
+constexpr int NumberOfOutputEntries = (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch+0)*(FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch+0)*(FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch+0) * FVRusanovSolver::NumberOfUnknowns;
+constexpr int NumberOfFiniteVolumesPerPatch = FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch*FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch*FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch;
 #endif
 
 /**
@@ -72,15 +72,15 @@ constexpr int NumberOfFiniteVolumesPerPatch = EulerFVRusanov::NumberOfFiniteVolu
  * the values.
  */
 void initInputData( double* Q ) {
-  for (int i=0; i<NumberOfInputEntries/EulerFVRusanov::NumberOfUnknowns; i++) {
-    Q[i*EulerFVRusanov::NumberOfUnknowns+0] = 1.0;
-    Q[i*EulerFVRusanov::NumberOfUnknowns+1] = std::sin( 1.0 * i / (NumberOfInputEntries) * tarch::la::PI );
-    Q[i*EulerFVRusanov::NumberOfUnknowns+2] = std::sin( 2.0 * i / (NumberOfInputEntries) * tarch::la::PI );
+  for (int i=0; i<NumberOfInputEntries/FVRusanovSolver::NumberOfUnknowns; i++) {
+    Q[i*FVRusanovSolver::NumberOfUnknowns+0] = 1.0;
+    Q[i*FVRusanovSolver::NumberOfUnknowns+1] = std::sin( 1.0 * i / (NumberOfInputEntries) * tarch::la::PI );
+    Q[i*FVRusanovSolver::NumberOfUnknowns+2] = std::sin( 2.0 * i / (NumberOfInputEntries) * tarch::la::PI );
     #if Dimensions == 3
-      Q[i*EulerFVRusanov::NumberOfUnknowns+3] = std::sin( 3.0 * i / (NumberOfInputEntries) * tarch::la::PI );
-      Q[i*EulerFVRusanov::NumberOfUnknowns+4] = 1.1 + std::sin( i / (NumberOfInputEntries) * tarch::la::PI );
+      Q[i*FVRusanovSolver::NumberOfUnknowns+3] = std::sin( 3.0 * i / (NumberOfInputEntries) * tarch::la::PI );
+      Q[i*FVRusanovSolver::NumberOfUnknowns+4] = 1.1 + std::sin( i / (NumberOfInputEntries) * tarch::la::PI );
     #else
-      Q[i*EulerFVRusanov::NumberOfUnknowns+3] = 1.1 + std::sin( i / (NumberOfInputEntries) * tarch::la::PI );
+      Q[i*FVRusanovSolver::NumberOfUnknowns+3] = 1.1 + std::sin( i / (NumberOfInputEntries) * tarch::la::PI );
     #endif
   }
 }
@@ -175,7 +175,7 @@ void runBenchmarksOnHost(int numberOfPatches) {
     tarch::timing::Watch watch( "::runBenchmarksOnHost", "runBaseline(...)", false );
     double outputMaxEigenvalue = 0;
     for (int i=0; i<patches; i++) {
-      outputMaxEigenvalue = tasks::EulerFVRusanovEnclaveTask::applyKernelToCell(
+      outputMaxEigenvalue = tasks::FVRusanovSolverEnclaveTask::applyKernelToCell(
         marker,
         TimeStamp,
         TimeStepSize,
@@ -278,43 +278,47 @@ void runBenchmarksOnHost(int numberOfPatches) {
     }
   };
 
-  const auto numberOfPatchesPerThread = numberOfPatches / tarch::multicore::Core::getInstance().getNumberOfThreads();
+  auto numberOfPatchesPerThread = numberOfPatches;
+  if constexpr (WithScaling) {
+    numberOfPatchesPerThread /= tarch::multicore::Core::getInstance().getNumberOfThreads();
+  }
+    printf("%d\n", numberOfPatchesPerThread);
 
   #pragma omp parallel for
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     runBaseline(thread, numberOfPatchesPerThread);
 
     runStatelessVariantOnHost(
-      ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
       "heap, patch-wise, AoS", thread, numberOfPatchesPerThread
     );
     runStatelessVariantOnHost(
-      ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "heap, patch-wise, AoSoA", thread, numberOfPatchesPerThread
     );
     runStatelessVariantOnHost(
-      ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
       "heap, patch-wise, SoA", thread, numberOfPatchesPerThread
     );
     runStatelessVariantOnHost(
-      ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables>,
+      ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables>,
       "heap, patch-wise, in-situ", thread, numberOfPatchesPerThread
     );
 
     runStatelessVariantOnHost(
-      ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
       "heap, batched, AoS", thread, numberOfPatchesPerThread
     );
     runStatelessVariantOnHost(
-      ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "heap, batched, AoSoA", thread, numberOfPatchesPerThread
     );
     runStatelessVariantOnHost(
-      ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
       "heap, batched, SoA", thread, numberOfPatchesPerThread
     );
     runStatelessVariantOnHost(
-      ::exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables>,
+      ::exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables>,
       "heap, batched, in-situ", thread, numberOfPatchesPerThread
     );
   }
@@ -402,47 +406,47 @@ void submitSYCLKernels(int patches, int device, int thread) {
     h.host_task([=]() {
       runStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "sycl, task-graph, AoS", thread
       );
       runStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "sycl, task-graph, AoSoA", thread
       );
       runStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, task-graph, SoA", thread
       );
       runStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "sycl, patch-wise, AoS", thread
       );
       runStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "sycl, patch-wise, AoSoA", thread
       );
       runStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, patch-wise, SoA", thread
       );
       runStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "sycl, batched, AoS", thread
       );
       runStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "sycl, batched, AoSoA", thread
       );
       runStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, batched, SoA", thread
       );
     });
@@ -474,7 +478,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       runStatelessVariantOnDevice(
         numberOfPatchesPerThread, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "omp, patch-wise, AoS, managed", thread
       );
     }
@@ -483,7 +487,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       runStatelessVariantOnDevice(
         numberOfPatchesPerThread, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "omp, patch-wise, AoSoA, managed", thread
       );
     }
@@ -492,7 +496,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       runStatelessVariantOnDevice(
         numberOfPatchesPerThread, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "omp, patch-wise, SoA, managed", thread
       );
     }
@@ -501,7 +505,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       runStatelessVariantOnDevice(
         numberOfPatchesPerThread, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "omp, patch-wise, AoS, map", thread
       );
     }
@@ -509,7 +513,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       runStatelessVariantOnDevice(
         numberOfPatchesPerThread, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "omp, patch-wise, AoSoA, map", thread
       );
     }
@@ -517,7 +521,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       runStatelessVariantOnDevice(
         numberOfPatchesPerThread, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "omp, patch-wise, SoA, map", thread
       );
     }
@@ -529,7 +533,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       runStatelessVariantOnDevice(
         numberOfPatchesPerThread, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "omp, batched, AoS, managed", thread
       );
     }
@@ -538,7 +542,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       runStatelessVariantOnDevice(
         numberOfPatchesPerThread, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "omp, batched, AoSoA, managed", thread
       );
     }
@@ -547,7 +551,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       runStatelessVariantOnDevice(
         numberOfPatchesPerThread, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "omp, batched, SoA, managed", thread
       );
     }
@@ -556,7 +560,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       runStatelessVariantOnDevice(
         numberOfPatchesPerThread, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "omp, batched, AoS, map", thread
       );
     }
@@ -564,7 +568,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       runStatelessVariantOnDevice(
         numberOfPatchesPerThread, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "omp, batched, AoSoA, map", thread
       );
     }
@@ -572,7 +576,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       runStatelessVariantOnDevice(
         numberOfPatchesPerThread, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "omp, batched, SoA, map", thread
       );
     }
@@ -613,32 +617,32 @@ void runBenchmarksOnDevice(int numberOfPatches) {
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     runStatelessVariantOnDevice(
       numberOfPatchesPerThread, device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
       "cpp, patch-wise, AoS", thread
     );
     runStatelessVariantOnDevice(
       numberOfPatchesPerThread, device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "cpp, patch-wise, AoSoA", thread
     );
     runStatelessVariantOnDevice(
       numberOfPatchesPerThread, device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
       "cpp, patch-wise, SoA", thread
     );
     runStatelessVariantOnDevice(
       numberOfPatchesPerThread, device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
       "cpp, batched, AoS", thread
     );
     runStatelessVariantOnDevice(
       numberOfPatchesPerThread, device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "cpp, batched, AoSoA", thread
     );
     runStatelessVariantOnDevice(
       numberOfPatchesPerThread, device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
       "cpp, batched, SoA", thread
     );
   }
@@ -655,9 +659,9 @@ int main(int argc, char** argv) {
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
-#ifdef UseFenv
-  tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-#endif
+//#ifdef UseFenv
+//  tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+//#endif
 
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
     logError("main()", "MPI runs without multithreading are not supported currently.");
@@ -685,11 +689,11 @@ int main(int argc, char** argv) {
   #endif
 
   logInfo("main()", "Number of threads: " << tarch::multicore::Core::getInstance().getNumberOfThreads());
-  logInfo("main()", "Number of finite volumes per axis per patch: " << EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch);
+  logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
   logInfo("main()", "Dimensions: " << Dimensions);
 
   int numberOfPatches = tarch::multicore::Core::getInstance().getNumberOfThreads();
-  for (; numberOfPatches <= 1024*2*2*2*2; numberOfPatches *= 2) {
+  for (; numberOfPatches <= MaxPatches; numberOfPatches *= 2) {
     std::stringstream msg;
     msg << "kernel-benchmarks-" << numberOfPatches << "-patches-" << tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
     otterPhaseSwitch( msg.str().c_str() );
@@ -700,7 +704,7 @@ int main(int argc, char** argv) {
 
     runBenchmarksOnHost(numberOfPatches);
     if (tarch::accelerator::Device::getInstance().getNumberOfDevices() > 0) {
-      runBenchmarksOnDevice(numberOfPatches);
+      //runBenchmarksOnDevice(numberOfPatches);
     }
   }
 

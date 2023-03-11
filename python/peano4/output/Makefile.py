@@ -382,12 +382,17 @@ did search for a file """ + input_file )
         Use this flag for generated files which can be tracked
         by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
     """
-    if generated:
-      if self.generated_hfiles.count(filename)==0:
+    if self.generated_hfiles.count(filename)==0 and self.hfiles.count(filename)==0:
+      if generated:
         self.generated_hfiles.append( filename )
-    else:
-      if self.hfiles.count(filename)==0:
+      else:
         self.hfiles.append( filename )
+
+  def remove_h_file(self,filename,generated=True):
+    if generated:
+      if filename in self.generated_hfiles: self.generated_hfiles.remove(filename)
+    else:
+      if filename in self.hfiles: self.hfiles.remove(filename)
 
   def add_cpp_file(self,filename,generated=True):
     """
@@ -406,12 +411,17 @@ did search for a file """ + input_file )
         Use this flag for generated files which can be tracked
         by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
     """
-    if generated:
-      if self.generated_cppfiles.count(filename)==0:
+    if self.generated_cppfiles.count(filename)==0 and self.cppfiles.count(filename)==0:
+      if generated:
         self.generated_cppfiles.append( filename )
-    else:
-      if self.cppfiles.count(filename)==0:
+      else:
         self.cppfiles.append( filename )
+
+  def remove_cpp_file(self,filename,generated=True):
+    if generated:
+      if filename in self.generated_cppfiles: self.generated_cppfiles.remove(filename)
+    else:
+      if filename in self.cppfiles: self.cppfiles.remove(filename)
 
   def add_Fortran_file(self,filename,generated=True):
     """
@@ -435,12 +445,17 @@ did search for a file """ + input_file )
         Use this flag for generated files which can be tracked
         by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
     """
-    if generated:
-      if self.generated_fortranfiles.count(filename)==0:
+    if self.generated_fortranfiles.count(filename)==0 and self.fortranfiles.count(filename)==0:
+      if generated:
         self.generated_fortranfiles.append( filename )
-    else:
-      if self.fortranfiles.count(filename)==0:
+      else:
         self.fortranfiles.append( filename )
+
+  def remove_Fortran_file(self,filename,generated=True):
+    if generated:
+      if filename in self.generated_fortranfiles: self.generated_fortranfiles.remove(filename)
+    else:
+      if filename in self.fortranfiles: self.fortranfiles.remove(filename)
 
   def add_Fortran_module(self,module_file,force=False):
     """
