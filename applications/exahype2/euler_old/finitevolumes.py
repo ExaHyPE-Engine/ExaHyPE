@@ -56,8 +56,8 @@ periodic_BC = [False, False, False]
 
 project.set_global_simulation_parameters(
   dimensions = dimensions,
-  offset = [0.0,0.0,0.0],
-  size = [1.0,1.0,1.0],
+  offset = [0.0,0.0],
+  size = [1.0,1.0],
   min_end_time = end_time,
   max_end_time = end_time,
   first_plot_time_stamp = 0.0,
@@ -80,7 +80,7 @@ verbose    = False
 build_mode = peano4.output.CompileMode.Release
 #build_mode = peano4.output.CompileMode.Asserts
 #build_mode = peano4.output.CompileMode.Debug
-peano_dir  = "../../.."
+peano_dir  = "../../../"
 project.set_Peano4_installation( peano_dir, build_mode )
 peano4_project = project.generate_Peano4_project(verbose)
 peano4_project.build(make_clean_first=True)
