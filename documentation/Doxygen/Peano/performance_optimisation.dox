@@ -1,0 +1,44 @@
+/**
+
+@page peano_performance_optimisation Performance Optimisation in Peano
+
+This section discusses some Peano-specific performance optimisation steps.
+While Peano provides simplistic performance analysis 
+features to spot some flaws, a proper performance optimisation would likely
+rely on external performance analysis tools.
+
+
+If you plan to run any performance analysis with the Intel or NVIDIA tools, I 
+recommend you to switch to the respective toolchain and logging
+before you continue (cmp. peano_installation).
+For other performance tools such as Scalasca/Score-P, Peano offers bespoke 
+toolchains, too. 
+These toolchains ensure that all tracing information is piped into appropriate
+data formats.
+
+
+It is the developer's choice whether to pick a release build or a trace build
+for the performance analysis.
+Most people start with the release build and then switch the tracing on for a
+deeper insight.
+If you use tracing, you will have to use a proper log filter, as Peano's log 
+information otherwise becomes huge, i.e. challenging to handle, and the enormous
+data quickly pollutes the runtime measurements.
+
+
+
+## Single core optimisation
+
+
+
+## Single node optimisation
+
+
+
+## MPI optimisation
+
+
+
+
+ */
+ 
