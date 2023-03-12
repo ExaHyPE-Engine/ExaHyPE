@@ -24,7 +24,7 @@ namespace tarch::accelerator::omp {
   #endif
     return reinterpret_cast<void *>(resolved);
   #else
-    return omp_get_mapped_ptr(ptr, targetDevice);
+    return mk_omp_get_mapped_ptr(ptr, targetDevice);
   #endif
   }
 }
