@@ -27,13 +27,11 @@ lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a    
                 libPeano4Core2d.a libPeano4Core2d_debug.a libPeano4Core2d_asserts.a libPeano4Core2d_trace.a libPeano4Core2d_stats.a \
                 libPeano4Core3d.a libPeano4Core3d_debug.a libPeano4Core3d_asserts.a libPeano4Core3d_trace.a libPeano4Core3d_stats.a
 
-
 libTarch_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
 libTarch_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE)
 libTarch_asserts_a_CXXFLAGS = $(CXXFLAGS_PEANO_2D_ASSERTS)
 libTarch_debug_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_DEBUG)
 libTarch_stats_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_STATS)
-
 
 libPeano4Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE) 
 libPeano4Core2d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_STATS) 
@@ -83,8 +81,6 @@ Peano4Core_SOURCES = \
   peano4/stacks/STDVectorStack.cpp \
   peano4/utils/Loop.cpp
 
-
-
 Tarch_SOURCES= tarch/tarch.cpp \
  tarch/UnitTests.cpp \
  tarch/la/tests/DynamicMatrixTest.cpp \
@@ -107,6 +103,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/accelerator/omp/GPUMemoryManager.cpp \
  tarch/accelerator/sycl/accelerator.cpp \
  tarch/accelerator/sycl/Device.cpp \
+ tarch/accelerator/cuda/ErrorCheck.cpp \
  tarch/multicore/BooleanSemaphore.cpp \
  tarch/multicore/multicore.cpp \
  tarch/multicore/Core.cpp \
@@ -189,7 +186,6 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/services/Service.cpp \
  tarch/services/ServiceRepository.cpp 
 
-
 #
 # Map defined source sequences onto libraries
 #
@@ -209,4 +205,3 @@ libPeano4Core3d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core3d_asserts_a_SOURCES = $(Peano4Core_SOURCES)
 libPeano4Core3d_debug_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core3d_stats_a_SOURCES   = $(Peano4Core_SOURCES)
-

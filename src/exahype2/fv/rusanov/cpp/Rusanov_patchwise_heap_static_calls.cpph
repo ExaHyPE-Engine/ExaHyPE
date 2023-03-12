@@ -19,48 +19,44 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingCPP)
-  /**
-   * The halo size passed in by the user might differ from the one that we have to evaluate/
-   * take into account from the solver's perspective.
-   */
-  constexpr int solversHaloSize        = 1;
+  constexpr int solversHaloSize = 1;
 
   exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator(
-    1, 
-    numberOfVolumesPerAxisInPatch, 
-    haloSize, 
-    unknowns, 
+    1,
+    numberOfVolumesPerAxisInPatch,
+    haloSize,
+    unknowns,
     auxiliaryVariables
   );
   exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator(
-    1, 
+    1,
     numberOfVolumesPerAxisInPatch,
-    0, 
-    unknowns, 
+    0,
+    unknowns,
     auxiliaryVariables
   );
   TempDataEnumerator fluxHostEnumerator(
-    hostPatchData.numberOfCells, 
-    numberOfVolumesPerAxisInPatch,   
-    solversHaloSize, 
-    unknowns, 
+    hostPatchData.numberOfCells,
+    numberOfVolumesPerAxisInPatch,
+    solversHaloSize,
+    unknowns,
     0
   );
   TempDataEnumerator ncpHostEnumerator(
-    hostPatchData.numberOfCells, 
+    hostPatchData.numberOfCells,
     numberOfVolumesPerAxisInPatch+1,
-    solversHaloSize, 
-    unknowns, 
+    solversHaloSize,
+    unknowns,
     0
   );
   TempDataEnumerator eigenvalueHostEnumerator(
-    hostPatchData.numberOfCells, 
-    numberOfVolumesPerAxisInPatch,   
-    solversHaloSize,        
-    1, 
+    hostPatchData.numberOfCells,
+    numberOfVolumesPerAxisInPatch,
+    solversHaloSize,
+    1,
     0
   );
-  
+
   double* tempFluxX = new double[fluxHostEnumerator.size()];
   double* tempFluxY = new double[fluxHostEnumerator.size()];
   double* tempFluxZ = new double[fluxHostEnumerator.size()];
@@ -74,18 +70,18 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   // The cartesian products have to be located on the heap so that they are accessible from the GPU.
   // Here we define types to be able to allocate in heap.
   using cart_prod_2d = decltype(tl::views::cartesian_product(
-    std::views::iota(0,1), 
+    std::views::iota(0,1),
     std::views::iota(0,1)
   ));
   using cart_prod_3d = decltype(tl::views::cartesian_product(
-    std::views::iota(0,1), 
-    std::views::iota(0,1), 
+    std::views::iota(0,1),
+    std::views::iota(0,1),
     std::views::iota(0,1)
   ));
   using cart_prod_4d = decltype(tl::views::cartesian_product(
-    std::views::iota(0,1), 
-    std::views::iota(0,1), 
-    std::views::iota(0,1), 
+    std::views::iota(0,1),
+    std::views::iota(0,1),
+    std::views::iota(0,1),
     std::views::iota(0,1)
   ));
 
@@ -155,19 +151,19 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   auto* range2d_solvhalosize_m = new cart_prod_3d;
   *range2d_solvhalosize_m = tl::views::cartesian_product(
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
-    std::views::iota(0,numberOfVolumesPerAxisInPatch),  
+    std::views::iota(0,numberOfVolumesPerAxisInPatch),
     std::views::iota(0,numberOfVolumesPerAxisInPatch+2*solversHaloSize-1)
   );
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
-    1, 
+    1,
     numberOfVolumesPerAxisInPatch,
     haloSize,
     unknowns,
     auxiliaryVariables
   );
   exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
-    1, 
+    1,
     numberOfVolumesPerAxisInPatch,
     0,
     unknowns,
@@ -175,21 +171,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   );
   
   TempDataEnumerator fluxEnumerator(
-    hostPatchData.numberOfCells, 
+    hostPatchData.numberOfCells,
     numberOfVolumesPerAxisInPatch,
     haloSize,
     unknowns,
     0
   );
   TempDataEnumerator ncpEnumerator(
-    hostPatchData.numberOfCells, 
+    hostPatchData.numberOfCells,
     numberOfVolumesPerAxisInPatch+1,
     haloSize,
     unknowns,
     0
   );
   TempDataEnumerator eigenvalueEnumerator(
-    hostPatchData.numberOfCells, 
+    hostPatchData.numberOfCells,
     numberOfVolumesPerAxisInPatch,
     haloSize,
     1,
@@ -197,7 +193,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   );
 
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-
     if (Dimensions==2) {
       std::for_each(
         std::execution::par_unseq,
@@ -240,7 +235,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
               QOutEnumerator
             );
           }
-    
         }
       );
     }
@@ -286,13 +280,11 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
               QOutEnumerator
             );
           }
-
         }
       );
     }
 
     if (Dimensions==2) {
-      
       std::for_each(
         std::execution::par_unseq,
         range1d_solvhalosize->begin(),
@@ -306,7 +298,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           dt=hostPatchData.dt
         ](auto ids){
           auto [y,x] = ids;
-          
           internal::computeMaxEigenvalue_LoopBody<Solver>(
             QIn[patchIndex],
             QInEnumerator,
@@ -350,6 +341,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           QOut=hostPatchData.QOut
         ](auto ids){
           auto [y,x,unknown] = ids;
+
           internal::updateSolutionWithEigenvalueDamping_LoopBody(
             QIn[patchIndex],
             QInEnumerator,
@@ -406,7 +398,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(w,u-solversHaloSize,v),
-            t[patchIndex], 
+            t[patchIndex],
             dt[patchIndex],
             1,
             tempEigenvalueY,
@@ -426,7 +418,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             tempEigenvalueZ,
             eigenvalueEnumerator
           );
-          
         }
       );
 
@@ -440,7 +431,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           cellCentre=hostPatchData.cellCentre,
           cellSize=hostPatchData.cellSize,
           dt=hostPatchData.dt,
-          QOut=hostPatchData.QOut          
+          QOut=hostPatchData.QOut
         ](auto ids){
           auto [x,y,z,unknown] = ids;
           internal::updateSolutionWithEigenvalueDamping_LoopBody(
@@ -461,11 +452,9 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           );
         }
       );
-
     }
 
     if (evaluateFlux and Dimensions==2) {
-
       std::for_each(
         std::execution::par_unseq,
         range1d_solvhalosize->begin(),
@@ -507,7 +496,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             tempFluxY,
             fluxEnumerator
           );
-
         }
       );
 
@@ -537,11 +525,9 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           );
         }
       );
-
     }
 
     else if (evaluateFlux and Dimensions==3) {
-
       std::for_each(
         std::execution::par_unseq,
         range2d_solvhalosize->begin(),
@@ -596,7 +582,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             tempFluxZ,
             fluxEnumerator
           );
-
         }
       );
 
@@ -628,9 +613,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
       );
     }
 
-
     if (evaluateNonconservativeProduct and Dimensions==2) {
-      
       std::for_each(
         std::execution::par_unseq,
         range1d_solvhalosize_m->begin(),
@@ -700,10 +683,8 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           );
         }
       );
-
     }
     else if (evaluateNonconservativeProduct and Dimensions==3) { 
-
       std::for_each(
         std::execution::par_unseq,
         range2d_solvhalosize_m->begin(),
@@ -759,7 +740,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             tempNonconservativeProductZ,
             ncpEnumerator
           );
-
         }
       );
 
@@ -824,10 +804,8 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           );
         }
       );
-
       hostPatchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
-    
     else if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==3) {
       double newMaxEigenvalue = 0.0;
 
@@ -863,7 +841,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
 
       hostPatchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
-  } // This is the end of the target offloading block
+  }
 
   delete[] tempFluxX;
   delete[] tempFluxY;
@@ -884,7 +862,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   delete[] range3d_unknown_aux;
   delete[] range1d_solvhalosize_m;
   delete[] range2d_solvhalosize_m;
-
 
   #else
   assertionMsg(false, "this routine should only be used in combination with CPP offloading, as it has a device parameter" );

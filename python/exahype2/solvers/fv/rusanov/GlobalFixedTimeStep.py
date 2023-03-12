@@ -16,13 +16,12 @@ from exahype2.solvers.fv.kernels import KernelVariant
 
 from exahype2.solvers.fv.FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 
-
 class GlobalFixedTimeStep( SingleSweep ):
-  def __init__(self, 
+  def __init__(self,
     name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, normalised_time_step_size,
-    flux=PDETerms.User_Defined_Implementation, 
-    ncp=PDETerms.None_Implementation, 
-    eigenvalues=PDETerms.User_Defined_Implementation, 
+    flux=PDETerms.User_Defined_Implementation,
+    ncp=PDETerms.None_Implementation,
+    eigenvalues=PDETerms.User_Defined_Implementation,
     boundary_conditions=PDETerms.User_Defined_Implementation,
     refinement_criterion=PDETerms.Empty_Implementation,
     initial_conditions=PDETerms.User_Defined_Implementation,
@@ -30,24 +29,21 @@ class GlobalFixedTimeStep( SingleSweep ):
     plot_grid_properties=False, overlap=1
   ):
     """
-  
     time_step_size: Float
       This is the normalised time step size w.r.t. the coarsest admissible h value. If
       the code employs AMR on top of it and refines further, it will automatically 
       downscale the time step size accordingly. So hand in a valid time step size w.r.t.
       to max_volume_h.
-  
     """
-    super(GlobalFixedTimeStep,self).__init__(name, 
-                                             patch_size, 
-                                             overlap, 
-                                             unknowns, 
-                                             auxiliary_variables, 
-                                             min_volume_h, 
-                                             max_volume_h, 
+    super(GlobalFixedTimeStep,self).__init__(name,
+                                             patch_size,
+                                             overlap,
+                                             unknowns,
+                                             auxiliary_variables,
+                                             min_volume_h,
+                                             max_volume_h,
                                              plot_grid_properties,
-                                             kernel_namespace="rusanov") 
-    
+                                             kernel_namespace="rusanov")
     self._normalised_time_step_size = normalised_time_step_size
 
     self._flux_implementation                 = PDETerms.None_Implementation
@@ -61,23 +57,28 @@ class GlobalFixedTimeStep( SingleSweep ):
 #include "exahype2/fv/rusanov/Rusanov.h"
 """
 
-    self.set_implementation(flux=flux, 
-      ncp=ncp, 
-      eigenvalues=eigenvalues, 
-      boundary_conditions=boundary_conditions, 
-      refinement_criterion=refinement_criterion, 
-      initial_conditions=initial_conditions, 
-      source_term=source_term )
-
+    self.set_implementation(
+      flux=flux,
+      ncp=ncp,
+      eigenvalues=eigenvalues,
+      boundary_conditions=boundary_conditions,
+      refinement_criterion=refinement_criterion,
+      initial_conditions=initial_conditions,
+      source_term=source_term
+    )
 
   def set_implementation(self,
-    flux=None,ncp=None,
-    eigenvalues=None,
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
-    memory_location         = None,
-    use_split_loop          = False,
-    additional_action_set_includes = "",
-    additional_user_includes       = ""
+                         flux                            = None,
+                         ncp                             = None,
+                         eigenvalues                     = None,
+                         boundary_conditions             = None,
+                         refinement_criterion            = None,
+                         initial_conditions              = None,
+                         source_term                     = None,
+                         memory_location                 = None,
+                         use_split_loop                  = False,
+                         additional_action_set_includes  = "",
+                         additional_user_includes        = ""
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -112,13 +113,12 @@ class GlobalFixedTimeStep( SingleSweep ):
 
     self._compute_time_step_size              = solver_code_snippets.create_compute_time_step_size()
     self._compute_new_time_step_size          = solver_code_snippets.create_compute_new_time_step_size()
-    
+
     self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
 
     self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
     self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
     self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
-      
-    super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
+    super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)

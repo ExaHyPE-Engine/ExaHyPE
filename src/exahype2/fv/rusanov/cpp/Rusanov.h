@@ -7,7 +7,7 @@
 #include <execution>
 #include <algorithm>
 #include <numeric>
-#include "extra/cartesian_product.h"
+#include "tarch/accelerator/cpp/cartesian_product.h" // TODO: Remove this
 
 namespace exahype2 {
   namespace fv {
@@ -67,7 +67,6 @@ namespace exahype2 {
         __attribute__((always_inline))
         #endif
         ;
-
 
         template <
           typename Solver,
@@ -156,7 +155,5 @@ namespace exahype2 {
   }
 }
 
-
 #include "Rusanov_patchwise_heap_static_calls.cpph"
 #include "Rusanov_batched_heap_static_calls.cpph"
-

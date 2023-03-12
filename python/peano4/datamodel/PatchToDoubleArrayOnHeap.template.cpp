@@ -5,7 +5,10 @@
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _dataSmartPointer(
-    static_cast< {{FLOAT_TYPE}}* >( allocateMemory(Cardinality, tarch::MemoryLocation::Heap) )
+    tarch::allocateMemory< {{FLOAT_TYPE}} >( Cardinality, tarch::MemoryLocation::Heap ),
+    [] (auto p) {
+      tarch::freeMemory( p, tarch::MemoryLocation::Heap );
+    }
   ) {
   value = &( _dataSmartPointer[0] );
 }

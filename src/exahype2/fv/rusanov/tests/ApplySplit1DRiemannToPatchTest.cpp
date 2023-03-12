@@ -4,30 +4,24 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/la/Vector.h"
 
-
 exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::ApplySplit1DRiemannToPatchTest():
   TestCase ("exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest") {
 }
-
 
 void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::run() {
   testMethod(testMe);
   testMethod(testBreakingDam);
 }
 
-
-void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testBreakingDam() {
-
-}
-
+void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testBreakingDam() {}
 
 void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testMe() {
 
    // This is really just testing the different ways to iterate throught he x,y grid
    // The input values are ad-hoc
 
-  double * numericalFluxL = ::tarch::allocateMemory(5, tarch::MemoryLocation::Heap);
-  double * numericalFluxR = ::tarch::allocateMemory(5, tarch::MemoryLocation::Heap);
+  double * numericalFluxL = ::tarch::allocateMemory<double>(5, tarch::MemoryLocation::Heap);
+  double * numericalFluxR = ::tarch::allocateMemory<double>(5, tarch::MemoryLocation::Heap);
   numericalFluxL[0]=1.0;
   numericalFluxL[1]=2.0;
   numericalFluxL[2]=3.0;
@@ -40,13 +34,12 @@ void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testMe() {
   numericalFluxR[4]=10.0;
 
   int numberOfVolumesPerAxisInPatch = 10;
-  
+
   // These two values are not used in this test. So I comment them
   // out to eliminate compiler warnings.
   //tarch::la::Vector<Dimensions,double> patchCentre = {0.018519,0.018519};
   //tarch::la::Vector<Dimensions,double> patchSize   = {0.037037,0.037037};
   tarch::la::Vector<Dimensions,double> volumeH     = {0.01,0.01};
-
 
   int unknowns = 5;
   int auxiliaryVariables = 0;
@@ -66,7 +59,6 @@ void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testMe() {
     {
       const int leftVoxelInImage     =  x - 1 + y * numberOfVolumesPerAxisInPatch;
       const int rightVoxelInImage    =  x     + y * numberOfVolumesPerAxisInPatch;
-
 
       for (int unknown=0; unknown<unknowns; unknown++)
       {
@@ -112,10 +104,9 @@ void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testMe() {
   }
 
   // Done with routine 1
-   
+
   double * Qouttest= new double[500];
   for (unsigned int i=0;i<500;++i) Qouttest[i]=0.0;
-
 
   for (int shift=0; shift<2; shift++)
   {
@@ -125,7 +116,6 @@ void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testMe() {
        {
           const int leftVoxelInImage     = x-1 + y * numberOfVolumesPerAxisInPatch;
           const int rightVoxelInImage    = x   + y * numberOfVolumesPerAxisInPatch;
-
 
           for (int unknown=0; unknown<unknowns; unknown++)
           {
@@ -155,7 +145,6 @@ void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testMe() {
            const int lowerVoxelInImage    = x + (y-1) * numberOfVolumesPerAxisInPatch;
            const int upperVoxelInImage    = x     + y * numberOfVolumesPerAxisInPatch;
 
-
            for (int unknown=0; unknown<unknowns; unknown++)
            {
               if (y>0)
@@ -174,7 +163,7 @@ void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testMe() {
         }
      }
   }
-  
+
   // Done with routine 2
   double * Qouttest2= new double[500];
   for (unsigned int i=0;i<500;++i) Qouttest2[i]=0.0;
@@ -237,7 +226,6 @@ void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testMe() {
         }
       }
 
-
   // Elementwise comparison
 
   for (unsigned int i=0;i<500;++i)
@@ -247,9 +235,6 @@ void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testMe() {
      //printf("%f vs %f\n", Qouttest[i], Qouttest2[i]);
      validateNumericalEquals(Qouttest[i], Qouttest2[i]);
   }
-
-
-
 
   delete[] Qout;
   delete[] Qouttest;

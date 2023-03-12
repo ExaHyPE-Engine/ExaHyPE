@@ -324,7 +324,6 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   }
   if (CCZ4ReSwi==2) { //
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
-        std::cout << "@";
       constexpr int NumberOfRefinementLayers = 2;
 //    current "standard" refinement pattern
       double Radius[NumberOfRefinementLayers] = {4, 2.5};

@@ -41,7 +41,6 @@ void exahype2::fd::tests::SommerfeldBCTest::flatsolutiontest() {
     1.0, 2.0, 1.0, 2.0, 1.0, 2.0,   0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
   };
 
-  double Qinf[2]={1.0,2.0};
 
   ::exahype2::fd::applySommerfeldConditions(
     [&](
@@ -54,6 +53,14 @@ void exahype2::fd::tests::SommerfeldBCTest::flatsolutiontest() {
     ) -> double {
         return 2.0;
     },
+    [&](
+        double * __restrict__                        Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH
+    ) -> void {
+      Q[0] = 1.0;
+      Q[1] = 2.0;
+    },
     {1.0,0.0,0.0},
     {0.05,0.05,0.05},
     1.0,
@@ -65,8 +72,7 @@ void exahype2::fd::tests::SommerfeldBCTest::flatsolutiontest() {
     3, //facenumber
     {0.0,0.0,0.0},
     Qold,
-    Qnew,
-    Qinf
+    Qnew
   );
 
   std::cout<<std::setprecision(1);

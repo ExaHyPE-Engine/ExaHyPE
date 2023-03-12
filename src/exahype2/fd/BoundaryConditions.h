@@ -2,14 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
 
-
 #include <functional>
-
 
 namespace exahype2 {
   namespace fd {
@@ -50,7 +46,6 @@ namespace exahype2 {
       double* __restrict__                         Q
     );
 
-
     /**
      * Apply Sommerfeld boundary conditions
      *
@@ -80,6 +75,13 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
         ) -> double {
           return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
         },
+        [&](
+          double * __restrict__                        Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  gridCellH
+        ) -> void {
+          repositories::{{SOLVER_INSTANCE}}.initialCondition( Q, faceCentre, gridCellH, true );
+        },
         marker.x(),
         marker.h(),
         {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
@@ -97,6 +99,42 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       </pre>
 """
      *
+     *
+     * @param farFieldSolution
+     */
+    void applySommerfeldConditions(
+      std::function< double(
+        const double* __restrict__                   Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      ) >   maxEigenvalue,
+      std::function< void(
+        double* __restrict__                         Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH
+      ) >   farFieldSolution,
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      double                                       t,
+      double                                       dt,
+      int                                          numberOfGridCellsPerPatchPerAxis,
+      int                                          overlap,
+      int                                          numberOfUnknowns,
+      int                                          numberOfAuxiliaryVariables,
+      int                                          faceNumber,
+      const tarch::la::Vector<Dimensions,double>&  systemOrigin,
+      double* __restrict__                         Qold,
+      double* __restrict__                         Qnew
+    );
+
+    /**
+     * Wrapper around the other applySommerfeldConditions() function.
+     *
+     * In this variant, the far-field solution is zero, so the solution is kind
+     * of trivialised there.
      */
     void applySommerfeldConditions(
       std::function< double(
@@ -118,10 +156,7 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       int                                          faceNumber,
       const tarch::la::Vector<Dimensions,double>&  systemOrigin,
       double* __restrict__                         Qold,
-      double* __restrict__                         Qnew,
-      double* __restrict__                         Qinf
+      double* __restrict__                         Qnew
     );
   }
 }
-
-

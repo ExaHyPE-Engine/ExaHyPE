@@ -140,6 +140,9 @@ class ADERDG( object ):
     self._plot_grid_properties = plot_grid_properties
     self.plot_description = ""
 
+    self.plot_metadata    = ""
+    self.select_dofs_to_print = None
+
     #used by children classes or setters in order to add constants or includes to the corresponding part
     self._solver_constants         = ""
     self.user_action_set_includes  = ""
@@ -452,21 +455,24 @@ class ADERDG( object ):
           mapping.append( (x,y,z) )
 
     # calls a generator which generates a standard plotter that uses the tarch library
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
-      filename=output_path + "solution-" + self._name, 
-      patch=self._current_time_step, 
-      dataset_name=self._unknown_identifier(), 
-      description=self.plot_description,
-      mapping=mapping,
-      guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
-      additional_includes="""
-#include "exahype2/PlotFilter.h"
-#include "../repositories/SolverRepository.h"
-""",
-      precision="PlotterPrecision",
-      time_stamp_evaluation="repositories::getMinTimeStamp()", plot_cell_data=False,
-      dataType=self._solution_persistent_storage_precision
-    ))
+# @todo This should have been merged again p4 before    
+#    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
+#      filename=output_path + "solution-" + self._name, 
+#      patch=self._current_time_step, 
+#      dataset_name=self._unknown_identifier(), 
+#      description=self.plot_description,
+#      mapping=mapping,
+#      plot_cell_data=False,
+#      select_dofs = self.select_dofs_to_print,
+#      guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
+#      additional_includes="""
+##include "exahype2/PlotFilter.h"
+##include "../repositories/SolverRepository.h"
+#""",
+#     # precision="PlotterPrecision",
+#      time_stamp_evaluation="repositories::getMinTimeStamp()", plot_cell_data=False,
+#      dataType=self._solution_persistent_storage_precision
+#    ))
 
     if self._plot_grid_properties:    
       step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 

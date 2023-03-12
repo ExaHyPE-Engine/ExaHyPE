@@ -43,7 +43,7 @@ void peano4::parallel::tests::PingPongTest::testBuiltInType() {
 
 
 namespace {
-  int testErrors = 0;
+  [[maybe_unused]] int testErrors = 0;
 
   class PingPongSendTask: public tarch::multicore::Task {
     private:
