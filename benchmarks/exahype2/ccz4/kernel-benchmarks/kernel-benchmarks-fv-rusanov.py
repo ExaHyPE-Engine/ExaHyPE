@@ -10,6 +10,7 @@ import exahype2
 dimensions            = 2
 max_patches           = 1024*2
 patch_size            = 17
+timesteps             = 100
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -23,8 +24,9 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - Finite Volumes Rusanov
 parser.add_argument("-m",       "--build-mode",         dest="build_mode",        choices=build_modes.keys(),   default="Release",          help="|".join(build_modes.keys()) )
 parser.add_argument("-ps",      "--patch-size",         dest="patch_size",        type=int,                     default=patch_size,         help="Number of finite volumes per axis (dimension) per patch")
 parser.add_argument("-mp",      "--max-patches",        dest="max_patches",       type=int,                     default=max_patches,        help="Maximal number of patches to study")
-parser.add_argument("-a",       "--accuracy",           dest="accuracy",          type=float,                   default=0.0,                help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon.")
-parser.add_argument(            "--with-scaling",       dest="with_scaling",      action="store_true",         default=False,              help="Benchmark kernels according to scaling laws. When switched off, each thread replicates the problem size. (off by default)" )
+parser.add_argument("-t",       "--timesteps",          dest="timesteps",         type=int,                     default=timesteps,          help="Number of timesteps")
+parser.add_argument("-a",       "--accuracy",           dest="accuracy",          type=float,                   default=-1.0,               help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon (default).")
+parser.add_argument(            "--with-scaling",       dest="with_scaling",      action="store_true",          default=False,              help="Benchmark kernels according to scaling laws. When switched off, each thread replicates the problem size (off by default)." )
 parser.add_argument(            "--no-compile",         dest="compile",           action="store_false",         default=True,               help="Compile (on by default)" )
 args = parser.parse_args()
 
@@ -155,6 +157,7 @@ peano4_project = my_project.generate_Peano4_project(verbose=True)
 peano4_project.constants.export_boolean("WithScaling", str(args.with_scaling))
 peano4_project.constants.export_constexpr_with_type( "Accuracy", str(accuracy), "double" )
 peano4_project.constants.export_constexpr_with_type( "MaxPatches", str(args.max_patches), "int" )
+peano4_project.constants.export_constexpr_with_type( "TimeSteps", str(args.timesteps), "int" )
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/InitialValues.cpp", generated=False )
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp", generated=False )
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/ccz4" )
