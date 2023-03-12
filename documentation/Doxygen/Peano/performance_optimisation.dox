@@ -73,6 +73,15 @@ is a proper load balancing for two cores, as we have 13 vs 14 cells.
 
 There are a few things to check in this case:
 
+- If you use a generic algorithm to load balance, reduce the load balancing 
+  quality that you aim for. No load balancing will be able to ensure 100% perfect
+  load, as we work in a discrete setup, so they will have some threshold. If you
+  work with a very fine mesh, then it is important to use a high load balancing quality (we typically start with 
+  something around 95%). However, if you want to use only few cells per core, 
+  a smaller load balancing quality (something like 80%) should be 
+  absolutely fine. Every time the load balancing threshold is violated, Peano will
+  try to split up subpartitions, and you might end up with very small aka cheap
+  partitions if the load is too cheap. 
 - Do some large trees cut off some very small trees at one point? If so, can you
   reduce the maximum number of trees used? If this implies that you end up with 
   fewer trees than cores, you will have to use tasking on top of the domain 
