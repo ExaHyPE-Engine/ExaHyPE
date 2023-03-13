@@ -342,7 +342,8 @@ void runStatelessVariantOnDevice(
   {
     ::exahype2::CellData patchData(patches);
     for (int i=0; i<patches; i++) {
-      patchData.QIn[i]            = tarch::allocateMemory<double>(NumberOfInputEntries, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+      //patchData.QIn[i]            = tarch::allocateMemory<double>(NumberOfInputEntries, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+      patchData.QIn[i]           = new double[ NumberOfInputEntries ];
       patchData.t[i]             = TimeStamp;
       patchData.dt[i]            = TimeStepSize;
       patchData.QOut[i]          = new double[ NumberOfOutputEntries ];
@@ -384,7 +385,8 @@ void runStatelessVariantOnDevice(
     }
 
     for (int i=0; i<patches; i++) {
-      tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+      //tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+      delete[] patchData.QIn[i];
       delete[] patchData.QOut[i];
     }
   }
@@ -396,7 +398,8 @@ void runStatelessVariantOnDevice(
   #pragma omp target enter data map(alloc : a [0:N], b [0:N])
   for (unsigned int k = 0; k < TimeSteps; k++) {
     tarch::timing::Watch watch( "::runBenchmarksOnDevice", "runStatelessVariantOnDevice(...)", false );
-    #pragma omp target loop
+    //#pragma omp target loop
+    #pragma omp target teams distribute parallel for simd
     for (int i = 0; i < N; i++) {
       b[i] = a[i];
     }
@@ -716,7 +719,10 @@ int main(int argc, char** argv) {
   logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
   logInfo("main()", "Dimensions: " << Dimensions);
 
-  int numberOfPatches = tarch::multicore::Core::getInstance().getNumberOfThreads();
+  int numberOfPatches = 1;
+  if constexpr (WithScaling) {
+    numberOfPatches = tarch::multicore::Core::getInstance().getNumberOfThreads();
+  }
   for (; numberOfPatches <= MaxPatches; numberOfPatches *= 2) {
     std::stringstream msg;
     msg << "kernel-benchmarks-" << numberOfPatches << "-patches-" << tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
