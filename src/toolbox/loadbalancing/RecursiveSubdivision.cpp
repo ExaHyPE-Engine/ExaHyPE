@@ -26,7 +26,7 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(Configuration
   _globalNumberOfRanksWithEnabledLoadBalancing(0),
   _localNumberOfSplits(0),
   _numberOfStateUpdatesWithoutAnySplit(0),
-  _stepsToWaitForNextLoadBalancingDecision(std::numeric_limits<int>::max()),
+  _stepsToWaitForNextLoadBalancingDecision(0),
   _state( State::InterRankDistribution ),
   _roundRobinToken(0),
   _configuration(configuration) {
