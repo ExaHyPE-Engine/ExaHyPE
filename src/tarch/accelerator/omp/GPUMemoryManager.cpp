@@ -8,6 +8,8 @@
 
 #include <omp.h>
 
+#define UseManagedSharedAcceleratorDeviceMemory 0
+
 tarch::logging::Log  tarch::accelerator::omp::GPUMemoryManager::_log( "tarch::accelerator::omp::GPUMemoryManager" );
 
 tarch::accelerator::omp::GPUMemoryManager& tarch::accelerator::omp::GPUMemoryManager::getInstance() {
@@ -25,7 +27,13 @@ void* tarch::accelerator::omp::GPUMemoryManager::allocateRawData( int size, int 
 
   // Is a free page left? If not, insert one
   if ( _deviceMemory.at(device).freePages[size].empty() ) {
-    _deviceMemory.at(device).freePages[size].push_back(omp_target_alloc(size, device));
+    _deviceMemory.at(device).freePages[size].push_back(
+#if UseManagedSharedAcceleratorDeviceMemory
+      internal::allocateRawData(size, MemoryLocation::ManagedSharedAcceleratorDeviceMemory)
+#else
+      omp_target_alloc(size, device)
+#endif
+    );
   }
 
   // Grab fitting page
@@ -70,7 +78,11 @@ void tarch::accelerator::omp::GPUMemoryManager::clear() {
 
     for (auto& p: deviceMemory.second.freePages)
     for (auto& pp: p.second) {
+#if UseManagedSharedAcceleratorDeviceMemory
+      freeMemory(pp, MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+#else
       omp_target_free(pp, device);
+#endif
     }
   }
 

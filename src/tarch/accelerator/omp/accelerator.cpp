@@ -15,7 +15,6 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
   void* result = nullptr;
   switch (location) {
     case MemoryLocation::Heap:
-      //result = new (std::align_val_t(AlignmentOnHeap)) char[size];
       result = aligned_alloc(AlignmentOnHeap, size);
       break;
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
@@ -24,10 +23,8 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
       #elif defined(__HIPCC__)
       hipMallocManaged(&result, size, hipMemAttachGlobal);
       #elif defined(__AMDGPU__) or defined(__clang__) // fall back to non-managed memory when on AMD/LLVM
-      //result = new (std::align_val_t(AlignmentOnHeap)) char[size];
       result = aligned_alloc(AlignmentOnHeap, size);
       #else
-      //result = new (std::align_val_t(AlignmentOnHeap)) char[size];
       result = aligned_alloc(AlignmentOnHeap, size);
       #endif
       break;
@@ -38,7 +35,6 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
 void tarch::freeMemory(void* data, MemoryLocation location) {
   switch (location) {
     case MemoryLocation::Heap:
-      //delete[] data;
       free(data);
       break;
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
@@ -47,10 +43,8 @@ void tarch::freeMemory(void* data, MemoryLocation location) {
       #elif defined(__HIPCC__)
       hipFree(data);
       #elif defined(__AMDGPU__) or defined(__clang__) // fall back to non-managed memory when on AMD/LLVM
-      //delete[] data;
       free(data);
       #else
-      //delete[] data;
       free(data);
       #endif
       break;
