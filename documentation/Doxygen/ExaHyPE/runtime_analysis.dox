@@ -49,7 +49,7 @@
  
  As ExaHyPE 2 is built on top of Peano 4, all the generic Peano scripts  work for ExaHyPE, too. 
 
- @see peano_runtime_analysis
+ @see \ref peano_runtime_analysis
  @see exahype2.postprocessing.plot-scaling.TimeseriesPlots.py
 
 */

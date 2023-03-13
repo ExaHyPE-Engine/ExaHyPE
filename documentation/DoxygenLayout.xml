@@ -4,6 +4,7 @@
   <navindex>
     <tab type="mainpage" visible="yes" title=""/>
     <!-- <tab type="pages" visible="yes" title="Test Page" intro=""/> -->
+    <tab type="user" visible="yes" title="Installation"      url="\ref installation"     intro=""/> <!-- this creates a custom tab -->
     <tab type="user" visible="yes" title="Peano"      url="\ref peano_home"     intro=""/> <!-- this creates a custom tab -->
     <tab type="user" visible="yes" title="ExaHyPE"    url="\ref exahype_home"   intro=""/> <!-- this creates a custom tab -->
     <tab type="user" visible="yes" title="Swift"      url="\ref swift_home"     intro=""/> <!-- this creates a custom tab -->
