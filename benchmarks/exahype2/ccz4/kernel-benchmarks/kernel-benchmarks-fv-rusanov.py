@@ -9,7 +9,7 @@ import exahype2
 
 dimensions            = 2
 max_patches           = 1024*2
-patch_size            = 17
+patch_size            = 5
 timesteps             = 100
 
 build_modes = {
@@ -154,7 +154,7 @@ my_project.set_global_simulation_parameters(
 )
 
 peano4_project = my_project.generate_Peano4_project(verbose=True)
-peano4_project.constants.export_boolean("WithScaling", str(args.with_scaling))
+peano4_project.constants.export_boolean("WithScaling", args.with_scaling)
 peano4_project.constants.export_constexpr_with_type( "Accuracy", str(accuracy), "double" )
 peano4_project.constants.export_constexpr_with_type( "MaxPatches", str(args.max_patches), "int" )
 peano4_project.constants.export_constexpr_with_type( "TimeSteps", str(args.timesteps), "int" )

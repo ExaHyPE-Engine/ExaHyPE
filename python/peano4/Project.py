@@ -158,21 +158,59 @@ class Project (object):
         cmake_build_dir = find_cmake_build_dir()
         if cmake_build_dir != "":
           command = f"cd {cmake_build_dir} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
-          result = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          process = subprocess.Popen([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=False)
         else:
-          result = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if result.returncode==0:
-          print( result.stdout.decode("utf-8") )
-          print( "compile completed successfully" )
+          process = subprocess.Popen(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=False)
+        # Start a thread to print the output of the subprocess
+        import threading
+        def print_output(process):
+          num_warnings = 0
+          num_errors = 0
+          while True:
+            # Read one line from stdout
+            stdout_line = process.stdout.readline()
+            if stdout_line:
+                decoded_line = stdout_line.decode('utf-8').strip()
+                print(decoded_line)
+            # Read one line from stderr
+            stderr_line = process.stderr.readline()
+            if stderr_line:
+                decoded_line = stderr_line.decode('utf-8').strip()
+                if 'warning:' in decoded_line.lower():
+                  num_warnings += 1
+                  print('\033[35m' + decoded_line + '\033[0m')  # Print warning messages in purple
+                elif 'error:' in decoded_line.lower():
+                  num_errors += 1
+                  print('\033[31m' + decoded_line + '\033[0m')  # Print error messages in red
+                  error_messages.append(decoded_line)
+                else:
+                  print(decoded_line)
+            # If both stdout and stderr have been fully read, exit the loop
+            if not stdout_line and not stderr_line:
+                break
+          print('Number of warnings:', num_warnings)
+          print('Number of errors:', num_errors)
+        error_messages = []
+        output_thread = threading.Thread(target=print_output, args=(process,))
+        output_thread.start()
+        # Wait for the subprocess to finish
+        process.wait()
+        # Join the output thread
+        output_thread.join()
+        # Get the final output of the subprocess
+        _, _ = process.communicate()
+        if process.returncode==0:
+          print("compile completed successfully")
         else:
-          print( result.stderr.decode("utf-8") )
-          print( "compile not successful" )
+          # Raise an exception with the error message captured from the standard error stream of the subprocess
+          error_message = '\n'.join(error_messages)
+          raise Exception(error_message)
         self.is_built = True
         self.build_was_successful = True
       except Exception as e:
-        print( "compile was not successful: " + str(e) )
         self.is_built = True
         self.build_was_successful = False
+        raise Exception("compile was not successful: " + str(e))
     else:
       print( "cannot build as code generation has not been successful" )
 
