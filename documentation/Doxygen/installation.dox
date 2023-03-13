@@ -1,26 +1,123 @@
 /**
 
-@page installation "Installation"
+@page installation <h2>Installation</h2>
+
+@todo figure out how to use footnotes. classical html methods seem not to work, and doxygen has no keyword for them
 
 There are two ways to obtain Peano: 
 You can either download one of the archives we provide on the webpage, or you
 can work directly against a repository clone (recommended).
-We recommend to work against the latest release of Peano which you can get through
+We recommend to work against the latest release of Peano which you can get through:
 
 <pre>
 git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
 </pre>
 
 
+in the directory where you've stored your downloaded file. 
+If you work with the archive, type in
+
+<code> <b> 
+tar -xzvf myarchive.tar.gz
+</b></code> 
+
 in the directory where you've stored your downloaded file.
 
+<h2> Prepare the configure environment</h2>
+
+First, ensure you have the autotool packages installed on your system. They
+typically are shipped in the packages <code> <b>autoconf</b></code>, <code> <b>automake</b></code> and
+<code> <b>libtool</b></code>.
+Run the line below in the shell to set up the configure environment. These steps should only be required once, unless you push major revisions to the
+development branch.
+
+<code> <b> libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing; </b></code>
+
+<h2> Configuration </h2>
+The steps below will guide you through configuring and building the Peano code.
+An example of a shell script which summarises these steps can be found 
+\ref sample_installation_script "here."
 
 
-<code> libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing; </code>
+Peano  relies on the autotools to set up its build environment.
+Change into the project's directory and type in: 
+
+<code> <b>./configure --help</b></code>
+
+The <code> <b> --help </b></code> option should give you some information about the available
+variants of Peano.
+A sole <code> <b>./configure</b></code>
+call gives you the minimalist version of
+Peano, which might be appropriate for a first test.
+
+@remark 
+I recommend that you start a first test without any additional flavours of
+Peano, i.e. to work with a plain <code> <b>./configure </b></code> call. Once the tests
+pass, I recommend that you add further options (IO) and/or parallelisation.
+Please note that the baseline config is not sufficient for most applications
+as it is merely a stripped down version of the Peano core.
+ExaHyPE for example requires you to add <code> <b>--enable-exahype</b></code>,
+<code> <b>--enable-loadbalancing-toolbox</b></code> and <code> <b>--enable-blockstructured</b></code>. 
+But the bare/minimal version is good for first tests.
+
+The output of <code> <b>./configure --help</b></code> should be reasonably verbose, but I 
+summarise some of the most important options below:
+
+<table> 
+  <tr>
+    <th>
+      <code> <b> --with-multithreading </b> </code>
+      <code> <b>  </b> </code>
+    </th>
+
+    <th>
+      Switch on multithreading. By default, we
+      build without multithreading, but using, for instance, <code> <b> --with-multithreading=omp </b> </code>
+      makes Peano  use the OpenMP threading model. Please consult <code> <b> --help </b> </code> for
+      details. Note: To use OpenMP multithreading, you will need a compiler which
+      supports OpenMP 5.0 (e.g - GCC 9.x)[fn]]Peano realises its GPGPU
+     offloading via OpenMP, too. Some compilers struggle to translate these GPGPU
+      instructions. In this case, please configure with the CXXFLAG
+     <code> <b> -DnoGPUOffloading </b> </code> .[/fn].
+    </th>
+  </tr>
+
+  <tr>
+    <th>
+      <code> <b> --with-mpi </b> </code>
+      <code> <b>  </b> </code>
+    </th>
+
+    <th>
+      Enable the MPI version of Peano. You have to tell the
+      build environment however which compile command to use. Please note that
+      we need a C++ MPI wrapper. So <code> <b>  --with-mpi=mpcxx</b> </code> is a typical call. Currently, you also need  <code> <b> --with-multithreading </b> </code> if you want to use MPI. 
+    </th>
+  </tr>
+
+  <tr>
+    <th>
+      \texttt{--with-toolchain}
+    </th>
+
+    <th>
+      Build against a particular vendor toolchain.
+      Currently, I have dedicated support for the NVIDIA NVTX SDK
+      (\texttt{--with-toolchain=nvidia}) providing NVIDIA-specific logging/tracing
+      as well as memory allocation calls---the latter is of use if you use
+      GPUs---and the Intel toolchain (\texttt{--with-toolchain=intel}). The latter
+      in particular links against the ITAC tracing API. I also have support for
+      Google's Chrome browser (\texttt{--with-toolchain=chrome}) which means that
+      traces are written in a way that you can display it in Chrome. Ensure that your CXXFLAGS set the right include path\footnote{It is
+      \texttt{CXXFLAGS+=-I/opt/nvidia/nsight-systems/2020.3.1/target-linux-x64/nvtx/include/nvtx3/}
+      on my system, e.g.}.
+      This is optional.
+    </th>
+  </tr>
 
 
-@todo Copy tex content over
-
+  
+</table>
 */
 
 
