@@ -8,11 +8,6 @@ import dastgen2
 
 import shutil
 
-# HDF5 Reader
-import peano4.toolbox.particles.sph.fileReader
-
-# SPH initialisation snippets library
-import peano4.toolbox.particles.sph.initSnippets
 
 ########################################################################################
 # Parse user input
@@ -28,8 +23,8 @@ parser.add_argument("-et",  "--end-time",        dest="end_time",       type=flo
 parser.add_argument("-dt",  "--timestep-size",   dest="timestep_size",  type=float, default=1e-4,              help="Global timestep size (initial value)" )
 parser.add_argument("-cs",  "--cell-size",       dest="cell_size",      type=float, default=0.3,               help="Cell size (default 0.3)" )
 parser.add_argument("-pd",  "--peano-dir",       dest="peanodir",       default="../../../..",                 help="Peano4 directory" )
-parser.add_argument("-asserts",  "--asserts",    dest="asserts",        action="store_true", default=False,    help="Switch on assertions" )
 parser.add_argument("-ms",  "--mantissa-size",   dest="mantissa_size", type=int, default=52, help="Mantissa size for clang truncation (if supported by compiler)")
+parser.add_argument("-asserts",  "--asserts",    dest="asserts",        action="store_true", default=False,    help="Switch on assertions" )
 args = parser.parse_args()
 
 
@@ -73,7 +68,6 @@ particle.mantissa_size = args.mantissa_size
 # simulation - we do that here. 
 
 
-# @TODO Introduce get and set methods to interface into SPHLeapfrogFixedInteractionRadius
 
 # Time-integration parameters -------------------------------------------------
 GLOBAL_TIME_STEP_SIZE = "1e-4"
@@ -158,23 +152,16 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 # Initialisation snippet for the particle
 ###############################################################################
 #
-# If we work with only one particle, then we can simply set its velocity. 
-# However, our script works both if we only module the earth but also when we
-# model earth and sun explicitly. In the latter case, we have to ensure that 
-# only the earth is given an initial velocity.
-#
-###############################################################################
-
-#
 #  Insert particles in regular grid. Attributes are set via an initalisation
 #  snippet.
 #
 
 # Noh problem (2D) snippet 
-ICs = peano4.toolbox.particles.sph.initSnippets.NohProblemIC( dimensions=HYDRO_DIMENSIONS )
+ICs = swift2.scenario.NohProblemIC( dimensions=HYDRO_DIMENSIONS )
 initialisation_snippet = ICs.initialisation_snippet
 
-# Insert particles by coordinate
+# Set up the coordinates for the particles
+# We construct a regular (lattice) configuration.
 Npart = args.particle_number
 offset = 1/Npart
 
@@ -190,30 +177,16 @@ yp= yp.reshape((np.prod(yp.shape),))
 coords[:,0] = xp
 coords[:,1] = yp
 
-project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
+project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesByCoordinates(
   particle_set        = particle_set,
   initialisation_call = initialisation_snippet,
   coordinates         = coords,
+  additional_includes = """
+#include "swift2/kernels/equation_of_state.h"
+"""  
   )
 )
 
-
-#project.algorithm_step_init.add_action_set( 
-#  peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(
-#    particle_set=particle,
-#    distance_between_particles=args.particle_distance,
-#    initialisation_call=initialisation_snippet,
-#    noise=False,
-#    additional_includes=""" 
-#    #include <cmath>
-#    #include "Constants.h" 
-#    #include "swift2/kernels/kernel_hydro.h"
-#    #include "swift2/kernels/equation_of_state.h"
-#    """,
-#    computational_domain_offset=[0.0, 0.0]
-#  )
-#)
-#
 
 ###############################################################################
 # Set up the plotter
@@ -314,7 +287,9 @@ if args.clean_temporary_directories:
   for dir in dirs:
     shutil.rmtree( dir )
 
-peano4_project.generate( overwrite=1, throw_away_data_after_generation=True )
+# It is safe (and recommended) to overwrite any existing main file, since this
+# is generated automatically by the Swift2 graph compiler.
+peano4_project.generate( overwrite=peano4.output.Overwrite.Always, throw_away_data_after_generation=True )
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
 
 # remove output files from previous runs
