@@ -17,55 +17,55 @@ git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
 in the directory where you've stored your downloaded file. 
 If you work with the archive, type in
 
-<code> <b> 
-tar -xzvf myarchive.tar.gz
-</b></code> 
-
-in the directory where you've stored your downloaded file.
-
-<h2> Prepare the configure environment</h2>
-
-First, ensure you have the autotool packages installed on your system. They
-typically are shipped in the packages <code> <b>autoconf</b></code>, <code> <b>automake</b></code> and
-<code> <b>libtool</b></code>.
-Run the line below in the shell to set up the configure environment. These steps should only be required once, unless you push major revisions to the
-development branch.
-
-<code> <b> libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing; </b></code>
-
-<h2> Configuration </h2>
-The steps below will guide you through configuring and building the Peano code.
-An example of a shell script which summarises these steps can be found 
-\ref sample_installation_script "here."
-
-
-Peano  relies on the autotools to set up its build environment.
-Change into the project's directory and type in: 
-
-<code> <b>./configure --help</b></code>
-
-The <code> <b> --help </b></code> option should give you some information about the available
-variants of Peano.
-A sole <code> <b>./configure</b></code>
-call gives you the minimalist version of
-Peano, which might be appropriate for a first test.
-
-@remark 
-I recommend that you start a first test without any additional flavours of
-Peano, i.e. to work with a plain <code> <b>./configure </b></code> call. Once the tests
-pass, I recommend that you add further options (IO) and/or parallelisation.
-Please note that the baseline config is not sufficient for most applications
-as it is merely a stripped down version of the Peano core.
-ExaHyPE for example requires you to add <code> <b>--enable-exahype</b></code>,
-<code> <b>--enable-loadbalancing-toolbox</b></code> and <code> <b>--enable-blockstructured</b></code>. 
-But the bare/minimal version is good for first tests.
-
-The output of <code> <b>./configure --help</b></code> should be reasonably verbose, but I 
-summarise some of the most important options below:
-
-<table> 
-  <tr>
-    <th>
+<code> <b> <br>
+tar -xzvf myarchive.tar.gz<br>
+</b></code> <br>
+<br>
+in the directory where you've stored your downloaded file.<br>
+<br>
+<h2> Prepare the configure environment</h2><br>
+<br>
+First, ensure you have the autotool packages installed on your system. They<br>
+typically are shipped in the packages <code> <b>autoconf</b></code>, <code> <b>automake</b></code> and<br>
+<code> <b>libtool</b></code>.<br>
+Run the line below in the shell to set up the configure environment. These steps should only be required once, unless you push major revisions to the<br>
+development branch.<br>
+<br>
+<code> <b> libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing; </b></code><br>
+<br>
+<h2> Configuration </h2><br>
+The steps below will guide you through configuring and building the Peano code.<br>
+An example of a shell script which summarises these steps can be found <br>
+\ref sample_installation_script "here."<br>
+<br>
+<br>
+Peano  relies on the autotools to set up its build environment.<br>
+Change into the project's directory and type in: <br>
+<br>
+<code> <b>./configure --help</b></code><br>
+<br>
+The <code> <b> --help </b></code> option should give you some information about the available<br>
+variants of Peano.<br>
+A sole <code> <b>./configure</b></code><br>
+call gives you the minimalist version of<br>
+Peano, which might be appropriate for a first test.<br>
+<br>
+@remark <br>
+I recommend that you start a first test without any additional flavours of<br>
+Peano, i.e. to work with a plain <code> <b>./configure </b></code> call. Once the tests<br>
+pass, I recommend that you add further options (IO) and/or parallelisation.<br>
+Please note that the baseline config is not sufficient for most applications<br>
+as it is merely a stripped down version of the Peano core.<br>
+ExaHyPE for example requires you to add <code> <b>--enable-exahype</b></code>,<br>
+<code> <b>--enable-loadbalancing-toolbox</b></code> and <code> <b>--enable-blockstructured</b></code>. <br>
+But the bare/minimal version is good for first tests.<br>
+<br>
+The output of <code> <b>./configure --help</b></code> should be reasonably verbose, but I <br>
+summarise some of the most important options below:<br>
+<br>
+<table> <br>
+  <tr><br>
+    <th><br>
       <code> <b> --with-multithreading </b> </code>
       <code> <b>  </b> </code>
     </th>
@@ -97,19 +97,19 @@ summarise some of the most important options below:
 
   <tr>
     <th>
-      \texttt{--with-toolchain}
+      <code> <b>--with-toolchain</b> </code>
     </th>
 
     <th>
       Build against a particular vendor toolchain.
       Currently, I have dedicated support for the NVIDIA NVTX SDK
-      (\texttt{--with-toolchain=nvidia}) providing NVIDIA-specific logging/tracing
+      (<code> <b>--with-toolchain=nvidia</b> </code>) providing NVIDIA-specific logging/tracing
       as well as memory allocation calls---the latter is of use if you use
-      GPUs---and the Intel toolchain (\texttt{--with-toolchain=intel}). The latter
+      GPUs---and the Intel toolchain (<code> <b>--with-toolchain=intel</b> </code>). The latter
       in particular links against the ITAC tracing API. I also have support for
-      Google's Chrome browser (\texttt{--with-toolchain=chrome}) which means that
+      Google's Chrome browser (<code> <b>--with-toolchain=chrome</b> </code>) which means that
       traces are written in a way that you can display it in Chrome. Ensure that your CXXFLAGS set the right include path\footnote{It is
-      \texttt{CXXFLAGS+=-I/opt/nvidia/nsight-systems/2020.3.1/target-linux-x64/nvtx/include/nvtx3/}
+      <code> <b>CXXFLAGS+=-I/opt/nvidia/nsight-systems/2020.3.1/target-linux-x64/nvtx/include/nvtx3/</b> </code>
       on my system, e.g.}.
       This is optional.
     </th>
@@ -117,19 +117,19 @@ summarise some of the most important options below:
 
   <tr>
     <th>
-      \texttt{--with-gpu}
+      <code> <b>--with-gpu</b> </code>
     </th>
 
     <th>
       Build against a particular vendor toolchain.
       Currently, I have dedicated support for the NVIDIA NVTX SDK
-      (\texttt{--with-toolchain=nvidia}) providing NVIDIA-specific logging/tracing
+      (<code> <b>--with-toolchain=nvidia</b> </code>) providing NVIDIA-specific logging/tracing
       as well as memory allocation calls---the latter is of use if you use
-      GPUs---and the Intel toolchain (\texttt{--with-toolchain=intel}). The latter
+      GPUs---and the Intel toolchain (<code> <b>--with-toolchain=intel</b> </code>). The latter
       in particular links against the ITAC tracing API. I also have support for
-      Google's Chrome browser (\texttt{--with-toolchain=chrome}) which means that
+      Google's Chrome browser (<code> <b>--with-toolchain=chrome</b> </code>) which means that
       traces are written in a way that you can display it in Chrome. Ensure that your CXXFLAGS set the right include path\footnote{It is
-      \texttt{CXXFLAGS+=-I/opt/nvidia/nsight-systems/2020.3.1/target-linux-x64/nvtx/include/nvtx3/}
+      <code> <b>CXXFLAGS+=-I/opt/nvidia/nsight-systems/2020.3.1/target-linux-x64/nvtx/include/nvtx3/</b> </code>
       on my system, e.g.}.
       This is optional.
     </th>
@@ -137,14 +137,14 @@ summarise some of the most important options below:
 
   <tr>
     <th>
-      \texttt{--enable-XXX}
+      <code> <b>--enable-XXX</b> </code>
     </th>
 
     <th>
       A lot of frameworks or engines built on top of \Peano\
   have to be enabled explicitly. \ExaHyPE\ is probably the most popular engine
   shipped with the code, but there is also a particle/SPH module or some linear
-  algebra stuff. Run with \texttt{--help} for a list of toolboxes. Some
+  algebra stuff. Run with <code> <b>--help</b> </code> for a list of toolboxes. Some
   toolboxes have further internal and external dependencies, and the translation
   of the toolboxes can be time consuming. By default, \Peano\ thus disables all
   of its toolboxes.
@@ -158,18 +158,18 @@ summarise some of the most important options below:
 
 Compilers, linkers and both compiler and linker flags can be changed by
 resetting the corresponding environment variables (such as
-\texttt{CXX} or \texttt{LDFLAGS} or \texttt{CCFLAGS}) \emph{prior} to the
+<code> <b>CXX</b> </code> or <code> <b>LDFLAGS</b> </code> or <code> <b>CCFLAGS</b> </code>) \emph{prior} to the
 configure call.
-Alternatively, you can pass the variables to be used to \texttt{configure}
-	through arguments (\texttt{./configure CXX=icpc ...}, e.g.). 
-Please consult the \texttt{--help} output for details.
+Alternatively, you can pass the variables to be used to <code> <b>configure</b> </code>
+	through arguments (<code> <b>./configure CXX=icpc ...</b> </code>, e.g.). 
+Please consult the <code> <b>--help</b> </code> output for details.
 For some supercomputers that we use frequently, there are recommendations which
 setting to use (Chapter~\ref{chapter:selected-HPC-platforms}).
 @todo correct the above reference
 
 @remark 
 Most Linux tools prefer you to specify a dedicated installation directory via
-\texttt{--prefix}.
+<code> <b>--prefix</b> </code>.
 For \Peano, things are slightly different: \Peano\ is a mere engine, i.e.~not
 ``useful'' per se.
 It is applications built on top of \Peano\ that become tools that you might
@@ -177,30 +177,30 @@ later want to install/deploy on your system.
 Therefore, I ship \Peano\ with static libraries only, and most users work with
 the code in the download/installation directory until they have constructed the
 application with the help of \Peano.
-So no need to specify a proper installation directory via \texttt{--prefix}.
+So no need to specify a proper installation directory via <code> <b>--prefix</b> </code>.
 
 
 <h2>Build </h2>
-\begin{code}
-make
-\end{code}
+<code> <b> <br>
+make<br>
+</b> </code> 
 should build the \Peano\ core.
 It also builds some examples and all the extensions and toolboxes you have
 manually enabled.
 All of these go into static libraries.
 The code is not small and you thus might prefer
-\begin{code}
-make -jx
-\end{code}
+<code> <b> <br>
+make -jx<br>
+</b> </code> 
 with x being the number of threads to use for compilation.
 
 @remark
 Following up on the remark above, 
-\begin{code}
-make install
-\end{code}
+<code> <b> <br>
+make install<br>
+</b> </code> 
 would deploy the \Peano\ files in the directory specified via the
-\texttt{prefix} before.
+<code> <b>prefix</b> </code> before.
 Most Unix tools want you to install them. 
 For \Peano, things might be slightly different as it is an engine used to
 construct tools in the first place. 
@@ -208,9 +208,9 @@ construct tools in the first place.
 <h2>Installation Test</h2>
 Once you have compiled \Peano\, I recommend that you run all tests using
 
-\begin{code}
-  make check
-\end{code}
+<code> <b> <br>
+  make check<br>
+</b> </code> 
 
 The call launches all of \Peano's unit tests, i.e.~all the unit tests for the
 core plus the extensions that you have enabled.
@@ -218,19 +218,19 @@ core plus the extensions that you have enabled.
 @remark
 
 I have written the test target such that it works out-of-the-box for non-MPI
-calls. If you have configured with \texttt{--with-mpi}, then the unit tests
+calls. If you have configured with <code> <b>--with-mpi</b> </code>, then the unit tests
 will fail. But this does not mean that the unit tests are broken. It is simply
 due to the fact that the makefile's test target does not know that you have to
-use the \texttt{mpirun} prefix.
+use the <code> <b>mpirun</b> </code> prefix.
 To make a long story short: If you use MPI and you want to run the unit tests,
 you have to do so manually.
 
 To run 2D and 3D tests individually, use
 
-\begin{code}
-  src/unittests/UnitTests2d
-  src/unittests/UnitTests3d
-\end{code}
+<code> <b> <br>
+  src/unittests/UnitTests2d<br>
+  src/unittests/UnitTests3d<br>
+</b> </code> 
 
 You can run these builds with different core counts and also MPI support if you
 have compiled with MPI.
@@ -238,24 +238,24 @@ The executables contain both node correctness tests and MPI ping-pong tests,
 i.e.~you can both assess a valid build plus a working MPI environment.
 If successful, you should always get a message alike
 
-\begin{code}
-Peano 4 (C) www.peano-framework.org 
-build: 2d, with mpi (1 ranks), omp (4 threads), debug level=4
-it is recommended that you run the unit tests with more than one MPI rank, too (file:main.cpp,line:82)
-usage: ././UnitTests2d core-count (use default core count=1 now) (file:main.cpp,line:88)
-running test case collection "tarch.la.tests" ..... ok
-running test case collection "tarch.la" ............. ok
-running test case collection "tarch.mpi.tests" ..... ok
-running test case collection "tarch.mpi" ... ok
-running test case collection "tarch" ... ok
-running test case collection ... ok
-running test case collection "peano4.grid.tests" ....... ok
-running test case collection "peano4.grid" ... ok
-running test case collection "peano4.parallel.tests" ....... ok
-running test case collection "peano4.parallel" ... ok
-running test case collection "peano4" ... ok
-running test case collection ... ok
-\end{code}
+<code> <b> <br>
+Peano 4 (C) www.peano-framework.org <br>
+build: 2d, with mpi (1 ranks), omp (4 threads), debug level=4<br>
+it is recommended that you run the unit tests with more than one MPI rank, too (file:main.cpp,line:82)<br>
+usage: ././UnitTests2d core-count (use default core count=1 now) (file:main.cpp,line:88)<br>
+running test case collection "tarch.la.tests" ..... ok<br>
+running test case collection "tarch.la" ............. ok<br>
+running test case collection "tarch.mpi.tests" ..... ok<br>
+running test case collection "tarch.mpi" ... ok<br>
+running test case collection "tarch" ... ok<br>
+running test case collection ... ok<br>
+running test case collection "peano4.grid.tests" ....... ok<br>
+running test case collection "peano4.grid" ... ok<br>
+running test case collection "peano4.parallel.tests" ....... ok<br>
+running test case collection "peano4.parallel" ... ok<br>
+running test case collection "peano4" ... ok<br>
+running test case collection ... ok<br>
+</b> </code> 
 
 Watch out for the last line that tells you whether the overall unit tests passed
 through.
@@ -268,26 +268,26 @@ through.
 To make any Python example pass, you have to set the Python paths.
 There are multiple ways to do so.
 
-The standard way is to set the \texttt{PYTHONPATH}:
-\begin{code}
-export PYTHONPATH=myPeanoDirectory/python
-\end{code}
-This can even be done in the \texttt{.bashrc}.
+The standard way is to set the <code> <b>PYTHONPATH</b> </code>:
+<code> <b> <br>
+export PYTHONPATH=myPeanoDirectory/python<br>
+</b> </code> 
+This can even be done in the <code> <b>.bashrc</b> </code>.
 
 Alternatively, you can augment your Python scripts later on with 
-\begin{code}
-import sys
-PEANO4_PYTHON_DIR="myPeanoDirectory/python"
-sys.path.append(PEANO4_PYTHON_DIR)
-\end{code}
+<code> <b> <br>
+import sys<br>
+PEANO4_PYTHON_DIR="myPeanoDirectory/python"<br>
+sys.path.append(PEANO4_PYTHON_DIR)<br>
+</b> </code> 
 
 Please note that most Python scripts require you to set the
-\texttt{LD\_LIBRARY\_PATH}. 
+<code> <b>LD\_LIBRARY\_PATH</b> </code>. 
 If you install \Peano, then this path should be automatically right.
 If you work with a local \Peano\ installation, you can either tell \Peano\
 through its API where to search for the library (all routines that add a
 library accept additional search paths), or you can again use the
-\texttt{sys.path.append} command to extend \texttt{LD\_LIBRARY\_PATH}.
+<code> <b>sys.path.append</b> </code> command to extend <code> <b>LD\_LIBRARY\_PATH</b> </code>.
 
 @remark
 I personally prefer the variant to go through the environment variable.
