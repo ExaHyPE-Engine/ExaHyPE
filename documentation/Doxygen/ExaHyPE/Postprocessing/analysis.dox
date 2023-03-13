@@ -1,5 +1,5 @@
 /**
-@page exahype_postprocessing_visualisation Visualisation
+@page exahype_postprocessing_analysis Postprocessing Analysis
 
 \ExaHyPE\ relies on \Peano's standard output routines to write file dumps. 
 As the files can be rather large, the simulation configuration allows you to

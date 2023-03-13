@@ -2,7 +2,23 @@
 @page exahype_home ExaHyPE
 
 
-How can we have a table of contents here?
 
+<ul>
+  <li> \ref exahype_performance_optimisation </li>
+  <li> \ref exahype_runtime_analysis </li> 
+  <li> \ref exhaype_postprocessing_home 
+    <ul>
+      <li> \ref exahype_postprocessing_analysis </li>
+      <li> \ref exahype_postprocessing_runtime_analysis </li>
+      <li> \ref exahype_postprocessing_visualisation </li>
+    </ul>
+    
+    </li>
+
+  
+
+</ul>
+
+What happens if we put some text down here?
 
 */
