@@ -2,7 +2,7 @@
 @page action_sets Action sets
 
 Peano has a variety of functions which occur during spacetree traversal events. For 
-a full description, please see \ref "https://dl.acm.org/doi/10.1145/3319797" the original article on Peano.
+a full description, please see <a href="https://dl.acm.org/doi/10.1145/3319797"> the original article on Peano. </a> 
 
 Event  | Semantics
 ------------- | -------------
