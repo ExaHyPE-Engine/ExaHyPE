@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/nvhpc:22.11-devel-cuda_multi-ubuntu22.04
+FROM nvcr.io/nvidia/nvhpc:23.1-devel-cuda_multi-ubuntu22.04
 
 ARG SPACK_ROOT=/usr/local
 ENV FORCE_UNSAFE_CONFIGURE=1 \
