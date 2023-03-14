@@ -1,6 +1,6 @@
 /** \page html_installation Installation
 
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
 <head>
   <meta charset="utf-8" />
@@ -16,7 +16,7 @@
     ul.task-list{list-style: none;}
   </style>
 </head>
-<body>
+<body> -->
 
   @todo re-add all of the missing references to Peano and Exahype - these were lost in the pandocs conversion
   @todo re-add a link to the sample installation script, found \ref sample_installation_script "here."
