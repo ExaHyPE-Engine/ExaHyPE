@@ -193,14 +193,14 @@ class LeapfrogFixedInteractionRadius(Particle):
                     #                                           }}
                     #                                         );
                     #                                         """.format(self.name, self.name, self.name, self.particle_particle_interaction_over_particle_sets_kernel),
-        cell_kernel                    = """::swift2::kernels::computeGravitationalForce( 
+        cell_kernel                    = """::swift2::kernels::gravity::computeGravitationalForce( 
                                            localParticles, 
                                            activeParticles
                                          );""",
         touch_vertex_last_time_kernel  = self.touch_particles_of_set_last_time_kernel,
         includes                       = """
                                          #include "Constants.h"
-                                         #include "swift2/kernels/ParticleParticleInteraction.h"
+                                         #include "swift2/kernels/gravity/TwoBodyProblem.h"
                                          """,
       ),
       AlgorithmStep( 

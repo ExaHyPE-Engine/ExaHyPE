@@ -99,15 +99,6 @@ namespace swift2 {
         const double betaAV
         );
 
-
-    /**
-     * Hard-coded two-body gravitational interaction for Earth-Moon system
-     */
-    template <typename ParticleContainer>
-    void computeGravitationalForce(
-        const ParticleContainer&  localParticles,
-        const ParticleContainer&  activeParticles
-        );
   } 
 } 
 
