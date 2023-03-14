@@ -420,14 +420,17 @@ void runStatelessVariantOnDevice(
   const double bandwidthPeak = 1.0E-9 * 2 * sizeof(double) * N / minTimePeak;*/
 
   if (currentThread==0) {
+    std::string label = "min";
     double timeToPlot = minTime;
-    if (PlotAverage) {
+    if constexpr (PlotAverage) {
       timeToPlot = averageTime;
+      label = "avg";
     }
     logInfo("main()", "stateless kernels on device " << device << " with "
       << markerName << ": "
       << timeToPlot << " / "
       << (timeToPlot/patches/NumberOfFiniteVolumesPerPatch)
+      << " [s/" << label << "]"
       /*<< ", theoretical peak: "
       << minTimePeak << " / "
       << (minTimePeak/N) << " ("
