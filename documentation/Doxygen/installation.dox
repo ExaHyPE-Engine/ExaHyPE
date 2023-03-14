@@ -1,304 +1,174 @@
-/**
+/** \page html_installation Installation
 
-@page installation <h2>Installation</h2>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>10_installation</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+</head>
+<body>
 
-@todo figure out how to use footnotes. classical html methods seem not to work, and doxygen has no keyword for them
+  @todo re-add all of the missing references to Peano and Exahype - these were lost in the pandocs conversion
+  @todo re-add a link to the sample installation script, found \ref sample_installation_script "here."
 
-There are two ways to obtain Peano: 
-You can either download one of the archives we provide on the webpage, or you
-can work directly against a repository clone (recommended).
-We recommend to work against the latest release of Peano which you can get through:
-
-<pre>
-git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
-</pre>
-
-
-in the directory where you've stored your downloaded file. 
-If you work with the archive, type in
-
-<code> <b> <br>
-tar -xzvf myarchive.tar.gz<br>
-</b></code> <br>
-<br>
-in the directory where you've stored your downloaded file.<br>
-<br>
-<h2> Prepare the configure environment</h2><br>
-<br>
-First, ensure you have the autotool packages installed on your system. They<br>
-typically are shipped in the packages <code> <b>autoconf</b></code>, <code> <b>automake</b></code> and<br>
-<code> <b>libtool</b></code>.<br>
-Run the line below in the shell to set up the configure environment. These steps should only be required once, unless you push major revisions to the<br>
-development branch.<br>
-<br>
-<code> <b> libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing; </b></code><br>
-<br>
-<h2> Configuration </h2><br>
-The steps below will guide you through configuring and building the Peano code.<br>
-An example of a shell script which summarises these steps can be found <br>
-\ref sample_installation_script "here."<br>
-<br>
-<br>
-Peano  relies on the autotools to set up its build environment.<br>
-Change into the project's directory and type in: <br>
-<br>
-<code> <b>./configure --help</b></code><br>
-<br>
-The <code> <b> --help </b></code> option should give you some information about the available<br>
-variants of Peano.<br>
-A sole <code> <b>./configure</b></code><br>
-call gives you the minimalist version of<br>
-Peano, which might be appropriate for a first test.<br>
-<br>
-@remark <br>
-I recommend that you start a first test without any additional flavours of<br>
-Peano, i.e. to work with a plain <code> <b>./configure </b></code> call. Once the tests<br>
-pass, I recommend that you add further options (IO) and/or parallelisation.<br>
-Please note that the baseline config is not sufficient for most applications<br>
-as it is merely a stripped down version of the Peano core.<br>
-ExaHyPE for example requires you to add <code> <b>--enable-exahype</b></code>,<br>
-<code> <b>--enable-loadbalancing-toolbox</b></code> and <code> <b>--enable-blockstructured</b></code>. <br>
-But the bare/minimal version is good for first tests.<br>
-<br>
-The output of <code> <b>./configure --help</b></code> should be reasonably verbose, but I <br>
-summarise some of the most important options below:<br>
-<br>
-<table> <br>
-  <tr><br>
-    <th><br>
-      <code> <b> --with-multithreading </b> </code>
-      <code> <b>  </b> </code>
-    </th>
-
-    <th>
-      Switch on multithreading. By default, we
-      build without multithreading, but using, for instance, <code> <b> --with-multithreading=omp </b> </code>
-      makes Peano  use the OpenMP threading model. Please consult <code> <b> --help </b> </code> for
-      details. Note: To use OpenMP multithreading, you will need a compiler which
-      supports OpenMP 5.0 (e.g - GCC 9.x)[fn]]Peano realises its GPGPU
-     offloading via OpenMP, too. Some compilers struggle to translate these GPGPU
-      instructions. In this case, please configure with the CXXFLAG
-     <code> <b> -DnoGPUOffloading </b> </code> .[/fn].
-    </th>
-  </tr>
-
-  <tr>
-    <th>
-      <code> <b> --with-mpi </b> </code>
-      <code> <b>  </b> </code>
-    </th>
-
-    <th>
-      Enable the MPI version of Peano. You have to tell the
-      build environment however which compile command to use. Please note that
-      we need a C++ MPI wrapper. So <code> <b>  --with-mpi=mpcxx</b> </code> is a typical call. Currently, you also need  <code> <b> --with-multithreading </b> </code> if you want to use MPI. 
-    </th>
-  </tr>
-
-  <tr>
-    <th>
-      <code> <b>--with-toolchain</b> </code>
-    </th>
-
-    <th>
-      Build against a particular vendor toolchain.
-      Currently, I have dedicated support for the NVIDIA NVTX SDK
-      (<code> <b>--with-toolchain=nvidia</b> </code>) providing NVIDIA-specific logging/tracing
-      as well as memory allocation calls---the latter is of use if you use
-      GPUs---and the Intel toolchain (<code> <b>--with-toolchain=intel</b> </code>). The latter
-      in particular links against the ITAC tracing API. I also have support for
-      Google's Chrome browser (<code> <b>--with-toolchain=chrome</b> </code>) which means that
-      traces are written in a way that you can display it in Chrome. Ensure that your CXXFLAGS set the right include path\footnote{It is
-      <code> <b>CXXFLAGS+=-I/opt/nvidia/nsight-systems/2020.3.1/target-linux-x64/nvtx/include/nvtx3/</b> </code>
-      on my system, e.g.}.
-      This is optional.
-    </th>
-  </tr>
-
-  <tr>
-    <th>
-      <code> <b>--with-gpu</b> </code>
-    </th>
-
-    <th>
-      Build against a particular vendor toolchain.
-      Currently, I have dedicated support for the NVIDIA NVTX SDK
-      (<code> <b>--with-toolchain=nvidia</b> </code>) providing NVIDIA-specific logging/tracing
-      as well as memory allocation calls---the latter is of use if you use
-      GPUs---and the Intel toolchain (<code> <b>--with-toolchain=intel</b> </code>). The latter
-      in particular links against the ITAC tracing API. I also have support for
-      Google's Chrome browser (<code> <b>--with-toolchain=chrome</b> </code>) which means that
-      traces are written in a way that you can display it in Chrome. Ensure that your CXXFLAGS set the right include path\footnote{It is
-      <code> <b>CXXFLAGS+=-I/opt/nvidia/nsight-systems/2020.3.1/target-linux-x64/nvtx/include/nvtx3/</b> </code>
-      on my system, e.g.}.
-      This is optional.
-    </th>
-  </tr>
-
-  <tr>
-    <th>
-      <code> <b>--enable-XXX</b> </code>
-    </th>
-
-    <th>
-      A lot of frameworks or engines built on top of \Peano\
-  have to be enabled explicitly. \ExaHyPE\ is probably the most popular engine
-  shipped with the code, but there is also a particle/SPH module or some linear
-  algebra stuff. Run with <code> <b>--help</b> </code> for a list of toolboxes. Some
-  toolboxes have further internal and external dependencies, and the translation
-  of the toolboxes can be time consuming. By default, \Peano\ thus disables all
-  of its toolboxes.
-    </th>
-  </tr>
-
+<h1 id="installation">Installation</h1>
+<p>There are two ways to obtain : You can either download one of the archives we provide on the webpage, or you can work directly against a repository clone (recommended). If you work with the archive, type in a</p>
+<p>tar -xzvf myarchive.tar.gz</p>
+<p>in the directory where you’ve stored your downloaded file.</p>
+<p>If you work with the git archive, you have to clone this archive first. I grant access to  free of charge and the repository is public. However, I ask users to sign up for the software if they indend to push modifications to the code (which I very much appreciate<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>). This way I can report to funding agencies how frequent the software is used, and I also have at least some ideas which application areas benefit from the software and where it is actively used and developed. If you do not indend to modify the  core code base, you can just clone the code anomymously.</p>
+<p>git clone https://gitlab.lrz.de/hpcsoftware/Peano.git cd Peano</p>
+<p><span id="page::installation::git-clone" label="page::installation::git-clone">[page::installation::git-clone]</span></p>
+<p>I still maintain the “old” Peano in the repository (version 3), and most users consider this to be the standard Peano generation. For the present document, it is thus important that you manually switch to the branch <code>p4</code>.</p>
+<h2 id="prepare-the-configure-environment">Prepare the configure environment</h2>
+<p>This step should only required if you work directly against the git repository. If you prefer to download a snapshot of , then you can skip this section and continue with <a href="#section:installation:configure" data-reference-type="ref" data-reference="section:installation:configure">1.2</a>.</p>
+<ul>
+<li><p>Ensure you have the autotool packages installed on your system. They typically are shipped in the packages <code>autoconf</code>, <code>automake</code> and <code>libtool</code>.</p></li>
+<li><p>Set up the configure environment:</p>
+<p>libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake –add-missing</p></li>
+</ul>
+<p><span id="page::installation::configure" label="page::installation::configure">[page::installation::configure]</span></p>
+<p>These steps should only be required once, unless you push major revisions to the development branch.</p>
+<h2 id="section:installation:configure">Configure</h2>
+<p> relies on the autotools to set up its build environment. Change into the project’s directory and type in</p>
+<p>./configure –help</p>
+<p>The <code>–help</code> option should give you some information about the available variants of . A sole <code>./configure</code> call gives you the minimalist version of —might be appropriate for a first test.</p>
+<p>I recommend that you start a first test without any additional flavours of , i.e. to work with a plain <code>./configure</code> call. Once the tests pass, I recommend that you add further options (IO) and/or parallelisation. Please note that the baseline config is not sufficient for most applications as it is merely a stripped down version of the  core.  for example requires you to add <code>–enable-exahype</code> and <code>–enable-loadbalancing-toolbox</code>. But the bare/minimal version is good for first tests.</p>
+<p>The output of <code>./configure –help</code> should be reasonable verbose, but I summarise some of the most imporant options below:</p>
+<table>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>–with-multithreading</code></td>
+<td style="text-align: left;">Switch on multithreading. By default, we build without multithreading, but a <code>–with-multithreading=omp</code>, e.g., makes  use the OpenMP threading model. Please consult <code>–help</code> for details. Note: To use OpenMP multithreading, you will need a compiler which supports OpenMP 5.0 (e.g - GCC 9.x)<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>–with-mpi</code></td>
+<td style="text-align: left;">Enable the MPI version of . You have to tell the build environment however which compile command to use. Please note that we need a C++ MPI wrapper. So <code>–with-mpi=mpcxx</code> is a typical call. Currently, you also need <code>–with-multithreading</code> if you want to use MPI.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>–with-toolchain</code></td>
+<td style="text-align: left;">Build against a particular vendor toolchain. Currently, I have dedicated support for the NVIDIA NVTX SDK (<code>–with-toolchain=nvidia</code>) providing NVIDIA-specific logging/tracing as well as memory allocation calls—the latter is of use if you use GPUs—and the Intel toolchain (<code>–with-toolchain=intel</code>). The latter in particular links against the ITAC tracing API. I also have support for Google’s Chrome browser (<code>–with-toolchain=chrome</code>) which means that traces are written in a way that you can display it in Chrome. Ensure that your CXXFLAGS set the right include path<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>. This is optional.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>–with-gpu</code></td>
+<td style="text-align: left;">Add GPU support. The code base currently is prepared to support GPUs via OpenMP, SYCL, C++ tasking and HIP. Not all versions are equally mature. In principle, you can combine different GPU programming approaches with different multithreading techniques, but our recommendation is that you use C++ threading with C++ GPU offloading, OpenMP threading with OpenMP offloading, and OneTBB threading with SYCL.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>–enable-XXX</code></td>
+<td style="text-align: left;">A lot of frameworks or engines built on top of  have to be enabled explicitly.  is probably the most popular engine shipped with the code, but there is also a particle/SPH module or some linear algebra stuff. Run with <code>–help</code> for a list of toolboxes. Some toolboxes have further internal and external dependencies, and the translation of the toolboxes can be time consuming. By default,  thus disables all of its toolboxes.</td>
+</tr>
+</tbody>
 </table>
-
-
-<!--  -->
-
-Compilers, linkers and both compiler and linker flags can be changed by
-resetting the corresponding environment variables (such as
-<code> <b>CXX</b> </code> or <code> <b>LDFLAGS</b> </code> or <code> <b>CCFLAGS</b> </code>) \emph{prior} to the
-configure call.
-Alternatively, you can pass the variables to be used to <code> <b>configure</b> </code>
-	through arguments (<code> <b>./configure CXX=icpc ...</b> </code>, e.g.). 
-Please consult the <code> <b>--help</b> </code> output for details.
-For some supercomputers that we use frequently, there are recommendations which
-setting to use (Chapter~\ref{chapter:selected-HPC-platforms}).
-@todo correct the above reference
-
-@remark 
-Most Linux tools prefer you to specify a dedicated installation directory via
-<code> <b>--prefix</b> </code>.
-For \Peano, things are slightly different: \Peano\ is a mere engine, i.e.~not
-``useful'' per se.
-It is applications built on top of \Peano\ that become tools that you might
-later want to install/deploy on your system. 
-Therefore, I ship \Peano\ with static libraries only, and most users work with
-the code in the download/installation directory until they have constructed the
-application with the help of \Peano.
-So no need to specify a proper installation directory via <code> <b>--prefix</b> </code>.
-
-
-<h2>Build </h2>
-<code> <b> <br>
-make<br>
-</b> </code> 
-should build the \Peano\ core.
-It also builds some examples and all the extensions and toolboxes you have
-manually enabled.
-All of these go into static libraries.
-The code is not small and you thus might prefer
-<code> <b> <br>
-make -jx<br>
-</b> </code> 
-with x being the number of threads to use for compilation.
-
-@remark
-Following up on the remark above, 
-<code> <b> <br>
-make install<br>
-</b> </code> 
-would deploy the \Peano\ files in the directory specified via the
-<code> <b>prefix</b> </code> before.
-Most Unix tools want you to install them. 
-For \Peano, things might be slightly different as it is an engine used to
-construct tools in the first place. 
-
-<h2>Installation Test</h2>
-Once you have compiled \Peano\, I recommend that you run all tests using
-
-<code> <b> <br>
-  make check<br>
-</b> </code> 
-
-The call launches all of \Peano's unit tests, i.e.~all the unit tests for the
-core plus the extensions that you have enabled.
-
-@remark
-
-I have written the test target such that it works out-of-the-box for non-MPI
-calls. If you have configured with <code> <b>--with-mpi</b> </code>, then the unit tests
-will fail. But this does not mean that the unit tests are broken. It is simply
-due to the fact that the makefile's test target does not know that you have to
-use the <code> <b>mpirun</b> </code> prefix.
-To make a long story short: If you use MPI and you want to run the unit tests,
-you have to do so manually.
-
-To run 2D and 3D tests individually, use
-
-<code> <b> <br>
-  src/unittests/UnitTests2d<br>
-  src/unittests/UnitTests3d<br>
-</b> </code> 
-
-You can run these builds with different core counts and also MPI support if you
-have compiled with MPI.
-The executables contain both node correctness tests and MPI ping-pong tests,
-i.e.~you can both assess a valid build plus a working MPI environment.
-If successful, you should always get a message alike
-
-<code> <b> <br>
-Peano 4 (C) www.peano-framework.org <br>
-build: 2d, with mpi (1 ranks), omp (4 threads), debug level=4<br>
-it is recommended that you run the unit tests with more than one MPI rank, too (file:main.cpp,line:82)<br>
-usage: ././UnitTests2d core-count (use default core count=1 now) (file:main.cpp,line:88)<br>
-running test case collection "tarch.la.tests" ..... ok<br>
-running test case collection "tarch.la" ............. ok<br>
-running test case collection "tarch.mpi.tests" ..... ok<br>
-running test case collection "tarch.mpi" ... ok<br>
-running test case collection "tarch" ... ok<br>
-running test case collection ... ok<br>
-running test case collection "peano4.grid.tests" ....... ok<br>
-running test case collection "peano4.grid" ... ok<br>
-running test case collection "peano4.parallel.tests" ....... ok<br>
-running test case collection "peano4.parallel" ... ok<br>
-running test case collection "peano4" ... ok<br>
-running test case collection ... ok<br>
-</b> </code> 
-
-Watch out for the last line that tells you whether the overall unit tests passed
-through.
-
-<h2> Python Configuration </h2>
-\Peano\ is developed with Python 3. Python 2 is not supported. 
-
-
-<h3> Python Paths</h3>
-To make any Python example pass, you have to set the Python paths.
-There are multiple ways to do so.
-
-The standard way is to set the <code> <b>PYTHONPATH</b> </code>:
-<code> <b> <br>
-export PYTHONPATH=myPeanoDirectory/python<br>
-</b> </code> 
-This can even be done in the <code> <b>.bashrc</b> </code>.
-
-Alternatively, you can augment your Python scripts later on with 
-<code> <b> <br>
-import sys<br>
-PEANO4_PYTHON_DIR="myPeanoDirectory/python"<br>
-sys.path.append(PEANO4_PYTHON_DIR)<br>
-</b> </code> 
-
-Please note that most Python scripts require you to set the
-<code> <b>LD\_LIBRARY\_PATH</b> </code>. 
-If you install \Peano, then this path should be automatically right.
-If you work with a local \Peano\ installation, you can either tell \Peano\
-through its API where to search for the library (all routines that add a
-library accept additional search paths), or you can again use the
-<code> <b>sys.path.append</b> </code> command to extend <code> <b>LD\_LIBRARY\_PATH</b> </code>.
-
-@remark
-I personally prefer the variant to go through the environment variable.
-\Peano's Python API yield plain old makefiles building executables that work
-completely without any Python. 
-This way, we ensure that we work smoothly on supercomputers, too, where Python
-sometimes is not available in the latest version or on the compute nodes.
-As long as you run through environment variables or the \Peano\ routines to
-specify paths, your makefiles also will continue to work that way. 
+<p>Compilers, linkers and both compiler and linker flags can be changed by resetting the corresponding environment variables (such as <code>CXX</code> or <code>LDFLAGS</code> or <code>CCFLAGS</code>) <em>prior</em> to the configure call. Alternatively, you can pass the variables to be used to <code>configure</code> through arguments (<code>./configure CXX=icpc ...</code>, e.g.). Please consult the <code>–help</code> output for details. For some supercomputers that we use frequently, there are recommendations which setting to use (Chapter <a href="#chapter:selected-HPC-platforms" data-reference-type="ref" data-reference="chapter:selected-HPC-platforms">[chapter:selected-HPC-platforms]</a>).</p>
+<p>Most Linux tools prefer you to specify a dedicated installation directory via <code>–prefix</code>. For , things are slightly different:  is a mere engine, i.e. not “useful” per se. It is applications built on top of  that become tools that you might later want to install/deploy on your system. Therefore, I ship  with static libraries only, and most users work with the code in the download/installation directory until they have constructed the application with the help of . So no need to specify a proper installation directory via <code>–prefix</code>.</p>
+<h2 id="build">Build</h2>
+<p>Once the configuration has been successful, a simple</p>
+<p>make</p>
+<p>should build the  core. It also builds some examples and all the extensions and toolboxes you have manually enabled. All of these go into static libraries. The code is not small and you thus might prefer</p>
+<p>make -jx</p>
+<p>with x being the number of parallel builds to use.</p>
+<p>Following up on the remark above,</p>
+<p>make install</p>
+<p>would deploy the  files in the directory specified via the <code>prefix</code> before. Most Unix tools want you to install them. For , things might be slightly different as it is an engine used to construct tools in the first place.</p>
+<h2 id="installation-test">Installation test</h2>
+<p>Once you have compiled   I recommend that you run all tests using</p>
+<p>make check</p>
+<p>The call launches all of ’s unit test, i.e. all the unit tests for the core plus the extensions that you have enabled.</p>
+<p>I have written the test target such that it works out-of-the-box for non-MPI calls. If you have configured with <code>–with-mpi</code>, then the unit tests will fail. But this does not mean that the unit tests are broken. It is simply due to the fact that the makefile’s test target does not know that you have to use the <code>mpirun</code> prefix. To make a long story short: If you use MPI and you want to run the unit tests, you have to do so manually.</p>
+<p>To run 2D and 3D tests individually, use</p>
+<p>src/unittests/UnitTests2d src/unittests/UnitTests3d</p>
+<p>You can run these builds with different core counts and also MPI support if you have compiled with MPI. The executables contain both node correctness tests and MPI ping-pong tests, i.e. you can both assess a valid build plus a working MPI environment. If successful, you should always get a message alike</p>
+<p>Peano 4 (C) www.peano-framework.org build: 2d, with mpi (1 ranks), omp (4 threads), debug level=4 it is recommended that you run the unit tests with more than one MPI rank, too (file:main.cpp,line:82) usage: ././UnitTests2d core-count (use default core count=1 now) (file:main.cpp,line:88) running test case collection "tarch.la.tests" ..... ok running test case collection "tarch.la" ............. ok running test case collection "tarch.mpi.tests" ..... ok running test case collection "tarch.mpi" ... ok running test case collection "tarch" ... ok running test case collection ... ok running test case collection "peano4.grid.tests" ....... ok running test case collection "peano4.grid" ... ok running test case collection "peano4.parallel.tests" ....... ok running test case collection "peano4.parallel" ... ok running test case collection "peano4" ... ok running test case collection ... ok</p>
+<p>Watch out for the last line that tells you whether the overall unit tests passed through.</p>
+<h2 id="python-configuration">Python configuration</h2>
+<p> is developed with Python 3. Python 2 is not supported.</p>
+<h3 id="python-paths">Python paths</h3>
+<p>To make any Python example pass, you have to set the Python paths. There are multiple ways to do so.</p>
+<p>The standard way is to set the <code>PYTHONPATH</code>:</p>
+<p>export PYTHONPATH=myPeanoDirectory/python</p>
+<p>This can even be done in the <code>.bashrc</code>.</p>
+<p>Alternatively, you can augment your Python scripts later on with</p>
+<p>Please note that most Python scripts require you to set the <code>LD_LIBRARY_PATH</code>. If you install , then this path should be automatically right. If you work with a local  installation, you can either tell  through its API where to search for the library (all routines that add a library accept additional search paths), or you can again use the <code>sys.path.append</code> command to extend <code>LD_LIBRARY_PATH</code>.</p>
+<p>I personally prefer the variant to go through the environment variable. ’s Python API yield plain old makefiles building executables that work completely without any Python. This way, we ensure that we work smoothly on supercomputers, too, where Python sometimes is not available in the latest version or on the compute nodes. As long as you run through environment variables or the  routines to specify paths, your makefiles also will continue to work that way.</p>
+<h3 id="python-packages">Python packages</h3>
+<p> currently relies on the following Python packages/projects:</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Package</th>
+<th style="text-align: left;">Description</th>
+<th style="text-align: left;">Ubuntu</th>
+<th style="text-align: left;">OpenSUSE</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">jinja2</td>
+<td style="text-align: left;">For all the templated glue code.</td>
+<td style="text-align: left;"><code>python3-jinja2</code></td>
+<td style="text-align: left;"><code></code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">sympy</td>
+<td style="text-align: left;">For the symbolic modelling of partial differential equations (predominantly in ).</td>
+<td style="text-align: left;"><code>python3-sympy</code></td>
+<td style="text-align: left;"><code>python3-sympy</code></td>
+</tr>
+</tbody>
+</table>
+<p>The table above specifies the corresponding packages in our two main distributions for which we test . They can be installed via <code>zypper install</code> (SUSE) or <code>apt-get install</code> (Ubuntu), respectively. Alternatively, you might want to use Python’s <code>pip</code>.</p>
+<h2 id="fortran">Fortran</h2>
+<p>If you don’t use Fortran in your own code, ignore this section.</p>
+<p>’s core does not use any Fortran at all. However, many users use Fortran for their domain-specific programming. If you want to have a seemless integration of your particular Fortran choice through ’s Python API, invoke <code>./configure</code> ensuring that the Fortran variables—in particular the environment variable <code>FC</code> identifying the compiler—are properly set.</p>
+<p>For many codes and the GNU Fortran compiler, you need the flag <code>-fdefault-real-8</code>. You can export <code>FCFLAGS</code> and make it contain this argument before you invoke <code>configure</code>. As the ’s core does not use Fortran—it is only applications built on top of —you can redefine the flags later on (see <a href="#section:installation:applications-built-with-Peano" data-reference-type="ref" data-reference="section:installation:applications-built-with-Peano">1.9</a>).</p>
+<h2 id="chapter:installation:build-variants"> components and build variants</h2>
+<p> currently is delivered as a set of archives, i.e. static libraries:</p>
+<ul>
+<li><p>There is a technical architecture (<code>Tarch</code>) and the actual <code>Peano4Core</code>.</p></li>
+<li><p>Each archive variant is available as a release version, as a debug version, as a version with tracing and assertions and as a tracing-only version.</p></li>
+<li><p>Each archive variant is available as 2d build and as 3d build. If you need higher dimensions, you have to build the required libraries manually.</p></li>
+</ul>
+<p>The version terminology is as follows:</p>
+<ul>
+<li><p><span><strong>debug</strong></span> The debug versions of the archives all have the postfix <code>_debug</code>. If you link against these versions, the full set of assertions, of all tracing and all debug messages is available; though you can always filter on the application-level which information you want to see (cmp. Chapter <a href="#section:logging" data-reference-type="ref" data-reference="section:logging">[section:logging]</a>).</p></li>
+<li><p><span><strong>asserts</strong></span> Thsee versions of the archives all have the postfix <code>_asserts</code>. If you link against these versions, all assertions are on. The code also contains tracing macros (see below).</p></li>
+<li><p><span><strong>tracing</strong></span> The release versions of the archives all have the postfix <code>_trace</code>. If you link against these versions, all assertions and debug messages are removed, but some tracing is active. You can switch on/off the tracing per class (cmp. Chapter <a href="#section:logging" data-reference-type="ref" data-reference="section:logging">[section:logging]</a>), and different tracing backends allow you to connect to different (profiling) tools.</p></li>
+<li><p><span><strong>release</strong></span> The release versions of the archives have no particular postfix. They disable tracing, any debugging and all assertions. These archives should be used by production runs.</p></li>
+</ul>
+<p>Peano’s release components still write info messages (they suppress debug, tracing and logging, but not essential information). If you want to filter out these messages, too, you have to apply a log filter (Chapter <a href="#section:logging:log-filter" data-reference-type="ref" data-reference="section:logging:log-filter">[section:logging:log-filter]</a>).</p>
+<p>Besides these archives, the  installation also comes along with a set of example applications. They are found in the directory <code>src/examples</code>. Most examples create by default two variants of the example: a debug version and one with only tracing enabled. Several examples furthermore come along as 2d and 3d build.</p>
+<h2 id="section:installation:documentation">Documentation</h2>
+<p>There are three major types/resources of documentation of the software:</p>
+<ol>
+<li><p>This guidebook/LaTeX documentation that describes how to use the code base from a high abstraction level and with anecdotal examples.</p></li>
+<li><p>The documentation of the C++ code. Here, I follow an <em>“everything is in the code”</em> philosophy, i.e. all documentation can be found in the C++ header files.</p></li>
+<li><p>The documentation of the Python code. Here, I follow an <em>“everything is in the code”</em> philosophy, i.e. all documentation can be found in the Python scripts.</p></li>
+</ol>
+<p>You can create a webpage from the in-code documentation through the tool <code>doxygen</code><a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a>. Doxygen is called via <code>peano.doxygen-configuration</code>, i.e. calling</p>
+<p>doxygen peano.doxygen-configuration</p>
+<p>gives you the output.</p>
+<h2 id="section:installation:applications-built-with-Peano">Compile/link options for applications built with </h2>
+<p> is a framework, i.e. ships very few executables (mainly only for test purposes and for postprocessing). Its core delivery is a set of libraries. Application codes then build on top of these libraries. While it is up to you to decide which build system you use in your application,  natively favours makefiles.</p>
+<p>If you use ’s Python API, it will create dummy makefiles. Higher-level  applicaitons such as  build upon the Python API and thus work with makefiles, too. When they create these makefiles, they parse your local  installation’s makefiles and extract the information from there. This is, when you’ve selected a particular compiler or compiler option when you install , this choice will automatically propagate through to your domain-specific codes. There’s however the option to overwrite the chosen settings—either by defining appropriate environment variables before you invoke <code>make</code> or by resetting variables manually within your Python scripts that configure the environment.</p>
+<section class="footnotes" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1" role="doc-endnote"><p>’s guidebook (the file you currently read) is hosted within ’s git repository, too. I’m always happy if people add content to this documentation, too.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2" role="doc-endnote"><p> realises its GPGPU offloading via OpenMP, too. Some compilers struggle to translate these GPGPU instructions. In this case, please configure with the CXXFLAG <code>-DnoGPUOffloading</code>.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3" role="doc-endnote"><p>It is <code>CXXFLAGS+=-I/opt/nvidia/nsight-systems/2020.3.1/target-linux-x64/nvtx/include/nvtx3/</code> on my system, e.g.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4" role="doc-endnote"><p><a href="http://www.doxygen.nl">http://www.doxygen.nl</a>.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+</body>
+</html>
 
 */
-
-
-
