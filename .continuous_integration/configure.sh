@@ -22,7 +22,7 @@ if [ "$toolchain" = "amd" ]; then
   read -p "Enter CXX compiler [amdclang++, hipcc]: " cxx
   cxx=${cxx:-amdclang++}
   #read -p "Enter Fortran compiler: " fcc
-  CXXFLAGS="-std=c++20 -W -Wall -Wextra"
+  CXXFLAGS="-std=c++20 -O3 -W -Wall -Wextra"
   LDFLAGS=""
   PS3="Select multithreading mode: "
   select shared in none omp; do
@@ -119,7 +119,7 @@ if [ "$toolchain" = "nvidia" ]; then
   read -p "Enter CXX compiler [nvc++]: " cxx
   cxx=${cxx:-nvc++}
   #read -p "Enter Fortran compiler: " fcc
-  CXXFLAGS="-std=c++20 -W -Wall -Wextra"
+  CXXFLAGS="-std=c++20 -O4 -W -Wall -Wextra"
   LDFLAGS=""
   PS3="Select multithreading mode: "
   select shared in none omp cpp; do
@@ -492,7 +492,6 @@ if [ "$toolchain" = "llvm" ]; then
         --enable-loadbalancing \
         --enable-blockstructured \
         --enable-fem \
-        --enable-swift \
         --with-fenv \
         --with-multithreading=$shared \
         CC=$cc CXX=$cxx \
@@ -509,7 +508,6 @@ if [ "$toolchain" = "llvm" ]; then
       --enable-loadbalancing \
       --enable-blockstructured \
       --enable-fem \
-      --enable-swift \
       --with-fenv \
       CC=$cc CXX=$cxx \
       CXXFLAGS="$CXXFLAGS" \
