@@ -1,13 +1,9 @@
 /**
-@page peano_home Solvers
-TODO - add in the rest of the solvers, found in various .h files through src
+@page peano_home Peano
 
-Please find below links to instruction on how the solvers works:
-
+<h2> Menu </h2>
 <ul>
-
-  <li> \ref DG  </li>
-
+  <li> \ref action_sets  </li>
 </ul>
 
 
