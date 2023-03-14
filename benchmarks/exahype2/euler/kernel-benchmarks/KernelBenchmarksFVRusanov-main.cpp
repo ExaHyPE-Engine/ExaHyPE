@@ -41,6 +41,8 @@
 #include <tbb/task_group.h>
 #endif
 
+#include <numeric>
+
 using namespace benchmarks::exahype2::kernelbenchmarks;
 
 static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 0.0);
@@ -341,6 +343,7 @@ void runStatelessVariantOnDevice(
   int                     currentThread
 ) {
   double minTime = 0.0;
+  double averageTime = 0.0;
 
   {
     ::exahype2::CellData patchData(patches);
@@ -370,6 +373,7 @@ void runStatelessVariantOnDevice(
       timings.push_back(watch.getCalendarTime());
     }
     minTime = *std::minmax_element(timings.begin() + 1, timings.end()).first;
+    averageTime = std::accumulate(timings.begin() + 1, timings.end(), 0.0) / (double) (TimeSteps - 1);
 
     if constexpr (Accuracy > 0.0) {
       int errors = 0;
@@ -416,10 +420,14 @@ void runStatelessVariantOnDevice(
   const double bandwidthPeak = 1.0E-9 * 2 * sizeof(double) * N / minTimePeak;*/
 
   if (currentThread==0) {
+    double timeToPlot = minTime;
+    if (PlotAverage) {
+      timeToPlot = averageTime;
+    }
     logInfo("main()", "stateless kernels on device " << device << " with "
       << markerName << ": "
-      << minTime << " / "
-      << (minTime/patches/NumberOfFiniteVolumesPerPatch)
+      << timeToPlot << " / "
+      << (timeToPlot/patches/NumberOfFiniteVolumesPerPatch)
       /*<< ", theoretical peak: "
       << minTimePeak << " / "
       << (minTimePeak/N) << " ("
