@@ -41,8 +41,6 @@
 #include <tbb/task_group.h>
 #endif
 
-#include <numeric>
-
 using namespace benchmarks::exahype2::kernelbenchmarks;
 
 static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 0.0);
@@ -55,6 +53,8 @@ tarch::timing::Measurement plotMeasurement;
 
 double validMaxEigenvalue = 0;
 double* validOutcome = nullptr;
+double minTime = 0;
+constexpr int N = 33554432*2;
 
 #if Dimensions==2
 constexpr int NumberOfInputEntries  = (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch+2)*(FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch+2) * FVRusanovSolver::NumberOfUnknowns;
@@ -342,100 +342,62 @@ void runStatelessVariantOnDevice(
   const std::string&      markerName,
   int                     currentThread
 ) {
-  double minTime = 0.0;
-  double averageTime = 0.0;
-
-  {
-    ::exahype2::CellData patchData(patches);
-    for (int i=0; i<patches; i++) {
-      //patchData.QIn[i]            = tarch::allocateMemory<double>(NumberOfInputEntries, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-      patchData.QIn[i]           = new double[ NumberOfInputEntries ];
-      patchData.t[i]             = TimeStamp;
-      patchData.dt[i]            = TimeStepSize;
-      patchData.QOut[i]          = new double[ NumberOfOutputEntries ];
-      patchData.cellCentre[i]   = tarch::la::Vector<Dimensions,double>(CellOffset+0.5*CellSize);
-      patchData.cellSize[i]     = tarch::la::Vector<Dimensions,double>(CellSize);
-      initInputData( patchData.QIn[i] );
-    }
-
-    std::vector<double> timings;
-    for (unsigned int k = 0; k < TimeSteps; k++) {
-      tarch::timing::Watch watch( "::runBenchmarksOnDevice", "runStatelessVariantOnDevice(...)", false );
-      kernel(
-        device,
-        patchData,
-        true ,
-        false ,
-        false ,
-        true   //computeCFL
-      );
-      watch.stop();
-      timings.push_back(watch.getCalendarTime());
-    }
-    minTime = *std::minmax_element(timings.begin() + 1, timings.end()).first;
-    averageTime = std::accumulate(timings.begin() + 1, timings.end(), 0.0) / (double) (TimeSteps - 1);
-
-    if constexpr (Accuracy > 0.0) {
-      int errors = 0;
-      double maxDifference = 0.0;
-      for (int i=0; i<patches; i++) {
-        auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( patchData.QOut[i],i,patchData.maxEigenvalue[i]);
-        errors += errorsPerPatch;
-        maxDifference = std::max(maxDifference, maxDifferencePerPatch);
-      }
-
-      if (errors > 0) {
-        logError("main()", "max difference of outcome from "
-          << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
-        std::abort();
-      }
-    }
-
-    for (int i=0; i<patches; i++) {
-      //tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
-      delete[] patchData.QIn[i];
-      delete[] patchData.QOut[i];
-    }
+  ::exahype2::CellData patchData(patches);
+  for (int i=0; i<patches; i++) {
+    //patchData.QIn[i]            = tarch::allocateMemory<double>(NumberOfInputEntries, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    patchData.QIn[i]           = new double[ NumberOfInputEntries ];
+    patchData.t[i]             = TimeStamp;
+    patchData.dt[i]            = TimeStepSize;
+    patchData.QOut[i]          = new double[ NumberOfOutputEntries ];
+    patchData.cellCentre[i]   = tarch::la::Vector<Dimensions,double>(CellOffset+0.5*CellSize);
+    patchData.cellSize[i]     = tarch::la::Vector<Dimensions,double>(CellSize);
+    initInputData( patchData.QIn[i] );
   }
 
-  /*std::vector<double> timings;
-  constexpr int N = 33554432*2;
-  double* a = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Heap);
-  double* b = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Heap);
-  #pragma omp target enter data map(alloc : a [0:N], b [0:N])
+  std::vector<double> timings;
   for (unsigned int k = 0; k < TimeSteps; k++) {
     tarch::timing::Watch watch( "::runBenchmarksOnDevice", "runStatelessVariantOnDevice(...)", false );
-    //#pragma omp target loop
-    #pragma omp target teams distribute parallel for simd
-    for (int i = 0; i < N; i++) {
-      b[i] = a[i];
-    }
+    kernel(
+      device,
+      patchData,
+      true ,
+      false ,
+      false ,
+      true   //computeCFL
+    );
     watch.stop();
     timings.push_back(watch.getCalendarTime());
   }
-  #pragma omp target exit data map(release : a [0:N], b [0:N])
-  tarch::freeMemory( a, tarch::MemoryLocation::Heap );
-  tarch::freeMemory( b, tarch::MemoryLocation::Heap );
-  const double minTimePeak  = *std::minmax_element(timings.begin() + 1, timings.end()).first;
-  const double bandwidthPeak = 1.0E-9 * 2 * sizeof(double) * N / minTimePeak;*/
+
+  if constexpr (Accuracy > 0.0) {
+    int errors = 0;
+    double maxDifference = 0.0;
+    for (int i=0; i<patches; i++) {
+      auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( patchData.QOut[i],i,patchData.maxEigenvalue[i]);
+      errors += errorsPerPatch;
+      maxDifference = std::max(maxDifference, maxDifferencePerPatch);
+    }
+
+    if (errors > 0) {
+      logError("main()", "max difference of outcome from "
+        << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+      std::abort();
+    }
+  }
+
+  for (int i=0; i<patches; i++) {
+    //tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+    delete[] patchData.QIn[i];
+    delete[] patchData.QOut[i];
+  }
 
   if (currentThread==0) {
-    std::string label = "min";
-    double timeToPlot = minTime;
-    if constexpr (PlotAverage) {
-      timeToPlot = averageTime;
-      label = "avg";
-    }
     logInfo("main()", "stateless kernels on device " << device << " with "
       << markerName << ": "
-      << timeToPlot << " / "
-      << (timeToPlot/patches/NumberOfFiniteVolumesPerPatch)
-      << " [s/" << label << "]"
-      /*<< ", theoretical peak: "
-      << minTimePeak << " / "
-      << (minTimePeak/N) << " ("
-      << bandwidthPeak << " [GB/s]), efficiency: "
-      << ((minTimePeak/N) / (minTime/patches/NumberOfFiniteVolumesPerPatch)) * 100.0 << " [%]"*/
+      << *std::minmax_element(timings.begin() + 1, timings.end()).first << " / "
+      << (*std::minmax_element(timings.begin() + 1, timings.end()).first/patches/NumberOfFiniteVolumesPerPatch) << ", "
+      << "efficiency: "
+      << ((minTime/N) / (*std::minmax_element(timings.begin() + 1, timings.end()).first/patches/NumberOfFiniteVolumesPerPatch)) * 100.0 << " [%]"
     );
   }
 };
@@ -515,6 +477,31 @@ void runBenchmarksOnDevice(int numberOfPatches) {
   }
 
 #if defined(SharedOMP) and defined(GPUOffloadingOMP)
+  std::vector<double> timings;
+  double* a = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Heap);
+  double* b = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Heap);
+  #pragma omp target enter data map(alloc : a [0:N], b [0:N])
+  for (unsigned int k = 0; k < TimeSteps; k++) {
+    tarch::timing::Watch watch( "::runBenchmarksOnDevice", "measureBandwidth", false );
+    //#pragma omp target loop
+    #pragma omp target teams distribute parallel for simd
+    for (int i = 0; i < N; i++) {
+      b[i] = a[i];
+    }
+    watch.stop();
+    timings.push_back(watch.getCalendarTime());
+  }
+  #pragma omp target exit data map(release : a [0:N], b [0:N])
+  tarch::freeMemory( a, tarch::MemoryLocation::Heap );
+  tarch::freeMemory( b, tarch::MemoryLocation::Heap );
+  minTime  = *std::minmax_element(timings.begin() + 1, timings.end()).first;
+  const double bandwidth = 1.0E-9 * 2 * sizeof(double) * N / minTime;
+  logInfo("main()", "achievable bandwidth on device " << device << ": "
+    << bandwidth << " [GB/s], "
+    << minTime << " / "
+    << (minTime/N)
+  );
+
   #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__) or defined(__AMDGPU__) or defined(__clang__)
     tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
     #pragma omp parallel for

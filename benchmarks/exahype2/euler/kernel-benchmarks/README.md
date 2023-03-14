@@ -67,7 +67,13 @@ threads hit the GPUs with kernel invocations.
 
 ## Visualisation of Results
 If you want to use the pre-manufactured visualisation scripts, you have to pipe
-the program output into a file. After that, invoke
+the program output into a file, i.e.,
+
+```shell
+kernel-benchmarks-fv-rusanov-2d-patch-size-4 |& tee kernel-benchmarks-fv-rusanov-2d-patch-size-4.txt
+```
+
+After that, invoke
 
 ```shell
 python3 create-scaling-plot.py <outputfile>
