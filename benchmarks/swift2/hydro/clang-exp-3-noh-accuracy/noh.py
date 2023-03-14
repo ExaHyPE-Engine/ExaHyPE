@@ -21,6 +21,7 @@ parser.add_argument("-d",   "--dimensions",      dest="dimensions",     type=int
 parser.add_argument("-np",  "--particle-number", dest="particle_number",   required=True,  type=int,           help="Particle number (1D)" )
 parser.add_argument("-et",  "--end-time",        dest="end_time",       type=float, default=0.2,               help="End of simulation" )
 parser.add_argument("-dt",  "--timestep-size",   dest="timestep_size",  type=float, default=1e-4,              help="Global timestep size (initial value)" )
+parser.add_argument("-cfl",   "--cfl-factor",      dest="cfl_factor",     type=float, default=0.1,              help="Value of the CFL constant" )
 parser.add_argument("-cs",  "--cell-size",       dest="cell_size",      type=float, default=0.3,               help="Cell size (default 0.3)" )
 parser.add_argument("-pd",  "--peano-dir",       dest="peanodir",       default="../../../..",                 help="Peano4 directory" )
 parser.add_argument("-ms",  "--mantissa-size",   dest="mantissa_size", type=int, default=52, help="Mantissa size for clang truncation (if supported by compiler)")
@@ -34,22 +35,21 @@ args = parser.parse_args()
 
 project_namespace = ["benchmarks", "swift2", "noh"]
 
-dimensions  = args.dimensions
-
 project = swift2.Project( namespace=project_namespace,
                           project_name="Noh", 
                           executable="noh2D" )
 
-# Effective SPH dimensions ----------------------------------------------------
-HYDRO_DIMENSIONS = 2
 
-# Particle number along 1 dimension -------------------------------------------
-HYDRO_PART_NUMBER = str(args.particle_number);
+# Initialise the SPH particle --------------------------------------------------
+# If multiple particle species are present, we can specify the parameters
+# independently for each case.
 
-# Declare the particle type
-particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH", 
-                                                             dimensions_hydro = HYDRO_DIMENSIONS,
-                                                             cfl_factor             = 0.1, 
+name = "hydroPart"
+dimensions  = args.dimensions
+
+particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name, 
+                                                             dimensions_hydro       = dimensions,
+                                                             cfl_factor             = args.cfl_factor, 
                                                              initial_time_step_size = args.timestep_size,
                                                              constant_time_step_size= True,
                                                              swift_project_namespace= project_namespace,
@@ -60,18 +60,23 @@ particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH"
                                                              )
 
 
-# Set the mantissa size for particle attributes
-# Native size is 53 (double precision)
-particle.mantissa_size = args.mantissa_size
+########################################################################################
+# Set parameters for the SPH simulation
+# If no parameters are passed to the swift2 project, it initializes with
+# default values. The values of the parameters can be modified or retrieved
+# using the set/get methods.
+########################################################################################
 
-# There are plenty of constant simulation paramaters to specify for our SPH
-# simulation - we do that here. 
 
+# HYDRO_DIMENSION can be smaller than the Peano4 dimensions
+HYDRO_DIMENSIONS = dimensions
 
+# Particle number along 1 dimension
+HYDRO_PART_NUMBER = args.particle_number
 
-# Time-integration parameters -------------------------------------------------
-GLOBAL_TIME_STEP_SIZE = "1e-4"
-CFL_CONSTANT = "0.1"
+# Time integration parameters 
+GLOBAL_TIME_STEP_SIZE = args.timestep_size
+CFL_CONSTANT = args.cfl_factor
 
 # EoS parameter ---------------------------------------------------------------
 gamma_hydro_list = [str(5/3), str(7/5), str(4/3), str(2/1)]
@@ -80,15 +85,13 @@ GAMMA = gamma_hydro_list[0]
 GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
 # Artificial viscosity parameters ---------------------------------------------
-ALPHA_AV= "0.8"     # =0.8 in SWIFT
-BETA_AV = "3"       # =3 in SWIFT/SPHENIX
+ALPHA_AV= particle.alpha_av
+BETA_AV = particle.beta_av
 
 # Newton-Raphson parameters --------------------------------------------------
-# Maximum allowed number of Newton-Raphson iterations
-HYDRO_DEFAULT_MAX_ITERATIONS = "10"
-
-# Tolerance for Newton-Raphson convergence
-H_TOLERANCE = "1e-4"
+# Maximum allowed number of iterations and convergence tolerance
+HYDRO_DEFAULT_MAX_ITERATIONS = particle.h_max_iterations
+H_TOLERANCE = particle.h_tolerance
 
 # SPH kernel -------------------------------------------------------
 kernel_list = ['M5']
@@ -97,8 +100,7 @@ KERNEL = kernel_list[0]
 KERNEL_SYMBOL = kernel_list_symbols[0]
 
 # Smoothing-length free parameter (resolution "eta_neighbours"). 
-SMOOTH_ETA_FAC = str( 1.245 ) 
-particle.set_eta_factor(SMOOTH_ETA_FAC)
+SMOOTH_ETA_FAC = particle.eta_factor
 
 if(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
   KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
@@ -108,14 +110,19 @@ else:
   print(f'Unable to determine the kernel support radius. Please check.'  )
 
 # Max/min allowed values for smoothing length h
-HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD) ) 
-HYDRO_h_MIN = "1e-6"
-particle.set_h_hydro_limits(HYDRO_h_MIN, HYDRO_h_MAX)
+HYDRO_h_MAX = args.cell_size / 2
+HYDRO_h_MIN = particle.h_hydro_min
 
-# We have to declare the sph particle attributes, in this case for MinimalSPH.
+particle.h_hydro_max = HYDRO_h_MAX
+
+# IMPORTANT: Reduce the mantissa size for particle attributes -------------------
+# Native size is 53 (double precision)
+particle.mantissa_size = args.mantissa_size
+
+# Finally, we have to declare the sph particle attributes, in this case for MinimalSPH.
 particle.declare_sph_particle_attributes()
 
-# Add particle to the SWIFT project
+# Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
 particle_set = project.add_particle_species( particle )
@@ -124,7 +131,8 @@ if args.asserts:
   build_mode = peano4.output.CompileMode.Asserts
 else:
   build_mode = peano4.output.CompileMode.Release
-    
+
+# Set Peano4 simulation parameters ---------------------------------------------
 offset      = [ 0, 0, 0 ] 
 domain_size = [ 1, 1, 1 ]
 periodic_boundary_conditions = [False,False,False]          # Periodic BC
@@ -266,20 +274,31 @@ print(f'Adiabatic index: {GAMMA}'  )
 print(f'Smoothing length free factor: {SMOOTH_ETA_FAC}'   )
 print('-----------------------------------------------------------------------')
 
-# Export Constants.h file
-peano4_project.constants.export_const_with_type("HYDRO_DIMENSIONS"     , str(HYDRO_DIMENSIONS), "double")
-peano4_project.constants.export_const_with_type("HYDRO_PART_NUMBER"    , HYDRO_PART_NUMBER    , "double")
-peano4_project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", GLOBAL_TIME_STEP_SIZE, "double")
-peano4_project.constants.export_const_with_type("CFL_CONSTANT"         , CFL_CONSTANT         , "double")
+
+# Export Constants.h file ------------------------------------------------------
+peano4_project.constants.export_const_with_type("HYDRO_DIMENSIONS"     , str(HYDRO_DIMENSIONS) , "double")
+peano4_project.constants.export_const_with_type("HYDRO_PART_NUMBER"    , str(HYDRO_PART_NUMBER), "double")
+peano4_project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", str(GLOBAL_TIME_STEP_SIZE), "double")
+peano4_project.constants.export_const_with_type("CFL_CONSTANT"         , str(CFL_CONSTANT)    , "double")
 peano4_project.constants.export_const_with_type("GAMMA"                , GAMMA                , "double")
-peano4_project.constants.export_const_with_type("ALPHA_AV"             , ALPHA_AV             , "double")
-peano4_project.constants.export_const_with_type("BETA_AV"              , BETA_AV              , "double")
-peano4_project.constants.export_const_with_type("HYDRO_DEFAULT_MAX_ITERATIONS", HYDRO_DEFAULT_MAX_ITERATIONS, "int")
-peano4_project.constants.export_const_with_type("H_TOLERANCE"          , H_TOLERANCE          , "double")
+peano4_project.constants.export_const_with_type("ALPHA_AV"             , str(ALPHA_AV)        , "double")
+peano4_project.constants.export_const_with_type("BETA_AV"              , str(BETA_AV )        , "double")
+peano4_project.constants.export_const_with_type("HYDRO_DEFAULT_MAX_ITERATIONS", str(HYDRO_DEFAULT_MAX_ITERATIONS), "int")
+peano4_project.constants.export_const_with_type("H_TOLERANCE"          , str(H_TOLERANCE)     , "double")
 peano4_project.constants.export_const_with_type("KERNEL_SUPPORT_RAD"   , KERNEL_SUPPORT_RAD   , "double")
-peano4_project.constants.export_const_with_type("HYDRO_h_MAX"          , HYDRO_h_MAX          , "double")
-peano4_project.constants.export_const_with_type("HYDRO_h_MIN"          , HYDRO_h_MIN          , "double")
-peano4_project.constants.export_const_with_type("SMOOTH_ETA_FAC"       , SMOOTH_ETA_FAC       , "double")
+peano4_project.constants.export_const_with_type("HYDRO_h_MAX"          , str(HYDRO_h_MAX)     , "double")
+peano4_project.constants.export_const_with_type("HYDRO_h_MIN"          , str(HYDRO_h_MIN)     , "double")
+peano4_project.constants.export_const_with_type("SMOOTH_ETA_FAC"       , str(SMOOTH_ETA_FAC)  , "double")
+
+# Export symbols for compilation (e.g. for SPH kernel) -----------------------
+peano4_project.output.makefile.add_CXX_flag("-D" + "HYDRO_DIMENSION=" + str(HYDRO_DIMENSIONS) )
+peano4_project.output.makefile.add_CXX_flag("-D" + GAMMA_HYDRO_SYMBOL )
+peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL )
+
+
+###############################################################################
+# Cleanup and compilation
+###############################################################################
 
 # If we want to start a project from scratch, we may want to remove some of the generated code
 if args.clean_temporary_directories:
