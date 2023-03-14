@@ -1,7 +1,7 @@
 /**
 @page exahype_home ExaHyPE
 
-
+@todo work out how to get these hyperlinks into the drop down
 
 <ul>
   <li> \ref exahype_performance_optimisation </li>
@@ -14,8 +14,6 @@
     </ul>
     
     </li>
-
-  
 
 </ul>
 
