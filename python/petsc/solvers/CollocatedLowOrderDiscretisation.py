@@ -2,8 +2,9 @@
 # use, please see the copyright notice at www.peano-framework.org
 import peano4
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
-
 import dastgen2
+
+import os
 
 from .Solver       import Solver
 
@@ -81,4 +82,60 @@ class CollocatedLowOrderDiscretisation(Solver):
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     datamodel.add_vertex(self._dof)
+
+
+  def add_implementation_files_to_project(self, namespace, output):
+    """
+    
+    The solver creates two classes: An abstract base class and its 
+    implementations. The abstract base class will be overwritten if
+    there is one in the directory. I pipe all the Python constants 
+    into this base class, so they are available in the C++ code. 
+    
+    The implementation file will not be overwritten, as I assume that
+    the users will write their own domain-specific stuff in there. If
+    it does not exist yet, I'll create an empty stub which can be 
+    befilled with something meaningful.
+    
+    Besides the creation of these two files, I also add the files to the
+    project artifacts and the makefile, so they are captured by the build
+    system.
+    
+    """
+    templatefile_prefix  = os.path.dirname( os.path.realpath(__file__) ) + "/"
+    templatefile_prefix += self.__class__.__name__
+    templatefile_prefix += ".template"
+
+    abstractHeaderDictionary = {}
+    implementationDictionary = {}
+    #self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
+    #self._init_dictionary_with_default_parameters(implementationDictionary)
+    #self.add_entries_to_text_replacement_dictionary(abstractHeaderDictionary)
+    #self.add_entries_to_text_replacement_dictionary(implementationDictionary)
+
+    generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+      "Abstract" + templatefile_prefix + ".h",
+      "Abstract" + templatefile_prefix + ".cpp",
+      "Abstract" + self._name, 
+      namespace,
+      ".", 
+      abstractHeaderDictionary,
+      True,
+      True)
+    generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+      templatefile_prefix + ".h",
+      templatefile_prefix + ".cpp",
+      self._name, 
+      namespace,
+      ".", 
+      implementationDictionary,
+      False,
+      True)
+
+    output.add( generated_abstract_header_file )
+    output.add( generated_solver_files )
+    output.makefile.add_h_file( "Abstract" + self._name + ".h" )
+    output.makefile.add_h_file( self._name + ".h" )
+    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
+    output.makefile.add_cpp_file( self._name + ".cpp" )
   

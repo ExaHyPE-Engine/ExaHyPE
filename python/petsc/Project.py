@@ -229,7 +229,7 @@ This yet has to be written.
     solver.add_to_map_solution_onto_mesh(self.algorithm_step_map_solution_onto_mesh)
     solver.add_to_plot                  (self.algorithm_step_plot)
 
-    #self._project.solversteps.add_step(self._algorithm_step_solve)
+    solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
     pass
 
 
