@@ -122,7 +122,7 @@ void {{codeNamespace}}::riemannSolver(
 #ifdef USE_IPO
     #pragma forceinline recursive
 #endif
-    solver.{{solverName}}::multiplyMaterialParameterMatrix(Qavg, ncp);
+    solver.{{solverName}}::multiplyMaterialParameterMatrix(Qavg, faceCentre, dx, t, dt, direction, ncp);
 {% endif %}{# useMaterialParam #}
     #pragma omp simd aligned(FL,ncp:{{alignmentSize}})
     for (int n = 0; n < {{nVarPad}}; n++) {
@@ -148,7 +148,7 @@ void {{codeNamespace}}::riemannSolver(
 #ifdef USE_IPO
     #pragma forceinline recursive
 #endif
-    solver.{{solverName}}::multiplyMaterialParameterMatrix(Qavg, flux);
+    solver.{{solverName}}::multiplyMaterialParameterMatrix(Qavg, faceCentre, dx, t, dt, direction, flux_values);
 {% endif %}{# useMaterialParam #}
     #pragma omp simd aligned(FL,flux_values:{{alignmentSize}})
     for (int n = 0; n < {{nVar}}; n++) {

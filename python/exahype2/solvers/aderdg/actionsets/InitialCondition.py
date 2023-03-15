@@ -37,7 +37,13 @@ class InitialCondition(AbstractAderDGActionSet):
     {% if USE_POINT_SOURCE!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.initPointSourceLocations(repositories::{{SOLVER_INSTANCE}}.pointSourceLocation);
     {% endif %}
-        
+
+
+    const double timeStamp = 0.0;
+    const double timeStepSize = 0.0;
+    {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;    
+    {{COMPUTE_NEW_TIME_STEP_SIZE}}
+    
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 
 """

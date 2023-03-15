@@ -5,7 +5,7 @@ import exahype2
 import argparse
 
 import exahype2.solvers.aderdg
-from exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStep import GlobalFixedTimeStep
+from exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
 from exahype2.solvers.aderdg.ADERDG import ADERDG
 from exahype2.solvers.aderdg.SingleSweep import SingleSweep
 from exahype2.solvers.aderdg.ADERDG import Polynomials
@@ -30,10 +30,10 @@ auxiliary_variables = {"rho":1, "cp": 1, "cs": 1}
 max_h          = args.h
 min_h          = 0.9 * max_h / 3.0
 
-theSolver=GlobalFixedTimeStep(
+theSolver=GlobalAdaptiveTimeStep(
   name="elastic",  order=5,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
-  min_cell_h=min_h, max_cell_h=max_h, time_step_size=0.00001,
+  min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9,
   flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
   ncp=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation)
 
