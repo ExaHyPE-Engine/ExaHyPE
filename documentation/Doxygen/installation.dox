@@ -1,0 +1,363 @@
+/**
+\page installation
+
+Installation
+============
+
+@todo re-add all of the missing references to Peano and Exahype - these were lost in the pandocs conversion
+@todo re-add a link to the sample installation script, found \ref sample_installation_script "here."
+
+There are two ways to obtain : You can either download one of the
+archives we provide on the webpage, or you can work directly against a
+repository clone (recommended). If you work with the archive, type in a
+
+tar -xzvf myarchive.tar.gz
+
+in the directory where you've stored your downloaded file.
+
+If you work with the git archive, you have to clone this archive first.
+I grant access to  free of charge and the repository is public. However,
+I ask users to sign up for the software if they indend to push
+modifications to the code (which I very much appreciate[^1]). This way I
+can report to funding agencies how frequent the software is used, and I
+also have at least some ideas which application areas benefit from the
+software and where it is actively used and developed. If you do not
+indend to modify the  core code base, you can just clone the code
+anomymously.
+
+git clone https://gitlab.lrz.de/hpcsoftware/Peano.git cd Peano
+
+[\[page::installation::git-clone\]]{#page::installation::git-clone
+label="page::installation::git-clone"}
+
+I still maintain the "old" Peano in the repository (version 3), and most
+users consider this to be the standard Peano generation. For the present
+document, it is thus important that you manually switch to the branch
+`p4`.
+
+Prepare the configure environment
+---------------------------------
+
+This step should only required if you work directly against the git
+repository. If you prefer to download a snapshot of , then you can skip
+this section and continue with
+[1.2](#section:installation:configure){reference-type="ref"
+reference="section:installation:configure"}.
+
+-   Ensure you have the autotool packages installed on your system. They
+    typically are shipped in the packages `autoconf`, `automake` and
+    `libtool`.
+
+-   Set up the configure environment:
+
+    libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .;
+    automake --add-missing
+
+[\[page::installation::configure\]]{#page::installation::configure
+label="page::installation::configure"}
+
+These steps should only be required once, unless you push major
+revisions to the development branch.
+
+Configure {#section:installation:configure}
+---------
+
+ relies on the autotools to set up its build environment. Change into
+the project's directory and type in
+
+./configure --help
+
+The `–help` option should give you some information about the available
+variants of . A sole `./configure` call gives you the minimalist version
+of ---might be appropriate for a first test.
+
+I recommend that you start a first test without any additional flavours
+of , i.e. to work with a plain `./configure` call. Once the tests pass,
+I recommend that you add further options (IO) and/or parallelisation.
+Please note that the baseline config is not sufficient for most
+applications as it is merely a stripped down version of the  core.  for
+example requires you to add `–enable-exahype` and
+`–enable-loadbalancing-toolbox`. But the bare/minimal version is good
+for first tests.
+
+The output of `./configure –help` should be reasonable verbose, but I
+summarise some of the most imporant options below:
+
+  ------------------------ ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  `–with-multithreading`   Switch on multithreading. By default, we build without multithreading, but a `–with-multithreading=omp`, e.g., makes  use the OpenMP threading model. Please consult `–help` for details. Note: To use OpenMP multithreading, you will need a compiler which supports OpenMP 5.0 (e.g - GCC 9.x)[^2].
+  `–with-mpi`              Enable the MPI version of . You have to tell the build environment however which compile command to use. Please note that we need a C++ MPI wrapper. So `–with-mpi=mpcxx` is a typical call. Currently, you also need `–with-multithreading` if you want to use MPI.
+  `–with-toolchain`        Build against a particular vendor toolchain. Currently, I have dedicated support for the NVIDIA NVTX SDK (`–with-toolchain=nvidia`) providing NVIDIA-specific logging/tracing as well as memory allocation calls---the latter is of use if you use GPUs---and the Intel toolchain (`–with-toolchain=intel`). The latter in particular links against the ITAC tracing API. I also have support for Google's Chrome browser (`–with-toolchain=chrome`) which means that traces are written in a way that you can display it in Chrome. Ensure that your CXXFLAGS set the right include path[^3]. This is optional.
+  `–with-gpu`              Add GPU support. The code base currently is prepared to support GPUs via OpenMP, SYCL, C++ tasking and HIP. Not all versions are equally mature. In principle, you can combine different GPU programming approaches with different multithreading techniques, but our recommendation is that you use C++ threading with C++ GPU offloading, OpenMP threading with OpenMP offloading, and OneTBB threading with SYCL.
+  `–enable-XXX`            A lot of frameworks or engines built on top of  have to be enabled explicitly.  is probably the most popular engine shipped with the code, but there is also a particle/SPH module or some linear algebra stuff. Run with `–help` for a list of toolboxes. Some toolboxes have further internal and external dependencies, and the translation of the toolboxes can be time consuming. By default,  thus disables all of its toolboxes.
+  ------------------------ ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Compilers, linkers and both compiler and linker flags can be changed by
+resetting the corresponding environment variables (such as `CXX` or
+`LDFLAGS` or `CCFLAGS`) *prior* to the configure call. Alternatively,
+you can pass the variables to be used to `configure` through arguments
+(`./configure CXX=icpc ...`, e.g.). Please consult the `–help` output
+for details. For some supercomputers that we use frequently, there are
+recommendations which setting to use
+(Chapter [\[chapter:selected-HPC-platforms\]](#chapter:selected-HPC-platforms){reference-type="ref"
+reference="chapter:selected-HPC-platforms"}).
+
+Most Linux tools prefer you to specify a dedicated installation
+directory via `–prefix`. For , things are slightly different:  is a mere
+engine, i.e. not "useful" per se. It is applications built on top of
+ that become tools that you might later want to install/deploy on your
+system. Therefore, I ship  with static libraries only, and most users
+work with the code in the download/installation directory until they
+have constructed the application with the help of . So no need to
+specify a proper installation directory via `–prefix`.
+
+Build
+-----
+
+Once the configuration has been successful, a simple
+
+make
+
+should build the  core. It also builds some examples and all the
+extensions and toolboxes you have manually enabled. All of these go into
+static libraries. The code is not small and you thus might prefer
+
+make -jx
+
+with x being the number of parallel builds to use.
+
+Following up on the remark above,
+
+make install
+
+would deploy the  files in the directory specified via the `prefix`
+before. Most Unix tools want you to install them. For , things might be
+slightly different as it is an engine used to construct tools in the
+first place.
+
+Installation test
+-----------------
+
+Once you have compiled   I recommend that you run all tests using
+
+make check
+
+The call launches all of 's unit test, i.e. all the unit tests for the
+core plus the extensions that you have enabled.
+
+I have written the test target such that it works out-of-the-box for
+non-MPI calls. If you have configured with `–with-mpi`, then the unit
+tests will fail. But this does not mean that the unit tests are broken.
+It is simply due to the fact that the makefile's test target does not
+know that you have to use the `mpirun` prefix. To make a long story
+short: If you use MPI and you want to run the unit tests, you have to do
+so manually.
+
+To run 2D and 3D tests individually, use
+
+src/unittests/UnitTests2d src/unittests/UnitTests3d
+
+You can run these builds with different core counts and also MPI support
+if you have compiled with MPI. The executables contain both node
+correctness tests and MPI ping-pong tests, i.e. you can both assess a
+valid build plus a working MPI environment. If successful, you should
+always get a message alike
+
+Peano 4 (C) www.peano-framework.org build: 2d, with mpi (1 ranks), omp
+(4 threads), debug level=4 it is recommended that you run the unit tests
+with more than one MPI rank, too (file:main.cpp,line:82) usage:
+././UnitTests2d core-count (use default core count=1 now)
+(file:main.cpp,line:88) running test case collection \"tarch.la.tests\"
+\..... ok running test case collection \"tarch.la\" \...\...\...\.... ok
+running test case collection \"tarch.mpi.tests\" \..... ok running test
+case collection \"tarch.mpi\" \... ok running test case collection
+\"tarch\" \... ok running test case collection \... ok running test case
+collection \"peano4.grid.tests\" \...\.... ok running test case
+collection \"peano4.grid\" \... ok running test case collection
+\"peano4.parallel.tests\" \...\.... ok running test case collection
+\"peano4.parallel\" \... ok running test case collection \"peano4\" \...
+ok running test case collection \... ok
+
+Watch out for the last line that tells you whether the overall unit
+tests passed through.
+
+Python configuration
+--------------------
+
+ is developed with Python 3. Python 2 is not supported.
+
+### Python paths
+
+To make any Python example pass, you have to set the Python paths. There
+are multiple ways to do so.
+
+The standard way is to set the `PYTHONPATH`:
+
+export PYTHONPATH=myPeanoDirectory/python
+
+This can even be done in the `.bashrc`.
+
+Alternatively, you can augment your Python scripts later on with
+
+Please note that most Python scripts require you to set the
+`LD_LIBRARY_PATH`. If you install , then this path should be
+automatically right. If you work with a local  installation, you can
+either tell  through its API where to search for the library (all
+routines that add a library accept additional search paths), or you can
+again use the `sys.path.append` command to extend `LD_LIBRARY_PATH`.
+
+I personally prefer the variant to go through the environment variable.
+'s Python API yield plain old makefiles building executables that work
+completely without any Python. This way, we ensure that we work smoothly
+on supercomputers, too, where Python sometimes is not available in the
+latest version or on the compute nodes. As long as you run through
+environment variables or the  routines to specify paths, your makefiles
+also will continue to work that way.
+
+### Python packages
+
+ currently relies on the following Python packages/projects:
+
+  Package   Description                                                                         Ubuntu             OpenSUSE
+  --------- ----------------------------------------------------------------------------------- ------------------ -----------------
+  jinja2    For all the templated glue code.                                                    `python3-jinja2`   ``
+  sympy     For the symbolic modelling of partial differential equations (predominantly in ).   `python3-sympy`    `python3-sympy`
+
+The table above specifies the corresponding packages in our two main
+distributions for which we test . They can be installed via
+`zypper install` (SUSE) or `apt-get install` (Ubuntu), respectively.
+Alternatively, you might want to use Python's `pip`.
+
+Fortran
+-------
+
+If you don't use Fortran in your own code, ignore this section.
+
+'s core does not use any Fortran at all. However, many users use Fortran
+for their domain-specific programming. If you want to have a seemless
+integration of your particular Fortran choice through 's Python API,
+invoke `./configure` ensuring that the Fortran variables---in particular
+the environment variable `FC` identifying the compiler---are properly
+set.
+
+For many codes and the GNU Fortran compiler, you need the flag
+`-fdefault-real-8`. You can export `FCFLAGS` and make it contain this
+argument before you invoke `configure`. As the 's core does not use
+Fortran---it is only applications built on top of ---you can redefine
+the flags later on (see
+[1.9](#section:installation:applications-built-with-Peano){reference-type="ref"
+reference="section:installation:applications-built-with-Peano"}).
+
+ components and build variants {#chapter:installation:build-variants}
+------------------------------
+
+ currently is delivered as a set of archives, i.e. static libraries:
+
+-   There is a technical architecture (`Tarch`) and the actual
+    `Peano4Core`.
+
+-   Each archive variant is available as a release version, as a debug
+    version, as a version with tracing and assertions and as a
+    tracing-only version.
+
+-   Each archive variant is available as 2d build and as 3d build. If
+    you need higher dimensions, you have to build the required libraries
+    manually.
+
+The version terminology is as follows:
+
+-   **debug** The debug versions of the archives all have the postfix
+    `_debug`. If you link against these versions, the full set of
+    assertions, of all tracing and all debug messages is available;
+    though you can always filter on the application-level which
+    information you want to see (cmp. Chapter
+    [\[section:logging\]](#section:logging){reference-type="ref"
+    reference="section:logging"}).
+
+-   **asserts** Thsee versions of the archives all have the postfix
+    `_asserts`. If you link against these versions, all assertions are
+    on. The code also contains tracing macros (see below).
+
+-   **tracing** The release versions of the archives all have the
+    postfix `_trace`. If you link against these versions, all assertions
+    and debug messages are removed, but some tracing is active. You can
+    switch on/off the tracing per class (cmp. Chapter
+    [\[section:logging\]](#section:logging){reference-type="ref"
+    reference="section:logging"}), and different tracing backends allow
+    you to connect to different (profiling) tools.
+
+-   **release** The release versions of the archives have no particular
+    postfix. They disable tracing, any debugging and all assertions.
+    These archives should be used by production runs.
+
+Peano's release components still write info messages (they suppress
+debug, tracing and logging, but not essential information). If you want
+to filter out these messages, too, you have to apply a log filter
+(Chapter
+[\[section:logging:log-filter\]](#section:logging:log-filter){reference-type="ref"
+reference="section:logging:log-filter"}).
+
+Besides these archives, the  installation also comes along with a set of
+example applications. They are found in the directory `src/examples`.
+Most examples create by default two variants of the example: a debug
+version and one with only tracing enabled. Several examples furthermore
+come along as 2d and 3d build.
+
+Documentation {#section:installation:documentation}
+-------------
+
+There are three major types/resources of documentation of the software:
+
+1.  This guidebook/LaTeX documentation that describes how to use the
+    code base from a high abstraction level and with anecdotal examples.
+
+2.  The documentation of the C++ code. Here, I follow an *"everything is
+    in the code"* philosophy, i.e. all documentation can be found in the
+    C++ header files.
+
+3.  The documentation of the Python code. Here, I follow an *"everything
+    is in the code"* philosophy, i.e. all documentation can be found in
+    the Python scripts.
+
+You can create a webpage from the in-code documentation through the tool
+`doxygen`[^4]. Doxygen is called via `peano.doxygen-configuration`,
+i.e. calling
+
+doxygen peano.doxygen-configuration
+
+gives you the output.
+
+Compile/link options for applications built with  {#section:installation:applications-built-with-Peano}
+------------------------------------------------
+
+ is a framework, i.e. ships very few executables (mainly only for test
+purposes and for postprocessing). Its core delivery is a set of
+libraries. Application codes then build on top of these libraries. While
+it is up to you to decide which build system you use in your
+application,  natively favours makefiles.
+
+If you use 's Python API, it will create dummy makefiles. Higher-level
+ applicaitons such as  build upon the Python API and thus work with
+makefiles, too. When they create these makefiles, they parse your local
+ installation's makefiles and extract the information from there. This
+is, when you've selected a particular compiler or compiler option when
+you install , this choice will automatically propagate through to your
+domain-specific codes. There's however the option to overwrite the
+chosen settings---either by defining appropriate environment variables
+before you invoke `make` or by resetting variables manually within your
+Python scripts that configure the environment.
+
+[^1]: 's guidebook (the file you currently read) is hosted within 's git
+    repository, too. I'm always happy if people add content to this
+    documentation, too.
+
+[^2]:  realises its GPGPU offloading via OpenMP, too. Some compilers
+    struggle to translate these GPGPU instructions. In this case, please
+    configure with the CXXFLAG `-DnoGPUOffloading`.
+
+[^3]: It is
+    `CXXFLAGS+=-I/opt/nvidia/nsight-systems/2020.3.1/target-linux-x64/nvtx/include/nvtx3/`
+    on my system, e.g.
+
+[^4]: <http://www.doxygen.nl>.
+
+*/
