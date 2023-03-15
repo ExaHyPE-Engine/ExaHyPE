@@ -70,7 +70,9 @@ class Project (object):
 
     self.constants  = peano4.output.Constants(self)
 
-  def generate(self, overwrite=peano4.output.Overwrite.Default):
+  def generate(self,
+               overwrite=peano4.output.Overwrite.Default,
+               throw_away_data_after_generation=False):
     """
     Generate all code. If you add stuff to your project after a 
     build, you have to (re-)generate the code. If you compile only
@@ -82,6 +84,17 @@ class Project (object):
     call before you change parameter settings and call generate
     again. To do so, invoke cleanup(). If you forget this, two
     subsequent generate calls enrich the output twice.
+
+    throw_away_data_after_generation: Bool
+      The Peano 4 memory footprint can become quite substantial 
+      effectively reducing the translation capabilities (as compilers
+      tend to require a lot of memory, too). So pass in True if you 
+      want the script to throw away the data structures (and run a 
+      garbage collection) after all files have been generated. Please
+      note that it invalidates both this object (and maybe another 
+      object that you've used to generate the present one - such as 
+      ExaHyPE). It really strips everything down to the stuff you 
+      absolutely need to translate and run the code.
     """
     print( "generate all code ..." )
     self.is_generated = True
@@ -94,9 +107,21 @@ class Project (object):
     self.main.construct_output(self.output,self.project_name + "-main")
     self.output.generate(overwrite, self.directory)
     self.constants.generate(overwrite, self.directory)
+
     print( "generation complete" )
 
-  def build(self, make_clean_first=True, throw_away_data_after_build=False, number_of_parallel_builds=-1, additional_libraries=[]):
+    if throw_away_data_after_generation:
+      self.datamodel = None
+      self.solversteps = None
+      self.output      = None
+      gc.collect()
+      print( "threw away all data and ran garbage collection" )
+
+  def build(self,
+            make_clean_first=True,
+            throw_away_data_after_build=False,
+            number_of_parallel_builds=-1,
+            additional_libraries=[]):
     """
       Invokes the underlying make/C build mechanism on the project.
 
@@ -108,15 +133,7 @@ class Project (object):
         to zero, it will use the core count as guideline how to compile.
 
       throw_away_data_after_build: Bool
-        The Peano memory footprint can become quite substantial
-        effectively reducing the translation capabilities (as compilers
-        tend to require a lot of memory, too). So pass in True if you
-        want the script to throw away the data structures (and run a
-        garbage collection) after all files have been generated. Please
-        note that it invalidates both this object (and maybe another
-        object that you've used to generate the present one - such as
-        ExaHyPE). It really strips everything down to the stuff you
-        absolutely need to translate and run the code.
+        see generate()
     """
     if number_of_parallel_builds<=0:
         number_of_parallel_builds = multiprocessing.cpu_count()
@@ -159,8 +176,8 @@ class Project (object):
     else:
       print( "cannot build as code generation has not been successful" )
 
-    self.cleanup()
     if throw_away_data_after_build:
+      self.cleanup()
       self.datamodel    = None
       self.solversteps  = None
       self.output       = None
@@ -211,20 +228,3 @@ class Project (object):
     else:
       print( "cannot run as code compilation has not been successful" )
     return success
-
-  def set_sph_sequence(self, hydroScheme='minimal'):
-    """
-    Change the DefaultSequence used to generate the main file template, to the
-    class that generates the main file of an SPH simulation. The effect will
-    take place when calling the generate method.
-    In the future, this might not be needed if we implement an ifdefSPH
-    directive into the default template, and encapsulate the SPH-specific steps
-    there.
-    """
-    self.main = peano4.runner.SPHSequence(self) 
-    if hydroScheme != 'minimal': 
-      warning_msg = """
-      This is not the minimal SPH scheme. Please double check that the
-      algorithmic steps in the main file are valid for your hydro scheme.
-      """
-      print( warning_msg )

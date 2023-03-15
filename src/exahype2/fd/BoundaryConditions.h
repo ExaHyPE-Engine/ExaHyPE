@@ -46,7 +46,6 @@ namespace exahype2 {
       double* __restrict__                         Q
     );
 
-
     /**
      * Apply Sommerfeld boundary conditions
      *
@@ -130,7 +129,6 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       double* __restrict__                         Qold,
       double* __restrict__                         Qnew
     );
-
 
     /**
      * Wrapper around the other applySommerfeldConditions() function.

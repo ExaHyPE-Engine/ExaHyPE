@@ -62,7 +62,15 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
 {% endif %}
 
 {% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %}
-    virtual void multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs) = 0;
+    virtual void multiplyMaterialParameterMatrix(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
+      const tarch::la::Vector<Dimensions, double> &volumeX,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs
+      ) = 0;
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
@@ -145,7 +153,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::l
 {% endif %}
 
 {% if MATERIAL_PARAM_IMPLEMENTATION!="<empty>" and MATERIAL_PARAM_IMPLEMENTATION!="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>"%}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs){
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
+  double t,
+  double dt,
+  int normal,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs){
   {{MATERIAL_PARAM_IMPLEMENTATION}}
 }
 {% endif %}
@@ -213,7 +228,14 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[0]}} *const Q, {{COMPUTATION_PRECISIONS[0]}} *S) override;
 {% endif %}
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
-    void multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[0]}}* const Q, {{COMPUTATION_PRECISIONS[0]}}** const rhs) override;
+    void multiplyMaterialParameterMatrix(
+      const {{COMPUTATION_PRECISIONS[0]}}* const Q, 
+      const tarch::la::Vector<Dimensions, double> &volumeX,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[0]}}* const rhs) override;
 {% endif %}
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     void pointSource(const {{COMPUTATION_PRECISIONS[0]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[0]}}* const forceVector, int n) override;
@@ -267,7 +289,14 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
 {% endif %}
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
     template<typename T>
-    void multiplyMaterialParameterMatrix(const T* const Q, T** const rhs);
+    void multiplyMaterialParameterMatrix(
+      const T* const Q, 
+      const tarch::la::Vector<Dimensions, double> &volumeX,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
+      double t,
+      double dt,
+      int normal,
+      T* const rhs);
 {% endif %}
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     template<typename T>
@@ -328,8 +357,17 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     }
 {% endif %}
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
-    void multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs) override {
-      multiplyMaterialParameterMatrix<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, rhs);
+    void multiplyMaterialParameterMatrix(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
+      const tarch::la::Vector<Dimensions, double> &volumeX,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs) override {
+      
+      multiplyMaterialParameterMatrix<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, volumeX, volumeH, t, dt, normal, rhs);
+
     }
 {% endif %}
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
@@ -429,7 +467,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
   const {{COMPUTATION_PRECISIONS[0]}}* const Q,
-  {{COMPUTATION_PRECISIONS[0]}}** const rhs
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
+  double t,
+  double dt,
+  int normal,
+  {{COMPUTATION_PRECISIONS[0]}}* const rhs
 ) {
   
     // @todo implement
@@ -575,7 +618,12 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
   const T* const Q,
-  T** const rhs
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
+  double t,
+  double dt,
+  int normal,
+  T* const rhs
 ) {
   
     // @todo implement
@@ -583,7 +631,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatri
 }
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs);
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const tarch::la::Vector<Dimensions, double> &volumeX, const tarch::la::Vector<Dimensions, double> &volumeH, double t, double dt, int normal, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs);
 {% endfor%}
 {% endif %}
 

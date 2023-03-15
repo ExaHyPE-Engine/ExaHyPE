@@ -85,7 +85,6 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
   delete[] QAlgebraicSourceGathered;
 }
 
-
 template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
   const double* __restrict__                   QIn,
@@ -130,7 +129,6 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
   delete[] QAlgebraicSourceGathered;
 }
 
-
 template <typename Solver>
 void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
   const double* __restrict__                   QIn,
@@ -165,7 +163,6 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
     );
   }
 }
-
 
 template <class QOutEnumeratorType>
 double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
@@ -209,7 +206,6 @@ double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
 
     return result;
 }
-
 
 template <typename Solver>
 double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
