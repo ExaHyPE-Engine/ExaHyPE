@@ -104,7 +104,6 @@ class CollocatedLowOrderDiscretisation(Solver):
     """
     templatefile_prefix  = os.path.dirname( os.path.realpath(__file__) ) + "/"
     templatefile_prefix += self.__class__.__name__
-    templatefile_prefix += ".template"
 
     abstractHeaderDictionary = {}
     implementationDictionary = {}
@@ -114,8 +113,8 @@ class CollocatedLowOrderDiscretisation(Solver):
     #self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-      "Abstract" + templatefile_prefix + ".h",
-      "Abstract" + templatefile_prefix + ".cpp",
+      templatefile_prefix + ".Abstract.template.h",
+      templatefile_prefix + ".Abstract.template.cpp",
       "Abstract" + self._name, 
       namespace,
       ".", 
@@ -123,8 +122,8 @@ class CollocatedLowOrderDiscretisation(Solver):
       True,
       True)
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-      templatefile_prefix + ".h",
-      templatefile_prefix + ".cpp",
+      templatefile_prefix + ".template.h",
+      templatefile_prefix + ".template.cpp",
       self._name, 
       namespace,
       ".", 
