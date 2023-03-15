@@ -56,7 +56,9 @@ class Solver(object):
   
   
   def __init__(self, 
-               name):
+               name,
+               min_h,
+               max_h):
     """
     
     name: String
@@ -64,6 +66,8 @@ class Solver(object):
     
     """
     self._name = name
+    self.min_h = min_h
+    self.max_h = max_h
     pass
     
     

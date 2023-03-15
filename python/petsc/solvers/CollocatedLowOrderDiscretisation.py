@@ -14,8 +14,12 @@ from abc import abstractmethod
 class CollocatedLowOrderDiscretisation(Solver):
   def __init__(self,
                name,
-               number_of_unknowns):
-    super( CollocatedLowOrderDiscretisation, self ).__init__( name )
+               number_of_unknowns,
+               min_h,
+               max_h):
+    super( CollocatedLowOrderDiscretisation, self ).__init__( name,
+                                                              min_h,
+                                                              max_h )
     
     self._number_of_unknowns = number_of_unknowns
     
@@ -56,6 +60,7 @@ class CollocatedLowOrderDiscretisation(Solver):
 
 
   def add_to_create_grid(self, observer):
+    observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h),False)
     pass
 
   
@@ -105,12 +110,11 @@ class CollocatedLowOrderDiscretisation(Solver):
     templatefile_prefix  = os.path.dirname( os.path.realpath(__file__) ) + "/"
     templatefile_prefix += self.__class__.__name__
 
-    abstractHeaderDictionary = {}
-    implementationDictionary = {}
-    #self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
-    #self._init_dictionary_with_default_parameters(implementationDictionary)
-    #self.add_entries_to_text_replacement_dictionary(abstractHeaderDictionary)
-    #self.add_entries_to_text_replacement_dictionary(implementationDictionary)
+    dictionary = {
+        "SOLVER_INCLUDES": "",
+        "MIN_H": self.min_h,
+        "MAX_H": self.max_h,
+        }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".Abstract.template.h",
@@ -118,7 +122,7 @@ class CollocatedLowOrderDiscretisation(Solver):
       "Abstract" + self._name, 
       namespace,
       ".", 
-      abstractHeaderDictionary,
+      dictionary,
       True,
       True)
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -127,7 +131,7 @@ class CollocatedLowOrderDiscretisation(Solver):
       self._name, 
       namespace,
       ".", 
-      implementationDictionary,
+      dictionary,
       False,
       True)
 

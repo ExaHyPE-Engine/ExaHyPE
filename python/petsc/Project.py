@@ -109,7 +109,6 @@ class Project(object):
                                        dimensions,
                                        offset,
                                        domain_size,
-                                       mesh_size,
                                        plotter_precision = 5,
                                        ):
     """
@@ -121,7 +120,6 @@ class Project(object):
     self._domain_size   = domain_size
     self._dimensions    = dimensions
     self._plotter_precision = plotter_precision
-    self._mesh_size         = mesh_size
     if plotter_precision<=0:
       raise Exception( "Plotter precision has to be bigger than 0" ) 
     
@@ -173,8 +171,6 @@ class Project(object):
     #  for solverstep in solversteps:
     #    solverstep.use_vertex(current_species_set)
     #    solverstep.use_cell(cell_marker_for_statistics)
-
-    self.algorithm_step_create_grid.add_action_set(peano4.toolbox.CreateRegularGrid(self._mesh_size),False)
 
     self._project.solversteps.add_step(self.algorithm_step_create_grid)
     self._project.solversteps.add_step(self.algorithm_step_enumerate)

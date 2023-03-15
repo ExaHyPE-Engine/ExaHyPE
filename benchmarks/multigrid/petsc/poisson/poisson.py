@@ -33,7 +33,11 @@ project = petsc.Project(project_name = "Poisson",
                         ) 
                         
                         
-solver = petsc.solvers.CollocatedLowOrderDiscretisation("Poisson", 1)
+solver = petsc.solvers.CollocatedLowOrderDiscretisation("Poisson", 
+                                                        1,
+                                                        args.meshsize,
+                                                        args.meshsize
+                                                        )
 
 project.add_solver( solver )
                         
@@ -51,7 +55,6 @@ cube_size = 1.0
 project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
   offset                = [0.0, 0.0, 0.0],
-  mesh_size             = args.meshsize,
   domain_size           = [ cube_size, cube_size, cube_size],
 )
 
