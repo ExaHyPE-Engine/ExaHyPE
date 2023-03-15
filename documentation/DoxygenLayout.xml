@@ -3,12 +3,12 @@
   <!-- Navigation index tabs for HTML output -->
   <navindex>
     <tab type="mainpage" visible="yes" title=""/>
-    <!-- <tab type="pages" visible="yes" title="Test Page" intro=""/> -->
-    <tab type="user" visible="yes" title="Installation"      url="\ref html_installation"     intro=""/>
-    <tab type="usergroup" visible="yes" title="Peano"      url="\ref peano_home"     intro=""/> 
-    <tab type="usergroup" visible="yes" title="Swift"      url="\ref swift_home"     intro=""/> 
-    <tab type="usergroup" visible="yes" title="Multigrid"  url="\ref multigrid_home" intro=""/> 
-    <tab type="usergroup" title="ExaHyPE"    url="\ref exahype_home"   intro=""/> <!-- this creates a custom tab -->
+    <tab type="user" visible="yes" title="Installation"      url="\ref installation"     intro=""/>
+    <tab type="user" title="ExaHyPE"    url="\ref exahype_home"   intro=""/>
+    <tab type="user" visible="yes" title="Peano"      url="\ref peano_home"     intro=""/> 
+    <tab type="user" visible="yes" title="Swift"      url="\ref swift_home"     intro=""/> 
+    <tab type="user" visible="yes" title="Multigrid"  url="\ref multigrid_home" intro=""/> 
+    <tab type="user" visible="yes" title="Old Tex Docus"  url="\ref old_tex_docus" intro=""/> 
       <!-- <tab type="user"  title="sdf"    url="\ref exahype_performance_optimisation"   intro=""/>  -->
       <!-- </tab> -->
     <tab type="modules" visible="yes" title="" intro=""/>

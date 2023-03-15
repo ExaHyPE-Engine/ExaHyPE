@@ -1,0 +1,45 @@
+/**
+\page old_tex_docus Old Tex Docus 
+
+Here we compile each of the old tex docus one by one. The conversion is done with pandoc, and some latex 
+macros are not supported. But this will give us some structure.
+
+Each of these pages was converted using pandocs from the .tex found in Peano/documentation. As such, some links might be broken,
+but I will fix these as I go.
+
+Most of the page references should match the original title of the chapter. But wherever there might be a reference clash (or 
+the possibility for one), I have added "_tex"
+
+@todo re-introduce proper code blocks
+@todo fix sixing. at time of writing, the images in the exahype_tex file are way off.
+@todo work out whether folder 10_installation is still necessary. other folders contain images that are referenced, but the installation dox is now one level higher.
+
+\tableofcontents
+
+\li \subpage preamble
+\li \subpage architecture
+\li \subpage exahype_tex
+\li \subpage swift_tex
+\li \subpage introduction_tex
+\li \subpage finite_volumes_tex
+\li \subpage pidt
+\li \subpage multigrid_tex
+\li \subpage introduction_40
+\li \subpage high_level_concepts
+\li \subpage logging
+\li \subpage unit_tests
+\li \subpage parallel
+\li \subpage tools_tex
+\li \subpage amr_tex
+\li \subpage domain_decomposition
+\li \subpage new_action_set 
+\li \subpage postprocessing_tex
+\li \subpage blockstructured_file_format 
+\li \subpage eclipse_tex 
+\li \subpage selected_hpc_platforms
+\li \subpage faq_tex
+\li \subpage troubleshooting_tex
+
+
+
+*/

@@ -1,0 +1,375 @@
+/**
+
+\page troubleshooting_tex
+
+Troubleshooting {#chapter:troubleshooting}
+===============
+
+Autotools (`configure`)
+-----------------------
+
+-   **`configure` fails with ...**. Before you start any further
+    investigation, update to the latest version of the autotools, ensure
+    your configure script suits this version, and rerun the build system
+    configuration:
+
+    autoreconf --install libtoolize; aclocal; autoconf; autoheader; cp
+    src/config.h.in .; automake --add-missing
+
+-   **checking host system type\... Invalid configuration './configure':
+    machine './configure-unknown' not recognized**. We got this recently
+    on a number of new Linux installations. In this case, adding
+
+    to your `configure` call seems to be necessary.
+
+-   To be continued ...
+
+Python API
+----------
+
+-   **`import peano4` yields not found error**. You haven't set your
+    `PYTHONPATH` properly. Ensure that it points to 's `python`
+    subdirectory. So use something similar to
+
+    export PYTHONPATH= /git/Peano/python
+
+-   **/usr/bin/ld: cannot find -lExaHyPE2Core3d\_trace**. Your Python
+    script has not been able to locate the  libraries. You can either
+    tweak your systems parameters, i.e. set the search pathes, or you
+    can manually add the library:
+
+-   My installation or paraview complains about **ModuleNotFoundError:
+    No module named 'numpy'**. For most parts of , you need the package
+    `numpy`, though major parts of  can operate without it. If you don't
+    have numpy on your system install it with either of the following
+    commands:
+
+    pip4 install --user numpy python3 -m pip install --user --update pip
+
+    Similar arguments hold for `jinja2`.
+
+-   To be continued ...
+
+Compilation
+-----------
+
+-   **My compiler yields warnings of the type**
+
+    **How can I disable them?** Please consult your compiler options.
+    Usually re-configuring with the flag
+    `CXXFLAGS="... -Wno-unknown-attributes"` or
+    `CXXFLAGS="... -Wno-attributes=clang::"` eliminates the warnings.
+
+-   **My compiler reports something like**
+
+    We have seen this error with GCC if the supported C++ generation is
+    too old. Try to return configure with `CXXFLAGS=-std=c++0x`.
+    Depending on your compiler, the flag might also be
+    `CXXFLAGS=–std=c++0x` (two hyphens).
+
+-   **My compiler yields errors like**
+
+    'warning \#3191: scoped enumeration types are a C++11 feature'
+
+    Your compiler seems not to have C++11 (or, newer) enabled by
+    default. Rerun configure with the flag `CXXFLAGS=-std=c++0x`.
+
+-   **My compiler terminates with**
+
+    'error: unknown attribute 'optimize' ignored\*'
+
+    We have seen this issue notably on macOS with CLANG replacing GCC.
+    Unfortunately, CLANG seems to pretend to be GNU on some systems and
+    then the wrong header is included. Ensure that
+    `CompilerSpecificSettings.h`[^1] includes a file such that the
+    compiler `CompilerCLANG` is defined.
+
+-   **My compiler requires ages to translate the unit tests**. Ensure
+    that the flag `UseTestSpecificCompilerSettings` is enabled. This
+    effectively disables any optimisation for the unit tests. Without
+    the flag, unit test can become really big due to template
+    instantiation.
+
+-   **`./configure` crashes when I try to translate with TBB**. I have
+    seen this on a couple of systems and found it annoying. First,
+    ensure that configure find the TBB header. To ensure it does, check
+    that `CXXFLAGS` are properly set. Next, set `LDFLAGS=-Lmypath`.
+    Usually, I add `-ltbb` to this parameter and then everything is
+    fine. However, some configures then don't like the configure script
+    anymore. So I instead use `export PEANO_LDFLAGS="-ltbb"`. For some
+    systems, it then still remains necessary to add pthreads, too.
+
+-   **My compiler terminates with errors when I enable OpenMP
+    multithreading** . Make sure that you are using a compiler with
+    OpenMP 5.0 support, such as GCC 9.x.
+
+-   **I configured Peano with HDF5, but my application (experiment) will
+    not compile**. The application will parse the configure call used by
+    Peano to feed its Makefile, but will not infer the settings from
+    `–with-hdf5`. To get the correct flags for HDF5 support for your
+    experiment, you might want to add the following to your Peano
+    configuration call:
+    `LDFLAGS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"`.
+    Notice that some outdated GCC compilers might struggle with the last
+    one on the list.
+
+-   To be continued ...
+
+Linking
+-------
+
+-   **My linker yields errors like 'undefined reference to std::vector
+    \... '**. We have seen this with some outdated GCC compilers. Ensure
+    you meet the minimum GCC requirements or switch to another compiler.
+
+-   **The linker says that the vtk libraries were not found**. VTK can
+    be tricky to get up and running. See a comprehensive discussion on
+    VTK issues in Chapter
+    [\[chapter:postprocessing\]](#chapter:postprocessing){reference-type="ref"
+    reference="chapter:postprocessing"}. It includes compiler/linker
+    issues.
+
+-   **If I use Fortran as well, I get errors alike *undefined reference
+    to for\_stop\_core' or 'for\_write\_seq\_list'***. This tells you
+    that the linker failed to find the Fortran standard libraries. For
+    the GNU compilers, you need for example the flag `-lgfortran`, while
+    the Intel compiler requires you to add ... To add these flags, set
+    the `LDFLAGS` before you run `configure`:
+
+    \# GNU export LDFLAGS=-lgfortran
+
+    \# Intel export LDFLAGS=-lifcore
+
+    On the Python API side, I considered adding these flags to the
+    template makefile or offering an API function to add them manually
+    to the makefile from the Python script. I dropped these ideas, as
+    these libraries are specific to the build and hardware system and
+    have nothing to do with a particular application.
+
+-   **The complains about some routines/classes from the technical
+    architectures, but they are definitely there**. GCC/C++ is extremely
+    sensitive when it comes to the order of the libraries used. You
+    might have to edit your makefile manually to get a "valid" ordering
+    that works. My recommendation is that you always links from the most
+    abstract library to the lowest level lib. In one  project, e.g., the
+    following order worked whereas all others resulted in linker errors:
+    `-lExaHyPE2Core2d_asserts`, `-lToolboxLoadBalancing2d_asserts`,
+    `-lPeano4Core2d_asserts`, `-lTarch_asserts`.
+
+-   To be continued ...
+
+Debugging
+---------
+
+-   **I can't see my log/trace statements.** There's a whole set of
+    things that can go wrong.
+
+    -   Check that your log filter specifies the **class name**. In
+        Peano 3, there was the opportunity to filter messages out on a
+        routine level. For efficiency reasons, I had to remove this. So
+        now you can only filter per class. Ensure you don't specify
+        methods. If you do so, Peano 4 thinks your method name is a
+        (sub)class name and won't apply your filter.
+
+    -   Ensure that your main code is translated with a reasonable debug
+        flag. The makefile has to translate your code with
+        `-DPeanoDebug=4` (or 1 if you are only interested in tracing).
+
+    -   Ensure you link to libraries which are built with a reasonable
+        debug level. For this, run your code and search for the header
+
+        build: 2d, no mpi, C++ threading, debug level=4
+
+        on the terminal. Again, has to be 1 or 4 at least.
+
+    -   Ensure you have a whitelist entry for the routine you are
+        interested in. Ensure that it is the right level (`TargetDebug`
+        or `TargetTrace`, respectively):
+
+        tarch::logging::LogFilter::getInstance().addFilterListEntry(
+        tarch::logging::LogFilter::FilterListEntry(
+        tarch::logging::LogFilter::FilterListEntry::TargetInfo,
+        tarch::logging::LogFilter::FilterListEntry::AnyRank,
+        \"examples::algebraicmg\",
+        tarch::logging::LogFilter::FilterListEntry::WhiteListEntry ) );
+
+    -   If you are still unsure which log filters are active, insert
+
+        tarch::logging::LogFilter::getInstance().printFilterListToCout();
+
+        into your code and see which entries it does enlist.
+
+-   **gdb says "not in executable format: file format not recognized"**.
+    automake puts the actual executable into a `.libs` directory and
+    creates bash scripts invoking those guys. Change into `.libs` and
+    run gdb directly on the executable. Before you do so, ensure that
+    `LD_LIBRARY_Path` points to the directory containing the libraries.
+    Again, those guys are stored in a `.libs` subdirectory, so the
+    library path should point to that subdirectory.
+
+-   **The interesting details are hidden in the debugger. It says
+    something about inlined and doesn't give proper line numbers**. I
+    recommend that you set `CXXFLAGS` to `-fno-inline` (Intel), rerun
+    the `configure` script and recompile. This should stop the compiler
+    from inlining too aggressive.
+
+-   To be continued ...
+
+MPI troubleshooting
+-------------------
+
+-   **My compile fails with a message like the one below**:
+
+    This is a know error with MPI installations that do not support
+    one-sided MPI.  uses one-sided MPI to raise/report (non-critical)
+    exceptions accross MPI boundaries. Non-critical means that the code
+    continues to finish the current compute step, dumps the solution
+    (for debugging) and then terminates. It does not terminate
+    immediately. If you disable one-sided MPI (pass
+    `CXXFLAGS=-DnoMPISupportsSingleSidedCommunication` to your
+    `configure` call), then such a non-critical assertion will also
+    terminate immediately.
+
+-   **My code crashes unexpectedly with malloc/free errors**. Please
+    rerun your code with Intel MPI and the flag `-check_mpi`. You should
+    not get any error reports. If you do, we have had serious problems
+    as some of Peano's classes use `MPI_C_BOOL` or `MPI_CXX_BOOL`. They
+    seem not be supported properly.
+
+-   **With more and more ranks, I suddenly run into timeouts**.  has a
+    built-in timeout detection which you can alter by changing the
+    timeout threshold. This is done via the `–timeout XXX` parameter.
+    The other thing is that  subdivides the partition such that each
+    core (!) gets one SFC-fragment. For smallish problems, this can lead
+    to a massive overhead, as the partitions are too small. In this
+    case, you either have to restrict the threads per rank via
+    `–threads XXX` (this is problematic, as it effectively reduces the
+    code's efficiency) or you instruct your load balancing not to split
+    up that often. See the documentation of your particular load
+    balancing strategy.
+
+-   To be continued ...
+
+OpenMP troubleshooting
+----------------------
+
+-   **My linker fails, as OpenMP or pthreads are not found**. We see
+    this frequently with GNU compilers. Ensure that your `LDFLAGS` holds
+    `-fopenmp` when you run `configure`.
+
+-   **My code uses only one core**. If you pass
+    `–with-multithreading=omp` to `configure`, ensure that you add all
+    flags that your compiler needs to `CXXFLAGS`, too. If you compile
+    requires you to pass `-openmp`, e.g., to make it understand OpenMP
+    pragmas, then you have to add `CXXFLAGS=-openmp` to your configure
+    invocation. We've seen multiple times with GNU that the GNU compiler
+    translates your codd if you use `–with-multithreading=omp`, but
+    effectively ignores the OpenMP pragmas as you forgot to specify
+    `CXXFLAGS=-openmp`. You end up with core libraries which do not
+    support multithreading or even deadlock.
+
+-   **My code hangs**. Check how many threads OpenMP tries to book. You
+    find this information at the startup where you typically obtain a
+    message similar to
+
+    Peano 4 (C) www.peano-framework.org build: 2d, no mpi, omp (8
+    threads), debug level=2
+
+    The number of threads should not be bigger than the physical threads
+    and I strongly recommend not to count hyperthreads as real threads.
+    If you find that you have to reduce the thread count (as your system
+    by default uses SMT), pass in `–threads X` to reduce the thread
+    count to `X` manually. Your initial notification will continue to
+    report all SMT threads, but there will be a message immediately
+    after that clarifies that you manually reduce the thread count. If
+    you work in a SLURM/batch environment, changing the thread/core
+    count in the batch script might be more convenient.
+
+-   **I run into linker errors like
+    `undefined reference to ‘omp_get_mapped_ptr’`**. This happens if
+    your system requires you to specify an OpenMP target when you
+    translate with GPU offloading support. Compare to the examples on
+    page .
+
+-   To be continued ...
+
+SYCL troubleshooting
+--------------------
+
+-   ** always uses all GPUs, but I don't want to use all the (virtual)
+    devices**.  uses, by default, all devices that are visible and
+    associates one SYCL queue with each device. Most DPC++ runtimes can
+    however filter the number of visible devices. See the Intel
+    documentation, for example, at
+    <https://intel.github.io/llvm-docs/EnvironmentVariables.html>. A
+    simple
+
+    does the trick.
+
+-   To be continued ...
+
+External tools
+--------------
+
+-   **The Intel tools yield invalid or messed up results**. Ensure you
+    have built your code with
+    `-DTBB_USE_ASSERT -DTBB_USE_THREADING_TOOLS`. Please consult the
+    supercomputer/tool remarks on page .
+
+-   **I struggle to configure  with Otter**. First, ensure you add
+    `–with-otter` to your configure call. If the configure fails, run
+    through the following checks one by one:
+
+    -   Ensure that you have added
+        `CXXFLAGS="... -Iyour-path/otter/include"` to your `CXXFLAGS`.
+
+    -   Ensure that you have added `LIBS="... -lotter-serial -lotf2"` to
+        your libraries. Depending on your system, you might need the
+        explicit linking to `otf2` or not.
+
+    -   Ensure that you have added
+        `LDFLAGS="... –Lyour-path/otter/build/lib -L/opt/otf2/lib"` Once
+        again, you might need the explicit OTF2 link or not.
+
+    -   Add the libraries to your library path
+        (`LD_LIBRARY_PATH=$LD_LIBRARY_PATH:your-path/otter/build/lib:/opt/otf2/lib`)
+        as the checks otherwise will fail.
+
+-   To be continued ...
+
+Errors with particular software stacks
+--------------------------------------
+
+-   **My unit tests fail in the NodeTest**. We have found that GCC's STL
+    is buggy (confirmed in version 9.3.0), although we do not know if
+    this bug is found within the `unordered_set`, the `bitset` or the
+    `pair` implementation. Anyway, a newer version of GCC (12 for
+    example) seem to fix this issue. If you use Intel's toolchain or
+    literally any LLVM, you might have to manually load a newer GNU
+    version after you've loaded your core compiler.
+
+-   To be continued ...
+
+PDT (legacy)
+------------
+
+This section is deprecated and is of relevance if and only if you use
+the Python API with the legacy DaStGen support to model
+application-specific data.
+
+-   **The PDT does not pass as the jar file is built with the wrong Java
+    version**. Download the whole Peano project (from sourceforge via
+    subversion), change into the directory `pdt/src`, and run
+
+    make clean make createParser make compile make dist
+
+    Use the `pdt.jar` from the `pdt` directory now.
+
+[^1]: Peano relies on a header
+    `tarch/compiler/CompilerSpecificSettings.h`. Whenever I find
+    incompatibilities between different compilers, I try to resolve them
+    through this file. The header reads out some compiler preprocessor
+    directives and then includes the one it find most appropriate. You
+    may always include your own file derived from one of the other
+    headers in the directory.
+*/
