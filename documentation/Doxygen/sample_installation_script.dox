@@ -1,0 +1,36 @@
+/**
+
+@page sample_installation_script Sample Installation script
+
+Please find below a sample shell script that will install Peano with ExaHyPE
+enabled. Here we use GCC-12 and G++-12 as the C and C++ compiler, as well as 
+OpenMP for the multithreading support. We also include some flags to suppress
+warnings.
+
+<code> 
+
+#!/bin/sh
+
+#will clean up the Peano directory if files from previous builds are present<br>
+make clean
+
+#Standard operations<br>
+libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing;
+
+#Configure Peano with whatever we need <br>
+./configure --enable-loadbalancing --enable-exahype --enable-blockstructured --with-multithreading=omp CXXFLAGS="--std=c++20 -fopenmp -Wno-unknown-attributes -Wno-attributes=clang::" LDFLAGS="-fopenmp" CC=gcc-12 CXX=g++-12
+    
+#Get number of threads available for quicker compilation<br>
+THREADS_NUM=$(nproc --all)
+
+#Compile and check build<br>
+echo "Starting compilation with $THREADS_NUM threads."<br>
+make -j$THREADS_NUM <br>
+echo "Compilation complete. Now Checking..."<br>
+
+#checks installation and runs the unit tests <br>
+make check
+
+exit 0
+</code>
+*/

@@ -1,0 +1,129 @@
+/**
+
+@page peano_performance_optimisation Performance Optimisation in Peano
+
+This section discusses some Peano-specific performance optimisation steps.
+While Peano provides simplistic performance analysis 
+features to spot some flaws, a proper performance optimisation would likely
+rely on external performance analysis tools.
+
+
+If you plan to run any performance analysis with the Intel or NVIDIA tools, I 
+recommend you to switch to the respective toolchain and logging
+before you continue (cmp. peano_installation).
+For other performance tools such as Scalasca/Score-P, Peano offers bespoke 
+toolchains, too. 
+These toolchains ensure that all tracing information is piped into appropriate
+data formats.
+
+
+It is the developer's choice whether to pick a release build or a trace build
+for the performance analysis.
+Most people start with the release build and then switch the tracing on for a
+deeper insight.
+If you use tracing, you will have to use a proper log filter, as Peano's log 
+information otherwise becomes huge, i.e. challenging to handle, and the enormous
+data quickly pollutes the runtime measurements.
+
+Besides the trace option, Peano also offers a statistics mode where the code
+samples certain key properties. These statistics are meant to complement real
+performance analysis with domain-specific data: We think that it is the job
+of a performance analyis tool to uncover what is going wrong and the statistics
+then can help to clarify why this happens from an application's point of view.
+ 
+
+
+## Single core optimisation
+
+### The code fails to use aligned data
+
+See general remarks in documentation of tarch::allocateMemory() and
+tarch::MemoryLocation.
+
+@see tarch::allocateMemory()
+@see tarch::MemoryLocation
+
+
+## Multithreading optimisation
+
+### The individual trees are of significantly different sizes
+
+Most of Peano's solvers (such as ExaHyPE) support tasking to facilitate 
+light-weight load balancing. However, even the best load balancing will not
+be able to compensate for a poor initial geometric distribution. To assess
+the quality of your partition, Peano's loadbalancing toolbox \ref peano_runtime_analysis "provides a script"
+that visualises the distribution of cells. 
+
+
+ @image html runtime_analysis_loadbalancing_example00.png 
+
+
+If the cell distribution is similar to the one above, you have subpartitions
+of significantly different sizes. 
+In a profile, such an ill-balanced setup materialises typically in high task
+runtime spin times.
+In OpenMP for example, __kmp_fork_barrier() appears high up in the list of the most expensive routine.
+If you don't want to use the visualisation script, you can also check the program dump of your code.
+
+
+       rank:1  toolbox::loadbalancing::dumpStatistics()    info    2 tree(s): (#1:13/716)(#3:14/715) total=27/1431 (local/remote)
+
+is a proper load balancing for two cores, as we have 13 vs 14 cells.
+
+
+There are a few things to check in this case:
+
+- If you use a generic algorithm to load balance, reduce the load balancing 
+  quality that you aim for. No load balancing will be able to ensure 100% perfect
+  load, as we work in a discrete setup, so they will have some threshold. If you
+  work with a very fine mesh, then it is important to use a high load balancing quality (we typically start with 
+  something around 95%). However, if you want to use only few cells per core, 
+  a smaller load balancing quality (something like 80%) should be 
+  absolutely fine. Every time the load balancing threshold is violated, Peano will
+  try to split up subpartitions, and you might end up with very small aka cheap
+  partitions if the load is too cheap. 
+- Do some large trees cut off some very small trees at one point? If so, can you
+  reduce the maximum number of trees used? If this implies that you end up with 
+  fewer trees than cores, you will have to use tasking on top of the domain 
+  decomposition, or computing kernels which fan out over the cores (see below). 
+- Analogously, you can try to set minimum tree sizes, such that subpartitions 
+  are not allowed to split up further if they have too few cells.
+- If you know your problem/mesh and this mesh is static, it might be wise to 
+  abandon a generic load balancing algorithm and to use a hard-coded one with 
+  a tailored load distribution.
+- Can you use compute kernels which are in turn using multiple cores? If the 
+  problem is just too small or too complicated to be geometrically distributed
+  with proper partitions of roughly equal sizes, you have to use compute routines
+  that exploit the other cores. This is a last resort and does not really fix
+  the flaw discussed, but it helps you to harvest all resources of your machine.
+
+Most of these strategies can be realised within the load balancing scheme used. 
+If you use the built-in strategies, study their documentation.
+
+@see toolbox::loadbalancing::RecursiveSubdivision is a generic load balancer.
+@see toolbox::loadbalancing::Hardcoded provides the opportunity to specify and fix your load balancing.
+
+
+### Introducing tasks makes my code significantly slower
+
+This could be a sign of a scheduler flaw. Peano offers multiple different 
+multithreading schedulers: It can map tasks onto native OpenMP/TBB/... tasks
+or it can introduce an additional, bespoke tasking layer. 
+
+
+## MPI optimisation
+
+### Switching from one to two ranks increases the runtime
+
+Validate if both ranks get roughly the same number of cells. If this holds, the 
+performance drop is due to a bad per-rank (shared memory) load balancing most of 
+the times. Study the recommendations above after you have visualised the distribution
+of the cells per rank.
+
+
+
+
+
+
+ */
+ 
