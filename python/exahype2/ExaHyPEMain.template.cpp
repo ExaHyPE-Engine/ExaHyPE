@@ -479,7 +479,7 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-  otterTraceInitialise(OTTER_SRC_ARGS());
+  otterTraceInitialise();
 
   #if defined(SharedOMP)
   #pragma omp parallel
