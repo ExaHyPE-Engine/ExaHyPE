@@ -47,13 +47,15 @@ Here, ```page_ref``` will serve as a global unique identifier throughout doxygen
 Additionally, files must start with ```/**``` and end with ```* /```, so that Doxygen is alerted to process them.
 So new pages, that are not code documentation, should look something like this:
 
+@todo figure out a way to display the "end of file" characters correctly. If I type them in the comment box it abruptly ends the file here!
+
 ```
-/** 
-\page page_ref Page Title
+ / ** 
+ \page page_ref Page Title
 
-Content of my page, written in markdown language
+ Content of my page, written in markdown language
 
-* /
+ * /
 
 ```
 
@@ -65,23 +67,21 @@ for our large-scale extensions such as ExaHyPE or Swift. Please consult with
 the team if you want to add a new top-level entry. 
 
 If the team agrees that there should be a new top-level entry, you have to add
-entries a new page somewhere within ```documentation/Doxygen```. Please note that any page marked with ``` page``` will appear on the top level menu. New documentation should therefore be structured as follows:
+entries a new page somewhere within ```documentation/Doxygen```. Please note that any page marked with ``` \page``` will appear on the top level menu. New documentation should therefore be structured as follows:
 
 New Main Page
 -------------
 
 <ul>
-<li> Begin the new main page as above (with a ``` page```, ```page_ref``` and title). </li>
+<li> Begin the new main page as above (with a ``` \page```, ```page_ref``` and title). </li>
 <li> Enumerate all the subpages to be nested within this page below. This prevents these subpages from appearing at the top level menu. </li>
-<li></li>
-<li></li>
 
 </ul>
 
 New Sub Page
 ------------
 
-Ensure that you follow normal rules for constructing a page (begin with ``` page```, include a reference and a title).
+Ensure that you follow normal rules for constructing a page (begin with ```\page```, include a reference and a title).
 
 Example:
 --------
@@ -100,7 +100,7 @@ Please see below a list of pages that are relevant here:
 In the new subpage, where you go into more detail about the topics introduced in the new top-level page:
 
 ```
- page subpage_ref Subpage Title
+ \page subpage_ref Subpage Title
 
 Content coninues here...
 
