@@ -9,7 +9,7 @@ Peano and its toolboxes and extensions follow some very simplistic documentation
 - Code documentation should be in the header files for C/C++ code;
 - Further documentation files have the extension .dox.
 
-To generate the documentation, type in
+To generate the documentation, ```cd``` to your Peano directory, and type:
 
       doxygen documentation/Doxyfile
       
@@ -31,6 +31,32 @@ descriptions), the corresponding dox files should go into
 
       documentation/Doxygen/SubDir
 
+### Generic Pages
+
+Doxygen supports the addition of pages anywhere in the directories that it searches. These can be written in 
+markdown or html. 
+
+Any page to be included should start with
+      
+```
+\page page_ref Page Title 
+```
+
+Here, ```page_ref``` will serve as a global unique identifier throughout doxygen. 
+
+Additionally, files must start with ```/**``` and end with ```* /```, so that Doxygen is alerted to process them.
+So new pages, that are not code documentation, should look something like this:
+
+```
+/** 
+\page page_ref Page Title
+
+Content of my page, written in markdown language
+
+* /
+
+```
+
 
 ### Add new rubric to top-level menu
 
@@ -39,9 +65,49 @@ for our large-scale extensions such as ExaHyPE or Swift. Please consult with
 the team if you want to add a new top-level entry. 
 
 If the team agrees that there should be a new top-level entry, you have to add
-entries to DoxygenLayout.xml which are similar to 
+entries a new page somewhere within ```documentation/Doxygen```. Please note that any page marked with ``` page``` will appear on the top level menu. New documentation should therefore be structured as follows:
 
-      <tab type="user" visible="yes" title="Swift"      url="\ref swift_home"     intro=""/> 
+New Main Page
+-------------
+
+<ul>
+<li> Begin the new main page as above (with a ``` page```, ```page_ref``` and title). </li>
+<li> Enumerate all the subpages to be nested within this page below. This prevents these subpages from appearing at the top level menu. </li>
+<li></li>
+<li></li>
+
+</ul>
+
+New Sub Page
+------------
+
+Ensure that you follow normal rules for constructing a page (begin with ``` page```, include a reference and a title).
+
+Example:
+--------
+
+In the new, top-level page:
+
+```
+ \page page_ref Page Title
+
+Please see below a list of pages that are relevant here:
+
+ \li \subpage subpage_ref
+
+```
+
+In the new subpage, where you go into more detail about the topics introduced in the new top-level page:
+
+```
+ page subpage_ref Subpage Title
+
+Content coninues here...
+
+```
+
+
+
 
 
 
