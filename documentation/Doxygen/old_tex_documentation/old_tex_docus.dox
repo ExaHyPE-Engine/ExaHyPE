@@ -13,6 +13,7 @@ the possibility for one), I have added "_tex"
 @todo re-introduce proper code blocks
 @todo fix sixing. at time of writing, the images in the exahype_tex file are way off.
 @todo work out whether folder 10_installation is still necessary. other folders contain images that are referenced, but the installation dox is now one level higher.
+@todo re-introduce the refernces to Peano. pandocs deleted any reference to "\Peano\"
 
 \tableofcontents
 
