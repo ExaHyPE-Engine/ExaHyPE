@@ -100,15 +100,6 @@ void swift2::kernels::computeDensity(
 
           assertion3( not std::isnan( localParticle->getOmega() ), localParticle->toString(), localParticle->getOmega(), dW_a_dh );
 
-//          /* Debugging */
-//          if( localParticle->getX()(0) == 0.5){
-//            printf("DEBUGGING computeDensity --- \n");
-//            std::cout << "local particle: "<< localParticle->toString() << std::endl;
-//            std::cout << "active particle: "<< activeParticle->toString() << std::endl;
-//            printf("r=%E, cutoffR=%E, kernel_gamma=%E, \n", r, cutoffR, kernel_gamma );
-//            printf("size of active set=%d \n", localParticles.size() );
-//          }
-
         } /* End if r<cutoffR */
       } /* End for active particles */
 
@@ -179,12 +170,6 @@ void swift2::kernels::computeHydroForce(
         /* SWIFT "f" */
         const double f_ab = 1.0 - localParticle ->getF() / m_b;
         const double f_ba = 1.0 - activeParticle->getF() / m_a;
-
-/*
-        // PHANTOM CODE version
-        const double f_ab = 1.0 / localParticle ->getOmega();
-        const double f_ba = 1.0 / activeParticle->getOmega();
-*/
 
         /* Compute gradient terms */
         const double P_over_rho2_a = P_a / (rho_a * rho_a) * f_ab;

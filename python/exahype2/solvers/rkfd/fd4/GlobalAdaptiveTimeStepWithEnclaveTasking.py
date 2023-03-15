@@ -5,7 +5,7 @@ from exahype2.solvers.rkfd.PDETerms    import PDETerms
 
 import jinja2
 
-from .kernels import create_compute_Riemann_kernel_for_FD4
+from .kernels import create_compute_kernel_for_FD4
 
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_declarations
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_definitions
@@ -13,7 +13,7 @@ from exahype2.solvers.rkfd.kernels import create_solver_declarations
 from exahype2.solvers.rkfd.kernels import create_solver_definitions
 #
 from exahype2.solvers.rkfd.kernels import SolverVariant
-from exahype2.solvers.rkfd.kernels import RiemannKernelVariant
+from exahype2.solvers.rkfd.kernels import KernelVariant
 
 from exahype2.solvers.rkfd.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
@@ -86,33 +86,41 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
 
     if not                  KOSigma==None:  self._KO_Sigma                                  = KOSigma
 
-    self._compute_kernel_call = create_compute_Riemann_kernel_for_FD4(
-      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
-      compute_max_eigenvalue_of_next_time_step=True,
-      solver_variant = SolverVariant.WithVirtualFunctions,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap,
-      KOSigma=self._KO_Sigma
+    self._compute_kernel_call = create_compute_kernel_for_FD4(
+      self._flux_implementation, 
+      self._ncp_implementation, 
+      self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step = True,
+      solver_variant                           = SolverVariant.WithVirtualFunctions,
+      kernel_variant                           = KernelVariant.PatchWiseAoSHeap,
+      KOSigma                                  = self._KO_Sigma
     )
-    self._fused_compute_kernel_call_cpu = create_compute_Riemann_kernel_for_FD4(
-      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
-      compute_max_eigenvalue_of_next_time_step=True,
-      solver_variant = SolverVariant.Stateless,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap,
-      KOSigma=self._KO_Sigma
+    self._fused_compute_kernel_call_cpu = create_compute_kernel_for_FD4(
+      self._flux_implementation, 
+      self._ncp_implementation, 
+      self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step = True,
+      solver_variant                           = SolverVariant.Stateless,
+      kernel_variant                           = KernelVariant.PatchWiseAoSHeap,
+      #solver_variant                           = SolverVariant.Multicore,
+      #kernel_variant                           = KernelVariant.BatchedAoSHeap,
+      KOSigma                                  = self._KO_Sigma
     )
-    self._fused_compute_kernel_call_cpu = create_compute_Riemann_kernel_for_FD4(
-      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
-      compute_max_eigenvalue_of_next_time_step=True,
-      solver_variant = SolverVariant.Accelerator,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap,
-      KOSigma=self._KO_Sigma
+    self._fused_compute_kernel_call_gpu = create_compute_kernel_for_FD4(
+      self._flux_implementation, 
+      self._ncp_implementation, 
+      self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step = True,
+      solver_variant                           = SolverVariant.AcceleratorWithExplicitCopy,
+      kernel_variant                           = KernelVariant.PatchWiseAoSHeap,
+      KOSigma                                  = self._KO_Sigma
     )
 
     solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)
 
-    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
     self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()
-    self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
     self._abstract_solver_user_definitions  += solver_code_snippets.create_abstract_solver_user_definitions()
 
     self._compute_time_step_size              = solver_code_snippets.create_compute_time_step_size()

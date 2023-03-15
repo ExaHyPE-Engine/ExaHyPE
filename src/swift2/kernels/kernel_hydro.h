@@ -26,10 +26,10 @@
 #define kernel_constant ((float)(3125. / 768.))
 #elif HYDRO_DIMENSION==2
 #define kernel_gamma ((float)(1.977173))
-#define kernel_constant ((float)(46875. * M_PI / 2398.))
+#define kernel_constant ((float)(46875. * M_1_PI / 2398.))
 #elif HYDRO_DIMENSION==3
 #define kernel_gamma ((float)(2.018932))
-#define kernel_constant ((float)(15625. * M_PI / 512.))
+#define kernel_constant ((float)(15625. * M_1_PI / 512.))
 #endif
 
 static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)]

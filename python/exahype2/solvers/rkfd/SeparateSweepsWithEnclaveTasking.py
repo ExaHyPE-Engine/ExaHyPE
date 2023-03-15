@@ -91,7 +91,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           oldQWithHalo
         );
         fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
-        fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
+        // Time stamp is not updated, as this will be done by final linear combination
+        // fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
 
         tarch::multicore::spawnTask( newEnclaveTask );
       }
@@ -444,11 +445,15 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guards = self._primary_sweeps_of_Runge_Kutta_step_on_face
 
 
-  def add_implementation_files_to_project(self,namespace,output):
+  def add_implementation_files_to_project(self,namespace,output,dimensions):
     """
+    
       Add the enclave task for the GPU
+      
+      See superclass for further information. 
+      
     """
-    super(SeparateSweepsWithEnclaveTasking, self).add_implementation_files_to_project(namespace, output)
+    super(SeparateSweepsWithEnclaveTasking, self).add_implementation_files_to_project(namespace, output, dimensions)
     templatefile_prefix = os.path.join(os.path.dirname(os.path.realpath(__file__)), "SeparateSweeps.EnclaveTask.template")
 
     implementationDictionary = {}

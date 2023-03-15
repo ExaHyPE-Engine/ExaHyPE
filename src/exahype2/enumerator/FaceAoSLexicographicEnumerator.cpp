@@ -18,7 +18,7 @@ std::string exahype2::enumerator::FaceAoSLexicographicEnumerator::toString() con
 
 
 int exahype2::enumerator::FaceAoSLexicographicEnumerator::size() const {
-  if (Dimensions==2) {
+  if constexpr (Dimensions==2) {
     return (_numberOfDoFsPerAxisInPatch)
         * (2*_haloSize)
         * (_unknowns+_numberOfAuxiliaryVariables);

@@ -28,6 +28,24 @@
 
 namespace {
   int tagCounter = 0;
+
+  /**
+   * The MPI standard specifies that the tag upper bound must be at least 32767,
+   * but code code better checks if this is supported by the MPI implementation.
+   * Also, user codes might be nasty and require more tags.
+   */
+  int maxTag = -1;
+
+  void validateMaxTag() {
+    if (
+      maxTag>0
+      and
+      tagCounter>=maxTag
+    ) {
+      tarch::logging::Log _log("tarch::mpi");
+      logError( "validateTag()", "code has requested " << tagCounter << " tags, but the maximum tag supported by MPI implementation is " << maxTag );
+    }
+  }
 }
 
 
@@ -64,6 +82,9 @@ int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName
               << " the free tag " << result << " (" << numberOfTags << " consecutive tags reserved)" << std::endl;
   }
   #endif
+
+  validateMaxTag();
+
   return result;
 }
 
@@ -91,7 +112,7 @@ void tarch::mpi::Rank::plotMessageQueues() {
   MPI_Status   status;
   MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, _communicator, &flag, &status);
   if (flag==0) {
-    _log.error("plotMessageQueues()", "there are no messages from any sender in MPI queue");
+    logError("plotMessageQueues()", "there are no messages from any sender in MPI queue");
   }
   else {
     logError(
@@ -126,7 +147,7 @@ void tarch::mpi::Rank::triggerDeadlockTimeOut(
         << " seconds for " << numberOfExpectedMessages
         << " message(s) from node " << communicationPartnerRank << " with tag " << tag
         << ". Timeout. " << comment;
-    _log.error( "triggerDeadlockTimeOut(...)", out.str() );
+    logError( "triggerDeadlockTimeOut(...)", out.str() );
 
     plotMessageQueues();
 
@@ -439,7 +460,7 @@ void tarch::mpi::Rank::logStatus() const {
   #endif
   statusMessage << ", #processors=" << _numberOfProcessors;
 
-  _log.info( "logStatus()", statusMessage.str() );
+  logInfo( "logStatus()", statusMessage.str() );
 }
 
 
@@ -460,19 +481,30 @@ bool tarch::mpi::Rank::init(int* argc, char*** argv) {
   #endif
 
   if (result!=MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)";
+    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;
     return false;
   }
 
   result = MPI_Comm_size( MPI_COMM_WORLD, &_numberOfProcessors );
   if (result!=MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)";
+    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;
     return false;
   }
 
   result = MPI_Comm_rank( MPI_COMM_WORLD, &_rank );
   if (result!=MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)";
+    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;
+    return false;
+  }
+
+  int   answerFlag;
+  void* rawMaxTag;
+  MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &rawMaxTag, &answerFlag);
+  if (answerFlag) {
+    maxTag = *(int*)rawMaxTag;
+  }
+  else {
+    std::cerr << "init(int*,char***)\t was not able to query what the maximum tag value is" << std::endl;
     return false;
   }
 

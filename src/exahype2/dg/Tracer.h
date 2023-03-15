@@ -39,13 +39,13 @@ namespace exahype2 {
      * entries and the unknowns plus the auxiliary variables have the
      * same total count.
      */
-    template <typename Particle>
+    template <typename Particle, typename QStoreType>
     void projectAllValuesOntoParticle(
       const peano4::datamanagement::CellMarker&    marker,
       int                                          order,
       const double* __restrict__                   QuadratureNodes1d,
       int                                          unknownsPerDoF,
-      const double* __restrict__                   Q,
+      const QStoreType* __restrict__               Q,
       Particle&                                    particle
     );
   }

@@ -2,7 +2,6 @@
 #include "exahype2/fd/FD_Helper.cpph"
 #include "peano4/utils/Loop.h"
 
-
 void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
   ::exahype2::CellData&   patchData,
   int                     numberOfGridCellsPerPatchPerAxis,
@@ -38,8 +37,6 @@ void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
     patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
   }
 }
-
-
 
 template <>
 double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(

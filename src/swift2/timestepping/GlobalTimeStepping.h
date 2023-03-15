@@ -17,9 +17,24 @@ namespace swift2 {
      * very first time step, where we don't know the maximum velocity yet.
      *
      * The operation overwrites dt.
+     *
+     * @param cflFactor            The constant withint the CFL condition.
+     * @param initialTimeStepSize  This value is used if we don't know the mesh
+     *   size or maximum velocity yet.
+     * @param maxRelativeGrowth    This is the relative max growth of the time
+     *   step size per time step. You can set it to max of double if you want
+     *   the time step size to jump immediately if it can.
      */
     template <typename Particle>
-    void computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity( double cflFactor, double initialTimeStepSize );
+    void computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity(
+      double cflFactor,
+      double initialTimeStepSize,
+      double maxRelativeGrowth = 0.1
+    );
+
+
+//    void computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity( double cflFactor, double initialTimeStepSize );
+
 
     /**
      * Determines the maximum global time step size dt allowed by the CLF condition in

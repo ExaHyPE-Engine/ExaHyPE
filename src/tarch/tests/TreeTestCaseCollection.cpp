@@ -115,7 +115,7 @@ void tarch::tests::TreeTestCaseCollection::run( const std::string& prefix ) {
   }
 
   if ( _writeToLog and _testCaseName!="" ) {
-    _log.info("run()",logInformation );
+    logInfo("run()",logInformation );
   }
 }
 

@@ -14,25 +14,17 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
-
 
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
 
-
-  
 namespace tarch{
 namespace mpi{
-
   struct DoubleMessage;
 }
 }
-
-
 
 struct tarch::mpi::DoubleMessage {
   public:
@@ -51,9 +43,10 @@ struct tarch::mpi::DoubleMessage {
     static void sendAndPollDanglingMessages(const tarch::mpi::DoubleMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages(tarch::mpi::DoubleMessage& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
-    
 
     #ifdef Parallel
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -73,8 +66,8 @@ struct tarch::mpi::DoubleMessage {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    
-    
+    PRAGMA_POP
+
     /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
@@ -113,14 +106,10 @@ struct tarch::mpi::DoubleMessage {
     static void receive(   tarch::mpi::DoubleMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
-
     std::string toString() const;
-  
+
   private:
-      double   _value;
-
-
-
+    double   _value;
 
     #ifdef Parallel
     private:
@@ -136,9 +125,4 @@ struct tarch::mpi::DoubleMessage {
       static MPI_Datatype  Datatype;
       #endif
     #endif
-
-
-
 };
-
-  

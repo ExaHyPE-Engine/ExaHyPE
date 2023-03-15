@@ -111,12 +111,11 @@ void exahype2::RefinementControl::addCommand(
     case ::exahype2::RefinementCommand::Refine:
       {
         tarch::la::Vector<Dimensions,double> expandedWidth   = (1.0+_Tolerance) * h;
-        tarch::la::Vector<Dimensions,double> shift           = 0.5 * (expandedWidth - h);
         tarch::la::Vector<Dimensions,double> refinedMeshSize = (1.0+_Tolerance) * 1.0/3.0 * h;
 
         peano4::grid::GridControlEvent newEvent(
           peano4::grid::GridControlEvent::RefinementControl::Refine,
-          x-0.5 * h - shift,
+          x-0.5*expandedWidth,
           expandedWidth,
           refinedMeshSize
         );

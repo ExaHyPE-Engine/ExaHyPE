@@ -1,0 +1,179 @@
+{# /**
+ * This file is part of the ExaHyPE project.
+ * Copyright (c) 2016  http://exahype.eu
+ * All rights reserved.
+ *
+ * The project has received funding from the European Union's Horizon
+ * 2020 research and innovation programme under grant agreement
+ * No 671698. For copyrights and licensing, please consult the webpage.
+ *
+ * Released under the BSD 3 Open Source License.
+ * For the full license text, see LICENSE.txt
+ **/ #}
+
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+
+#include "{{pathToOptKernel}}/Kernels.h"
+#include "{{pathToOptKernel}}/DGMatrices.h"
+#include "{{pathToOptKernel}}/Quadrature.h"
+
+#include "{{solverHeader}}"
+
+
+template <typename pStoreType, typename cCompType>
+void {{codeNamespace}}::riemannSolver(
+  {{solverName}}& solver,
+  cCompType* __restrict__ FL, 
+  cCompType* __restrict__ FR,
+  const pStoreType* const __restrict__ QL, 
+  const pStoreType* const __restrict__ QR,
+  const double t,
+  const double dt,
+  const tarch::la::Vector<Dimensions,double>& faceCentre,
+  const tarch::la::Vector<Dimensions,double>& dx,
+  const int direction
+) {
+  /*
+   * For the linear kernels, we need the material parameters in the
+   * extrapolated predictor.
+   * We compute the averages of the material parameters but
+   * do not use them in the max eigenvalue calculation.
+   */
+
+#ifdef __INTEL_COMPILER
+  __assume_aligned(weights2, {{alignmentSize}});
+  __assume_aligned(FL, {{alignmentSize}});
+  __assume_aligned(FR, {{alignmentSize}});
+  __assume_aligned(QL, {{alignmentSize}});
+  __assume_aligned(QR, {{alignmentSize}});
+#endif
+  
+  std::memset(FL, 0, {{nVarPad*nDof*nDof3D}}*sizeof(cCompType));
+  std::memset(FR, 0, {{nVarPad*nDof*nDof3D}}*sizeof(cCompType));
+  
+  // Compute the average variables and parameters from the left and the right
+  cCompType QavL[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
+  cCompType QavR[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
+
+  for (int ij = 0; ij < {{nDof*nDof3D}}; ij++) {
+    #pragma omp simd aligned(QavL,QavR,QL,QR:{{alignmentSize}})
+    for (int n = 0; n < {{nDataPad}}; n++) {
+      QavL[n] += weights2[ij] * QL[ij*{{nDataPad}}+n];
+      QavR[n] += weights2[ij] * QR[ij*{{nDataPad}}+n];
+    }
+  }
+
+  //get abs max eigenvalue 
+#ifdef USE_IPO
+  #pragma forceinline recursive
+#endif
+  cCompType smaxL = solver.{{solverName}}::maxEigenvalue(&QavL[0], faceCentre, dx, t, dt, direction);
+#ifdef USE_IPO
+  #pragma forceinline recursive
+#endif
+  cCompType smaxR = solver.{{solverName}}::maxEigenvalue(&QavR[0], faceCentre, dx, t, dt, direction);
+  cCompType smax = std::max(smaxL, smaxR);
+
+  cCompType Qavg[{{nDataPad}}] __attribute__((aligned({{alignmentSize}})));
+  #pragma omp simd aligned(Qavg,QavR,QavL:{{alignmentSize}})
+  for (int n = 0; n < {{nDataPad}}; n++) {
+    Qavg[n] = 0.5 *  (QavR[n] + QavL[n]);
+  }
+  
+  //used by NCP or Flux (at least one is used)
+  cCompType Qdiff[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))); 
+{% if nPar > 0 %}
+  //We copy the averaged material parameters to Qdiff as they are used in the flux term
+  //These must not be overritten !
+  std::copy_n(Qavg+{{nVar}},{{nDataPad-nVar}}, Qdiff+{{nVar}});
+{% endif %}
+  
+{% if useNCP %}
+  cCompType ncp[{{nVarPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
+{% endif %}
+{% if useFlux %}
+  cCompType flux_values[{{nVarPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
+{% endif %}
+  
+  for (int ij = 0; ij < {{nDof*nDof3D}}; ij++) {
+    #pragma omp simd aligned(Qdiff,QR,QL:{{alignmentSize}})
+    for (int n = 0 ; n < {{nVar}} ; n++){ 
+      Qdiff[n] = 0.5 * (QR[ij*{{nDataPad}}+n] - QL[ij*{{nDataPad}}+n]);
+    }
+
+{% if useNCP %}
+    //NCP
+#ifdef USE_IPO
+    #pragma forceinline recursive
+#endif
+    solver.{{solverName}}::nonconservativeProduct(
+      Qavg,
+      Qdiff,
+      faceCentre,
+      dx,
+      t,
+      dt,
+      direction,
+      ncp
+    );
+{% if useMaterialParam %}
+#ifdef USE_IPO
+    #pragma forceinline recursive
+#endif
+    solver.{{solverName}}::multiplyMaterialParameterMatrix(Qavg, ncp);
+{% endif %}{# useMaterialParam #}
+    #pragma omp simd aligned(FL,ncp:{{alignmentSize}})
+    for (int n = 0; n < {{nVarPad}}; n++) {
+      FL[ij*{{nVarPad}}+n] += ncp[n]; 
+    }
+{% endif %}{# useNCP #}
+    
+{% if useFlux %}
+    //Flux
+#ifdef USE_IPO
+    #pragma forceinline recursive
+#endif  
+    solver.{{solverName}}::flux(
+      Qdiff,
+      faceCentre,
+      dx,
+      t,
+      dt,
+      direction,
+      flux_values
+    );
+{% if useMaterialParam %}
+#ifdef USE_IPO
+    #pragma forceinline recursive
+#endif
+    solver.{{solverName}}::multiplyMaterialParameterMatrix(Qavg, flux);
+{% endif %}{# useMaterialParam #}
+    #pragma omp simd aligned(FL,flux_values:{{alignmentSize}})
+    for (int n = 0; n < {{nVar}}; n++) {
+      FL[ij*{{nVarPad}}+n] += flux_values[n];
+    }
+{% endif %}{# useFlux #}
+
+    #pragma omp simd aligned(FR,FL,Qdiff:{{alignmentSize}})
+    for (int n = 0; n < {{nVar}}; n++) {
+      FR[ij*{{nVarPad}}+n] = FL[ij*{{nVarPad}}+n] + smax*Qdiff[n];
+      FL[ij*{{nVarPad}}+n] -= smax*Qdiff[n];
+    }
+  } //ij
+  
+}
+
+
+template void {{codeNamespace}}::riemannSolver(
+  {{solverName}}& solver,
+  {{correctorComputePrecision}}* __restrict__ FL, 
+  {{correctorComputePrecision}}* __restrict__ FR,
+  const {{predictorStoragePrecision}}* const __restrict__ QL, 
+  const {{predictorStoragePrecision}}* const __restrict__ QR,
+  const double t,
+  const double dt,
+  const tarch::la::Vector<Dimensions,double>& faceCentre,
+  const tarch::la::Vector<Dimensions,double>& dx,
+  const int direction);

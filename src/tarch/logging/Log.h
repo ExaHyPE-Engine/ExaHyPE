@@ -7,7 +7,7 @@
 #endif
 #include <iostream>
 #include <sstream>
-
+#include <functional>
 
 #ifdef __APPLE__
 #include <mach/mach_time.h>
@@ -19,7 +19,6 @@
 #include <chrono>
 
 #include "config.h"
-
 
 namespace tarch {
   namespace logging {
@@ -36,271 +35,333 @@ namespace tarch {
 /**
  * @see logInfo() macro
  */
-#define logDebug(methodName, messageStream) \
+#define logDebug(methodName, logMacroMessageStream) \
    { \
-      std::ostringstream conv; \
-      conv << messageStream; \
-      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-      _log.debug (methodName, conv.str()); \
+      auto logMacroMessage = [&](void) -> std::string { \
+        std::ostringstream conv; \
+        conv << logMacroMessageStream; \
+        conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+        return conv.str(); \
+      }; \
+      _log.debug (methodName, logMacroMessage); \
    }
 #else
-#define logDebug(methodName, messageStream)
+#define logDebug(methodName, logMacroMessageStream)
 #endif
-
 
 #if PeanoDebug>=1
 #define logTraceIn(methodName) \
   { \
-    std::ostringstream conv; \
-    conv << "in (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.traceIn(methodName, conv.str()); \
-    _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+      std::ostringstream conv; \
+      conv << "in (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+      return conv.str(); \
+    }; \
+    _log.traceIn(methodName, logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
   }
 
 #define logTraceInWith1Argument(methodName,argument0) \
   { \
-    std::ostringstream conv; \
-    conv << "in:" << #argument0 << ":" << argument0; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.traceIn (methodName, conv.str()); \
-    _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+      std::ostringstream conv; \
+      conv << "in:" << #argument0 << ":" << argument0; \
+      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+      return conv.str(); \
+    }; \
+    _log.traceIn (methodName, logMacroMessage); \
+    _log.indent(true, _log.getTraceInformation(methodName), logMacroMessage); \
   }
 
 #define logTraceInWith2Arguments(methodName,argument0,argument1) \
   { \
-    std::ostringstream conv; \
-    conv << "in:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.traceIn (methodName, conv.str()); \
-    _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "in:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.traceIn (methodName, logMacroMessage); \
+    _log.indent(true, _log.getTraceInformation(methodName), logMacroMessage); \
   }
 
 #define logTraceInWith3Arguments(methodName,argument0,argument1,argument2) \
   { \
-    std::ostringstream conv; \
-    conv << "in:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.traceIn (methodName, conv.str()); \
-    _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "in:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.traceIn (methodName, logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
   }
 
 #define logTraceInWith4Arguments(methodName,argument0,argument1,argument2,argument3) \
   { \
-    std::ostringstream conv; \
-    conv << "in:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << "," << #argument3 << ":" << argument3; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.traceIn (methodName, conv.str()); \
-    _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "in:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << "," << #argument3 << ":" << argument3; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.traceIn (methodName, logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
   }
 
 #define logTraceInWith5Arguments(methodName,argument0,argument1,argument2,argument3,argument4) \
   { \
-    std::ostringstream conv; \
-    conv << "in:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << "," << #argument3 << ":" << argument3; \
-    conv << "," << #argument4 << ":" << argument4; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.traceIn (methodName, conv.str()); \
-    _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "in:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << "," << #argument3 << ":" << argument3; \
+     conv << "," << #argument4 << ":" << argument4; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.traceIn (methodName, logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
   }
 
 #define logTraceInWith6Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5) \
   { \
-    std::ostringstream conv; \
-    conv << "in:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << "," << #argument3 << ":" << argument3; \
-    conv << "," << #argument4 << ":" << argument4; \
-    conv << "," << #argument5 << ":" << argument5; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.traceIn (methodName, conv.str()); \
-    _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "in:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << "," << #argument3 << ":" << argument3; \
+     conv << "," << #argument4 << ":" << argument4; \
+     conv << "," << #argument5 << ":" << argument5; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.traceIn (methodName, logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
   }
 
 #define logTraceInWith7Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5,argument6) \
   { \
-    std::ostringstream conv; \
-    conv << "in:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << "," << #argument3 << ":" << argument3; \
-    conv << "," << #argument4 << ":" << argument4; \
-    conv << "," << #argument5 << ":" << argument5; \
-    conv << "," << #argument6 << ":" << argument6; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.traceIn (methodName, conv.str()); \
-    _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "in:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << "," << #argument3 << ":" << argument3; \
+     conv << "," << #argument4 << ":" << argument4; \
+     conv << "," << #argument5 << ":" << argument5; \
+     conv << "," << #argument6 << ":" << argument6; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.traceIn (methodName, logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
   }
 
 #define logTraceInWith8Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5,argument6,argument7) \
   { \
-    std::ostringstream conv; \
-    conv << "in:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << "," << #argument3 << ":" << argument3; \
-    conv << "," << #argument4 << ":" << argument4; \
-    conv << "," << #argument5 << ":" << argument5; \
-    conv << "," << #argument6 << ":" << argument6; \
-    conv << "," << #argument7 << ":" << argument7; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.traceIn (methodName, conv.str()); \
-    _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "in:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << "," << #argument3 << ":" << argument3; \
+     conv << "," << #argument4 << ":" << argument4; \
+     conv << "," << #argument5 << ":" << argument5; \
+     conv << "," << #argument6 << ":" << argument6; \
+     conv << "," << #argument7 << ":" << argument7; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.traceIn (methodName, logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
   }
 
 #define logTraceInWith9Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5,argument6,argument7,argument8) \
   { \
-    std::ostringstream conv; \
-    conv << "in:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << "," << #argument3 << ":" << argument3; \
-    conv << "," << #argument4 << ":" << argument4; \
-    conv << "," << #argument5 << ":" << argument5; \
-    conv << "," << #argument6 << ":" << argument6; \
-    conv << "," << #argument7 << ":" << argument7; \
-    conv << "," << #argument8 << ":" << argument8; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.traceIn (methodName, conv.str()); \
-    _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "in:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << "," << #argument3 << ":" << argument3; \
+     conv << "," << #argument4 << ":" << argument4; \
+     conv << "," << #argument5 << ":" << argument5; \
+     conv << "," << #argument6 << ":" << argument6; \
+     conv << "," << #argument7 << ":" << argument7; \
+     conv << "," << #argument8 << ":" << argument8; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.traceIn (methodName, logMacroMessage); \
+    _log.indent(true,_log.getTraceInformation(methodName), logMacroMessage); \
   }
 
 #define logTraceOut(methodName) \
   { \
-    std::ostringstream conv; \
-    conv << "out (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
-    _log.traceOut (methodName, conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "out (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.indent(false,_log.getTraceInformation(methodName),logMacroMessage); \
+    _log.traceOut (methodName, logMacroMessage); \
   }
 
 #define logTraceOutWith1Argument(methodName,argument0) \
   { \
-    std::ostringstream conv; \
-    conv << "out:" << #argument0 << ":" << argument0; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
-    _log.traceOut (methodName, conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+      std::ostringstream conv; \
+      conv << "out:" << #argument0 << ":" << argument0; \
+      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+      return conv.str(); \
+    }; \
+    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.traceOut (methodName, logMacroMessage); \
   }
 
 #define logTraceOutWith2Arguments(methodName,argument0,argument1) \
   { \
-    std::ostringstream conv; \
-    conv << "out:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
-    _log.traceOut (methodName, conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "out:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.traceOut (methodName, logMacroMessage); \
   }
 
 #define logTraceOutWith3Arguments(methodName,argument0,argument1,argument2) \
   { \
-    std::ostringstream conv; \
-    conv << "out:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
-    _log.traceOut (methodName, conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "out:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.traceOut (methodName, logMacroMessage); \
   }
 
 #define logTraceOutWith4Arguments(methodName,argument0,argument1,argument2,argument3) \
   { \
-    std::ostringstream conv; \
-    conv << "out:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << "," << #argument3 << ":" << argument3; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
-    _log.traceOut (methodName, conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "out:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << "," << #argument3 << ":" << argument3; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.traceOut (methodName, logMacroMessage); \
   }
 
 #define logTraceOutWith5Arguments(methodName,argument0,argument1,argument2,argument3,argument4) \
   { \
-    std::ostringstream conv; \
-    conv << "out:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << "," << #argument3 << ":" << argument3; \
-    conv << "," << #argument4 << ":" << argument4; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
-    _log.traceOut (methodName, conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "out:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << "," << #argument3 << ":" << argument3; \
+     conv << "," << #argument4 << ":" << argument4; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.traceOut (methodName, logMacroMessage); \
   }
 
 #define logTraceOutWith6Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5) \
   { \
-    std::ostringstream conv; \
-    conv << "out:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << "," << #argument3 << ":" << argument3; \
-    conv << "," << #argument4 << ":" << argument4; \
-    conv << "," << #argument5 << ":" << argument5; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
-    _log.traceOut (methodName, conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "out:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << "," << #argument3 << ":" << argument3; \
+     conv << "," << #argument4 << ":" << argument4; \
+     conv << "," << #argument5 << ":" << argument5; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.traceOut (methodName, logMacroMessage); \
   }
 
 #define logTraceOutWith7Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5,argument6) \
   { \
-    std::ostringstream conv; \
-    conv << "out:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << "," << #argument3 << ":" << argument3; \
-    conv << "," << #argument4 << ":" << argument4; \
-    conv << "," << #argument5 << ":" << argument5; \
-    conv << "," << #argument6 << ":" << argument6; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
-    _log.traceOut (methodName, conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "out:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << "," << #argument3 << ":" << argument3; \
+     conv << "," << #argument4 << ":" << argument4; \
+     conv << "," << #argument5 << ":" << argument5; \
+     conv << "," << #argument6 << ":" << argument6; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.indent(false,_log.getTraceInformation(methodName), logMacroMessage); \
+    _log.traceOut (methodName, logMacroMessage); \
   }
 
 
 #define logTraceOutWith8Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5,argument6,argument7) \
   { \
-    std::ostringstream conv; \
-    conv << "out:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1 << ":" << argument1; \
-    conv << "," << #argument2 << ":" << argument2; \
-    conv << "," << #argument3 << ":" << argument3; \
-    conv << "," << #argument4 << ":" << argument4; \
-    conv << "," << #argument5 << ":" << argument5; \
-    conv << "," << #argument6 << ":" << argument6; \
-    conv << "," << #argument7 << ":" << argument7; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
-    _log.traceOut (methodName, conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "out:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1 << ":" << argument1; \
+     conv << "," << #argument2 << ":" << argument2; \
+     conv << "," << #argument3 << ":" << argument3; \
+     conv << "," << #argument4 << ":" << argument4; \
+     conv << "," << #argument5 << ":" << argument5; \
+     conv << "," << #argument6 << ":" << argument6; \
+     conv << "," << #argument7 << ":" << argument7; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+    }; \
+    _log.indent(false,_log.getTraceInformation(methodName),logMacroMessage); \
+    _log.traceOut (methodName, logMacroMessage); \
   }
 
 #define logTraceOutWith12Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5,argument6,argument7,argument8,argument9,argument10,argument11) \
   { \
-    std::ostringstream conv; \
-    conv << "out:" << #argument0 << ":" << argument0; \
-    conv << "," << #argument1  << ":" << argument1; \
-    conv << "," << #argument2  << ":" << argument2; \
-    conv << "," << #argument3  << ":" << argument3; \
-    conv << "," << #argument4  << ":" << argument4; \
-    conv << "," << #argument5  << ":" << argument5; \
-    conv << "," << #argument6  << ":" << argument6; \
-    conv << "," << #argument7  << ":" << argument7; \
-    conv << "," << #argument8  << ":" << argument8; \
-    conv << "," << #argument9  << ":" << argument9; \
-    conv << "," << #argument10 << ":" << argument10; \
-    conv << "," << #argument11 << ":" << argument11; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-    _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
-    _log.traceOut (methodName, conv.str()); \
+    auto logMacroMessage = [&](void) -> std::string { \
+     std::ostringstream conv; \
+     conv << "out:" << #argument0 << ":" << argument0; \
+     conv << "," << #argument1  << ":" << argument1; \
+     conv << "," << #argument2  << ":" << argument2; \
+     conv << "," << #argument3  << ":" << argument3; \
+     conv << "," << #argument4  << ":" << argument4; \
+     conv << "," << #argument5  << ":" << argument5; \
+     conv << "," << #argument6  << ":" << argument6; \
+     conv << "," << #argument7  << ":" << argument7; \
+     conv << "," << #argument8  << ":" << argument8; \
+     conv << "," << #argument9  << ":" << argument9; \
+     conv << "," << #argument10 << ":" << argument10; \
+     conv << "," << #argument11 << ":" << argument11; \
+     conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+     return conv.str(); \
+   }; \
+    _log.indent(false,_log.getTraceInformation(methodName),logMacroMessage); \
+    _log.traceOut (methodName, logMacroMessage); \
   }
 
 #else
@@ -326,7 +387,6 @@ namespace tarch {
 #define logTraceOutWith12Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5,argument6,argument7,argument8,argument9,argument10,argument11)
 #endif
 
-
 /**
  * @brief Wrapper macro around tarch::tarch::logging::Log to improve logging.
  *
@@ -347,19 +407,21 @@ namespace tarch {
  * operator works only for strings properly. If you use it with a string and
  * another data type, it might be that the string is assigned an invalid length.
  */
-#define logInfo(methodName, messageStream) \
+#define logInfo(methodName, logMacroMessageStream) \
    { \
+     auto logMacroMessage = [&](void) -> std::string { \
       std::ostringstream conv; \
-      conv << messageStream; \
-      _log.info (methodName, conv.str()); \
+      conv << logMacroMessageStream; \
+      return conv.str(); \
+    }; \
+    _log.info (methodName, logMacroMessage); \
    }
 
 #define logExceptionAndQuit(exception) \
   { \
-    std::cerr << std::string("caught exception (file:)") << __FILE__ << std::string(",line:") << __LINE__ << std::string("): ") << std::string(exception.what()); \
+    std::cerr << std::string("caught exception (file:)") << __FILE__ << std::string(", line:") << __LINE__ << std::string("): ") << std::string(exception.what()); \
     exit(-1); \
   }
-
 
 /**
  * @brief Wrapper macro around tarch::tarch::logging::Log to improve logging.
@@ -374,12 +436,15 @@ namespace tarch {
  * Usage:
  * logWarning( "myOperation()", "anyText" << myVar << ",anotherText" << myVar2 );
  */
-#define logWarning(methodName, messageStream) \
+#define logWarning(methodName, logMacroMessageStream) \
    { \
-      std::ostringstream conv; \
-      conv << messageStream; \
-      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-      _log.warning (methodName, conv.str()); \
+     auto logMacroMessage = [&](void) -> std::string { \
+       std::ostringstream conv; \
+       conv << logMacroMessageStream; \
+       conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+       return conv.str(); \
+     }; \
+     _log.warning(methodName, logMacroMessage); \
    }
 
 /**
@@ -395,15 +460,16 @@ namespace tarch {
  * Usage:
  * logInfo( "myOperation()", "anyText" << myVar << ",anotherText" << myVar2 );
  */
-#define logError(methodName, messageStream) \
+#define logError(methodName, logMacroMessageStream) \
    { \
-      std::ostringstream conv; \
-      conv << messageStream; \
-      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
-      _log.error (methodName, conv.str()); \
+     auto logMacroMessage = [&](void) -> std::string { \
+       std::ostringstream conv; \
+       conv << logMacroMessageStream; \
+       conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+       return conv.str(); \
+     }; \
+      _log.error (methodName, logMacroMessage); \
    }
-
-
 
 /**
  * Log Device
@@ -421,7 +487,7 @@ namespace tarch {
  *
  * There are five different log levels, the user may write any output:
  *
- * - error: Here only errors have to be written to. Error messages may never
+ * - error: Here only errors have to be written to. Error logMacroMessages may never
  *          be oppressed.
  * - warning:
  * - debug: Debug information that is switched off normally. Only available if
@@ -452,7 +518,6 @@ class tarch::logging::Log {
     typedef CommandLineLogger     UseLogService;
     #endif
 
-
     /**
      * Returns the time stamp in nanoseconds.
      */
@@ -476,7 +541,6 @@ class tarch::logging::Log {
      */
     static std::string getMachineInformation();
 
-
     /**
      * Constructor
      *
@@ -498,6 +562,20 @@ class tarch::logging::Log {
     static void exception( const std::bad_alloc& exception, const std::string& file, const int lineNumber );
 
     /**
+     * We could make the logMacroMessage passed into a log statement a string. However,
+     * many codes write rather complicated strings and therefore spend a lot of
+     * time to construct the logMacroMessage. This is fine in release mode, e.g., where
+     * the number of strings is small. It is problematic in trace mode or debug,
+     * where we have a lot of strings, and most of them won't be used, as we
+     * filter them out later anyway.
+     *
+     * Therefore, I switch to lazy evaluation: a logMacroMessage string is constructed
+     * if and only if the logMacroMessage will be written. The construction is realised
+     * through a (lambda) function modelled via Message.
+     */
+    typedef std::function< std::string(void) >  Message;
+
+    /**
      * Log Debug Information
      *
      * Remark: Please do not use this operation directly, but use the macros
@@ -513,13 +591,12 @@ class tarch::logging::Log {
      * overloading.
      *
      * @param methodName method name
-     * @param message    log message
+     * @param logMacroMessage    log logMacroMessage
      */
     #if PeanoDebug>=4
-    void debug(const std::string& methodName, const std::string& message);
+      void debug(const std::string& methodName, Message logMacroMessage);
     #else
-    void debug(const std::string& methodName, const std::string& message) const {
-    }
+      inline void debug([[maybe_unused]] const std::string& methodName, [[maybe_unused]] Message logMacroMessage) const {}
     #endif
 
     /**
@@ -535,10 +612,9 @@ class tarch::logging::Log {
      * overloading.
      *
      * @param methodName method name
-     * @param message    log message
+     * @param logMacroMessage    log logMacroMessage
      */
-    void info(const std::string& methodName, const std::string& message);
-
+    void info(const std::string& methodName, Message logMacroMessage);
 
     /**
      * Log a Warning
@@ -553,9 +629,9 @@ class tarch::logging::Log {
      * overloading.
      *
      * @param methodName method name
-     * @param message    log message
+     * @param logMacroMessage    log logMacroMessage
      */
-    void warning(const std::string& methodName, const std::string& message);
+    void warning(const std::string& methodName, Message logMacroMessage);
 
 
     /**
@@ -571,16 +647,16 @@ class tarch::logging::Log {
      * overloading.
      *
      * @param methodName method name
-     * @param message    log message
+     * @param logMacroMessage    log logMacroMessage
      */
-    void error(const std::string& methodName, const std::string& message);
+    void error(const std::string& methodName, Message logMacroMessage);
 
     #if PeanoDebug>=1
-    void traceIn(const std::string& methodName, const std::string& message);
-    void traceOut(const std::string& methodName, const std::string& message);
+    void traceIn(const std::string& methodName, Message logMacroMessage);
+    void traceOut(const std::string& methodName, Message logMacroMessage);
     #else
-    void traceIn(const std::string& methodName, const std::string& message);
-    void traceOut(const std::string& methodName, const std::string& message);
+    void traceIn(const std::string& methodName, Message logMacroMessage);
+    void traceOut(const std::string& methodName, Message logMacroMessage);
     #endif
 
     /**
@@ -589,7 +665,7 @@ class tarch::logging::Log {
      * Depending on indent the operation increments or decrements the indent.
      * The call is forwarded to the logging device.
      */
-    void indent( bool indent, const std::string& trace, const std::string& message ) const;
+    void indent( bool indent, const std::string& trace, Message logMacroMessage ) const;
 
     std::string getTraceInformation( const std::string& methodName ) const;
 

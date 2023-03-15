@@ -1,3 +1,4 @@
+#pragma once
 
 namespace {
   /**
@@ -15,9 +16,6 @@ namespace {
    * which is way less elegant, yet knows how often the underlying while
    * loop is to be unrolled.
    */
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
-  #endif
   tarch::la::Vector<Dimensions,int> gridCellIndex2d( int x, int y ) InlineMethod {
     tarch::la::Vector<Dimensions,int> result;
     result(0) = x;
@@ -32,7 +30,4 @@ namespace {
     result(2) = z;
     return result;
   }
-  #if defined(GPUOffloadingOMP)
-  #pragma omp end declare target
-  #endif
 }

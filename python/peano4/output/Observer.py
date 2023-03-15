@@ -1,20 +1,17 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .Helper import Overwrite
-from .Helper import writeFile
-
-from .Jinja2TemplatedHeaderFile import Jinja2TemplatedHeaderFile
-
-
 import os
 import re
 import jinja2
 
+from .Helper import write_file
+
+from .Overwrite import Overwrite
+
+from .Jinja2TemplatedHeaderFile import Jinja2TemplatedHeaderFile
 
 class Observer(object):
   default_overwrite = True
-
-
 
   def __init__(self,classname,namespace,subdirectory,included_actions,vertices,faces,cells):
     """
@@ -365,7 +362,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         ))
       ) {
         assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->empty(), event.toString(), peano4::datamanagement::VertexMarker(event).toString(), _spacetreeId, inVertexStack);
-        {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->pop();
+        {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->pop() );
         #if PeanoDebug>0
         if ( peano4::grid::PeanoCurve::isInOutStack(inVertexStack) ) {
           assertionVectorNumericalEquals7( data.getDebugX(), marker.x(outVertexStackPosition), event.toString(), data.getDebugX(), marker.toString(), inVertexStack, i, outVertexStackPosition, _spacetreeId );
@@ -474,7 +471,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         ))
       ) {
         assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), event.toString(), peano4::datamanagement::FaceMarker(event).toString(), _spacetreeId,inFaceStack );
-        {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->pop();
+        {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->pop() );
         #if PeanoDebug>0
         if ( peano4::grid::PeanoCurve::isInOutStack(inFaceStack) ) {
           assertionVectorNumericalEquals5( data.getDebugX(), marker.x(outFaceStackPosition), data.getDebugX(), data.getDebugH(), marker.toString(), outFaceStackPosition, _spacetreeId );
@@ -584,7 +581,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       ))
     ) {
       assertion3( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
-      {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop();
+      {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop() );
       
       #if PeanoDebug>0
       assertionVectorNumericalEquals4( data.getDebugX(), marker.x(), data.getDebugX(), data.getDebugH(), marker.toString(), _spacetreeId );
@@ -1775,8 +1772,6 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
 
     output_file.write( s)
 
-
-
   TemplateImplementationFilePrologue = """
 #include "{{CLASSNAME}}.h"
 #include "repositories/DataRepository.h"
@@ -1796,9 +1791,8 @@ tarch::logging::Log {{FULL_QUALIFIED_CLASSNAME}}::_log( "{{FULL_QUALIFIED_CLASSN
 
 """
 
-
   def __generate_implementation(self,overwrite,full_qualified_filename):
-    if writeFile(overwrite,self.default_overwrite,full_qualified_filename):
+    if write_file(overwrite,self.default_overwrite,full_qualified_filename):
       import inspect, os
       print( "{} written by {}".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__))))
 
@@ -1818,13 +1812,11 @@ tarch::logging::Log {{FULL_QUALIFIED_CLASSNAME}}::_log( "{{FULL_QUALIFIED_CLASSN
       self.__generate_storeCell(output_file)
       self.__generate_exchange_routines(output_file)
 
-
   #
   # @todo Sollte man mit Jinja 2 nicht mehr brauchen
   #
   def get_cpp_file_name(self):
     return self.subdirectory + "/" + self.classname + ".cpp"
-
 
   def generate(self,overwrite,directory):
     if not os.path.exists( directory + "/" + self.subdirectory ):
