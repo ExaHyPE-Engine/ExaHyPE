@@ -1,0 +1,42 @@
+/**
+\page documentation Documentation
+
+Peano and its toolboxes and extensions follow some very simplistic documentation paradigms:
+
+- Everything is in the code;
+- All documentation is created via doxygen;
+- What does not fit into the code is documented in separated files which also are processed by doxygen;
+- Code documentation should be in the header files for C/C++ code;
+- Further documentation files have the extension .dox.
+
+To generate the documentation, type in
+
+      doxygen documentation/Doxyfile
+      
+
+## Rationale
+
+We aim for documentation which is always up-to-date.
+The documentation shall be searchable.
+We want to have one medium which integrates high-level overview information 
+with source code documentation.
+
+
+## How to add new files
+
+Header files and Python scripts are automatically picked up by the script as 
+long as they are stored within directories which are subject to search.
+If you want to write stand-alone docu (such as high-level overview 
+descriptions), the corresponding dox files should go into 
+
+      documentation/Doxygen/SubDir
+
+### Add new rubric to top-level menu
+
+
+### Add new page to ...
+
+
+
+
+*/
