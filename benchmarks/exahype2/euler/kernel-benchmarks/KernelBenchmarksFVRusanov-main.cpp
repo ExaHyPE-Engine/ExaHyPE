@@ -395,9 +395,9 @@ void runStatelessVariantOnDevice(
     logInfo("main()", "stateless kernels on device " << device << " with "
       << markerName << ": "
       << *std::minmax_element(timings.begin() + 1, timings.end()).first << " / "
-      << (*std::minmax_element(timings.begin() + 1, timings.end()).first/patches/NumberOfFiniteVolumesPerPatch) << ", "
-      << "efficiency: "
-      << ((minTime/N) / (*std::minmax_element(timings.begin() + 1, timings.end()).first/patches/NumberOfFiniteVolumesPerPatch)) * 100.0 << " [%]"
+      << (*std::minmax_element(timings.begin() + 1, timings.end()).first/patches/NumberOfFiniteVolumesPerPatch)
+      //<< ", efficiency: "
+      //<< ((minTime/N) / (*std::minmax_element(timings.begin() + 1, timings.end()).first/patches/NumberOfFiniteVolumesPerPatch)) * 100.0 << " [%]"
     );
   }
 };
@@ -502,7 +502,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     << (minTime/N)
   );
 
-  #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__) or defined(__AMDGPU__) or defined(__clang__)
+  #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__) //or defined(__AMDGPU__) or defined(__clang__)
     tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
     #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
@@ -557,7 +557,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     }
   #endif
 
-  #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__) or defined(__AMDGPU__) or defined(__clang__)
+  #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__) //or defined(__AMDGPU__) or defined(__clang__)
     tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
     #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
