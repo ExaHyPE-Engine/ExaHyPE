@@ -31,7 +31,18 @@ descriptions), the corresponding dox files should go into
 
       documentation/Doxygen/SubDir
 
+
 ### Add new rubric to top-level menu
+
+Top level menu entries are reserved for rubrics such as files, packages, ... or 
+for our large-scale extensions such as ExaHyPE or Swift. Please consult with 
+the team if you want to add a new top-level entry. 
+
+If the team agrees that there should be a new top-level entry, you have to add
+entries to DoxygenLayout.xml which are similar to 
+
+      <tab type="user" visible="yes" title="Swift"      url="\ref swift_home"     intro=""/> 
+
 
 
 ### Add new page to ...
