@@ -28,9 +28,8 @@ namespace exahype2 {
         MaxEigenvalue           maxEigenvalue
       );
 
-
       namespace internal {
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -50,11 +49,10 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * The complicated way to write =0.
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -72,7 +70,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Copy previous solution over into new time step and add source term
          *
@@ -89,8 +86,7 @@ namespace exahype2 {
          * variables that you use to compute some metrics, ... They are not
          * evolved as part of the PDE. As the source term affects only the PDE
          * variables, we copy these entries in Q over and add the source term 
-	 * contribution, while the auxilibary parameters remain plain copies.
-         *
+         * contribution, while the auxilibary parameters remain plain copies.
          *
          * No SIMD declaration here, as we can't SIMDise over functors anyway.
          *
@@ -111,7 +107,6 @@ namespace exahype2 {
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
-
         /**
          * Overloaded version which uses static invocation instead of a
          * functor.
@@ -130,7 +125,6 @@ namespace exahype2 {
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
-
         /**
          * Specialised version.
          */
@@ -148,7 +142,6 @@ namespace exahype2 {
           const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator
         ) InlineMethod;
 
-
         template <class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
@@ -162,12 +155,11 @@ namespace exahype2 {
           double                                       dt
         ) InlineMethod;
 
-
         /**
          * Specialisation without the gather.
          */
         template <>
-        static double reduceMaxEigenvalue_LoopBody(
+        double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
           const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator,
           exahype2::fd::MaxEigenvalue                  maxEigenvalue,
@@ -178,7 +170,6 @@ namespace exahype2 {
           double                                       t,
           double                                       dt
         ) InlineMethod;
-
 
         /**
          * Overloaded version with static function calls.
@@ -194,7 +185,6 @@ namespace exahype2 {
           double                                       t,
           double                                       dt
         ) InlineMethod;
-
 
         /**
          * Overloaded version with static function calls.
@@ -214,6 +204,4 @@ namespace exahype2 {
     }
 }
 
-
 #include "LoopBody.cpph"
-

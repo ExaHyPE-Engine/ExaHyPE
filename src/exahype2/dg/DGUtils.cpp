@@ -233,16 +233,17 @@ std::string exahype2::dg::plotFace(
 }
 
 
-double exahype2::dg::evaluatePolynomial(
+template <typename QStoreType>
+QStoreType exahype2::dg::evaluatePolynomial(
   const peano4::datamanagement::CellMarker&    marker,
   int                                          order,
   const double* __restrict__                   QuadratureNodes1d,
   int                                          unknownsPerDoF,
-  const double* __restrict__                   Q,
+  const QStoreType* __restrict__               Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   int                                          unknown
 ) {
-  double result = 0.0;
+  QStoreType result = 0.0;
   dfor(currentDoF,order+1) {
     double denominator = 1.0;
     double enumerator  = 1.0;
@@ -264,3 +265,22 @@ double exahype2::dg::evaluatePolynomial(
 
 
 
+template float exahype2::dg::evaluatePolynomial(
+  const peano4::datamanagement::CellMarker&    marker,
+  int                                          order,
+  const double* __restrict__                   QuadratureNodes1d,
+  int                                          unknownsPerDoF,
+  const float* __restrict__                    Q,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  int                                          unknown
+);
+
+template double exahype2::dg::evaluatePolynomial(
+  const peano4::datamanagement::CellMarker&    marker,
+  int                                          order,
+  const double* __restrict__                   QuadratureNodes1d,
+  int                                          unknownsPerDoF,
+  const double* __restrict__                   Q,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  int                                          unknown
+);

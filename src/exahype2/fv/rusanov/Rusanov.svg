@@ -7,7 +7,7 @@
    viewBox="0 0 210 297"
    version="1.1"
    id="svg5"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
    sodipodi:docname="Rusanov.svg"
    inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
    inkscape:export-xdpi="90"
@@ -27,14 +27,16 @@
      inkscape:document-units="mm"
      showgrid="true"
      inkscape:zoom="1.1224747"
-     inkscape:cx="397.33635"
+     inkscape:cx="363.03714"
      inkscape:cy="611.14963"
      inkscape:window-width="1920"
      inkscape:window-height="1005"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1">
+     inkscape:current-layer="layer1"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1">
     <inkscape:grid
        type="xygrid"
        id="grid848" />
@@ -638,7 +640,7 @@
     <g
        id="g1444"
        style="fill:#ff0000"
-       transform="matrix(0.91143794,0.2567869,-0.41143759,0.56884768,104.31496,98.28199)"
+       transform="matrix(0.91143794,0.2567869,-0.41143759,0.56884768,104.31496,99.340324)"
        inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90">
@@ -1478,7 +1480,7 @@
     <g
        id="g1444-6-1"
        style="fill:#0000ff"
-       transform="matrix(0.91143794,0.2567869,-0.41143759,0.56884768,105.56957,76.873479)"
+       transform="matrix(0.91143794,0.2567869,-0.41143759,0.56884768,103.98206,78.990147)"
        inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90">

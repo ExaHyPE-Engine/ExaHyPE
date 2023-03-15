@@ -23,17 +23,17 @@ void exahype2::dg::projectValueOntoParticle(
 }
 
 
-template <typename Particle>
+template <typename Particle, typename QStoreType>
 void exahype2::dg::projectAllValuesOntoParticle(
   const peano4::datamanagement::CellMarker&    marker,
   int                                          order,
   const double* __restrict__                   QuadratureNodes1d,
   int                                          unknownsPerDoF,
-  const double* __restrict__                   Q,
+  const QStoreType* __restrict__               Q,
   Particle&                                    particle
 ) {
   for (int unknown=0; unknown<unknownsPerDoF; unknown++) {
-    double value = ::exahype2::dg::evaluatePolynomial(
+    QStoreType value = ::exahype2::dg::evaluatePolynomial(
         marker,
         order,
         QuadratureNodes1d,

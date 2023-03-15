@@ -32,23 +32,21 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
   exahype2::enumerator::AoSLexicographicEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize,unknowns,0);
   exahype2::enumerator::AoSLexicographicEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,1,0);
 
-  double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductX = evaluateNonconservativeProduct                     ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductY = evaluateNonconservativeProduct                     ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductZ = (evaluateNonconservativeProduct and Dimensions==3) ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempEigenvalueX            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
-  double* tempEigenvalueY            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
-  double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductX = evaluateNonconservativeProduct                     ? tarch::allocateMemory<double>( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductY = evaluateNonconservativeProduct                     ? tarch::allocateMemory<double>( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductZ = (evaluateNonconservativeProduct and Dimensions==3) ? tarch::allocateMemory<double>( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempEigenvalueX            =                                    tarch::allocateMemory<double>( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvalueY            =                                    tarch::allocateMemory<double>( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory<double>( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     logDebug( "timeStepWithRusanov_sequential(...)", "evaluate source terms and/or copy solution over" );
     if (Dimensions==2 and evaluateSource) {
-      otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
-        otterLoopIterationBegin();
         internal::copySolutionAndAddSourceTerm_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -62,16 +60,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
     else if (Dimensions==3 and evaluateSource) {
-      otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-        otterLoopIterationBegin();
         internal::copySolutionAndAddSourceTerm_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -85,16 +79,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
     else if (Dimensions==2) {
-      otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        otterLoopIterationBegin();
         internal::copySolution_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -104,17 +94,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
     else {
-      otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        otterLoopIterationBegin();
         internal::copySolution_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -124,16 +110,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
 
     if (Dimensions==2) {
-      otterLoopBegin();
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
-        otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -147,14 +129,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
             tempEigenvalueX,
             eigenvalueEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
-
-      otterLoopBegin();
       for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -168,15 +145,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
             tempEigenvalueY,
             eigenvalueEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
-
-      otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int unknown = 0; unknown < unknowns; unknown++) {
-        otterLoopIterationBegin();
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -193,16 +165,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
     else {
-      otterLoopBegin();
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-        otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -216,15 +184,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
               tempEigenvalueX,
               eigenvalueEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
-
-      otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-        otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -238,15 +201,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
               tempEigenvalueY,
               eigenvalueEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
-
-      otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++) {
-        otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -260,17 +218,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
               tempEigenvalueZ,
               eigenvalueEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
-
-
-      otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int unknown = 0; unknown < unknowns; unknown++) {
-        otterLoopIterationBegin();
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -287,16 +239,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
 
     if (evaluateFlux and Dimensions==2) {
-      otterLoopBegin();
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++) {
-        otterLoopIterationBegin();
         internal::computeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -311,14 +259,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           tempFluxX,
           fluxEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
-
-      otterLoopBegin();
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
       for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++) {
-        otterLoopIterationBegin();
         internal::computeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -333,15 +276,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           tempFluxY,
           fluxEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
-
-      otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int unknown=0; unknown<unknowns; unknown++) {
-        otterLoopIterationBegin();
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
@@ -354,16 +292,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
     else if (evaluateFlux and Dimensions==3) {
-      otterLoopBegin();
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
       for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++) {
-        otterLoopIterationBegin();
         internal::computeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -378,15 +312,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           tempFluxX,
           fluxEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
-
-      otterLoopBegin();
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
       for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++)
       for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++) {
-        otterLoopIterationBegin();
         internal::computeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -401,15 +330,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           tempFluxY,
           fluxEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
-
-      otterLoopBegin();
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
       for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize;  z++) {
-        otterLoopIterationBegin();
         internal::computeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -424,16 +348,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           tempFluxZ,
           fluxEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
-
-      otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int unknown=0; unknown<unknowns; unknown++) {
-        otterLoopIterationBegin();
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
@@ -446,17 +365,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
 
 
     if (evaluateNonconservativeProduct and Dimensions==2) {
-      otterLoopBegin();
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++) {
-        otterLoopIterationBegin();
           internal::computeNonconservativeFlux_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -471,14 +386,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
             tempNonconservativeProductX,
             ncpEnumerator
           );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
-
-      otterLoopBegin();
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
       for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++) {
-        otterLoopIterationBegin();
         internal::computeNonconservativeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -493,15 +403,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           tempNonconservativeProductY,
           ncpEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
-
-      otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int unknown=0; unknown<unknowns; unknown++) {
-        otterLoopIterationBegin();
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
           ncpEnumerator,
@@ -514,16 +419,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
     else if (evaluateNonconservativeProduct and Dimensions==3) {
-        otterLoopBegin();
         for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
         for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
-          otterLoopIterationBegin();
           internal::computeNonconservativeFlux_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -538,15 +439,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
             tempNonconservativeProductX,
             ncpEnumerator
           );
-          otterLoopIterationEnd();
         }
-        otterLoopEnd();
-
-        otterLoopBegin();
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
         for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
         for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++) {
-          otterLoopIterationBegin();
           internal::computeNonconservativeFlux_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -561,15 +457,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
             tempNonconservativeProductY,
             ncpEnumerator
           );
-          otterLoopIterationEnd();
         }
-        otterLoopEnd();
-
-        otterLoopBegin();
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
         for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize-1; z++) {
-          otterLoopIterationBegin();
           internal::computeNonconservativeFlux_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -584,16 +475,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
             tempNonconservativeProductZ,
             ncpEnumerator
           );
-          otterLoopIterationEnd();
         }
-        otterLoopEnd();
-
-        otterLoopBegin();
         for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
         for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
         for (int unknown=0; unknown<unknowns; unknown++) {
-          otterLoopIterationBegin();
           internal::updateSolutionWithNonconservativeFlux_LoopBody(
             tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
             ncpEnumerator,
@@ -606,18 +492,14 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
             *(patchData.QOut + patchIndex),
             QOutEnumerator
           );
-          otterLoopIterationEnd();
         }
-        otterLoopEnd();
     }
 
     if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
       logDebug( "timeStepWithRusanov_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
       double newMaxEigenvalue = 0.0;
-      otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
-        otterLoopIterationBegin();
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
           internal::reduceMaxEigenvalue_LoopBody(
@@ -632,18 +514,14 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
             patchData.dt[patchIndex]
           )
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
     else if (evaluateMaximumEigenvalueAfterTimeStep) {
       double newMaxEigenvalue = 0.0;
-      otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-        otterLoopIterationBegin();
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
           internal::reduceMaxEigenvalue_LoopBody(
@@ -658,9 +536,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
             patchData.dt[patchIndex]
           )
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
   }

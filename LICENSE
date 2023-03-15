@@ -1,4 +1,6 @@
-According to good scientific practice, publications on results achieved in whole or in part due to Peano should cite at least one paper presenting the Peano software.
+According to good scientific practice, publications on results achieved in
+whole or in part due to Peano should cite at least one paper presenting the
+Peano software.
 
 The owner wishes to make the software available to all users to use, reproduce,
 modify, distribute and redistribute also for commercial purposes under the
@@ -10,16 +12,17 @@ permission to
  - link it with independent modules or
  - to instantiate templates and macros from Peano's source files 
 to produce an executable, regardless of the license terms of these independent
-modules, and to copy and distribute the resulting executable under terms of 
-your choice, provided that you also meet, for each linked independent module, 
-the terms and conditions of this license of that module. 
+modules, and to copy and distribute the resulting executable under terms of
+your choice, provided that you also meet, for each linked independent module,
+the terms and conditions of this license of that module.
 
 Copyright (c) 2009-2022, Technische Universitaet Muenchen
 Copyright (c) 2013-2022, Durham University
 
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
 
  Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
@@ -30,8 +33,8 @@ Redistribution and use in source and binary forms, with or without modification,
     display the following acknowledgement: "This product includes the software
     Peano (www.peano-framework.org)."
  Neither the name of the Technische Universitaet Muenchen, Munich, Germany,
-    Durham University, Durham, Great Britain, nor the names of any contributor 
-    may be used to endorse or promote  products derived from this software 
+    Durham University, Durham, Great Britain, nor the names of any contributor
+    may be used to endorse or promote  products derived from this software
     without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND

@@ -395,7 +395,7 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-  otterTraceInitialise(OTTER_SRC_ARGS());
+  otterTraceInitialise();
 
 
   #if defined(SharedOMP)
@@ -425,6 +425,8 @@ int main(int argc, char** argv) {
   }
   }
   #endif
+  
+  otterTraceFinalise();
 
   peano4::shutdownSingletons();
   {{NAMESPACE | join("::")}}::repositories::DataRepository::shutdownDatatypes();

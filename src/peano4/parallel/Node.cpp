@@ -82,19 +82,6 @@ void peano4::parallel::Node::init() {
   }
 
   #ifdef Parallel
-  int answerFlag;
-  int maxTag;
-  MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &maxTag, &answerFlag);
-  if (answerFlag and maxTag>=ReservedMPITagsForDataExchange) {
-    logDebug( "init()", "maximum tag value is " << maxTag << " and this is greater than the required " << ReservedMPITagsForDataExchange );
-  }
-  else if (answerFlag) {
-    logWarning( "init()", "maximum tag value is " << maxTag << " though we would need " << ReservedMPITagsForDataExchange << " tags. Code will likely crash" );
-  }
-  else {
-    logError( "init()", "was not able to query what the maximum tag value is" );
-  }
-
   for (int i=0; i<MaxSpacetreesPerRank; i++) {
     MPI_Comm_dup(tarch::mpi::Rank::getInstance().getCommunicator(), &(_dataExchangeCommunicators[i]));
   }
@@ -152,7 +139,6 @@ int peano4::parallel::Node::reserveId(int rank, int forTreeId)  {
   int result = -1;
   while (result==-1 and localThread<MaxSpacetreesPerRank) {
     if ( _treeEntries.count( getId(rank,localThread) )==0 ) {
-      assertion(localThread<ReservedMPITagsForDataExchange/2);
       result = getId(rank,localThread);
     }
     else {

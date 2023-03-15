@@ -79,7 +79,7 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
 
   tarch::multicore::releaseTaskNumber(number);
 
-  otterSynchroniseDescendantTasks();
+  otterSynchroniseTasks(NULL, otter_sync_descendants);
 
   return storedData;
 }

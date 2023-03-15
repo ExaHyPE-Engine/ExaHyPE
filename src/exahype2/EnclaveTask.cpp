@@ -33,15 +33,14 @@ exahype2::EnclaveTask::EnclaveTask(
   logTraceOut( "EnclaveTask(...)" );
 }
 
-
 bool exahype2::EnclaveTask::run() {
   logTraceInWith1Argument( "run()", getTaskId() );
 
-  otterTaskBegin();
+  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
   computeTask();
 
   EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
-  otterTaskEnd();
+  otterTaskEnd(task);
   logTraceOut( "run()" );
   return false;
 }
@@ -51,7 +50,7 @@ void exahype2::EnclaveTask::computeTask() {
   assertion( _numberOfResultValues>0 );
   assertion( _inputValues!=nullptr );
 
-  _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+  _outputValues = tarch::allocateMemory<double>( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
   logDebug( "computeTask()", "lambda=" << _maxEigenvalue );
   _functor();

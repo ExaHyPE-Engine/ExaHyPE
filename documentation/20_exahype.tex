@@ -1893,7 +1893,7 @@ Yet, increasing the domain size usually helps in such a case.
 
 
 
-\section{More complex boundaries}
+\subsection{More complex boundaries}
 
 \paragraph{Extrapolating boundary data}
 %
@@ -2017,6 +2017,55 @@ When the actual boundary routine is invoked, the inner degree of freedom will
 contain this material parameter, i.e.~you can read it out and make your boundary
 realisation depend upon its value.
 
+
+\subsection{A complete swap out of boundary conditions}
+
+So far, all boundary conditions have relies on a call-back principle: The user
+supplements an implementation of the (point-wise) boundary data behaviour, and
+there is some generic kernel which runs over the boundary and calls this
+implementation.
+This means, \ExaHyPE\ has to anticipate what kind of information the user might
+need when they implement their boundary data.
+
+\begin{remark}
+ The current interface for boundary conditions is more or less tailored towards
+ stationary boundary data. As soon as you need some time-dependent behaviour on
+ the boundary such as ODEs (Sommerfeld boundary conditions, e.g.), you might be
+ well-advised to swap out the whole boundary implementation.
+\end{remark}
+
+
+\noindent
+Every \ExaHyPE\ solver has an attribute \texttt{\_action\_set\_handle\_boundary}.
+This is the action set that we invoke to handle the boundary. 
+It has an attribute \texttt{TemplateHandleBoundary\_KernelCalls} which is a
+string in jinja2 format.
+It is used to actually generate the kernel call.
+By default, it invokes the \texttt{applyBoundaryConditions} function of your
+solver. 
+You can redirect this call:
+
+
+\begin{code}
+  thesolver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
+::exahype2::fd::myFancyBCs( ... );
+""" 
+\end{code}
+
+
+\noindent
+The start of the attribute with an underscore emphasises that I usually do not
+expect users to alter the action set.
+This is for experienced users.
+Most of them will create their own subclass of the solver.
+In this case, an attribute with an underscore make sense.
+
+
+\ExaHyPE\ comes along with a limited set of pre-manufactured boundary
+conditions. 
+What is available in which content depends strongly on the solver type used.
+Consult the documentation of the \texttt{HandleBoundary.h} file of your solver
+type.
 
 
 
@@ -2608,7 +2657,7 @@ through the Python API.
 
 \section{Postprocessing}
 
-\subsection{IO}
+\subsection{Visualisation}
 
 \ExaHyPE\ relies on \Peano's standard output routines to write file dumps. 
 As the files can be rather large, the simulation configuration allows you to
@@ -2630,21 +2679,6 @@ The coarser levels hence hold garbage.
 I therefore strongly recommend that you always run the render script with the
 option \texttt{-filter-fine-grid}.
 This makes the script throw away all coarser resolutions.
-
-
-\paragraph{Reduce output size}
-
-By default, \ExaHyPE\ maps each Finite Volumne and each DG quadrature point onto
-a vertex in the output file. 
-This can result in large meshes.
-\Peano's render script provides a filter such that you see only the patch or
-cell average.
-
-
-Further to that, consult the documentation of your project's
-\texttt{set\_global\_simulation\_parameters}. 
-You can spatially filter right within \ExaHyPE, i.e.~ask the code that only
-subfragments of the overall mesh are dumped into the file in the first place.
 
 
 \paragraph{Finite Volumes}
@@ -2678,6 +2712,54 @@ anymore.
 Alternatively, 
 you can averaging over cells and display only the average.
 Consult the script's help.
+
+
+\subsection{Reduce output size}
+%
+%
+%
+By default, \ExaHyPE\ maps each Finite Volume and each DG quadrature point onto
+a vertex in the output file, i.e.~it maps the compute mesh onto an unstructured
+(visualisation) mesh.
+This can result in large data dumps.
+\Peano's render script provides a filter such that you see only the patch or
+cell average.
+However, this is a postprocessing step.
+Many users instead want to restrict the memory footprint a priori.
+
+
+\paragraph{Dump frequency}.
+%
+%
+An obvious strategy to bring the memory footprint down is to print less often.
+For this, you reduce the plot frequency in
+\texttt{set\_global\_simulation\_parameters} or you make the code dump the first
+snapshot later.
+
+
+\paragraph{Cut out part of the computational domain}.
+%
+%
+Further to that, consult the documentation of your project's
+\texttt{add\_plot\_filter}. 
+You can spatially filter right within \ExaHyPE, i.e.~ask the code that only
+subfragments of the overall mesh are dumped into the file in the first place.
+
+
+\paragraph{Tailor output}.
+%
+%
+The most sophisticated variant tailors the actual file writer per solver to the
+needs of the code.
+Each solver has an attribute \texttt{select\_dofs\_to\_print}.
+It is set to \texttt{None} by default which means that all quantities per degree
+of freedom are dumped into the output.
+You can pick only a few entries though via
+
+\begin{code}
+my_solver.select_dofs_to_print = [4,5,8]
+\end{code}
+
 
 
 \subsection{Tracers}
@@ -2780,6 +2862,23 @@ trace  applications::exahype2::ccz4::repositories -1  white always-on
 
 
 \begin{itemize}
+  \item {\bf The code is extremely bandwidth-bound and seems to move data
+    forth and back all the time}. Most \ExaHyPE\ solvers store their data on  
+    (call) stacks to localise all memory accesses. This implies that they move
+    their data around a lot. You can alter this behaviour by switching to a
+    heap-based memory administration. Consult the documentation of the solver of
+    interest, but the ``fix'' always looks similar to 
+    \begin{code}
+self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
+    \end{code}, i.e.~you have to swap how a patch is mapped onto a C++
+    implementation.
+    Most solvers provide a routine
+    \begin{code}
+my_solver.switch_to_heap_storage(True, True)
+    \end{code} which does the switch for you. Please around with different
+    \texttt{True}, \texttt{False} combinations.
+    See also next section on
+    AVX/alignment.
   \item {\bf I do not profit from more cores}. There can be many reasons for
   this, but I recommend to check a few things first:
   \begin{enumerate}
@@ -2794,27 +2893,42 @@ trace  applications::exahype2::ccz4::repositories -1  white always-on
     tasking? Almost all of \ExaHyPE's solvers are offered as version with
     enclave tasking which means that they employ domain decomposition plus
     tasking on top.
+    \begin{remark}
+Enclave tasking often makes your code {\bf slower} initially. Ensure you use the
+heap storage (see remarks above) and then consider to switch the compute kernels
+(see remarks below).
+    \end{remark}
   \end{enumerate}
+  \item {\bf Enclave tasking is very slow}. This is a meta-question, i.e.~you
+    have to run through a series of checks:
+    \begin{enumerate}
+      \item Switch to the heap data structure (see remark above).
+      \item 
+    \end{enumerate} 
   \item {\bf I cannot use more trees per rank, and enclave tasking doesn't make
     my code faster either}. This phenomenon often goes hand in hand with a lack
     of enclave tasks: The problem is simply too small to find enough tasks.
     There are a few tasks, but as tasks can only run on one single core, the
     code struggles to keep all cores busy.
-    \begin{enumerate}
-      \item Check if you can work with more regular grids. They usually help you
+    Check if you can work with more regular grids. They usually help you
       to generate more tasks. So avoid steep AMR changes.
-      \item Switch the compute kernel. For the FD4 scheme and OpenMP, we provide
-      for example compute kernels which theoretically can spread out over the
+  \item {\bf I use enclave tasking and have more trees per node than
+  cores (or can't get more trees), but still the code does not use all
+  the compute resources}. Switch the compute kernel.
+  For the FD4 scheme and OpenMP, we provide for example compute kernels which theoretically can spread out over the
       whole node. The kernel is slower than the default version on one core, but
       it can use further cores and thus eventually becomes faster. Usually, you
       have to follow a few steps to enable this alternative kernel:
-      \begin{itemize}
+      \begin{enumerate}
         \item Switch to an enclave solver.
+        \item Instruct the enclave solver that there it can use stateless PDE
+        terms. For this, pass the constructor the argument
+        \texttt{pde\_terms\_without\_state=True}.
         \item Ensure that the routine \texttt{patchCanUseStatelessPDETerms}
         return true most of the time (this is the default).
         \item Make the solver use a solver on the CPU which uses the batched
         taskgraph realisation.
-        Most \ExaHyPE\ solver have an attribute similar to
+        Most \ExaHyPE\ solver have an attribute similar to \newline
         \texttt{self.\_fused\_compute\_kernel\_call\_cpu} which is initialised
         with some default kernel call. Browse through your code and alter it
         such that it uses
@@ -2822,7 +2936,10 @@ trace  applications::exahype2::ccz4::repositories -1  white always-on
 solver_variant                           = SolverVariant.Multicore,
 kernel_variant                           = KernelVariant.BatchedAoSHeap,
 \end{code}
-      \end{itemize}
+        and a batched solver variant (patch-wise or similar makes limited
+        sense). Usually, the kernels are constructed in \texttt{set\_implementation}, so 
+        it might make sense to plug into this one (overwrite it, call the 
+        supertype's implementation, and then switch the kernel).
     \end{enumerate} 
   \item {\bf The multithreading is very imbalanced, i.e.~I see a lot of trees
   per rank, but this does not materialise in higher speed}.
@@ -2846,23 +2963,6 @@ rank:1  toolbox::loadbalancing::dumpStatistics()    info    2 tree(s): \
     you might have encountered a scheduler flaw. Change the multicore scheduler
     on the command line.
   \end{enumerate}
-  \item {\bf The code is extremely bandwidth-bound and seems to move data
-  forth and back all the time}. Most \ExaHyPE\ solvers store their data on
-  (call) stacks to localise all memory accesses. This implies that they move
-  their data around a lot. You can alter this behaviour by switching to a
-  heap-based memory administration. Consult the documentation of the solver of
-  interest, but the ``fix'' always looks similar to 
-  \begin{code}
-self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
-  \end{code}, i.e.~you have to swap how a patch is mapped onto a C++
-  implementation.
-  Most solvers provide a routine
-  \begin{code}
-  my_solver.switch_to_heap_storage(True, True)
-  \end{code} which does the switch for you. Please around with different
-  \texttt{True}, \texttt{False} combinations.
-  See also next section on
-  AVX/alignment.
   \item {\bf The code seems to fail to use aligned data}. See general remarks
   in documentation of \texttt{tarch::allocateMemory()} and
   \texttt{tarch::MemoryLocation}.
