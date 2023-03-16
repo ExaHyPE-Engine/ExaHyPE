@@ -1,5 +1,6 @@
 /**
-\page documentation Documentation
+
+\page page_documentation Documentation
 
 Peano and its toolboxes and extensions follow some very simplistic documentation paradigms:
 
@@ -12,7 +13,16 @@ Peano and its toolboxes and extensions follow some very simplistic documentation
 To generate the documentation, ```cd``` to your Peano directory, and type:
 
       doxygen documentation/Doxyfile
-      
+     
+To understand the following descriptions, it is reasonable to keep the 
+following terminology in mind:
+
+- A page is the LaTeX equivalent of a chapter.
+- A subpage is the LaTeX equivalent of a section.
+- We typically use the hash signs to substructure information 
+  within a section where two hashes denote sections. 
+
+
 
 ## Rationale
 
@@ -20,6 +30,13 @@ We aim for documentation which is always up-to-date.
 The documentation shall be searchable.
 We want to have one medium which integrates high-level overview information 
 with source code documentation.
+
+
+Peano's documentation can be quite complex with all the toolboxes and 
+extensions being part of the code plus the fact that we combine C/C++
+and Python in numerous ways.
+Therefore, the file structure of the documentation reflects the logical
+structure of the menus.
 
 
 ## How to add new files
@@ -31,88 +48,60 @@ descriptions), the corresponding dox files should go into
 
       documentation/Doxygen/SubDir
 
-### Generic Pages
-
-Doxygen supports the addition of pages anywhere in the directories that it searches. These can be written in 
-markdown or html. 
-
-Any page to be included should start with
-      
-```
-\page page_ref Page Title 
-```
-
-Here, ```page_ref``` will serve as a global unique identifier throughout doxygen. 
-
+Doxygen supports the addition of pages anywhere in the directories that it searches. 
+These can be written in markdown or html. 
 Additionally, files must start with ```/**``` and end with ```* /```, so that Doxygen is alerted to process them.
-So new pages, that are not code documentation, should look something like this:
-
-@todo figure out a way to display the "end of file" characters correctly. If I type them in the comment box it abruptly ends the file here!
-
-```
- / ** 
- \page page_ref Page Title
-
- Content of my page, written in markdown language
-
- * /
-
-```
 
 
-### Add new rubric to top-level menu
+### New (top-level) documentation page
 
-Top level menu entries are reserved for rubrics such as files, packages, ... or 
-for our large-scale extensions such as ExaHyPE or Swift. Please consult with 
+With top-level, we mean something like Peano or ExaHyPE or Swift. 
+Top level menu entries are reserved for such rubrics and therefore are infrequently introduced. 
+Please consult with 
 the team if you want to add a new top-level entry. 
 
-If the team agrees that there should be a new top-level entry, you have to add
-entries a new page somewhere within ```documentation/Doxygen```. Please note that any page marked with ``` \page``` will appear on the top level menu. New documentation should therefore be structured as follows:
+If the team agrees that there should be a new top-level entry, please follow 
+the following conventions:
 
-New Main Page
--------------
+- Add a new directory within documentation/Doxygen.
+- Create a new main page within this new directory. Most packages call this 
+  file home.dox. 
 
-<ul>
-<li> Begin the new main page as above (with a ``` \page```, ```page_ref``` and title). </li>
-<li> Enumerate all the subpages to be nested within this page below. This prevents these subpages from appearing at the top level menu. </li>
+The new mainpage typically reads as follows
 
-</ul>
+         @page peano_home Peano
 
-New Sub Page
-------------
+         \tableofcontents
 
-Ensure that you follow normal rules for constructing a page (begin with ```\page```, include a reference and a title).
+         \li \subpage action_sets
 
-Example:
---------
-
-In the new, top-level page:
-
-```
- \page page_ref Page Title
-
-Please see below a list of pages that are relevant here:
-
- \li \subpage subpage_ref
-
-```
-
-In the new subpage, where you go into more detail about the topics introduced in the new top-level page:
-
-```
- \page subpage_ref Subpage Title
-
-Content coninues here...
-
-```
+where peano_home and Peano are to be replaced with the names of you choice.
 
 
+Next, enumerate all the subpages to be nested within this page below. 
+This prevents these subpages from appearing at the top level menu.
 
 
+### New subpages
 
+Subpages are the doxygen term for something that we would call a section
+in LaTeX. To create such a section, please follow the following steps:
 
-### Add new page to ...
+- Create a new file within the documentation subdirectory of your choice;
+- Begin the new main page as above (with a ``` \page```, ```page_ref``` and title), i.e. any page to be included should start with    
 
+       \page page_ref Page Title 
+
+  Here, ```page_ref``` will serve as a global unique identifier throughout doxygen.
+  Therefore, we usually use identifiers peano_mysection where page is a generic
+  prefix, peano identifies the top-level rubric (page) and mysection.
+- Any page marked with ``` \page``` will appear on the top level menu by 
+  default. New documentation sections should therefore be added to their 
+  corresponding chapter or top-level page (see above) via 
+
+           \li \subpage page_ref
+
+  where page_ref typically has a structure similar to peano_mysection.
 
 
 

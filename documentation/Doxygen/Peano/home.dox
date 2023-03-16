@@ -1,9 +1,13 @@
 /**
+
 @page peano_home Peano
 
 \tableofcontents
 
-\li \subpage action_sets
+\li \subpage peano_architecture
+\li \subpage peano_action_sets
+\li \subpage peano_runtime_analysis
+\li \subpage peano_performance_optimisation
 
 @todo add links to the python and c++ documentation which has already been captured. 
 @todo tidy this up - just adding this page in to introduce methods which need to be written for multigrid, such as touchVertexFirstTime
