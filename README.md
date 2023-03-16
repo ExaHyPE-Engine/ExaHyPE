@@ -54,7 +54,7 @@ In order to run a specific toolchain Docker image you can execute the following 
 
 ```shell
 docker pull peanoframework/<toolchain>
-docker run -it --rm --gpus=all --privileged peanoframework/<toolchain> /bin/bash
+docker run -it -v ${PWD}:/work --rm --gpus=all --privileged peanoframework/<toolchain> /bin/bash
 ```
 
 where `<toolchain>` needs to replaced by the toolchain you want to use. When you run the Docker container interactively using the command above, you can quickly check whether GPU offloading is supported on your system by executing `./check_XXX_offload`.
