@@ -40,6 +40,7 @@ def generate_aderdg_kernels(
     useMaterialParam=False, useMaterialParamVect=False,
     useGaussLobatto=False,
     useVectPDE=False,
+    useLibxsmm=False,
     architecture="noarch",
     useCERKGuess=False,
     useSplitCK=False,
@@ -57,6 +58,7 @@ def generate_aderdg_kernels(
     "pathToOutputDirectory" : "generated/kernels/aderdg/" + numerics,
     "solverName" : solverName,
     "namespace" : "generated::kernels::AderDG::" + numerics,
+    "useLibxsmm" : useLibxsmm,
     "architecture" : architecture,
     }
   
@@ -79,7 +81,7 @@ def generate_aderdg_kernels(
     "usePointSources"       : usePointSources,
     "useMaterialParam"      : useMaterialParam or useMaterialParamVect,
     "useMaterialParamVect"  : useMaterialParamVect,
-    "quadratureType"        : ("Gauss-Lobatto" if useGaussLobatto==True else "Gauss-Legendre"),
+    "useGaussLobatto"       : useGaussLobatto,
     "useCERKGuess"          : useCERKGuess,
     "useSplitCK"            : useSplitCK,
     "useVectPDE"            : useVectPDE,

@@ -263,6 +263,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
+
+  {{FINISH_TIME_STEP_IMPLEMENTATION}}
+
 }
 
 
@@ -413,9 +416,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 		if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
 			_maxTimeStampThisTimeStep = 0.0;
 		}
-	}
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
+
+  }
 }
 
 

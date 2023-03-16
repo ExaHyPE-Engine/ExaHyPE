@@ -67,7 +67,7 @@ class Controller:
             "codeNamespace"         : args["namespace"],
             "tempVarsOnStack"       : args["tempVarsOnStack"],
             "architecture"          : args["architecture"],
-            "useLibxsmm"            : Configuration.useLibxsmm,
+            "useLibxsmm"            : args["useLibxsmm"] if "useLibxsmm" in args else Configuration.useLibxsmm,
             "pathToLibxsmmGemmGenerator"  : Configuration.pathToLibxsmmGemmGenerator,
             "runtimeDebug"          : Configuration.runtimeDebug #for debug
         }

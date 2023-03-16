@@ -1,0 +1,23 @@
+/**
+@page exahype_home ExaHyPE
+
+
+@todo work out how to get these hyperlinks into the drop down
+
+\tableofcontents
+
+\li \subpage exahype_performance_optimisation </li>
+\li \subpage exahype_runtime_analysis </li> 
+\li \subpage exhaype_postprocessing_home 
+<ul>
+      <li> \subpage exahype_postprocessing_analysis </li>
+      <li> \subpage exahype_postprocessing_runtime_analysis </li>
+      <li> \subpage exahype_postprocessing_visualisation </li>
+    </ul>
+    </li>
+
+</ul>
+
+What happens if we put some text down here?
+
+*/
