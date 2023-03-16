@@ -5,5 +5,33 @@
 
 \li \subpage action_sets
 
+@todo add links to the python and c++ documentation which has already been captured. 
+@todo tidy this up - just adding this page in to introduce methods which need to be written for multigrid, such as touchVertexFirstTime
 
-*/
+Broadly speaking, Peano is a framework for generating dynamically adaptive grids for a wide range
+of scientific applications. The original article on Peano can be found <a href="https://dl.acm.org/doi/10.1145/3319797"> here. </a> 
+
+Peano allows us to embed the computational domain into a unit hypercube of dimension @f$ d @f$. The domain can be refined, where needed,
+by dividing the unit hypercube @f$ k^d @f$ times along each axis, leading to @f$ k^d @f$ hypercubes. We call this process **refinement**.
+By default, we take @f$ k @f$ to be 3, as this allows for traversing the cells using a Peano curve. 
+
+Where necessary, some cells in the hypercube may be further refined where greater computational resources are necessary. This leads to a 
+hierarchy called a **spacetree**, where, loosely speaking, the nodes at a depth @f$ n @f$ represent a cell which has been @f$ n@f$-times refined.
+@todo clear up wording here! 
+
+Crucially, cells and vertices are made unique through both their **level of refinement/resolution** and their **position in space**. 
+
+### Traversal
+
+The Peano backend chooses the order in which to traverse the spacetree. Each cell at each level of refinement are processed each traversal. 
+The user can define what exactly is to happen in each cell upon each traversal, by writing functionality into each of the functions in the 
+Action Set.
+
+@todo Specify each of these, and how they can be given extra functionality. 
+
+
+In general, making a new simulation in Peano is about defining the computational domain, informing the software about the number
+of unknowns per cell, the number of unknowns per vertex and so on.
+
+
+*/ 
