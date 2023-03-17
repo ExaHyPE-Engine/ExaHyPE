@@ -12,6 +12,7 @@ ToolboxFiniteElements_SOURCES = \
   ElementMatrix.cpp \
   Stencil.cpp \
   StencilFactory.cpp \
+  UnitTests.cpp \
   tests/StencilFactoryTest.cpp
   
 
