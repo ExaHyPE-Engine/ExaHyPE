@@ -1,17 +1,35 @@
-# Selection of benchmarks for the Euler compute kernels
-This directory hosts a set of benchmarks which assess the sole performance of 
+/*
+
+@page benchmarks_exahype2_euler_kernel_benchmarks Euler kernel benchmark
+
+
+ExaHyPE 2's implementation of the Euler equations is shipped
+with a benchmark to assess the speed of the compute kernels.
+The benchmark solely computes the throughput on one core or one GPU and thus
+provides key information how efficient these core kernels perform on your
+system.
+It neglects other effects such as multithreading overhead or MPI data exchange, grid
+management, time stepping behaviour, halo data exchange, and so forth.
+
+
+To run the benchmark, change into the benchmark's directory.
+The directory hosts a set of benchmarks which assess the sole performance of 
 the individual kernels on the CPU and GPUs. While this might be of limited 
 relevance for large-scale runs, where scalability, IO overheads and other
 factors play a dominant role, it tells us what the core compute routines could,
 in theory, deliver.
 
+
 ## Build benchmarks
+
 There are different benchmarks for the different solver types (currently finite
 volumes and discontinuous Galerkin) and you have to build different executables
 for different patch sizes, orders or dimensions. Below is a set of benchmarks 
 that I tend to build from time to time.
 
+
 ### Finite Volumes
+
 I typically create a bunch of benchmarks around the Finite Volume solvers:
 
     export PYTHONPATH=../../../../python
@@ -33,6 +51,7 @@ triggered by
      rm *.o
 
 ## Run experiments
+
 All the benchmarks run out of the box without any user interaction once built.
 All of them produce outputs in a similar way, so it is easier to interpret the
 outcomes. For most runs, you don't have to specify anything. However, you might
@@ -51,7 +70,9 @@ pass all as argument, but you have to pass something. Otherwise, ExaHyPE will
 only use the host. OpenMP in contrast uses all the devices that are available
 by default.
 
+
 ### Finite Volumes
+
 I typically run the Finite Volume solvers with
 
     ./kernel-benchmark-fv-2d-patch-size-4 --threads 1 -gpus all
@@ -61,14 +82,41 @@ I typically run the Finite Volume solvers with
 
 to obtain a first insight into how the throughput changes as more and more 
 threads hit the GPUs with kernel invocations.
+A typical output reads as follows:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+========================================
+  Number of patches fused: 4
+ ========================================
+ baseline: 0.000141742 / 2.88504e-08
+ stateless kernels on host with heap, patch-wise, AoS: 0.000156606 / 3.18758e-08
+ stateless kernels on host with heap, patch-wise, AoSoA: 0.000114747 / 2.33558e-08
+ stateless kernels on host with heap, patch-wise, SoA: 0.000114582 / 2.33222e-08
+ stateless kernels on host with heap, patch-wise, in-situ: 3.5338e-05 / 7.19275e-09
+ stateless kernels on host with heap, batched, AoS: 0.000116653 / 2.37437e-08
+ stateless kernels on host with heap, batched, AoSoA: 0.000115959 / 2.36025e-08
+ stateless kernels on host with heap, batched, SoA: 0.000114284 / 2.32616e-08
+ stateless kernels on host with heap, batched, in-situ:  \end{terminal}
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The code takes multiple patches (here 4) and hands them over to one compute
+kernel, i.e. one compute kernel processes N patches in one rush. The code
+runs a baseline experiment first. This is the most generic numerical kernel
+that ExaHyPE 2 offers, and one that supports all kinds of side-effects and 
+polymorphism. After that, the benchmark assesses the speed of various kernel
+variants and gives you both the total runtime and the runtime per degree of
+freedom.
+
 
 ## Visualisation of results (runtime behaviour)
+
 If you want to use the pre-manufactured visualisation scripts, you have to pipe
 the program output into a file. After that, invoke
 
-    python3 create-bar-plot.py outputfile
+    python3 create-scaling-plot.py outputfile
 
 ## Science case
+
 As sketched above, this code studies the kernel that takes one cell or 
 patch (aka a small regular grid) and advances it in time by one time step.
 In ExaHyPE 2, this is a fundamental building block behind more complex 
@@ -91,13 +139,17 @@ high-level (algorithmic) overview what the individual kernels do compute
 step by step: 
 
 ### Finite Volumes
+
 The Finite Volumes solvers works with small regular grids (patches). A compute
 kernel is given a patch augmented by a halo layer of size one. In the real 
 simulation, the halo layer is befilled with copies of data from neighbouring
 cells. With the halo, we can thus advance a patch in time without any 
 synchronisation with a neighbour. 
 
+
+@image html src/exahype2/fv/rusanov/Rusanov00.png
 <img src="../../../../src/exahype2/fv/rusanov/Rusanov00.png" />
+
 
 So we are given the patch (grey) plus the halo cells (red, blue, yellow, green).
 We also pass in the white cells, though they have not meaning. They are just 
@@ -172,3 +224,6 @@ kernel calls. The SYCL calls for example can be found in the routine
 and I suggest that you comment all the testStatelessVariantOnDevice()
 calls in there out if you encounter issues. Check if the code works
 without the kernels, and then comment them in again one by one.
+
+
+*/
