@@ -21,11 +21,11 @@ its particle toolsbox and SWIFT together.
 ## Configure Peano
 
 As Swift 2 is a Peano extension, you first have to @ref page_installation "configure and build the core
-Peano code base", i.e. its libraries. 
+Peano code base", i.e. its libraries, before you start any work. 
 Hereby, it is important that you add the particles toolbox:
 
 
-          ./configure ... --enable-particles
+          ./configure ... --enable-particles --enable-swift
 
       
 ## A first Swift 2 application

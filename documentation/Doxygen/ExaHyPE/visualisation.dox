@@ -1,12 +1,13 @@
 /**
-@page exahype_postprocessing_visualisation Visualisation
 
-\ExaHyPE\ relies on \Peano's standard output routines to write file dumps. 
+@page exahype_visualisation Visualisation
+
+ExaHyPE 2  relies on Peano's standard output routines to write file dumps. 
 As the files can be rather large, the simulation configuration allows you to
 specify exactly how often you want to see file dumps, and you can also add
 spatial filters.
 The latter help you to visualise only subdomains.
-As we rely on \Peano's infrastructure, you can use the \texttt{render} script in
+As we rely on Peano's infrastructure, you can use the \texttt{render} script in
 \texttt{python/peano4/visualisation} to convert the output files into vtu files.
 Consult also Chapter \ref{chapter:postprocessing} for a discussion of various
 visualisation pathways.
@@ -14,8 +15,8 @@ visualisation pathways.
 
 \paragraph{Multiscale data}
 
-All \Peano\ output files dump various resolutions of the data. 
-\ExaHyPE\ atm however does only use the finest mesh resolution to compute
+All Peano 4 output files dump various resolutions of the data. 
+ExaHyPE 2  atm however does only use the finest mesh resolution to compute
 something.
 The coarser levels hence hold garbage. 
 I therefore strongly recommend that you always run the render script with the
