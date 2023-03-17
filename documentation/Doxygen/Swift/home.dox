@@ -1,14 +1,125 @@
 /**
+
 @page swift_home Swift
-TODO - add in the rest of the solvers, found in various .h files through src
 
-Please find below links to instruction on how the solvers works:
 
-<ul>
+\tableofcontents
 
-  <li> \ref DG  </li>
 
-</ul>
+@image html logos/excalibur.png
+
+Swift 2 is a <a href="https://swift.dur.ac.uk">SWIFT (SPH With Inter-dependent Fine-grained
+Tasking)</a> clone which combines the SWIFT SPH kernels
+(tasks) with Peano's particle-in-dual-tree concept.
+The integration of the SWIFT kernels and Peano 4 has been made possible by the
+EPSRC ExCALIBUR grants Massively Parallel Particle Hydrodynamics
+for Engineering and Astrophysics (EP/V001523/1) and PAX-SPH.
+Swift 2 is realised as Python layer on top of Peano 4 and brings Peano's core, 
+its particle toolsbox and SWIFT together.
+
+
+## Configure Peano
+
+As Swift 2 is a Peano extension, you first have to @ref page_installation "configure and build the core
+Peano code base", i.e. its libraries. 
+Hereby, it is important that you add the particles toolbox:
+
+
+          ./configure ... --enable-particles
+
+      
+## A first Swift 2 application
+
+Our interface for Swift 2 is almost complete realised in Python.
+We configure the whole simulation in Python, but typically make the key 
+steps of a simulation point to generic C++ routines which are shipped with
+Peano 4.
+Alterantively, we can inject C++ code manually into the Python code (which is
+great for prototyping).
+Once the Python script is executed, it generates a plain C++ code with a
+makefile which waves Peano's core and the SPH kernels together.
+
+We start with the creation of a Swift 2 project:
+
+
+~~~~~~~~~~~~~~~~~~~~~
+project = swift2.Project( namespace=['''benchmarks''', '''swift2''', '''planetorbit'''], 
+                          project_name='''planetorbit''', 
+                          executable=orbit-exec )
+~~~~~~~~~~~~~~~~~~~~~
+
+
+Next, we have to add a particle species.
+The definition of a particle is straightforward. We employ a tool called
+DaStGen 2 which really just is a set of Python classes which represent the 
+attributes of a C++ class: 
+We build up a set of Python objects sketching a C++ struct and Swift 2 and
+DaStGen eventually dump them into proper C++ code from which it is embedded into the 
+actual simulator.   
+
+
+~~~~~~~~~~~~~~~~~~~~~
+     import dastgen2
+
+     particle = peano4.toolbox.particles.Particle('''Particle''')
+
+     v_attr = peano4.dastgen2.Peano4DoubleArray('''v''','''Dimensions''')
+     mass_attr = dastgen2.attributes.Double('''mass''')
+
+     particle.data.add_attribute(v_attr)
+     particle.data.add_attribute(mass_attr)
+~~~~~~~~~~~~~~~~~~~~~
+
+
+Though conceptionally a plain C++ pretty printer, the DaStGen2 Python API
+can create some fancy C++ annotations. You can, for example, specify ranges
+in which integers live, or you can prescribe the precision you wanna have 
+for floating point values. If you have a specialised LLVM compiler, these
+annotations will be used to generate aggressively optimised code.
+
+
+
+
+## Bibliography
+
+Whenever you build a Peano application, you get all the C++ code plus a 
+Makefile. 
+You also get a Readme file (similar file name to your executable) which 
+enlists which algorithmic building blocks you employ.
+This Readme file might be your first point of recherche.
+
+
+The best reference for Swift is
+
+      @inproceedings{10.1145/2929908.2929916,
+        author = {Schaller, Matthieu and Gonnet, Pedro and Chalk, Aidan B. G. and Draper, Peter W.},
+        title = {SWIFT: Using Task-Based Parallelism, Fully Asynchronous Communication, and Graph Partition-Based Domain Decomposition for Strong Scaling on More than 100,000 Cores},
+        year = {2016},
+        publisher = {Association for Computing Machinery},
+        doi = {10.1145/2929908.2929916},
+        booktitle = {Proceedings of the Platform for Advanced Scientific Computing Conference},
+        articleno = {2},
+        numpages = {10},
+        series = {PASC '16}
+      }
+
+  
+The official pidt paper is
+
+
+
+      @article{WEINZIERL201642,
+        title = {Two particle-in-grid realisations on spacetrees},
+        journal = {Parallel Computing},
+        volume = {52},
+        pages = {42 - 64},
+        year = {2016},
+        issn = {0167-8191},
+        doi = {https://doi.org/10.1016/j.parco.2015.12.007},
+        author = {T. Weinzierl and B. Verleye and P. Henri and D. Roose}
+      }
+      
+
 
 
 */
