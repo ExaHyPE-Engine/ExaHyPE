@@ -3,7 +3,7 @@
 #pragma once
 
 /**
- * @page SYCL SYCL support
+ * @page tarch_accelerator_SYCL SYCL support
  *
  * Using SYCL in Peano can be tricky, as SYCL's interface (headers, e.g.) still
  * changes from time to time, and as SYCL uses a couple of macros and functions

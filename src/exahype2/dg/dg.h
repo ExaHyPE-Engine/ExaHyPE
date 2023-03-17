@@ -5,7 +5,7 @@
 
 
 /**
- * @page DG Discontinuous Galerkin
+ * @page exahype2_dg Discontinuous Galerkin
  *
  * ExaHyPE's discontinuous Galerkin realisation provides support for plain
  * higher-order DG with Riemann solvers of your choice. The C++ code is a mere

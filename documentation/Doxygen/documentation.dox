@@ -104,5 +104,13 @@ in LaTeX. To create such a section, please follow the following steps:
   where page_ref typically has a structure similar to peano_mysection.
 
 
+The last item illustrates a fundamental paradigm of doxygen:
+All the pages are, in the first lace, one large blob. 
+To introduce parent-child relations, you have to add the child to the parent page.
+The child page itself does not specify its parent.
+Through this, you can duplicate entries in the navigation menu:
+you simply add the subpage to multiple parents.
+ 
+
 
 */
