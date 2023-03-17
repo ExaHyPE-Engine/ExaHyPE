@@ -74,6 +74,8 @@ for datatype_input in datatype_inputs:
     path = glob.glob( folder_input + filename_template )
     path = Tcl().call('lsort', '-dict', path)
 
+    assert path != '', "No matching file found in path. Check input data."
+
     for file in path:
         absfilename = file
         tempname = os.path.basename(absfilename)
