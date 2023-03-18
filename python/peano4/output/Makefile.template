@@ -129,8 +129,8 @@ distclean:
 	rm -rf globaldata celldata facedata vertexdata observers repositories tasks
 	rm -f Constants.h
 	rm -f README-*
-	rm -rf .gitignore
-	rm -rf GeneratedSubdirectories.cmake
-	rm -rf CMakeLists.txt
+	rm -f .gitignore
+	rm -f GeneratedSubdirectories.cmake
+	rm -f CMakeLists.txt
 
 maintainer-clean: distclean

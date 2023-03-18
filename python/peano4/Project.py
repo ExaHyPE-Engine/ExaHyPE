@@ -1,5 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import io
 import gc
 import os
 import sys
@@ -160,22 +161,37 @@ class Project (object):
           command = f"cd {cmake_build_dir} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
           process = subprocess.Popen([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
-          process = subprocess.Popen(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          process = subprocess.Popen(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
         # Start a thread to print the output of the subprocess
         import threading
         def print_output(process):
           num_warnings = 0
           num_errors = 0
+          output_buffer = io.StringIO()
+          remaining_data = ""
+          chunk_size = int(1024 * (number_of_parallel_builds/4))
           while True:
             # Read one line from stdout
             stdout_line = process.stdout.readline()
             if stdout_line:
-                decoded_line = stdout_line.decode('utf-8').strip()
-                print(decoded_line)
-            # Read one line from stderr
-            stderr_line = process.stderr.readline()
-            if stderr_line:
-                decoded_line = stderr_line.decode('utf-8').strip()
+              decoded_line = stdout_line.decode('utf-8').strip()
+              print(decoded_line)
+            # Read a fixed-size chunk from stderr
+            stderr_chunk = process.stderr.read(chunk_size)
+            if stderr_chunk:
+              # Find the last newline character in the chunk
+              last_newline_index = stderr_chunk.rfind(b"\n")
+              if last_newline_index != -1:
+                # Add any remaining data from the previous chunk to the beginning of this chunk
+                stderr_chunk = stderr_chunk[:last_newline_index+1].decode('utf-8') + remaining_data
+                remaining_data = stderr_chunk[last_newline_index+1:]
+              else:
+                # If there is no newline character in the chunk, buffer the entire chunk and wait for the next chunk
+                remaining_data += stderr_chunk
+                continue
+              decoded_chunk = stderr_chunk
+              output_buffer.write(decoded_chunk)
+              for decoded_line in decoded_chunk.splitlines():
                 if 'warning:' in decoded_line.lower():
                   num_warnings += 1
                   print('\033[35m' + decoded_line + '\033[0m')  # Print warning messages in purple
@@ -186,8 +202,19 @@ class Project (object):
                 else:
                   print(decoded_line)
             # If both stdout and stderr have been fully read, exit the loop
-            if not stdout_line and not stderr_line:
-                break
+            if not stdout_line and not stderr_chunk:
+              break
+          # Print any remaining data that didn't end with a newline
+          if remaining_data:
+            output_buffer.write(remaining_data.decode('utf-8'))
+            for decoded_line in remaining_data.decode('utf-8').splitlines():
+              if 'warning:' in decoded_line.lower():
+                num_warnings += 1
+                print('\033[35m' + decoded_line + '\033[0m')
+              elif 'error:' in decoded_line.lower():
+                num_errors += 1
+                print('\033[31m' + decoded_line + '\033[0m')
+                error_messages.append(decoded_line)
           print('Number of warnings:', num_warnings)
           print('Number of errors:', num_errors)
         error_messages = []
