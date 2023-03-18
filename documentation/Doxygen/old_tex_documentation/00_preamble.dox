@@ -1,0 +1,102 @@
+/**
+
+\page preamble Preamble
+
+Preamble
+========
+
+Peano is an open source framework for solvers on dynamically adaptive
+Cartesian meshes. Its core is built with C++, but many tools around it
+are written in Python.  is based upon the fact that spacetrees, a
+generalisation of the classical octree concept, yield a cascade of
+adaptive Cartesian grids. Consequently, any spacetree traversal is
+equivalent to an element-wise traversal of the hierarchy of the adaptive
+Cartesian grids. The software  realises such a grid traversal and
+storage algorithm, and it provides hook-in points for applications
+performing per-element, per-vertex, and so forth operations on the grid.
+It also provides interfaces for dynamic load balancing, sophisticated
+geometry representations, and other features.
+
+Peano is currently available in its fourth generation. The development
+of the original set of Peano codes started around 2002. 2005-2009, we
+merged these codes into one Peano kernel (2nd generation). In 2009, I
+started a complete reimplementation of the kernel with special emphasis
+on reusability, application-independent design and the support for rapid
+prototyping. This third generation of the code ended around 2019 when we
+released the ExaHyPE code---a hyperbolic equation system solver engine
+which uses Peano's AMR meshes. The current guidebook discusses  , which
+reuses ideas and lessons learned from Peano 3 as well as lots of code
+buildling blocks, but can be seen as a major rewrite starting from
+scratch.
+
+ has been the code base for multiple projects over the past years. The
+most prominent one is likely ExaHyPE. The first generation of ExaHyPE
+has been a stand-alone projects using Peano as one required library or
+framework out of many. The second generation, , is merged into as
+spin-off. This document therefore covers , too.
+
+Dependencies and prerequisites {#dependencies-and-prerequisites .unnumbered}
+------------------------------
+
+'s core is plain C++17 code. We however use a whole set of tools around
+it:
+
+-   GNU autotools (automake) to set up the system (required).
+
+-   C++17-compatible C++ compiler (required).
+
+-   Python3 (optional; not required if you work only with the C++
+    baseline).
+
+-   MPI2 (optional). MPI's multithreaded support is required.
+
+-   Intel's Threading Building Blocks (TBB) or OpenMP 5. We also can
+    work with C++ threads, but found their performance suboptimal. TBB
+    is not shipped as part of OneAPI.
+
+-   The Visualization Toolkit (VTK) if you want to use the built-in
+    visualisation facilities (optional).
+
+-   Doxygen if you want to create HTML pages of PDFs of the in-code
+    documentation.
+
+I test and maintain  for Linux only. If you prefer Windows or MacOS, it
+should work as long as you provide the mandatory tools from above, but I
+won't be able to help.
+
+  Software     Version        Remarks
+  ------------ -------------- -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  GNU g++      7.5 or older   Works with  core but not with some extensions such as .
+  GNU g++      9.3.1          Current development version. Works.
+  Intel icpc   19.1           Works with  and all extensions such as . Tests with Intel Fortran have been successful, too.
+  VTK          7--9           Supported by . Default is 8, i.e. if you need other version, you have to inform configure (see Chapter [\[chapter:postprocessing\]](#chapter:postprocessing){reference-type="ref" reference="chapter:postprocessing"}).
+  Python       3              Development version. Python 2 is not supported by frontend.
+
+How the text is organised {#how-the-text-is-organised .unnumbered}
+-------------------------
+
+This LaTeX documentation first summarises some installation options. We
+then present some high-level tutorials for some applications built on
+top of . This notably covers . We continue with a discussion of 's
+Python API, before I discuss C++ options and how to extend the
+integration of Python with the C++ framework. An appendix gives further
+information on particular machines, file formats, and so forth. It hosts
+an FAQ and tips how to combine/use  with other tools.
+
+While the tutorial present a user's view, i.e. how to use
+pre-manufactured ingredients, the latter chapters discuss how to
+implement new ingredients. However, they still give a high-level
+overview and focus on rationale and design decisions. 's core philosophy
+is *documentation is in the code* (see Section
+[\[section:installation:documentation\]](#section:installation:documentation){reference-type="ref"
+reference="section:installation:documentation"}).
+
+In line with this philosophy, also the LaTeX documentation is held
+within the repository. If you feel something is urgently missing and
+deserves a chapter or things remain unclear, please extend the
+LaTeX documentation and issue a merge request.
+
+\
+Tobias Weinzierl\
+
+*/

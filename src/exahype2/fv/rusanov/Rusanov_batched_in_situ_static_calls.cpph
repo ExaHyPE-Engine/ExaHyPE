@@ -883,13 +883,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     logDebug( "timeStepWithRusanov_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
     for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
       double newMaxEigenvalue = 0.0;
-      otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       #if defined(SharedOMP)
       #pragma omp simd reduction(max:newMaxEigenvalue)
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        otterLoopIterationBegin();
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
           internal::reduceMaxEigenvalue_LoopBody<Solver>(

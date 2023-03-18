@@ -1,0 +1,75 @@
+/**
+<!-- use html - style comments here -->
+
+@mainpage Peano 4
+
+\tableofcontents
+
+@image html documentation/logos/Peano-logo.png
+
+
+This is the documentation of Peano which is generated automatically through Doxygen.
+Peano comprises the core Peano 4 modules, the Python API, and a set of Peano extensions as well as benchmarks.
+The most important extensions at the moment are ExaHyPE 2, our PETSc toolkit and a prototype version of Swift 2.
+
+
+Peano is an open source framework for solvers on dynamically adaptive
+Cartesian meshes.
+Its core is built with C++, but many tools around it are written in Python.
+Peano  is based upon the fact that spacetrees, a generalisation of the
+classical octree concept, yield a cascade of adaptive Cartesian grids.
+Consequently, any spacetree traversal is equivalent to an element-wise
+traversal of the hierarchy of the adaptive Cartesian grids. The software
+Peano  realises such a grid traversal and storage algorithm, and it provides
+hook-in points for applications performing per-element, per-vertex, and so
+forth operations on the grid. It also provides interfaces for dynamic load
+balancing, sophisticated geometry representations, and other features.
+
+
+Peano is currently available in its fourth generation. 
+The development of the original set of Peano codes started around 2002.
+2005-2009, we merged these codes into one Peano kernel (2nd generation). 
+In 2009, I started a complete reimplementation of the kernel with special
+emphasis on reusability, application-independent design and the support for rapid prototyping. 
+This third generation of the code ended around 2019 when we released the
+ExaHyPE code - a hyperbolic equation system solver engine which uses Peano's
+AMR meshes.
+The current guidebook discusses Peano 4, which reuses ideas and lessons learned
+from Peano 3 as well as lots of code buildling blocks, but can be seen as a
+major rewrite starting from scratch.
+
+
+
+Peano has been the code base for multiple projects over the past years.
+The most prominent one is likely ExaHyPE.
+The first generation of ExaHyPE has been a stand-alone projects using Peano
+as one required library or framework out of many.
+The second generation, ExaHyPE, is merged into Peano as spin-off.
+This document therefore covers ExaHyPE, too.
+
+
+
+## Dependencies and prerequisites
+
+Peano's core is plain C++17 code. 
+We however use a whole set of tools around it:
+
+- GNU autotools (automake) or CMake to set up the system (required).
+- C++17-compatible C++ compiler (required).
+- Python3 (optional; not required if you work only with the C++ baseline).
+- MPI2 (optional). MPI's multithreaded support is required.
+- Intel's Threading Building Blocks (TBB), OpenMP 5 or SYCL. We also can work with C++
+  threads, but found their performance suboptimal. 
+- The Visualization Toolkit (VTK) if you want to use the built-in
+  visualisation facilities (optional).
+- Doxygen if you want to create HTML pages of PDFs of the in-code
+  documentation.
+
+I test and maintain Peano  for Linux only.
+If you prefer Windows or MacOS, it should work as long as you provide the
+mandatory tools from above, but I won't be able to help.
+
+
+
+ */
+ 
