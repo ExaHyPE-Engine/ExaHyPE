@@ -187,7 +187,7 @@ void tarch::mpi::Rank::writeTimeOutWarning(
     else {
       logWarning(
         "writeTimeOutWarning(...)",
-        "deadlock detection switched off as deadlock time out is set to " << _deadlockTimeOut << ", i.e. you will continue to get warnings, but code will not shut down"
+        "deadlock detection switched off as deadlock time out is set to " << _deadlockTimeOut.count() << ", i.e. you will continue to get warnings, but code will not shut down"
       );
     }
 
