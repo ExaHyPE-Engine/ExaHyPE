@@ -570,7 +570,7 @@ void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
   assertion( value>=0 );
   _deadlockTimeOut = std::chrono::seconds(value);
   if (value==0) {
-    logInfo( "setDeadlockTimeOut(int)", "set deadlock timeout to " << _deadlockTimeOut << " and hence disabled timeout checks" );
+    logInfo( "setDeadlockTimeOut(int)", "set deadlock timeout to " << _deadlockTimeOut.count() << " and hence disabled timeout checks" );
   }
 }
 
