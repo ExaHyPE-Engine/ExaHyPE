@@ -178,12 +178,24 @@ void tarch::mpi::Rank::writeTimeOutWarning(
       << " message(s) from node " << communicationPartnerRank << " with tag " << tag
     );
 
-    logWarning(
-      "writeTimeOutWarning(...)",
-      "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
-    );
+    if ( _deadlockTimeOut.count()>0 ) {
+      logWarning(
+        "writeTimeOutWarning(...)",
+        "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
+      );
+    }
+    else {
+      logWarning(
+        "writeTimeOutWarning(...)",
+        "deadlock detection switched off as deadlock time out is set to " << _deadlockTimeOut << ", i.e. you will continue to get warnings, but code will not shut down"
+      );
+    }
 
-    if (_timeOutWarning<_deadlockTimeOut/2) {
+    if (
+      _timeOutWarning<_deadlockTimeOut/2
+      or
+      _deadlockTimeOut.count()<=0
+    ) {
       std::chrono::seconds newTimeOutWarning = _timeOutWarning*2;
       logWarning(
         "writeTimeOutWarning(...)",
@@ -557,6 +569,9 @@ void tarch::mpi::Rank::setTimeOutWarning( int value ) {
 void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
   assertion( value>=0 );
   _deadlockTimeOut = std::chrono::seconds(value);
+  if (value==0) {
+    logInfo( "setDeadlockTimeOut(int)", "set deadlock timeout to " << _deadlockTimeOut << " and hence disabled timeout checks" );
+  }
 }
 
 
