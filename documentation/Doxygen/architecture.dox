@@ -8,11 +8,13 @@ Users obviously might want to inject Fortran or similar, but Peano 4 itself stic
 There is a Python API, but this Python API is merely a code generator, i.e. it produces stand-alone C++ executables.
 
 
-## Static organisation
+## Code organisation
 
 Peano is organised into layers.
 The componentes per layer are delivered as static libraries.
-Every Peano application, at the end of the day, follows this architecture blueprint.
+All their C/C++ code is holds within the directory src.
+Peano's layer architecture applies to all simulations built on top of Peano, too, i.e. 
+every Peano application, at the end of the day, follows a similar architecture blueprint.
 
 
 @image html architecture-static.png
@@ -39,6 +41,7 @@ Every Peano application, at the end of the day, follows this architecture bluepr
   entirely written in C++ (using the tarch) and holds the heart and brain of the
   code, i.e. all the data management, the mesh management, the tree traversals and the domain
   decomposition.
+  This core is 
   
 
 

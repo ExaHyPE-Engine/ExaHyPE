@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<VTKFile type="Collection" version="0.1"
+         byte_order="LittleEndian"
+         compressor="vtkZLibDataCompressor">
+  <Collection>
+
+    <DataSet timestep="0.0" group="" part="0" file="solution-SelfSimilarInfallFD4.peano-patch-file-0.vtu" />
+
+    <DataSet timestep="0.02222222222222222" group="" part="0" file="solution-SelfSimilarInfallFD4.peano-patch-file-1.vtu" />
+
+  </Collection>
+</VTKFile>
