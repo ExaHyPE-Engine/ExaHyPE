@@ -94,12 +94,6 @@ make distclean
 make maintainer-clean
 ```
 
-# Documentation and Guidebook
-A detailed list of features can be found in the [guidebook](./documentation/) which we ship with the
-repository (TeX sources).
-You can build a PDF version of the guidebook via:
-
-```shell
-cd documentation
-make
-```
+# Documentation
+A detailed list of features can be found in the [documentation](./documentation/)
+which we ship with the repository (TeX sources).
