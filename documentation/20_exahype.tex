@@ -2,23 +2,6 @@
 \label{section:exahype}
 
 
-% \begin{figure}[htb]
- \begin{center}
-  \includegraphics[width=0.16\textwidth]{60_exahype/EU.png}
-  \includegraphics[width=0.35\textwidth]{60_exahype/ExaHyPE_Logo.jpg}
-  \includegraphics[width=0.27\textwidth]{60_exahype/ExCALIBUR.png}
- \end{center}
-%  \caption{
- { \footnotesize
-   The original ExaHyPE project delivering the first generation of the ExaHyPE
-   software has received funding from the European Union’s Horizon 2020 research
-   and innovation programme under grant agreement No 671698 (ExaHyPE).
-   \ExaHyPE\ has been made possible by EPSRC under the grant EP/V00154X/1
-   (ExaClaw). 
- }
-% \end{figure}
-
-
 \ExaHyPE\ is both a set of C/C++ and Fortran core routines complementing the
 \Peano\ core and a high-level augmentation of \Peano's Python API.
 \ExaHyPE's Python API can be read as builder mechanism:
@@ -39,87 +22,10 @@ The details of these domain-specific codes are not covered by the present
 document.
 
 
-\begin{framed}
-\paragraph*{A first \ExaHyPE\ run}
-\begin{itemize}
-  \item Clone the repository (cmp.~page
-  \pageref{page::installation::git-clone}). Skip this step if you already have a
-  \Peano\ checkout, i.e.~if you have completed this step once.
-  \begin{bash}
-git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
-  \end{bash}
-  \item Create the build system (cmp.~page
-  \pageref{page::installation::configure}). Skip this step if you already have a
-  working configure, i.e.~if you have completed this step once.
-  \begin{bash}
-libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-  \end{bash}
-  \item Configure \Peano\ with the flags \texttt{--enable-exahype},
-  \texttt{--enable-loadbalancing}, \texttt{--enable-blockstructured}:
-  \begin{bash}
-./configure --enable-exahype --enable-loadbalancing --enable-blockstructured
-  \end{bash}
-   These are the mandatory extensions (toolboxes). You might want to add further
-   options.
-   You also will have to add additional flags on
-   particular system.
-   In particular the flags \texttt{CXX}, \text{CXXFLAGS} and \texttt{LDFLAGS} to pick your
-   compiler, your compiler settings and your linker parameters. Chapter
-   \ref{chapter:selected-HPC-platforms} discusses some popular choices. Skip
-   this step if you have already completed it once.
-  \item Recompile your \Peano\ code by typing in
-  \begin{bash}
-make
-  \end{bash}
-   This should give you a couple
-  of static libraries in the respective subdirectories. Skip this
-  step if you have already completed it once.
-  \item Ensure that \texttt{python} subdirectory is in your Python search path
-  and
-  \item run the Jupyter notebook in \texttt{examples/exahype2/euler}: 
-  \begin{bash}
-export PYTHONPATH=../../../python/
-jupyter-notebook Euler.ipynb
-  \end{bash}
-  \noindent
-  or---if you don't like Jupyter notebooks---type in
-  \begin{bash}
-export PYTHONPATH=../../../python/
-python3 example-scripts/finitevolumes.py -cs 0.2
-./peano4
-  \end{bash}
-  \item Finally, jump straight into Chapter \ref{chapter:postprocessing} and
-  pick one of the pathways there to convert the output files into vtk files
-  which Paraview or VisIt can display.
-\end{itemize}
-\end{framed}
 
 
 
-\section{Historical remarks}
 
-\ExaHyPE\ is the follow-up development of the ExaHyPE project which has
-been funded by the EU from 2015--2019.
-The present version is the second generation of the code (\ExaHyPE) and has
-seen substantial rewrites of core routines.
-However, many paradigms and even code blocks remain the same.
-Migrating from the original ExaHyPE to \ExaHyPE\ thus should be straightforward.
-
-
-The original ExaHyPE had been built on top of Peano (third generation) and tried
-to hide as much of Peano away as possible.
-In \ExaHyPE, I go the opposite way: \ExaHyPE\ is a full-blown Peano add-in and I
-try not to hide anything away.
-Where we designed our own data management on top of Peano in ExaHyPE, all the
-data management (as well as parallelisation, e.g.) is native \Peano.
-
-
-With the migration from a sole-C++ philosophy to C++ supplemented by a Python
-API in \Peano, I also dumped ExaHyPE's former configuration/specification file
-pradigma.
-An \ExaHyPE\ application now is championed by a sole Python script.
-This Python script yields a native \Peano\ application (builder mechanism) which
-then assembles the application.
 
 
 
@@ -218,127 +124,6 @@ peano4_project = project.generate_Peano4_project()
 peano4_project.generate( throw_away_data_after_generation=False )  
   \end{code}
 \end{itemize}
-
-
-\begin{framed}
-\paragraph*{Kernel benchmark}
-
-\ExaHyPE's implementation of the Euler equations is shipped
-with a benchmark to assess the speed of the compute kernels.
-The benchmark solely computes the throughput on one core or one GPU and thus
-provides key information how efficient these core kernels perform on your
-system.
-It neglects other effects such as multithreading or MPI data exchange, grid
-management, time stepping behaviour, halo data exchange, and so forth.
-To run the benchmark, follow the following steps:
-
-
-\label{page:exahype:kernel-benchmark}
-\begin{enumerate}
-  \item Clone the repository (cmp.~page
-  \pageref{page::installation::git-clone}). Skip this step if you already have a
-  \Peano\ checkout, i.e.~if you have completed this step once.
-  \begin{bash}
-git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
-  \end{bash}
-  \item Create the build system (cmp.~page
-  \pageref{page::installation::configure}). Skip this step if you already have a
-  working configure, i.e.~if you have completed this step once.
-  \begin{bash}
-libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-  \end{bash}
-  \item Configure \Peano\ with the flags \texttt{--enable-exahype},
-  \texttt{--enable-loadbalancing}, \texttt{--enable-blockstructured}:
-  \begin{bash}
-./configure --enable-exahype --enable-loadbalancing --enable-blockstructured
-  \end{bash}
-   These are the core extensions (toolboxes) required for the benchmark. 
-   If you want to test your system with OpenMP offloading, e.g., you will need
-   an additional
-   \texttt{--with-gpu=omp}.
-   Though the benchmarks in principle assess only the core performance of the
-   compute kernels, they can mimick the concurrent offloading from multiple
-   threads.
-   To enable this feature, you have to activate multithreading, too (add
-   \texttt{--with-multithreading=omp} for example).
-   Run \texttt{./configure --help} for various combinations of GPU and
-   multithreading back-ends.
-   Finally, you will have to add additional flags
-   on particular system.
-   In particular the flags \texttt{CXX}, \text{CXXFLAGS} and \texttt{LDFLAGS} to pick your
-   compiler, you compiler settings and your linker parameters. Chapter
-   \ref{chapter:selected-HPC-platforms} discusses some popular choices. Skip
-   this step if you have already completed it once.
-  \item Recompile your \Peano\ code by typing in
-  \begin{bash}
-make
-  \end{bash}
-  \item Set the \texttt{PYTHONPATH} and run the benchmark script within the
-  Euler example directory:
-  \begin{bash}
-  cd benchmarks/exahype2/euler/kernel-benchmarks
-  export PYTHONPATH=../../../../python
-  python3 fv-rusanov-kernel-benchmarks.py
-  \end{bash}
-  This builds a default benchmarks for 2d with $17 \times 17$ patches. 
-  \item Run the benchmark
-  \begin{bash}
-./kernel-benchmark-fv-2d-patch-size-17 --threads 1 --gpus all
-  \end{bash}
-  which should give you an output similar to
-  \begin{terminalOutput}
-========================================
-  Number of patches fused: 1
- ========================================
- baseline: 0.000141742 / 2.88504e-08
- stateless kernels on host with heap, patch-wise, AoS: 0.000156606 / 3.18758e-08
- stateless kernels on host with heap, patch-wise, AoSoA: 0.000114747 / 2.33558e-08
- stateless kernels on host with heap, patch-wise, SoA: 0.000114582 / 2.33222e-08
- stateless kernels on host with heap, patch-wise, in-situ: 3.5338e-05 / 7.19275e-09
- stateless kernels on host with heap, batched, AoS: 0.000116653 / 2.37437e-08
- stateless kernels on host with heap, batched, AoSoA: 0.000115959 / 2.36025e-08
- stateless kernels on host with heap, batched, SoA: 0.000114284 / 2.32616e-08
- stateless kernels on host with heap, batched, in-situ:  \end{terminal}
-  \end{terminalOutput}
-  \item The Python script generating and the benchmark supports different options 
-  and benchmark settings.   
-  Type in \texttt{--help} for additional information.
-  The statement above assesses the kernel performance if only one thread is used. 
-  Offloading to the GPUs from multiple threads is notoriously tricky, while running a 
-  kernel benchmark on multiple cores stresses the interconnect. I therefore always
-  recommend to start with the single core measurements. Finally, there's a
-  \texttt{kernel-benchmark.md} markup file which describes further settings and 
-  also discusses built-in postprocessing options. 
-\end{enumerate}
-
-\noindent
-The benchmark gives you the total runtime and cost per degree of freedom update (throughput) 
-on one core or GPU, respectively.
-Data is provided 
-for
-various patch sizes batched (fused) into one large patch assembly, for patches 
-which exploit stateless operations, and different kernel realisations.
-
-Baseline is what you get with \ExaHyPE's most basic configuration and its flexible
-architecture, where users can tailor each PDE term towards their needs.
-The other variants exploit hints how to tune these computations and try out various optimisations,
-algorithmic reformulations and internal data formats for temporary data.
-Please note that we assess only the Euler equations here, i.e.~we are extremely
-bandwidth-bound and induce almost no load.
-All GPU data comprise all data transfer and memory allocations on the GPU.
-They provide fair measurements and not raw compute figures.
-We have data for SYCL\footnotemark, OpenMP\footnotemark \ and C++\footnotemark 
-\ GPU benchmarks.
-\end{framed}
-
-\footnotetext{\texttt{
-./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++20
--Wno-unknown-attributes" "-ltbb" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl
-}}
-% \footnote{\texttt{
-% ./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++17
-% -Wno-unknown-attributes -fiopenmp  -fopenmp-targets=spir64' 'LDFLAGS=-g3 -L/opt/intel/oneapi_customer/tbb/latest/lib/intel64/gcc4.8 -ltbb -fiopenmp' --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl
-% }}.
 
 
 \section{Case study: A Finite Volumes code coupling two solvers  (hyperbolic+elliptic)}

@@ -1,6 +1,20 @@
-# Selection of Benchmarks of Compute Kernels for the Euler Equations
-This directory hosts a set of benchmarks which assess the sole performance of
-the individual Euler kernels on the CPU and GPUs. While this might be of limited
+/*
+
+@page benchmarks_exahype2_euler_kernel_benchmarks Euler kernel benchmark
+
+
+ExaHyPE 2's implementation of the Euler equations is shipped
+with a benchmark to assess the speed of the compute kernels.
+The benchmark solely computes the throughput on one core or one GPU and thus
+provides key information how efficient these core kernels perform on your
+system.
+It neglects other effects such as multithreading overhead or MPI data exchange, grid
+management, time stepping behaviour, halo data exchange, and so forth.
+
+
+To run the benchmark, change into the benchmark's directory.
+The directory hosts a set of benchmarks which assess the sole performance of 
+the individual kernels on the CPU and GPUs. While this might be of limited 
 relevance for large-scale runs, where scalability, IO overheads and other
 factors play a dominant role, it tells us what the core compute routines could,
 in theory, deliver.
@@ -64,6 +78,31 @@ You can run the benchmarks as follows:
 
 to obtain a first insight into how the throughput changes as more and more
 threads hit the GPUs with kernel invocations.
+A typical output reads as follows:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+========================================
+  Number of patches fused: 4
+ ========================================
+ baseline: 0.000141742 / 2.88504e-08
+ stateless kernels on host with heap, patch-wise, AoS: 0.000156606 / 3.18758e-08
+ stateless kernels on host with heap, patch-wise, AoSoA: 0.000114747 / 2.33558e-08
+ stateless kernels on host with heap, patch-wise, SoA: 0.000114582 / 2.33222e-08
+ stateless kernels on host with heap, patch-wise, in-situ: 3.5338e-05 / 7.19275e-09
+ stateless kernels on host with heap, batched, AoS: 0.000116653 / 2.37437e-08
+ stateless kernels on host with heap, batched, AoSoA: 0.000115959 / 2.36025e-08
+ stateless kernels on host with heap, batched, SoA: 0.000114284 / 2.32616e-08
+ stateless kernels on host with heap, batched, in-situ:  \end{terminal}
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The code takes multiple patches (here 4) and hands them over to one compute
+kernel, i.e. one compute kernel processes N patches in one rush. The code
+runs a baseline experiment first. This is the most generic numerical kernel
+that ExaHyPE 2 offers, and one that supports all kinds of side-effects and 
+polymorphism. After that, the benchmark assesses the speed of various kernel
+variants and gives you both the total runtime and the runtime per degree of
+freedom.
+
 
 ## Visualisation of Results
 If you want to use the pre-manufactured visualisation scripts, you have to pipe
@@ -102,13 +141,17 @@ high-level (algorithmic) overview what the individual kernels do compute
 step by step:
 
 ### Finite Volumes
+
 The Finite Volumes solvers works with small regular grids (patches). A compute
 kernel is given a patch augmented by a halo layer of size one. In the real
 simulation, the halo layer is befilled with copies of data from neighbouring
 cells. With the halo, we can thus advance a patch in time without any
 synchronisation with a neighbour.
 
+
+@image html src/exahype2/fv/rusanov/Rusanov00.png
 <img src="../../../../src/exahype2/fv/rusanov/Rusanov00.png" />
+
 
 So we are given the patch (grey) plus the halo cells (red, blue, yellow, green).
 We also pass in the white cells, though they have not meaning. They are just

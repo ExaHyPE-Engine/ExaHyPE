@@ -10,7 +10,7 @@
 namespace toolbox {
   namespace particles {
     /**
-     * @page MultilevelSorting Multilevel sorting tolerance
+     * Multilevel sorting tolerance
      *
      * As the particle association is not unique and not sharp, as we work with
      * floating point numbers. The correlation

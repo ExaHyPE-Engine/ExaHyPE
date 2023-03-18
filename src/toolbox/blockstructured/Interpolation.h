@@ -12,7 +12,7 @@
 #include <map>
 
 /**
- * @page Interpolation Halo layer interpolation
+ * @page toolbox_blockstructured_interpolation Halo layer interpolation
  *
  * When we create hanging faces, we have to interpolate from coarse to
  * fine.

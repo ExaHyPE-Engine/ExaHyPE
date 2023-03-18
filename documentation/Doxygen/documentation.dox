@@ -1,0 +1,116 @@
+/**
+
+\page page_documentation Documentation
+
+Peano and its toolboxes and extensions follow some very simplistic documentation paradigms:
+
+- Everything is in the code;
+- All documentation is created via doxygen;
+- What does not fit into the code is documented in separated files which also are processed by doxygen;
+- Code documentation should be in the header files for C/C++ code;
+- Further documentation files have the extension .dox.
+
+To generate the documentation, ```cd``` to your Peano directory, and type:
+
+      doxygen documentation/Doxyfile
+     
+To understand the following descriptions, it is reasonable to keep the 
+following terminology in mind:
+
+- A page is the LaTeX equivalent of a chapter.
+- A subpage is the LaTeX equivalent of a section.
+- We typically use the hash signs to substructure information 
+  within a section where two hashes denote sections. 
+
+
+
+## Rationale
+
+We aim for documentation which is always up-to-date.
+The documentation shall be searchable.
+We want to have one medium which integrates high-level overview information 
+with source code documentation.
+
+
+Peano's documentation can be quite complex with all the toolboxes and 
+extensions being part of the code plus the fact that we combine C/C++
+and Python in numerous ways.
+Therefore, the file structure of the documentation reflects the logical
+structure of the menus.
+
+
+## How to add new files
+
+Header files and Python scripts are automatically picked up by the script as 
+long as they are stored within directories which are subject to search.
+If you want to write stand-alone docu (such as high-level overview 
+descriptions), the corresponding dox files should go into 
+
+      documentation/Doxygen/SubDir
+
+Doxygen supports the addition of pages anywhere in the directories that it searches. 
+These can be written in markdown or html. 
+Additionally, files must start with ```/**``` and end with ```* /```, so that Doxygen is alerted to process them.
+
+
+### New (top-level) documentation page
+
+With top-level, we mean something like Peano or ExaHyPE or Swift. 
+Top level menu entries are reserved for such rubrics and therefore are infrequently introduced. 
+Please consult with 
+the team if you want to add a new top-level entry. 
+
+If the team agrees that there should be a new top-level entry, please follow 
+the following conventions:
+
+- Add a new directory within documentation/Doxygen.
+- Create a new main page within this new directory. Most packages call this 
+  file home.dox. 
+
+The new mainpage typically reads as follows
+
+         @page peano_home Peano
+
+         \tableofcontents
+
+         \li \subpage action_sets
+
+where peano_home and Peano are to be replaced with the names of you choice.
+
+
+Next, enumerate all the subpages to be nested within this page below. 
+This prevents these subpages from appearing at the top level menu.
+
+
+### New subpages
+
+Subpages are the doxygen term for something that we would call a section
+in LaTeX. To create such a section, please follow the following steps:
+
+- Create a new file within the documentation subdirectory of your choice;
+- Begin the new main page as above (with a ``` \page```, ```page_ref``` and title), i.e. any page to be included should start with    
+
+       \page page_ref Page Title 
+
+  Here, ```page_ref``` will serve as a global unique identifier throughout doxygen.
+  Therefore, we usually use identifiers peano_mysection where page is a generic
+  prefix, peano identifies the top-level rubric (page) and mysection.
+- Any page marked with ``` \page``` will appear on the top level menu by 
+  default. New documentation sections should therefore be added to their 
+  corresponding chapter or top-level page (see above) via 
+
+           \li \subpage page_ref
+
+  where page_ref typically has a structure similar to peano_mysection.
+
+
+The last item illustrates a fundamental paradigm of doxygen:
+All the pages are, in the first lace, one large blob. 
+To introduce parent-child relations, you have to add the child to the parent page.
+The child page itself does not specify its parent.
+Through this, you can duplicate entries in the navigation menu:
+you simply add the subpage to multiple parents.
+ 
+
+
+*/

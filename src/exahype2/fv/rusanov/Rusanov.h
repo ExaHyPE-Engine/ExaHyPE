@@ -22,7 +22,7 @@
 #endif
 
 /**
- * @page Rusanov ExaHyPE's Rusanov kernel implementation
+ * @page exahype2_fv_Rusanov ExaHyPE's Rusanov kernel implementation
  *
  * ExaHyPE's Finite Volume compute kernels rely on a block-structured mesh.
  * Each cell of the spacetree carries a patch of @f$ p \times p \times p @f$

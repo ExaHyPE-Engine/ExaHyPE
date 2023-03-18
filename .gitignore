@@ -282,10 +282,11 @@ cython_debug/
 # Misc
 .DS_Store
 /Debug/
+/documentatio.synctex.gz
 
 compile_commands.json
 
 UnitTests2d
 UnitTests3d
 
-
+/documentation/
