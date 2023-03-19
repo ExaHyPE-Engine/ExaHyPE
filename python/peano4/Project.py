@@ -182,8 +182,8 @@ class Project (object):
         warnings = re.findall(r"(?i)warning:.*", error_message)
         errors = re.findall(r"(?i)error:.*", error_message)
         if warnings:
-          print("\nWarnings:")
-          print(PURPLE + "\n".join(warnings) + RESET)
+          #print("\nWarnings:")
+          #print(PURPLE + "\n".join(warnings) + RESET)
           print(f"Number of warnings: {len(warnings)}")
         # Raise exception with errors
         if errors:
