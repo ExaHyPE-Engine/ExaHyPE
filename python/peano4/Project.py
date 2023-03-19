@@ -159,21 +159,9 @@ class Project (object):
         cmake_build_dir = find_cmake_build_dir()
         if cmake_build_dir != "":
           command = f"cd {cmake_build_dir} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
-          process = subprocess.Popen([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          process = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
-          process = subprocess.Popen(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # Start a thread to print the output of the subprocess
-        import threading
-        def print_output(stream):
-          while True:
-            line = stream.readline().decode().strip()
-            if not line:
-              break
-            print(line)
-        stdout_thread = threading.Thread(target=print_output, args=(process.stdout,))
-        stdout_thread.start()
-        process.wait()
-        stdout_thread.join()
+          process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # Extract warnings and errors from error message
         PURPLE = "\033[35m"
         RED = "\033[31m"
@@ -181,9 +169,10 @@ class Project (object):
         error_message = process.stderr.read().decode().strip()
         warnings = re.findall(r"(?i)warning:.*", error_message)
         errors = re.findall(r"(?i)error:.*", error_message)
+        # Print warnings into the terminal
         if warnings:
-          #print("\nWarnings:")
-          #print(PURPLE + "\n".join(warnings) + RESET)
+          print("\nWarnings:")
+          print(PURPLE + "\n".join(warnings) + RESET)
           print(f"Number of warnings: {len(warnings)}")
         # Raise exception with errors
         if errors:
