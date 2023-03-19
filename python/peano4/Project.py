@@ -1,8 +1,8 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import io
 import gc
 import os
+import re
 import sys
 import subprocess
 import multiprocessing
@@ -161,77 +161,42 @@ class Project (object):
           command = f"cd {cmake_build_dir} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
           process = subprocess.Popen([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
-          process = subprocess.Popen(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+          process = subprocess.Popen(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # Start a thread to print the output of the subprocess
         import threading
-        def print_output(process):
-          num_warnings = 0
-          num_errors = 0
-          output_buffer = io.StringIO()
-          remaining_data = ""
-          chunk_size = int(1024 * (number_of_parallel_builds/4))
+        def print_output(stream):
           while True:
-            # Read one line from stdout
-            stdout_line = process.stdout.readline()
-            if stdout_line:
-              decoded_line = stdout_line.decode('utf-8').strip()
-              print(decoded_line)
-            # Read a fixed-size chunk from stderr
-            stderr_chunk = process.stderr.read(chunk_size)
-            if stderr_chunk:
-              # Find the last newline character in the chunk
-              last_newline_index = stderr_chunk.rfind(b"\n")
-              if last_newline_index != -1:
-                # Add any remaining data from the previous chunk to the beginning of this chunk
-                stderr_chunk = stderr_chunk[:last_newline_index+1].decode('utf-8') + remaining_data
-                remaining_data = stderr_chunk[last_newline_index+1:]
-              else:
-                # If there is no newline character in the chunk, buffer the entire chunk and wait for the next chunk
-                remaining_data += stderr_chunk
-                continue
-              decoded_chunk = stderr_chunk
-              output_buffer.write(decoded_chunk)
-              for decoded_line in decoded_chunk.splitlines():
-                if 'warning:' in decoded_line.lower():
-                  num_warnings += 1
-                  print('\033[35m' + decoded_line + '\033[0m')  # Print warning messages in purple
-                elif 'error:' in decoded_line.lower():
-                  num_errors += 1
-                  print('\033[31m' + decoded_line + '\033[0m')  # Print error messages in red
-                  error_messages.append(decoded_line)
-                else:
-                  print(decoded_line)
-            # If both stdout and stderr have been fully read, exit the loop
-            if not stdout_line and not stderr_chunk:
+            line = stream.readline().decode().strip()
+            if not line:
               break
-          # Print any remaining data that didn't end with a newline
-          if remaining_data:
-            output_buffer.write(remaining_data.decode('utf-8'))
-            for decoded_line in remaining_data.decode('utf-8').splitlines():
-              if 'warning:' in decoded_line.lower():
-                num_warnings += 1
-                print('\033[35m' + decoded_line + '\033[0m')
-              elif 'error:' in decoded_line.lower():
-                num_errors += 1
-                print('\033[31m' + decoded_line + '\033[0m')
-                error_messages.append(decoded_line)
-          print('Number of warnings:', num_warnings)
-          print('Number of errors:', num_errors)
-        error_messages = []
-        output_thread = threading.Thread(target=print_output, args=(process,))
-        output_thread.start()
-        # Wait for the subprocess to finish
+            print(line)
+        stdout_thread = threading.Thread(target=print_output, args=(process.stdout,))
+        stdout_thread.start()
         process.wait()
-        # Join the output thread
-        output_thread.join()
-        # Get the final output of the subprocess
-        _, _ = process.communicate()
-        if process.returncode==0:
-          print("compile completed successfully")
-        else:
-          # Raise an exception with the error message captured from the standard error stream of the subprocess
-          error_message = '\n'.join(error_messages)
+        stdout_thread.join()
+        # Extract warnings and errors from error message
+        PURPLE = "\033[35m"
+        RED = "\033[31m"
+        RESET = "\033[0m"
+        error_message = process.stderr.read().decode().strip()
+        warnings = re.findall(r"(?i)warning:.*", error_message)
+        errors = re.findall(r"(?i)error:.*", error_message)
+        if warnings:
+          print("\nWarnings:")
+          print(PURPLE + "\n".join(warnings) + RESET)
+          print(f"Number of warnings: {len(warnings)}")
+        # Raise exception with errors
+        if errors:
+          print("\nErrors:")
+          print(RED + "\n".join(errors) + RESET)
+          print(f"Number of Errors: {len(errors)}")
+          error_message = "\n".join(errors)
           raise Exception(error_message)
+        # Check the return code for linker errors
+        if process.returncode != 0:
+          linker_error_message = process.stdout.decode().strip() + "\n" + error_message
+          raise Exception(linker_error_message)
+        print("compile completed successfully")
         self.is_built = True
         self.build_was_successful = True
       except Exception as e:
