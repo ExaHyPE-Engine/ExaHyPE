@@ -183,7 +183,7 @@ undefined reference to for_write_seq_list
   that can be used to spot runtime flaws, e.g.
 - ***The Intel/NVIDIA tools yield too much data*** First, pick the  
   \ref compiler_specific_settings "vendor-specific toolchain" fitting to your system/compiler. After that,
-  amend your log filter. See \ref logging for more info.
+  amend your log filter. See \ref tarch_logging for more info.
 
 
 ## External tools
