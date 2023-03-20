@@ -2,7 +2,7 @@
 
 \page logging
 
-Logging, tracing, statistics, profiling and assertions {#section:logging}
+Logging, tracing, statistics, profiling and assertions
 ======================================================
 
 Logging, tracing and assertion architecture

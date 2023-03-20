@@ -55,8 +55,7 @@ Broadly speaking, the toolchain alters the code in two ways:
   pipes onto the terminal anymore, but are passed into the ITAC API.
 - It adds -DTBB_USE_THREADING_TOOLS to the compile flags.
 
-@todo Add link to tarch's logging discussion
-
+For further discussion on logging, please see \ref logging.
 
 The flags show that the name Intel toolchain is misleading.
 We are actually not tailoring the build to the Intel toolchain, but we tailor
