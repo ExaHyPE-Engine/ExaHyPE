@@ -733,9 +733,9 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
 #endif
 
 
-  // *  project data onto opposite face as well to trade with "identical" cell,
-  // *  this essentially simulates the exchange of surface data with the
-  // *  neighbouring cells which Peano would take care of for us normally
+  //   project data onto opposite face as well to trade with "identical" cell,
+  //   this essentially simulates the exchange of surface data with the
+  //   neighbouring cells which Peano would take care of for us normally
   projectVolumetricDataOntoFaces(
     QIn,
     order,

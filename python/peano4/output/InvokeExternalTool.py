@@ -4,7 +4,6 @@ import os
 import re
 import subprocess
 
-
 class InvokeExternalTool(object):
   def __init__(self,instruction_stream,subdirectory):
     """
@@ -13,7 +12,6 @@ class InvokeExternalTool(object):
     """
     self.instruction_stream = instruction_stream
     self.subdirectory       = subdirectory
-
 
   def generate(self,overwrite,directory):
     if not os.path.exists( directory + "/" + self.subdirectory ):
@@ -26,6 +24,3 @@ class InvokeExternalTool(object):
          print( "Error: something went wrong with the program invocation (error code=" + str(returnCode) + ")" )
     except Exception as e:
       print( "Error: "  + str(e) )
-    
-    
-      

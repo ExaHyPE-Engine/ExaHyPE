@@ -1,0 +1,78 @@
+# 
+# Peano patch file 
+# Version 0.2 
+# 
+format ASCII
+dimensions 2
+
+
+begin cell-metadata "cell-marker"
+  number-of-unknowns 5
+  number-of-dofs-per-axis 1
+  description is-refined,has-been-refined,local,enclave
+end cell-metadata
+
+begin patch
+  offset 0.000000e+00 0.000000e+00
+  size 1.111111e-01 1.111111e-01
+  begin cell-values "cell-marker"
+     0 0 1.000000e+00 1.000000e+00 1.000000e+00
+  end cell-values
+end patch
+
+begin patch
+  offset 1.111111e-01 0.000000e+00
+  size 1.111111e-01 1.111111e-01
+  begin cell-values "cell-marker"
+     0 0 1.000000e+00 1.000000e+00 1.000000e+00
+  end cell-values
+end patch
+
+begin patch
+  offset 2.222222e-01 0.000000e+00
+  size 1.111111e-01 1.111111e-01
+  begin cell-values "cell-marker"
+     0 0 1.000000e+00 0 0
+  end cell-values
+end patch
+
+begin patch
+  offset 2.222222e-01 1.111111e-01
+  size 1.111111e-01 1.111111e-01
+  begin cell-values "cell-marker"
+     0 0 1.000000e+00 0 0
+  end cell-values
+end patch
+
+begin patch
+  offset 1.111111e-01 1.111111e-01
+  size 1.111111e-01 1.111111e-01
+  begin cell-values "cell-marker"
+     0 0 1.000000e+00 0 0
+  end cell-values
+end patch
+
+begin patch
+  offset 0.000000e+00 1.111111e-01
+  size 1.111111e-01 1.111111e-01
+  begin cell-values "cell-marker"
+     0 0 1.000000e+00 1.000000e+00 1.000000e+00
+  end cell-values
+end patch
+
+begin patch
+  offset 0.000000e+00 2.222222e-01
+  size 1.111111e-01 1.111111e-01
+  begin cell-values "cell-marker"
+     0 0 1.000000e+00 0 0
+  end cell-values
+end patch
+
+begin patch
+  offset 1.111111e-01 2.222222e-01
+  size 1.111111e-01 1.111111e-01
+  begin cell-values "cell-marker"
+     0 0 1.000000e+00 0 0
+  end cell-values
+end patch
+

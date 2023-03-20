@@ -17,6 +17,7 @@ namespace {
   int nonblockingTasksCounter          = 0;
 
   const int StandardPriority           = 16;
+
   const int BackgroundConsumerPriority = 1;
 
   const std::string BSPConcurrencyLevelStatisticsIdentifier( "tarch::multicore::bsp-concurrency-level" );
@@ -33,7 +34,6 @@ namespace {
    * NVIDIA's nvc++ does not support taskloops. We have contacted their R&D and they
    * confirmed that they only implement a subset of OpenMP, and the taskloop is not
    * on the list of features that they want to support.
-   *
    *
    * ## Implementation (bugs)
    *
@@ -76,7 +76,6 @@ namespace {
     smartmpi::reportWaitTime(taskWaitTime.getCPUTime(),tarch::mpi::Rank::getInstance().getRank());
     #endif
   }
-
 
   /**
    * Aggressive BSP-type variant to run through tasks which ensures high
@@ -122,13 +121,11 @@ namespace {
    *   all BSP stuff is now in work. In this case, we can also enable the
    *   polling. But not before.
    *
-   *
    * ## System-specific details
    *
    * NVIDIA's nvcc does not support the taskloop. It would be easy to replace
    * the taskloop with a for loop and tasks within the loop body. But I decided
    * to strive for a clean code.
-   *
    *
    * ## Performance
    *
@@ -155,13 +152,11 @@ namespace {
    * all of our thread-local tasks to the global queue once this routine has
    * terminated.
    *
-   *
    * ## NVIDIA
    *
    * NVIDIA's nvc++ does not support taskloops. We have contacted their R&D and they
    * confirmed that they only implement a subset of OpenMP, and the taskloop is not
    * on the list of features that they want to support.
-   *
    *
    * ## Bugs/flaws
    *
@@ -188,7 +183,7 @@ namespace {
     #endif
     for (int i=0; i<NumberOfThreads; i++) {
       #if !defined(OpenMPTaskGroup)
-      #pragma omp task
+      #pragma omp task shared(pendingTasks, spawnedTasks, tasks, strategy) firstprivate(NumberOfThreads, i) priority(StandardPriority) untied
       #endif
       {
         ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
@@ -209,37 +204,18 @@ namespace {
         #endif
         pendingTasks--;
 
-        const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
-        const int  threadNumber = tarch::multicore::Core::getInstance().getThreadNumber();
-
-
         while (
           pendingTasks>0
           and
-          // Without this yield, the code will deadlock if you have more trees
-          // than cores. As the first p trees on p cores will finish and then
-          // poll. The other >p trees/tasks will starve
           pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
           and
           spawnedTasks==NumberOfThreads
         ) {
-          tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-          int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks(threadNumber);
-
-          bool processedSomeTasks = false;
-          if (numberOfPendingTasks>=fusion.minTasks) {
-            tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
-            processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
-          }
-          else if (numberOfPendingTasks>0) {
-            tarch::multicore::internal::processThreadLocalTask(threadNumber);
-          }
-          else { // no local tasks left over
-            tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
-            const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-            processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
-          }
+          ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+            strategy
+          );
         }
+
         ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
       }
     }
@@ -260,7 +236,6 @@ namespace {
   }
 }
 
-
 void tarch::multicore::native::spawnTask(Task*  job) {
   #pragma omp atomic
   nonblockingTasksCounter++;
@@ -275,7 +250,6 @@ void tarch::multicore::native::spawnTask(Task*  job) {
     nonblockingTasksCounter--;
   }
 }
-
 
 /**
  * Use a taskloop and label it as nogroup, i.e. we only synchronise over the
@@ -299,11 +273,9 @@ void tarch::multicore::native::spawnAndWait(
   }
 }
 
-
 int tarch::multicore::native::getNumberOfPendingTasks() {
   return nonblockingTasksCounter;
 }
-
 
 /**
  * It is not clear what happens if I use tasksOfSameType directly within the task.
@@ -314,7 +286,6 @@ int tarch::multicore::native::getNumberOfPendingTasks() {
  * this one into fuse(). The firstprivate annotation is not required, as this is the
  * default. But I leave it in here to highlight that three variables are copied,
  * but tasksOfSameType is not copied and not used within the task.
- *
  *
  * ## NVIDIA
  *
@@ -343,7 +314,6 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
     }
   }
 }
-
 
 void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
   #pragma omp taskyield

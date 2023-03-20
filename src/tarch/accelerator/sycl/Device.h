@@ -2,9 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 /**
- * @page SYCL SYCL support
+ * @page tarch_accelerator_SYCL SYCL support
  *
  * Using SYCL in Peano can be tricky, as SYCL's interface (headers, e.g.) still
  * changes from time to time, and as SYCL uses a couple of macros and functions
@@ -14,12 +13,11 @@
  * wraps around the standard SYCL headers. I strongly recommend all Peano files
  * to use this header rather than SYCL directly.
  *
- * Besides the fancy includes, the SYCL header also provides the getSYCLQueue()
+ * Besides the fancy includes, the SYCL header also provides the tarch::accelerator::getSYCLQueue()
  * routine. When you start up the Peano's Core object, it will automatically
  * put one SYCL queue onto each device. You can query the singleton for the
  * number of devices from anywhere in the code, but to get hold of these
  * devices, you should use the getter in the SYCL.h header.
- *
  *
  * ## Implementation
  *
@@ -29,16 +27,13 @@
  *
  * ## Dependencies
  *
- * Don't include any other Peano header in this file, as all Peano headers might
- * indirectly include this one via multicore.h, as they need the macro
- * SYCL_EXTERNAL.
- *
- * The only header you need from Peano is the actual config.h.
+ * Don't include any other Peano header in the file tarch/accelerator/sycl/Device.h, as all Peano headers might
+ * indirectly include this one via multicore.h (as they need the macro
+ * SYCL_EXTERNAL, e.g.). The only header that this file in turn needs
+ * from Peano is the actual config.h.
  *
  */
-
 #if defined(GPUOffloadingSYCL)
-
 
 #pragma push_macro("Dimensions")
 #pragma push_macro("assertion")
@@ -48,9 +43,7 @@
 #pragma pop_macro("Dimensions")
 #pragma pop_macro("assertion")
 
-
 #include <set>
-
 
 namespace tarch {
   namespace accelerator {
@@ -73,7 +66,6 @@ namespace tarch {
      * @see tarch::multicore::getHostSYCLQueue()
      */
     sycl::queue& getSYCLQueue( int number );
-
 
     /**
      * Write available queues to cout. The logging interface is not used, as

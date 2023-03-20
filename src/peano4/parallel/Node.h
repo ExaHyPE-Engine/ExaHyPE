@@ -61,11 +61,6 @@ class peano4::parallel::Node {
      */
     static constexpr int        StacksPerCommunicationPartner = 4;
 
-    /**
-     * The MPI standard specifies that the tag upper bound must be at least 32767.
-     */
-    static constexpr int ReservedMPITagsForDataExchange = MaxSpacetreesPerRank * StacksPerCommunicationPartner;
-
     #if !defined(Parallel)
     typedef int MPI_Comm;
     #endif

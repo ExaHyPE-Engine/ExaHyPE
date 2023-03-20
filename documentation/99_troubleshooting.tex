@@ -2,32 +2,6 @@
 \label{chapter:troubleshooting}
 
 
-\section{Autotools (\texttt{configure})}
-
-\begin{itemize}
-  \item \textbf{\texttt{configure} fails with \ldots}. Before you start
-  any further investigation, update to the latest version of the autotools,
-  ensure your configure script suits this version, and rerun the build system
-  configuration:
-  \begin{bash}
-autoreconf --install
-libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-  \end{bash}
-  \item \textbf{checking host system type... Invalid configuration
-  `./configure': machine `./configure-unknown' not recognized}. We got this
-  recently on a number of new Linux installations. In this case, adding 
-\begin{code}
---build=x86_64 --host=x86_64
-\end{code}
-  to your \texttt{configure} call seems to be necessary.
-%   \item \textbf{No unit tests seem to run.} Peano4 builds a set of libraries that are linked into 
-%     the actual application. It seems that some linkers consider the unit tests to be dead code,
-%     as the actual test routines indeed are never called (by the library). See the documentation in 
-%     \texttt{tarch/tests/TestCase.h} for some details. 
-  \item To be continued \dots
-\end{itemize}
-
-
 \section{Python API}
 
 \begin{itemize}
@@ -64,126 +38,8 @@ python3 -m pip install --user --update pip
 \end{itemize}
 
 
-\section{Compilation}
 
 
-
-% /usr/bin/ld: ../../../../src/exahype2/libExaHyPE2Core2d_debug.a(libExaHyPE2Core2d_debug_a-PatchUtils.o): relocation R_X86_64_32 against symbol `_ZSt4cerr@@GLIBCXX_3.4' can not be used when making a PIE object; recompile with -fPIE
-
-
-\begin{itemize}
-  \item \textbf{My compiler yields warnings of the type}
-  \begin{terminalOutput} 
-./peano4/grid/GridTraversalEvent.h:161:7: warning: unknown attribute 'compress' ignored [-Wunknown-attributes]
- [[clang::pack]]  std::bitset<TwoPowerD>   _hasBeenRefined;
-  \end{terminalOutput}     
-  \textbf{How can I disable them?}
-  Please consult your compiler options. Usually re-configuring with the flag
-  \texttt{CXXFLAGS="... -Wno-unknown-attributes"} or \texttt{CXXFLAGS="...
-  -Wno-attributes=clang::"} eliminates the warnings.
-  \item \textbf{My compiler reports something like} 
-\begin{terminalOutput}
-tarch/multicore/multicore.cpp:13:19: error: `align_val_t` is not a member of `std` 
-  13 |  return new (std::align_val_t(Alignment)) double[size];
-\end{terminalOutput}
-  We have seen this error with GCC if the supported C++ generation is too old.
-  Try to return configure with 
-  \texttt{CXXFLAGS=-std=c++0x}.
-  Depending on your compiler, the flag might also be 
-  \texttt{CXXFLAGS=--std=c++0x} (two hyphens).
-  \item \textbf{My compiler yields errors like}
-\begin{terminalOutput}
-`warning \#3191: scoped enumeration types are a C++11 feature` 
-\end{terminalOutput}
-  Your compiler seems not to have
-  C++11 (or, newer) enabled by default. Rerun configure with the flag
-  \texttt{CXXFLAGS=-std=c++0x}.
-  \item \textbf{ My compiler terminates with}
-\begin{terminalOutput}
-`error: unknown attribute 'optimize' ignored*`
-\end{terminalOutput}
-   We have seen this issue notably on macOS
-   with CLANG replacing GCC. Unfortunately, CLANG seems to pretend to be GNU on
-   some systems and then the wrong header is included. Ensure that
-   \texttt{CompilerSpecificSettings.h}\footnote{Peano relies on a header \texttt{tarch/compiler/CompilerSpecificSettings.h}.
-Whenever I find incompatibilities between different compilers, I try to resolve them through this file. 
-The header reads out some compiler preprocessor directives and then includes the
-one it find most appropriate. 
-You may always include your own file derived from one of the other headers in
-the directory.} includes a file such that the
-   compiler
-   \texttt{CompilerCLANG} is defined.
-  \item \textbf{ My compiler requires ages to translate the unit tests}. Ensure
-  that the flag \linebreak \texttt{UseTestSpecificCompilerSettings} is enabled.
-  This effectively disables any optimisation for the unit tests. Without the
-  flag, unit test can become really big due to template instantiation.
-  \item \textbf{\texttt{./configure} crashes when I try to translate with TBB}.
-  I have seen this on a couple of systems and found it annoying. 
-  First, ensure that configure
-  find the TBB header. To ensure it does, check that \texttt{CXXFLAGS} are properly
-  set. Next, set \texttt{LDFLAGS=-Lmypath}. Usually, I add \texttt{-ltbb} to 
-  this parameter and then everything is fine. However, some configures then don't 
-  like the configure script anymore. So I instead use \texttt{export PEANO\_LDFLAGS="-ltbb"}. 
-  For some systems, it then still remains necessary to add pthreads, too.
-  \item \textbf{ My compiler terminates with errors when I enable OpenMP multithreading }.
-  Make sure that you are using a compiler with OpenMP 5.0 support, such as GCC 9.x.
-  \item \textbf{I configured Peano with HDF5, but my application (experiment) will not compile}.
-  The application will parse the configure call used by Peano to feed its
-  Makefile, but will not infer the settings from \texttt{--with-hdf5}. To get
-  the correct flags for HDF5 support for your experiment, you might want to add
-  the following to your Peano configuration call:
-  \texttt{LDFLAGS="-lhdf5\_hl\_cpp -lhdf5\_cpp -lhdf5\_hl -lhdf5 -lstdc++"}.
-  Notice that some outdated GCC compilers might struggle with the last one on the list.
-  \item To be continued \dots
-\end{itemize}
-
-
-
-\section{Linking}
-
-\begin{itemize}
-  \item \textbf{My linker yields errors like `undefined reference to
-  std::vector ...  `}.
-  We have seen this with some outdated GCC compilers. Ensure you meet the
-  minimum GCC requirements or switch to another compiler.
-  \item \textbf{The linker says that the vtk libraries were not found}.
-  VTK can be tricky to get up and running. See a comprehensive discussion on VTK
-  issues in Chapter \ref{chapter:postprocessing}. It includes compiler/linker issues.
-  \item \textbf{If I use Fortran as well, I get errors alike \emph{undefined
-  reference to for\_stop\_core' or 'for\_write\_seq\_list'}}. This tells you
-  that the linker failed to find the Fortran standard libraries. For the GNU
-  compilers, you need for example the flag \texttt{-lgfortran}, while the Intel
-  compiler requires you to add \ldots
-  To add these flags, set the \texttt{LDFLAGS} before you run
-  \texttt{configure}:
-  \begin{bash}
-# GNU
-export LDFLAGS=-lgfortran
-
-# Intel
-export LDFLAGS=-lifcore
-  \end{bash}
-  On the Python API side, I considered adding these flags to the template
-  makefile or offering an API function to add them manually to the makefile from
-  the Python script. I dropped these ideas, as these libraries are specific to
-  the build and hardware system and have nothing to do with a particular
-  application.
-%   \item \textbf{No unit tests seem to run.} Peano4 builds a set of libraries that are linked into 
-%     the actual application. It seems that some linkers consider the unit tests to be dead code,
-%     as the actual test routines indeed are never called (by the library). See the documentation in 
-%     \texttt{tarch/tests/TestCase.h} for some details. 
-  \item \textbf{The complains about some routines/classes from the technical
-  architectures, but they are definitely there}.
-  GCC/C++ is extremely sensitive when it comes to the order of the libraries
-  used. You might have to edit your makefile manually to get a ``valid''
-  ordering that works. My recommendation is that you always links from the most
-  abstract library to the lowest level lib. In one \ExaHyPE\ project, e.g., the
-  following order worked whereas all others resulted in linker errors:
-  \texttt{-lExaHyPE2Core2d\_asserts},
-  \texttt{-lToolboxLoadBalancing2d\_asserts}, \texttt{-lPeano4Core2d\_asserts},
-  \texttt{-lTarch\_asserts}.
-  \item To be continued \dots
-\end{itemize}
 
 
 
@@ -358,7 +214,7 @@ export SYCL_DEVICE_TYPE=CPU
        \texttt{CXXFLAGS="... -Iyour-path/otter/include"} to your
        \texttt{CXXFLAGS}.
       \item Ensure that you have added
-       \texttt{LIBS="... -lotter-serial -lotf2"} to your libraries. Depending on
+       \texttt{LIBS="... -lotter-task-graph -lotf2"} to your libraries. Depending on
        your system, you might need the explicit linking to \texttt{otf2} or not.
       \item Ensure that you have added
       \texttt{LDFLAGS="... --Lyour-path/otter/build/lib -L/opt/otf2/lib"}

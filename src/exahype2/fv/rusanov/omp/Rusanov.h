@@ -101,6 +101,7 @@ namespace exahype2 {
         #endif
         ;
 
+
         template <
           typename Solver,
           int      numberOfVolumesPerAxisInPatch,
@@ -146,7 +147,6 @@ namespace exahype2 {
         #endif
         ;
 
-
         /**
          * Dummy version delegating to one well-defined proper kernel. By
          * offering such a routine, we can generate generic compute code
@@ -169,23 +169,40 @@ namespace exahype2 {
           bool                    evaluateSource,
           bool                    evaluateMaximumEigenvalueAfterTimeStep
         ) {
-          timeStepWithRusanov_patchwise_map_static_calls<
-            Solver,
-            numberOfVolumesPerAxisInPatch,
-            haloSize,
-            unknowns,
-            auxiliaryVariables,
-            TempDataEnumerator
-          >(
-            targetDevice,
-            patchData,
-            evaluateFlux,
-            evaluateNonconservativeProduct,
-            evaluateSource,
-            evaluateMaximumEigenvalueAfterTimeStep
-          );
+          #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__)
+            timeStepWithRusanov_patchwise_managed_static_calls<
+              Solver,
+              numberOfVolumesPerAxisInPatch,
+              haloSize,
+              unknowns,
+              auxiliaryVariables,
+              TempDataEnumerator
+            >(
+              targetDevice,
+              patchData,
+              evaluateFlux,
+              evaluateNonconservativeProduct,
+              evaluateSource,
+              evaluateMaximumEigenvalueAfterTimeStep
+            );
+          #else
+            timeStepWithRusanov_patchwise_map_static_calls<
+              Solver,
+              numberOfVolumesPerAxisInPatch,
+              haloSize,
+              unknowns,
+              auxiliaryVariables,
+              TempDataEnumerator
+            >(
+              targetDevice,
+              patchData,
+              evaluateFlux,
+              evaluateNonconservativeProduct,
+              evaluateSource,
+              evaluateMaximumEigenvalueAfterTimeStep
+            );
+          #endif
         }
-
 
         #if defined(GPUOffloadingOMP)
         /**
@@ -210,7 +227,29 @@ namespace exahype2 {
           double*    maxEigenvalue;
         };
         #pragma omp end declare target
+
         #endif
+
+
+        template <
+          typename Solver,
+          int      numberOfVolumesPerAxisInPatch,
+          int      haloSize,
+          int      unknowns,
+          int      auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_batched_heap_multicore_static_calls(
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
       }
     }
   }
@@ -220,4 +259,4 @@ namespace exahype2 {
 #include "Rusanov_batched_map_static_calls.cpph"
 #include "Rusanov_patchwise_managed_static_calls.cpph"
 #include "Rusanov_batched_managed_static_calls.cpph"
-
+#include "Rusanov_batched_heap_multicore_static_calls.cpph"

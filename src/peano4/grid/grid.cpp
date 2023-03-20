@@ -6,11 +6,9 @@
 
 #include "peano4/utils/Loop.h"
 
-
 namespace {
-  tarch::logging::Log _log( "peano4::grid" );
+  [[maybe_unused]] tarch::logging::Log _log( "peano4::grid" );
 }
-
 
 bool peano4::grid::isContained( const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event, double upscaleAutomatonState ) {
   assertion1(upscaleAutomatonState>=1.0,upscaleAutomatonState);
@@ -19,20 +17,17 @@ bool peano4::grid::isContained( const peano4::grid::AutomatonState& state, const
     tarch::la::allSmallerEquals( state.getX() + (0.5+0.5*upscaleAutomatonState)*state.getH(), event.getOffset()+event.getWidth() );
 }
 
-
 bool peano4::grid::overlaps( const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event ) {
   return tarch::la::allGreaterEquals( state.getX()+ state.getH(), event.getOffset() )
     and
     tarch::la::allSmallerEquals( state.getX(), event.getOffset()+event.getWidth() );
 }
 
-
 bool peano4::grid::overlaps( const tarch::la::Vector<Dimensions,double>& x, const GridControlEvent& event ) {
   return tarch::la::allGreaterEquals( x, event.getOffset() )
     and
     tarch::la::allSmallerEquals( x, event.getOffset()+event.getWidth() );
 }
-
 
 peano4::grid::GridVertex peano4::grid::createVertex(
   GridVertex::State                            state,
@@ -156,8 +151,6 @@ void peano4::grid::internal::removeEraseEventsThatAreCancelledByRefineEvents(
   const std::list< peano4::grid::GridControlEvent >&  refineEvents,
   std::list< peano4::grid::GridControlEvent >&        eraseEvents
 ) {
-  static tarch::logging::Log _log( "peano4::grid" );
-
   std::list< peano4::grid::GridControlEvent >::iterator pEraseEvent = eraseEvents.begin();
   while( pEraseEvent != eraseEvents.end() ) {
     bool overlaps = false;
@@ -175,8 +168,6 @@ void peano4::grid::internal::removeEraseEventsThatAreCancelledByRefineEvents(
 
 
 void peano4::grid::internal::mergeAdjacentRefinementEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents ) {
-  static tarch::logging::Log _log( "peano4::grid" );
-
   bool hasMergedRefinementEventOrCancelledErase = true;
   while (hasMergedRefinementEventOrCancelledErase) {
     std::list< peano4::grid::GridControlEvent >::iterator inputP = inputEvents.begin();

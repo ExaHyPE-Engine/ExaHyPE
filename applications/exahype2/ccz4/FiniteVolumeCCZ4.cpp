@@ -48,6 +48,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* t
 		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 		tp->TP_epsilon=1e-6;}
 	
+  //following data reference: https://journals.aps.org/prd/pdf/10.1103/PhysRevD.69.024006
 	if (CCZ4swi==2 and CCZ4BBHType==1){
 		tp->par_b=3.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
@@ -313,7 +314,6 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
   const double radius = tarch::la::norm2( volumeCentre );
-
   //
   // see documentation in header file
   //
@@ -324,7 +324,6 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   }
   if (CCZ4ReSwi==2) { //
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
-        std::cout << "@";
       constexpr int NumberOfRefinementLayers = 2;
 //    current "standard" refinement pattern
       double Radius[NumberOfRefinementLayers] = {4, 2.5};
@@ -409,12 +408,25 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
       }
     }
   }
-  if (CCZ4ReSwi==6) {
-    if (tarch::la::equals(t,0.0)) {
+  if (CCZ4ReSwi==6){
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       constexpr int NumberOfRefinementLayers = 2;
       double Radius[NumberOfRefinementLayers] = {5, 3.5};
       double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
 
+      result = ::exahype2::RefinementCommand::Keep;
+      for (int i=0; i<NumberOfRefinementLayers; i++) {
+        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
+          result=::exahype2::RefinementCommand::Refine;
+        }
+      }
+    }
+  }
+  if (CCZ4ReSwi==7){ 
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      constexpr int NumberOfRefinementLayers = 2;
+      double Radius[NumberOfRefinementLayers] = {3.0, 1.5};
+      double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {
         if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {

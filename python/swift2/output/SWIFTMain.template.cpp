@@ -65,7 +65,6 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
   static double nextMinPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
   static bool   haveJustWrittenSnapshot                     = false;
   static tarch::la::Vector<Dimensions,double> minH          = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
-  static int    globalNumberOfTrees                         = 0;
   bool          continueToSolve                             = true;
 
   if (false) {} // just there to make my script's syntax easier
@@ -396,7 +395,7 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-  otterTraceInitialise(OTTER_SRC_ARGS());
+  otterTraceInitialise();
 
 
   #if defined(SharedOMP)
@@ -426,6 +425,8 @@ int main(int argc, char** argv) {
   }
   }
   #endif
+  
+  otterTraceFinalise();
 
   peano4::shutdownSingletons();
   {{NAMESPACE | join("::")}}::repositories::DataRepository::shutdownDatatypes();

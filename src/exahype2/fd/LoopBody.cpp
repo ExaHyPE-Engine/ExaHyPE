@@ -2,7 +2,6 @@
 #include "exahype2/fd/FD_Helper.cpph"
 #include "peano4/utils/Loop.h"
 
-
 void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
   ::exahype2::CellData&   patchData,
   int                     numberOfGridCellsPerPatchPerAxis,
@@ -15,9 +14,7 @@ void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     double newMaxEigenvalue = 0.0;
-    otterLoopBegin(); // TODO: how do I clarify that this is a reduction? Do we need this info here?
     dfor(cell,numberOfGridCellsPerPatchPerAxis) {
-      otterLoopIterationBegin();
       newMaxEigenvalue = std::max(
         newMaxEigenvalue,
         ::exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
@@ -32,14 +29,10 @@ void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
           patchData.dt[patchIndex]
         )
       );
-      otterLoopIterationEnd();
     }
-    otterLoopEnd();
     patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
   }
 }
-
-
 
 template <>
 double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(

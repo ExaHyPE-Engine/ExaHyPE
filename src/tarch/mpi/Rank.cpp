@@ -28,6 +28,24 @@
 
 namespace {
   int tagCounter = 0;
+
+  /**
+   * The MPI standard specifies that the tag upper bound must be at least 32767,
+   * but code code better checks if this is supported by the MPI implementation.
+   * Also, user codes might be nasty and require more tags.
+   */
+  int maxTag = -1;
+
+  void validateMaxTag() {
+    if (
+      maxTag>0
+      and
+      tagCounter>=maxTag
+    ) {
+      tarch::logging::Log _log("tarch::mpi");
+      logError( "validateTag()", "code has requested " << tagCounter << " tags, but the maximum tag supported by MPI implementation is " << maxTag );
+    }
+  }
 }
 
 
@@ -65,7 +83,7 @@ int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName
   }
   #endif
 
-  validateMaxTagIsSupported();
+  validateMaxTag();
 
   return result;
 }
@@ -480,19 +498,30 @@ bool tarch::mpi::Rank::init(int* argc, char*** argv) {
   #endif
 
   if (result!=MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)";
+    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;
     return false;
   }
 
   result = MPI_Comm_size( MPI_COMM_WORLD, &_numberOfProcessors );
   if (result!=MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)";
+    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;
     return false;
   }
 
   result = MPI_Comm_rank( MPI_COMM_WORLD, &_rank );
   if (result!=MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)";
+    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;
+    return false;
+  }
+
+  int   answerFlag;
+  void* rawMaxTag;
+  MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &rawMaxTag, &answerFlag);
+  if (answerFlag) {
+    maxTag = *(int*)rawMaxTag;
+  }
+  else {
+    std::cerr << "init(int*,char***)\t was not able to query what the maximum tag value is" << std::endl;
     return false;
   }
 

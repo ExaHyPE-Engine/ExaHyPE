@@ -2,23 +2,6 @@
 \label{section:exahype}
 
 
-% \begin{figure}[htb]
- \begin{center}
-  \includegraphics[width=0.16\textwidth]{60_exahype/EU.png}
-  \includegraphics[width=0.35\textwidth]{60_exahype/ExaHyPE_Logo.jpg}
-  \includegraphics[width=0.27\textwidth]{60_exahype/ExCALIBUR.png}
- \end{center}
-%  \caption{
- { \footnotesize
-   The original ExaHyPE project delivering the first generation of the ExaHyPE
-   software has received funding from the European Union’s Horizon 2020 research
-   and innovation programme under grant agreement No 671698 (ExaHyPE).
-   \ExaHyPE\ has been made possible by EPSRC under the grant EP/V00154X/1
-   (ExaClaw). 
- }
-% \end{figure}
-
-
 \ExaHyPE\ is both a set of C/C++ and Fortran core routines complementing the
 \Peano\ core and a high-level augmentation of \Peano's Python API.
 \ExaHyPE's Python API can be read as builder mechanism:
@@ -39,87 +22,10 @@ The details of these domain-specific codes are not covered by the present
 document.
 
 
-\begin{framed}
-\paragraph*{A first \ExaHyPE\ run}
-\begin{itemize}
-  \item Clone the repository (cmp.~page
-  \pageref{page::installation::git-clone}). Skip this step if you already have a
-  \Peano\ checkout, i.e.~if you have completed this step once.
-  \begin{bash}
-git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
-  \end{bash}
-  \item Create the build system (cmp.~page
-  \pageref{page::installation::configure}). Skip this step if you already have a
-  working configure, i.e.~if you have completed this step once.
-  \begin{bash}
-libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-  \end{bash}
-  \item Configure \Peano\ with the flags \texttt{--enable-exahype},
-  \texttt{--enable-loadbalancing}, \texttt{--enable-blockstructured}:
-  \begin{bash}
-./configure --enable-exahype --enable-loadbalancing --enable-blockstructured
-  \end{bash}
-   These are the mandatory extensions (toolboxes). You might want to add further
-   options.
-   You also will have to add additional flags on
-   particular system.
-   In particular the flags \texttt{CXX}, \text{CXXFLAGS} and \texttt{LDFLAGS} to pick your
-   compiler, your compiler settings and your linker parameters. Chapter
-   \ref{chapter:selected-HPC-platforms} discusses some popular choices. Skip
-   this step if you have already completed it once.
-  \item Recompile your \Peano\ code by typing in
-  \begin{bash}
-make
-  \end{bash}
-   This should give you a couple
-  of static libraries in the respective subdirectories. Skip this
-  step if you have already completed it once.
-  \item Ensure that \texttt{python} subdirectory is in your Python search path
-  and
-  \item run the Jupyter notebook in \texttt{examples/exahype2/euler}: 
-  \begin{bash}
-export PYTHONPATH=../../../python/
-jupyter-notebook Euler.ipynb
-  \end{bash}
-  \noindent
-  or---if you don't like Jupyter notebooks---type in
-  \begin{bash}
-export PYTHONPATH=../../../python/
-python3 example-scripts/finitevolumes.py -cs 0.2
-./peano4
-  \end{bash}
-  \item Finally, jump straight into Chapter \ref{chapter:postprocessing} and
-  pick one of the pathways there to convert the output files into vtk files
-  which Paraview or VisIt can display.
-\end{itemize}
-\end{framed}
 
 
 
-\section{Historical remarks}
 
-\ExaHyPE\ is the follow-up development of the ExaHyPE project which has
-been funded by the EU from 2015--2019.
-The present version is the second generation of the code (\ExaHyPE) and has
-seen substantial rewrites of core routines.
-However, many paradigms and even code blocks remain the same.
-Migrating from the original ExaHyPE to \ExaHyPE\ thus should be straightforward.
-
-
-The original ExaHyPE had been built on top of Peano (third generation) and tried
-to hide as much of Peano away as possible.
-In \ExaHyPE, I go the opposite way: \ExaHyPE\ is a full-blown Peano add-in and I
-try not to hide anything away.
-Where we designed our own data management on top of Peano in ExaHyPE, all the
-data management (as well as parallelisation, e.g.) is native \Peano.
-
-
-With the migration from a sole-C++ philosophy to C++ supplemented by a Python
-API in \Peano, I also dumped ExaHyPE's former configuration/specification file
-pradigma.
-An \ExaHyPE\ application now is championed by a sole Python script.
-This Python script yields a native \Peano\ application (builder mechanism) which
-then assembles the application.
 
 
 
@@ -218,127 +124,6 @@ peano4_project = project.generate_Peano4_project()
 peano4_project.generate( throw_away_data_after_generation=False )  
   \end{code}
 \end{itemize}
-
-
-\begin{framed}
-\paragraph*{Kernel benchmark}
-
-\ExaHyPE's implementation of the Euler equations is shipped
-with a benchmark to assess the speed of the compute kernels.
-The benchmark solely computes the throughput on one core or one GPU and thus
-provides key information how efficient these core kernels perform on your
-system.
-It neglects other effects such as multithreading or MPI data exchange, grid
-management, time stepping behaviour, halo data exchange, and so forth.
-To run the benchmark, follow the following steps:
-
-
-\label{page:exahype:kernel-benchmark}
-\begin{enumerate}
-  \item Clone the repository (cmp.~page
-  \pageref{page::installation::git-clone}). Skip this step if you already have a
-  \Peano\ checkout, i.e.~if you have completed this step once.
-  \begin{bash}
-git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
-  \end{bash}
-  \item Create the build system (cmp.~page
-  \pageref{page::installation::configure}). Skip this step if you already have a
-  working configure, i.e.~if you have completed this step once.
-  \begin{bash}
-libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-  \end{bash}
-  \item Configure \Peano\ with the flags \texttt{--enable-exahype},
-  \texttt{--enable-loadbalancing}, \texttt{--enable-blockstructured}:
-  \begin{bash}
-./configure --enable-exahype --enable-loadbalancing --enable-blockstructured
-  \end{bash}
-   These are the core extensions (toolboxes) required for the benchmark. 
-   If you want to test your system with OpenMP offloading, e.g., you will need
-   an additional
-   \texttt{--with-gpu=omp}.
-   Though the benchmarks in principle assess only the core performance of the
-   compute kernels, they can mimick the concurrent offloading from multiple
-   threads.
-   To enable this feature, you have to activate multithreading, too (add
-   \texttt{--with-multithreading=omp} for example).
-   Run \texttt{./configure --help} for various combinations of GPU and
-   multithreading back-ends.
-   Finally, you will have to add additional flags
-   on particular system.
-   In particular the flags \texttt{CXX}, \text{CXXFLAGS} and \texttt{LDFLAGS} to pick your
-   compiler, you compiler settings and your linker parameters. Chapter
-   \ref{chapter:selected-HPC-platforms} discusses some popular choices. Skip
-   this step if you have already completed it once.
-  \item Recompile your \Peano\ code by typing in
-  \begin{bash}
-make
-  \end{bash}
-  \item Set the \texttt{PYTHONPATH} and run the benchmark script within the
-  Euler example directory:
-  \begin{bash}
-  cd benchmarks/exahype2/euler/kernel-benchmarks
-  export PYTHONPATH=../../../../python
-  python3 fv-rusanov-kernel-benchmarks.py
-  \end{bash}
-  This builds a default benchmarks for 2d with $17 \times 17$ patches. 
-  \item Run the benchmark
-  \begin{bash}
-./kernel-benchmark-fv-2d-patch-size-17 --threads 1 --gpus all
-  \end{bash}
-  which should give you an output similar to
-  \begin{terminalOutput}
-========================================
-  Number of patches fused: 1
- ========================================
- baseline: 0.000141742 / 2.88504e-08
- stateless kernels on host with heap, patch-wise, AoS: 0.000156606 / 3.18758e-08
- stateless kernels on host with heap, patch-wise, AoSoA: 0.000114747 / 2.33558e-08
- stateless kernels on host with heap, patch-wise, SoA: 0.000114582 / 2.33222e-08
- stateless kernels on host with heap, patch-wise, in-situ: 3.5338e-05 / 7.19275e-09
- stateless kernels on host with heap, batched, AoS: 0.000116653 / 2.37437e-08
- stateless kernels on host with heap, batched, AoSoA: 0.000115959 / 2.36025e-08
- stateless kernels on host with heap, batched, SoA: 0.000114284 / 2.32616e-08
- stateless kernels on host with heap, batched, in-situ:  \end{terminal}
-  \end{terminalOutput}
-  \item The Python script generating and the benchmark supports different options 
-  and benchmark settings.   
-  Type in \texttt{--help} for additional information.
-  The statement above assesses the kernel performance if only one thread is used. 
-  Offloading to the GPUs from multiple threads is notoriously tricky, while running a 
-  kernel benchmark on multiple cores stresses the interconnect. I therefore always
-  recommend to start with the single core measurements. Finally, there's a
-  \texttt{kernel-benchmark.md} markup file which describes further settings and 
-  also discusses built-in postprocessing options. 
-\end{enumerate}
-
-\noindent
-The benchmark gives you the total runtime and cost per degree of freedom update (throughput) 
-on one core or GPU, respectively.
-Data is provided 
-for
-various patch sizes batched (fused) into one large patch assembly, for patches 
-which exploit stateless operations, and different kernel realisations.
-
-Baseline is what you get with \ExaHyPE's most basic configuration and its flexible
-architecture, where users can tailor each PDE term towards their needs.
-The other variants exploit hints how to tune these computations and try out various optimisations,
-algorithmic reformulations and internal data formats for temporary data.
-Please note that we assess only the Euler equations here, i.e.~we are extremely
-bandwidth-bound and induce almost no load.
-All GPU data comprise all data transfer and memory allocations on the GPU.
-They provide fair measurements and not raw compute figures.
-We have data for SYCL\footnotemark, OpenMP\footnotemark \ and C++\footnotemark 
-\ GPU benchmarks.
-\end{framed}
-
-\footnotetext{\texttt{
-./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++20
--Wno-unknown-attributes" "-ltbb" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl
-}}
-% \footnote{\texttt{
-% ./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++17
-% -Wno-unknown-attributes -fiopenmp  -fopenmp-targets=spir64' 'LDFLAGS=-g3 -L/opt/intel/oneapi_customer/tbb/latest/lib/intel64/gcc4.8 -ltbb -fiopenmp' --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl
-% }}.
 
 
 \section{Case study: A Finite Volumes code coupling two solvers  (hyperbolic+elliptic)}
@@ -1893,7 +1678,7 @@ Yet, increasing the domain size usually helps in such a case.
 
 
 
-\section{More complex boundaries}
+\subsection{More complex boundaries}
 
 \paragraph{Extrapolating boundary data}
 %
@@ -2017,6 +1802,55 @@ When the actual boundary routine is invoked, the inner degree of freedom will
 contain this material parameter, i.e.~you can read it out and make your boundary
 realisation depend upon its value.
 
+
+\subsection{A complete swap out of boundary conditions}
+
+So far, all boundary conditions have relies on a call-back principle: The user
+supplements an implementation of the (point-wise) boundary data behaviour, and
+there is some generic kernel which runs over the boundary and calls this
+implementation.
+This means, \ExaHyPE\ has to anticipate what kind of information the user might
+need when they implement their boundary data.
+
+\begin{remark}
+ The current interface for boundary conditions is more or less tailored towards
+ stationary boundary data. As soon as you need some time-dependent behaviour on
+ the boundary such as ODEs (Sommerfeld boundary conditions, e.g.), you might be
+ well-advised to swap out the whole boundary implementation.
+\end{remark}
+
+
+\noindent
+Every \ExaHyPE\ solver has an attribute \texttt{\_action\_set\_handle\_boundary}.
+This is the action set that we invoke to handle the boundary. 
+It has an attribute \texttt{TemplateHandleBoundary\_KernelCalls} which is a
+string in jinja2 format.
+It is used to actually generate the kernel call.
+By default, it invokes the \texttt{applyBoundaryConditions} function of your
+solver. 
+You can redirect this call:
+
+
+\begin{code}
+  thesolver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
+::exahype2::fd::myFancyBCs( ... );
+""" 
+\end{code}
+
+
+\noindent
+The start of the attribute with an underscore emphasises that I usually do not
+expect users to alter the action set.
+This is for experienced users.
+Most of them will create their own subclass of the solver.
+In this case, an attribute with an underscore make sense.
+
+
+\ExaHyPE\ comes along with a limited set of pre-manufactured boundary
+conditions. 
+What is available in which content depends strongly on the solver type used.
+Consult the documentation of the \texttt{HandleBoundary.h} file of your solver
+type.
 
 
 
@@ -2608,76 +2442,56 @@ through the Python API.
 
 \section{Postprocessing}
 
-\subsection{IO}
-
-\ExaHyPE\ relies on \Peano's standard output routines to write file dumps. 
-As the files can be rather large, the simulation configuration allows you to
-specify exactly how often you want to see file dumps, and you can also add
-spatial filters.
-The latter help you to visualise only subdomains.
-As we rely on \Peano's infrastructure, you can use the \texttt{render} script in
-\texttt{python/peano4/visualisation} to convert the output files into vtu files.
-Consult also Chapter \ref{chapter:postprocessing} for a discussion of various
-visualisation pathways.
+\subsection{Visualisation}
 
 
-\paragraph{Multiscale data}
 
-All \Peano\ output files dump various resolutions of the data. 
-\ExaHyPE\ atm however does only use the finest mesh resolution to compute
-something.
-The coarser levels hence hold garbage. 
-I therefore strongly recommend that you always run the render script with the
-option \texttt{-filter-fine-grid}.
-This makes the script throw away all coarser resolutions.
-
-
-\paragraph{Reduce output size}
-
-By default, \ExaHyPE\ maps each Finite Volumne and each DG quadrature point onto
-a vertex in the output file. 
-This can result in large meshes.
+\subsection{Reduce output size}
+%
+%
+%
+By default, \ExaHyPE\ maps each Finite Volume and each DG quadrature point onto
+a vertex in the output file, i.e.~it maps the compute mesh onto an unstructured
+(visualisation) mesh.
+This can result in large data dumps.
 \Peano's render script provides a filter such that you see only the patch or
 cell average.
+However, this is a postprocessing step.
+Many users instead want to restrict the memory footprint a priori.
 
 
+\paragraph{Dump frequency}.
+%
+%
+An obvious strategy to bring the memory footprint down is to print less often.
+For this, you reduce the plot frequency in
+\texttt{set\_global\_simulation\_parameters} or you make the code dump the first
+snapshot later.
+
+
+\paragraph{Cut out part of the computational domain}.
+%
+%
 Further to that, consult the documentation of your project's
-\texttt{set\_global\_simulation\_parameters}. 
+\texttt{add\_plot\_filter}. 
 You can spatially filter right within \ExaHyPE, i.e.~ask the code that only
 subfragments of the overall mesh are dumped into the file in the first place.
 
 
-\paragraph{Finite Volumes}
+\paragraph{Tailor output}.
+%
+%
+The most sophisticated variant tailors the actual file writer per solver to the
+needs of the code.
+Each solver has an attribute \texttt{select\_dofs\_to\_print}.
+It is set to \texttt{None} by default which means that all quantities per degree
+of freedom are dumped into the output.
+You can pick only a few entries though via
 
-If you dump Finite Volume data, it becomes difficult to spot how the resulting
-Finite Volumes are organised in patches:
-The organisation in patches is not visible unless you study AMR resolution
-boundaries.
-If you are interested in seeing the patch boundaries, use the
-\texttt{--shrink-cells} option and pass in a value that is smaller than one. 
-You then will see gaps (voids) between the individual patches.
+\begin{code}
+my_solver.select_dofs_to_print = [4,5,8]
+\end{code}
 
-
-\paragraph{Discontinuous Galerkin}
-
-If you use \ExaHyPE's Discontinuous Galerkin solvers with non-Lobatto nodes, 
-the file dumps will look pretty ragged.
-This is due to the fact that the DG quadrature points are not placed on the cell
-faces.
-This might be unsatisfying and make some postprocessing (isolines, e.g.)
-difficult, but we found it important to display the actual spatial arrangement
-of the unknowns.
-
-
-The standard postprocessing scripts allow you to rescale individual cells.
-Use \texttt{--shrink-cells} with a value slightly bigger than one to spread out
-the quadrature points.
-It is important to note that the shrinking distorts the actual physical layout
-of the quadrature points, i.e.~the output will not really reflect the solution
-anymore.
-Alternatively, 
-you can averaging over cells and display only the average.
-Consult the script's help.
 
 
 \subsection{Tracers}
@@ -2748,130 +2562,6 @@ postprocessing scripts that you can use straightaway to visualise the code
 behaviour and outcomes.
 
 
-\section{Performance optimisation}
-
-This section discusses some \ExaHyPE-specific performance optimisation steps.
-Any performance optimisation should obviously be guided by rigorous performance
-analysis, i.e.~trial-and-error performance optimisation is unlikely to yield
-a lower runtime.
-
-\begin{remark}
-  If you plan to run any performance analysis
-  with the Intel tools, I recommend you switch
-  to the respective toolchain and logging
-  before you continue (cmp.~Section~\ref{section:logging:logger:ITAC}).
-  
-  After that, add all tracing libraries to the blacklist besides your project's
-  repositories. This way, you will get a coarse breakdown of program phases.
-  After that, you might enable additional tracing as you dig deeper into your
-  code's performance. 
-  If your project is in the directory \texttt{applications::exahype2::ccz4}, an
-  initial log filter file could look as follows:
-  
-  \begin{bash}
-trace  tarch                               -1     black always-on
-trace  peano4                              -1     black always-on
-trace  exahype2                            -1     black always-on
-trace  toolbox                             -1     black always-on
-trace  applications::exahype2::ccz4 -1  black always-on
-trace  applications::exahype2::ccz4::repositories -1  white always-on
-  \end{bash}
-\end{remark}
-
-
-\begin{itemize}
-  \item {\bf I do not profit from more cores}. There can be many reasons for
-  this, but I recommend to check a few things first:
-  \begin{enumerate}
-    \item Is your problem big enough per rank or are you maybe using too many
-    nodes/MPI ranks? If so, you should either accept that your problem is simply
-    too small for this number of nodes or jump down to next item. Read through
-    the other suggestions first, though.
-    \item Does the code spawn enough subtrees per node? If not, you might artificially restrict the number of trees
-    per node in your load balancing, i.e.~set a maximum number of trees.
-    Increase the number of trees per rank!
-    \item Have you already switched from a naive solver to one with enclave
-    tasking? Almost all of \ExaHyPE's solvers are offered as version with
-    enclave tasking which means that they employ domain decomposition plus
-    tasking on top.
-  \end{enumerate}
-  \item {\bf I cannot use more trees per rank, and enclave tasking doesn't make
-    my code faster either}. This phenomenon often goes hand in hand with a lack
-    of enclave tasks: The problem is simply too small to find enough tasks.
-    There are a few tasks, but as tasks can only run on one single core, the
-    code struggles to keep all cores busy.
-    \begin{enumerate}
-      \item Check if you can work with more regular grids. They usually help you
-      to generate more tasks. So avoid steep AMR changes.
-      \item Switch the compute kernel. For the FD4 scheme and OpenMP, we provide
-      for example compute kernels which theoretically can spread out over the
-      whole node. The kernel is slower than the default version on one core, but
-      it can use further cores and thus eventually becomes faster. Usually, you
-      have to follow a few steps to enable this alternative kernel:
-      \begin{itemize}
-        \item Switch to an enclave solver.
-        \item Ensure that the routine \texttt{patchCanUseStatelessPDETerms}
-        return true most of the time (this is the default).
-        \item Make the solver use a solver on the CPU which uses the batched
-        taskgraph realisation.
-        Most \ExaHyPE\ solver have an attribute similar to
-        \texttt{self.\_fused\_compute\_kernel\_call\_cpu} which is initialised
-        with some default kernel call. Browse through your code and alter it
-        such that it uses
-\begin{code}
-solver_variant                           = SolverVariant.Multicore,
-kernel_variant                           = KernelVariant.BatchedAoSHeap,
-\end{code}
-      \end{itemize}
-    \end{enumerate} 
-  \item {\bf The multithreading is very imbalanced, i.e.~I see a lot of trees
-  per rank, but this does not materialise in higher speed}.
-  The phenomenon typically goes hand in hand with high Spin Times (in VTune,
-  e.g.). Operations like \texttt{\_\_kmp\_fork\_barrier} appear high up in the list of the most expensive routine. There are different things to check:
-  \begin{enumerate}
-    \item Does the code yield subtrees which are extremely ill-balanced? In this
-    case, you might might want to reduce the number of ranks per tree. \ExaHyPE\
-    reports how big the trees are via
-    \begin{bash}
-rank:1  toolbox::loadbalancing::dumpStatistics()    info    2 tree(s): \
-  (#1:13/716)(#3:14/715) total=27/1431 (local/remote)
-    \end{bash}
-    In this case, we have only two trees and they are of almost the
-    same size (13 vs.~14). But if these numbers differ dramatically,
-    you might want to reduce the number of trees.
-    \item Does the code use enclave tasks but does not yield many tasks? In this
-    case, try a more regular mesh, i.e.~artificially refine to avoid steep
-    resolution changes.
-    \item Does the code use enclave tasks and yield many tasks? In this case,
-    you might have encountered a scheduler flaw. Change the multicore scheduler
-    on the command line.
-  \end{enumerate}
-  \item {\bf The code is extremely bandwidth-bound and seems to move data
-  forth and back all the time}. Most \ExaHyPE\ solvers store their data on
-  (call) stacks to localise all memory accesses. This implies that they move
-  their data around a lot. You can alter this behaviour by switching to a
-  heap-based memory administration. Consult the documentation of the solver of
-  interest, but the ``fix'' always looks similar to 
-  \begin{code}
-self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
-  \end{code}, i.e.~you have to swap how a patch is mapped onto a C++
-  implementation.
-  Most solvers provide a routine
-  \begin{code}
-  my_solver.switch_to_heap_storage(True, True)
-  \end{code} which does the switch for you. Please around with different
-  \texttt{True}, \texttt{False} combinations.
-  See also next section on
-  AVX/alignment.
-  \item {\bf The code seems to fail to use aligned data}. See general remarks
-  in documentation of \texttt{tarch::allocateMemory()} and
-  \texttt{tarch::MemoryLocation}.
-  \item {\bf The PDE term routines (sources, ncp, fluxes, eigenvalues,
-  \ldots) are extremely expensive}. In principle, that's what you want to see.
-  If this is the case, then you should next follow the recommendations for GPU
-  parallelisation (cmp.~\ref{section:exahype:gpu-support}). These focus on GPU
-  efficiency, but the optimisations also pay off significantly for CPUs.
-\end{itemize}
 
 
 

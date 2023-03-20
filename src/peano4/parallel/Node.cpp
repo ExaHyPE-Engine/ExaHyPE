@@ -139,7 +139,6 @@ int peano4::parallel::Node::reserveId(int rank, int forTreeId)  {
   int result = -1;
   while (result==-1 and localThread<MaxSpacetreesPerRank) {
     if ( _treeEntries.count( getId(rank,localThread) )==0 ) {
-      assertion(localThread<ReservedMPITagsForDataExchange/2);
       result = getId(rank,localThread);
     }
     else {

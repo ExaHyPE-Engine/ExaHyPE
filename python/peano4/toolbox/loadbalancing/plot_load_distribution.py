@@ -226,5 +226,8 @@ if __name__ == "__main__":
 
   plt.ylim( bottom=9 )
   plt.legend(ncol=args.columns_in_legend)
-  plt.savefig( args.file + "-cells-per-rank.pdf" )
-  plt.savefig( args.file + "-cells-per-rank.png" )
+  output_filename = args.file + "-cells-per-rank"
+  plt.savefig( output_filename + ".pdf" )
+  plt.savefig( output_filename + ".png" )
+  print( "wrote output to " + output_filename + "[-cells-per-rank|-tree-per-rank].[png|pdf]")
+  

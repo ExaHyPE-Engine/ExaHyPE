@@ -333,6 +333,8 @@ class tarch::mpi::Rank {
      * Thanks to Andrew Mallinson (Intel) for pointing this out.
      *
      * @return true if initialisation has been successful
+     *
+     * @see shutdown
      */
     bool init(int* argc, char*** argv);
 

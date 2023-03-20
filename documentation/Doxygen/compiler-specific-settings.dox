@@ -1,0 +1,23 @@
+/**
+
+@page compiler_specific_settings System- and compiler-specific settings
+
+- What is this file
+- How does it refer to CXXFLAGS
+
+   
+   
+   Ensure that
+   \texttt{CompilerSpecificSettings.h}\footnote{Peano relies on a header \texttt{tarch/compiler/CompilerSpecificSettings.h}.
+Whenever I find incompatibilities between different compilers, I try to resolve them through this file. 
+The header reads out some compiler preprocessor directives and then includes the
+one it find most appropriate. 
+You may always include your own file derived from one of the other headers in
+the directory.} includes a file such that the
+   compiler
+   \texttt{CompilerCLANG} is defined.
+
+
+
+ */
+ 

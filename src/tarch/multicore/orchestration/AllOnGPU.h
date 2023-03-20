@@ -37,6 +37,14 @@ class tarch::multicore::orchestration::AllOnGPU: public tarch::multicore::orches
      */
     int getNumberOfTasksToHoldBack() override;
 
+    /**
+     * Return how many tasks to fuse at least, at most and to which device
+     * to deploy them.
+     *
+     * @return (-1,std::numeric_limits<int>::max(),0) within the BSP section,
+     *   such that the lower limit is never exceeded. Return the device
+     *   otherwise with a min size of 1.
+     */
     FuseInstruction getNumberOfTasksToFuseAndTargetDevice() override;
 
     /**
