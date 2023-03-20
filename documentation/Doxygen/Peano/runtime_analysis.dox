@@ -14,6 +14,10 @@
  In this context, they are great for first data inspection, and then they can serve as starting point
  for "proper" scripts whose outcome goes into papers.
  
+ Please note that Peano's runtime analysis cannot replace a proper performance 
+ analysis tool. In this context, it is worth studying @ref compiler_specific_settings "the vendor-specific settings"
+ that are supported for various tools.
+ 
  
  
  ## Load balancing toolbox

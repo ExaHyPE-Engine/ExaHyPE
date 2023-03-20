@@ -1,0 +1,539 @@
+#include "SelfSimilarInfallFD4FaceLabel.h"
+
+
+
+#include <sstream>
+#include <algorithm>
+
+
+
+benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::SelfSimilarInfallFD4FaceLabel(tarch::la::Vector<Dimensions,double>  __debugX, tarch::la::Vector<Dimensions,double>  __debugH, bool  __Boundary, std::bitset<2>  __Updated, tarch::la::Vector<2,double>  __UpdatedTimeStamp, tarch::la::Vector<2,double>  __NewTimeStamp, tarch::la::Vector<2,double>  __OldTimeStamp){
+#if PeanoDebug>0
+setDebugX( __debugX);
+#endif 
+#if PeanoDebug>0
+setDebugH( __debugH);
+#endif 
+setBoundary( __Boundary);
+setUpdated( __Updated);
+setUpdatedTimeStamp( __UpdatedTimeStamp);
+setNewTimeStamp( __NewTimeStamp);
+setOldTimeStamp( __OldTimeStamp);
+}
+
+
+
+benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::SelfSimilarInfallFD4FaceLabel( const SelfSimilarInfallFD4FaceLabel& copy ) {
+#if PeanoDebug>0
+  setDebugX( copy.getDebugX() );
+#endif 
+#if PeanoDebug>0
+  setDebugH( copy.getDebugH() );
+#endif 
+  setBoundary( copy.getBoundary() );
+  setUpdated( copy.getUpdated() );
+  setUpdatedTimeStamp( copy.getUpdatedTimeStamp() );
+  setNewTimeStamp( copy.getNewTimeStamp() );
+  setOldTimeStamp( copy.getOldTimeStamp() );
+}
+
+
+
+
+
+std::string benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::toString() const {
+  std::ostringstream out;
+  out << "(";
+#if PeanoDebug>0
+  out << "debugX=" << _debugX;
+#endif 
+#if PeanoDebug>0
+  out << ","; 
+  out << "debugH=" << _debugH;
+#endif 
+  out << ","; 
+  out << "Boundary=" << _Boundary;
+  out << ","; 
+  out << "Updated=" << getUpdated();
+  out << ","; 
+  out << "UpdatedTimeStamp=" << _UpdatedTimeStamp;
+  out << ","; 
+  out << "NewTimeStamp=" << _NewTimeStamp;
+  out << ","; 
+  out << "OldTimeStamp=" << _OldTimeStamp;
+  out << ")";
+  return out.str();
+}
+
+
+
+
+
+#if PeanoDebug>0
+tarch::la::Vector<Dimensions,double>   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getDebugX() const {
+  return   _debugX;
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setDebugX(const tarch::la::Vector<Dimensions,double>& value) {
+  _debugX = value;
+}
+
+
+double   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getDebugX(int index) const {
+  return   _debugX(index);
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setDebugX(int index, double value) {
+  _debugX(index) = value;
+}
+
+
+#endif 
+
+
+#if PeanoDebug>0
+tarch::la::Vector<Dimensions,double>   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getDebugH() const {
+  return   _debugH;
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setDebugH(const tarch::la::Vector<Dimensions,double>& value) {
+  _debugH = value;
+}
+
+
+double   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getDebugH(int index) const {
+  return   _debugH(index);
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setDebugH(int index, double value) {
+  _debugH(index) = value;
+}
+
+
+#endif 
+
+
+bool   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getBoundary() const {
+  return _Boundary;
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setBoundary(bool value) {
+  _Boundary = value;
+}
+
+
+std::bitset<2>   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getUpdated() const {
+
+  std::bitset<2> result;
+  for (int i=0; i<2; i++) result[i] =   _Updated[i];
+  return result;
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setUpdated(const std::bitset<2>&  value) {
+
+  for (int i=0; i<2; i++)   _Updated[i]=value[i];
+}
+
+
+bool   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getUpdated(int index) const {
+  return   _Updated[index];
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setUpdated(int index, bool value) {
+  _Updated[index] = value;
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::flipUpdated(int index) {
+  _Updated[index] = not   _Updated[index];
+}
+
+
+tarch::la::Vector<2,double>   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getUpdatedTimeStamp() const {
+  return   _UpdatedTimeStamp;
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setUpdatedTimeStamp(const tarch::la::Vector<2,double>& value) {
+  _UpdatedTimeStamp = value;
+}
+
+
+double   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getUpdatedTimeStamp(int index) const {
+  return   _UpdatedTimeStamp(index);
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setUpdatedTimeStamp(int index, double value) {
+  _UpdatedTimeStamp(index) = value;
+}
+
+
+tarch::la::Vector<2,double>   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getNewTimeStamp() const {
+  return   _NewTimeStamp;
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setNewTimeStamp(const tarch::la::Vector<2,double>& value) {
+  _NewTimeStamp = value;
+}
+
+
+double   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getNewTimeStamp(int index) const {
+  return   _NewTimeStamp(index);
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setNewTimeStamp(int index, double value) {
+  _NewTimeStamp(index) = value;
+}
+
+
+tarch::la::Vector<2,double>   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getOldTimeStamp() const {
+  return   _OldTimeStamp;
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setOldTimeStamp(const tarch::la::Vector<2,double>& value) {
+  _OldTimeStamp = value;
+}
+
+
+double   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getOldTimeStamp(int index) const {
+  return   _OldTimeStamp(index);
+}
+
+
+void   benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::setOldTimeStamp(int index, double value) {
+  _OldTimeStamp(index) = value;
+}
+
+
+
+
+
+
+#ifdef Parallel
+
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
+MPI_Datatype benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::Datatype;
+#endif
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getForkDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getGlobalCommunciationDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getJoinDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getBoundaryExchangeDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getMultiscaleDataExchangeDatatype() {
+  return Datatype;
+}
+
+
+int benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::getSenderRank() const {
+  return _senderDestinationRank;
+}
+
+
+void benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::initDatatype() {
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel  instances[2];
+
+  int NumberOfAttributes = 0;
+#if PeanoDebug>0
+  NumberOfAttributes++;
+#endif 
+#if PeanoDebug>0
+  NumberOfAttributes++;
+#endif 
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+
+  MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
+  int*          blocklen = new int[NumberOfAttributes]; 
+  MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
+  
+  int counter            = 0;
+#if PeanoDebug>0
+  subtypes[counter] = MPI_DOUBLE;
+  blocklen[counter] = Dimensions;
+  counter++;
+#endif
+#if PeanoDebug>0
+  subtypes[counter] = MPI_DOUBLE;
+  blocklen[counter] = Dimensions;
+  counter++;
+#endif
+  subtypes[counter] = MPI_BYTE;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_UNSIGNED_LONG;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_DOUBLE;
+  blocklen[counter] = 2;
+  counter++;
+  subtypes[counter] = MPI_DOUBLE;
+  blocklen[counter] = 2;
+  counter++;
+  subtypes[counter] = MPI_DOUBLE;
+  blocklen[counter] = 2;
+  counter++;
+   
+  MPI_Aint  baseFirstInstance;
+  MPI_Aint  baseSecondInstance;
+  MPI_Get_address( &instances[0], &baseFirstInstance );
+  MPI_Get_address( &instances[1], &baseSecondInstance );
+  
+  counter = 0;
+
+#if PeanoDebug>0
+  MPI_Get_address( &(instances[0]._debugX.data()[0]), &disp[counter] );
+  counter++;
+#endif
+
+#if PeanoDebug>0
+  MPI_Get_address( &(instances[0]._debugH.data()[0]), &disp[counter] );
+  counter++;
+#endif
+  MPI_Get_address( &(instances[0]._Boundary), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._Updated), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._UpdatedTimeStamp.data()[0]), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._NewTimeStamp.data()[0]), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._OldTimeStamp.data()[0]), &disp[counter] );
+  counter++;
+
+  MPI_Aint offset = disp[0] - baseFirstInstance;
+  MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
+  for (int i=NumberOfAttributes-1; i>=0; i--) {
+    disp[i] = disp[i] - disp[0];
+  }
+
+  int errorCode = 0; 
+  MPI_Datatype tmpType; 
+  errorCode += MPI_Type_create_struct( NumberOfAttributes, blocklen, disp, subtypes, &tmpType );
+  errorCode += MPI_Type_create_resized( tmpType, offset, extent, &Datatype );
+  errorCode += MPI_Type_commit( &Datatype );
+  errorCode += MPI_Type_free( &tmpType );
+  if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
+
+  delete[] subtypes;
+  delete[] blocklen; 
+  delete[] disp;
+
+  #else
+  // invoke routine once to trigger lazy initialisation
+  getForkDatatype();
+  getJoinDatatype();
+  getBoundaryExchangeDatatype();
+  getMultiscaleDataExchangeDatatype();
+  getGlobalCommunciationDatatype();
+  #endif
+}
+
+
+void benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::shutdownDatatype() {
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  MPI_Datatype type;
+  type = getForkDatatype();
+  MPI_Type_free( &type );
+  type = getJoinDatatype();
+  MPI_Type_free( &type );
+  type = getBoundaryExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getMultiscaleDataExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getGlobalCommunciationDatatype();
+  MPI_Type_free( &type );
+  #else
+  MPI_Datatype type = Datatype;
+  MPI_Type_free( &type );
+  #endif
+}
+
+
+void benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::send(const benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel& buffer, int destination, int tag, MPI_Comm communicator ) {
+  MPI_Send( &buffer, 1, Datatype, destination, tag, communicator);
+}
+
+
+void benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::receive(benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel& buffer, int source, int tag, MPI_Comm communicator ) {
+  MPI_Status status;
+  MPI_Recv( &buffer, 1, Datatype, source, tag, communicator, &status);
+  buffer._senderDestinationRank = status.MPI_SOURCE;
+}
+
+
+void benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::send(
+  const benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel& buffer, 
+  int destination, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {
+  MPI_Request sendRequestHandle; 
+  int         flag = 0; 
+  MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle ); 
+  MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
+  startCommunicationFunctor(); 
+  while (!flag) { 
+    waitFunctor();
+    MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
+  }
+}
+
+
+void benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::receive(
+  benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel& buffer, 
+  int source, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {   
+  MPI_Status  status;
+  MPI_Request receiveRequestHandle; 
+  int         flag = 0; 
+  MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle ); 
+  MPI_Test( &receiveRequestHandle, &flag, &status );
+  startCommunicationFunctor(); 
+  while (!flag) { 
+    waitFunctor();
+    MPI_Test( &receiveRequestHandle, &flag, &status ); 
+  }
+  buffer._senderDestinationRank = status.MPI_SOURCE;
+}
+#endif
+
+#ifdef Parallel
+void benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::sendAndPollDanglingMessages(const benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel& message, int destination, int tag, MPI_Comm communicator ) {
+  benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::send(
+    message, destination, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel", "sendAndPollDanglingMessages()", destination, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+
+
+void benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::receiveAndPollDanglingMessages(benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel& message, int source, int tag, MPI_Comm communicator ) {
+  benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::receive(
+    message, source, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+#endif
+    
+void benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel& neighbour, const peano4::datamanagement::FaceMarker& marker) {
+  
+  switch (context) {
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
+      {
+        _Boundary = _Boundary or neighbour._Boundary;
+  
+        const int normal         = marker.getSelectedFaceNumber() % Dimensions;
+        const int neighbourEntry = marker.outerNormal()(normal)<0.0 ? 0 : 1;
+  
+        _Updated[ neighbourEntry ]          = neighbour._Updated[ neighbourEntry ];
+        _UpdatedTimeStamp( neighbourEntry ) = neighbour._UpdatedTimeStamp( neighbourEntry );
+        _NewTimeStamp( neighbourEntry )     = neighbour._NewTimeStamp( neighbourEntry );
+        _OldTimeStamp( neighbourEntry )     = neighbour._OldTimeStamp( neighbourEntry );
+      }
+      break;
+    default:
+      assertionMsg( false, "not implemented yet" );
+  }
+
+}
+
+
+bool benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::receiveAndMerge(
+  const peano4::datamanagement::FaceMarker& marker
+  
+) const {
+  return true;
+}
+
+
+bool benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::send(
+  const peano4::datamanagement::FaceMarker& marker
+  
+) const {
+  return true;
+}
+
+
+bool benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::loadPersistently( 
+  const peano4::datamanagement::FaceMarker& marker 
+  
+) {
+  return true;
+}
+
+
+bool benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::storePersistently( 
+  const peano4::datamanagement::FaceMarker& marker 
+  
+) const {
+  return true;
+}
+
+
+bool benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::SelfSimilarInfallFD4FaceLabel::compute( 
+  const peano4::datamanagement::FaceMarker& marker 
+  
+) const {
+  return true;
+}

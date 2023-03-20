@@ -1,0 +1,91 @@
+/**
+
+@page compiler_specific_settings Vendor software stacks and system- and compiler-specific settings
+
+
+Peano has three different approaches how to handle system- and compiler-specific 
+settings and properties:
+
+- Most of the system-specific information should be specified through CXXFLAGS 
+  or LDFLAGS, i.e. when you configure the original setup. These flags as well 
+  as all the information about enabled toolboxes, extensions, and so forth are
+  dumped into the config.h and the Makefiles. C++ codes will read config.h to 
+  take the settings into account, and the Python API will parse the generated
+  Makefile to extract the relevant info and use it for all codes built on top 
+  of Peano, too.
+- At compile time, the system will furthermore read out the compiler version,
+  and it will include the compiler-specific settings for this particular 
+  compiler. This allows Peano to use certain defines for certain compiler 
+  flavours.
+- Peano offers special toolchains for special vendors.
+
+
+
+## Compiler-specific settings
+
+Peano relies on a header tarch/compiler/CompilerSpecificSettings.h.
+This header reads out the compiler version and includes a particular flavour
+of the header for this compiler, i.e. the header reads out some compiler preprocessor directives and then includes the
+one it find most appropriate. 
+You may always include your own file derived from one of the other headers in
+the directory.
+
+Whenever we find incompatibilities between different compilers, we try to 
+resolve them through defines within the compiler-specific settings.
+The setting also are used to configure for particular machine specifica such 
+as default alignment. 
+Most expressions within the compiler-specific settings header can manually 
+be overwritten via defines. 
+Consult the file implementation for details.  
+
+
+
+## Intel oneAPI toolchain
+
+Peano provides dedicated support for an Intel/oneAPI toolchain. To activate 
+this toolchain, you have to reconfigure with  
+~~~~~~~~~~~~~~~~~~~~~~~
+./configure ... --with-toolchain=intel
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Broadly speaking, the toolchain alters the code in two ways:
+
+- It enables ITAC.
+- It switches the line logger to the ITAC logger. That is, trace data are not
+  pipes onto the terminal anymore, but are passed into the ITAC API.
+- It adds -DTBB_USE_THREADING_TOOLS to the compile flags.
+
+@todo Add link to tarch's logging discussion
+
+
+The flags show that the name Intel toolchain is misleading.
+We are actually not tailoring the build to the Intel toolchain, but we tailor
+the setup to the Intel analysis tools. 
+Most production runs will not use the Intel toolchain, but rather set all 
+Intel-specific flags for compiler and linker manually.
+
+
+There are further Intel-specific properties and features which are *not* automatically 
+introduced but might be of interest if you work with the Intel tools:
+~~~~~~~~~~~~~~~~~~~~~~~
+CXXFLAGS="-DTBB_USE_ASSERT"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Once you try to trace your code with the Intel tool, the size of the traces 
+quickly becomes unmanageable. It might therefore be reasonable to insert
+~~~~~~~~~~~~~~~~~~~~~~~
+VTPause();
+VTResume();
+~~~~~~~~~~~~~~~~~~~~~~~
+into your code. This is not done generically, as every Peano application is slightly 
+different, and different performance analysis runs might be interested in different 
+things. A good point to insert these pause and resume commands is the @ref peano_main
+"Peano main routine" where you pick different algorithmic steps. Some extensions such 
+as ExaHyPE also define callbacks for particular phase changes, i.e. when we switch from
+time stepping to plotting, e.g. I still recommend the main, as the main is typically
+not overwritten by Python APIs if you have changed something in there manually.
+
+
+ */
+ 
