@@ -31,10 +31,10 @@ export OMPI_CC=/cosma/home/dp004/dc-barr3/software/bin/clang
 export OMPI_CXX=/cosma/home/dp004/dc-barr3/software/bin/clang++
 
 # Run the code
-#./run_1e-0.sh
-#./run_1e-1.sh
-./run_1e-2.sh
-#./run_1e-3.sh
+./run_AMR_0.sh
+#./run_AMR_1.sh
+#./run_AMR_2.sh
+#./run_AMR_3.sh
 
 # report
 echo ""
