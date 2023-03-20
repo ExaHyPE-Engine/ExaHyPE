@@ -4,7 +4,7 @@
 
 # Parameters
 END_TIME=0.5 
-CELL_SIZE=0.03 # level 2
+CELL_SIZE=0.01 # level 3
 PLOT_DELTA=0
 
 # Run python script to generate the experiment
@@ -16,10 +16,12 @@ export OMP_NUM_THREADS=1
 # run experiment
 echo 'running experiment...'
 
-likwid-perfctr -f -C 0 -g MEM        -o output_MEM.cvs        -O ./orbit-experiment
-likwid-perfctr -f -C 0 -g DATA       -o output_DATA.cvs       -O ./orbit-experiment
-likwid-perfctr -f -C 0 -g CACHE      -o output_CACHE.cvs      -O ./orbit-experiment
-likwid-perfctr -f -C 0 -g CPI        -o output_CPI.cvs        -O ./orbit-experiment
+likwid-perfctr -f -C 0 -g MEM            -o output_MEM.cvs            -O ./orbit-experiment
+likwid-perfctr -f -C 0 -g DATA           -o output_DATA.cvs           -O ./orbit-experiment
+likwid-perfctr -f -C 0 -g CACHES         -o output_CACHES.cvs         -O ./orbit-experiment
+likwid-perfctr -f -C 0 -g L2CACHE        -o output_L2CACHE.cvs        -O ./orbit-experiment
+likwid-perfctr -f -C 0 -g L3CACHE        -o output_L3CACHE.cvs        -O ./orbit-experiment
+likwid-perfctr -f -C 0 -g CYCLE_ACTIVITY -o output_CYCLE_ACTIVITY.cvs -O ./orbit-experiment
 
 # generate Peano grid for Paraview
 #pvpython ../../../python/peano4/visualisation/render.py grid.peano-patch-file
