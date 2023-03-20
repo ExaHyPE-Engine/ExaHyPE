@@ -132,6 +132,9 @@ for datatype_input in datatype_inputs:
         clock_speed_on = AVG_on [2]
         clock_speed_off= AVG_off[2]
 
+        data_volume_on = AVG_on [-1]
+        data_volume_off= AVG_off[-1]
+
     elif datatype_input == 'CACHE':
         cache_req_on = AVG_on [1]/1e12
         cache_req_off= AVG_off[1]/1e12
@@ -148,8 +151,8 @@ plt.rc('font', **font)
 plt.rc('font', family='serif')
 plt.rc('text', usetex=False)
 
-fig = plt.figure(figsize=(14, 4)) 
-gs = gridspec.GridSpec(1,3, wspace=0.2)
+fig = plt.figure(figsize=(10, 8)) 
+gs = gridspec.GridSpec(2,2, wspace=0.30, hspace=0.25)
 
 ax0 = plt.subplot(gs[0])
 
@@ -173,14 +176,31 @@ plt.xticks([1,2,4,8,16,32,64])
 
 leg = plt.legend(loc ="upper right", fontsize=10)
 
-# Cache requests
+# Memory data volume
 ax1 = plt.subplot(gs[1])
+plt.scatter(cores_array, data_volume_on , marker='o', edgecolors='r', facecolors='r', s=25, zorder=10, label=r'on')
+plt.plot   (cores_array, data_volume_on , c='r', lw=1.2, zorder=-1)
+plt.scatter(cores_array, data_volume_off,  marker='^', c='b', s=25, zorder=10, label=r'off' )
+plt.plot   (cores_array, data_volume_off, c='b', lw=1.2, zorder=11)
+plt.xlabel(r'Cores')
+plt.ylabel(r'Memory data volume [GBytes]' )
+plt.margins(0.05, 0.1)
+plt.xscale( "log", base=2 )
+#plt.yscale( "log", base=10)
+plt.gca().xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
+#plt.gca().yaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
+plt.xticks([1,2,4,8,16,32,64])
+plt.tick_params(direction='in', top=True, right=True)
+
+
+# Cache requests
+ax1 = plt.subplot(gs[2])
 plt.scatter(cores_array, cache_req_on , marker='o', edgecolors='r', facecolors='r', s=25, zorder=10, label=r'on')
 plt.plot   (cores_array, cache_req_on , c='r', lw=1.2, zorder=-1)
 plt.scatter(cores_array, cache_req_off,  marker='^', c='b', s=25, zorder=10, label=r'off' )
 plt.plot   (cores_array, cache_req_off, c='b', lw=1.2, zorder=11)
 plt.xlabel(r'Cores')
-plt.ylabel(r'Average cache requests [$\times10^{12}$]' )
+plt.ylabel(r'L2 cache requests [$\times10^{12}$]' )
 plt.margins(0.05, 0.1)
 plt.xscale( "log", base=2 )
 #plt.yscale( "log", base=10)
@@ -190,18 +210,18 @@ plt.xticks([1,2,4,8,16,32,64])
 plt.tick_params(direction='in', top=True, right=True)
 
 # Cache miss rate
-ax2 = plt.subplot(gs[2])
+ax2 = plt.subplot(gs[3])
 plt.scatter(cores_array, 100*cache_miss_ratio_on , marker='o', edgecolors='r', facecolors='r', s=25, zorder=10, label=r'on')
 plt.plot   (cores_array, 100*cache_miss_ratio_on , c='r', lw=1.2)
 plt.scatter(cores_array, 100*cache_miss_ratio_off,  marker='^', c='b', s=25, zorder=10, label=r'off' )
 plt.plot   (cores_array, 100*cache_miss_ratio_off, c='b', lw=1.2)
 plt.xlabel(r'Cores')
-plt.ylabel(r'Average cache miss rate [%]' )
+plt.ylabel(r'L2 cache miss rate [%]' )
 plt.margins(0.05, 0.1)
 plt.xscale( "log", base=2 )
 plt.gca().xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 plt.xticks([1,2,4,8,16,32,64])
-plt.tick_params(direction='in', top=Truee, right=True)
+plt.tick_params(direction='in', top=True, right=True)
 
 plt.show()
 fig.savefig( "plot_likwid_np_400" + ".pdf", bbox_inches='tight')
