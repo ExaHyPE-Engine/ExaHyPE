@@ -75,10 +75,16 @@ CXXFLAGS="-DTBB_USE_ASSERT"
 
 
 Once you try to trace your code with the Intel tool, the size of the traces 
-quickly becomes unmanageable. It might therefore be reasonable to insert
+quickly becomes unmanageable. 
+It might therefore be reasonable to start the tracing manually. 
+Details on this can be found on <a href="https://www.intel.com/content/www/us/en/docs/vtune-profiler/user-guide/2023-0/collection-control-api.html">Intel's collection control</a> pages.
+Basically, you have to add
 ~~~~~~~~~~~~~~~~~~~~~~~
-VTPause();
-VTResume();
+#include <ittnotify.h>
+
+__itt_pause();
+
+__itt_resume();
 ~~~~~~~~~~~~~~~~~~~~~~~
 into your code. This is not done generically, as every Peano application is slightly 
 different, and different performance analysis runs might be interested in different 
@@ -87,6 +93,13 @@ things. A good point to insert these pause and resume commands is the @ref peano
 as ExaHyPE also define callbacks for particular phase changes, i.e. when we switch from
 time stepping to plotting, e.g. I still recommend the main, as the main is typically
 not overwritten by Python APIs if you have changed something in there manually.
+
+Please note that older documentation on the web refers to 
+~~~~~~~~~~~~~~~~~~~~~~~
+VTPause();
+VTResume();
+~~~~~~~~~~~~~~~~~~~~~~~
+These functions seem to be deprecated and are not shipped with oneAPI anymore.
 
 
 ## Example machine configurations
@@ -129,12 +142,15 @@ on this machine.
 - MPI performance analysis runs
 ~~~~~~~~~~~~~~~~~~~~~~
 module load itac
-./configure CC=icpx CXX=icpx CXXFLAGS="-I${ITAC_HOME}/itac/latest/include -I${VT_ROOT}/include -Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g -L${ITAC_HOME}/itac/latest/lib -L${VT_LIB_DIR}" LIBS="-lVT ${VT_ADD_LIBS}" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=intel
+./configure CC=icpx CXX=icpx CXXFLAGS="-I${VTUNE_HOME}/vtune/latest/include -I${VT_ROOT}/include -Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g -L${VT_LIB_DIR} -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-lVT ${VT_ADD_LIBS} -littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=intel
 ~~~~~~~~~~~~~~~~~~~~~~
   Further to these flags, I @ref faq "pause and resume the data collection" manually in 
   ExaHyPE and Swift. This is however something I do in the main() routine of 
   the respective applications. 
 
+
+
+-L/apps/developers/tools/vtune/2021.9/1/default/vtune/latest/lib64 -littnotify
 
  */
  
