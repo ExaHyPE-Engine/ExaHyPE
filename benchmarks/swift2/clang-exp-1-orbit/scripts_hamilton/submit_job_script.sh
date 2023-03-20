@@ -37,10 +37,10 @@ export OMPI_CXX=/nobackup/hgcq36/llvm-13-release/bin/clang++
 #export OMP_NUM_THREADS=24
 
 # Run the code
-#./run_1e-0.sh
-#./run_1e-1.sh
-./run_1e-2.sh
-#./run_1e-3.sh
+./run_AMR_0.sh
+#./run_AMR_1.sh
+#./run_AMR_2.sh
+#./run_AMR_3.sh
 
 # report
 echo ""
