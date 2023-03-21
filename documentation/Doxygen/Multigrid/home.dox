@@ -1,6 +1,12 @@
 /**
 \page multigrid_home Multigrid
 
-\sub
+\li \subpage multigrid_architecture
+\li \subpage multigrid_petsc
+
+Peano's multigrid extension provides stand-alone multigrid solers. However, the
+solver ingredients are designed in a way that they can be used by other codes, 
+too.
+
 
 */

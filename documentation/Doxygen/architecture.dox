@@ -120,6 +120,30 @@ Eventually, users have to invoke generate() and the Python API will generate all
 leaving the body of the action sets and the main routine to the user to implement.
 
 
+Most extensions of Peano 4 (such as ExaHyPE or Swift or our multigrid
+extensions) add an additional layer: They provide a domain-specific API.
+In this API, users describe what they want to do. The API manages a 
+domain-specific project. Every time the user adds a new feature, the 
+API breaks this down into the 
+
+- data required to implement this feature
+- grid traversals, i.e. algorithm steps, required to implement this feature
+- actions required to realise this feature
+
+and they add it to an internal Peano 4 Python object.
+
+@image html generic-python-workflow.png
+
+Eventually, this Python 4 object is returned.
+It now contains a description of all observers, action sets, and additional 
+classes that we need to run the experiment. 
+The user can now call generate() on the Python 4 project.
+This generates all the classes in plain C++ plus a Makefile.
+Classes means actual computations but also all glue code that is 
+required to make Peano's core interact with any user C++ code.
+So the top-level API represents the domain knowledge.
+The Peano 4 Python object represents how the data and behaviour will be implemented eventually.
+The C++ view then is the actual implementation.
 
 
 ## Components and build variants
