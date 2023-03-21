@@ -68,11 +68,11 @@ double ::examples::exahype2::tutorial::swe::maxEigenvalue(
 	  switch(normal){
 	  case 0: //x
 		  u = ih * Q[1];
-		  result = std::max(u-c, u+c);
+      result = std::max(std::abs(u-c), std::abs(u+c));
 		  break;
 	  case 1: //y
 		  u = ih * Q[2];
-		  result = std::max(u-c, u+c);
+      result = std::max(std::abs(u-c), std::abs(u+c));
 		  break;
 	  }
 	  
