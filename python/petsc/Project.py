@@ -16,9 +16,28 @@ from petsc.PETScMain import PETScMain
 class Project(object):
   """
    
-  Represents an abstract PETSc solver
+  Represents a multigrid solver project
   
-  Please do not use this class directly. Use one of its subclasses.
+  
+  
+  ## Algorithmic steps
+  
+  Every PETSc project runs through the following steps:
+ 
+  - algorithm_step_create_grid
+  - algorithm_step_enumerate
+  - _algorithm_step_init
+  - algorithm_step_assemble
+  - _algorithm_step_solve
+  - algorithm_step_map_solution_onto_mesh
+  - algorithm_step_plot
+  
+  Each of these steps is mapped onto one observer. It is clear that not all
+  steps actually lead to mesh traversals and, therefore, are not to be modified
+  by users. They are simply there to allow the main function to pick a step and
+  to tell all MPI ranks to run the same step on all local trees. I therefore 
+  mark these steps as private via a leading underscore.
+  
   
   """
   def __init__(self, 

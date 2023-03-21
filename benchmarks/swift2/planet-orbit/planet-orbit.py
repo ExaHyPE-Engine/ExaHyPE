@@ -334,7 +334,6 @@ project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesByCoordi
 # which returns an object that holds global information about this particle 
 # type. 
 ###############################################################################
-#particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particle_set, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
 particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", 
                                                                       particle_set, 
                                                                       "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name) )

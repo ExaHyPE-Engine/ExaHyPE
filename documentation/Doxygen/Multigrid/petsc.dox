@@ -1,0 +1,70 @@
+/**
+
+ @page multigrid_petsc Peano 4 PETSc projects
+ 
+ A PETSc project is a wrapper around Peano 4 project, i.e. it holds a Peano 4 
+ Python project. Each call to the PETSc API builds up an internal data 
+ representation which is eventually mapped onto a native Peano 4 project.
+
+ ## Algorithmic steps
+ 
+ Each PETSc project consists of the following steps:
+ 
+ 1. Create the mesh. The mesh construction (and the associated load balancing)
+    can require multiple mesh sweeps, so this logical step can be realised 
+    through multiple grid traversals.
+    
+ 2. Enumerate all the grid entities, i.e. assign each vertex/face/cell 
+    (depending on solver type) a unique number.
+    
+ 3. Initialise the mesh, i.e. assign each vertex/face/cell a value if the value
+    is fixed and otherwise a right-hand side and material parameters.
+    
+ 4. Initialise PETSc. Inform the library on the size of the required matrices
+    and vectors. This step does not require a mesh traversal of its own.
+ 
+ 5. Assemble the linear equation system and the right-hand side.
+ 
+ 6. Invoke PETSc's solver. This step does not require a mesh traversal.
+ 
+ 7. Run over the mesh and copy the outcome of the PETSc solve into the mesh,
+    so we can create a geometric model with the results.
+    
+ 8. Visualise the outcome.
+ 
+Details on these steps are given in the class description of petsc.Project. It
+maps each step on to an observer, despite the fact that two steps do not 
+require a mesh traversal. 
+
+
+ ## Code structure
+ 
+ - petsc.Project  Base class behind any PETSc project. This class
+   holds one observer per algorithm step, it holds some global properties
+   (such as the domain size), and it administers a peano4.Project.
+   It also holds an instance of petsc.PETScMain.
+ - petsc.PETScMain represents the main C++ file. It is responsible to pick
+   the reight sequence of the calculations.
+ - The project holds an arbitrary number of PDE solvers.
+  
+When we add a solver to the PETSc project via petsc.Project.add_solver(),
+the project memorises this solver, but also asks the solver to add its
+actions to each observer.
+So the project holds for example an observer for the plotting. 
+Its main will invoke this plotting as very last step.
+However, the project cannot know what to plot actually.
+When you add a solver, the project takes this solver object and asks it
+"hey, can you please add whatever you want to do to this observer so 
+we get a meaningful output".
+This means that the solver adds its action set to the observer.
+
+
+When we invoke petsc.Project.generate_Peano4_project(), we obtain one Peano 
+4 project which hosts all of these observers and action sets, and the main, 
+and so forth. The original hierarchical information on the number of solvers
+and so forth are lost. This is a realisation representation, not a logical 
+representation of our project.
+ 
+
+ */
+ 
