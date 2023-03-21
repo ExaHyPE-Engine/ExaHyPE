@@ -8,5 +8,16 @@ Peano's multigrid extension provides stand-alone multigrid solers. However, the
 solver ingredients are designed in a way that they can be used by other codes, 
 too.
 
+## Configure PETSc
+
+Our Peano 4 PETSc extensions are lain Peano 4 extensions which require a 
+configuation that links against PETSc and includes the finite element toolbox:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure ... --enable-finiteelements
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The latter contains all the routines for our assemblies as well as the 
+matrix-free solvers.
 
 */
