@@ -41,12 +41,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     {{CLASSNAME}}();
 
+    /**
     virtual void startInitialisation() = 0;
     virtual void finishInitialisation() = 0;
 
     virtual void startEnumeration() = 0;
     virtual void finishEnumeration() = 0;
-
+*/
   protected:
     static tarch::logging::Log  _log;
 

@@ -38,6 +38,11 @@ class Project(object):
   to tell all MPI ranks to run the same step on all local trees. I therefore 
   mark these steps as private via a leading underscore.
   
+  ## Attributes
+  
+  - _solver_instances: [String,String]
+      List of tuples of typename and names of solvers that this project should use simultaneously.
+  
   
   """
   def __init__(self, 
@@ -58,6 +63,8 @@ class Project(object):
     self._build_mode          = peano4.output.CompileMode.Asserts
     self._executable_name = executable
     self._output_path   = "./"
+    
+    self._solver_instances = []
 
     self.algorithm_step_create_grid             = peano4.solversteps.Step( "CreateGrid",          False )
     self.algorithm_step_enumerate               = peano4.solversteps.Step( "Enumerate",           False )
@@ -165,31 +172,9 @@ class Project(object):
     """
     self._project.main = PETScMain(self._project,
                                    self._domain_offset,
-                                   self._domain_size
+                                   self._domain_size,
+                                   self._solver_instances
                                    )
-
-
-    #
-    #  
-    #  self._project.datamodel.add_global_object(current_species_set.particle_model)
-    #  self._project.datamodel.add_vertex(current_species_set)#
-
-    #  self._algorithm_step_create_grid.use_vertex(current_species_set)
-    #  self.algorithm_step_init.use_vertex(current_species_set)
-    #  self.algorithm_step_sort.use_vertex(current_species_set)
-    #  self.algorithm_step_plot.use_vertex(current_species_set)
-
-      # Enable cell statistics for this species
-    #  self._project.datamodel.add_cell(cell_marker_for_statistics)   
-      
-      # Add cell statistics to these action steps
-    #  self._algorithm_step_create_grid.use_cell(cell_marker_for_statistics)
-    #  self.algorithm_step_init.use_cell(cell_marker_for_statistics)
-    #  self.algorithm_step_sort.use_cell(cell_marker_for_statistics)
-    #  self.algorithm_step_plot.use_cell(cell_marker_for_statistics)
-    #  for solverstep in solversteps:
-    #    solverstep.use_vertex(current_species_set)
-    #    solverstep.use_cell(cell_marker_for_statistics)
 
     self._project.solversteps.add_step(self.algorithm_step_create_grid)
     self._project.solversteps.add_step(self.algorithm_step_enumerate)
@@ -245,6 +230,8 @@ This yet has to be written.
     solver.add_to_plot                  (self.algorithm_step_plot)
 
     solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
+    
+    self._solver_instances.append( (solver.typename(), solver.instance_name()) )
     pass
 
 

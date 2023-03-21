@@ -174,4 +174,13 @@ class Solver(object):
      
     """
     assert False, "should not be called"
-  
+
+
+  def typename(self):
+    return self._name;
+
+      
+  def instance_name(self):
+    return "instanceOf" + self.typename()  
+
+

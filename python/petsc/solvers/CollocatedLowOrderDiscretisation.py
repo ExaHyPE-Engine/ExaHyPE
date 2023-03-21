@@ -119,7 +119,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".Abstract.template.h",
       templatefile_prefix + ".Abstract.template.cpp",
-      "Abstract" + self._name, 
+      "Abstract" + self.typename(), 
       namespace,
       ".", 
       dictionary,
@@ -128,7 +128,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".template.h",
       templatefile_prefix + ".template.cpp",
-      self._name, 
+      self.typename(), 
       namespace,
       ".", 
       dictionary,
