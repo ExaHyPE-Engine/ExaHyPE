@@ -415,6 +415,7 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
     for (int j=0;j<3;j++) Kex[i][j]=Aex[i][j]/phi2 + (1./3)*traceK*g_cov[i][j]/phi2;
 
     double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    double Christoffel_tilde[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
@@ -533,7 +534,7 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
-    for (int l = 0; m < 3; m++) w_vec[i] += phi2*g_contr[i][j]*eps_lc_symbol[j][k][l]*v_vec[k]*u_vec[l];
+    for (int l = 0; l < 3; l++) w_vec[i] += phi2*g_contr[i][j]*eps_lc_symbol[j][k][l]*v_vec[k]*u_vec[l];
 
 	
 	double dotp1=0;
