@@ -8,29 +8,24 @@ import dastgen2
 
 import shutil
 
-# To execute shell commands via python
-import subprocess
-
-# HDF5 Reader
-import peano4.toolbox.particles.sph.fileReader
-
-# SPH initialisation snippets library
-import peano4.toolbox.particles.sph.initSnippets
 
 ########################################################################################
 # Parse user input
 ########################################################################################
 
 parser = argparse.ArgumentParser(description='SPH benchmarking script')
-parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1,                     help="Parallel builds" )
-parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False,       help="Verbose")
-parser.add_argument("-c",   "--clean",             dest="clean_temporary_directories",  action="store_true",        help="Remove temporary directories before script starts" )
-parser.add_argument("-d",   "--dimensions",        dest="dimensions",     type=int,   default=2,                    help="Spatial dimensions (default 2)" )
-parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=0.2,                  help="End of simulation" )
-parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=float, default=1e-4,                 help="Global timestep size (initial value)" )
-parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3,                  help="Cell size (default 0.3)" )
-parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../..",                    help="Peano4 directory" )
-parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False,       help="Switch on assertions" )
+parser.add_argument("-j",     "--parallel-builds", dest="j",              type=int, default=-1,                 help="Parallel builds" )
+parser.add_argument("-v",     "--verbose",         dest="verbose",        action="store_true", default=False,   help="Verbose")
+parser.add_argument("-c",     "--clean",           dest="clean_temporary_directories",  action="store_true",    help="Remove temporary directories before script starts" )
+parser.add_argument("-d",     "--dimensions",      dest="dimensions",     type=int,   default=2,                help="Spatial dimensions (default 2)" )
+parser.add_argument("-np",    "--particle-number", dest="particle_number",   required=True,  type=int,          help="Particle number (1D)" )
+parser.add_argument("-et",    "--end-time",        dest="end_time",       type=float, default=0.2,              help="End of simulation" )
+parser.add_argument("-plot",  "--plot-delta",      dest="plot_delta",     type=float, default=0.01,             help="Plot delta (0 switches off)" )
+parser.add_argument("-dt",    "--timestep-size",   dest="timestep_size",  type=float, default=1e-4,             help="Global timestep size (initial value)" )
+parser.add_argument("-cfl",   "--cfl-factor",      dest="cfl_factor",     type=float, default=0.1,              help="Value of the CFL constant" )
+parser.add_argument("-cs",    "--cell-size",       dest="cell_size",      type=float, default=0.3,              help="Cell size (default 0.3)" )
+parser.add_argument("-pd",    "--peano-dir",       dest="peanodir",       default="../../../..",                help="Peano4 directory" )
+parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False,   help="Switch on assertions" )
 args = parser.parse_args()
 
 
@@ -40,39 +35,107 @@ args = parser.parse_args()
 
 project_namespace = ["benchmarks", "swift2", "sod"]
 
-dimensions  = args.dimensions
-
 project = swift2.Project( namespace=project_namespace,
                           project_name="Sod1D", 
                           executable="sod1D" )
 
-# Effective SPH dimensions ----------------------------------------------------
-HYDRO_DIMENSIONS = 1
 
-# Declare the particle type
-particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH", 
-                                                             dimensions_hydro = HYDRO_DIMENSIONS,
-                                                             cfl_factor             = 0.1, 
+# Initialise the SPH particle --------------------------------------------------
+# If multiple particle species are present, we can specify the parameters
+# independently for each case.
+
+name = "hydroPart"
+dimensions = args.dimensions
+
+particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name, 
+                                                             dimensions_hydro       = dimensions,
+                                                             cfl_factor             = args.cfl_factor, 
                                                              initial_time_step_size = args.timestep_size,
                                                              constant_time_step_size= True,
                                                              swift_project_namespace= project_namespace,
-                                                             is_sph = True,
-                                                             particles_per_cell = 100,
-                                                             min_h = 0.6,
-                                                             max_h = 0.5
+                                                             is_sph                 = True,
+                                                             particles_per_cell     = 20,
+                                                             min_h                  = args.cell_size/100,
+                                                             max_h                  = args.cell_size
                                                              )
 
-# Add particle to the SWIFT project
+
+########################################################################################
+# Set parameters for the SPH simulation
+# If no parameters are passed to the swift2 project, it initializes with
+# default values. The values of the parameters can be modified or retrieved
+# using the set/get methods.
+########################################################################################
+
+
+# HYDRO_DIMENSION can be smaller than the Peano4 dimensions
+HYDRO_DIMENSIONS = 1
+
+# Particle number along 1 dimension
+HYDRO_PART_NUMBER = args.particle_number
+
+# Time integration parameters 
+GLOBAL_TIME_STEP_SIZE = args.timestep_size
+CFL_CONSTANT = args.cfl_factor
+
+# EoS parameter ---------------------------------------------------------------
+gamma_hydro_list = [str(5/3), str(7/5), str(4/3), str(2/1)]
+gamma_hydro_list_symbols = ['HYDRO_GAMMA_5_3','HYDRO_GAMMA_7_5','HYDRO_GAMMA_4_3','HYDRO_GAMMA_2_1']
+GAMMA = gamma_hydro_list[0]
+GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
+
+# Artificial viscosity parameters ---------------------------------------------
+ALPHA_AV= particle.alpha_av
+BETA_AV = particle.beta_av
+
+# Newton-Raphson parameters --------------------------------------------------
+# Maximum allowed number of iterations and convergence tolerance
+HYDRO_DEFAULT_MAX_ITERATIONS = particle.h_max_iterations
+H_TOLERANCE = particle.h_tolerance
+
+# SPH kernel -------------------------------------------------------
+kernel_list = ['M5']
+kernel_list_symbols = ['QUARTIC_SPLINE_KERNEL']
+KERNEL = kernel_list[0]
+KERNEL_SYMBOL = kernel_list_symbols[0]
+
+# Smoothing-length free parameter (resolution "eta_neighbours"). 
+SMOOTH_ETA_FAC = particle.eta_factor
+
+if(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
+  KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
+if(KERNEL=='M5' and HYDRO_DIMENSIONS ==2):
+  KERNEL_SUPPORT_RAD = "1.977173"
+else:
+  print(f'Unable to determine the kernel support radius. Please check.'  )
+
+# Max/min allowed values for smoothing length h 
+HYDRO_h_MAX = args.cell_size / 2
+HYDRO_h_MIN = particle.h_hydro_min
+
+particle.h_hydro_max = HYDRO_h_MAX
+
+# Optional: Reduce the mantissa size for particle attributes -------------------
+# Native size is 53 (double precision)
+#particle.mantissa_size = 23
+
+# Finally, we have to declare the sph particle attributes, in this case for MinimalSPH.
+particle.declare_sph_particle_attributes()
+
+# Add particle to the SWIFT project --------------------------------------------
+# Notice that you any change to the particle will not take effect after adding
+# the particle_set to the project
 particle_set = project.add_particle_species( particle )
 
 if args.asserts:
   build_mode = peano4.output.CompileMode.Asserts
 else:
   build_mode = peano4.output.CompileMode.Release
-    
+
+# Set Peano4 simulation parameters ---------------------------------------------
 offset      = [ 0, 0, 0 ] 
 domain_size = [ 1, 1, 1 ]
-periodic_boundary_conditions = [False,False,False]          # Periodic BC
+periodic_boundary_conditions = [False,False,False]
 
 project.set_global_simulation_parameters(
   dimensions            = dimensions,
@@ -81,37 +144,24 @@ project.set_global_simulation_parameters(
   min_end_time          = args.end_time,
   max_end_time          = 0.0,
   first_plot_time_stamp = 0.0, 
-  time_in_between_plots = args.end_time/50, 
+  time_in_between_plots = args.plot_delta, 
   periodic_BC           = periodic_boundary_conditions,
-  plotter_precision     = 8  # plotter precision
+  plotter_precision     = 8
 )
-
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new toolbox::loadbalancing::RecursiveSubdivision::DefaultConfiguration()")
 
 
-
 ###############################################################################
 # Initialisation snippet for the particle
 ###############################################################################
-#
-# If we work with only one particle, then we can simply set its velocity. 
-# However, our script works both if we only module the earth but also when we
-# model earth and sun explicitly. In the latter case, we have to ensure that 
-# only the earth is given an initial velocity.
-#
-###############################################################################
 
-#
-#  Insert particles from file
-#
-project.algorithm_step_init.add_action_set( peano4.toolbox.particles.sph.fileReader.InsertParticlesFromHDF5File( 
+project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesFromHDF5File( 
   particle_set         = particle_set,
   filename='sodShock.hdf5' 
   ))
-
 
 ###############################################################################
 # Set up the plotter
@@ -165,61 +215,8 @@ project.algorithm_step_plot.add_action_set( particle_plotter )
 # 
 #
 ###############################################################################
+
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
-
-# There are plenty of constant simulation paramaters to specify for our SPH
-# simulation - we do that here. 
-
-# Particle number along 1 dimension -------------------------------------------
-HYDRO_PART_NUMBER = str( 900 );
-
-# Time-integration parameters -------------------------------------------------
-GLOBAL_TIME_STEP_SIZE = "1e-4"
-CFL_CONSTANT = "0.1"
-
-# EoS parameter ---------------------------------------------------------------
-gamma_hydro_list = [str(5/3), str(7/5), str(4/3), str(2/1)]
-gamma_hydro_list_symbols = ['HYDRO_GAMMA_5_3','HYDRO_GAMMA_7_5','HYDRO_GAMMA_4_3','HYDRO_GAMMA_2_1']
-GAMMA = gamma_hydro_list[0]
-GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
-
-# Artificial viscosity parameters ---------------------------------------------
-ALPHA_AV= "0.8"     # =0.8 in SWIFT
-BETA_AV = "3"       # =3 in SWIFT/SPHENIX
-
-# Newton-Raphson parameters --------------------------------------------------
-# Maximum allowed number of Newton-Raphson iterations
-HYDRO_DEFAULT_MAX_ITERATIONS = "10"
-
-# Tolerance for Newton-Raphson convergence
-H_TOLERANCE = "1e-4"
-
-# SPH kernel -------------------------------------------------------
-kernel_list = ['M5']
-kernel_list_symbols = ['QUARTIC_SPLINE_KERNEL']
-KERNEL = kernel_list[0]
-KERNEL_SYMBOL = kernel_list_symbols[0]
-
-# Smoothing-length free parameter (resolution "eta_neighbours"). 
-SMOOTH_ETA_FAC = str( 1.235 ) 
-particle.set_eta_factor(SMOOTH_ETA_FAC)
-
-if(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
-  KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
-else:
-  print(f'Unable to determine the kernel support radius. Please check.'  )
-
-# Max/min allowed values for smoothing length h
-HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD) ) 
-HYDRO_h_MIN = "1e-6"
-particle.set_h_hydro_limits(HYDRO_h_MIN, HYDRO_h_MAX)
-
-
-# Export symbols for compilation (e.g. for SPH kernel) -----------------------
-peano4_project.output.makefile.add_CXX_flag("-D" + "HYDRO_DIMENSION=" + str(HYDRO_DIMENSIONS) )
-peano4_project.output.makefile.add_CXX_flag("-D" + GAMMA_HYDRO_SYMBOL )
-peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL )
-
 
 # Some sanity checks ----------------------------------------------------------
 if GAMMA not in gamma_hydro_list:
@@ -237,20 +234,31 @@ print(f'Adiabatic index: {GAMMA}'  )
 print(f'Smoothing length free factor: {SMOOTH_ETA_FAC}'   )
 print('-----------------------------------------------------------------------')
 
-# Export Constants.h file
-peano4_project.constants.export_const_with_type("HYDRO_DIMENSIONS"     , str(HYDRO_DIMENSIONS), "double")
-peano4_project.constants.export_const_with_type("HYDRO_PART_NUMBER"    , HYDRO_PART_NUMBER    , "double")
-peano4_project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", GLOBAL_TIME_STEP_SIZE, "double")
-peano4_project.constants.export_const_with_type("CFL_CONSTANT"         , CFL_CONSTANT         , "double")
+
+# Export Constants.h file ------------------------------------------------------
+peano4_project.constants.export_const_with_type("HYDRO_DIMENSIONS"     , str(HYDRO_DIMENSIONS) , "double")
+peano4_project.constants.export_const_with_type("HYDRO_PART_NUMBER"    , str(HYDRO_PART_NUMBER), "double")
+peano4_project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", str(GLOBAL_TIME_STEP_SIZE), "double")
+peano4_project.constants.export_const_with_type("CFL_CONSTANT"         , str(CFL_CONSTANT)    , "double")
 peano4_project.constants.export_const_with_type("GAMMA"                , GAMMA                , "double")
-peano4_project.constants.export_const_with_type("ALPHA_AV"             , ALPHA_AV             , "double")
-peano4_project.constants.export_const_with_type("BETA_AV"              , BETA_AV              , "double")
-peano4_project.constants.export_const_with_type("HYDRO_DEFAULT_MAX_ITERATIONS", HYDRO_DEFAULT_MAX_ITERATIONS, "int")
-peano4_project.constants.export_const_with_type("H_TOLERANCE"          , H_TOLERANCE          , "double")
+peano4_project.constants.export_const_with_type("ALPHA_AV"             , str(ALPHA_AV)        , "double")
+peano4_project.constants.export_const_with_type("BETA_AV"              , str(BETA_AV )        , "double")
+peano4_project.constants.export_const_with_type("HYDRO_DEFAULT_MAX_ITERATIONS", str(HYDRO_DEFAULT_MAX_ITERATIONS), "int")
+peano4_project.constants.export_const_with_type("H_TOLERANCE"          , str(H_TOLERANCE)     , "double")
 peano4_project.constants.export_const_with_type("KERNEL_SUPPORT_RAD"   , KERNEL_SUPPORT_RAD   , "double")
-peano4_project.constants.export_const_with_type("HYDRO_h_MAX"          , HYDRO_h_MAX          , "double")
-peano4_project.constants.export_const_with_type("HYDRO_h_MIN"          , HYDRO_h_MIN          , "double")
-peano4_project.constants.export_const_with_type("SMOOTH_ETA_FAC"       , SMOOTH_ETA_FAC       , "double")
+peano4_project.constants.export_const_with_type("HYDRO_h_MAX"          , str(HYDRO_h_MAX)     , "double")
+peano4_project.constants.export_const_with_type("HYDRO_h_MIN"          , str(HYDRO_h_MIN)     , "double")
+peano4_project.constants.export_const_with_type("SMOOTH_ETA_FAC"       , str(SMOOTH_ETA_FAC)  , "double")
+
+# Export symbols for compilation (e.g. for SPH kernel) -----------------------
+peano4_project.output.makefile.add_CXX_flag("-D" + "HYDRO_DIMENSION=" + str(HYDRO_DIMENSIONS) )
+peano4_project.output.makefile.add_CXX_flag("-D" + GAMMA_HYDRO_SYMBOL )
+peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL )
+
+
+###############################################################################
+# Cleanup and compilation
+###############################################################################
 
 # If we want to start a project from scratch, we may want to remove some of the generated code
 if args.clean_temporary_directories:
@@ -258,11 +266,9 @@ if args.clean_temporary_directories:
   for dir in dirs:
     shutil.rmtree( dir )
 
-peano4_project.generate( overwrite=1, throw_away_data_after_generation=True )
-
-bashCommand = "sed -i 's/g++/h5c++/g' Makefile"
-subprocess.check_output(['bash','-c', bashCommand])
-
+# It is safe (and recommended) to overwrite any existing main file, since this
+# is generated automatically by the Swift2 graph compiler.
+peano4_project.generate( overwrite=peano4.output.Overwrite.Always, throw_away_data_after_generation=True )
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
 
 # remove output files from previous runs

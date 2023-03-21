@@ -8,8 +8,13 @@ export OMP_NUM_THREADS=1
 IC_FILENAME="sodShock.hdf5"
 
 # Parameters
+N_PART=900          # fixed by IC file
 END_TIME=0.1
-
+TIMESTEP_SIZE=1e-3
+CFL_FACTOR=0.2
+PLOT_DELTA=0.01
+CELL_SIZE=0.1
+#
 # Generate initial condition file
 if [ ! -e $IC_FILENAME ]
 then
@@ -18,21 +23,19 @@ then
 fi
 
 # Run python script to generate the experiment
-python3 sod.py -et=$END_TIME
+echo 'generate and compile code ...'
+echo python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
+python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
 
 # run experiment
 echo 'running experiment...'
-./sod1D
+./sod1D > output.txt
+echo 'experiment run finished.'
 
-#likwid-perfctr -f -C 0 -g MEM            -o output_MEM.cvs            -O ./orbit-experiment
-#likwid-perfctr -f -C 0 -g DATA           -o output_DATA.cvs           -O ./orbit-experiment
-#likwid-perfctr -f -C 0 -g CACHES         -o output_CACHES.cvs         -O ./orbit-experiment
-#likwid-perfctr -f -C 0 -g L2CACHE        -o output_L2CACHE.cvs        -O ./orbit-experiment
-#likwid-perfctr -f -C 0 -g L3CACHE        -o output_L3CACHE.cvs        -O ./orbit-experiment
-#likwid-perfctr -f -C 0 -g CYCLE_ACTIVITY -o output_CYCLE_ACTIVITY.cvs -O ./orbit-experiment
+echo 'post-processing results...'
 
 # generate Peano grid for Paraview (if needed)
-#pvpython ../../../../python/peano4/visualisation/render.py grid.peano-patch-file
+pvpython ../../../../python/peano4/visualisation/render.py grid.peano-patch-file
 
 # Save results into directory
 DIRNAME="output"
@@ -40,13 +43,22 @@ if [ -d $DIRNAME ]
 then
     rm -r $DIRNAME
 fi
-
 mkdir $DIRNAME
-mv *.cvs Constants.h $DIRNAME
+mv output.txt $DIRNAME
+
+# Save file with parameters and metadata
+less Constants.h > Constants.txt && mv Constants.txt $DIRNAME
 
 # Save snapshots
 mkdir $DIRNAME"/snapshots/"
 mv particles* grid* $DIRNAME"/snapshots/"
 
+# Save other data, if any
+if [ -e *.csv ]
+then
+    mv *.csv $DIRNAME
+fi
 
-# @TODO: run plot script
+echo 'Done. Bye!'
+
+# @TODO: run plot script if necessary
