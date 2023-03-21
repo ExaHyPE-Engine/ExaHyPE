@@ -1,0 +1,10 @@
+/**
+
+@page peano_architecture Architecture
+
+Every Peano application, i.e. every application built on top of Peano has the
+same structure.
+
+@image html architecture-static-c.png
+
+ */
