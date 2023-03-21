@@ -3,7 +3,7 @@
 
 
 template <typename ParticleContainer>
-void swift2::kernels::computeGravitationalForce(
+void swift2::kernels::gravity::computeGravitationalForce(
   const ParticleContainer&   localParticles,
   const ParticleContainer&   activeParticles
 ) {
