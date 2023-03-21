@@ -1,0 +1,70 @@
+/**
+\page new_action_set 
+
+Introducing a new pre-defined action set {#section:new-action-set}
+========================================
+
+This chapter discusses how you make an action set (set of event
+implementations) of your code available to other projects as a
+pre-defined action set. As a result of such a refactoring, others can
+inject your ideas straightforwardly into their project. The name
+refactoring suggests that I highly recommend that you start from a
+working action set that you've written manually and extensively tested.
+
+Prepare classes
+---------------
+
+Create a new subclass of `peano4.solversteps.ActionSet`
+
+and ensure that Python finds the class in its path.
+
+Implement new action set
+------------------------
+
+To implement the new action set, you have to tell Peano what the
+function bodies look like. Before we do so, we instruct the toolkit
+whether this is an action set that users should later on edit; that is,
+your new predefined action set serves as blueprint. Alternatively, your
+action set can be read-only and users shall not modify it. In this case,
+Peano will place it in the observers' directory and always regenerate it
+automatically.
+
+The first step hence is to give your action set a clear name (which will
+also be used as class name part for the generated file) and to provide
+this information:
+
+The actual events are generated through the operation bodies. All these
+bodies are queries through one operation. The query's arguments
+clarifies which operation body is requested
+
+and its values are those constants in `Mapping` which start with
+`OPERATION_`.
+
+There are further routines to control the refinement et al. These
+routines are self explaining if you study the base class/interface.
+
+More interesting is the question how to make the actual method bodies
+use grid information. For this, the canonical way is that you extend the
+constructor such that an object of your action set always "knows" which
+data they work on. The interfaces of all action sets are always the
+same, so it should be straightforward to make your generated method
+bodies use the grid data once the constructor is told what they are.
+
+Use your new action set
+-----------------------
+
+To use the action set, you create your algorithmic steps. Once created,
+you also create and instance of your action set and you add it to the
+step with `add_action_set`. The order in which action sets are added is
+important. See `add_action_set`'s documentation of information on this.
+
+Conventions
+-----------
+
+By default, the Peano toolkit equips each action set with a couple of
+features/attributes:
+
+-   Every action set has a static attribute `_log` which is an instance
+    of `tarch::logging::Log`. That is, you can use Peano's logging
+    commands straightaway.
+*/

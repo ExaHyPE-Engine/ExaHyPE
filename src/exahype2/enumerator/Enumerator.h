@@ -11,7 +11,7 @@
 
 
 /**
- * @page Enumerator ExaHyPE 2 enumerators
+ * @page exahype2_enumerator ExaHyPE 2 enumerators
  *
  * ## Finite Volumes
  *

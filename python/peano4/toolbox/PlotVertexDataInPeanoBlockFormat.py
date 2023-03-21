@@ -19,7 +19,8 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
                additional_includes=""
                ):
     """
-      Plot only the grid structure
+    
+      Plot grid and assume all data are associated with vertices
       
       filename: String
         Name of the output file
@@ -35,15 +36,27 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
       getter: String (C++ code)
         Getter acting on the vertex. Could be something alike getU() for example.
         If there's no getter but you want to directly access the data, remove 
-        any brackets from the passed string.
+        any brackets from the passed string. Please note that Peano's plotter
+        routines usually require plain value (double) pointers. So if a string
+        like
+        
+              getU()
+              
+        returns a tarch vector, you have to pass in 
+        
+              getU().data()
+              
+        to make the getter compatible with plotters' interface.
         
       time_stamp_evaluation: String
         C++ expression returning a double. This is used to write the time series
         file for a series of snapshots. Pass in "0" if you solve a stationary 
-        problem, e.g. 
-
+        problem, e.g. You can also hand in the constants NoMetaFile or 
+        CountTimeSteps.
+        
       number_of_unknows_per_vertex: Integer
-        Has to match to the getter.                        
+        Has to match to the getter.
+        
     """
     self.d = {}
     self.d[ "FILENAME" ]            = filename

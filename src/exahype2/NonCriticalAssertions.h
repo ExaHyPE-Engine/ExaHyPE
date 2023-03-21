@@ -8,7 +8,7 @@
 
 
 /**
- * @page Assertions Noncritical assertions
+ * @page exahype2_NoncriticalAssertions Noncritical assertions
  *
  * A noncritical assertion is an assertion which indicates that something went
  * horribly wrong due to a programming error. You should never use an assertion

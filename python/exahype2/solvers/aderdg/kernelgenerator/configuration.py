@@ -77,8 +77,9 @@ class Configuration:
 
 
     # set to false to use standard loops instead of libxsmm
-    useLibxsmm = True;
-    
+#    useLibxsmm = True;
+    useLibxsmm = False;
+
     # set to true to print models runtime
     runtimeDebug = False;
 

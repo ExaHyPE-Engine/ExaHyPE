@@ -179,44 +179,6 @@ particularly like sole MPI builds without multithreading.
 
 
 
-\paragraph{Intel OneAPI toolchain (ITAC)}
-% 
-For Intel's ITAC, we have to load the itac module and reconfigure.
-We found many supercomputers to deploy itac to modules of its own, i.e.~it is
-not loaded by default.
-
-
-\begin{bash}
-./configure CXXFLAGS="-DLogService=ITACLogger \
- --with-toolchain=intel
-\end{bash}
-
-\noindent
-switches the logging to ITAC and activates the Intel toolchain.
-Please note that it depends on your log filter file (Chapter
-\ref{section:logging}) what data is piped into ITAC and which data isn't.
-
-
-
-
-
-\section{NVIDIA NVC++ toolchain}
-
-The NVIDIA toolchain requires us to make \texttt{CXX}
-and \texttt{CC} point to the C++ compiler, as both are passed the same
-arguments by configure, which are actually only understood by the C++ version.
-
-\begin{bash}
-export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
-./configure CXX=$NVCPP CC=$NVCPP \
- CXXFLAGS="-O3 --std=c++17" \
- --enable-exahype --enable-blockstructured --enable-loadbalancing
-\end{bash}
-
-\noindent
-Some compute kernels are not available with the NVIDIA tools, as the compiler is
-pretty picky when it decides which temporary variables it might place on the
-call stack.
 
 
 \paragraph{OpenMP and OpenMP offloading}

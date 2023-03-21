@@ -44,14 +44,12 @@ namespace exahype2 {
 
           // STEP 1: copy solution from old array to new array, or set all to zero
           if ( Dimensions==3 and copyOldTimeStepAndScaleWithTimeStepSize ) {
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
             for (int unknown=0; unknown<unknowns; unknown++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               ::exahype2::fd::internal::copySolution_LoopBody(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -61,19 +59,15 @@ namespace exahype2 {
                   patchData.QOut[patchIndex],
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
           }
           else if (Dimensions==3 and not copyOldTimeStepAndScaleWithTimeStepSize){
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
               for (int unknown=0; unknown<unknowns; unknown++) {
-                otterLoopIterationBegin();
                 ::exahype2::fd::internal::clearSolution_LoopBody(
                     patchIndex,
                     gridCellIndex3d(x,y,z),
@@ -81,19 +75,15 @@ namespace exahype2 {
                     patchData.QOut[patchIndex],
                     QOutEnumerator
                 );
-                otterLoopIterationEnd();
               }
             }
-            otterLoopEnd();
           }
           else if (Dimensions==2 and copyOldTimeStepAndScaleWithTimeStepSize) {
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int unknown=0; unknown<unknowns; unknown++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               ::exahype2::fd::internal::copySolution_LoopBody(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -103,18 +93,14 @@ namespace exahype2 {
                   patchData.QOut[patchIndex],
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
           }
           else {
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int unknown=0; unknown<unknowns; unknown++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               ::exahype2::fd::internal::clearSolution_LoopBody(
                     patchIndex,
                     gridCellIndex2d(x,y),
@@ -122,20 +108,16 @@ namespace exahype2 {
                     patchData.QOut[patchIndex],
                     QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
           }
 
 
           // Step 2: Add source terms
           if (Dimensions==2 and evaluateAlgebraicSource) {
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               ::exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -148,18 +130,14 @@ namespace exahype2 {
                   patchData.QOut[patchIndex],
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
           }
           else if (Dimensions==3 and evaluateAlgebraicSource) {
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               ::exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -172,19 +150,15 @@ namespace exahype2 {
                   patchData.QOut[patchIndex],
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
           }
 
           // STEP 3: Evaluate flux and update solution accordingly
           if (evaluateFlux and Dimensions==2) {
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::computeFlux_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -198,16 +172,11 @@ namespace exahype2 {
                   tempFluxX,
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
-
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::computeFlux_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -221,17 +190,12 @@ namespace exahype2 {
                   tempFluxY,
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
-
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int unknown=0; unknown<unknowns; unknown++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
                 // @todo 2d missing
                 internal::updateSolutionWithFlux_LoopBody(
                   tempFluxX, tempFluxY, tempFluxZ,
@@ -245,18 +209,14 @@ namespace exahype2 {
                   *(patchData.QOut + patchIndex),
                   QOutEnumerator
                 );
-                otterLoopIterationEnd();
             }
-            otterLoopEnd();
           }
           else if (evaluateFlux and Dimensions==3) {
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::computeFlux_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -270,17 +230,12 @@ namespace exahype2 {
                   tempFluxX,
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
-
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::computeFlux_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -294,17 +249,12 @@ namespace exahype2 {
                   tempFluxY,
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
-
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::computeFlux_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -318,9 +268,7 @@ namespace exahype2 {
                   tempFluxZ,
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
 
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
@@ -345,12 +293,10 @@ namespace exahype2 {
 
           // STEP 4: Evaluate differential source and update solution accordingly
           if (evaluateDifferentialSource and Dimensions==2) {
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::computeDifferentialSourceTerm_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -365,16 +311,11 @@ namespace exahype2 {
                   QOutEnumerator,
                   variant
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
-
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::computeDifferentialSourceTerm_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -389,17 +330,12 @@ namespace exahype2 {
                   QOutEnumerator,
                   variant
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
-
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int unknown=0; unknown<unknowns; unknown++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::updateSolutionWithDifferentialSourceTerm_LoopBody(
                   tempDifferentialSourceX, tempDifferentialSourceY, tempDifferentialSourceZ,
                   QOutEnumerator,
@@ -412,19 +348,14 @@ namespace exahype2 {
                   *(patchData.QOut + patchIndex),
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
           }
           else if (evaluateDifferentialSource and Dimensions==3) {
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-
-              otterLoopIterationBegin();
               internal::computeDifferentialSourceTerm_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -439,17 +370,12 @@ namespace exahype2 {
                   QOutEnumerator,
                   variant
                );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
-
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::computeDifferentialSourceTerm_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -464,17 +390,12 @@ namespace exahype2 {
                   QOutEnumerator,
                   variant
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
-
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::computeDifferentialSourceTerm_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -489,18 +410,13 @@ namespace exahype2 {
                   QOutEnumerator,
                   variant
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
-
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
             for (int unknown=0; unknown<unknowns; unknown++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::updateSolutionWithDifferentialSourceTerm_LoopBody(
                   tempDifferentialSourceX, tempDifferentialSourceY, tempDifferentialSourceZ,
                   QOutEnumerator,
@@ -513,19 +429,15 @@ namespace exahype2 {
                   *(patchData.QOut + patchIndex),
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
           }
 
           // STEP 5: compute the Kreiss Oliger dissipation and add it to the solution
           if (evaluateKODissipation and Dimensions==2) {
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::computeKreissOligerDissipationTerm_LoopBody(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -539,16 +451,11 @@ namespace exahype2 {
                   tempKODissipationX,
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
-
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::computeKreissOligerDissipationTerm_LoopBody(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -562,17 +469,12 @@ namespace exahype2 {
                   tempKODissipationY,
                   QOutEnumerator
               );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
-
-            otterLoopBegin();
             for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
             for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
             for (int unknown=0; unknown<unknowns; unknown++)
             for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
               const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-              otterLoopIterationBegin();
               internal::updateSolutionWithKODissipationTerm_LoopBody(
                   KOSigma, tempKODissipationX, tempKODissipationY, tempKODissipationZ,
                   QOutEnumerator,
@@ -585,18 +487,14 @@ namespace exahype2 {
                   *(patchData.QOut + patchIndex),
                   QOutEnumerator
                 );
-              otterLoopIterationEnd();
             }
-            otterLoopEnd();
           }
           else if (evaluateKODissipation and Dimensions==3) {
-              otterLoopBegin();
               for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
               for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
               for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
               for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
                 const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-                otterLoopIterationBegin();
                 internal::computeKreissOligerDissipationTerm_LoopBody(
                     patchData.QIn[patchIndex],
                     QInEnumerator,
@@ -610,17 +508,12 @@ namespace exahype2 {
                     tempKODissipationX,
                     QOutEnumerator
                 );
-                otterLoopIterationEnd();
               }
-              otterLoopEnd();
-
-              otterLoopBegin();
               for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
               for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
               for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
               for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
                 const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-                otterLoopIterationBegin();
                 internal::computeKreissOligerDissipationTerm_LoopBody(
                     patchData.QIn[patchIndex],
                     QInEnumerator,
@@ -634,17 +527,12 @@ namespace exahype2 {
                     tempKODissipationY,
                     QOutEnumerator
                 );
-                otterLoopIterationEnd();
               }
-              otterLoopEnd();
-
-              otterLoopBegin();
               for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
               for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
               for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
               for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
                 const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-                otterLoopIterationBegin();
                 internal::computeKreissOligerDissipationTerm_LoopBody(
                     patchData.QIn[patchIndex],
                     QInEnumerator,
@@ -658,18 +546,13 @@ namespace exahype2 {
                     tempKODissipationZ,
                     QOutEnumerator
                 );
-                otterLoopIterationEnd();
               }
-              otterLoopEnd();
-
-              otterLoopBegin();
               for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
               for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
               for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
               for (int unknown=0; unknown<unknowns; unknown++)
               for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
                 const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
-                otterLoopIterationBegin();
                 internal::updateSolutionWithKODissipationTerm_LoopBody(
                     KOSigma, tempKODissipationX, tempKODissipationY, tempKODissipationZ,
                     QOutEnumerator,
@@ -682,9 +565,7 @@ namespace exahype2 {
                     *(patchData.QOut + patchIndex),
                     QOutEnumerator
                 );
-                otterLoopIterationEnd();
               }
-              otterLoopEnd();
           }
         }
       }

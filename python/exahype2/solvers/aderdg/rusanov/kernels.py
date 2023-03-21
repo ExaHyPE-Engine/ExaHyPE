@@ -964,19 +964,19 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping():
   
   """ 
   return """
-  #ifdef Parallel
-  double newMaxEigenvalue = _maxEigenvalue;
-  tarch::mpi::Rank::getInstance().allReduce(
-        &newMaxEigenvalue,
-        &_maxEigenvalue,
-        1,
-        MPI_DOUBLE,
-        MPI_MAX, 
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
-  #endif
+    #ifdef Parallel
+    double newMaxEigenvalue = _maxEigenvalue;
+    tarch::mpi::Rank::getInstance().allReduce(
+          &newMaxEigenvalue,
+          &_maxEigenvalue,
+          1,
+          MPI_DOUBLE,
+          MPI_MAX, 
+          [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+          );
+    #endif
 
-  if (_solverState == SolverState::Correction) {  
+
     if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
       ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
       // keep time step size invariant
@@ -988,7 +988,7 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping():
     }
     else {
       const double minVolumeSize = _minCellHThisTimeStep;
-      _admissibleTimeStepSize = CFL * PNPM / _maxEigenvalue; //the max eigenvalue here is already scaled with the volume size
+      _admissibleTimeStepSize = CFL * PNPM / _maxEigenvalue; //the max eigenvalue here is already the sum of the eigenvalues in each directionscaled with the volume size in that direction
       if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
         ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
       }
@@ -996,7 +996,7 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping():
         logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")" );
       }
     }
-  }
+
 """
 
 def create_constructor_implementation_for_adaptive_time_stepping():

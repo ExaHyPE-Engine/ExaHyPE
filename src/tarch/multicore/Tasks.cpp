@@ -553,7 +553,8 @@ void tarch::multicore::spawnAndWait(
     native::spawnAndWait(tasks,orchestrationStrategy);
     orchestrationStrategy->endBSPSection();
 
-    otterSynchroniseChildTasks();
+    // AT: ideally would record the handle of the encountering task here to correctly identify child tasks
+    otterSynchroniseTasks(NULL, otter_sync_children);
 
     internal::copyInternalTaskQueuesOverIntoGlobalQueue(-1);
 
