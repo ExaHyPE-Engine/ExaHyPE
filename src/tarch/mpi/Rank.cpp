@@ -26,31 +26,9 @@
 #endif
 
 
-namespace {
-  int tagCounter = 0;
-
-  /**
-   * The MPI standard specifies that the tag upper bound must be at least 32767,
-   * but code code better checks if this is supported by the MPI implementation.
-   * Also, user codes might be nasty and require more tags.
-   */
-  int maxTag = -1;
-
-  void validateMaxTag() {
-    if (
-      maxTag>0
-      and
-      tagCounter>=maxTag
-    ) {
-      tarch::logging::Log _log("tarch::mpi");
-      logError( "validateTag()", "code has requested " << tagCounter << " tags, but the maximum tag supported by MPI implementation is " << maxTag );
-    }
-  }
-}
-
-
-
 tarch::logging::Log tarch::mpi::Rank::_log("tarch::mpi::Rank");
+int     tarch::mpi::Rank::_maxTags     = 0;
+int     tarch::mpi::Rank::_tagCounter  = -1;
 
 
 tarch::mpi::Rank  tarch::mpi::Rank::_singleton;
@@ -58,16 +36,16 @@ tarch::mpi::Rank  tarch::mpi::Rank::_singleton;
 
 
 void tarch::mpi::Rank::releaseTag(int tag) {
-  if (tag==tagCounter-1) {
-    tagCounter--;
+  if (tag==_tagCounter-1) {
+    _tagCounter--;
   }
 }
 
 
 int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName, int numberOfTags) {
   assertion2(numberOfTags>=1,fullQualifiedMessageName,numberOfTags);
-  const int result = tagCounter;
-  tagCounter += numberOfTags;
+  const int result = _tagCounter;
+  _tagCounter += numberOfTags;
 
   // I protect the tag manually (not via log filter), as many tags are actually
   // grabbed before most applications initialise their log filters properly.
@@ -83,7 +61,7 @@ int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName
   }
   #endif
 
-  validateMaxTag();
+  validateMaxTagIsSupported();
 
   return result;
 }
@@ -273,8 +251,7 @@ tarch::mpi::Rank::Rank():
   _communicator( MPI_COMM_WORLD),
   _timeOutWarning(0),
   _deadlockTimeOut(0),
-  _areTimeoutsEnabled(true),
-  _maxTags(-1) {
+  _areTimeoutsEnabled(true) {
 }
 #else
 tarch::mpi::Rank::Rank():
@@ -283,8 +260,7 @@ tarch::mpi::Rank::Rank():
   _numberOfProcessors(1),
   _timeOutWarning(0),
   _deadlockTimeOut(0),
-  _areTimeoutsEnabled(true),
-  _maxTags(-1) {
+  _areTimeoutsEnabled(true) {
 }
 #endif
 
@@ -468,14 +444,14 @@ void tarch::mpi::Rank::logStatus() const {
 
 bool tarch::mpi::Rank::validateMaxTagIsSupported() {
   if (
-    getInstance()._maxTags <= 0
+    _maxTags <= 0
     or
-    tagCounter<getInstance()._maxTags
+    _tagCounter<_maxTags
     ) {
     return true;
   }
   else {
-    logWarning( "validateMaxTagIsSupported()", "maximum tag value is " << getInstance()._maxTags << " though we would need " << tagCounter << " tags. Code will likely crash" );
+    logWarning( "validateMaxTagIsSupported()", "maximum tag value is " << _maxTags << " though we would need " << _tagCounter << " tags. Code will likely crash" );
     return false;
   }
 }
@@ -518,20 +494,11 @@ bool tarch::mpi::Rank::init(int* argc, char*** argv) {
   void* rawMaxTag;
   MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &rawMaxTag, &answerFlag);
   if (answerFlag) {
-    maxTag = *(int*)rawMaxTag;
+    _maxTags = *(int*)rawMaxTag;
   }
   else {
     std::cerr << "init(int*,char***)\t was not able to query what the maximum tag value is" << std::endl;
     return false;
-  }
-
-  int answerFlag;
-  void* rawMaxTag;
-  MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &rawMaxTag, &answerFlag);
-  _maxTags = *(int*)rawMaxTag;
-  validateMaxTagIsSupported();
-  if (not answerFlag) {
-    logError( "init()", "was not able to query what the maximum tag value is" );
   }
 
   DoubleMessage::initDatatype();

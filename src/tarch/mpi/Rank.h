@@ -101,7 +101,15 @@ class tarch::mpi::Rank {
 
     bool    _areTimeoutsEnabled;
 
-    int     _maxTags;
+    /**
+     * Set by init() and actually stores the number of valid tags.
+     */
+    static int     _maxTags;
+
+    /**
+     * Count  the tags that have already been handed out.
+     */
+    static int     _tagCounter;
 
     /**
      * The standard constructor assignes the attributes default values and
