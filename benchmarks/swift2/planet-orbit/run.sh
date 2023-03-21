@@ -1,0 +1,46 @@
+#!/bin/sh
+
+# Script to run experiment
+
+# Parameters
+END_TIME=0.5 
+CELL_SIZE=0.4 
+PLOT_DELTA=0.1
+
+# Run python script to generate the experiment
+python3 planet-orbit.py -integrator leapfrog -et=$END_TIME -cs=$CELL_SIZE -plot=$PLOT_DELTA
+
+# set threads number
+export OMP_NUM_THREADS=1
+
+# run experiment
+echo 'running experiment...'
+./orbit-$CELL_SIZE > output.txt
+echo 'post-processing results...'
+
+# generate Peano grid for Paraview
+pvpython ../../../python/peano4/visualisation/render.py grid.peano-patch-file
+
+DIRNAME="output_"$CELL_SIZE
+if [ -d $DIRNAME ]
+then
+    rm -r $DIRNAME
+fi
+mkdir $DIRNAME
+mv output.txt $DIRNAME
+
+# Save file with parameters and metadata
+less Constants.h > Constants.txt && mv Constants.txt $DIRNAME
+
+# Save snapshots
+mkdir $DIRNAME"/snapshots/"
+mv particles* grid* $DIRNAME"/snapshots/"
+
+# Save other data, if any
+if [ -e *.cvs ]
+then
+    mv *.cvs $DIRNAME
+fi
+
+echo 'Done. Bye!'
+
