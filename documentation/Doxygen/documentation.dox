@@ -5,12 +5,12 @@
 Peano and its toolboxes and extensions follow some very simplistic documentation paradigms:
 
 - Everything is in the code;
-- All documentation is created via doxygen;
-- What does not fit into the code is documented in separated files which also are processed by doxygen;
+- All documentation is created via \c doxygen;
+- What does not fit into the code is documented in separated files which also are processed by \c doxygen;
 - Code documentation should be in the header files for C/C++ code;
-- Further documentation files have the extension .dox.
+- Further documentation files have the extension ```.dox```.
 
-To generate the documentation, ```cd``` to your Peano directory, and type:
+To generate the documentation, \c cd to your Peano directory, and type:
 
       doxygen documentation/Doxyfile
      
@@ -28,8 +28,8 @@ following terminology in mind:
 
 We aim for documentation which is always up-to-date.
 The documentation shall be searchable.
-We want to have one medium which integrates high-level overview information 
-with source code documentation.
+We want to have one medium which integrates top-level and high-level overview information (normally stored in ```*.dox``` files)
+with low-level source code documentation (normally stored in ```*.h``` and ```*.py``` files).
 
 
 Peano's documentation can be quite complex with all the toolboxes and 
@@ -43,31 +43,35 @@ structure of the menus.
 
 Header files and Python scripts are automatically picked up by the script as 
 long as they are stored within directories which are subject to search.
-If you want to write stand-alone docu (such as high-level overview 
+Low-level subpages are automatically generated for them.
+If you want to write stand-alone docu (such as top-level or high-level overview 
 descriptions), the corresponding dox files should go into 
 
       documentation/Doxygen/SubDir
 
 Doxygen supports the addition of pages anywhere in the directories that it searches. 
 These can be written in markdown or html. 
-Additionally, files must start with ```/**``` and end with ```* /```, so that Doxygen is alerted to process them.
+Additionally, files must start with \htmlonly /** \endhtmlonly and end with \htmlonly */ \endhtmlonly,
+so that Doxygen is alerted to process them.
 
 
 ### New (top-level) documentation page
 
 With top-level, we mean something like Peano or ExaHyPE or Swift. 
-Top level menu entries are reserved for such rubrics and therefore are infrequently introduced. 
-Please consult with 
-the team if you want to add a new top-level entry. 
+Top-level menu entries are reserved for such rubrics and therefore are infrequently introduced. 
+Please consult with  the team if you want to add a new top-level entry. 
 
 If the team agrees that there should be a new top-level entry, please follow 
 the following conventions:
 
-- Add a new directory within documentation/Doxygen.
+- Add a new directory within ```documentation/Doxygen```.
 - Create a new main page within this new directory. Most packages call this 
-  file home.dox. 
+  file ```home.dox```. 
 
 The new mainpage typically reads as follows
+
+\verbatim
+/**
 
          @page peano_home Peano
 
@@ -75,42 +79,78 @@ The new mainpage typically reads as follows
 
          \li \subpage action_sets
 
-where peano_home and Peano are to be replaced with the names of you choice.
+*/
+\endverbatim
+
+where \c peano_home and \c Peano are to be replaced with the names of your choice.
 
 
 Next, enumerate all the subpages to be nested within this page below. 
 This prevents these subpages from appearing at the top level menu.
 
 
-### New subpages
+### New (high-level) subpages
 
-Subpages are the doxygen term for something that we would call a section
+Subpages are the Doxygen term for something that we would call a section
 in LaTeX. To create such a section, please follow the following steps:
 
 - Create a new file within the documentation subdirectory of your choice;
-- Begin the new main page as above (with a ``` \page```, ```page_ref``` and title), i.e. any page to be included should start with    
+- Begin the new main page as above (with a ```\page```, ```page_ref``` and a page title),
+  i.e. any page to be included should start with    
+
+\verbatim
+/**
 
        \page page_ref Page Title 
+\endverbatim
 
-  Here, ```page_ref``` will serve as a global unique identifier throughout doxygen.
-  Therefore, we usually use identifiers peano_mysection where page is a generic
-  prefix, peano identifies the top-level rubric (page) and mysection.
+  Here, ```page_ref``` will serve as a global unique identifier throughout Doxygen.
+  Therefore, we usually use identifiers such as \c peano_mysection where (in this example) \c peano is a generic
+  prefix identifying the top-level rubric (page), and \c mysection is the subpage within the rubric.
 - Any page marked with ``` \page``` will appear on the top level menu by 
   default. New documentation sections should therefore be added to their 
   corresponding chapter or top-level page (see above) via 
 
+\verbatim
            \li \subpage page_ref
+\endverbatim
 
-  where page_ref typically has a structure similar to peano_mysection.
+  where \c page_ref typically has a structure similar to \c peano_mysection.
 
 
-The last item illustrates a fundamental paradigm of doxygen:
+The last item illustrates a fundamental paradigm of Doxygen:
 All the pages are, in the first lace, one large blob. 
 To introduce parent-child relations, you have to add the child to the parent page.
 The child page itself does not specify its parent.
 Through this, you can duplicate entries in the navigation menu:
 you simply add the subpage to multiple parents.
- 
 
+Don't forget to conclude every dox file with:
+ 
+\verbatim
+*/
+\endverbatim
+
+### Adding (low-level) documentation inside the code
+
+Doxygen recognises comments written following certain rules in C++ and Python source codes.
+As comments are written differently in these languages, these rules are also different.
+In C++, a comment section must be wrapped by the first line \htmlonly /** \endhtmlonly and the last line \htmlonly */ \endhtmlonly
+and will contain a (multiline) text between them (describing, for example, a function and its arguments before the function body):
+
+\verbatim
+/**
+ * Comment title
+ *
+ * Multiline text
+ ...
+ * Multiline text
+ */
+\endverbatim
+
+In Python, a comment section must be wrapped differently, namely,
+starting with the first line \htmlonly """! \endhtmlonly and the last line \htmlonly """ \endhtmlonly.
+Don't forget the exclamation mark as this allows Doxygen to render a Python comment on a webpage correctly,
+otherwise the comment text will appear as a code snippet.
 
 */
