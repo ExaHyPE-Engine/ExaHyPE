@@ -95,6 +95,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
             if ( particleIsDuplicate(p) ) {
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfVirtualEliminatedSpatialDuplicates++;
+              delete p;
             }
             else {
               this->push_back(p);
