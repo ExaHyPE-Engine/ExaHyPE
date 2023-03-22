@@ -453,8 +453,16 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     bool isLocalBalancingBad() const;
 
     /**
+     * Determine splits for initial load balancing
+     *
+     *
      * This is part of the action SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
-     * i.e. we use it for the original local splitting.
+     * i.e. we use it for the initial local splitting.
+     *
+     * The algorithm is relatively simple: We determine the maximum number of
+     * trees given the minimum of the weight (size) of the heaviest tree, the
+     * weight that we are allowed to pick given the number of threads, and the
+     * number of threads that are available.
      *
      * @param Number of splits that the code should run
      */

@@ -541,7 +541,7 @@ bool toolbox::loadbalancing::RecursiveSubdivision::fitsIntoMemory(State state) c
 
 int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank() const {
   int maxSizeOfLocalRank = getWeightOfHeaviestLocalSpacetree();
-  int maxLocalTrees      = std::min( _configuration->getMaxLocalTreesPerRank(_state)-1, maxSizeOfLocalRank-1 );
+  int maxLocalTrees      = std::min( {_configuration->getMaxLocalTreesPerRank(_state)-1, maxSizeOfLocalRank-1, tarch::multicore::Core::getInstance().getNumberOfThreads()-1} );
   int numberOfSplits     = std::max(1,maxLocalTrees);
 
   int worstCaseEstimateForSizeOfSpacetree = tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte );
