@@ -54,7 +54,14 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   points, you have a vertex marker which gives you the position of the 
   vertex to which a particular is associated, and you have the localParticles.
   This is a vector of pointers in this particular case.
+ 
+  ## Attributes
   
+  name: String
+    To be in line with other conventions, I recommend you start with an 
+    uppercase letter. This has to be a valid C++ identifier, i.e. don't 
+    use any special symbols besides an underscore.
+   
   @see peano4::datamanagement::CellMarker
   @see peano4::datamanagement::VertexMarker
   
