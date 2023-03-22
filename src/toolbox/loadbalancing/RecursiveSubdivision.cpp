@@ -252,8 +252,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
         tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1
       ) {
         _state = State::IntraRankDistribution;
-        // @todo Debug
-        logInfo( "updateState()", "switch to state " << toString(_state) );
+        logDebug( "updateState()", "switch to state " << toString(_state) );
       }
       break;
     case State::IntraRankDistribution:
@@ -261,13 +260,13 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
         peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 1
       ) {
         _state = State::WaitForRoundRobinToken;
-        logInfo( "updateState()", "switch to state " << toString(_state) << " as more than one local subpartition is already hosted, i.e. we assume rank has already spread out locally" );
+        logDebug( "updateState()", "switch to state " << toString(_state) << " as more than one local subpartition is already hosted, i.e. we assume rank has already spread out locally" );
       }
       if (
         tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
       ) {
         _state = State::WaitForRoundRobinToken;
-        logInfo( "updateState()", "switch to state " << toString(_state) << " as rank is degenerated with only one thread, i.e. rank-local distribution makes no sense" );
+        logDebug( "updateState()", "switch to state " << toString(_state) << " as rank is degenerated with only one thread, i.e. rank-local distribution makes no sense" );
       }
       break;
     case State::WaitForRoundRobinToken:
@@ -277,8 +276,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
 
         if (_roundRobinToken==tarch::mpi::Rank::getInstance().getRank()) {
           _state = State::InterRankBalancing;
-          // @todo Debug
-          logInfo( "updateState()", "switch to state " << toString(_state) );
+          logDebug( "updateState()", "switch to state " << toString(_state) );
         }
       }
       break;
@@ -290,14 +288,11 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
           !hasSplitRecently()
         ) {
           _state = State::IntraRankBalancing;
-          // @todo Debug
-          logInfo( "updateState()", "switch to state " << toString(_state) );
+          logDebug( "updateState()", "switch to state " << toString(_state) );
         }
         else {
           _state = State::WaitForRoundRobinToken;
-	           // @todo Debug
-          logInfo( "updateState()", "switch to state " << toString(_state) );
-
+          logDebug( "updateState()", "switch to state " << toString(_state) );
         }
       }
       break;
@@ -317,13 +312,11 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
     case State::Stagnation:
       if ( getWeightOfHeaviestLocalSpacetree()==-1) {
         _state = State::Stagnation;
-         // @todo Debug
-          logInfo( "updateState()", "switch to state " << toString(_state) );
+        logDebug( "updateState()", "switch to state " << toString(_state) );
       }
       else {
-       _state = State::WaitForRoundRobinToken;
-         // @todo Debug
-          logInfo( "updateState()", "switch to state " << toString(_state) );
+        _state = State::WaitForRoundRobinToken;
+        logDebug( "updateState()", "switch to state " << toString(_state) );
       }
       break;
     case State::SwitchedOff:
@@ -805,6 +798,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::enable( bool value ) {
     logInfo( "enable()", "switched load balancing on (again) and therefore change to state " << toString(_state) );
   }
   else if (not value) {
+    logInfo( "enable()", "switched load balancing off" );
     _state = State::SwitchedOff;
   }
 }
