@@ -57,15 +57,16 @@ tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 #endif
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleIsDuplicate(const DoFType* particle) const {
-  for (auto p: *this) {
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleIsDuplicate(const DoFType* particle) {
+  iterator result = {{NAMESPACE | join("::")}}::{{CLASSNAME}}::begin();
+  while (result!={{NAMESPACE | join("::")}}::{{CLASSNAME}}::end()) {
     if (
-      tarch::la::equals( p->getX(), particle->getX(), toolbox::particles::SpatialDuplicateTolerance )
+      tarch::la::equals( (*result)->getX(), particle->getX(), toolbox::particles::SpatialDuplicateTolerance )
     ) {
-      return true;
+      return result;
     }
   }
-  return false;
+  return result;
 }
 
 
@@ -85,19 +86,23 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
       // this is not a bug but intentional.
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
       {
+        logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
         for (auto p: neighbour) {
           if (
             p->getParallelState()==DoFType::ParallelState::Local
           ) {
-            logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
             p->setParallelState( DoFType::ParallelState::Virtual );
 
-            if ( particleIsDuplicate(p) ) {
+            iterator iteratorToExistingCopy = particleIsDuplicate(p);
+            if ( iteratorToExistingCopy!=end() ) {
+              logDebug( "merge(...)", "incoming particle " << p->toString() << " is local on other rank and will be virtual here. It replaces existing copy" );
+              delete *iteratorToExistingCopy;
+              this->push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfVirtualEliminatedSpatialDuplicates++;
-              delete p;
             }
             else {
+              logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
               this->push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfMergedVirtualParticles++;
@@ -322,10 +327,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     _particlesThatCanNotBeLiftedWithinTheirTree.begin(),
     _particlesThatCanNotBeLiftedWithinTheirTree.end()
   );
-  logDebug( "finishedTraversal()", "rolled over local list and now have " << _particlesThatHaveToBeSieved.size() << " sieve particles here" );
+  logDebug( "finishedTraversal()", "rolled over local list and now have " << _particlesThatHaveToBeSieved.size() << " sieve particles to sieve" );
 
   _particlesThatHaveToBeSieved.eliminateSpatialDuplicates();
-  logDebug( "finishedTraversal()", "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left" );
+  logDebug(
+    "finishedTraversal()",
+    "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left to sieve " <<
+    "(local particles that are rolled over=" << _particlesThatCanNotBeLiftedWithinTheirTree.size() << ")"
+  );
+  // shallow clear, as the pointers have already been rolled over into _particlesThatHaveToBeSieved
   _particlesThatCanNotBeLiftedWithinTheirTree.clear();
 }
 
@@ -532,7 +542,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
   for (auto *p: *this) {
     delete p;
   }
-  clear();
+  Base::clear();
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
+  Base::clear();
 }
 
 

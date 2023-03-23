@@ -55,6 +55,18 @@
       static tarch::multicore::BooleanSemaphore   _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
 
       static {{CLASSNAME}}     _particlesThatCanNotBeLiftedWithinTheirTree;
+
+      /**
+       * Particles that should be sieved
+       *
+       * This is a set of particles which should be sieved in the next traversal.
+       * However, nobody takes particles directly from this list. Instead, tasks
+       * will work with their own clones of this list.
+       *
+       * @see getSievedParticlesForNextGridTraversal()
+       *
+       * The list is populated by finishedTraversal().
+       */
       static {{CLASSNAME}}     _particlesThatHaveToBeSieved;
 
       static int _numberOfLifts;
@@ -97,9 +109,16 @@
       #endif
 
       /**
-       * Return if there's already a particle at p's position in the set.
+       * Check if there's already a particle at p's position in the set.
+       *
+       * As we return a non-const iterator, the operation may not be labelled
+       * as const.
+       *
+       *
+       * @return container's end() if there is no duplicate. Otherwise, return
+       *   iterator pointing to existing particle.
        */
-      bool particleIsDuplicate( const DoFType*  p ) const;
+      Base::iterator particleIsDuplicate( const DoFType*  p );
     public:
 
       /**
@@ -285,6 +304,17 @@
       void particlesCanNotBeLiftedLocally();
 
       /**
+       * Shallow clear
+       *
+       * Plain delegate to superclass clear(), i.e. this routine clears a set
+       * of pointers, but it does not delete the actual particles. If you want
+       * that behaviour, you have to call deleteParticles(). I merely introduce
+       * this wrapper to be able to add this comment on the shallow vs deep
+       * copy/clear mechanism.
+       */
+      void clear();
+
+      /**
        * Inform set that particle cannot be lifted on its current tree
        *
        * This routine basically takes the particle and inserts it into the list
@@ -381,9 +411,25 @@
       );
 
       /**
+       * Deep copy of particles that have to be sieved
+       *
        * This routine returns a deep copy of all the particles that are to be
        * sieved. Use this before you start to traverse your local domain. As
-       * it is a deep copy, you have to invoke deleteParticles().
+       * it is a deep copy, you have to invoke deleteParticles() on the result.
+       * The rationale behind the deep copying is as follows: Individual
+       * threads run through their subdomain in parallel and they should not
+       * compete for a global sieve set. At the same time, you want to
+       * eliminate a particle from the sieve set as soon as you have worked it
+       * in: No code should check that particle again, and you definitely don't
+       * want to insert it multiple times. So I make each thread (subtree) work
+       * with a sieve set of its own which it can manipulate as it wants. At
+       * the end of the traversal, it will delete all remaining particles, i.e.
+       * kill all those deep copies that were not relevant to the local
+       * partition.
+       *
+       * @see deleteParticles() to clean up the local copy.
+       * @see _particlesThatHaveToBeSieved which is the container from which we
+       *   create a deep copy.
        */
       static {{NAMESPACE | join("::")}}::{{CLASSNAME}} getSievedParticlesForNextGridTraversal();
 
