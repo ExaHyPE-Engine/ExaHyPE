@@ -386,7 +386,7 @@ if args.clean_temporary_directories:
   for dir in dirs:
     shutil.rmtree( dir )
 
-peano4_project.generate( throw_away_data_after_generation=True )
+peano4_project.generate( overwrite=peano4.output.Overwrite.Always, throw_away_data_after_generation=True )
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
 
 # remove output files from previous runs
