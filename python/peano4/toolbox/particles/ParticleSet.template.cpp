@@ -65,6 +65,7 @@ tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
     ) {
       return result;
     }
+    result++;
   }
   return result;
 }
@@ -98,6 +99,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
               logDebug( "merge(...)", "incoming particle " << p->toString() << " is local on other rank and will be virtual here. It replaces existing copy" );
               delete *iteratorToExistingCopy;
               this->push_back(p);
+              // delete p;
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfVirtualEliminatedSpatialDuplicates++;
             }
