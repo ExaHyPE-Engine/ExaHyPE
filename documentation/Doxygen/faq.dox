@@ -173,6 +173,30 @@ undefined reference to for_write_seq_list
     core compiler.
 
 
+
+## Python API
+
+-   ***`import peano4` yields not found error***. You haven't set your
+    `PYTHONPATH` properly. Ensure that it points to Peano's python
+    subdirectory. So use something similar to
+    
+             export PYTHONPATH=~/git/Peano/python
+
+-   My installation or paraview complains about ***ModuleNotFoundError: No module named 'numpy'***. 
+    For some parts of Peano and its extensions, you need the package
+    numpy. If you don't
+    have numpy on your system install it with either of the following
+    commands:
+    
+             pip3 install --user numpy 
+    
+    Similar arguments hold for jinja2. Please note that Peano's API 
+    and all extensions are written in a way that they can work without
+    numpy in principle. However, not all features (solvers in ExaHyPE, e.g.)
+    might be available if you have no numpy. 
+
+
+
 ## Performance analysis
 
 - ***The Intel/NVIDIA tools do not provide meaningful insight*** Read through 
@@ -214,7 +238,69 @@ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:your-path/otter/build/lib:/opt/otf2/lib
 ~~~~~~~~~~~~~~~~~~~~~
     as the checks otherwise will fail.
 
+
+## Debugging
+
+Debugging
+---------
+
+- ***I can't see my log/trace statements.*** There's a whole set of
+  things that can go wrong.
+  -   Check that your log filter specifies the class name. For efficiency 
+      reasons, you can only filter per class. Ensure you don't specify
+      methods. If you do so, Peano 4 thinks your method name is a
+      (sub)class name and won't apply your filter.
+  -   Ensure that your main code is translated with a reasonable debug
+      flag. The makefile has to translate your code with
+      `-DPeanoDebug=4` (or 1 if you are only interested in tracing).
+  -   Ensure you link to libraries which are built with a reasonable
+      debug level. For this, run your code and search for the header
+
+                   build: 2d, no mpi, C++ threading, debug level=4
+
+      on the terminal. Again, has to be 1 or 4 at least.
+  -   Ensure you have a whitelist entry for the routine you are
+      interested in. Study how to use @tarch_logging "Peano's logging" or
+      insert manual log filter statements:
+
+                  tarch::logging::LogFilter::getInstance().addFilterListEntry(
+                    tarch::logging::LogFilter::FilterListEntry(
+                      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
+                      tarch::logging::LogFilter::FilterListEntry::AnyRank,
+                      "examples::algebraicmg",
+                      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry 
+                    ) 
+                  );
+
+  -   If you are still unsure which log filters are active, insert
+
+                   tarch::logging::LogFilter::getInstance().printFilterListToCout();
+                   
+      into your code and see which entries it does enlist.
+
+- ***gdb says "not in executable format: file format not recognized"***.
+  automake puts the actual executable into a `.libs` directory and
+  creates bash scripts invoking those guys. Change into `.libs` and
+  run gdb directly on the executable. Before you do so, ensure that
+  `LD_LIBRARY_Path` points to the directory containing the libraries.
+  Again, those guys are stored in a `.libs` subdirectory, so the
+  library path should point to that subdirectory.
+
+
+## MPI troubleshooting
   
+- ***My code crashes unexpectedly with malloc/free errors***. Please
+  rerun your code with Intel MPI and the flag `-check_mpi`. You should
+  not get any error reports. If you do, we have had serious problems
+  as some of Peano's classes use `MPI_C_BOOL` or `MPI_CXX_BOOL`. They
+  seem not be supported properly.
+
+- ***With more and more ranks, I suddenly run into timeouts***. Peano has a
+  built-in timeout detection which you can alter by changing the
+  timeout threshold. This is done via the `--timeout XXX` parameter.
+
+
+
   
  */
  

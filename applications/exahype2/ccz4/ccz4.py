@@ -134,7 +134,8 @@ if __name__ == "__main__":
           "K0":1,     #58
         }
 
-        number_of_unknowns = sum(unknowns.values())
+        number_of_unknowns = 2
+# sum(unknowns.values())
 
         self._my_user_includes = """
 #include "../CCZ4Kernels.h"
@@ -303,6 +304,7 @@ if __name__ == "__main__":
   }
 """
         self.switch_to_heap_storage(False,False)
+        #self.switch_to_heap_storage(True,True)
 
    
       def create_action_sets(self):
@@ -969,12 +971,13 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-6,-6,0.0]
-    project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
-    my_solver.select_dofs_to_print = [0,3,5,12,16,17,18,54,59,60]
+    probe_point = [-12,-12,0.0]
+    project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
+    my_solver.select_dofs_to_print = [0]
 
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
+#    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
+
 
 ########################################################################################
 #Tracer setting 
