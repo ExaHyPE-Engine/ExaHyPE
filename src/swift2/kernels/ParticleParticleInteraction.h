@@ -46,7 +46,7 @@ namespace swift2 {
      *
      * The present kernel is a sole particle-particle interaction kernel.
      *
-     * Here we calculate the density, Omega and drho/dt sums.
+     * Here we calculate the density and drho/dt sums.
      * The latter can be used in the Newton-Raphson iteration.
      *
      * Subscripts a and b represent indices of Local and Active particles, respectively:

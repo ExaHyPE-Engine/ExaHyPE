@@ -465,14 +465,11 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                                valid_mantissa_bits=self._mantissa_size)
     self.hright   = dastgen2.attributes.Double("hRight",
                                                valid_mantissa_bits=self._mantissa_size)
-    self.Omega    = dastgen2.attributes.Double("Omega",
-                                               valid_mantissa_bits=self._mantissa_size)   # PHANTOM (~1/f)
     self.data.add_attribute(self.f)
     self.data.add_attribute(self.wcount_dh)
     self.data.add_attribute(self.rho_dh)
     self.data.add_attribute(self.hleft)
     self.data.add_attribute(self.hright)
-    self.data.add_attribute(self.Omega)
 
     # Newton-Raphson iterations ----------------------------------------------------
     self.smoothL_prev   = dastgen2.attributes.Double("smoothingLengthPrevious",

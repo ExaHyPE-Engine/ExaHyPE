@@ -32,7 +32,6 @@ void swift2::kernels::prepareDensityCalculation(
 
       /* Not originally in SWIFT */
       particle->setNcount  (0);
-      particle->setOmega   (0.0);   
     }
   }
 }
@@ -76,7 +75,6 @@ void swift2::kernels::endDensityCalculation(
       particle->setWcount_dh( particle->getWcount_dh() +       (-hydroDimensions * W_a * h_inv_dim_plus_one) );
 
       /* Not needed in SWIFT */
-      particle->setOmega    ( particle->getOmega()     + m_a * (-hydroDimensions * W_a * h_inv_dim_plus_one) );
 
       /* Useful for debugging */
       particle->setNcount   ( particle->getNcount()    + 1 );
@@ -125,7 +123,7 @@ void swift2::kernels::endDensityCalculation(
       
         /* Construct the final expression of the grad-h-term.
          * Swift use "f" (see also Springel and Hernquist). 
-         * PHANTOM use Omega, which is proportional to ~ 1/f. (Price et al 2018) */
+         */
        
         const double dh_drho_a = - h_a / rho_a / hydroDimensions;
         const double common_factor = h_a / hydroDimensions / particle->getWcount();
@@ -163,14 +161,6 @@ void swift2::kernels::endDensityCalculation(
         /* SWIFT */ 
         particle->setF( grad_h_term );      
         
-        /* Price: finish calculation of Omega */
-        particle->setOmega( 1.0 - dh_drho_a * particle->getOmega() ); 
-
-        /* Re-set if gone ill */
-        if( tarch::la::smallerEquals( particle->getOmega(), 0.0) ){
-          particle->setOmega(1.0);
-        }
-
         particle->setPressure( P_a );
         particle->setSoundSpeed( soundspeed );
         particle->setBalsara( balsara );
@@ -347,7 +337,6 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
 
       /* Not needed in SWIFT */
       particle->setNcount   ( particle->getNcount()    + 1 );
-      particle->setOmega    ( particle->getOmega()     + m_a * (-hydroDimensions * W_a * h_inv_dim_plus_one) );
 
       const double rho_inv = 1.0 / particle->getDensity();
       // @TODO: implement cosmological factors

@@ -77,10 +77,6 @@ void swift2::kernels::computeDensity(
           /* Increment drho/dh */
           localParticle->setRho_dh   ( localParticle->getRho_dh()    + m_b*dW_a_dh ); 
 
-          /* Increment Omega */
-          /* Notice that this is the same as drho_dh in SWIFT */
-          localParticle->setOmega    ( localParticle->getOmega()     + m_b*dW_a_dh );
-
           /* Increment dWcount/dh */
           localParticle->setWcount_dh( localParticle->getWcount_dh() +     dW_a_dh ); 
 
@@ -97,8 +93,6 @@ void swift2::kernels::computeDensity(
           /* 2D Term only has 1 component (z) */
           const double curlvr2D = dv_ab[0]*dx[1] - dv_ab[1]*dx[0];
           localParticle->setRot_v( localParticle->getRot_v() + fac_a * curlvr2D );
-
-          assertion3( not std::isnan( localParticle->getOmega() ), localParticle->toString(), localParticle->getOmega(), dW_a_dh );
 
         } /* End if r<cutoffR */
       } /* End for active particles */
@@ -225,8 +219,8 @@ void swift2::kernels::computeHydroForce(
         localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), v_sig) );
 
         assertion6( not std::isnan( localParticle->getHDot() ), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba );
-        assertion8( not tarch::la::isEntryNan( localParticle->getA() ), localParticle->toString(), sph_acc_term, visc_acc_term, f_ab, f_ba,
-                    activeParticle->getOmega(), activeParticle->getF(), activeParticle->getIsBoundaryParticle() );
+        assertion7( not tarch::la::isEntryNan( localParticle->getA() ), localParticle->toString(), sph_acc_term, visc_acc_term, f_ab, f_ba,
+                                                                        activeParticle->getF(), activeParticle->getIsBoundaryParticle() );
       }
 
 
