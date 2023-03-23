@@ -7,6 +7,13 @@
 
 \li \subpage swift_architecture
 \li \subpage swift_tutorials
+=======
+\li \subpage swift_tutorials_home
+\li \subpage swift_benchmarks
+\li \subpage swift_visualisation 
+\li \subpage swift_graph_compiler
+\li \subpage swift_particle_lifecycle
+\li \subpage swift_initial_conditions 
 
 @image html logos/excalibur.png
 
@@ -22,8 +29,9 @@ its particle toolsbox and SWIFT together.
 
 ## Configure Peano
 
-As Swift 2 is a Peano extension, you first have to @ref page_installation "configure and build the core
-Peano code base", i.e. its libraries, before you start any work. 
+As Swift 2 is a Peano extension, you first have to 
+@ref page_installation "configure and build the core Peano code base",
+i.e. its libraries, before you start any work. 
 Hereby, it is important that you add the particles toolbox:
 
 
