@@ -381,8 +381,8 @@ Its idea is that a mesh is dumped as an unstructured set of cell where each cell
 is uniquely identified through its offset and its size. 
 The mesh data format lacks any topological information (connectivity).
 A cell always is a patch, i.e. holds a (topological) Cartesian mesh of
-dimensions $k \times k$ or $k \times k \times k $, respectively.
-If you work without patches, $k=2$. 
+dimensions @f$ k \times k @f$ or @f$ k \times k \times k @f$, respectively.
+If you work without patches, @f$ k=2 @f$. 
 In this case, the block format obviously can yield a significant overhead.
 
 
