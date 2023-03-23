@@ -125,7 +125,6 @@ class GreshoChanVortexIC:
       particle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
       particle->setHasConverged(false);
       particle->setHasNoNeighbours(false);
-      particle->setHasBeenKicked(false);
       particle->setResidual(0.0);
       particle->setIterCount(0);
       particle->setIsBoundaryParticle(false);

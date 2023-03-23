@@ -78,7 +78,6 @@ class SodShockIC:
       particle->setTime(0);
       particle->setHasConverged(false);
       particle->setHasNoNeighbours(false);
-//      particle->setHasBeenKicked(true);
       particle->setResidual(0.0);
       particle->setIterCount(0);
       particle->setIsBoundaryParticle(false);
