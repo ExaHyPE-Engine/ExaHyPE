@@ -3,6 +3,7 @@
 @page swift_benchmarks Benchmarks
 
 \li \subpage benchmarks_swift2_planet_orbit
+\li \subpage benchmarks_swift2_hydro_simple_sph_noh_2D
 
 
 Swift comes along with a set of benchmarks. 

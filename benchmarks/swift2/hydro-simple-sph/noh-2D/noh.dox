@@ -2,6 +2,19 @@
 
  @page benchmarks_swift2_hydro_simple_sph_noh_2D Noh-2D (Simple SPH)
  
+ Simple Noh-2d benchmark with @f$ N \times N @f$ particles. You specify the @f$ N @f$
+ on the Python command line level:
+ 
+            python3 noh.py -np 10
+            
+ There are also different build versions (release vs debug for example) about 
+ which you can find out by passing `--help`.            
+            
+ @image html noh_0.png
+ @image html noh_150.png
+ @image html noh_300.png
+ 
+ 
 ~~~~~~~~~~~~~~~~~~~~~~~~
 #!/bin/sh
 
