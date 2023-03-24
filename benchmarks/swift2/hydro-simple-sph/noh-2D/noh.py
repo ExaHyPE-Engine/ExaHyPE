@@ -119,9 +119,6 @@ particle.h_hydro_max = HYDRO_h_MAX
 # Native size is 53 (double precision)
 #particle.mantissa_size = 23
 
-# Finally, we have to declare the sph particle attributes, in this case for MinimalSPH.
-particle.declare_sph_particle_attributes()
-
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project

@@ -1,3 +1,10 @@
+/**
+
+ @page benchmarks_swift2_planet_orbit Planet orbit
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
 #!/bin/sh
 
 # Script to run experiment
@@ -43,4 +50,7 @@ then
 fi
 
 echo 'Done. Bye!'
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
+ */
+ 
