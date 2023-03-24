@@ -12,10 +12,10 @@ import shutil
 import subprocess
 
 # HDF5 Reader
-import peano4.toolbox.particles.sph.fileReader
+import swift2.input.InsertParticlesFromHDF5File
 
 # SPH initialisation snippets library
-import peano4.toolbox.particles.sph.initSnippets
+import swift2.scenario.SedovBlast
 
 ########################################################################################
 # Parse user input
@@ -116,12 +116,9 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 #  filename='sedov.hdf5' 
 #  ))
 
-#
-# Insert particles by coordinate
-#
 
 # Snippet from library
-ICs = peano4.toolbox.particles.sph.initSnippets.SedovBlastIC(dimensions=1)
+ICs = swift2.scenario.SedovBlast.SedovBlastIC(dimensions=1)
 initialisation_snippet = ICs.initialisation_snippet
 
 Npart = args.particle_number
@@ -132,7 +129,7 @@ coords[:,0] = np.linspace(0, 1, Npart, endpoint=False)
 
 print('inserting particles at:', coords)
 
-project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
+project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesByCoordinates(
   particle_set         = particle_set,
   initialisation_call  = initialisation_snippet,
   coordinates          = coords,
@@ -162,11 +159,10 @@ project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParti
 # which returns an object that holds global information about this particle 
 # type. 
 ###############################################################################
-#particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particle_set, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
 particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", 
                                                                       particle_set, 
-                                                                      "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name) )
-particle_plotter.add_attribute_to_plot(particle.part_id , 1)
+                                                                      "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name) 
+                                                                      )
 particle_plotter.add_attribute_to_plot(particle.velocity     , dimensions)
 particle_plotter.add_attribute_to_plot(particle.acceleration , dimensions)
 particle_plotter.add_attribute_to_plot(particle.mass , 1)
