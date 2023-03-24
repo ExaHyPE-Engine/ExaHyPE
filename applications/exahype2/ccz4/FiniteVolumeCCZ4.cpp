@@ -371,12 +371,11 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
       }
     }
   }
-  if (CCZ4ReSwi==6){ //single black hole, higher level of amr
+  if (CCZ4ReSwi==8){ //single black hole, higher level of amr
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
-      constexpr int NumberOfRefinementLayers = 5;
- //   with some alter
-      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5, 0.5, 0.2};
-      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.04, 0.01, 0.004};
+      constexpr int NumberOfRefinementLayers = 1;
+      double Radius[NumberOfRefinementLayers] = {2};
+      double MaxH[NumberOfRefinementLayers]   = {0.04};
 
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {
