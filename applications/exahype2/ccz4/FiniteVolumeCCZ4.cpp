@@ -328,10 +328,6 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
 //    current "standard" refinement pattern
       double Radius[NumberOfRefinementLayers] = {4, 2.5};
       double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
-//    with some alter
-//      double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
-//      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15};
-
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {
         if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
