@@ -1,3 +1,8 @@
+/**
+
+ @page benchmarks_swift2_hydro_simple_sph_noh_2D Noh-2D (Simple SPH)
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~
 #!/bin/sh
 
 # Script to run experiment (Noh 2D)
@@ -54,3 +59,9 @@ echo 'Done. Bye!'
 
 
 # @TODO: run plot script if necessary
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ */
+ 
+ 
