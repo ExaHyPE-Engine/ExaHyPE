@@ -134,8 +134,7 @@ if __name__ == "__main__":
           "K0":1,     #58
         }
 
-        #number_of_unknowns = 2
-        sum(unknowns.values())
+        number_of_unknowns = sum(unknowns.values())
 
         self._my_user_includes = """
 #include "../CCZ4Kernels.h"
