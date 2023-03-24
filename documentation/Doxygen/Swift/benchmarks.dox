@@ -2,8 +2,8 @@
 
 @page swift_benchmarks Benchmarks
 
-\li \subpage benchmarks_swift_particle_orbit_benchmark
-\li \subpage benchmarks_swift_sod_1d_benchmark
+\li \subpage benchmarks_swift2_planet_orbit
+
 
 Swift comes along with a set of benchmarks. 
 These can be found under `/benchmarks/swift2/hydro`
