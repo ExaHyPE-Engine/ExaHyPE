@@ -4,8 +4,9 @@
 
 \tableofcontents
 
-\subpage tarch_logging
-\subpage tarch_tests
+\li \subpage tarch_logging
+\li \subpage tarch_tests
+\li \subpage tarch_patch_files
 
 
 

@@ -1,0 +1,49 @@
+/**
+
+@page swift_initial_conditions Initial conditions
+
+There are two main ways to implement initial conditions for the
+simulations:
+
+  - Insert particle by coordinates (```InsertParticlesByCoordinates.py```).
+  - Insert particles from an HDF5 file (```InsertParticlesFromHDF5File.py```).
+
+The former option is typically complemented by an initialisation snippet that
+sets the individual particle attributes (other than positions).
+The latter option automatically sets (at least a subset of) the particle
+attributes.
+
+## Insert particle by coordinates.
+
+
+
+
+A set of snippets for SPH benchmarks can be found at
+
+
+
+
+
+
+## Insert particles from an HDF5 file.
+
+A basic HDF5 reader that is compatible with IC files from the original Swift code is
+implemented in ```InsertParticlesFromHDF5File.py```.
+In order to make use of the HDF5 reader, Peano must have been configured with
+
+          ./configure ... --enable-particles --enable-swift --with-hdf5
+
+Since this also has to be supported by the compiler used at the application
+level, it is recommended to include the following LDFLAGS:
+
+          ./configure ... LDFLAGS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++" ... 
+          --enable-particles --enable-swift --with-hdf5
+
+
+
+
+
+
+
+
+*/

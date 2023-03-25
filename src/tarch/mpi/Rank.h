@@ -90,16 +90,54 @@ class tarch::mpi::Rank {
     #endif
 
     /**
-     * How long shall the application wait until it writes a time-out warning
+     * Timeout warning
+     *
+     * How long shall the application wait until it writes a time-out warning.
+     * Different to _deadlockTimeOut, this value changes over time: If we write
+     * a warning message, we increase this value. So, by default, you can make
+     * is rather small. The code then will increase it once you have written a
+     * warning to avoid that the terminal is flooded with these warnings. It
+     * will never by bigger than _deadlockTimeOut though due to this growth.
+     *
+     * Despite the growth discussion, you can use a timeout warning that is
+     * greater than zero and set _deadlockTimeOut to zero. In this case, you
+     * will get warnings that the code thinks it runs into a deadlock, but you
+     * do not get a timeout ever.
+     *
+     * @see writeTimeOutWarning()
+     * @see _deadlockTimeOut
      */
     std::chrono::seconds _timeOutWarning;
 
+    /**
+     * Time to timeout
+     *
+     * This counter specifies the seconds until a timeout is triggered. If the
+     * field equals zero, no timeouts will ever happen.
+     */
     std::chrono::seconds _deadlockTimeOut;
 
     std::chrono::system_clock::time_point  _globalTimeOutWarning;
     std::chrono::system_clock::time_point  _globalTimeOutDeadlock;
 
+    /**
+     * Global toggle to enable/disable timeouts
+     *
+     * This flag helps user codes to enable/disable timeouts (temporarily).
+     * Note that the flag is not the only way how to disable the timeouts.
+     * Alternatively, you can set _deadlockTimeOut to zero.
+     */
     bool    _areTimeoutsEnabled;
+
+    /**
+     * Set by init() and actually stores the number of valid tags.
+     */
+    static int     _maxTags;
+
+    /**
+     * Count  the tags that have already been handed out.
+     */
+    static int     _tagCounter;
 
     /**
      * The standard constructor assignes the attributes default values and
@@ -129,6 +167,14 @@ class tarch::mpi::Rank {
     void receiveDanglingMessagesFromReceiveBuffers();
 
   public:
+    /**
+     * Just try to find out if a tag is actually supported. This works after
+     * we've called the init() routine. if we call this routine before, it
+     * will always pass. If the tag is not supported, we write a warning and
+     * return false.
+     */
+    static bool validateMaxTagIsSupported();
+
     /**
      * Return a Free Tag
      *
@@ -306,11 +352,21 @@ class tarch::mpi::Rank {
      * environment. Afterwards the original parameters from the user are stored
      * within them.
      *
-     * !! Implementation details
+     * ## Implementation details
      *
      * init never uses the log device to report any errors as the log device
      * usually in turn uses Node's getters. Furthermore, the _initIsCalled flag
      * has thus to be set before the log state operation is invoked.
+     *
+     *
+     * ## Upper tag bound
+     *
+     * We try to find out how many tags the system does support. Here, the MPI
+     * standard is a little bit weird, as it requires a pointer to a void pointer
+     * and then we can read the data from there. So it seems we get a pointer to
+     * a system variable back rather than the system variable.
+     *
+     * Thanks to Andrew Mallinson (Intel) for pointing this out.
      *
      * @return true if initialisation has been successful
      *

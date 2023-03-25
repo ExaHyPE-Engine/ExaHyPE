@@ -32,7 +32,6 @@ void swift2::kernels::prepareDensityCalculation(
 
       /* Not originally in SWIFT */
       particle->setNcount  (0);
-      particle->setOmega   (0.0);   
     }
   }
 }
@@ -76,8 +75,9 @@ void swift2::kernels::endDensityCalculation(
       particle->setWcount_dh( particle->getWcount_dh() +       (-hydroDimensions * W_a * h_inv_dim_plus_one) );
 
       /* Not needed in SWIFT */
+
+      /* Useful for debugging */
       particle->setNcount   ( particle->getNcount()    + 1 );
-      particle->setOmega    ( particle->getOmega()     + m_a * (-hydroDimensions * W_a * h_inv_dim_plus_one) );
 
       const double rho_inv = 1.0 / particle->getDensity();
       // @TODO: implement cosmological factors
@@ -89,6 +89,9 @@ void swift2::kernels::endDensityCalculation(
       /* Finish calculation of the velocity divergence */
       particle->setDiv_v( particle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
       
+      assertion3( std::isfinite(density), particle->toString(), W_a, h_inv_dim);
+      assertion1( particle->getNcount() > 1, particle->toString() );
+                
       
       //
       // =====================
@@ -109,7 +112,7 @@ void swift2::kernels::endDensityCalculation(
         if (hydroDimensions == 2){  /* in 2D sims Rot_v is a scalar */
           curl_v = std::sqrt( particle->getRot_v() * particle->getRot_v() );
         } else {
-          // @TODO: add 3D case as well.
+          assertionMsg( false, "3D curl_v term to be implemented (straightforward, but have only run 2D so far...)" );
         }
       
         /* Compute the norm of div v */
@@ -120,7 +123,7 @@ void swift2::kernels::endDensityCalculation(
       
         /* Construct the final expression of the grad-h-term.
          * Swift use "f" (see also Springel and Hernquist). 
-         * PHANTOM use Omega, which is proportional to ~ 1/f. (Price et al 2018) */
+         */
        
         const double dh_drho_a = - h_a / rho_a / hydroDimensions;
         const double common_factor = h_a / hydroDimensions / particle->getWcount();
@@ -158,14 +161,6 @@ void swift2::kernels::endDensityCalculation(
         /* SWIFT */ 
         particle->setF( grad_h_term );      
         
-        /* Price: finish calculation of Omega */
-        particle->setOmega( 1.0 - dh_drho_a * particle->getOmega() ); 
-
-        /* Re-set if gone ill */
-        if( tarch::la::smallerEquals( particle->getOmega(), 0.0) ){
-          particle->setOmega(1.0);
-        }
-
         particle->setPressure( P_a );
         particle->setSoundSpeed( soundspeed );
         particle->setBalsara( balsara );
@@ -342,7 +337,6 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
 
       /* Not needed in SWIFT */
       particle->setNcount   ( particle->getNcount()    + 1 );
-      particle->setOmega    ( particle->getOmega()     + m_a * (-hydroDimensions * W_a * h_inv_dim_plus_one) );
 
       const double rho_inv = 1.0 / particle->getDensity();
       // @TODO: implement cosmological factors
@@ -354,6 +348,9 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
       /* Finish calculation of the velocity divergence */
       particle->setDiv_v( particle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
       
+      assertion3( std::isfinite(density)             , particle->toString(), W_a, h_inv_dim);
+      assertion2( std::isfinite(h_inv_dim)           , particle->toString(), rho_inv);
+      assertion2( std::isfinite(particle->getDiv_v()), particle->toString(), rho_inv);
       
       //
       // =====================
@@ -374,7 +371,7 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
         if (hydroDimensions != 3){  /* in 2D sims Rot_v is a scalar */
           curl_v = std::sqrt( particle->getRot_v() * particle->getRot_v() );
         } else {
-          // @TODO: add 3D case as well.
+          assertionMsg( false, "3D curl_v term to be implemented (straightforward, but have only run 2D so far...)" );
         }
       
         /* Compute the norm of div v */
@@ -396,6 +393,9 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
         particle->setPressure( P_a );
         particle->setSoundSpeed( soundspeed );
         particle->setBalsara( balsara );
+
+        assertion3( std::isfinite(P_a), particle->toString(), rho_a, particle->getU() );
+
       } /* End hydro_prepare_force */
       
     }
@@ -433,7 +433,10 @@ void swift2::kernels::endHydroForceCalculation(
     not particle->getIsBoundaryParticle()
     ) {
       particle->setHDot( 
-        particle->getHDot() * particle->getSmoothingLength() / hydroDimensions );
+       particle->getHDot() * particle->getSmoothingLength() / hydroDimensions );
+
+      assertion2( std::isfinite(particle->getHDot()), particle->toString(), 
+                                                      particle->getSmoothingLength() );
     }
   }
 }
@@ -444,7 +447,6 @@ void swift2::kernels::flagBoundaryParticles(
   const ParticleContainer&  localParticles
 ) {
   for (auto* particle: localParticles) {
-
     if( 
       particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
       and
@@ -453,20 +455,17 @@ void swift2::kernels::flagBoundaryParticles(
     
       /* Flag if particle is at boundary of the simulation box */
       particle->setIsBoundaryParticle(false);
-//    @TODO Re-introduce dependence on particle separation.
-//      const double max_dist_boundary = 3 * (1.0 /HYDRO_PART_NUMBER); 
-      const double max_dist_boundary = 3 * (1.0 / 900); 
-
-      const double max_dist_boundary_left = 0.5 * 8 * max_dist_boundary;
+      const double max_dist_boundary = 3 * (1.0 /HYDRO_PART_NUMBER); 
 
       for (int d=0; d<Dimensions; d++) {
-        if ( particle->getX()(d) < max_dist_boundary_left || 
+        if ( particle->getX()(d) < max_dist_boundary || 
              particle->getX()(d) > (1.0 - max_dist_boundary) ) 
         {
           particle->setIsBoundaryParticle(true);
         }
       }
 
+/*
       // Fix right boundary of the Sod shock, which as fewer particles
       const double max_dist_boundary_right = max_dist_boundary * 8;
       for (int d=0; d<Dimensions; d++) {
@@ -478,6 +477,8 @@ void swift2::kernels::flagBoundaryParticles(
           particle->setPressure(pressure);
         }
       }
+*/
+
     }
   }
 }

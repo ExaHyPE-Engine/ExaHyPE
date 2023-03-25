@@ -26,6 +26,7 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(Configuration
   _globalNumberOfRanksWithEnabledLoadBalancing(0),
   _localNumberOfSplits(0),
   _numberOfStateUpdatesWithoutAnySplit(0),
+  _stepsToWaitForNextLoadBalancingDecision(0),
   _state( State::InterRankDistribution ),
   _roundRobinToken(0),
   _configuration(configuration) {
@@ -54,6 +55,7 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString() const {
       << ",lightest-rank-weight=" << _lightestRank._unrefinedCells
       << ",round-robin-token=" << _roundRobinToken 
       << ",number-of-state-updated-without-any-split=" << _numberOfStateUpdatesWithoutAnySplit
+      << ",steps-to-wait-for-next-load-balancing-decision=" << _stepsToWaitForNextLoadBalancingDecision
       << ",global-number-of-splits=" << _globalNumberOfSplits
       << ",local-number-of-splits=" << _localNumberOfSplits
       << ",global-number-of-trees=" << _globalNumberOfTrees
@@ -115,6 +117,10 @@ void toolbox::loadbalancing::RecursiveSubdivision::waitForGlobalStatisticsExchan
 void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
   _localNumberOfInnerUnrefinedCell = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells();
 
+  if (_stepsToWaitForNextLoadBalancingDecision>0) {
+    _stepsToWaitForNextLoadBalancingDecision--;
+  }
+
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1) {
     _globalNumberOfInnerUnrefinedCells           = _localNumberOfInnerUnrefinedCell;
     _lightestRank._rank                          = 1;
@@ -137,11 +143,12 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
     if ( _globalNumberOfInnerUnrefinedCells < _localNumberOfInnerUnrefinedCell ) {
       logInfo(
         "updateGlobalView()",
-        "local number of cells (" << _localNumberOfInnerUnrefinedCell << ") is bigger than global cell count (" << _globalNumberOfInnerUnrefinedCells << 
-        "). Use local cell count to guide partitioning as local data seems to lag behind"
+        "local number of cells (" << _localNumberOfInnerUnrefinedCell << ") is bigger than global cell count (" << _globalNumberOfInnerUnrefinedCells <<
+        "). This usually happens if a forking tree has some pending refinement events and cannot refine anymore, as it has already spawned cells. Postpone further load balancing decisions"
       );
-      _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCell;
-      _lightestRank._rank                = tarch::mpi::Rank::getInstance().getRank();
+      _stepsToWaitForNextLoadBalancingDecision = 3;
+      _globalNumberOfInnerUnrefinedCells       = _localNumberOfInnerUnrefinedCell;
+      _lightestRank._rank                      = tarch::mpi::Rank::getInstance().getRank();
     }
 
     _globalSumRequest            = new MPI_Request();
@@ -252,8 +259,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
         tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1
       ) {
         _state = State::IntraRankDistribution;
-        // @todo Debug
-        logInfo( "updateState()", "switch to state " << toString(_state) );
+        logDebug( "updateState()", "switch to state " << toString(_state) );
       }
       break;
     case State::IntraRankDistribution:
@@ -261,13 +267,13 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
         peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 1
       ) {
         _state = State::WaitForRoundRobinToken;
-        logInfo( "updateState()", "switch to state " << toString(_state) << " as more than one local subpartition is already hosted, i.e. we assume rank has already spread out locally" );
+        logDebug( "updateState()", "switch to state " << toString(_state) << " as more than one local subpartition is already hosted, i.e. we assume rank has already spread out locally" );
       }
       if (
         tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
       ) {
         _state = State::WaitForRoundRobinToken;
-        logInfo( "updateState()", "switch to state " << toString(_state) << " as rank is degenerated with only one thread, i.e. rank-local distribution makes no sense" );
+        logDebug( "updateState()", "switch to state " << toString(_state) << " as rank is degenerated with only one thread, i.e. rank-local distribution makes no sense" );
       }
       break;
     case State::WaitForRoundRobinToken:
@@ -277,8 +283,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
 
         if (_roundRobinToken==tarch::mpi::Rank::getInstance().getRank()) {
           _state = State::InterRankBalancing;
-          // @todo Debug
-          logInfo( "updateState()", "switch to state " << toString(_state) );
+          logDebug( "updateState()", "switch to state " << toString(_state) );
         }
       }
       break;
@@ -290,14 +295,11 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
           !hasSplitRecently()
         ) {
           _state = State::IntraRankBalancing;
-          // @todo Debug
-          logInfo( "updateState()", "switch to state " << toString(_state) );
+          logDebug( "updateState()", "switch to state " << toString(_state) );
         }
         else {
           _state = State::WaitForRoundRobinToken;
-	           // @todo Debug
-          logInfo( "updateState()", "switch to state " << toString(_state) );
-
+          logDebug( "updateState()", "switch to state " << toString(_state) );
         }
       }
       break;
@@ -309,21 +311,22 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
           tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
          ) {
           _state = State::Stagnation;
-          // @todo Debug
-          logInfo( "updateState()", "switch to state " << toString(_state) );
+          logDebug( "updateState()", "switch to state " << toString(_state) );
         }
       }
       break;
     case State::Stagnation:
       if ( getWeightOfHeaviestLocalSpacetree()==-1) {
         _state = State::Stagnation;
-         // @todo Debug
-          logInfo( "updateState()", "switch to state " << toString(_state) );
+        logDebug( "updateState()", "switch to state " << toString(_state) );
       }
       else {
+<<<<<<< HEAD
        _state = State::WaitForRoundRobinToken;
-         // @todo Debug
-          logInfo( "updateState()", "switch to state " << toString(_state) );
+=======
+        _state = State::WaitForRoundRobinToken;
+>>>>>>> refs/remotes/origin/particles
+        logDebug( "updateState()", "switch to state " << toString(_state) );
       }
       break;
     case State::SwitchedOff:
@@ -354,6 +357,10 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString( Action actio
 
 
 toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::RecursiveSubdivision::getAction() const {
+  if (_stepsToWaitForNextLoadBalancingDecision>0) {
+    return Action::None;
+  }
+
   switch (_state) {
     case State::InterRankDistribution:
       {
@@ -548,7 +555,7 @@ bool toolbox::loadbalancing::RecursiveSubdivision::fitsIntoMemory(State state) c
 
 int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank() const {
   int maxSizeOfLocalRank = getWeightOfHeaviestLocalSpacetree();
-  int maxLocalTrees      = std::min( _configuration->getMaxLocalTreesPerRank(_state)-1, maxSizeOfLocalRank-1 );
+  int maxLocalTrees      = std::min( {_configuration->getMaxLocalTreesPerRank(_state)-1, maxSizeOfLocalRank-1, tarch::multicore::Core::getInstance().getNumberOfThreads()-1} );
   int numberOfSplits     = std::max(1,maxLocalTrees);
 
   int worstCaseEstimateForSizeOfSpacetree = tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte );
@@ -598,14 +605,14 @@ int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank()
 
 void toolbox::loadbalancing::RecursiveSubdivision::updateLoadBalancing() {
   auto action = getAction();
-// @todo rein
-//  #if PeanoDebug>0
-  logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state" << toString() );
-//  #else
-//  if ( action!=Action::None ) {
-//    logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state" << toString() );
-//  }
-//  #endif
+
+  #if PeanoDebug>0
+  logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state " << toString() );
+  #else
+  if ( action!=Action::None ) {
+    logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state" << toString() );
+  }
+  #endif
 
   switch ( action ) {
     case Action::None:
@@ -637,7 +644,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateLoadBalancing() {
 
           logInfo(
             "updateLoadBalancing()",
-            "split " << cellsPerCore << " cells " << numberOfSplits <<
+            "split " << cellsPerCore << " or " << (cellsPerCore+1) << " cells " << numberOfSplits <<
             " times from tree " << heaviestSpacetree << " on local rank (hosts " << numberOfLocalUnrefinedCellsOfHeaviestSpacetree <<
             " unrefined cells with " << tarch::multicore::Core::getInstance().getNumberOfThreads() << " threads per rank)" );
 
@@ -791,6 +798,9 @@ void toolbox::loadbalancing::RecursiveSubdivision::triggerSplit( int sourceTree,
   }
 
   _localNumberOfSplits++;
+
+  assertionEquals(_stepsToWaitForNextLoadBalancingDecision,0);
+  _stepsToWaitForNextLoadBalancingDecision = 3;
 }
 
 
@@ -805,6 +815,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::enable( bool value ) {
     logInfo( "enable()", "switched load balancing on (again) and therefore change to state " << toString(_state) );
   }
   else if (not value) {
+    logInfo( "enable()", "switched load balancing off" );
     _state = State::SwitchedOff;
   }
 }

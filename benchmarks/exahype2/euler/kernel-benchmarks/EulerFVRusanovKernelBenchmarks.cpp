@@ -61,7 +61,7 @@ constexpr int NumberOfFiniteVolumesPerPatch = EulerFVRusanov::NumberOfFiniteVolu
 #else
 constexpr int NumberOfInputEntries  = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerFVRusanov::NumberOfUnknowns;
 constexpr int NumberOfOutputEntries = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0) * EulerFVRusanov::NumberOfUnknowns;
-constexpr int NumberOfFiniteVolumesPerPatch = EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch*EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch**EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch;
+constexpr int NumberOfFiniteVolumesPerPatch = EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch*EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch*EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch;
 #endif
 
 /**
