@@ -47,7 +47,6 @@ class TestDensityCalculation:
     particle->setHDot  (0.0);        
     particle->setWcount(0.0);        
     particle->setNcount(0  );        
-    particle->setOmega (1.0);  // set to 1 to avoid problem with boundary particles.
     particle->setF     (0.0);        
     particle->setRho_dh(0.0);           
     particle->setWcount_dh(0.0);  

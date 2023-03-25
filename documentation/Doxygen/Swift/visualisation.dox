@@ -1,0 +1,47 @@
+/**
+
+@page swift_visualisation Visualisation
+
+Swift 2 relies on Peano's standard output routines to write file dumps. 
+As the files can be rather large, the simulation configuration allows you to
+specify exactly how often you want to see file dumps, and you can also add
+spatial filters.
+The latter help you to visualise only subdomains.
+As we rely on Peano's infrastructure, you can use the ```render.py``` script in
+python/peano4/visualisation to convert the output files into vtu files.
+Consult also @ref peano_visualisation "Peano's generic discussion" of various
+visualisation pathways.
+
+
+## Python support for vtu format
+
+Besides the infrastructure that Peano provides, in Swift we very often require
+to visualise the different simulation quantities in detail, e.g. to compare the
+output of the simulation against a reference such as typically a known
+analytical solution.
+For this purpose, we have experimented with the 
+<a href="https://pypi.org/project/meshio/">
+meshio
+</a> 
+library, which can be install via pip, i.e. invoking 
+
+```
+pip install meshio
+```
+
+Then, the vtu file can be read as
+
+~~~~~~~~~~~~~~~~~~~~~
+        mesh = meshio.read( particles.vtu )
+~~~~~~~~~~~~~~~~~~~~~
+
+A few scripts are included among the SPH benchmarks, which can be used as
+reference.
+
+Notice that an error will be encountered if the vtu file is empty, which may
+prevent reading data from a set of vtu files.
+
+
+
+*/
+

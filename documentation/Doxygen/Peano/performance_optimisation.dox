@@ -108,7 +108,17 @@ If you use the built-in strategies, study their documentation.
 
 This could be a sign of a scheduler flaw. Peano offers multiple different 
 multithreading schedulers: It can map tasks onto native OpenMP/TBB/... tasks
-or it can introduce an additional, bespoke tasking layer. 
+or it can introduce an additional, bespoke tasking layer. If your code
+becomes significantly slower (or even hangs) once you have increased 
+the concurrency level, you might want to alter the scheduling. I 
+recommend that you start with native tasking, i.e. a scheme which 
+maps each task directly onto a native TBB/OpenMP/... task. For many
+codes, this disables them to offload many tasks to GPU or the balance
+between grid traversals. However, a native tasking is a good starting
+point to understand your scaling and the also plays along well with 
+mainstream performance analysis tools.
+
+
 
 
 ## MPI optimisation

@@ -47,7 +47,8 @@ tarch::multicore::BooleanSemaphore  exahype2::RefinementControl::_semaphore;
 
 
 exahype2::RefinementControl::RefinementControl(double tolerance):
-  _Tolerance( tolerance ) {
+  _Tolerance( tolerance ),
+  _maxLifetime( 0 ) {
   tarch::services::ServiceRepository::getInstance().addService( this, "exahype2::RefinementControl" );
 }
 
@@ -63,8 +64,6 @@ void exahype2::RefinementControl::shutdown() {
 
 void exahype2::RefinementControl::receiveDanglingMessages() {
   #ifdef Parallel
-  const int LifetimeOfReceivedMessages = 4;
-
   for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
     if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
       MPI_Status status;
@@ -80,7 +79,10 @@ void exahype2::RefinementControl::receiveDanglingMessages() {
 
         tarch::multicore::Lock lock( _semaphore );
         for (auto p: receiveBuffer) {
-          _newEvents.push_back( std::pair<peano4::grid::GridControlEvent,int>(p, LifetimeOfReceivedMessages) );
+          _newEvents.push_back( std::pair<peano4::grid::GridControlEvent,int>(
+            p, 
+            _maxLifetime + _AdditionalLifetimeReceivedEvents
+          ));
         }
       }
     }
@@ -108,6 +110,8 @@ void exahype2::RefinementControl::addCommand(
 ) {
   logTraceInWith3Arguments( "addCommand()", x, h, ::toString(command) );
   tarch::multicore::Lock lock( _semaphore );
+  
+  _maxLifetime = std::max( _maxLifetime, lifetime );
 
   switch (command) {
     case ::exahype2::RefinementCommand::Refine:

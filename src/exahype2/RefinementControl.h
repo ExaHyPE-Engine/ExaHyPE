@@ -105,7 +105,12 @@ std::string toString( exahype2::RefinementCommand value );
  */
 class exahype2::RefinementControl: public tarch::services::Service {
   public:
-    RefinementControl(double tolerance = 0.1);
+    /**
+     * @param tolerance How much should the code add around each
+     *   grid control. By default we use one percent additional
+     *   tolerance.
+     */
+    RefinementControl(double tolerance = 0.01);
     virtual ~RefinementControl();
 
     void receiveDanglingMessages() override;
@@ -131,10 +136,20 @@ class exahype2::RefinementControl: public tarch::services::Service {
      *
      * Depending on the context, we add a new refinement instruction
      * interpreting x and h. If you refine, I divide h by three.
+     * 
+     * ## Lifetime of a refinement event
+     *
+     * If a refinement event is triggered, we keep it alive for a while. This
+     * avoids oscillations (refinement events always overwrite coarsening) and
+     * it helps ranks to catch up - a code might not be able to refine
+     * immediately as it implements a Runge-Kutta scheme, e.g. In this case, we
+     * keep the event alive and then realise it once the code is ready to do
+     * so.
      *
      * @param x Centre of the cell for which this command is triggered. This is
      *   typically marker.x().
      * @param h Size of this cell. Typically marker.h().
+     * @param lifetime Has to be greater equal 1.
      */
     void addCommand(
       const tarch::la::Vector<Dimensions,double>&  x,
@@ -184,6 +199,19 @@ class exahype2::RefinementControl: public tarch::services::Service {
     static tarch::multicore::BooleanSemaphore  _semaphore;
 
     /**
+     * Additional lifetime of a refinement event shared via MPI
+     *
+     * If an event has been shared via MPI, we don't really know how
+     * old it actually has been, as it might stem from this very 
+     * iteration or two iterations before. We also do not know if the
+     * the receiving side just has split its domain and hence has been
+     * unable to react to the event recently. Therefore, we track the
+     * maximum of the lifetime as handed in by the user and add a 
+     * delta.
+     */
+    static constexpr int _AdditionalLifetimeReceivedEvents = 3;
+
+    /**
      * I need a tag of my own to exchange control info after each step.
      */
     static int _reductionTag;
@@ -192,6 +220,8 @@ class exahype2::RefinementControl: public tarch::services::Service {
      * We blow up the region around refinement criterion slightly.
      */
     const double _Tolerance;
+    
+    int _maxLifetime;
 
     typedef std::list< std::pair<peano4::grid::GridControlEvent,int> >  NewEvents;
 

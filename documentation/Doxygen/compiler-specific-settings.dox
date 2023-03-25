@@ -141,6 +141,7 @@ on this machine.
 - MPI performance analysis runs
 ~~~~~~~~~~~~~~~~~~~~~~
 module load itac
+module load vtune
 ./configure CC=icpx CXX=icpx CXXFLAGS="-I${VTUNE_HOME}/vtune/latest/include -I${VT_ROOT}/include -Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g -L${VT_LIB_DIR} -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-lVT ${VT_ADD_LIBS} -littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=intel
 ~~~~~~~~~~~~~~~~~~~~~~
   Further to these flags, I @ref faq "pause and resume the data collection" manually in 

@@ -134,8 +134,7 @@ if __name__ == "__main__":
           "K0":1,     #58
         }
 
-        number_of_unknowns = 2
-# sum(unknowns.values())
+        number_of_unknowns = sum(unknowns.values())
 
         self._my_user_includes = """
 #include "../CCZ4Kernels.h"
@@ -973,10 +972,10 @@ if __name__ == "__main__":
     project.set_output_path(path)
     probe_point = [-12,-12,0.0]
     project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
-    my_solver.select_dofs_to_print = [0]
+    my_solver.select_dofs_to_print = [0,12,16,17,18,54,59,60]
 
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
-#    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
 
 
 ########################################################################################
