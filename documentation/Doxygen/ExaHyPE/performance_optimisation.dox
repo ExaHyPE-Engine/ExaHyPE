@@ -18,7 +18,23 @@ All of the recommendations on  apply for ExaHyPE, too.
 ### The code is extremely bandwidth-bound and seems to move data forth and back all the time
 
 Most ExaHyPE solvers store their data on (call) stacks to localise all memory 
-accesses. This implies that they move their data around a lot. You can alter 
+accesses. This implies that they move their data around a lot. This 
+materialises in profiles similar to
+
+~~~~~~~~~~~~~~~~~~~
+Top Hotspots
+Function                                                           Module           CPU Time  % of CPU Time(%)
+-----------------------------------------------------------------  --------------  ---------  ----------------
+applications::exahype2::ccz4::ncp                                  peano4_bbhtest   559.299s             13.3%
+__memmove_avx_unaligned_erms                                       libc.so.6        529.383s             12.6%
+toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product  peano4_bbhtest   505.116s             12.0%
+applications::exahype2::ccz4::source                               peano4_bbhtest   347.667s              8.3%
+__kmpc_set_lock                                                    libiomp5.so      340.473s              8.1%
+[Others]                                                           N/A             1916.907s             45.7%
+~~~~~~~~~~~~~~~~~~~
+
+where memory movements (__memmove_avx_unaligned_erms) end up high on the list.
+You can alter 
 this behaviour by switching to a heap-based memory administration. Consult the 
 documentation of the solver of interest, but the ``fix'' always looks similar to 
 

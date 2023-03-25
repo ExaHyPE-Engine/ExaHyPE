@@ -400,8 +400,9 @@ namespace tarch {
        *        }
        *
        *
+       * @return Has processed some tasks
        */
-      void progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+      bool progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
         tarch::multicore::orchestration::Strategy*     strategy
       );
 

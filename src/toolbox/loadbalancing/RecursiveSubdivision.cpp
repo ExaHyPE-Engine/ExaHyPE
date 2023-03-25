@@ -267,13 +267,13 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
         peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 1
       ) {
         _state = State::WaitForRoundRobinToken;
-        logInfo( "updateState()", "switch to state " << toString(_state) << " as more than one local subpartition is already hosted, i.e. we assume rank has already spread out locally" );
+        logDebug( "updateState()", "switch to state " << toString(_state) << " as more than one local subpartition is already hosted, i.e. we assume rank has already spread out locally" );
       }
       if (
         tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
       ) {
         _state = State::WaitForRoundRobinToken;
-        logInfo( "updateState()", "switch to state " << toString(_state) << " as rank is degenerated with only one thread, i.e. rank-local distribution makes no sense" );
+        logDebug( "updateState()", "switch to state " << toString(_state) << " as rank is degenerated with only one thread, i.e. rank-local distribution makes no sense" );
       }
       break;
     case State::WaitForRoundRobinToken:
@@ -321,7 +321,11 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
         logDebug( "updateState()", "switch to state " << toString(_state) );
       }
       else {
+<<<<<<< HEAD
        _state = State::WaitForRoundRobinToken;
+=======
+        _state = State::WaitForRoundRobinToken;
+>>>>>>> refs/remotes/origin/particles
         logDebug( "updateState()", "switch to state " << toString(_state) );
       }
       break;
@@ -551,7 +555,7 @@ bool toolbox::loadbalancing::RecursiveSubdivision::fitsIntoMemory(State state) c
 
 int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank() const {
   int maxSizeOfLocalRank = getWeightOfHeaviestLocalSpacetree();
-  int maxLocalTrees      = std::min( _configuration->getMaxLocalTreesPerRank(_state)-1, maxSizeOfLocalRank-1 );
+  int maxLocalTrees      = std::min( {_configuration->getMaxLocalTreesPerRank(_state)-1, maxSizeOfLocalRank-1, tarch::multicore::Core::getInstance().getNumberOfThreads()-1} );
   int numberOfSplits     = std::max(1,maxLocalTrees);
 
   int worstCaseEstimateForSizeOfSpacetree = tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte );
@@ -811,6 +815,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::enable( bool value ) {
     logInfo( "enable()", "switched load balancing on (again) and therefore change to state " << toString(_state) );
   }
   else if (not value) {
+    logInfo( "enable()", "switched load balancing off" );
     _state = State::SwitchedOff;
   }
 }
