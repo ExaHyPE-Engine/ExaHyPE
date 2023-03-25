@@ -151,14 +151,14 @@ namespace {
   
           pendingTasks--;
 
-          while (
+          bool continueToProcessPendingTasks =
             pendingTasks>0
             and
             pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
             and
-            spawnedTasks==NumberOfThreads
-          ) {
-            ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+            spawnedTasks==NumberOfThreads;
+          while ( continueToProcessPendingTasks ) {
+            continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
               strategy
             );
           }

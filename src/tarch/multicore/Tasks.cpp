@@ -574,7 +574,7 @@ void tarch::multicore::spawnAndWait(
 }
 
 
-void tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+bool tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
  tarch::multicore::orchestration::Strategy*     strategy
 ) {
   const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
@@ -593,13 +593,15 @@ void tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksW
     processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
   }
   else if (numberOfPendingTasks>0) {
-    tarch::multicore::internal::processThreadLocalTask(threadNumber);
+    processedSomeTasks = tarch::multicore::internal::processThreadLocalTask(threadNumber);
   }
   else { // no local tasks left over
     tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
     const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
     processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
   }
+
+  return processedSomeTasks;
 }
 
 
