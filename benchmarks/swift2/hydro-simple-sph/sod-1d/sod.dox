@@ -1,6 +1,32 @@
-#!/bin/sh
+/**
 
-# Script to run experiment (Sod shockwave 1D)
+ @page benchmarks_swift2_hydro_simple_sph_sod_1d Sod Shockwave 1d (Simple SPH)
+
+The setup runs the 1d sod shockwave with a simple SPH scheme, i.e. fixed 
+interaction radius. By default, we embed the 1d setup into a 2d mesh, but 
+you can also change it to three dimensions.
+
+
+## Create the setup
+
+The setup can be defined via one simple Python call
+
+        python3 sod.py
+        
+Passing in --help gives you all the instructions needed. This documentation 
+hosts a script (below) which you can alternatively copy n paste into your 
+terminal.        
+
+## Postprocessing
+
+We ship a Jupyter notebook to postprocess the output data directly:
+
+        jupyter-notebook plot-SodShock_1D.ipynb
+
+
+## Script to run experiment (Sod shockwave 1D)
+
+~~~~~~~~~~~~~~~~~~
 
 # set threads number
 export OMP_NUM_THREADS=1
@@ -58,7 +84,8 @@ if [ -e *.csv ]
 then
     mv *.csv $DIRNAME
 fi
+~~~~~~~~~~~~~~~~~~
 
-echo 'Done. Bye!'
-
-# @TODO: run plot script if necessary
+ */
+ 
+ 
