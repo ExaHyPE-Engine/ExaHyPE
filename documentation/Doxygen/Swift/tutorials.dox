@@ -2,14 +2,7 @@
 
 @page swift_tutorials Tutorials
 
-\li \subpage swift_tutorials_two_particles
-
-Here are some very simple SWIFT tutorials:
-
-1. The \ref swift_tutorials_two_particles "two particles orbit setup" simulates
-   the Earth rotating around the Sun. So we actually have only one (free) 
-   particle with a hard-coded force function. The setup allows us to study the
-   AMR and the symplectic properties of the time integrator.
-
+We do not have real tutorials yet, but the @ref benchmarks_swift2_planet_orbit "planet orbit" benchmark
+has a lot of introductory comments.
 
 */
