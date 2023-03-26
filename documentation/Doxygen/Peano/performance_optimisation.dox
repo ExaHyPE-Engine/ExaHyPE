@@ -83,6 +83,16 @@ There are a few things to check in this case:
   try to split up subpartitions, and you might end up with very small aka cheap
   partitions if the load is too cheap. Even worse, the bipartitioning might not 
   be able to resolve the ill-balancing.
+- If you have a very adaptive mesh, ask your load balancing to use only a limited
+  number of partitions initially. Most (generic) load balancing schemes have an
+  upper limit how many trees they allow per rank. If all these ranks are used in 
+  the first decomposition while the grid is still constructed, the load balancer
+  has not "free" trees anymore when it encounters the adaptivity.
+  
+The realisation of the configuration depends on the load balancer. The generic
+load balancer toolbox::loadbalancing::RecursiveSubdivision for example allows
+you to distinguish how many trees the code uses for its first split-up vs how 
+many can be used from thereon. 
 
 
 
@@ -108,6 +118,7 @@ __kmpc_taskloop                                                    libiomp5.so  
 Once you dump the output into a file and you visualise it with \ref peano_runtime_analysis "the script enabling a display of remote trees",
 too small trees also usually manifest in very high remote cell counts, i.e.
 large numbers of outer and coarse cells, compared to actual fine grid cells.
+Use the flag --remote-cells.
 Below is an example where we have many trees per rank, and each tree hosts only 
 a few local fine grid cells compared to total number of cells per tree:
 
@@ -124,34 +135,16 @@ but the remote cells (empty circles) are by magnitudes more.
 In this case, it might be wise to reduce the tree size and to remove the overhead
 in return.
 
+Obviously, it depends on the load balancer that you use how to ensure that the 
+number of trees is not too big. The generic load balancer toolbox::loadbalancing::RecursiveSubdivision for example 
+accepts a configuration, and this configuration can pick a minimum tree size.
 
-@todo Recipe: maximum tree size restrict -> aber nicht hier dokumentieren, sondern 
-auf den Load balancer verweisen
-
-@todo Dann im ExaHyPE aber den neuen Kernel anstellen. Der ist naemlich noch net drin.  
- => doch, leider schon
-
-@todo ExaHyPE Parallelisierungs-Doku. Auf 0.9 umstellen. Das ist genug.
-
-@todo Es gibt kein Flag fuer unbegrenzt fuer den zweiten max tree count term.
-  
-- Do some large trees cut off some very small trees at one point? If so, can you
-  reduce the maximum number of trees used? If this implies that you end up with 
-  fewer trees than cores, you will have to use tasking on top of the domain 
-  decomposition, or computing kernels which fan out over the cores (see below). 
-- Analogously, you can try to set minimum tree sizes, such that subpartitions 
-  are not allowed to split up further if they have too few cells.
-- If you know your problem/mesh and this mesh is static, it might be wise to 
-  abandon a generic load balancing algorithm and to use a hard-coded one with 
-  a tailored load distribution.
-- Can you use compute kernels which are in turn using multiple cores? If the 
-  problem is just too small or too complicated to be geometrically distributed
-  with proper partitions of roughly equal sizes, you have to use compute routines
-  that exploit the other cores. This is a last resort and does not really fix
-  the flaw discussed, but it helps you to harvest all resources of your machine.
-
-Most of these strategies can be realised within the load balancing scheme used. 
-If you use the built-in strategies, study their documentation.
+If you restrict your subtree/subpartition size, you run risk that you end up with 
+a domain decomposition which cannot keep all cores busy. 
+In this case, you have to increase the code's concurrency otherwise, i.e. not via 
+geometric decomposition.
+Additional tasking within your code for example is an option, or compute kernels which 
+themselves can use more than one core.
 
 @see toolbox::loadbalancing::RecursiveSubdivision is a generic load balancer.
 @see toolbox::loadbalancing::Hardcoded provides the opportunity to specify and fix your load balancing.

@@ -118,5 +118,31 @@ peano4_project.generate()
 
  which converts the patch files into a pvd file which we can open in Paraview.
   
+  
+  ## What happens under the hood
 
+  The multigrid project will yield a Peano project which in turn will create
+  
+  - all the C++ code;
+  - a main file;
+  - a Makefile
+  
+  The main file realises one by one the different steps of a PETSc-based multigrid
+  solver and therefore follows exactly @ref peano_main "the vanilla Peano main file structure".
+  It runs through the algorithmic steps   
+  Per algorithmic step that we @ref multigrid_petsc "find in any PETSc" project one by one.
+  Per step, it issues one mesh traversal (besides for the actual solve, which is a single PETSc
+  call).
+  Per traversal, it hands in an observer.
+  
+  The observers are created by the multigrid project petsc.Project. This class
+  speaks of steps which is really what they are. The observer is the realisation
+  of these steps.
+  The steps that petsc.Project creates are more or less empty. 
+  When we invoke petsc.Project.add_solver(), the project takes the solver as passed
+  as an argument and asks the solver to add action sets, i.e. activities, to each 
+  step. 
+  
+  
+  
  */
