@@ -138,19 +138,50 @@ As comments are written differently in these languages, these rules are also dif
 In C++, a comment section must be wrapped by the first line \htmlonly /** \endhtmlonly and the last line \htmlonly */ \endhtmlonly
 and will contain a (multiline) text between them (describing, for example, a function and its arguments before the function body):
 
-\verbatim
+~~~~~~~~~~~~~~~~~~~~~~~~~
 /**
  * Comment title
  *
  * Multiline text
  ...
  * Multiline text
+ *
+ * ## Subsection 1 for this function or class or namespace
+ *
+ * More docu in multiline text.
+ *
+ *
+ * ## Subsection 2 for this function or class or namespace
+ *
+ * More docu in multiline text.
+ *
+ *
  */
-\endverbatim
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The documentation of a function, class or namespace has to be put ***before*** the 
+actual declaration, and it always in the header file in Peano.
+
 
 In Python, a comment section must be wrapped differently, namely,
-starting with the first line \htmlonly """! \endhtmlonly and the last line \htmlonly """ \endhtmlonly.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+"""!
+
+  Comment title 
+  
+  This is a Python comment that will make it into the HTML docu
+
+"""
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Don't forget the exclamation mark as this allows Doxygen to render a Python comment on a webpage correctly,
 otherwise the comment text will appear as a code snippet.
+For Python, the comment has to be put directly ***after*** the function or class definition.
+
+
+
+Within the individual comments, you can substructure the comments further via the hashtag.
+Markdown headlines should work, too.
 
 */
