@@ -21,7 +21,7 @@ class Project (object):
   """
 
   def __init__(self, namespace, project_name, directory = "."):
-    """
+    """!
       project_name  Simple string.
     """
     if sys.version_info.major < 3:
@@ -56,7 +56,7 @@ class Project (object):
     return "(#steps=" + str(self.solversteps) + ",model=" + str(self.datamodel) + ")"
 
   def cleanup(self):
-    """
+    """!
       This routine has to be called after you've generated your code.
     """
     self.output.clear()
@@ -73,7 +73,7 @@ class Project (object):
   def generate(self,
                overwrite=peano4.output.Overwrite.Default,
                throw_away_data_after_generation=False):
-    """
+    """!
     Generate all code. If you add stuff to your project after a 
     build, you have to (re-)generate the code. If you compile only
     once, you don't have to invoke this routine explicitly. It is
@@ -122,7 +122,7 @@ class Project (object):
             throw_away_data_after_build=False,
             number_of_parallel_builds=-1,
             additional_libraries=[]):
-    """
+    """!
       Invokes the underlying make/C build mechanism on the project.
 
       number_of_parallel_builds: int
@@ -185,7 +185,7 @@ class Project (object):
       print( "threw away all data and ran garbage collection" )
 
   def run(self, executable, args=[], prefix=None, pipefile=None, rebuild_if_required=True):
-    """
+    """!
     Runs the code. args should be a list of strings or the empty list.
     prefix is an array, too. A typical invocation looks alike
     project.run( ["16.0", "32.0"], ["/opt/mpi/mpirun", "-n", "1"] )

@@ -321,11 +321,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
         logDebug( "updateState()", "switch to state " << toString(_state) );
       }
       else {
-<<<<<<< HEAD
-       _state = State::WaitForRoundRobinToken;
-=======
         _state = State::WaitForRoundRobinToken;
->>>>>>> refs/remotes/origin/particles
         logDebug( "updateState()", "switch to state " << toString(_state) );
       }
       break;

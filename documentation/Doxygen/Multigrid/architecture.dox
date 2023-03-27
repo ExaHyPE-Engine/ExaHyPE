@@ -31,6 +31,13 @@ accommodates a Python representation of all data models and computational steps.
 The C++ outcome is the actual realisation.
 
 
+## File conventions
+
+Each multigrid solver is represented by one instance of 
+petsc.solvers.Solver. Please consult this class' documentation for available 
+subclasses (solver flavours) and information about files that are generated.
+
+
 
  */
  
