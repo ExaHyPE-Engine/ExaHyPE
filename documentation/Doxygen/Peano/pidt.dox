@@ -1,22 +1,16 @@
 /**
-\page pidt
+\page peano_pidt Peano's particle Support
 
-Peano's particle support {#section:pidt}
-===================
 
-'s particle handling is a follow-up to the 2015 paper "Two
+
+Peano's particle handling is a follow-up to the 2015 paper "Two
 Particle-in-Grid Realisations on Spacetrees"
 (<https://arxiv.org/abs/1508.02435>).
 
-##### A first  pidt run (native usage of particle interface) {#a-first-pidt-run-native-usage-of-particle-interface .unnumbered}
+##### A first  pidt run (native usage of particle interface)
 
--   Configure  with the flags `–enable-particles`:
-
-    libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .;
-    automake --add-missing ./configure --enable-particles
-
-    These are the two mandatory extensions. You might want to add
-    further options.
+-   Ensure that the <code> --enable-particles </code> option is included when setting up the 
+    <code> ./configure </code> environment. See \ref page_installation for more info.
 
 -   Recompile your  code. This should give you a couple of
     `ToolboxParticles` libraries in the `src/toolbox/particles`
