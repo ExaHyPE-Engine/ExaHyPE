@@ -239,9 +239,10 @@ class ADERDG( object ):
 
     #current time step contains the solution, projections are respectively the projection of the solution and of the fluxes as predicted by the space-time predictor
     self._current_time_step             = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier(), self._solution_persistent_storage_precision )
+    self._current_update                = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier()+"lduh", self._solution_persistent_storage_precision )
     self._rhs_estimates_projection      = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates", self._predictor_persistent_storage_precision )
-    self._flux_estimates_projection     = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns, self._unknown_identifier() + "FluxEstimates", self._predictor_persistent_storage_precision )    
-        
+    self._flux_estimates_projection     = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns, self._unknown_identifier() + "FluxEstimates", self._predictor_persistent_storage_precision )
+
     #custom merge implementation takes into account that the faces project such that the left cell projects to the left half of the face and the right cell projects to the right half
     self._rhs_estimates_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._rhs_estimates_projection)
     self._rhs_estimates_projection.generator.includes     += """
@@ -257,6 +258,9 @@ class ADERDG( object ):
 
     self._current_time_step.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._current_time_step.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+
+    self._current_update.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._current_update.generator.load_persistent_condition  = self._load_cell_data_default_guard()    
     
     self._rhs_estimates_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._rhs_estimates_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
@@ -272,6 +276,10 @@ class ADERDG( object ):
     self._flux_estimates_projection.generator.receive_and_merge_condition  = "false"
     
     self._current_time_step.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""
+
+    self._current_update.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """
 
@@ -411,6 +419,7 @@ class ADERDG( object ):
     """  
     datamodel.add_cell(self._cell_label)
     datamodel.add_cell(self._current_time_step)
+    datamodel.add_cell(self._current_update)
     datamodel.add_face(self._face_label)
     datamodel.add_face(self._rhs_estimates_projection)
     datamodel.add_face(self._flux_estimates_projection)
@@ -418,6 +427,7 @@ class ADERDG( object ):
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     step.use_cell(self._cell_label)
     step.use_cell(self._current_time_step)
+    step.use_cell(self._current_update)
     step.use_face(self._face_label)
     step.use_face(self._rhs_estimates_projection)
     step.use_face(self._flux_estimates_projection)

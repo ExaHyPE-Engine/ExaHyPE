@@ -38,11 +38,14 @@ class SingleSweep( ADERDG ):
     ")"
     
     # face estimates from the space-time predictor should be sent in predictor step and received and used in the correction step 
-    self._rhs_estimates_projection.generator.send_condition               = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
-    self._rhs_estimates_projection.generator.receive_and_merge_condition  = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
-    
-    self._flux_estimates_projection.generator.send_condition               = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
-    self._flux_estimates_projection.generator.receive_and_merge_condition  = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
+    self._rhs_estimates_projection.generator.send_condition                 = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
+    self._rhs_estimates_projection.generator.receive_and_merge_condition    = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
+
+    self._flux_estimates_projection.generator.send_condition                = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
+    self._flux_estimates_projection.generator.receive_and_merge_condition   = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
+
+#    self._riemann_estimates.generator.send_condition                        = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
+#    self._riemann_estimates.generator.receive_and_merge_condition           = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
     
               
   def create_action_sets(self):
@@ -67,6 +70,10 @@ class SingleSweep( ADERDG ):
   def _restrict_face_data_default_guard(self):    
     return super(SingleSweep, self)._restrict_face_data_default_guard() + \
       " and repositories::{}.getSolverState()=={}::SolverState::Prediction".format(self.get_name_of_global_instance(),self._name)
+
+  def _interpolate_face_data_default_guard(self):
+    return super(SingleSweep, self)._interpolate_face_data_default_guard() + \
+      " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(self.get_name_of_global_instance(),self._name)
 
   def set_preprocess_reconstructed_patch_kernel(self,kernel):
     """
