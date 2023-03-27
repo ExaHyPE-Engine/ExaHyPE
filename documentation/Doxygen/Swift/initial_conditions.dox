@@ -34,10 +34,15 @@ In order to make use of the HDF5 reader, Peano must have been configured with
           ./configure ... --enable-particles --enable-swift --with-hdf5
 
 Since this also has to be supported by the compiler used at the application
-level, it is recommended to include the following LDFLAGS:
+level, it is recommended to include the following flags:
 
-          ./configure ... LDFLAGS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++" ... 
-          --enable-particles --enable-swift --with-hdf5
+          ./configure ...  --enable-particles --enable-swift --with-hdf5 \
+                CXXFLAGS="-I/$HDF5_ROOT/include" \
+                LDFLAGS="-L/$HDF5_ROOT/lib" \
+                LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"
+
+where ``$HDF5_ROOT`` should be the directory that contains your local HDF5 installation,
+e.g. ``/usr`` or ``/usr/lib/x86_64-linux-gnu/hdf5/serial/``.
 
 
 
