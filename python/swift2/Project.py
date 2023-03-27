@@ -269,57 +269,57 @@ citation of the original SWIFT paper
       
         
   def generate_Peano4_project(self, verbose=False):
-    """
+    """!
     
-     Build the Peano4 project, i.e. all the action sets et al that you require
-     to run this ExaHyPE2 application. 
-     
-     This routine generates a Peano project, i.e. the domain-specific ExaHyPE 
-     view is translated into a Peano model. Once you have called this routine,
-     any changes to the ExaHyPE 2 configuration do not propagate into the Peano
-     setup anymore. If you alter the ExaHyPE setup, you have to call 
-     generate_Peano4_project() again to get a new snapshot/version of the
-     Peano setup.
-     
-     
-     ## Task graph compiler
-     
-     The core contribution of the generation is the task graph compiler which 
-     really is a mapping of algorithm steps per particle species onto grid 
-     sweeps. The actual mapping is outsourced into the function represented
-     by self.task_graph_compiler. This way, users can switch the translator's
-     behaviour. This function returns a sequence of mesh traversals. On top 
-     of that, we have the default traversals to create a grid, to plot it, and
-     to initialise the setup.
-     
-     Once we have our three default steps plus a sequence of algorithmic steps
-     per time step, we run through the following steps:
-     
-     - Create a particle set around each species and add it to the project as
-       global variable. This is the global container administering these guys.
-     - Tell each algorithmic step to use this particle set. An exception could be
-       the grid creation. At this point, we don't have particles yet. We add
-       the data structure nevertheless. It ensures that we have all the data
-       in place, and it we also then can be sure that everything is properly
-       initialised. The actual particle set will be empty at this point of the
-       simulation.
-     - Ensure that plotting and initialisation use the update particle-grid
-       association properly. The plot has to update it, as previous steps 
-       might have started a resort yet might not have finished it.
-     - Add all the algorithmic steps, including the default ones, to
-       the project.
+ Build the Peano4 project, i.e. all the action sets et al that you require
+ to run this ExaHyPE2 application. 
+ 
+ This routine generates a Peano project, i.e. the domain-specific ExaHyPE 
+ view is translated into a Peano model. Once you have called this routine,
+ any changes to the ExaHyPE 2 configuration do not propagate into the Peano
+ setup anymore. If you alter the ExaHyPE setup, you have to call 
+ generate_Peano4_project() again to get a new snapshot/version of the
+ Peano setup.
+ 
+ 
+ ## Task graph compiler
+ 
+ The core contribution of the generation is the task graph compiler which 
+ really is a mapping of algorithm steps per particle species onto grid 
+ sweeps. The actual mapping is outsourced into the function represented
+ by self.task_graph_compiler. This way, users can switch the translator's
+ behaviour. This function returns a sequence of mesh traversals. On top 
+ of that, we have the default traversals to create a grid, to plot it, and
+ to initialise the setup.
+ 
+ Once we have our three default steps plus a sequence of algorithmic steps
+ per time step, we run through the following steps:
+ 
+ - Create a particle set around each species and add it to the project as
+   global variable. This is the global container administering these guys.
+ - Tell each algorithmic step to use this particle set. An exception could be
+   the grid creation. At this point, we don't have particles yet. We add
+   the data structure nevertheless. It ensures that we have all the data
+   in place, and it we also then can be sure that everything is properly
+   initialised. The actual particle set will be empty at this point of the
+   simulation.
+ - Ensure that plotting and initialisation use the update particle-grid
+   association properly. The plot has to update it, as previous steps 
+   might have started a resort yet might not have finished it.
+ - Add all the algorithmic steps, including the default ones, to
+   the project.
 
-       
-    ## Particle initialisation and proper sorting
-    
-    The particle initialisation might end up with an invalid association of 
-    particles to vertices. The graph compiler might make the first step of a
-    time step sequence sort if and only if the last one has altered the 
-    particles' position. Consequently, we might end up with an initialisation
-    which yields an inconsistent data association. We therefore make it sort
-    the particles, but we need another grid sweep to finalise this sort in 
-    case we have to do some global rearrangements. This is our rationale why
-    we realise the initialisation in two steps.
+   
+## Particle initialisation and proper sorting
+
+The particle initialisation might end up with an invalid association of 
+particles to vertices. The graph compiler might make the first step of a
+time step sequence sort if and only if the last one has altered the 
+particles' position. Consequently, we might end up with an initialisation
+which yields an inconsistent data association. We therefore make it sort
+the particles, but we need another grid sweep to finalise this sort in 
+case we have to do some global rearrangements. This is our rationale why
+we realise the initialisation in two steps.
      
     """
     self.__generate_global_state_files()
