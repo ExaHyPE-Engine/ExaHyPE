@@ -386,19 +386,31 @@ namespace tarch {
        * the user has to wrap the function call into a code snippet similar
        * to
        *
+       *          bool continueToProcessPendingTasks =
+       *            pendingTasks>0
+       *            and
+       *            pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
+       *            and
+       *            spawnedTasks==NumberOfThreads;
+       *          while ( continueToProcessPendingTasks ) {
+       *            continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+       *             strategy
+       *            );
+       *          }
        *
-       *        while (
-       *          pendingTasks>0
-       *          and
-       *          pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
-       *          and
-       *          spawnedTasks==NumberOfThreads
-       *        ) {
-       *          progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
-       *            strategy
-       *          );
-       *        }
+       * This snippet highlights a fourth consideration: If we have tried to
+       * process a pending task but failed, then we terminate as well. This is
+       * not necessary for all solvers, but
        *
+       * - if other compute kernels/tasks fork further, an active polling keeps
+       *   the current thread busy, i.e. strips those other kernels off the
+       *   opportunity to grab threads in return. So active polling severely
+       *   slows down the calculation. In the worst case, it leads to deadlocks.
+       * - if there is an extreme ill-balance, a lot of threads will end up
+       *   competing for the global lock. In return, the task still computing
+       *   will struggle to enqueue new tasks rapidly. Once again, aggressive
+       *   polling would slow down the simulation even though it should, in
+       *   theory, be faster.
        *
        * @return Has processed some tasks
        */

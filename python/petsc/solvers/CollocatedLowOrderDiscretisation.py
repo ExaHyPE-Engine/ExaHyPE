@@ -6,17 +6,36 @@ import dastgen2
 
 import os
 
-from .Solver       import Solver
+from .Solver                         import Solver
+from petsc.actionsets.InitVertexDoFs import InitVertexDoFs
 
 from abc import abstractmethod
 
 
 class CollocatedLowOrderDiscretisation(Solver):
+  """!
+   
+  A low-order discretisation with degrees of freedom on the vertices
+    
+  This is one of the simplest solvers that you can think of. It places
+  one degree of freedom (can be scalar or a vector) on each vertex. As
+  we support solely element-wise assembly, this means you can implement
+  things like a 9-point (2d) or 27-point (3d) stencil, but not really
+  anything more sophisticated.
+  
+  """
   def __init__(self,
                name,
                number_of_unknowns,
                min_h,
                max_h):
+    """!
+   
+ Test comment (C)
+    
+I wanna see if this one applies to the solver or hte init
+   
+    """
     super( CollocatedLowOrderDiscretisation, self ).__init__( name,
                                                               min_h,
                                                               max_h )
@@ -32,7 +51,9 @@ class CollocatedLowOrderDiscretisation(Solver):
 
 
   def add_to_plot(self, observer):
-    """
+    """!
+    
+    Tell the project's observer how to plot the data
     
     Nothing fancy here. We add plotters from Peano's toolbox to visualise
     solution and right-hand side. 
@@ -69,6 +90,15 @@ class CollocatedLowOrderDiscretisation(Solver):
   
   
   def add_to_init(self, observer):
+    """!
+    
+    Solution initialisation
+    
+    Close to trivial: Just add the action set petsc.actionsets.InitVertexDoFs
+    to the observer.
+    
+    """
+    observer.add_action_set( InitVertexDoFs(self) ) 
     pass
   
   
@@ -114,12 +144,13 @@ class CollocatedLowOrderDiscretisation(Solver):
         "SOLVER_INCLUDES": "",
         "MIN_H": self.min_h,
         "MAX_H": self.max_h,
+        "CARDINALITY": self._number_of_unknowns
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".Abstract.template.h",
       templatefile_prefix + ".Abstract.template.cpp",
-      "Abstract" + self._name, 
+      "Abstract" + self.typename(), 
       namespace,
       ".", 
       dictionary,
@@ -128,7 +159,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".template.h",
       templatefile_prefix + ".template.cpp",
-      self._name, 
+      self.typename(), 
       namespace,
       ".", 
       dictionary,
@@ -141,4 +172,8 @@ class CollocatedLowOrderDiscretisation(Solver):
     output.makefile.add_h_file( self._name + ".h" )
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
-  
+
+
+  @property
+  def number_of_unknowns(self):
+    return self._number_of_unknowns

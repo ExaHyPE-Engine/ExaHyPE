@@ -1,6 +1,6 @@
 /**
 
-@page exahype_performance_optimisation Performance Optimisation in ExaHyPE
+@page exahype_performance_optimisation Performance optimisation
 
 
 This section discusses some ExaHyPE-specific performance optimisation steps.
@@ -46,7 +46,11 @@ i.e. you have to swap how a patch is mapped onto a C++ implementation. Most solv
 
 
 which does the switch for you. Please around with different True, False 
-combinations. See also next section on AVX/alignment.
+combinations. 
+Once you have switched, you should also consult @ref peano_performance_optimisation "Peano's generic remarks on alignment", 
+and you might want to change your kernel into a variant which optimises aggressively for vector registers (and can 
+potentially even use GPUs). This topic is discussed below.
+
 
 
 
@@ -64,6 +68,8 @@ parallelisation. These focus on GPU efficiency, but the optimisations also pay o
 A quick first insight into the single node behaviour can be obtained through Peano's
 @ref peano_performance_optimisation "scaling analysis scripts".
 Consult the @ref peano_runtime_analysis "Peano runtime analysis" remarks as well.
+
+
 
 ### There is a lack of enclave tasks
 

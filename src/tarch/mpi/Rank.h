@@ -90,15 +90,43 @@ class tarch::mpi::Rank {
     #endif
 
     /**
-     * How long shall the application wait until it writes a time-out warning
+     * Timeout warning
+     *
+     * How long shall the application wait until it writes a time-out warning.
+     * Different to _deadlockTimeOut, this value changes over time: If we write
+     * a warning message, we increase this value. So, by default, you can make
+     * is rather small. The code then will increase it once you have written a
+     * warning to avoid that the terminal is flooded with these warnings. It
+     * will never by bigger than _deadlockTimeOut though due to this growth.
+     *
+     * Despite the growth discussion, you can use a timeout warning that is
+     * greater than zero and set _deadlockTimeOut to zero. In this case, you
+     * will get warnings that the code thinks it runs into a deadlock, but you
+     * do not get a timeout ever.
+     *
+     * @see writeTimeOutWarning()
+     * @see _deadlockTimeOut
      */
     std::chrono::seconds _timeOutWarning;
 
+    /**
+     * Time to timeout
+     *
+     * This counter specifies the seconds until a timeout is triggered. If the
+     * field equals zero, no timeouts will ever happen.
+     */
     std::chrono::seconds _deadlockTimeOut;
 
     std::chrono::system_clock::time_point  _globalTimeOutWarning;
     std::chrono::system_clock::time_point  _globalTimeOutDeadlock;
 
+    /**
+     * Global toggle to enable/disable timeouts
+     *
+     * This flag helps user codes to enable/disable timeouts (temporarily).
+     * Note that the flag is not the only way how to disable the timeouts.
+     * Alternatively, you can set _deadlockTimeOut to zero.
+     */
     bool    _areTimeoutsEnabled;
 
     /**

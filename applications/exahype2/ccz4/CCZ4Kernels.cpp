@@ -415,13 +415,18 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
     for (int j=0;j<3;j++) Kex[i][j]=Aex[i][j]/phi2 + (1./3)*traceK*g_cov[i][j]/phi2;
 
     double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    double Christoffel_tilde[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
-    for (int l = 0; l < 3; l++) Christoffel[i][j][k]  += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l]/phi * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] );
+    for (int l = 0; l < 3; l++) {
+        Christoffel_tilde[i][j][k] += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] );
+        Christoffel[i][j][k]  += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l]/phi * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] );
+    }
 
     double dChristoffel[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
+    double dChristoffel_tilde[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+ 
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     for (int m = 0; m < 3; m++)
@@ -435,7 +440,48 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
             -dgup[k][m][l]*(g_cov[j][l]*PP[i]+g_cov[i][l]*PP[j]-g_cov[i][j]*PP[l])/phi
             -2*g_contr[m][l]*(DD[k][j][l]*PP[i]+DD[k][i][l]*PP[j]-DD[k][i][j]*PP[l])/phi
             +g_contr[m][l]*(g_cov[j][l]*PP[i]*PP[k]+g_cov[i][l]*PP[j]*PP[k]-g_cov[i][j]*PP[k]*PP[l])/phi2;
+
+        dChristoffel_tilde[k][i][j][m] += dgup[k][m][l]*(DD[i][j][l]+DD[j][i][l]-DD[l][i][j])
+            +0.5*g_contr[m][l]*(dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j]);
     }
+
+    double Gtilde[3] = {0,0,0};
+    for (int l = 0; l < 3; l++)
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++) Gtilde[i] += g_contr[j][l] * Christoffel_tilde[j][l][i];
+
+    const double Theta = Q[12]; // needed later
+    const double Ghat[3] = {Q[13], Q[14], Q[15]};
+
+    double Z[3] = {0,0,0}; // Matrix vector multiplications
+    for (int i=0;i<3;i++)
+    for (int j=0;j<3;j++) Z[i] += 0.5* g_cov[i][j]* (Ghat[j] - Gtilde[j]);
+
+    const double dGhat[3][3] = {
+        {gradQin[13][0],gradQin[14][0],gradQin[15][0]},
+        {gradQin[13][1],gradQin[14][1],gradQin[15][1]},
+        {gradQin[13][2],gradQin[14][2],gradQin[15][2]}
+    };
+
+    double dGtilde[3][3] = {0,0,0,0,0,0,0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int k = 0; k < 3; k++)
+    for (int j = 0; j < 3; j++)
+    for (int l = 0; l < 3; l++) dGtilde[k][i] += dgup[k][j][l]*Christoffel_tilde[j][l][i]+g_contr[j][l]*dChristoffel_tilde[k][j][l][i];
+
+    double dZ[3][3] = {0,0,0,0,0,0,0,0,0};
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++)
+    for (int k = 0; k < 3; k++) dZ[k][i] += DD[k][i][j]*(Ghat[j]-Gtilde[j])+0.5*g_cov[i][j]*(dGhat[k][j]-dGtilde[k][j]);
+
+    double nablaZ[3][3] = {0,0,0,0,0,0,0,0,0};
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++)
+    {
+      nablaZ[i][j] = dZ[i][j];
+      for (int k = 0; k < 3; k++) nablaZ[i][j] -= Christoffel[i][j][k]*Z[k];
+    }
+
 
     double Riemann[3][3][3][3] = {0};
     for (int i = 0; i < 3; i++)
@@ -467,15 +513,29 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
 	const double detgd=(1.0/(phi2*phi2*phi2))*( Q[0]*Q[3]*Q[5] - Q[0]*Q[4]*Q[4] - Q[1]*Q[1]*Q[5] + 2*Q[1]*Q[2]*Q[4] -Q[2]*Q[2]*Q[3]); //determinant of \gamma_ij
 	
 	double eps_lc_u[3][3][3]   = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //Levi-Civita tensor
+    double eps_lc_symbol[3][3][3]   = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //Levi-Civita symbol
 	eps_lc_u[0][1][2] = 1/pow(detgd,0.5); eps_lc_u[1][2][0] = 1/pow(detgd,0.5); eps_lc_u[2][0][1] = 1/pow(detgd,0.5);
 	eps_lc_u[2][1][0] =-1/pow(detgd,0.5); eps_lc_u[0][2][1] =-1/pow(detgd,0.5); eps_lc_u[1][0][2] =-1/pow(detgd,0.5);
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++)
+    for (int k = 0; k < 3; k++) {
+        eps_lc_symbol[i][j][k] = eps_lc_u[i][j][k] * pow(detgd,0.5);
+        if (detgd<0){ eps_lc_u[i][j][k]= - eps_lc_u[i][j][k]; }
+    }
+
 	
 	//calculate the orthonormal basis
     //mainly follow the paper: https://arxiv.org/pdf/gr-qc/0610128v1.pdf
 	if ((coor[0]*coor[0]+coor[1]*coor[1])<1e-10) {coor[0]+=1e-10;}
-	double v_vec[3]={coor[0], coor[1], coor[2]};//r-direction
-	double u_vec[3]={-coor[2], coor[1], 0.0}; //phi-direction
-	double w_vec[3]={coor[0]*coor[2],coor[1]*coor[2],-coor[0]*coor[0]-coor[1]*coor[1]};//theta-direction
+	double u_vec[3]={coor[0], coor[1], coor[2]};//r-direction
+	double v_vec[3]={-coor[2], coor[1], 0.0}; //phi-direction
+	//double w_vec[3]={coor[0]*coor[2],coor[1]*coor[2],-coor[0]*coor[0]-coor[1]*coor[1]};//theta-direction //??
+    double w_vec[3]={0,0,0};
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++)
+    for (int k = 0; k < 3; k++)
+    for (int l = 0; l < 3; l++) w_vec[i] += phi2*g_contr[i][j]*eps_lc_symbol[j][k][l]*v_vec[k]*u_vec[l];
+
 	
 	double dotp1=0;
     for (int j = 0; j < 3; j++)
@@ -484,27 +544,27 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
 	
 	dotp1=0;
     for (int j = 0; j < 3; j++)
-    for (int i = 0; i < 3; i++) dotp1 += g_cov[i][j]*v_vec[i]*w_vec[j]/phi2;
-	for (int a = 0; a < 3; a++) w_vec[a] = w_vec[a] - dotp1* v_vec[a];	
+    for (int i = 0; i < 3; i++) dotp1 += g_cov[i][j]*v_vec[i]*u_vec[j]/phi2;
+	for (int a = 0; a < 3; a++) u_vec[a] = u_vec[a] - dotp1* v_vec[a];	
 	
-	dotp1=0;
-    for (int j = 0; j < 3; j++)
-    for (int i = 0; i < 3; i++) dotp1 += g_cov[i][j]*w_vec[i]*w_vec[j]/phi2;
-	for (int a = 0; a < 3; a++) w_vec[a] = w_vec[a] / pow(dotp1,0.5);
-	
-	dotp1=0;
-    for (int j = 0; j < 3; j++)
-    for (int i = 0; i < 3; i++) dotp1 += g_cov[i][j]*v_vec[i]*u_vec[j]/phi2;	
-	double dotp2=0;
-    for (int j = 0; j < 3; j++)
-    for (int i = 0; i < 3; i++) dotp2 += g_cov[i][j]*w_vec[i]*u_vec[j]/phi2;
-    
-	for (int a = 0; a < 3; a++) u_vec[a] = u_vec[a] - dotp1 * v_vec[a] - dotp2 * w_vec[a];		
-		
 	dotp1=0;
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++) dotp1 += g_cov[i][j]*u_vec[i]*u_vec[j]/phi2;
 	for (int a = 0; a < 3; a++) u_vec[a] = u_vec[a] / pow(dotp1,0.5);
+	
+	dotp1=0;
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++) dotp1 += g_cov[i][j]*v_vec[i]*w_vec[j]/phi2;	
+	double dotp2=0;
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++) dotp2 += g_cov[i][j]*u_vec[i]*w_vec[j]/phi2;
+    
+	for (int a = 0; a < 3; a++) w_vec[a] = u_vec[a] - dotp1 * v_vec[a] - dotp2 * u_vec[a];		
+		
+	dotp1=0;
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++) dotp1 += g_cov[i][j]*w_vec[i]*w_vec[j]/phi2;
+	for (int a = 0; a < 3; a++) w_vec[a] = w_vec[a] / pow(dotp1,0.5);
 	
 	//EB part of Weyl
     //reference: https://academic.oup.com/book/9640/chapter/156750056
@@ -516,7 +576,7 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
     	elec[i][j]=Ricci[i][j];
 		for (int m = 0; m < 3; m++)
 		for (int k = 0; k < 3; k++){
-			elec[i][j] += phi2*g_contr[m][k]*(Kex[i][j]*Kex[m][k]-Kex[i][m]*Kex[k][j]);
+			elec[i][j] += phi2*g_contr[m][k]*(Kex[i][j]*Kex[m][k]-Kex[i][m]*Kex[k][j])-Kex[i][j]*Theta + 0.5*(nablaZ[i][j]+nablaZ[j][i]);
 			for (int l = 0; l < 3; l++){
 				mag[i][j] += g_cov[i][l] * eps_lc_u[l][k][m] * Cov_dKex[k][m][j] + g_cov[j][l] * eps_lc_u[l][k][m] * Cov_dKex[k][m][i];
 			}
@@ -537,14 +597,14 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
 	}
 
     //use 8.6.17 and 8.6.18
-    //notice we use \bar{m}^i={1 \over \sqrt{2} }(w^i- i u^i)
+    //notice we use \bar{m}^i={1 \over \sqrt{2} }(w^i- i v^i)
     Psi4[0]=0.0; Psi4[1]=0.0;
 	for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++){
     	//Real part for Psi4
-		Psi4[0] += 0.5*elec[i][j]*(w_vec[i]*w_vec[j]-u_vec[i]*u_vec[j])-0.5*mag[i][j]*(u_vec[i]*w_vec[j]+u_vec[j]*w_vec[i]);
+		Psi4[0] += 0.5*elec[i][j]*(w_vec[i]*w_vec[j]-v_vec[i]*v_vec[j])-0.5*mag[i][j]*(v_vec[i]*w_vec[j]+v_vec[j]*w_vec[i]);
 		//imaginary part for Psi4
-		Psi4[1] += -0.5*elec[i][j]*(u_vec[i]*w_vec[j]+u_vec[j]*w_vec[i])-0.5*mag[i][j]*(w_vec[i]*w_vec[j]-u_vec[i]*u_vec[j]);
+		Psi4[1] += - 0.5*elec[i][j]*(v_vec[i]*w_vec[j]+v_vec[j]*w_vec[i])-0.5*mag[i][j]*(w_vec[i]*w_vec[j]-v_vec[i]*v_vec[j]);
 	}
 	
 }

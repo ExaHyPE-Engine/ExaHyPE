@@ -384,6 +384,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     int _numberOfStateUpdatesWithoutAnySplit;
 
+    int _stepsToWaitForNextLoadBalancingDecision;
+
     State  _state;
 
     void updateGlobalView();
