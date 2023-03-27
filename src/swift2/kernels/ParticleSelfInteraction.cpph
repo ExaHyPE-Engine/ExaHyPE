@@ -444,7 +444,8 @@ void swift2::kernels::endHydroForceCalculation(
 
 template <typename ParticleContainer>
 void swift2::kernels::flagBoundaryParticles(
-  const ParticleContainer&  localParticles
+  const ParticleContainer&  localParticles,
+  const double nparts
 ) {
   for (auto* particle: localParticles) {
     if( 
@@ -455,7 +456,7 @@ void swift2::kernels::flagBoundaryParticles(
     
       /* Flag if particle is at boundary of the simulation box */
       particle->setIsBoundaryParticle(false);
-      const double max_dist_boundary = 3 * (1.0 /HYDRO_PART_NUMBER); 
+      const double max_dist_boundary = 3 * (1.0 / nparts);
 
       for (int d=0; d<Dimensions; d++) {
         if ( particle->getX()(d) < max_dist_boundary || 

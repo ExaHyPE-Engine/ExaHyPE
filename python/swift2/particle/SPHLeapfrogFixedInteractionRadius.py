@@ -239,6 +239,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     Some variations of this KDK form re-arrange the steps executed per timestep
     to avoid a second force loop.
     """
+
     return [ 
       AlgorithmStep( 
         name                           = "FlagBoundaryParticles",          
@@ -247,8 +248,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         touch_vertex_first_time_kernel = """
                                          """,
         touch_vertex_last_time_kernel  =
-                                        """::swift2::kernels::flagBoundaryParticles(localParticles );""",
- 
+                    """::swift2::kernels::flagBoundaryParticles(localParticles, {0} );""".format("::".join(self._swift_project_namespace)+"::HYDRO_PART_NUMBER"),
         includes                       = """
                                          #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"
