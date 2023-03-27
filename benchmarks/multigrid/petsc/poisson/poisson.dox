@@ -141,7 +141,7 @@ peano4_project.generate()
   The steps that petsc.Project creates are more or less empty. 
   When we invoke petsc.Project.add_solver(), the project takes the solver as passed
   as an argument and asks the solver to add action sets, i.e. activities, to each 
-  step. 
+  step. Each activity is a subclass of peano4.solversteps.ActionSet.
   
   
   

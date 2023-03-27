@@ -184,4 +184,11 @@ For Python, the comment has to be put directly ***after*** the function or class
 Within the individual comments, you can substructure the comments further via the hashtag.
 Markdown headlines should work, too.
 
+
+What is a little bit annoying is that Doxygen reads comments within the source code and
+headers as markdown. Consequently, comments that have an indent greater than five are 
+rendered once again as source code. You have to remove the indentation sometimes. It seems
+that this mainly affects the Python code, but not the C++ documentation.
+
+
 */
