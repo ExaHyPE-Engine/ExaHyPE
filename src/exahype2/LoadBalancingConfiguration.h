@@ -44,6 +44,10 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
      *   argument to 0, you effectively set no threshold - Peano will try to
      *   split any tree if it thinks it would improve the load balancing.
      *
+     *   This value is not taken into account for the initial distribution.
+     *   Here, you have to use maxNumberOfTreesThroughoutInitialDistribution
+     *   to constrain over-ambitious domain splitting.
+     *
      * @param maxNumberOfTreesThroughoutInitialDistribution Set the maximum
      *   number of trees (per rank) that we use when we split up the domain
      *   no a rank for the first time. By default, I try to give each thread

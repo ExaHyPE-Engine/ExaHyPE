@@ -210,5 +210,8 @@ object creation per grid sweep per tree.
 
 Return include statements that you need.
 
+All of these includes will eventually end up in the header of the generated
+C++ code. 
+
     """
     return ""

@@ -42,6 +42,21 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     {{CLASSNAME}}();
 
     /**
+     * Initialise a vertex degree of freedom
+     */
+    virtual void init(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h,
+      {% if CARDINALITY==1 %}
+      double&                                       value,
+      double&                                       rhs
+      {% else %}
+      const tarch::la::Vector< {{CARDINALITY}}, double >&  value,
+      const tarch::la::Vector< {{CARDINALITY}}, double >&  rhs
+      {% endif %}
+    );
+
+    /**
     virtual void startInitialisation() = 0;
     virtual void finishInitialisation() = 0;
 

@@ -6,7 +6,7 @@ import peano4
 from abc import abstractmethod
 
 class Solver(object):
-  """
+  """!
 
   Abstract base class for all PETSc solvers
 
@@ -73,7 +73,7 @@ class Solver(object):
     
   @abstractmethod
   def add_to_plot(self, observer):
-    """
+    """!
     
     Add whatever action set you want to use to observer.
     
@@ -83,7 +83,7 @@ class Solver(object):
 
   @abstractmethod
   def add_to_create_grid(self, observer):
-    """
+    """!
     
     Add whatever action set you want to use to observer.
     
@@ -93,7 +93,7 @@ class Solver(object):
   
   @abstractmethod
   def add_to_enumerate(self, observer):
-    """
+    """!
     
     Add whatever action set you want to use to observer.
     
@@ -103,7 +103,7 @@ class Solver(object):
   
   @abstractmethod
   def add_to_init(self, observer):
-    """
+    """!
     
     Add whatever action set you want to use to observer.
     
@@ -113,7 +113,7 @@ class Solver(object):
   
   @abstractmethod
   def add_to_assemble(self, observer):
-    """
+    """!
     
     Add whatever action set you want to use to observer.
     
@@ -163,14 +163,12 @@ class Solver(object):
 
   @abstractmethod    
   def add_implementation_files_to_project(self, namespace, output):
-    """
+    """!
     
-     The PETSc project will call this operation when it sets
-     up the overall environment.
-     
-     This routine is typically not invoked by a user.
+This routine is typically not invoked by a user.
 
-     output: peano4.output.Output
+output: peano4.output.Output
+  Add artefacts this output in any implementation.
      
     """
     assert False, "should not be called"
@@ -181,6 +179,11 @@ class Solver(object):
 
       
   def instance_name(self):
+    """!
+    
+Return the name of the object that will be created for this solver.
+    
+    """
     return "instanceOf" + self.typename()  
 
 

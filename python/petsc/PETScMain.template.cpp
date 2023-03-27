@@ -40,14 +40,6 @@
 using namespace {{NAMESPACE | join("::")}};
 
 
-{% for SOLVER in SOLVER_INSTANCES %}
-
-#include "{{SOLVER[0]}}.h"
-{{SOLVER[0]}}  {{SOLVER[1]}};
-
-{% endfor %}
-
-
 tarch::logging::Log _log("::");
 
 

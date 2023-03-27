@@ -8,16 +8,12 @@ class PETScMain(peano4.runner.DefaultSequence):
   def __init__(self,
                project,
                domain_offset,
-               domain_size,
-               type_name_of_solver_instances
+               domain_size
                ):
     """
     
      project: peano4.Project
-     
-     type_name_of_solver_instances: [String]
-       Name of the solvers that we should instantiate and use in the main.
-     
+          
     """
     super(PETScMain,self).__init__(project)
 
@@ -33,7 +29,6 @@ class PETScMain(peano4.runner.DefaultSequence):
       self.d[ "DomainSize" ] += str(i)
     self.d[ "DomainOffset" ] += "}"
     self.d[ "DomainSize" ]   += "}"
-    self.d[ "SOLVER_INSTANCES"] = type_name_of_solver_instances
 
 
   def _get_header_file_template(self):

@@ -142,7 +142,8 @@ peano4_project.generate()
   When we invoke petsc.Project.add_solver(), the project takes the solver as passed
   as an argument and asks the solver to add action sets, i.e. activities, to each 
   step. Each activity is a subclass of peano4.solversteps.ActionSet.
-  
+
+  @see peano4.petsc.actionsets.InitVertexDoFs for the actual initialisation phase.
   
   
  */
