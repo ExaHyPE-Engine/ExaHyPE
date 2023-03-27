@@ -5,7 +5,8 @@ from numpy import *
 # Generates a swift IC file for the Sedov blast test in a periodic cubic box
 
 # Parameters
-numPart = 1001
+numPart = 65
+#numPart = 1001
 gamma = 5.0 / 3.0  # Gas adiabatic index
 rho0 = 1.0  # Background density
 P0 = 1.0e-6  # Background pressure
