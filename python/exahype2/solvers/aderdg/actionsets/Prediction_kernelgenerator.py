@@ -78,7 +78,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     {{PREDICTOR_COMPUTATION_PRECISION}}* PSderivatives = nullptr;
     {% endif %}
         
-    {{PREDICTOR_COMPUTATION_PRECISION}} lduh[generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize()];
+    {{SOLUTION_STORAGE_PRECISION}}* lduh = fineGridCell{{UNKNOWN_IDENTIFIER}}lduh.value;    
         
     {{PREDICTOR_STORAGE_PRECISION}} lQhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndFaceTotalSize()]{0.0};
     {{PREDICTOR_STORAGE_PRECISION}} lFhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndFluxTotalSize()]{0.0};
@@ -201,13 +201,6 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
 
     {% endif %} {# nonlinear #}
 
-    generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate( 
-      luh,
-      luh, 
-      lduh, 
-      timeStepSize
-    );
-      
     /*
     Copy the estimates into the face data containers. Note that peano uses a different ordering of
     the faces that the kernels, so these are reordered somewhat.
@@ -220,17 +213,17 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
     */
   
-    const int basisElementsByFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFaceSize();
-    const int fluxElementsByFace   = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
+    const int basisElementsPerFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFaceSize();
+    const int fluxElementsPerFace   = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
 
     for(int d=0; d<Dimensions; d++){
       //Projected solution estimations
-      std::copy_n(&lQhbnd[2*d*basisElementsByFace], basisElementsByFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsByFace);
-      std::copy_n(&lQhbnd[(2*d+1)*basisElementsByFace], basisElementsByFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value);
+      std::copy_n(&lQhbnd[2*d*basisElementsPerFace], basisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsPerFace);
+      std::copy_n(&lQhbnd[(2*d+1)*basisElementsPerFace], basisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value);
       
       //Projected flux estimations
-      std::copy_n(&lFhbnd[2*d*fluxElementsByFace], fluxElementsByFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsByFace);
-      std::copy_n(&lFhbnd[(2*d+1)*fluxElementsByFace], fluxElementsByFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value);            
+      std::copy_n(&lFhbnd[2*d*fluxElementsPerFace], fluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace);
+      std::copy_n(&lFhbnd[(2*d+1)*fluxElementsPerFace], fluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value);            
 
       //Timestamp information for boundary handling
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setNewTimeStamp(1, timeStamp);
