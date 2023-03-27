@@ -47,8 +47,10 @@ project = swift2.Project( namespace=project_namespace,
 name = "hydroPart"
 dimensions = args.dimensions
 
+hydro_dimensions = 1 # dimensions for the hydro
+
 particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name, 
-                                                             dimensions_hydro       = dimensions,
+                                                             dimensions_hydro       = hydro_dimensions,
                                                              cfl_factor             = args.cfl_factor, 
                                                              initial_time_step_size = args.timestep_size,
                                                              constant_time_step_size= True,
@@ -69,7 +71,7 @@ particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name,
 
 
 # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
-HYDRO_DIMENSIONS = 1
+HYDRO_DIMENSIONS = hydro_dimensions
 
 # Particle number along 1 dimension
 HYDRO_PART_NUMBER = args.particle_number

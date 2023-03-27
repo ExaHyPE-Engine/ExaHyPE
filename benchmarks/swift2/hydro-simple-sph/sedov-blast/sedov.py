@@ -45,9 +45,9 @@ project = swift2.Project( namespace=project_namespace,
 # independently for each case.
 
 name = "hydroPart"
-dimensions  = args.dimensions
+dimensions  = args.dimensions # Peano dimensions
 
-hydro_dimensions = 2
+hydro_dimensions = 2 # dimensions for the hydro
 
 particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name, 
                                                              dimensions_hydro       = hydro_dimensions,
@@ -71,7 +71,7 @@ particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name,
 
 
 # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
-HYDRO_DIMENSIONS = dimensions
+HYDRO_DIMENSIONS = hydro_dimensions
 
 # Particle number along 1 dimension
 HYDRO_PART_NUMBER = args.particle_number
@@ -170,7 +170,7 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 Npart = args.particle_number
 offset = 1/Npart
 
-coords = np.zeros((Npart**HYDRO_DIMENSIONS, 3))
+coords = np.zeros((Npart**dimensions, 3))
 
 x = np.linspace(offset, 1, Npart, endpoint=False)
 y = np.linspace(offset, 1, Npart, endpoint=False)
