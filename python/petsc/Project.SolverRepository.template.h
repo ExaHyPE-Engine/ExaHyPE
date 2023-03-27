@@ -16,16 +16,13 @@
 
 {% for N in NAMESPACE %}
 namespace {{N}} {
+{% endfor %}
   namespace repositories {
+
     {% for SOLVER in SOLVER_INSTANCES %}
-
     extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
-
     {% endfor %}
   }
-{% endfor %}
-
-
 {% for N in NAMESPACE %}
 }
 {% endfor %}

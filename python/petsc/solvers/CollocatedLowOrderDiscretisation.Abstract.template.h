@@ -40,6 +40,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr double     MaxH = {{MAX_H}};
 
     {{CLASSNAME}}();
+    virtual ~{{CLASSNAME}}();
 
     /**
      * Initialise a vertex degree of freedom
@@ -54,7 +55,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       const tarch::la::Vector< {{CARDINALITY}}, double >&  value,
       const tarch::la::Vector< {{CARDINALITY}}, double >&  rhs
       {% endif %}
-    );
+    ) = 0;
 
     /**
     virtual void startInitialisation() = 0;

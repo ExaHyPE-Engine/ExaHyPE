@@ -10,4 +10,9 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 }
 
 
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {
+
+}
+
+
 
