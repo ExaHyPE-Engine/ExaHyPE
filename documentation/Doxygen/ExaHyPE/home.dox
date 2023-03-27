@@ -14,6 +14,8 @@
 \li \subpage exahype2_dg
 \li \subpage exahype2_dg_DG_AMD
 \li \subpage exahype2_fv_Rusanov
+\li \subpage exahype_finite_volumes
+
 
 
 @image html logos/ExaHyPE-logo.png

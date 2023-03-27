@@ -1,8 +1,11 @@
 /** 
-\page finite_volumes_tex 
+@page exahype_finite_volumes Finite Volumes
 
-A block-structured AMR code for Finite Volumes {#section:python-api-examples:finite-volumes}
-==============================================
+@todo figure out how to make this a subpage of a subpage. ie, 
+when i tried to insert this page as a subpage of exhaype2/tutorials, a range of 
+other random pages were drawn into the navtree for tutorials.
+
+## A block-structured AMR code for Finite Volumes 
 
 We create a simple Finite Volumes solver here. The examples starts with
 a simple regular grid, parallelises this grid, and finally adds adaptive
@@ -15,8 +18,7 @@ and time-consuming process despite the fact that I do offer a toolbox
 for block-structured code. For most applications, I therefore recommend
 to realise FV codes through ExaHyPE instead.
 
-Setting up the data structures
-------------------------------
+## Setting up the data structures
 
 We model our grid as an AMR grid consisting of $N \times N$ blocks. We
 call these blocks *patches*. In the example below, we have chosen $N=7$.
@@ -52,8 +54,7 @@ auxiliary face data structures, too:
 Before we generate the code, we export some of the Python constants that
 we use into C/C++, so we have it available there, too:
 
-Administration of the data structures
--------------------------------------
+## Administration of the data structures
 
 Projecting the patches onto the face data structures and back is a
 mechnical task. Therefore,  offers a toolbox to relieve you from the
@@ -79,8 +80,7 @@ this auxiliary patch and uses the faces to supplement it with halo data
 around it. So that it, you get the original patch data plus the cells
 around it in one big patch.
 
-A manually implemented FV scheme
---------------------------------
+## A manually implemented FV scheme
 
 As the name suggests, the reconstruction step is typically combined with
 the invocation of some computation on the patch. We give a simple
@@ -164,8 +164,7 @@ thing is, it also forwards two double pointer (`reconstructedPatch` and
 The string holding this routine is passed into the instantiation of the
 type `ApplyFunctorOnPatch` and thus is injected into the generated code.
 
-Plot results
-------------
+## Plot results
 
 For the plotting of patch-based AMR,  provides predefined action sets,
 too. They dump the output into Peano's patch format. Chapter
