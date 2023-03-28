@@ -1,6 +1,6 @@
 /**
 
-@page swift_initial_conditions Initial conditions
+@page swift_initial_conditions Initial conditions and particle insertion
 
 There are two main ways to implement initial conditions for the
 simulations:
@@ -65,5 +65,31 @@ Some of Swift's Python scripts use HDF5, too, and therefore need the package
 h5py which you can install via pip, e.g.
 
          pip install h5py
-         
+ 
+ 
+## General remarks on particle insertion
+
+There are a few key policies to follow whenever you insert particles:
+
+1. Particles have to be created on the heap, i.e. via an explicit new
+
+2. Every particle has to be initialised. You do this by calling toolbox::particles::init().
+   As you need need this helper routine, you have to include toolbox/particles/particles.h.
+   
+3. Particles have to be inserted into cells, and you should not try to do this
+   on your own. Instead use the helper function from particles.h:
+   
+~~~~~~~~~~~~~~~~~~~~~~
+      toolbox::particles::insertParticleIntoCell(
+        marker,
+        particle,
+        fineGridVerticesParticleSet
+      );
+~~~~~~~~~~~~~~~~~~~~~~
+
+Obviously, the names for the parameters for toolbox::particles::insertParticleIntoCell() 
+depend on the location from where you call the routine.
+
+
+*/
          
