@@ -33,22 +33,37 @@ In order to make use of the HDF5 reader, Peano must have been configured with
 
           ./configure ... --enable-particles --enable-swift --with-hdf5
 
-Since this also has to be supported by the compiler used at the application
-level, it is recommended to include the following flags:
+
+### With Spack/containers
+
+We assume that ``$HDF5_ROOT`` names the directory that contains your local HDF5 installation,
+e.g. ``/usr`` or ``/usr/lib/x86_64-linux-gnu/hdf5/serial/``.
+In this case, it is recommended to include the following flags:
 
           ./configure ...  --enable-particles --enable-swift --with-hdf5 \
                 CXXFLAGS="-I/$HDF5_ROOT/include" \
-                LDFLAGS="-L/$HDF5_ROOT/lib" \
+                LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" \
                 LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"
 
-where ``$HDF5_ROOT`` should be the directory that contains your local HDF5 installation,
-e.g. ``/usr`` or ``/usr/lib/x86_64-linux-gnu/hdf5/serial/``.
 
 
+### Ubuntu
+
+With Ubuntu, the packages you need are 
+
+- libhdf5-serial-dev
+- hdf5-tools
+
+and then you can configure with 
 
 
+         ./configure --enable-particles --enable-swift --enable-loadbalancing --enable-blockstructured --enable-exahype2 --with-hdf5 CXXFLAGS="--std=c++20 -I/usr/include/hdf5/serial" LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++" --build=x86_64 --host=x86_64
 
+### Python
 
+Some of Swift's Python scripts use HDF5, too, and therefore need the package
+h5py which you can install via pip, e.g.
 
-
-*/
+         pip install h5py
+         
+         

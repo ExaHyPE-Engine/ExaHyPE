@@ -150,6 +150,9 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     delete *p;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
   }
+  else {
+    assertion2( false, (*p)->toString(), marker.toString() );
+  }
 }
 """)
 
