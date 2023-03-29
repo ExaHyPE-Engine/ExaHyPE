@@ -534,11 +534,11 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
       _InternalEnergyWithinVoxel.push_back ( _InternalEnergy [_index] );
       _ParticleIDsWithinVoxel.push_back    ( _ParticleIDs    [_index] );
 
-      logDebug( "getParticlesWithinVoxel()", "_VelocityWithinVoxel:        " << _VelocityWithinVoxel[_index] );
-      logDebug( "getParticlesWithinVoxel()", "_MassWithinVoxel:            " << _MassWithinVoxel[_index] );
-      logDebug( "getParticlesWithinVoxel()", "_SmoothingLengthWithinVoxel: " << _SmoothingLengthWithinVoxel[_index] );
-      logDebug( "getParticlesWithinVoxel()", "_InternalEnergyWithinVoxel:  " << _InternalEnergyWithinVoxel[_index] );
-      logDebug( "getParticlesWithinVoxel()", "_ParticleIDsWithinVoxel:     " << _ParticleIDsWithinVoxel[_index] );
+      logDebug( "getParticlesWithinVoxel()", "_VelocityWithinVoxel:        " << _VelocityWithinVoxel.back() );
+      logDebug( "getParticlesWithinVoxel()", "_MassWithinVoxel:            " << _MassWithinVoxel.back() );
+      logDebug( "getParticlesWithinVoxel()", "_SmoothingLengthWithinVoxel: " << _SmoothingLengthWithinVoxel.back() );
+      logDebug( "getParticlesWithinVoxel()", "_InternalEnergyWithinVoxel:  " << _InternalEnergyWithinVoxel.back() );
+      logDebug( "getParticlesWithinVoxel()", "_ParticleIDsWithinVoxel:     " << _ParticleIDsWithinVoxel.back() );
 
       if (remove) {
         p = _Coordinates.erase(p);
