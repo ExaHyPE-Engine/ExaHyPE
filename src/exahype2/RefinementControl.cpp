@@ -3,6 +3,7 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
 #include "peano4/grid/grid.h"
+#include "peano4/parallel/SpacetreeSet.h"
 
 
 exahype2::RefinementCommand exahype2::getDefaultRefinementCommand() {
