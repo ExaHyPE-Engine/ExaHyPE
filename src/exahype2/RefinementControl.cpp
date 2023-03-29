@@ -111,6 +111,7 @@ void exahype2::RefinementControl::addCommand(
   logTraceInWith3Arguments( "addCommand()", x, h, ::toString(command) );
   tarch::multicore::Lock lock( _semaphore );
   
+  assertion(lifetime>=1);
   _maxLifetime = std::max( _maxLifetime, lifetime );
 
   switch (command) {
@@ -200,26 +201,37 @@ void exahype2::RefinementControl::triggerSendOfCopyOfCommittedEvents() {
 void exahype2::RefinementControl::finishStep() {
   _committedEvents.clear();
 
-  int maxLifetime = 0;
-  NewEvents::iterator p = _newEvents.begin();
-  while (p!=_newEvents.end()) {
-    _committedEvents.push_back( p->first );
-    p->second--;
-    if (p->second<=0) {
-      p = _newEvents.erase(p);
+  if ( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()==0 ) {
+    int maxLifetime = 0;
+    NewEvents::iterator p = _newEvents.begin();
+    while (p!=_newEvents.end()) {
+      _committedEvents.push_back( p->first );
+      p->second--;
+      if (p->second<=0) {
+        p = _newEvents.erase(p);
+      }
+      else {
+        maxLifetime = std::max( maxLifetime, p->second );
+        p++;
+      }
     }
-    else {
-      maxLifetime = std::max( maxLifetime, p->second );
-      p++;
+
+    if (not _committedEvents.empty()) {
+      logInfo(
+        "finishStep()",
+        "activate " << _committedEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep). Keep " <<
+        _newEvents.size() << " event(s) to be re-delivered later (max lifetime " << maxLifetime << ")"
+      );
     }
   }
-
-  if (not _committedEvents.empty()) {
-    logInfo(
-      "finishStep()",
-      "activate " << _committedEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep). Keep " <<
-      _newEvents.size() << " event(s) to be re-delivered later (max lifetime " << maxLifetime << ")"
-    );
+  else {
+    _newEvents.insert( _newEvents.begin(), _committedEvents.begin(), _committedEvents.end() );
+    if (not _committedEvents.empty()) {
+      logInfo(
+        "finishStep()",
+        "activate all " << _committedEvents.size() << " refinement/erase instructions from the new event list, as tree seems to be under construction still"
+      );
+    }
   }
 
   #ifdef Parallel

@@ -453,7 +453,12 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
           ) {
             static bool wroteWarning = false;
             if (not wroteWarning) {
-              logInfo( "getStrategyStep()", "local rank does not violate balancing condition between ranks but its local balancing is not good. However, there are already so many subpartitions locally that we assume that we already have a quite fine-granular decomposition. Skip further split-ups therefore" );
+              logInfo(
+                "getStrategyStep()",
+                "local rank does not violate balancing condition between ranks but its local balancing is not good. However, there are already " <<
+                peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() << " subpartitions locally and we are only supposed to use " <<
+                _configuration->getMaxLocalTreesPerRank(_state) << ". Skip any further domain decomposition therefore"
+              );
               wroteWarning = true;
             }
             return Action::None;

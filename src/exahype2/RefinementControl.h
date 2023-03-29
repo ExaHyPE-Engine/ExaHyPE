@@ -69,7 +69,9 @@ std::string toString( exahype2::RefinementCommand value );
  * - In the third grid sweep, the mesh is refined actually.
  *
  * Due to the overall three-step mechanism, we make the bookkeeping of the
- * events persistent. Each event can potentially survive a couple of sets.
+ * events persistent. Each event can potentially survive a couple of sets
+ * within the new events. It is rolled over multiple times until it "expires"
+ * within the new events.
  *
  * @see _committedEvents
  *
@@ -77,8 +79,7 @@ std::string toString( exahype2::RefinementCommand value );
  *
  * ## Multithreading
  *
- * As we use the class within a multithreaded environment, things become a
- * little bit more complicated. Peano 4 creates an observer object per
+ * As we use the class within a multithreaded environment, Peano 4 creates an observer object per
  * spacetree through a clone from observer no -1 (per rank, so this observer
  * is not really an observer. It is rather an observer prototype) and then
  * asks this observer how to refine. So we design the following pattern:
@@ -91,15 +92,35 @@ std::string toString( exahype2::RefinementCommand value );
  *   commands into this local object.
  * - When we are done, we merge the local copy back.
  *
- * So far, everything is simple and straightforward. The only tricky part is
- * when to decide when to kick out old refine/coarsen commands. The prototype
- * refinement control object is kind of a repository where we take copies from,
- * but we never know how many copies will be created in the end. So we make
- * each local copy notify the global guy that it will accumulate something, i.e.
- * eventually merge() its content into the global object. As a result, the
- * global can work with two buffers - an accumulation buffer and a valid one.
- * Whenever we know that all copies have merged their stuff back, we swap/update
- * the buffers.
+ *
+ * ## MPI
+ *
+ * After each mesh traversal, we expect the code to invoke finishStep().
+ * Here, we exchange all local events with the other ranks. This is an
+ * important step for two reasons:
+ *
+ * - MPI ranks might fork trees which end up on other ranks. This other
+ *   rank has to know if there had been refinement events.
+ * - If domain boundaries between ranks are ragged, we might end up with
+ *   many tiny refinement events which cannot be merged into one large
+ *   one. By exchanging these tiny guys, we can merge the events on each
+ *   and every rank and come up with one large region which has to be
+ *   refined.
+ *
+ * While merging for refinement controls is only an optimisation, merging
+ * coarsening commands is mandatory. Only refined regions completely
+ * contained within one huge coarsening instruction are actually coarsened.
+ *
+ *
+ * ## Lifecycle
+ *
+ * Whenever a code inserts a new event, it has to specify the lifetime.
+ * For Runge-Kutta 4, for example, you might want to pass in a four as
+ * one step might trigger a refinement, but you want to realise the
+ * refinement at the end of the time step, i.e. four steps later.
+ *
+ * Events received via MPI have no lifecycle. We therefore assign it the
+ * maximum lifetime plus an offset.
  *
  *
  */
@@ -164,30 +185,22 @@ class exahype2::RefinementControl: public tarch::services::Service {
      * Should be called after each traversal per rank.
      *
      * This routine rolls over _newEvents into the _committedEvents if they are still
-     * alive.
+     * alive. That is, _newEvents holds all the events including an "expiry date", while
+     * _committedEvents holds only those which are committed for this mesh traversal.
      *
-     * ## MPI handing
+     * We clear the committed events and then copy the new events over one by one unless
+     * they have expired. If they have expired, we delete them within _newEvents. In
+     * this context, we also reduce the maxLifetime, but this one is solely used for
+     * reporting purposes. It is not used. The global maximum lifetime is stored within
+     * _maxLifetime. This one is monotonously growing, while the locally reduced value
+     * here might decrease over time if no new events are added.
      *
-     * The MPI data exchange here is non-trivial, as we do not know which rank has how
-     * many messages. So we run in three steps: First, we send the committed events out to
-     * all partners. These sends are done non-blocking. They logically are a broadcast.
-     * Second, we loop over all the arising MPI_Requests and poll until they are finished.
-     * So we know all data has gone out. This is a while loop with the predicate
+     * Once we have committed all non-expiring events, we exchange them via MPI.
+     * For this, we first wait for all previous non-blocking communication to
+     * terminate (freeAllPendingSendRequests()), I create a copy of the
+     * committed events and then delegate the data exchange to
+     * triggerSendOfCopyOfCommittedEvents().
      *
-     *       not sendRequests.empty()
-     *
-     * Third, we hook into this while loop and probe for all the other ranks if they
-     * have sent us anything. So while we wait for our sends to go out, we poll the other
-     * ranks for their data, integrate this information into our data structures and
-     * therefore also free any MPI queues.
-     *
-     * As we build up the incoming data while we wait for our sends to go out, we have to
-     * send from a copy of the actual data (copyOfCommittedEvents): We cannot alter the
-     * outgoing data due to polls for incoming messages while we have still pending sends.
-     *
-     * It is important to work with non-blocking calls here, as the code otherwise tends
-     * to deadlock if we have a lot of events. This is due to MPI falling back to
-     * rendeszvouz message passing if the data that is on-the-fly becomes too large.
      */
     void finishStep();
 
@@ -275,7 +288,39 @@ class exahype2::RefinementControl: public tarch::services::Service {
     std::vector<MPI_Request*>                      _sendRequests;
     std::vector< peano4::grid::GridControlEvent >  _copyOfCommittedEvents;
 
+    /**
+     * Complete pending sends from previous mesh traversal
+     *
+     * @see triggerSendOfCopyOfCommittedEvents()
+     */
     void freeAllPendingSendRequests();
+
+
+    /**
+      *
+      * ## MPI handing
+      *
+      * The MPI data exchange here is non-trivial, as we do not know which rank has how
+      * many messages. So we run in three steps: First, we send the committed events out to
+      * all partners. These sends are done non-blocking. They logically are a broadcast.
+      * Second, we loop over all the arising MPI_Requests and poll until they are finished.
+      * So we know all data has gone out. This is a while loop with the predicate
+      *
+      *       not sendRequests.empty()
+      *
+      * Third, we hook into this while loop and probe for all the other ranks if they
+      * have sent us anything. So while we wait for our sends to go out, we poll the other
+      * ranks for their data, integrate this information into our data structures and
+      * therefore also free any MPI queues.
+      *
+      * As we build up the incoming data while we wait for our sends to go out, we have to
+      * send from a copy of the actual data (copyOfCommittedEvents): We cannot alter the
+      * outgoing data due to polls for incoming messages while we have still pending sends.
+      *
+      * It is important to work with non-blocking calls here, as the code otherwise tends
+      * to deadlock if we have a lot of events. This is due to MPI falling back to
+      * rendeszvouz message passing if the data that is on-the-fly becomes too large.
+      */
     void triggerSendOfCopyOfCommittedEvents();
     #endif
 };
