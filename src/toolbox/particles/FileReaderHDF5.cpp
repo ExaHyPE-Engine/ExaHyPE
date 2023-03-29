@@ -510,6 +510,9 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
 
   _index = 0; 
 
+  /* Loop over all coordinates that have been read in. When you find a 
+   * particle that belongs in this voxel, remove it from the list of particles
+   * to loop over so they don't get checked again in other voxels. */
   while ( p!=_Coordinates.end() ) {
 
     bool overlaps = true;
