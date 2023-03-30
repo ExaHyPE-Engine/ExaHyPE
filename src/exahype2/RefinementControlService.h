@@ -98,6 +98,10 @@ class exahype2::RefinementControlService: public tarch::services::Service {
      * committed events and then delegate the data exchange to
      * triggerSendOfCopyOfCommittedEvents().
      *
+     * Finally, we append the remote events to our set of committed events.
+     * This has to happen after the actual MPI exchange, so we can be sure
+     * that remote events are not immediately sent back again.
+     *
      */
     void finishStep();
 
@@ -120,7 +124,9 @@ class exahype2::RefinementControlService: public tarch::services::Service {
      * Container to accumulate new events. This is a list as we may assume
      * that a lot of inserts are done per iteration.
      */
-    RefinementControl::NewEvents    _newEvents;
+    RefinementControl::NewEvents    _localNewEvents;
+
+    std::list< peano4::grid::GridControlEvent >  _remoteNewEvents;
 
     /**
      * Container with all the valid events. Is an extract from _newEvents

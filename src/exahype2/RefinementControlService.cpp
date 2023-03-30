@@ -35,13 +35,14 @@ void exahype2::RefinementControlService::shutdown() {
 
 void exahype2::RefinementControlService::receiveDanglingMessages() {
   #ifdef Parallel
-  const int DefaultLifetimeReceivedEvent = 1;
   for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
     if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
       MPI_Status status;
       int        flag;
       MPI_Iprobe(rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
       if (flag) {
+        tarch::multicore::Lock lock(_semaphore);
+
         int numberOfMessages;
         MPI_Get_count( &status, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), &numberOfMessages );
 // @todo Debug
@@ -50,15 +51,11 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
         receiveBuffer.resize( numberOfMessages );
         MPI_Recv( receiveBuffer.data(), numberOfMessages, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
 
-        tarch::multicore::Lock lock( _semaphore );
         for (auto p: receiveBuffer) {
-          _newEvents.push_back( std::pair<peano4::grid::GridControlEvent,int>(
-            p,
-            DefaultLifetimeReceivedEvent
-          ));
+          _remoteNewEvents.push_back( p );
           _committedEvents.push_back( p );
         }
-  logInfo( "receiveDanglingMessages()", "now hold " << _newEvents.size() << " new events and " << _committedEvents.size() << " committed events (valid for this traversal)" );
+  logInfo( "receiveDanglingMessages()", "now hold " << _remoteNewEvents.size() << " new remote events and " << _committedEvents.size() << " committed events (valid for this traversal)" );
       }
     }
   }
@@ -69,7 +66,8 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
 std::string exahype2::RefinementControlService::toString() const {
   std::ostringstream msg;
   msg << "("
-      << "#new-events=" << _newEvents.size()
+      << "#new-local-events=" << _localNewEvents.size()
+      << "#new-remote-events=" << _remoteNewEvents.size()
       << ",#committed-events=" << _committedEvents.size()
       << ")";
   return msg.str();
@@ -78,21 +76,23 @@ std::string exahype2::RefinementControlService::toString() const {
 
 void exahype2::RefinementControlService::merge( const RefinementControl& control ) {
   tarch::multicore::Lock lock(_semaphore);
-  _newEvents.insert( _newEvents.end(), control._newEvents.begin(), control._newEvents.end() );
+  _localNewEvents.insert( _localNewEvents.end(), control._newEvents.begin(), control._newEvents.end() );
 }
 
 
 void exahype2::RefinementControlService::finishStep() {
+  tarch::multicore::Lock lock(_semaphore);
+
   _committedEvents.clear();
 
   int maxLifetime = 0;
-  RefinementControl::NewEvents::iterator p = _newEvents.begin();
-  while (p!=_newEvents.end()) {
+  RefinementControl::NewEvents::iterator p = _localNewEvents.begin();
+  while (p!=_localNewEvents.end()) {
     _committedEvents.push_back( p->first );
     p->second--;
 
     if (p->second<=0) {
-      p = _newEvents.erase(p);
+      p = _localNewEvents.erase(p);
     }
     else {
       maxLifetime = std::max( maxLifetime, p->second );
@@ -104,7 +104,8 @@ void exahype2::RefinementControlService::finishStep() {
     logInfo(
       "finishStep()",
       "activate " << _committedEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep). Keep " <<
-      _newEvents.size() << " event(s) to be re-delivered later (max lifetime " << maxLifetime << ")"
+      _localNewEvents.size() << " local event(s) to be re-delivered later (max lifetime " << maxLifetime << ") besides the " <<
+      _remoteNewEvents.size() << " remote events which will also be re-delivered next"
      );
   }
 
@@ -113,6 +114,11 @@ void exahype2::RefinementControlService::finishStep() {
   _copyOfCommittedEvents = _committedEvents;
   triggerSendOfCopyOfCommittedEvents();
   #endif
+
+  for (auto p: _remoteNewEvents) {
+     _committedEvents.push_back(p);
+  }
+  _remoteNewEvents.clear();
 }
 
 
