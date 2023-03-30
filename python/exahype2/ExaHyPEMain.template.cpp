@@ -130,7 +130,7 @@ bool selectNextAlgorithmicStep() {
   }
   else if (not gridConstructed) {
     // Grid construction termination criterion
-    if (
+ /*   if (
       tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= repositories::getMinAdmissibleMeshSize()
       and
       repositories::loadBalancer.getGlobalNumberOfTrees()<=globalNumberOfTrees
@@ -140,10 +140,12 @@ bool selectNextAlgorithmicStep() {
       addGridSweepWithoutGridRefinementNext = false;
       globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     }
-    else if ( tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < tarch::la::max( minH ) ) {
+    else */
+    if ( tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < tarch::la::max( minH ) ) {
       minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH();
       logDebug( "selectNextAlgorithmicStep()", "mesh has refined, so reset minH=" << minH << " and postpone further refinement" );
       addGridSweepWithoutGridRefinementNext = true;
+      stationaryGridCreationSteps           = 0;
     }
     else if (repositories::loadBalancer.getGlobalNumberOfTrees()>globalNumberOfTrees) {
       logInfo( 
@@ -151,9 +153,15 @@ bool selectNextAlgorithmicStep() {
         "mesh has rebalanced recently, so postpone further refinement)" 
       );
       addGridSweepWithoutGridRefinementNext = true;
+      stationaryGridCreationSteps           = 0;
       globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     }
-    else if (stationaryGridCreationSteps>5) {
+    else if (  
+      stationaryGridCreationSteps>5
+      // @todo wicthgi
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) == repositories::StepRepository::Steps::CreateGrid
+    ) {
       logInfo( "selectNextAlgorithmicStep()", "grid has been stationary for quite some time. Terminate grid construction" );
       addGridSweepWithoutGridRefinementNext = false;
       gridConstructed = true;
