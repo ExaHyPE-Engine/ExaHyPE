@@ -554,7 +554,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
         {
-          otterLoopIterationBegin();
           newMaxEigenvalue = std::max(
               newMaxEigenvalue,
               internal::reduceMaxEigenvalue_LoopBody(
