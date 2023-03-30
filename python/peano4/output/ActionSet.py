@@ -11,10 +11,16 @@ import peano4.solversteps.ActionSet
 
 class ActionSet(object):
   def __init__(self,classname,namespace,subdirectory,implementation = None):
-    """
+    """!
+     
+     Implementation of an Action Set
+    
+     Please consult peano4.solversteps.ActionSet for a description.
+     
      implementation Should be of type peano4.solversteps.Mapping or None. If
                     it is None, then the generated stuff will be a sole
                     interface.
+                    
     """
     self.classname    = classname
     self.namespace    = namespace

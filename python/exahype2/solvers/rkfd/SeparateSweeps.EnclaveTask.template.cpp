@@ -367,7 +367,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   bool foundOffloadingBranch = false;
 
-  otterParallelBegin();
 
   #if defined(GPUOffloadingOMP)
   if (targetDevice>=0) {
@@ -395,7 +394,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
   }
 
-  otterParallelEnd();
 
   //
   // ==================

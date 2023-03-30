@@ -7,6 +7,7 @@ import peano4
 import dastgen2
 import peano4.dastgen2
 
+
 class SPHLeapfrogFixedInteractionRadius(Particle):
   """
 
@@ -54,7 +55,14 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   points, you have a vertex marker which gives you the position of the 
   vertex to which a particular is associated, and you have the localParticles.
   This is a vector of pointers in this particular case.
+ 
+  ## Attributes
   
+  name: String
+    To be in line with other conventions, I recommend you start with an 
+    uppercase letter. This has to be a valid C++ identifier, i.e. don't 
+    use any special symbols besides an underscore.
+   
   @see peano4::datamanagement::CellMarker
   @see peano4::datamanagement::VertexMarker
   
@@ -112,13 +120,112 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     # Default value corresponds to IEEE doubles.
     self._mantissa_size = 52
 
-#   This is now done called from the python script for the experiment
-#    self.declare_sph_particle_attributes()
-
     # Project namespace to have consistent use of exported Constants in kernels
     # Not used right now.
     self._swift_project_namespace = swift_project_namespace
     
+    # Baseline particle properties --------------------------------------------------------------
+    self.mass             = dastgen2.attributes.Double("mass",
+                                                              valid_mantissa_bits=self._mantissa_size)
+    self.velocity         = peano4.dastgen2.Peano4DoubleArray("v","Dimensions",
+                                                              valid_mantissa_bits=self._mantissa_size)
+    self.acceleration     = peano4.dastgen2.Peano4DoubleArray("a","Dimensions",
+                                                              valid_mantissa_bits=self._mantissa_size)
+    self.data.add_attribute( self.mass )
+    self.data.add_attribute( self.velocity )
+    self.data.add_attribute( self.acceleration )
+
+    # Basic SPH properties
+    self.density = dastgen2.attributes.Double("density",
+                                              valid_mantissa_bits=self._mantissa_size)
+    self.pressure= dastgen2.attributes.Double("pressure",
+                                              valid_mantissa_bits=self._mantissa_size)
+    self.smoothL = dastgen2.attributes.Double("smoothingLength",
+                                              valid_mantissa_bits=self._mantissa_size)
+    self.u       = dastgen2.attributes.Double("u",
+                                              valid_mantissa_bits=self._mantissa_size)
+    self.uDot    = dastgen2.attributes.Double("uDot",
+                                              valid_mantissa_bits=self._mantissa_size)
+    self.data.add_attribute( self.density )
+    self.data.add_attribute( self.pressure )
+    self.data.add_attribute( self.smoothL )
+    self.data.add_attribute( self.u )
+    self.data.add_attribute( self.uDot )
+
+    # Variable smoothing length scheme ---------------------------------------------
+    self.f        = dastgen2.attributes.Double("f",
+                                               valid_mantissa_bits=self._mantissa_size)
+    self.wcount_dh= dastgen2.attributes.Double("wcount_dh",
+                                               valid_mantissa_bits=self._mantissa_size)
+    self.rho_dh   = dastgen2.attributes.Double("rho_dh",
+                                               valid_mantissa_bits=self._mantissa_size)
+    self.hleft    = dastgen2.attributes.Double("hLeft",
+                                               valid_mantissa_bits=self._mantissa_size)
+    self.hright   = dastgen2.attributes.Double("hRight",
+                                               valid_mantissa_bits=self._mantissa_size)
+    self.data.add_attribute(self.f)
+    self.data.add_attribute(self.wcount_dh)
+    self.data.add_attribute(self.rho_dh)
+    self.data.add_attribute(self.hleft)
+    self.data.add_attribute(self.hright)
+
+    # Newton-Raphson iterations ----------------------------------------------------
+    self.smoothL_prev   = dastgen2.attributes.Double("smoothingLengthPrevious",
+                                                     valid_mantissa_bits=self._mantissa_size)
+    self.wcount         = dastgen2.attributes.Double("wcount",
+                                                     valid_mantissa_bits=self._mantissa_size)
+    self.hDot           = dastgen2.attributes.Double("hDot",
+                                                     valid_mantissa_bits=self._mantissa_size)
+    self.residual       = dastgen2.attributes.Double("residual",
+                                                     valid_mantissa_bits=self._mantissa_size)
+    self.iteration_count= dastgen2.attributes.Integer("iterCount")
+    self.has_converged  = dastgen2.attributes.Boolean("hasConverged")
+    self.data.add_attribute(self.smoothL_prev)
+    self.data.add_attribute(self.wcount)
+    self.data.add_attribute(self.hDot)
+    self.data.add_attribute(self.residual)
+    self.data.add_attribute(self.iteration_count)
+    self.data.add_attribute(self.has_converged)
+
+    # Artificial viscosity scheme -------------------------------------------------
+    self.balsara   = dastgen2.attributes.Double("balsara",
+                                                valid_mantissa_bits=self._mantissa_size)
+    if( self._hydroDimensions == 3 ):
+      self.rot_v= peano4.dastgen2.Peano4DoubleArray("rot_v", "Dimensions",
+                                                valid_mantissa_bits=self._mantissa_size)
+    else: # Curl is a scalar in lower dimensions
+      self.rot_v     = dastgen2.attributes.Double("rot_v",
+                                                valid_mantissa_bits=self._mantissa_size)    # In 2D sims it only has 1 component (z)
+    self.div_v     = dastgen2.attributes.Double("div_v",
+                                                valid_mantissa_bits=self._mantissa_size)
+    self.v_sig_AV  = dastgen2.attributes.Double("v_sig_AV",
+                                                valid_mantissa_bits=self._mantissa_size)
+    self.soundSpeed= dastgen2.attributes.Double("soundSpeed",
+                                                valid_mantissa_bits=self._mantissa_size)
+    self.data.add_attribute(self.balsara)
+    self.data.add_attribute(self.rot_v)
+    self.data.add_attribute(self.div_v)
+    self.data.add_attribute(self.v_sig_AV)
+    self.data.add_attribute(self.soundSpeed)
+
+    # Extended arrays for time integration consistency
+    self.v_full = peano4.dastgen2.Peano4DoubleArray("v_full","Dimensions",
+                                                    valid_mantissa_bits=self._mantissa_size)
+    self.u_full = dastgen2.attributes.Double("u_full",
+                                                    valid_mantissa_bits=self._mantissa_size)
+    self.data.add_attribute(self.v_full)
+    self.data.add_attribute(self.u_full)
+
+    # Extra ------------------------------------------------------------------------
+    self.has_no_neighbours= dastgen2.attributes.Boolean("hasNoNeighbours")
+    self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
+    self.Ncount           = dastgen2.attributes.Integer("Ncount")              # integer number count
+    self.part_id          = dastgen2.attributes.Integer("partid")
+    self.data.add_attribute(self.has_no_neighbours)
+    self.data.add_attribute(self.is_boundary_part)
+    self.data.add_attribute(self.Ncount)
+    self.data.add_attribute(self.part_id)
+
     pass
 
 
@@ -414,125 +521,17 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     ]
 
 
-  def declare_sph_particle_attributes(self):
-    """
-    SPH Hydro particle attributes
-    """
-
-    # Baseline particle properties --------------------------------------------------------------
-    self.mass             = dastgen2.attributes.Double("mass",
-                                                              valid_mantissa_bits=self._mantissa_size)
-    self.velocity         = peano4.dastgen2.Peano4DoubleArray("v","Dimensions",
-                                                              valid_mantissa_bits=self._mantissa_size)
-    self.acceleration     = peano4.dastgen2.Peano4DoubleArray("a","Dimensions",
-                                                              valid_mantissa_bits=self._mantissa_size)
-    self.data.add_attribute( self.mass )
-    self.data.add_attribute( self.velocity )
-    self.data.add_attribute( self.acceleration )
-
-    # Basic SPH properties
-    self.density = dastgen2.attributes.Double("density",
-                                              valid_mantissa_bits=self._mantissa_size)
-    self.pressure= dastgen2.attributes.Double("pressure",
-                                              valid_mantissa_bits=self._mantissa_size)
-    self.smoothL = dastgen2.attributes.Double("smoothingLength",
-                                              valid_mantissa_bits=self._mantissa_size)
-    self.u       = dastgen2.attributes.Double("u",
-                                              valid_mantissa_bits=self._mantissa_size)
-    self.uDot    = dastgen2.attributes.Double("uDot",
-                                              valid_mantissa_bits=self._mantissa_size)
-    self.data.add_attribute( self.density )
-    self.data.add_attribute( self.pressure )
-    self.data.add_attribute( self.smoothL )
-    self.data.add_attribute( self.u )
-    self.data.add_attribute( self.uDot )
-
-    # Variable smoothing length scheme ---------------------------------------------
-    self.f        = dastgen2.attributes.Double("f",
-                                               valid_mantissa_bits=self._mantissa_size)
-    self.wcount_dh= dastgen2.attributes.Double("wcount_dh",
-                                               valid_mantissa_bits=self._mantissa_size)
-    self.rho_dh   = dastgen2.attributes.Double("rho_dh",
-                                               valid_mantissa_bits=self._mantissa_size)
-    self.hleft    = dastgen2.attributes.Double("hLeft",
-                                               valid_mantissa_bits=self._mantissa_size)
-    self.hright   = dastgen2.attributes.Double("hRight",
-                                               valid_mantissa_bits=self._mantissa_size)
-    self.Omega    = dastgen2.attributes.Double("Omega",
-                                               valid_mantissa_bits=self._mantissa_size)   # PHANTOM (~1/f)
-    self.data.add_attribute(self.f)
-    self.data.add_attribute(self.wcount_dh)
-    self.data.add_attribute(self.rho_dh)
-    self.data.add_attribute(self.hleft)
-    self.data.add_attribute(self.hright)
-    self.data.add_attribute(self.Omega)
-
-    # Newton-Raphson iterations ----------------------------------------------------
-    self.smoothL_prev   = dastgen2.attributes.Double("smoothingLengthPrevious",
-                                                     valid_mantissa_bits=self._mantissa_size)
-    self.wcount         = dastgen2.attributes.Double("wcount",
-                                                     valid_mantissa_bits=self._mantissa_size)
-    self.hDot           = dastgen2.attributes.Double("hDot",
-                                                     valid_mantissa_bits=self._mantissa_size)
-    self.residual       = dastgen2.attributes.Double("residual",
-                                                     valid_mantissa_bits=self._mantissa_size)
-    self.iteration_count= dastgen2.attributes.Integer("iterCount")
-    self.has_converged  = dastgen2.attributes.Boolean("hasConverged")
-    self.data.add_attribute(self.smoothL_prev)
-    self.data.add_attribute(self.wcount)
-    self.data.add_attribute(self.hDot)
-    self.data.add_attribute(self.residual)
-    self.data.add_attribute(self.iteration_count)
-    self.data.add_attribute(self.has_converged)
-
-    # Artificial viscosity scheme -------------------------------------------------
-    self.balsara   = dastgen2.attributes.Double("balsara",
-                                                valid_mantissa_bits=self._mantissa_size)
-    if( self._hydroDimensions == 3 ):
-      self.rot_v= peano4.dastgen2.Peano4DoubleArray("rot_v", "Dimensions",
-                                                valid_mantissa_bits=self._mantissa_size)
-    else: # Curl is a scalar in lower dimensions
-      self.rot_v     = dastgen2.attributes.Double("rot_v",
-                                                valid_mantissa_bits=self._mantissa_size)    # In 2D sims it only has 1 component (z)
-    self.div_v     = dastgen2.attributes.Double("div_v",
-                                                valid_mantissa_bits=self._mantissa_size)
-    self.v_sig_AV  = dastgen2.attributes.Double("v_sig_AV",
-                                                valid_mantissa_bits=self._mantissa_size)
-    self.soundSpeed= dastgen2.attributes.Double("soundSpeed",
-                                                valid_mantissa_bits=self._mantissa_size)
-    self.data.add_attribute(self.balsara)
-    self.data.add_attribute(self.rot_v)
-    self.data.add_attribute(self.div_v)
-    self.data.add_attribute(self.v_sig_AV)
-    self.data.add_attribute(self.soundSpeed)
-
-    # Extended arrays for time integration consistency
-    self.v_full = peano4.dastgen2.Peano4DoubleArray("v_full","Dimensions",
-                                                    valid_mantissa_bits=self._mantissa_size)
-    self.u_full = dastgen2.attributes.Double("u_full",
-                                                    valid_mantissa_bits=self._mantissa_size)
-    self.data.add_attribute(self.v_full)
-    self.data.add_attribute(self.u_full)
-
-    # Extra ------------------------------------------------------------------------
-    self.has_no_neighbours= dastgen2.attributes.Boolean("hasNoNeighbours")
-    self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
-    self.Ncount           = dastgen2.attributes.Integer("Ncount")              # integer number count
-    self.part_id          = dastgen2.attributes.Integer("partid")
-    self.data.add_attribute(self.has_no_neighbours)
-    self.data.add_attribute(self.is_boundary_part)
-    self.data.add_attribute(self.Ncount)
-    self.data.add_attribute(self.part_id)
-
-
-  """
-  Set the eta factor used by the SPH kernel to target a certain number of
-  neighbour particles.
-  The default value is eta = 1.235.
-  """
   @property
   def eta_factor(self):
+    """
+  
+    Set the eta factor used by the SPH kernel to target a certain number of
+    neighbour particles.
+    The default value is eta = 1.235.
+  
+    """
     return self._eta_factor
+
 
   @eta_factor.setter
   def eta_factor(self, eta_factor):
@@ -541,13 +540,16 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
       raise ValueError("SPH eta factor value not valid.")
     self._eta_factor = eta_factor
 
-  """
-  Viscosity parameters of the Minimal SPH model. Default SWIFT values are
-  alpha_av=0.8
-  and beta_av=3.
-  """
+
   @property
   def alpha_av(self):
+    """
+    
+    Viscosity parameters of the Minimal SPH model. Default SWIFT values are
+    alpha_av=0.8
+    and beta_av=3.
+  
+    """
     return self._alpha_av
 
   @alpha_av.setter
@@ -569,16 +571,16 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self._beta_av = beta_av
 
 
-
-  """
-  Set the limits allowed for the SPH smoothing length. Notice that the max value
-  is bounded by Peano's cutoff radius as h_max = R_cutoff_max = max_grid_size /
-  gamma_k, where gamma_k is the SPH kernel factor that relates h and H.
-  Typically gamma_k = 2, so h_max = max_grid_size / 2.
-  """
-
   @property
   def h_hydro_min(self):
+    """
+    
+    Set the limits allowed for the SPH smoothing length. Notice that the max value
+    is bounded by Peano's cutoff radius as h_max = R_cutoff_max = max_grid_size /
+    gamma_k, where gamma_k is the SPH kernel factor that relates h and H.
+    Typically gamma_k = 2, so h_max = max_grid_size / 2.
+    
+    """
     print('get h_hydro_min method called.')
     return self._h_hydro_min
 
@@ -602,13 +604,16 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self._h_hydro_max = h_hydro_max
 
 
-  """
-  Tolerance for Newton-Raphson convergence criterion.
-  """
   @property
   def h_tolerance(self):
+    """
+    
+    Tolerance for Newton-Raphson convergence criterion.
+    
+    """
     print('get h_tolerance method called.')
     return self._h_tolerance
+
 
   @h_tolerance.setter
   def h_tolerance(self, h_tolerance):
@@ -617,14 +622,15 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
       raise ValueError("Value of h_tolerance cannot be larger than 1.")
     self._h_tolerance = h_tolerance
 
-  """
-  Max number of iterations to adapt the SPH smoothing length
-  """
 
   @property
   def h_max_iterations(self):
+    """
+    Max number of iterations to adapt the SPH smoothing length
+    """
     print('get h_max_iterations method called.')
     return self._h_max_iterations
+
 
   @h_max_iterations.setter
   def h_max_iterations(self, h_max_iterations):
@@ -633,14 +639,18 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
       raise ValueError("Value of h_max_iterations is too large.")
     self._h_max_iterations = h_max_iterations
 
-  """
-  Set the mantissa size of doubles and Peano double arrays if
-  we want to use reduced precission via Clang annotations. As a reference,
-  floats have mantissa size = 23.
-  """
+
   @property
   def mantissa_size(self):
+    """
+    
+    Set the mantissa size of doubles and Peano double arrays if
+    we want to use reduced precission via Clang annotations. As a reference,
+    floats have mantissa size = 23.
+    
+    """
     return self._mantissa_size
+
 
   @mantissa_size.setter
   def mantissa_size(self, mantissa_size):
@@ -649,11 +659,14 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
       raise ValueError("Mantissa size has to be larger than 0.")
     self._mantissa_size = mantissa_size
 
-  """
-  Transform namespace into cpp format. Could be used to append namespace to
-  constants in kernels (not used currently).
-  """
+
   def get_cpp_namespace_from_project_namespace(self):
+    """
+    
+    Transform namespace into cpp format. Could be used to append namespace to
+    constants in kernels (not used currently).
+    
+    """
     namespace = ""
     for entry in self._swift_project_namespace:
       namespace = namespace + "::" + entry

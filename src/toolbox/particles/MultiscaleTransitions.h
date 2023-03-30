@@ -10,7 +10,7 @@
 namespace toolbox {
   namespace particles {
     /**
-     * @page MultilevelSorting Multilevel sorting tolerance
+     * Multilevel sorting tolerance
      *
      * As the particle association is not unique and not sharp, as we work with
      * floating point numbers. The correlation
@@ -295,8 +295,16 @@ namespace toolbox {
      * Eliminate spatial duplicates
      *
      * Whenever we work with distributed data structures and multilevel transitions
-     * in a distributed memory mindeset, we can run into redundant particles which
-     * we then have to elimninate.
+     * in a distributed memory mindset, we can run into redundant particles which
+     * we then have to eliminate.
+     *
+     * This elimination means that I actually delete the particle held by
+     * particleSet.
+     *
+     * @param particleSet Reference to a C++ container (often a stack) which in turn
+     *   hosts pointers to particles. If we find redundancies, we will delete this
+     *   object where the pointer points to and afterwards remove the pointer from
+     *   the container.
      *
      * @return [int,int] representing [numberOfLocalEliminatedSpatialDuplicates,numberOfVirtualEliminatedSpatialDuplicates]
      */

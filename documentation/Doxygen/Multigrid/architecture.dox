@@ -1,0 +1,43 @@
+/**
+
+@page multigrid_architecture Architecture
+
+
+The multigrid solvers consist of two ingredients: a Python-API and a set of 
+C++ tools. 
+The C++ tools use Peano's tarch and the matrixfree toolbox.
+Overall, the multigrid solvers realise the @ref page_architecture "blueprint of Peano's application architecture".
+They focus, as stand-alone applications, on stationary, elliptic problems that materialise in
+
+@f$ A x = b @f$
+
+
+With the stand-along multigrid solvers, they all realise the following pattern:
+
+1. There is a multigrid project, which serves as a container or general wrapper.
+   and defines the core multigrid solver steps.
+   
+2. The project hosts one or multiple solvers for a particular partial 
+   differential equation.
+   
+3. The multigrid is basically a factory producing a plain Peano 4 Python 
+   representation of the code.
+   
+4. The Peano 4 Python project then finally produces the C++ code.
+
+The multigrid project defines what is to be solved and how (in terms of numerics).
+The Peano 4 project then represents how this is realised in principle, i.e. it
+accommodates a Python representation of all data models and computational steps.
+The C++ outcome is the actual realisation.
+
+
+## File conventions
+
+Each multigrid solver is represented by one instance of 
+petsc.solvers.Solver. Please consult this class' documentation for available 
+subclasses (solver flavours) and information about files that are generated.
+
+
+
+ */
+ 

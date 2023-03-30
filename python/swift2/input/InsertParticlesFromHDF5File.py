@@ -69,9 +69,9 @@ class InsertParticlesFromHDF5File(ActionSet):
        * Initialise the full set of particle attributes 
        */
 
-      // @TODO assign values read from the hdf5 file 
-
       tarch::la::Vector<Dimensions,double> Velocity;
+      /* Density is not encoded in all SWIFT HDF5 IC files as it is recomputed
+      by the density loop anyway. Here we just initialse to an arbitrary value */
       const double Density         = 1.0;
       const double Mass            = MassWithinVoxel[indexEntry];
       const double SmoothingLength = SmoothingLengthWithinVoxel[indexEntry];
@@ -103,7 +103,7 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setMass           ( Mass );
       newParticle->setSmoothingLength( SmoothingLength );
 
-//      /* Hard coded for Sod 1D */
+//      /* Hard coded for Sod 1D test */
 //      newParticle->setSmoothingLength( 0.005 );
 
       newParticle->setU              ( InternalEnergy ); 
@@ -139,7 +139,6 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setHDot  (0.0);        
       newParticle->setWcount(0.0);        
       newParticle->setNcount(0  );        
-      newParticle->setOmega (1.0);  // set to 1 to avoid problem with boundary particles.
       newParticle->setF     (0.0);        
       newParticle->setRho_dh(0.0);           
       newParticle->setWcount_dh(0.0);  
@@ -150,7 +149,6 @@ class InsertParticlesFromHDF5File(ActionSet):
 //      newParticle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
       newParticle->setHasConverged(false);
       newParticle->setHasNoNeighbours(false);
-//      newParticle->setHasBeenKicked(true);
       newParticle->setResidual(0.0);
       newParticle->setIterCount(0);
       newParticle->setIsBoundaryParticle(false);

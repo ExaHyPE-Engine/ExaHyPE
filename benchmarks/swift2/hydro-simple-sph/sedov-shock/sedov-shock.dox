@@ -1,0 +1,16 @@
+/**
+
+ @page benchmarks_swift2_hydro_simple_sph_sedov_shock Sedov Shock (Simple SPH)
+ 
+
+
+ ## Script
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~
+@htmlinclude run.sh
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ */
+ 
+ 

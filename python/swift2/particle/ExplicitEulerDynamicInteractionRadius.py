@@ -10,6 +10,15 @@ class ExplicitEulerDynamicInteractionRadius(Particle):
   
   Extension of the explicit Euler to support dynamic cut-off radius 
   adoption. We try to keep a constant number of particles.
+
+ 
+  ## Attributes
+  
+  name: String
+    To be in line with other conventions, I recommend you start with an 
+    uppercase letter. This has to be a valid C++ identifier, i.e. don't 
+    use any special symbols besides an underscore.
+   
   
   @see swift2::kernels::adoptInteractionRadiusAndTriggerRerun()
   

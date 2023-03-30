@@ -354,7 +354,7 @@ h_cell_max:             """ + str( self._max_cell_h ) + """
 
 Real type of this solver: """ + str(type(self)) + """
 
-We assume of domain size of (0,""" + str(domain_size) + """)^d. Peano 4 will cut this domain equidistantly 
+We assume that you use a domain size of (0,""" + str(domain_size) + """)^d. Peano 4 will cut this domain equidistantly 
 and recursively into three parts along each coordinate axis. This yields a spacetree.
 
 The spacetree will at least have """ + str(self.get_min_number_of_spacetree_levels(domain_size)) + """ levels.
