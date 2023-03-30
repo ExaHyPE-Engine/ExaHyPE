@@ -48,7 +48,7 @@ like so:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
 from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
-vtufile = "path/to/your/output_file.pvd"
+pvdfile = "path/to/your/output_file.pvd"
 reader = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=0.1)
 partData = reader.load() # this is where the actual reading happens
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -60,7 +60,7 @@ attribute names are, you can run ``partData.show_attribute_list()``:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
 from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
-vtufile = "output/snapshots/particles-34.vtu"
+pvdfile = "path/to/your/output_file.pvd"
 reader = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=0.1)
 partData = reader.load()
 
@@ -78,6 +78,7 @@ from matplotlib import pyplot as plt
 from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
 
 # read in data
+pvdfile = "path/to/your/output_file.pvd"
 reader = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=0.1)
 partData = reader.load()
 
