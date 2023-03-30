@@ -10,7 +10,7 @@ import numpy as np
 from typing import Union
 
 try:
-    import vtuIOx
+    import vtuIO
 except ModuleNotFoundError:
     raise ModuleNotFoundError("You need the 'VTUinterface' package to use the ParticleVTUReader")
 
@@ -141,7 +141,7 @@ class ParticleVTUReader(object):
                  vtufile: Union[str, None] = None,
                  snapshot_time: Union[float, None] = None,
                  pvdfile: Union[str, None] = None,
-                 verbose: bool = True,
+                 verbose: bool = False,
                  ):
         """
         At initialization, either the ``vtufile`` argument needs to
@@ -215,7 +215,6 @@ class ParticleVTUReader(object):
             vtufiles = self._get_snapshot_vtu_files_from_pvd(self._pvdfile, self._snapshot_time)
             partdata = None
             pathprefix = os.path.dirname(self._pvdfile)
-            print(pathprefix)
             for f in vtufiles:
                 fullpath = os.path.join(pathprefix, f)
                 new_data = self._read_single_vtu_file(fullpath)
@@ -292,8 +291,6 @@ class ParticleVTUReader(object):
                     "; reading that in now"
                     )
 
-        #  snap_indexes = np.zeros(snap_indexes.shape, dtype=bool)
-        #  snap_indexes[0] = True
         vtufiles = np.array(allvtufiles)[snap_indexes]
         vtufiles = vtufiles.tolist()
 
