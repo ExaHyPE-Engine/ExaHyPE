@@ -22,9 +22,10 @@ def _clean_attribute_string(attr: str):
     cleaned_attr = attr.strip()
 
     # keep all illegal characters and their replacements
-    # in this dict.
+    # in this dict. Keys will be replaced by values.
     illegal_character_replacements = {
-            "-": "_"    
+            "-": "_",
+            " ": "_",
             }
 
     for key in illegal_character_replacements:
@@ -34,7 +35,7 @@ def _clean_attribute_string(attr: str):
 
 
 
-class SwiftParticleSet(object):
+class VTUParticleSet(object):
     """
     Container for particle data. All particle fields shall
     have the same name as specified in the .vtu files, and
@@ -49,7 +50,7 @@ class SwiftParticleSet(object):
         prints out all available particle fields
 
     merge(self, other):
-        merge another SwiftParticleSet into this one.
+        merge another VTUParticleSet into this one.
     """
 
     def __init__(self, particle_attributes: list):
@@ -92,7 +93,7 @@ class SwiftParticleSet(object):
 
     def merge(self, other):
         """
-        Merge two SwiftParticleSet objects into one (into self).
+        Merge two VTUParticleSet objects into one (into self).
         """
 
         if self._nattributes != other._nattributes:
@@ -114,7 +115,7 @@ class SwiftParticleSet(object):
 
 
 
-class SwiftVTUReader (object):
+class ParticleVTUReader (object):
     """
     Reads in particle fields from  a single .vtu file, or all .vtu
     at a given snapshot time specified in the provided .pvd file.
@@ -125,7 +126,7 @@ class SwiftVTUReader (object):
 
     load(self):
         actually read in the data, and return the particle data as a
-        SwiftParticleSet object.
+        VTUParticleSet object.
     """
 
     def __init__(self, 
@@ -139,11 +140,11 @@ class SwiftVTUReader (object):
         be provided, or both the ``snapshot_time`` and ``pvdfile``
         arguments in order to specify what data to read.
 
-        If ``vtufile`` is given, the swiftVTUReader will read in a 
+        If ``vtufile`` is given, the ParticleVTUReader will read in a 
         single .vtu file.
 
         If ``snapshot_time`` and ``pvdfile`` arguments are given, the
-        swiftVTUReader will read in all .vtu files corresponding to the
+        ParticleVTUReader will read in all .vtu files corresponding to the
         snapshot at the provided ``snapshot_time``.
 
         Parameters
@@ -194,7 +195,7 @@ class SwiftVTUReader (object):
         Returns
         -------
 
-        particleData: SwiftParticleSet
+        particleData: VTUParticleSet
             object containing all read-in particle data as attributes.
         """
 
@@ -294,7 +295,7 @@ class SwiftVTUReader (object):
     def _read_single_vtu_file(self, vtufilename: str):
         """
         Read in a single .vtu file, and return the filled out
-        SwiftParticleSet object containing the particle data.
+        VTUParticleSet object containing the particle data.
 
         Parameters
         ----------
@@ -306,7 +307,7 @@ class SwiftVTUReader (object):
         Returns
         -------
 
-        particleData: SwiftParticleSet
+        particleData: VTUParticleSet
             object containing all read-in particle data as attributes.
         """
 
@@ -319,7 +320,7 @@ class SwiftVTUReader (object):
         if self._verbose:
             print("File", vtufilename, "has particle fields:", point_field_names)
 
-        data = SwiftParticleSet(point_field_names)
+        data = VTUParticleSet(point_field_names)
         
         for attr in point_field_names:
             part_fields = vtufile.get_point_field(attr)
