@@ -21,7 +21,7 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::initialCo
   Q[1] = 0.0;                                                        // x-momentum
   Q[2] = 0.0;                                                        // y-momentum
   Q[3] = p / (gamma - 1) + 0.5 * (Q[1] * Q[1] + Q[2] * Q[2]) / Q[0]; // energy
-  Q[4] = 1e-4;                                                       // viscosity of fluid
+  Q[4] = 0.1;                                                        // viscosity of fluid
   Q[5] = 0.7;                                                        // prandtl number
   logTraceOut("initialCondition(...)");
 }
@@ -38,15 +38,16 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::boundaryC
   // @todo implement
   const double wall_velocity = 1.0;
   Qoutside[0] = Qinside[0];
-  if (faceCentre[0] >= 0.8)
+  if (faceCentre[1] >= 0.99)
   {
-    Qoutside[1] = 2.0 * wall_velocity * Qinside[0] - Qinside[1];
+    Qoutside[1] = Qinside[0] * wall_velocity;
   }
   else
   {
-    Qoutside[1] = Qinside[1];
+    Qoutside[1] = 0;
   }
-  Qoutside[2] = Qinside[2];
+  // std::cout<<"Face Centre:"<<faceCentre[0]<<"\n";
+  Qoutside[2] = 0;
   Qoutside[3] = Qinside[3];
   logTraceOut("boundaryConditions(...)");
 }
@@ -65,7 +66,13 @@ double ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::maxEi
   const double c = std::sqrt(gamma * p / Q[0]);                                        // speed of sound
   const double lambda_c = std::abs(Q[1 + normal] / Q[0]) + c;                          // max convective eigenvalue
   const double lambda_v = std::max(4 / 3 * Q[4] / Q[0], gamma * Q[4] / (Q[5] * Q[0])); // max viscous eigenvalue
-  
+
+  if (std::isnan(std::max(lambda_c, lambda_v)) || std::max(lambda_c, lambda_v) == 0)
+  {
+    std::cout << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "\n";
+    std::cout << std::max(lambda_c, lambda_v) << "," << lambda_c << "," << lambda_v << "," << c << "," << p << "\n";
+    exit(0);
+  }
   logTraceOut("maxEigenvalue(...)");
   return std::max(lambda_c, lambda_v);
 }
@@ -77,7 +84,7 @@ void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::flux(
     double t,
     double dt,
     int normal,
-    double *__restrict__ F // F[4]
+    double *__restrict__ F // F[4]./
 )
 {
   logTraceInWith4Arguments("flux(...)", faceCentre, volumeH, t, normal);
@@ -113,18 +120,27 @@ void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::noncons
 )
 {
   logTraceInWith4Arguments("nonconservativeProduct(...)", faceCentre, volumeH, t, normal);
+
   if (normal == 0)
   {
-    BTimesDeltaQ[1] = Q[4] * (2.0 / 3.0 * deltaQ[2] - 2 * deltaQ[2]) / Q[0]; // mu{2/3(du/dx)-2(du/dx)}
-    BTimesDeltaQ[2] = -Q[4] * (deltaQ[4] + deltaQ[3]) / Q[0];                // mu{dv/dx + du/dy}
+    BTimesDeltaQ[1] = Q[4] * (2.0 / 3.0 * (deltaQ[2] / volumeH[0] + deltaQ[5] / volumeH[1]) - 2 * deltaQ[2] / volumeH[0]) / Q[0]; // mu{2/3(du/dx+dv/dy)-2(du/dx)}
+    BTimesDeltaQ[2] = -Q[4] * (deltaQ[4] / volumeH[0] + deltaQ[3] / volumeH[1]) / Q[0];                                           // mu{dv/dx + du/dy}
   }
   else
   {
-    BTimesDeltaQ[1] = -Q[4] * (deltaQ[4] + deltaQ[3]) / Q[0];                // mu{dv/dx + du/dy}
-    BTimesDeltaQ[2] = Q[4] * (2.0 / 3.0 * deltaQ[5] - 2 * deltaQ[5]) / Q[0]; // mu{2/3(dv/dy)-2(dv/dy)}
+    BTimesDeltaQ[1] = -Q[4] * (deltaQ[4] / volumeH[0] + deltaQ[3] / volumeH[1]) / Q[0];                                           // mu{dv/dx + du/dy}
+    BTimesDeltaQ[2] = Q[4] * (2.0 / 3.0 * (deltaQ[2] / volumeH[0] + deltaQ[5] / volumeH[1]) - 2 * deltaQ[5] / volumeH[1]) / Q[0]; // mu{2/3(du/dx+dv/dy)-2(dv/dy)}
   }
   BTimesDeltaQ[0] = 0;
-  BTimesDeltaQ[3] = Q[1] / Q[0] * BTimesDeltaQ[1] + Q[2] / Q[0] * BTimesDeltaQ[2];
+  BTimesDeltaQ[3] = (Q[1] * BTimesDeltaQ[1] + Q[2] * BTimesDeltaQ[2]) / Q[0];
+  if (std::isnan(BTimesDeltaQ[3]) || std::isinf(BTimesDeltaQ[3]) || std::abs(BTimesDeltaQ[3]) > 1e5)
+  {
+    std::cout << normal << "\n";
+    std::cout << "ncp: " << BTimesDeltaQ[0] << "," << BTimesDeltaQ[1] << "," << BTimesDeltaQ[2] << "," << BTimesDeltaQ[3] << "\n";
+    std::cout << "deltaQ:" << deltaQ[0] << "," << deltaQ[1] << "," << deltaQ[2] << "," << deltaQ[3] << "," << deltaQ[4] << "," << deltaQ[5] << "\n";
+    std::cout << "Q:" << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "\n";
+    exit(0);
+  }
   logTraceOut("nonconservativeProduct(...)");
 }
 

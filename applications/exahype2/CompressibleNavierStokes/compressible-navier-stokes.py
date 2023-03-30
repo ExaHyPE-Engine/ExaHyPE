@@ -8,8 +8,8 @@ project = exahype2.Project( ["applications","exahype2", "CompressibleNavierStoke
 solver_name = "NavierStokesFV"
 unknowns    = 4
 auxiliary_variables = 2
-mesh_size   = 0.3
-patch_size  = 10
+mesh_size   = 0.4
+patch_size  = 3
 dimensions  = 2
 
 thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
@@ -18,7 +18,7 @@ thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   unknowns, auxiliary_variables,
   mesh_size, 
   mesh_size,
-  time_step_relaxation = 0.01,
+  time_step_relaxation = 0.99,
   flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   #source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation, 
   eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -35,7 +35,7 @@ project.set_global_simulation_parameters(
   min_end_time = 5.0,
   max_end_time = 5.0,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.1,
+  time_in_between_plots = 0.01,
   periodic_BC           = [False, False, False]
 )
 
