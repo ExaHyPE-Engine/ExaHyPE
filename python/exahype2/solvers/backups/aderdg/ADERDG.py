@@ -113,14 +113,14 @@ class AMR(AbstractADERDGActionSet):
 """
     if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
       result = """
-  repositories::refinementControl.merge( _localRefinementControl );
+  ::exahype2::RefinementControlService::getInstance().merge( _localRefinementControl );
 """
     return result
 
 
   def get_body_of_getGridControlEvents(self):
     return """
-  return repositories::refinementControl.getGridControlEvents();
+  return ::exahype2::RefinementControlService::getInstance().getGridControlEvents();
 """ 
 
   
