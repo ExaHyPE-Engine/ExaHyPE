@@ -137,7 +137,7 @@ class AdaptivityCriterion(AbstractAderDGActionSet):
   def get_body_of_getGridControlEvents(self):
     if self._implement_previous_refinement_instructions:
       return """
-    return repositories::refinementControl.getGridControlEvents();
+    return ::exahype2::RefinementControlService::getInstance().getGridControlEvents();
 """ 
     else:
       return """
@@ -154,7 +154,7 @@ class AdaptivityCriterion(AbstractAderDGActionSet):
 
     if self._build_up_new_refinement_instructions and operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
       result = """
-  repositories::refinementControl.merge( _localRefinementControl );
+  ::exahype2::RefinementControlService::getInstance().merge( _localRefinementControl );
 """
     
     if self._build_up_new_refinement_instructions and operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:

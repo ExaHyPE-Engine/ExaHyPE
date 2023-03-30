@@ -815,7 +815,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::enable( bool value ) {
     _state = State::InterRankBalancing;
     logInfo( "enable()", "switched load balancing on (again) and therefore change to state " << toString(_state) );
   }
-  else if (not value) {
+  else if (not value and _state != State::SwitchedOff) {
     logInfo( "enable()", "switched load balancing off" );
     _state = State::SwitchedOff;
   }
