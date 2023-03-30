@@ -35,6 +35,7 @@ void exahype2::RefinementControlService::shutdown() {
 
 void exahype2::RefinementControlService::receiveDanglingMessages() {
   #ifdef Parallel
+  const int DefaultLifetimeReceivedEvent = 1;
   for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
     if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
       MPI_Status status;
@@ -51,12 +52,11 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
 
         tarch::multicore::Lock lock( _semaphore );
         for (auto p: receiveBuffer) {
-    // @todo das ist naetuerlich totaler Kaese
           _newEvents.push_back( std::pair<peano4::grid::GridControlEvent,int>(
             p,
-            _maxLifetime + _AdditionalLifetimeReceivedEvents
+            DefaultLifetimeReceivedEvent
           ));
-    _committedEvents.push_back( p );
+          _committedEvents.push_back( p );
         }
   logInfo( "receiveDanglingMessages()", "now hold " << _newEvents.size() << " new events and " << _committedEvents.size() << " committed events (valid for this traversal)" );
       }
@@ -117,13 +117,12 @@ void exahype2::RefinementControlService::finishStep() {
 
 
 #ifdef Parallel
-void exahype2::RefinementControl::freeAllPendingSendRequests() {
+void exahype2::RefinementControlService::freeAllPendingSendRequests() {
   while (not _sendRequests.empty()) {
     std::vector<MPI_Request*>::iterator p = _sendRequests.begin();
     while (p!=_sendRequests.end()) {
       if (*p==nullptr) {
         p = _sendRequests.erase(p);
-
       }
       else {
         int flag;
@@ -139,7 +138,7 @@ void exahype2::RefinementControl::freeAllPendingSendRequests() {
 }
 
 
-void exahype2::RefinementControl::triggerSendOfCopyOfCommittedEvents() {
+void exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() {
   _sendRequests.clear();
 
   logInfo( "triggerSendOfCopyOfCommittedEvents()", "share my " << _copyOfCommittedEvents.size() << " event(s) with others" );
@@ -156,7 +155,7 @@ void exahype2::RefinementControl::triggerSendOfCopyOfCommittedEvents() {
 #endif
 
 std::vector< peano4::grid::GridControlEvent >  exahype2::RefinementControlService::getGridControlEvents() const {
-// @tood Debug
+// @todo Debug
         logInfo( "getGridControlEvents()", "return " << _committedEvents.size() << " grid control events" );
   return _committedEvents;
 }
