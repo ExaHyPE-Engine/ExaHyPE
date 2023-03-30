@@ -202,7 +202,7 @@ class exahype2::RefinementControl: public tarch::services::Service {
      * triggerSendOfCopyOfCommittedEvents().
      *
      */
-    void finishStep();
+    void finishStep(bool hasSplitRecently);
 
     std::string toString() const;
 
