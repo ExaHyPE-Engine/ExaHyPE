@@ -97,9 +97,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
             iterator iteratorToExistingCopy = particleIsDuplicate(p);
             if ( iteratorToExistingCopy!=end() ) {
               logDebug( "merge(...)", "incoming particle " << p->toString() << " is local on other rank and will be virtual here. It replaces existing copy" );
-              neighbour.erase(iteratorToExistingCopy);
-              this->push_back(p);
-              // delete p;
+              delete *iteratorToExistingCopy;
+              erase(iteratorToExistingCopy);
+              push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfVirtualEliminatedSpatialDuplicates++;
             }
