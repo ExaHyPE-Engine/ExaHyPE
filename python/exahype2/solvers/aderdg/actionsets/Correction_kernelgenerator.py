@@ -44,7 +44,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
     */
 
-    generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+    generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
       fineGridFace{{SOLVER_NAME}}QFluxEstimates.value,                        //FL
       fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+fluxElementsPerFace,    //FR
@@ -70,7 +70,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     {{COMPUTE_TIME_STEP_SIZE}}
         
     {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-    {{SOLUTION_STORAGE_PRECISION}}* lduh = fineGridCell{{UNKNOWN_IDENTIFIER}}lduh.value;
+    {{CORRECTOR_COMPUTATION_PRECISION}} lduh[generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize()]{0.0};
 
     const int fluxElementsPerFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
     
@@ -103,7 +103,6 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
 
     }// for d    
     
-
     generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate( 
       luh,
       luh, 

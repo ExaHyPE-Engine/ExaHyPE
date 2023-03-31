@@ -131,10 +131,9 @@ class ADERDG( object ):
     self._predictor_recompute   = False
     self._initialize_patches    = False
 
-    self._predictor_computation_precision        = PrecisionType["double"]
+    self._predictor_computation_precisions      = [PrecisionType["double"]]
     self._corrector_computation_precision        = PrecisionType["double"]
     self._solution_persistent_storage_precision  = PrecisionType["double"]
-    self._predictor_persistent_storage_precision = PrecisionType["double"]
 
     #whether or not to plot information about the grid as well as information about the content of the patches
     self._plot_grid_properties = plot_grid_properties
@@ -177,7 +176,8 @@ class ADERDG( object ):
     self._refinement_criterion_implementation = PDETerms.None_Implementation
     self._initial_conditions_implementation   = PDETerms.None_Implementation
     self._material_param_implementation       = PDETerms.None_Implementation
-  
+    self._precision_criterion_implementation  = PDETerms.None_Implementation
+
     """
     These will be used by children of this class to fill them with the declaration and definition of the
     above mandatory and optional functions.
@@ -240,8 +240,8 @@ class ADERDG( object ):
     #current time step contains the solution, projections are respectively the projection of the solution and of the fluxes as predicted by the space-time predictor
     self._current_time_step             = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier(), self._solution_persistent_storage_precision )
     self._current_update                = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier()+"lduh", self._solution_persistent_storage_precision )
-    self._rhs_estimates_projection      = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates", self._predictor_persistent_storage_precision )
-    self._flux_estimates_projection     = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns, self._unknown_identifier() + "FluxEstimates", self._predictor_persistent_storage_precision )
+    self._rhs_estimates_projection      = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates", self._corrector_computation_precision )
+    self._flux_estimates_projection     = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns, self._unknown_identifier() + "FluxEstimates", self._corrector_computation_precision )
 
     #custom merge implementation takes into account that the faces project such that the left cell projects to the left half of the face and the right cell projects to the right half
     self._rhs_estimates_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._rhs_estimates_projection)
@@ -550,8 +550,8 @@ class ADERDG( object ):
         useCERKGuess=self._use_CERK_Guess,
         useSplitCK=self._use_split_CK,
         predictorRecompute=self._predictor_recompute,
-        predictorComputePrecision=self._predictor_computation_precision,
-        predictorStoragePrecision=self._predictor_persistent_storage_precision,
+        predictorComputePrecisions=self._predictor_computation_precisions,
+        predictorStoragePrecision=self._corrector_computation_precision,
         correctorComputePrecision=self._corrector_computation_precision,
         correctorStoragePrecision=self._solution_persistent_storage_precision
       )
@@ -742,12 +742,14 @@ class ADERDG( object ):
     d["POLYNOMIAL_TYPE"] = ("lobatto" if self._polynomials is Polynomials.Gauss_Lobatto else "legendre")
 
     d["SOLUTION_STORAGE_PRECISION"]       = self._solution_persistent_storage_precision
-    d["PREDICTOR_STORAGE_PRECISION"]      = self._predictor_persistent_storage_precision
-    d["PREDICTOR_COMPUTATION_PRECISION"]  = self._predictor_computation_precision
+
+    d["PREDICTOR_COMPUTATION_PRECISIONS"]  = self._predictor_computation_precisions
     d["CORRECTOR_COMPUTATION_PRECISION"]  = self._corrector_computation_precision
     
-    d["COMPUTATION_PRECISIONS"] = list(set([self._predictor_computation_precision, self._corrector_computation_precision]))
-    d["NUMBER_OF_PRECISIONS"]   = len(d["COMPUTATION_PRECISIONS"])
+    d["COMPUTATION_PRECISIONS"]           = self._predictor_computation_precisions
+    if self._corrector_computation_precision not in d["COMPUTATION_PRECISIONS"]: d["COMPUTATION_PRECISIONS"].append(self._corrector_computation_precision)
+    d["NUMBER_OF_PREDICTOR_PRECISIONS"]   = len(d["PREDICTOR_COMPUTATION_PRECISIONS"])
+    d["NUMBER_OF_PRECISIONS"]             = len(d["COMPUTATION_PRECISIONS"])
 
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
     d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
@@ -770,6 +772,7 @@ class ADERDG( object ):
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
+    d[ "ADAPTIVE_PRECISION_IMPLEMENTATION" ]  = self._precision_criterion_implementation
     d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
     d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
     d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
@@ -849,10 +852,10 @@ class ADERDG( object ):
     polynomials=Polynomials.Gauss_Legendre,
     use_kernel_generator=True,
     use_libxsmm=False,
-    predictor_computation_precision="double",
+    predictor_computation_precisions=["double"],
     corrector_computation_precision="double",
     solution_persistent_storage_precision="double",
-    predictor_persistent_storage_precision="double",
+    precision_criterion_implementation  = PDETerms.None_Implementation,
     use_vectorized_PDE = False,
     architecture = "noarch",
     use_CERK_guess=False,
@@ -866,7 +869,7 @@ class ADERDG( object ):
     elif polynomials is Polynomials.Gauss_Lobatto:
       self._basis = GaussLobattoBasis(self._order+1)
     else:
-      raise Exception( "No proper basis chosen: {}, valid optioons are Gauss_Legendre and Gauss_Lobatto nodes".format(polynomials) )
+      raise Exception( "No proper basis chosen: {}, valid options are Gauss_Legendre and Gauss_Lobatto nodes".format(polynomials) )
 
     self._is_linear           = is_linear    
     self._polynomials         = polynomials
@@ -874,15 +877,23 @@ class ADERDG( object ):
     self._use_kernel_generator = use_kernel_generator
     self._use_libxsmm          = use_libxsmm
 
-    precisions = [predictor_computation_precision, corrector_computation_precision, solution_persistent_storage_precision, predictor_persistent_storage_precision]
+    precisions = [solution_persistent_storage_precision, corrector_computation_precision]
+    precisions.extend(predictor_computation_precisions)    
     for value in precisions:
       if value not in PrecisionType.keys():
         raise AssertionError("one of the chosen precisions was not a valid choice. valid choices are: " + PrecisionType.keys())
-      
-    self._predictor_computation_precision        = PrecisionType[predictor_computation_precision]
+
+    self._predictor_computation_precisions       = []
+    for precision in predictor_computation_precisions:
+      if PrecisionType[precision] not in self._predictor_computation_precisions:
+        self._predictor_computation_precisions.append(PrecisionType[precision])
     self._corrector_computation_precision        = PrecisionType[corrector_computation_precision]
     self._solution_persistent_storage_precision  = PrecisionType[solution_persistent_storage_precision]
-    self._predictor_persistent_storage_precision = PrecisionType[predictor_persistent_storage_precision]
+
+    if precision_criterion_implementation is not PDETerms.None_Implementation:
+      self._precision_criterion_implementation = precision_criterion_implementation
+    if len(self._predictor_computation_precisions)>1 and self._precision_criterion_implementation is PDETerms.None_Implementation:
+      self._precision_criterion_implementation = PDETerms.User_Defined_Implementation
 
     if(use_CERK_guess or use_split_CK or use_vectorized_PDE or predictor_recompute):
       raise Exception("The option you have chosen has not yet been implemented, it currently only exists in the code as a placeholder for future expansion")

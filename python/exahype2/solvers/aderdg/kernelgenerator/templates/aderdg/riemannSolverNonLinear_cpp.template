@@ -22,13 +22,13 @@
 
 #include "{{solverHeader}}"
 
-template <typename pStoreType, typename cCompType>
+template <typename cCompType>
 void {{codeNamespace}}::riemannSolver( 
   {{solverName}}& solver,
   cCompType* __restrict__ FL, 
   cCompType* __restrict__ FR,
-  const pStoreType* __restrict__ const QL, 
-  const pStoreType* __restrict__ const QR,
+  const cCompType* __restrict__ const QL, 
+  const cCompType* __restrict__ const QR,
   const double t,
   const double dt,
   const tarch::la::Vector<Dimensions,double>& faceCentre,
@@ -197,8 +197,8 @@ template void {{codeNamespace}}::riemannSolver(
   {{solverName}}& solver,
   {{correctorComputePrecision}}* __restrict__ FL, 
   {{correctorComputePrecision}}* __restrict__ FR,
-  const {{predictorStoragePrecision}}* const __restrict__ QL, 
-  const {{predictorStoragePrecision}}* const __restrict__ QR,
+  const {{correctorComputePrecision}}* const __restrict__ QL, 
+  const {{correctorComputePrecision}}* const __restrict__ QR,
   const double t,
   const double dt,
   const tarch::la::Vector<Dimensions,double>& faceCentre,

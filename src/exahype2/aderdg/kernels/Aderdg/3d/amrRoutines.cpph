@@ -26,8 +26,9 @@ void kernels::aderdg::generic::c::singleLevelFaceUnknownsProlongation(
     const pStoreType* lQhbndCoarse,
     const tarch::la::Vector<Dimensions-1, int>& subfaceIndex) {
   constexpr int order = basisSize-1;
-
   kernels::idx3 idx(basisSize,basisSize,numberOfVariables);
+
+  std::fill_n(lQhbndFine, basisSize*basisSize*numberOfVariables, 0.0);
 
   for (int m2 = 0; m2 < basisSize; ++m2) {
     for (int m1 = 0; m1 < basisSize; ++m1) {

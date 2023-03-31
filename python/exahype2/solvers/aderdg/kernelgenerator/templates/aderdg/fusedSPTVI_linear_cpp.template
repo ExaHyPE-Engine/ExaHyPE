@@ -36,7 +36,7 @@
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
     {{solverName}}& solver,
-    pCompType* __restrict__ lduh,
+    cStoreType* __restrict__ lduh,
     pStoreType* __restrict__ lQhbnd,
     pStoreType* __restrict__ lFhbnd,
     pCompType* __restrict__ lQi,
@@ -694,20 +694,21 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 
 }
 
+{% for precision_num in range(0,predictorComputePrecisions|length) %}
 template int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
     {{solverName}}& solver,
-    {{predictorComputePrecision}}* __restrict__ lduh,
+    {{predictorComputePrecisions[precision_num]}}* __restrict__ lduh,
     {{predictorStoragePrecision}}* __restrict__ lQhbnd,
     {{predictorStoragePrecision}}* __restrict__ lFhbnd,
-    {{predictorComputePrecision}}* __restrict__ lQi,
-    {{predictorComputePrecision}}* __restrict__ lFi,
-    {{predictorComputePrecision}}* __restrict__ lSi,   // for NCP or Source
-    {{predictorComputePrecision}}* __restrict__ lQhi,
-    {{predictorComputePrecision}}* __restrict__ lFhi,
-    {{predictorComputePrecision}}* __restrict__ lShi,  // for Source
-    {{predictorComputePrecision}}* __restrict__ gradQ, // for NCP or Source
-    {{predictorComputePrecision}}* __restrict__ PSi,   // for pointSource
-    {{predictorComputePrecision}}* __restrict__ PSderivatives, // for pointSource
+    {{predictorComputePrecisions[precision_num]}}* __restrict__ lQi,
+    {{predictorComputePrecisions[precision_num]}}* __restrict__ lFi,
+    {{predictorComputePrecisions[precision_num]}}* __restrict__ lSi,   // for NCP or Source
+    {{predictorComputePrecisions[precision_num]}}* __restrict__ lQhi,
+    {{predictorComputePrecisions[precision_num]}}* __restrict__ lFhi,
+    {{predictorComputePrecisions[precision_num]}}* __restrict__ lShi,  // for Source
+    {{predictorComputePrecisions[precision_num]}}* __restrict__ gradQ, // for NCP or Source
+    {{predictorComputePrecisions[precision_num]}}* __restrict__ PSi,   // for pointSource
+    {{predictorComputePrecisions[precision_num]}}* __restrict__ PSderivatives, // for pointSource
     const {{correctorStoragePrecision}}* const __restrict__ luh,
     const tarch::la::Vector<Dimensions,double>&  volumeCentre,
     const tarch::la::Vector<Dimensions,double>&  dx,
@@ -715,3 +716,4 @@ template int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffi
     const double dt,
     std::vector<int>* pointSources // will be deleted in the end if set
 );
+{% endfor %}

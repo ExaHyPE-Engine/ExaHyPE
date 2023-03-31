@@ -109,7 +109,7 @@ class DynamicAMR( AbstractAderDGActionSet ):
     //estimates
     kernels::aderdg::generic::c::singleLevelFaceUnknownsRestriction<
       {{SOLVER_NAME}},
-      {{PREDICTOR_STORAGE_PRECISION}},      
+      {{CORRECTOR_COMPUTATION_PRECISION}},      
       strideQ,
       Order+1>(
         coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).value+facePosition*basisElementsPerFace, //const double* lQhbndCoarse
@@ -120,7 +120,7 @@ class DynamicAMR( AbstractAderDGActionSet ):
     //fluxes
     kernels::aderdg::generic::c::singleLevelFaceUnknownsRestriction<
       {{SOLVER_NAME}}, //SolverType
-      {{PREDICTOR_STORAGE_PRECISION}}, //pStoreType      
+      {{CORRECTOR_COMPUTATION_PRECISION}}, //pStoreType      
       NumberOfVariables,      //numberOfVariables
       Order+1>(
         coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value+facePosition*fluxElementsPerFace, //const double* lQhbndCoarse

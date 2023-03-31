@@ -904,7 +904,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
 
 def create_compute_time_step_size_for_adaptive_time_stepping():
   return """
-  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
+    double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
 def create_compute_new_time_step_size_for_adaptive_time_stepping():

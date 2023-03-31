@@ -215,8 +215,8 @@ void boundaryConditions(
     const int faceIndex,
     const int direction);
 
-template <typename SolverType>
-double maxScaledEigenvalue(SolverType& solver, const double* const luh,
+template <typename SolverType, typename T>
+double maxScaledEigenvalue(SolverType& solver, const T* const luh,
                           const tarch::la::Vector<Dimensions, double>& cellCentre,
                           const tarch::la::Vector<Dimensions, double>& dx,
                           const double t, const double dt);

@@ -247,6 +247,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 }
 {% endif %}
 
+{% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<empty>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<user-defined>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>"%}
+    exahype2::PrecisionCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::precisionCriterion(
+      const {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions,double>&         x,
+      const tarch::la::Vector<Dimensions,double>&         h,
+      double                                              t,
+      SolverState                                         currentState
+    ) {
+  {{ADAPTIVE_PRECISION_IMPLEMENTATION}}
+}
+{% endif %}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
   assertion( _solverState == SolverState::GridConstruction );

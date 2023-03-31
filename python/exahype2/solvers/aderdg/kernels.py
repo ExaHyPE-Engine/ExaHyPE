@@ -319,7 +319,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       double                                       dt,
       int                                          normal
     ){
-      maxEigenvalue<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, volumeX, volumeH, t, dt, normal);
+      return maxEigenvalue<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, volumeX, volumeH, t, dt, normal);
     }
 {% endif %}
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
@@ -689,7 +689,7 @@ def create_compute_time_step_size_for_fixed_time_stepping():
   
   """
   return """
-  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
+    const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
 """
 
 def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):

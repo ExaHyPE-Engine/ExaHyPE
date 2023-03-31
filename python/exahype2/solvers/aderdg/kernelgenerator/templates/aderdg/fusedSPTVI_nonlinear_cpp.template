@@ -606,23 +606,25 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   return std::min(iter+1, MaxIterations); //return number of Picard iterations, min to avoid doing a +1 if the loop wasn't exited early
 }
 
+{% for precision_num in range(0,predictorComputePrecisions|length) %}
 template int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   {{solverName}}& solver, 
-  {{predictorComputePrecision}}* __restrict__ lduh,
+  {{predictorComputePrecisions[precision_num]}}* __restrict__ lduh,
   {{predictorStoragePrecision}}* __restrict__ lQhbnd, 
   {{predictorStoragePrecision}}* __restrict__ lGradQhbnd,
   {{predictorStoragePrecision}}* __restrict__ lFhbnd,
-  {{predictorComputePrecision}}* __restrict__ lQi,
-  {{predictorComputePrecision}}* __restrict__ rhs,
-  {{predictorComputePrecision}}* __restrict__ lFi,
-  {{predictorComputePrecision}}* __restrict__ lSi,   // for NCP or Source
-  {{predictorComputePrecision}}* __restrict__ lQhi,
-  {{predictorComputePrecision}}* __restrict__ lFhi,
-  {{predictorComputePrecision}}* __restrict__ lShi,  // for NCP or Source
-  {{predictorComputePrecision}}* __restrict__ gradQ, // for NCP or Source or viscousFlux
-  {{predictorComputePrecision}}* __restrict__ gradQAvg, // for viscousFlux
+  {{predictorComputePrecisions[precision_num]}}* __restrict__ lQi,
+  {{predictorComputePrecisions[precision_num]}}* __restrict__ rhs,
+  {{predictorComputePrecisions[precision_num]}}* __restrict__ lFi,
+  {{predictorComputePrecisions[precision_num]}}* __restrict__ lSi,   // for NCP or Source
+  {{predictorComputePrecisions[precision_num]}}* __restrict__ lQhi,
+  {{predictorComputePrecisions[precision_num]}}* __restrict__ lFhi,
+  {{predictorComputePrecisions[precision_num]}}* __restrict__ lShi,  // for NCP or Source
+  {{predictorComputePrecisions[precision_num]}}* __restrict__ gradQ, // for NCP or Source or viscousFlux
+  {{predictorComputePrecisions[precision_num]}}* __restrict__ gradQAvg, // for viscousFlux
   const {{correctorStoragePrecision}}* const __restrict__ luh,
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  dx,
   const double timeStamp,
   const double dt);
+{% endfor %}
