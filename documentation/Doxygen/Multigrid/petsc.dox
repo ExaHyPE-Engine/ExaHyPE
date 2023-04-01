@@ -5,6 +5,11 @@
  A PETSc project is a wrapper around Peano 4 project, i.e. it holds a Peano 4 
  Python project. Each call to the PETSc API builds up an internal data 
  representation which is eventually mapped onto a native Peano 4 project.
+ To use PETSc with Peano, you need to configure it with 
+ 
+ ~~~~~~~~~~~~~~~~~~~~~
+ ./configure --enable-finiteelements --with-petsc
+ ~~~~~~~~~~~~~~~~~~~~~
 
  ## Algorithmic steps
  

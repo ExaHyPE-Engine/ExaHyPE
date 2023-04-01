@@ -89,7 +89,7 @@ I wanna see if this one applies to the solver or hte init
     pass
   
   
-  def add_to_init(self, observer):
+  def add_to_enumerate_and_init_solution(self, observer):
     """!
     
     Solution initialisation

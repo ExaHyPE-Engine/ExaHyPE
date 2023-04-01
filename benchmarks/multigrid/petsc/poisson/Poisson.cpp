@@ -1,0 +1,24 @@
+#include "Poisson.h"
+
+
+multigrid::petsc::poisson::Poisson::Poisson() {
+  // @todo add your stuff here
+}
+
+
+multigrid::petsc::poisson::Poisson::~Poisson() {
+  // @todo add your stuff here
+}
+
+
+void multigrid::petsc::poisson::Poisson::init(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h,
+  
+  double&                                       value,
+  double&                                       rhs
+  
+) {
+  std::cout << "@";
+  // @todo add your stuff here
+}

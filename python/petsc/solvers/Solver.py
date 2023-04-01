@@ -108,17 +108,7 @@ vertex for the first time of a mesh traversal, e.g.
 
   
   @abstractmethod
-  def add_to_enumerate(self, observer):
-    """!
-    
-    Add whatever action set you want to use to observer.
-    
-    """
-    assert False, "should not be called"
-  
-  
-  @abstractmethod
-  def add_to_init(self, observer):
+  def add_to_enumerate_and_init_solution(self, observer):
     """!
     
     Add whatever action set you want to use to observer.

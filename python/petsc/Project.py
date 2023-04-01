@@ -30,8 +30,8 @@ Consult generate_Peano4_project() for the latter.
 Every PETSc project runs through the following steps:
  
   - algorithm_step_create_grid
-  - algorithm_step_enumerate
-  - _algorithm_step_init
+  - algorithm_step_enumerate_and_init_solution
+  - _algorithm_step_init_petsc
   - algorithm_step_assemble
   - _algorithm_step_solve
   - algorithm_step_map_solution_onto_mesh
@@ -72,13 +72,13 @@ mark these steps as private via a leading underscore.
     
     self._solver_instances = []
 
-    self.algorithm_step_create_grid             = peano4.solversteps.Step( "CreateGrid",          False )
-    self.algorithm_step_enumerate               = peano4.solversteps.Step( "Enumerate",           False )
-    self._algorithm_step_init                   = peano4.solversteps.Step( "Init",                False )
-    self.algorithm_step_assemble                = peano4.solversteps.Step( "Assemble",            False )
-    self._algorithm_step_solve                  = peano4.solversteps.Step( "Solve",               False )
-    self.algorithm_step_map_solution_onto_mesh  = peano4.solversteps.Step( "MapSolutionOntoMesh", False )
-    self.algorithm_step_plot                    = peano4.solversteps.Step( "Plot",                False )
+    self.algorithm_step_create_grid                  = peano4.solversteps.Step( "CreateGrid",                False )
+    self.algorithm_step_enumerate_and_init_solution  = peano4.solversteps.Step( "EnumerateAndInitSolution",  False )
+    self._algorithm_step_init_petsc                  = peano4.solversteps.Step( "InitPETSc",                 False )
+    self.algorithm_step_assemble                     = peano4.solversteps.Step( "Assemble",                  False )
+    self._algorithm_step_solve                       = peano4.solversteps.Step( "Solve",                     False )
+    self.algorithm_step_map_solution_onto_mesh       = peano4.solversteps.Step( "MapSolutionOntoMesh",       False )
+    self.algorithm_step_plot                         = peano4.solversteps.Step( "Plot",                      False )
                 
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
@@ -203,8 +203,8 @@ The function runs through various steps:
                                    )
 
     self._project.solversteps.add_step(self.algorithm_step_create_grid)
-    self._project.solversteps.add_step(self.algorithm_step_enumerate)
-    self._project.solversteps.add_step(self._algorithm_step_init)
+    self._project.solversteps.add_step(self.algorithm_step_enumerate_and_init_solution)
+    self._project.solversteps.add_step(self._algorithm_step_init_petsc)
     self._project.solversteps.add_step(self.algorithm_step_assemble)
     self._project.solversteps.add_step(self._algorithm_step_solve)
     self._project.solversteps.add_step(self.algorithm_step_map_solution_onto_mesh)
@@ -268,18 +268,17 @@ This yet has to be written.
     solver.add_to_Peano4_datamodel( self._project.datamodel, verbose=False )
     
     solver.add_use_statements(self.algorithm_step_create_grid)
-    solver.add_use_statements(self.algorithm_step_enumerate)
-    solver.add_use_statements(self._algorithm_step_init)
+    solver.add_use_statements(self.algorithm_step_enumerate_and_init_solution)
+    solver.add_use_statements(self._algorithm_step_init_petsc)
     solver.add_use_statements(self.algorithm_step_assemble)
     solver.add_use_statements(self.algorithm_step_map_solution_onto_mesh)
     solver.add_use_statements(self.algorithm_step_plot)
 
-    solver.add_to_create_grid           (self.algorithm_step_create_grid)
-    solver.add_to_enumerate             (self.algorithm_step_enumerate)
-    solver.add_to_init                  (self._algorithm_step_init)
-    solver.add_to_assemble              (self.algorithm_step_assemble)
-    solver.add_to_map_solution_onto_mesh(self.algorithm_step_map_solution_onto_mesh)
-    solver.add_to_plot                  (self.algorithm_step_plot)
+    solver.add_to_create_grid                (self.algorithm_step_create_grid)
+    solver.add_to_enumerate_and_init_solution(self.algorithm_step_enumerate_and_init_solution)
+    solver.add_to_assemble                   (self.algorithm_step_assemble)
+    solver.add_to_map_solution_onto_mesh     (self.algorithm_step_map_solution_onto_mesh)
+    solver.add_to_plot                       (self.algorithm_step_plot)
 
     solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
     
