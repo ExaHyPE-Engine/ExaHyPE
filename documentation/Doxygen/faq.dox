@@ -1,6 +1,6 @@
 /**
 
-@page faq FAQs and troubleshooting
+@page faq FAQs and troubleshooting (user perspective)
 
 
 Some frequently asked questions and problems are discussed below.
@@ -260,7 +260,7 @@ Debugging
 
       on the terminal. Again, has to be 1 or 4 at least.
   -   Ensure you have a whitelist entry for the routine you are
-      interested in. Study how to use @tarch_logging "Peano's logging" or
+      interested in. Study how to use @ref tarch_logging "Peano's logging" or
       insert manual log filter statements:
 
                   tarch::logging::LogFilter::getInstance().addFilterListEntry(
