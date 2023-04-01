@@ -195,7 +195,6 @@ if __name__ == "__main__":
             min_meshcell_h=min_volume_h, max_meshcell_h=max_volume_h,
             time_step_relaxation=cfl,
             KOSigma=KOSig,
-            #pde_terms_without_state=False
             pde_terms_without_state=True
           )
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking:
@@ -259,6 +258,8 @@ if __name__ == "__main__":
             KOSigma                                  = self._KO_Sigma
           )
 
+          self.switch_to_heap_storage(True,True)
+
         self.postprocess_updated_patch = """
 {
 """
@@ -302,8 +303,6 @@ if __name__ == "__main__":
     }
   }
 """
-        self.switch_to_heap_storage(False,False)
-        #self.switch_to_heap_storage(True,True)
 
    
       def create_action_sets(self):

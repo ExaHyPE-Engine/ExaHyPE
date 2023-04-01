@@ -1,0 +1,34 @@
+/**
+
+ @page tarch_services Services and singletons
+ 
+ Singletons are classes which are instantiated once and only once.
+ Most object-oriented books are not in favour of singletons, as they disagree 
+ with that idea that there's a class definition with multiple instantiations of
+ this class which are called objects. However, Peano needs singletons in 
+ several cases.
+ 
+ 
+ ## Singleton naming conventions
+ 
+ - Singletons are realised by making all constructors private or protected.
+ - A singleton has a dedicated function
+ 
+           static MyType& getInstance();
+
+   which returns a non-const reference.
+ - Its implementation holds a static reference to a singleton object which is 
+   then returned.
+ 
+   
+ ## MPI services
+ 
+ Due to Peano's architecture, there are classes which need to poll MPI every
+ now and then for potential messages (such as load balancing notifications).
+ Such classes are called services. Services
+ 
+ - are always singletons;
+ - are always inheriting from tarch::services::Service.
+
+ */
+ 

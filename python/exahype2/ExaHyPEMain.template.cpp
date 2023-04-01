@@ -60,26 +60,10 @@ tarch::timing::Measurement   plotMeasurement;
 
 
 /**
+ * Decide which step to run next
  *
- * <h2> Control of the parallel grid construction </h2>
+ * ## Control of the parallel grid construction
  *
- * We realise a very simplistic parallel grid construction strategy: When I run
- * the grid creation, I allow refinement if no rebalancing has happened, and I 
- * stop the grid construction as soon as I've met the minimal mesh width. 
- * Otherwise, I use refinement. There's exceptions to this:
- *
- * - Every @K = f$ 3^d @f$ iterations, I run a refinement even if I rebalance. It 
- *   might happen that rebalancing is extremely slow or not successful on one 
- *   rank, making another drop in, and so forth. So I use K, as 
- *   there are at most that many splits possible due to a grid refinement.
- *   K might be chosen slightly smaller (see code).
- * - In each step, I identify whether I've changed the minimal mesh. If not, 
- *   I increment a counter. If this counter is $3K$, I know that the mesh 
- *   refinement would have had the opportunity to refine the grid three times.
- *   It hasn't done so. So I can assume that the minimal mesh size not yet 
- *   yet reached, but the mesh refinement criteria don't need that minimal mesh
- *   (yet). Such effects arise for smooth boundary conditions, e.g., that 
- *   create shocks later on, i.e. they arise for non-linear PDEs.
  * 
  * @return continues to run
  */
@@ -94,7 +78,6 @@ bool selectNextAlgorithmicStep() {
   static bool   addGridSweepWithoutGridRefinementNext       = false;
   static tarch::la::Vector<Dimensions,double> minH          = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
   static int    globalNumberOfTrees                         = 0;
-  static int    stationaryGridCreationSteps                 = 0;
   bool          continueToSolve                             = true;
   
   if (exahype2::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
@@ -129,18 +112,7 @@ bool selectNextAlgorithmicStep() {
     gridInitialised = true;
   }
   else if (not gridConstructed) {
-    // Grid construction termination criterion
-    if (
-      tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= repositories::getMinAdmissibleMeshSize()
-      and
-      repositories::loadBalancer.getGlobalNumberOfTrees()<=globalNumberOfTrees
-    ) {
-      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << repositories::getMinAdmissibleMeshSize() << " with mesh size of " << tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) << " reached." );
-      gridConstructed = true;
-      addGridSweepWithoutGridRefinementNext = false;
-      globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
-    }
-    else if ( tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < tarch::la::max( minH ) ) {
+    if ( tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < tarch::la::max( minH ) ) {
       minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH();
       logDebug( "selectNextAlgorithmicStep()", "mesh has refined, so reset minH=" << minH << " and postpone further refinement" );
       addGridSweepWithoutGridRefinementNext = true;
@@ -153,22 +125,20 @@ bool selectNextAlgorithmicStep() {
       addGridSweepWithoutGridRefinementNext = true;
       globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     }
-    else if (stationaryGridCreationSteps>5) {
+    else if (  
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
+      and
+      // ensure that a proper creation has been ran before, so the mesh had the opportunity
+      // to refine further if it has not done yet
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) == repositories::StepRepository::Steps::CreateGrid
+    ) {
       logInfo( "selectNextAlgorithmicStep()", "grid has been stationary for quite some time. Terminate grid construction" );
       addGridSweepWithoutGridRefinementNext = false;
-      gridConstructed = true;
+      gridConstructed                       = true;
     }
     else {
       logInfo( "selectNextAlgorithmicStep()", "mesh rebalancing seems to be kind of stationary, so study whether to refine mesh further in next sweep" );
       addGridSweepWithoutGridRefinementNext = false;
-
-      if ( repositories::loadBalancer.getGlobalNumberOfTrees()<=globalNumberOfTrees ) {
-        stationaryGridCreationSteps++;
-      }
-      else {
-        stationaryGridCreationSteps=0;
-      }
-
       globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     }
 

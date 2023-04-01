@@ -9,6 +9,7 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 #include "exahype2/LoadBalancingConfiguration.h"
+#include "exahype2/RefinementControlService.h"
 
 {% for item in TRACERS -%}
 #include "vertexdata/{{ item }}.h"
@@ -24,7 +25,6 @@ int statisticsExchangeTag = tarch::mpi::Rank::reserveFreeTag("SolverRepository -
 
 tarch::logging::Log _log( "{{NAMESPACE | join("::")}}::SolverRepository" );
 
-::exahype2::RefinementControl  refinementControl;
 ::exahype2::PlotFilter         plotFilter;
 peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 
@@ -192,7 +192,7 @@ void finishTimeStep() {
   vertexdata::{{ item }}::finishedTraversal();
   {%- endfor %}
 
-  refinementControl.finishStep();
+  ::exahype2::RefinementControlService::getInstance().finishStep();
   loadBalancer.finishStep();
 
   #ifdef UseSmartMPI
@@ -211,7 +211,7 @@ void finishGridConstructionStep() {
   vertexdata::{{ item }}::finishedTraversal();
   {%- endfor %}
 
-  refinementControl.finishStep();
+  ::exahype2::RefinementControlService::getInstance().finishStep();
   loadBalancer.finishStep();
 
   gridStatisticsAfterGridConstruction = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics();
@@ -309,7 +309,7 @@ void finishSimulation() {
   {{ item[1] }}.finishSimulation();
   {%- endfor %}
   loadBalancer.finishStep();
-  refinementControl.finishStep();
+  ::exahype2::RefinementControlService::getInstance().finishStep();
 }
 
 
