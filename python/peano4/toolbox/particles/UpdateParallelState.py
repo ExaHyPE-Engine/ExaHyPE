@@ -11,47 +11,48 @@ import jinja2
 
 class UpdateParallelState(ActionSet):
   """
-   Update the parallel state of particles and keep stats of local particles
+  
+!Update the parallel state of particles and keep stats of local particles
      
-   This operation should always been called after you've resorted the particles
-   due to position changes or alterations of the cut-off radii. The action set
-   is the only place which heavily uses the particles' parallel states. These 
-   states are not to be used anywhere else in the code.
-   
-   
-   ## Statistics 
-     
-   The mapping keeps some statistics on any state update. These statistics
-   however are not shared via MPI. Instead, we hand them over to the 
-   particle set which then can consolidate the data among ranks and cores.
-    
-   
-   ## State transitions
-   
-   We have two states per particle: local and virtual. In our data model, 
-   particles are either local or virtual throughout 
-   the mesh traversal, but they might change their position and 
-   consequently enter their state. Virtual particles can only fly in through
-   the boundary, while particles can leave the local domain (and hence become
-   virtual) by moving through the boundary. 
+This operation should always been called after you've resorted the particles
+due to position changes or alterations of the cut-off radii. The action set
+is the only place which heavily uses the particles' parallel states. These 
+states are not to be used anywhere else in the code.
 
-   We recognise that we can throw away virtual particles after the sweep.
-   We assume that they are temporary copies from another rank which will
-   drop in again.
-   
-   The new state analysis is very simple:
-   - We clear the flag in touchVertexFirstTime(), i.e. all the particles 
-     associated to a vertex are initially set to virtual. We actually 
-     clear the new flag which is a working field, whereas the real parallel
-     state is always the valid one.
-   - Within a cell, we mark all local particles within this cell as local.
-   - When we hit a vertex and its particles for the last time, we can 
-     analyse the particles' parallel state. If the new state still is 
-     virtual, we throw the particle away. Otherwise we keep it and make
-     the (real) parallel state equal to the new state. By comparing the 
-     parallel state which results from the previous grid sweeps and the new
-     one, we can keep statistics how many particles are local, how many 
-     have flown into the domain, and how many have left the domain,
+
+## Statistics 
+  
+The mapping keeps some statistics on any state update. These statistics
+however are not shared via MPI. Instead, we hand them over to the 
+particle set which then can consolidate the data among ranks and cores.
+ 
+
+## State transitions
+
+We have two states per particle: local and virtual. In our data model, 
+particles are either local or virtual throughout 
+the mesh traversal, but they might change their position and 
+consequently enter their state. Virtual particles can only fly in through
+the boundary, while particles can leave the local domain (and hence become
+virtual) by moving through the boundary. 
+
+We recognise that we can throw away virtual particles after the sweep.
+We assume that they are temporary copies from another rank which will
+drop in again.
+
+The new state analysis is very simple:
+- We clear the flag in touchVertexFirstTime(), i.e. all the particles 
+  associated to a vertex are initially set to virtual. We actually 
+  clear the new flag which is a working field, whereas the real parallel
+  state is always the valid one.
+- Within a cell, we mark all local particles within this cell as local.
+- When we hit a vertex and its particles for the last time, we can 
+  analyse the particles' parallel state. If the new state still is 
+  virtual, we throw the particle away. Otherwise we keep it and make
+  the (real) parallel state equal to the new state. By comparing the 
+  parallel state which results from the previous grid sweeps and the new
+  one, we can keep statistics how many particles are local, how many 
+  have flown into the domain, and how many have left the domain,
     
   """
   def __init__(self,particle_set):
@@ -148,6 +149,9 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was virtual but remains virtual" );
     delete *p;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+  }
+  else {
+    assertion2( false, (*p)->toString(), marker.toString() );
   }
 }
 """)

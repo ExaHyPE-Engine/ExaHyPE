@@ -42,6 +42,4 @@ Notice that an error will be encountered if the vtu file is empty, which may
 prevent reading data from a set of vtu files.
 
 
-
 */
-
