@@ -13,6 +13,7 @@
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
+#include "tarch/logging/LogFilterFileReader.h"
 #include "tarch/UnitTests.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Core.h"
@@ -29,6 +30,8 @@
 #include "toolbox/loadbalancing/loadbalancing.h"
 
 #include "toolbox/finiteelements/UnitTests.h"
+
+#include "petsc/UnitTests.h"
 
 //#include "petsc/UserInterface.h"
 
@@ -262,6 +265,10 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidBuild;
   }
 
+  if ( not tarch::logging::LogFilterFileReader::parsePlainTextFile( "petsc.log-filter" ) ) {
+    logWarning( "main()", "no petsc.log-filter file found or file has been corrupted. Use default logging configuration" );
+  }
+
   repositories::DataRepository::initDatatypes();
 
 //#ifdef UseFenv
@@ -273,6 +280,7 @@ int main(int argc, char** argv) {
   unitTests->addTestCase( peano4::getUnitTests() );
   unitTests->addTestCase( tarch::getUnitTests() );
   unitTests->addTestCase( toolbox::finiteelements::getUnitTests() );
+  unitTests->addTestCase( petsc::getUnitTests() );
   unitTests->run();
   if (unitTests->getNumberOfErrors() != 0) {
     logError("main()", "unit tests failed. Quit.");

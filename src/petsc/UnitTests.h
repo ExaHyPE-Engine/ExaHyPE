@@ -6,12 +6,10 @@
 #include "tarch/tests/TestCase.h"
 
 
-namespace toolbox {
-  namespace blockstructured {
-    /**
-     * Please destroy after usage
-     */
-    tarch::tests::TestCase* getUnitTests();
-  }
+namespace petsc {
+  /**
+   * Please destroy after usage
+   */
+  tarch::tests::TestCase* getUnitTests();
 }
 

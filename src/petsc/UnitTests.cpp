@@ -4,14 +4,12 @@
 #include "tarch/tests/TreeTestCaseCollection.h"
 
 
-#include "toolbox/blockstructured/tests/InterpolationTest.h"
 
 
+tarch::tests::TestCase* petsc::getUnitTests() {
+  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection("petsc");
 
-tarch::tests::TestCase* toolbox::blockstructured::getUnitTests() {
-  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection("blockstructured");
-
-  result->addTestCase( new toolbox::blockstructured::tests::InterpolationTest() );
+  //result->addTestCase( new toolbox::blockstructured::tests::InterpolationTest() );
 
   return result;
 }

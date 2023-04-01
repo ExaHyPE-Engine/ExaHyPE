@@ -7,7 +7,8 @@ endif
 
 
 PETScSources = \
-  LocalToGlobalMap.cpp
+  LocalToGlobalMap.cpp \
+  UnitTests.cpp
 
 
 libPETSc_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)
