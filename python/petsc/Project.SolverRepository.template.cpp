@@ -15,4 +15,20 @@ namespace {{N}} {
 {% endfor %}
 
 
+void {{NAMESPACE | join("::")}}::repositories::computeLocalToGlobalMapsForAllSolvers() {
+  {% for SOLVER in SOLVER_INSTANCES %}
+  {{SOLVER[1]}}.getLocalToGlobalMap().computeLocalToGlobalMap();
+  {% endfor %}
+}
+
+
+int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
+
+
 

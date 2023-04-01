@@ -59,13 +59,14 @@ you can implement forks and joins (reductions) "natively". There
 are also functions to inject static data into an action set.
 
 There will be one class per action set per context (observer) 
-it is used for. Oen object will be created per grid sweep, and 
+in which it is used. One object will be created per grid sweep, and 
 it will have the tree identifier -1 by default. The actual 
 objects that then are used are constructed from this prototype
 object via the augmented copy constructor. The other important
 role of the prototype object, i.e. the one tied to spacetree id
 -1, is to manage the grid traversal events. It is this object
-that is asked to hand out grid traversals.
+that is asked to hand out grid traversals. Consult the documentation
+of get_constructor_body() for details on the tree id.
 
 If you want to realise BSP-like programming, then you typically
 realise the data sharing via the copy constructor. The 
@@ -101,16 +102,40 @@ to which action set.
   def __init__(self):
     pass
 
+
   @abstractmethod
   def get_constructor_body(self):
+    """! Define a tailored constructor body
+ 
+ By default, the constructor of an action set is empty. If you you assign
+ attributes to your action set, you however might want to initialise them
+ here. We do not support initialisation lists, to all has to be done via
+ setters unless you create attributes on the heap. 
+ 
+ The constructor's signature will look similar to
+
+
+        EnumerateAndInitSolution2petsc_actionsets_InitVertexDoFs0(int treeNumber);
+        
+        
+ where the treeNumber is -1 if this is the global instance of the 
+ action set owned by a rank, or a number greater or equal 0 if this action
+ set is a clone of the glocal action set that's used by one tree traversal.
+
+ @see get_attributes() to add attributes to your action set
+ 
+    """  
     return "// @todo Should be overwritten\n"
+
 
   def get_static_initialisations(self,full_qualified_classname):
     return ""
 
+
   @abstractmethod
   def get_destructor_body(self):
     return "// @todo Should be overwritten\n"
+
 
   def get_body_of_getGridControlEvents(self):
     return "return std::vector< peano4::grid::GridControlEvent >();\n"

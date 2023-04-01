@@ -190,7 +190,13 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-PETSc" );
 
         watch.start();
-        // todo
+
+        repositories::computeLocalToGlobalMapsForAllSolvers();
+        const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
+        logInfo( "step()", "total no of dofs=" << totalNumberOfDegreesOfFreedom );
+
+        // todo Dmitry
+
         watch.stop();
         initMeasurement.setValue( watch.getCalendarTime() );
       }

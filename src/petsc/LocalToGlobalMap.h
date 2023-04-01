@@ -14,6 +14,8 @@ namespace petsc {
 
 class petsc::LocalToGlobalMap {
   public:
+    static constexpr int RankGlobalTreeNumber = -1;
+
     /**
      * Creates an empty map for tree treeNumber
      *
@@ -23,10 +25,12 @@ class petsc::LocalToGlobalMap {
      * up its local map. After that, they merge() this local map into the
      * global one.
      *
-     * @param treeNumber Number of tree where this map is constructed or -1 if
-     *   it is the global map on this rank
+     * @param treeNumber Number of tree where this map is constructed or
+     *   RankGlobalTreeNumber if it is the global map on this rank
      */
-    LocalToGlobalMap(int treeNumber);
+    LocalToGlobalMap(int treeNumber = RankGlobalTreeNumber);
+
+    void setTreeNumber( int treeNumber );
 
     /**
      * Reserve some indices for unknowns and return the first one
@@ -59,6 +63,6 @@ class petsc::LocalToGlobalMap {
      */
     void computeLocalToGlobalMap();
 
-    int getTotalNumberOfIndices();
+    int getTotalNumberOfIndices() const;
 };
 

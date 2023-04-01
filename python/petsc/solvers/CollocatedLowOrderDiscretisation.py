@@ -6,8 +6,9 @@ import dastgen2
 
 import os
 
-from .Solver                         import Solver
-from petsc.actionsets.InitVertexDoFs import InitVertexDoFs
+from .Solver                             import Solver
+from petsc.actionsets.InitVertexDoFs     import InitVertexDoFs
+from petsc.actionsets.EnumerateVertices  import EnumerateVertices
 
 from abc import abstractmethod
 
@@ -45,7 +46,8 @@ I wanna see if this one applies to the solver or hte init
     self._dof = peano4.datamodel.DaStGen2( name )
     self._dof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_unknowns) ) )
     self._dof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(number_of_unknowns) ) )
-    self._dof.data.add_attribute( peano4.dastgen2.Peano4IntegerArray( "number", "2" ) )
+    #self._dof.data.add_attribute( peano4.dastgen2.Peano4IntegerArray( "number", "2" ) )
+    self._dof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
 
     pass
 
@@ -99,6 +101,7 @@ I wanna see if this one applies to the solver or hte init
     
     """
     observer.add_action_set( InitVertexDoFs(self) ) 
+    observer.add_action_set( EnumerateVertices(self) ) 
     pass
   
   
