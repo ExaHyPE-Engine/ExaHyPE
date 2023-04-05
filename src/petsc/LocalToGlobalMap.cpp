@@ -1,13 +1,10 @@
 #include "LocalToGlobalMap.h"
-#include <iostream>
 
 petsc::LocalToGlobalMap::LocalToGlobalMap(int treeNumber) : _treeNumber{treeNumber}, _totalNumberOfIndices{0} {
-  std::cout << "\ntreenumber = " << treeNumber << "\n\n";
 }
 
 
 void petsc::LocalToGlobalMap::setTreeNumber( int treeNumber ) {
-  std::cout << "treeNumber was " << _treeNumber << "\n";
   _treeNumber = treeNumber;
 }
 
@@ -27,6 +24,8 @@ int petsc::LocalToGlobalMap::reserveIndex(int cardinality) {
 
 
 void petsc::LocalToGlobalMap::merge( const LocalToGlobalMap& otherMap ) {
+  //increase our count of the number of indices globally
+  _totalNumberOfIndices += otherMap.getTotalNumberOfIndices();
 
   int otherTreeNumber = otherMap.getTreeNumber();
   int otherIndices = otherMap.getTotalNumberOfIndices();
@@ -60,7 +59,6 @@ int petsc::LocalToGlobalMap::getGlobalIndex( const std::pair<int,int>& index ) {
 
 // this occurs after finishing traversal
 void petsc::LocalToGlobalMap::computeLocalToGlobalMap() {
-  std::cout << "\ncomputing local to global map\n\n";
 }
 
 
