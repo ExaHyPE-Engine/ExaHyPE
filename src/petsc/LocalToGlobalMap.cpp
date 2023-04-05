@@ -39,12 +39,6 @@ int petsc::LocalToGlobalMap::getIndicesPerSubtree( int treeNumber ) const {
   return _indicesPerSubtree.at( treeNumber );
 }
 
-/*
-  for now, this will just perform some "modular" arthimetic, and we worry about 
-  crossover later. 
-  QUESTION: how to find number of total indices in the tree?
-    something to be done in localToGlobalMap
-*/
 // used in MapSolutionOntoMesh2petsc_actionsets_ProjectPETScSolutionOnVerticesBackOntoMesh0.cpp
 int petsc::LocalToGlobalMap::getGlobalIndex( const std::pair<int,int>& index ) {
 
