@@ -29,7 +29,7 @@ int petsc::LocalToGlobalMap::reserveIndex(int cardinality) {
 
 
 void petsc::LocalToGlobalMap::merge( const LocalToGlobalMap& otherMap ) {
-
+  std::cout << "\n\nmerge\n\n";
 }
 
 
