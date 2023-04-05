@@ -33,7 +33,7 @@ class petsc::LocalToGlobalMap {
 
     void setTreeNumber( int treeNumber );
     
-    int getTreeNumber();
+    int getTreeNumber() const;
 
     /**
      * Reserve some indices for unknowns and return the first one
