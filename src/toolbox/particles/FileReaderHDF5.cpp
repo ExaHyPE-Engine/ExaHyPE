@@ -548,22 +548,12 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
       /* Store coordinates */
       result.push_back(*p);
 
-      /* Also store other fields.
-       * This current version will make Voxel arrays grow in size beyond the
-       * size of the returned result (coordinates). @TODO Improve this so these
-       * have the same size.
-       */
+      /* Also store other fields. */
       _VelocityWithinVoxel.push_back       ( _Velocity       [*pind] );
       _MassWithinVoxel.push_back           ( _Mass           [*pind] );
       _SmoothingLengthWithinVoxel.push_back( _SmoothingLength[*pind] );
       _InternalEnergyWithinVoxel.push_back ( _InternalEnergy [*pind] );
       _ParticleIDsWithinVoxel.push_back    ( _ParticleIDs    [*pind] );
-
-      // logDebug( "getParticlesWithinVoxel()", "_VelocityWithinVoxel:        " << _VelocityWithinVoxel.back() );
-      // logDebug( "getParticlesWithinVoxel()", "_MassWithinVoxel:            " << _MassWithinVoxel.back() );
-      // logDebug( "getParticlesWithinVoxel()", "_SmoothingLengthWithinVoxel: " << _SmoothingLengthWithinVoxel.back() );
-      // logDebug( "getParticlesWithinVoxel()", "_InternalEnergyWithinVoxel:  " << _InternalEnergyWithinVoxel.back() );
-      // logDebug( "getParticlesWithinVoxel()", "_ParticleIDsWithinVoxel:     " << _ParticleIDsWithinVoxel.back() );
 
       if (remove) {
         p = _Coordinates.erase(p);
@@ -591,7 +581,6 @@ void toolbox::particles::FileReaderHDF5::clear() {
   _InternalEnergy.clear();
   _ParticleIDs.clear();
   _ParticleIndex.clear();
-
 }
 
 

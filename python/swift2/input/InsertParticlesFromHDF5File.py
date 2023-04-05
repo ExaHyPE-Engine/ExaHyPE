@@ -171,10 +171,6 @@ Read position from HDF5 and insert particles
         newParticle,
         fineGridVerticeshydroPartSet
       );
-
-      logInfo( "Init2peano4()", "_spacetreeId: " << _spacetreeId << 
-                             ", _particleNumberOnThisTree: " << _particleNumberOnThisTree );
-
     }
     
     logDebug( "touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " 
