@@ -5,7 +5,7 @@
 
 
 #include <utility>
-#include <map>
+#include <unordered_map>
 
 
 namespace petsc {
@@ -68,6 +68,9 @@ class petsc::LocalToGlobalMap {
 
     int getTotalNumberOfIndices() const;
 
+    /**
+     * should only be called from main tree, ie with treenumber = -1
+    */
     int getIndicesPerSubtree( int treeNumber ) const;
   
   private:
@@ -84,7 +87,7 @@ class petsc::LocalToGlobalMap {
      * keeps track of the number of indices per subtree.
      * used for computing local to global map.
     */
-    std::map<int,int> _indicesPerSubtree;
+    std::unordered_map<int,int> _indicesPerSubtree;
 
 };
 
