@@ -68,23 +68,23 @@ class petsc::LocalToGlobalMap {
 
     int getTotalNumberOfIndices() const;
 
-    // int getIndicesPerSubtree( int treeNumber ) const;
+    int getIndicesPerSubtree( int treeNumber ) const;
 
   private:
     int _treeNumber;
     
     // let's make this total number of indices in this tree specifically.
     // later, we use this to make sure the merge was successful
-    int _totalNumberOfIndices = 0;
+    int _totalNumberOfIndices;
 
     // std::vector<petsc::LocalToGlobalMap> _subTrees;
-    int _numberOfSubtrees = 0;
+    int _numberOfSubtrees;
 
     /**
      * keeps track of the number of indices per subtree.
      * used for computing local to global map.
     */
-    // std::map<int,int> _indicesPerSubtree;
+    std::map<int,int> _indicesPerSubtree;
 };
 
  

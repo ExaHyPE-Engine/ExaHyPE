@@ -8,9 +8,8 @@
 */
 
 
-petsc::LocalToGlobalMap::LocalToGlobalMap(int treeNumber) {
-  // std::cout << "\ntreenumber = " << treeNumber << "\n\n";
-  _treeNumber = treeNumber;
+petsc::LocalToGlobalMap::LocalToGlobalMap(int treeNumber) : _numberOfSubtrees(0), _totalNumberOfIndices(0), _treeNumber(treeNumber) {
+  std::cout << "\ntreenumber = " << treeNumber << "\n\n";
 }
 
 
@@ -22,10 +21,10 @@ void petsc::LocalToGlobalMap::setTreeNumber( int treeNumber ) {
 
 int petsc::LocalToGlobalMap::getTreeNumber() const {return _treeNumber;}
 
-// int petsc::LocalToGlobalMap::getIndicesPerSubtree( int treeNumber ) const {
-//   std::cout << "here\n";
-//   return _indicesPerSubtree.at(treeNumber); 
-// }
+int petsc::LocalToGlobalMap::getIndicesPerSubtree( int treeNumber ) const {
+  std::cout << "\n\there\n";
+  return _indicesPerSubtree.at(treeNumber); 
+}
 
 //we need to reserve some indices. best way to do that is to keep track 
 //of the total number of indices and return the first avail requested
@@ -74,9 +73,9 @@ int petsc::LocalToGlobalMap::getGlobalIndex( const std::pair<int,int>& index ) {
   //accumulate the number of indices "used up" by the previous subtrees.
   //index.first contains the local tree number 
   //assume that the other spacetree indices will be ordered 0, 1, 2, ....
-  // for (int i = 0; i < index.first; i++){
-  //   globalIndex += getIndicesPerSubtree( i );
-  // }
+  for (int i = 0; i < index.first; i++){
+    globalIndex += getIndicesPerSubtree( i );
+  }
 
   //now we've calculated the offset, add on the local index
   return 15;
