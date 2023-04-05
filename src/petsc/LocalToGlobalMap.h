@@ -5,7 +5,7 @@
 
 
 #include <utility>
-#include <unordered_map>
+#include <map>
 
 
 namespace petsc {
@@ -89,7 +89,7 @@ class petsc::LocalToGlobalMap {
      * keeps track of the number of indices per subtree.
      * used for computing local to global map.
     */
-    std::unordered_map<int,int> _indicesPerSubtree;
+    std::map<int,int> _indicesPerSubtree;
 
 };
 
