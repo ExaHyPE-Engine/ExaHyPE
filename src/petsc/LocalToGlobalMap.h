@@ -5,8 +5,7 @@
 
 
 #include <utility>
-#include <map>
-#include <iostream>
+#include <unordered_map>
 
 
 namespace petsc {
@@ -33,6 +32,7 @@ class petsc::LocalToGlobalMap {
     LocalToGlobalMap(int treeNumber = RankGlobalTreeNumber);
 
     void setTreeNumber( int treeNumber );
+    
     int getTreeNumber() const;
 
     /**
@@ -68,8 +68,13 @@ class petsc::LocalToGlobalMap {
 
     int getTotalNumberOfIndices() const;
 
+    /**
+     * should only be called from main tree, ie with treenumber = -1
+     * @param Number of tree where this map is constructed.
+     * @returns the number of vertices within the tree labelled treeNumber
+    */
     int getIndicesPerSubtree( int treeNumber ) const;
-
+  
   private:
     int _treeNumber;
     
@@ -84,7 +89,8 @@ class petsc::LocalToGlobalMap {
      * keeps track of the number of indices per subtree.
      * used for computing local to global map.
     */
-    std::map<int,int> _indicesPerSubtree;
+    std::unordered_map<int,int> _indicesPerSubtree;
+
 };
 
  
