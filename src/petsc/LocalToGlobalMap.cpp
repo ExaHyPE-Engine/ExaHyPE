@@ -36,14 +36,33 @@ void petsc::LocalToGlobalMap::merge( const LocalToGlobalMap& otherMap ) {
   _indicesPerSubtree.insert( std::make_pair( otherTreeNumber, otherIndices ) );
 }
 
+int petsc::LocalToGlobalMap::getIndicesPerSubtree( int treeNumber ) const {
+  return _indicesPerSubtree.at( treeNumber );
+}
+
 
 int petsc::LocalToGlobalMap::getGlobalIndex( const std::pair<int,int>& index ) {
-  return 15;
+  std::cout << "\ncomputing global index for tree number: " << index.first << ", index: " << index.second << "\n\n";
+
+  int localTreeNumber = index.first;
+  int localIndex = index.second;
+  
+  //to be returned:
+  int globalIndex(0);
+
+  //let's count the indices that were used up by other subtrees:
+  for (int i=0; i<localTreeNumber; i++){
+    globalIndex += getIndicesPerSubtree( i );
+  }
+
+  //add on the offset in the local subtree, and then return
+  globalIndex += localIndex;
+  return globalIndex;
 }
 
 
 void petsc::LocalToGlobalMap::computeLocalToGlobalMap() {
-
+  std::cout << "\ncomputing local to global map\n\n";
 }
 
 

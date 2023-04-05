@@ -70,6 +70,8 @@ class petsc::LocalToGlobalMap {
 
     /**
      * should only be called from main tree, ie with treenumber = -1
+     * @param Number of tree where this map is constructed.
+     * @returns the number of vertices within the tree labelled treeNumber
     */
     int getIndicesPerSubtree( int treeNumber ) const;
   
