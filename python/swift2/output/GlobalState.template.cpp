@@ -163,7 +163,7 @@ void finishTimeStep() {
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
-  logTraceIn( "TimeStep()" );
+  logTraceOut( "TimeStep()" );
 }
 
 
@@ -173,7 +173,7 @@ void finishGridConstructionStep() {
   {%- endfor %}
 
   loadBalancer.finishStep();
-  logTraceIn( "GridConstructionStep()" );
+  logTraceOut( "GridConstructionStep()" );
 }
 
 
@@ -184,7 +184,7 @@ void finishInitialisationStep() {
   {%- endfor %}
 
   loadBalancer.finishStep();
-  logTraceIn( "InitialisationStep()" );
+  logTraceOut( "InitialisationStep()" );
 }
 
 
@@ -195,7 +195,7 @@ void finishSortingStep() {
   {%- endfor %}
 
   loadBalancer.finishStep();
-  logTraceIn( "SortingStep()" );
+  logTraceOut( "SortingStep()" );
 }
 
 
@@ -203,7 +203,7 @@ void finishPlotStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
-  logTraceIn( "PlotStep()" );
+  logTraceOut( "PlotStep()" );
 }
 
 
@@ -211,7 +211,7 @@ void finishIntermediateStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
-  logTraceIn( "IntermediateStep()" );
+  logTraceOut( "IntermediateStep()" );
 }
 
 {% for item in NAMESPACE -%}
