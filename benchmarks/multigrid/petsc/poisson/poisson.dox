@@ -78,13 +78,19 @@ peano4_project.generate()
  
  
  ## Add numerics
- 
- 
+  
  Now it is time to build your code. The Python API will never overwrite your
  user code, i.e. alter the Poisson.h and Poisson.cpp file. So you are save
- when you rerun the Python script once more and make it call peano4_project.build().  
- But it is quite some overhead to regenerate all of that glue code. Just type
- in make on the terminal, and everything should be fine.
+ when you rerun the Python script once more and make it call 
+ 
+        peano4_project.build()
+        
+ As it is some overhead to regenerate all of that glue code, just type
+ in make on the terminal, and everything should be fine. Our implementation
+ of the Poisson setup is really simplistic. As we want to solve
+ 
+ @todo Sean can you write down stuff here?
+ 
 
  ## Visualisation
  

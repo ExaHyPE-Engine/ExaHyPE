@@ -10,30 +10,27 @@ import jinja2
 
 
 class ParticleAMR(ActionSet):
-  """
+  """!
 
-    AMR criterion based upon the particle density
+AMR criterion based upon the particle density
 
-    Most codes use this criterion in combination with a classic mesh-based criterion
-    which ensures that the mesh is not coarser than a certain maximal mesh sizes.
-    
-    
-    :: Algorithm
-    
-    The algorithm relies heavily on the ParticleTreeAnalysis action set which 
-    annotates each cell in the tree with the sum of the vertices associated to 
-    the 2^d adjacent vertices. If this sum exceeds certain thresholds and, depending
-    on the setup, some cut-off radii of hosted particles are small enough, the code
-    refines the tree. It is then the job of subsequent runs with 
-    UpdateParticleGridAssociation to drop the particles into the newly created 
-    cells.
-    
-    
-    As we work with cell data to guide the adaptivity yet store the particles 
-    within vertices, it is clear that refinement pattern tends to smear out. We
-    get rather regularly refined areas around the particles. For most applications,
-    that's totally fine, as it also ensures that 
-    
+Most codes use this criterion in combination with a classic mesh-based criterion
+which ensures that the mesh is not coarser than a certain maximal mesh sizes.
+
+The algorithm relies heavily on the ParticleTreeAnalysis action set which 
+annotates each cell in the tree with the sum of the vertices associated to 
+the 2^d adjacent vertices. If this sum exceeds certain thresholds and, depending
+on the setup, some cut-off radii of hosted particles are small enough, the code
+refines the tree. It is then the job of subsequent runs with 
+UpdateParticleGridAssociation to drop the particles into the newly created 
+cells.
+
+
+As we work with cell data to guide the adaptivity yet store the particles 
+within vertices, it is clear that refinement pattern tends to smear out. We
+get rather regularly refined areas around the particles. For most applications,
+that's totally fine, as it also ensures that 
+
   """
   def __init__(self,
                particle_set,

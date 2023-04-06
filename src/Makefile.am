@@ -14,6 +14,7 @@ SUBDIRS = . \
   toolbox/particles \
   exahype2 \
   swift2 \
+  petsc \
   convert \
   unittests
 

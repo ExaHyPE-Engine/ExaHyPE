@@ -5,13 +5,14 @@
 
 \tableofcontents
 
-\li \subpage swift_architecture
 \li \subpage swift_tutorials
 \li \subpage swift_benchmarks
-\li \subpage swift_visualisation 
+\li \subpage swift_architecture
 \li \subpage swift_graph_compiler
-\li \subpage swift_particle_lifecycle
 \li \subpage swift_initial_conditions 
+\li \subpage swift_parallelisation
+\li \subpage swift_particle_lifecycle
+\li \subpage swift_visualisation 
 
 @image html logos/excalibur.png
 

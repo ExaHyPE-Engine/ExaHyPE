@@ -16,16 +16,17 @@
 
 {% for N in NAMESPACE %}
 namespace {{N}} {
-  namespace repositories {
-    {% for SOLVER in SOLVER_INSTANCES %}
-
-    extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
-
-    {% endfor %}
-  }
 {% endfor %}
+  namespace repositories {
 
+    {% for SOLVER in SOLVER_INSTANCES %}
+    extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
+    {% endfor %}
 
+    void computeLocalToGlobalMapsForAllSolvers();
+    int getTotalNumberOfDegreesOfFreedom();
+
+  }
 {% for N in NAMESPACE %}
 }
 {% endfor %}

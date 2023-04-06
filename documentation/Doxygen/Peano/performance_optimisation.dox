@@ -176,10 +176,96 @@ performance drop is due to a bad per-rank (shared memory) load balancing most of
 the times. Study the recommendations above after you have visualised the distribution
 of the cells per rank.
 
+@image html performance_optimisation_mpi_cells_per_rank.png
+
+The example above results from outputs as shown below:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Peano 4 (C) www.peano-framework.org
+build: 3d, with mpi (2 ranks), omp (64 threads), no gpu support
+ 666073601    00:00:00     rank:0       core:32      info         exahype2::parseCommandLineArguments(...)                manually set timeout to 3600
+ 706182872    00:00:00     rank:0       core:32      info         ::::selectNextAlgorithmicStep()                         mesh has rebalanced recently, so postpone further refinement)
+ 842          00:00:00     rank:0       core:32      info         ::step()                                                run CreateGridButPostponeRefinement
+ 832976806    00:00:00     rank:1       core:124     info         exahype2::RefinementControl::finishStep()               share my 0 event(s) with others
+ [...]
+ 539406935606 00:08:59     rank:1       core:83      info         toolbox::loadbalancing::dumpStatistics()                41 tree(s): (#1:907/3930)(#3:38/509)(#5:38/925)(#7:38/1081)(#9:38/977)(#11:38/613)(#13:38/665)(#15:38/873)(#17:38/925)(#19:38/925)(#21:38/925)(#23:38/1081)(#25:38/1185)(#27:38/613)(#29:38/405)(#31:38/509)(#33:38/613)(#35:38/925)(#37:38/1003)(#39:38/925)(#41:38/1289)(#43:38/1497)(#45:38/1185)(#47:38/1211)(#49:38/1081)(#51:38/977)(#53:38/873)(#55:38/1237)(#57:38/1289)(#59:38/1341)(#61:38/1341)(#63:38/1289)(#65:38/1185)(#67:38/1471)(#69:38/1783)(#71:38/1575)(#73:38/1575)(#75:38/1575)(#77:38/1731)(#79:38/1471)(#81:29/1532) total=2418/48115 (local/remote)
+ 539319928237 00:08:59     rank:0       core:36      info         exahype2::RefinementControl::finishStep()               share my 0 event(s) with others
+ 539320233293 00:08:59     rank:0       core:36      info         toolbox::loadbalancing::dumpStatistics()                49 tree(s): (#0:1201/5846)(#2:76/1823)(#4:76/2057)(#6:76/2057)(#8:76/2057)(#10:76/2057)(#12:76/1355)(#14:76/1511)(#16:76/1355)(#18:76/1355)(#20:76/1511)(#22:76/1355)(#24:76/1199)(#26:76/1199)(#28:76/1589)(#30:76/1355)(#32:76/1667)(#34:76/1511)(#36:76/1589)(#38:76/1589)(#40:76/1355)(#42:76/1121)(#44:76/1199)(#46:76/1121)(#48:76/861)(#50:76/991)(#52:76/1199)(#54:76/1355)(#56:76/1433)(#58:76/861)(#60:76/887)(#62:76/1121)(#64:76/1433)(#66:76/1589)(#68:76/1589)(#70:76/1667)(#72:76/1511)(#74:76/1511)(#76:75/1356)(#78:75/1044)(#80:75/1200)(#82:75/1356)(#84:75/862)(#86:75/1200)(#88:75/1044)(#90:75/1278)(#92:75/1434)(#94:75/1200)(#96:74/785) total=4837/71600 (local/remote)
+ 538613648953 00:08:58     rank:0       core:36      info         ::step()                                                run TimeStep
+ 597638762240 00:09:57     rank:0       core:36      info         exahype2::RefinementControl::finishStep()               share my 0 event(s) with others
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We have 41 or 49 trees, respectively, on a single rank. 
+While this might be reasonably balanced, we have 64 cores/threads per rank and 
+hence can conclude that our load balancing does not keep all cores busy. 
+We loose out on threads.
+Enclave tasking and parallel compute kernels can, to some degree, mitigate this
+problem, but we should aim for a proper work distribution right from the 
+start, i.e. geometrically.
+Further to our observations so far, we see that rank 0 is significantly heavier in terms of total cell 
+count.
 
 
+What we furthermore see from the logs (as well as from the plot) is that each rank 
+has one massive tree, and then a lot of smaller trees. The smaller ones are all 
+properly balanced, i.e. they are all of the same size (around 75 on rank 0 and around 38
+on rank 1). But then we have this one massive tree besides these small ones. 
+That is not a good load balancing, and - if you use OpenMP - will manifest in 
+high spin times per node:
 
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Top Hotspots
+Function                                                           Module            CPU Time  % of CPU Time(%)
+-----------------------------------------------------------------  --------------  ----------  ----------------
+__kmp_fork_barrier                                                 libiomp5.so     73692.591s             94.2%
+__kmpc_taskloop                                                    libiomp5.so      1105.792s              1.4%
+TP::TwoPunctures::PunctEvalAtArbitPositionFaster                   peano4_bbhtest    722.662s              0.9%
+toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product  peano4_bbhtest    286.592s              0.4%
+applications::exahype2::ccz4::ncp                                  peano4_bbhtest    178.042s              0.2%
+[Others]                                                           N/A              2223.510s              2.8%
+Collection and Platform Info
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+In this case, we observe that the individual rank has made a reasonable load 
+balancing decision once it has "recovered" from the global spread out over
+all ranks:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3460753894   00:00:03     rank:0       core:32      info         peano4::parallel::SpacetreeSet::split(int,int)          trigger split of tree 0 into tree 22 with 76 fine grid cells
+[...] 
+3951177679   00:00:03     rank:0       core:38      info         peano4::grid::Spacetree::traverse(TraversalObserver)    have not been able to assign enough cells from 0 to new tree 112 (should have deployed 75 more cells)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+However, while the load balancing (rightly so) decided to keep all cores busy,
+it seems that not enough cells had been available at the time to bring them into
+the business. 
+
+
+We summarise:
+
+- The load balancing detects the ill-balancing between rank 0 and rank 1 and
+  actually asks rank 0 to span another child tree on rank 1. However, this 
+  fork is not successful. Apparently, no cells on rank 0 are left over. Which 
+  is clearly wrong.
+- The load balancing detects the local ill-balancing on rank 1 and asks rank 1
+  to fork another subtree on the local rank. This is not successful once again,
+  as there seem to be insufficient cells around. 
+  
+This makes absolutely no sense at all! The clue for this behaviour is however
+burried in the 900 cells per rank: As we work with three-partitioning, each 
+refinement gives us 27 new octants per octant. So two refinement levels brings
+us to the order of 900.
+
+
+@todo Visualisation of subdomains and mesh
+@todo Wer ist der Boesewicht
+@todo AMR Pattern stimmt halt wieder net
+@todo dot File extractor rein udn den zu Peano dazu
+@todo Er reported "there are already so many ... trees", was gar net stimmt. 
 
  */
  

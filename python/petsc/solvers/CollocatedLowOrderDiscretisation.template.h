@@ -25,6 +25,40 @@
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")}}::Abstract{{CLASSNAME}} {
   public:
+
+    /**
+     * Default constructor
+     *
+     * @todo Please add your documentation here.
+     */
+    {{CLASSNAME}}();
+
+    /**
+     * Destructor
+     *
+     * Has to be virtual, as there is a superclass with virtual functions.
+     *
+     * @todo Please add your documentation here.
+     */
+    virtual ~{{CLASSNAME}}();
+
+    /**
+     * Initialise a vertex degree of freedom
+     *
+     * @todo Please add your documentation here
+     */
+    void init(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h,
+      {% if CARDINALITY==1 %}
+      double&                                       value,
+      double&                                       rhs
+      {% else %}
+      const tarch::la::Vector< {{CARDINALITY}}, double >&  value,
+      const tarch::la::Vector< {{CARDINALITY}}, double >&  rhs
+      {% endif %}
+    ) override;
+
 };
 
 
