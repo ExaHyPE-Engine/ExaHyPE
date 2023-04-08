@@ -8,6 +8,9 @@ endif
 
 
 ToolboxLoadBalancing_SOURCES = \
+  Blacklist.cpp \
+  Configuration.cpp \
+  Greedy.cpp \
   Hardcoded.cpp \
   loadbalancing.cpp \
   NoLoadBalancing.cpp \
