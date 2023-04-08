@@ -3,7 +3,7 @@
 #pragma once
 
 
-#include "toolbox/loadbalancing/RecursiveSubdivision.h"
+#include "toolbox/loadbalancing/Configuration.h"
 
 namespace exahype2 {
   class LoadBalancingConfiguration;
@@ -14,7 +14,7 @@ namespace exahype2 {
  * ExaHyPE 2-specific load balancing configuration
  *
  */
-class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::RecursiveSubdivision::Configuration {
+class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Configuration {
   private:
     const double   _loadBalancingQuality;
     const int      _minSizeOfTree;
@@ -75,17 +75,17 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
 
     virtual ~LoadBalancingConfiguration() = default;
 
-    bool makeSplitDependOnMemory(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
+    bool makeSplitDependOnMemory(toolbox::loadbalancing::State state) override;
 
-    int getMaxLocalTreesPerRank(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
+    int getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) override;
 
-    double getWorstCaseBalancingRatio(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
+    double getWorstCaseBalancingRatio(toolbox::loadbalancing::State state) override;
 
     /**
      * If we do the initial distribution in-between ranks, then there
      * should be no such thing as a min tree size.
      */
-    int getMinTreeSize(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
+    int getMinTreeSize(toolbox::loadbalancing::State state) override;
 };
 
 

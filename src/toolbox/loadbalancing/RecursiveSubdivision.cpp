@@ -146,7 +146,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
         "local number of cells (" << _localNumberOfInnerUnrefinedCell << ") is bigger than global cell count (" << _globalNumberOfInnerUnrefinedCells <<
         "). This usually happens if a forking tree has some pending refinement events and cannot refine anymore, as it has already spawned cells. Postpone further load balancing decisions"
       );
-      _stepsToWaitForNextLoadBalancingDecision = 3;
+      _stepsToWaitForNextLoadBalancingDecision = std::max(_stepsToWaitForNextLoadBalancingDecision,1);
       _globalNumberOfInnerUnrefinedCells       = _localNumberOfInnerUnrefinedCell;
       _lightestRank._rank                      = tarch::mpi::Rank::getInstance().getRank();
     }

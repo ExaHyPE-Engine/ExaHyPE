@@ -1,4 +1,7 @@
 #include "LoadBalancingConfiguration.h"
+
+
+#include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"
 
 
@@ -16,7 +19,7 @@ exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
 }
 
 
-bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::loadbalancing::RecursiveSubdivision::State state) {
+bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::loadbalancing::State state) {
   return false;
 }
 
@@ -35,9 +38,9 @@ int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNu
 }
 
 
-int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::RecursiveSubdivision::State state) {
+int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) {
   if (
-    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankDistribution
+    state==toolbox::loadbalancing::State::IntraRankDistribution
   ) {
     return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTreesThroughoutInitialDistribution);
   }
@@ -47,16 +50,16 @@ int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadb
 }
 
 
-double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::RecursiveSubdivision::State state) {
+double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::State state) {
   return _loadBalancingQuality;
 }
 
 
-int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::RecursiveSubdivision::State state) {
+int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::State state) {
   if (
-    state==toolbox::loadbalancing::RecursiveSubdivision::State::InterRankDistribution
+    state==toolbox::loadbalancing::State::InterRankDistribution
     or
-    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankDistribution
+    state==toolbox::loadbalancing::State::IntraRankDistribution
   ) {
     return 0;
   }
