@@ -132,12 +132,20 @@ class ParticleVTUReader(object):
     Methods
     -------
 
+    get_all_vtufiles(self):
+        Read in and return all .vtu file names from the .pvd file
+        provided by pvdfilename at initialisation.
+
     load(self):
         actually read in the data, and return the particle data as a
         VTUParticleSet object.
+
+    read_single_vtu_file(self, vtufilename: str):
+        Read in particle data from a single .vtu file, and return the filled
+        out VTUParticleSet object containing the particle data.
     """
 
-    def __init__(self, 
+    def __init__(self,
                  vtufile: Union[str, None] = None,
                  snapshot_time: Union[float, None] = None,
                  pvdfile: Union[str, None] = None,
@@ -148,7 +156,7 @@ class ParticleVTUReader(object):
         be provided, or both the ``snapshot_time`` and ``pvdfile``
         arguments in order to specify what data to read.
 
-        If ``vtufile`` is given, the ParticleVTUReader will read in a 
+        If ``vtufile`` is given, the ParticleVTUReader will read in a
         single .vtu file.
 
         If ``snapshot_time`` and ``pvdfile`` arguments are given, the
@@ -162,9 +170,10 @@ class ParticleVTUReader(object):
             path to .vtu file to be read in
 
         snapshot_time: float
+            time of the snapshot to extract
 
-        vtufile: str
-            path to .vtu file to be read in
+        pvdfile: str
+            path to .pvd file to be read in
 
         verbose: bool
             how talkative the reading process should be
@@ -209,15 +218,14 @@ class ParticleVTUReader(object):
 
         if self._mode == "single":
             # read in the single file
-            return self._read_single_vtu_file(self._vtufile)
+            return self.read_single_vtu_file(self._vtufile)
 
         elif self._mode == "multiple":
             vtufiles = self._get_snapshot_vtu_files_from_pvd(self._pvdfile, self._snapshot_time)
             partdata = None
-            pathprefix = os.path.dirname(self._pvdfile)
             for f in vtufiles:
-                fullpath = os.path.join(pathprefix, f)
-                new_data = self._read_single_vtu_file(fullpath)
+                fullpath = self._get_full_vtufile_path(f)
+                new_data = self.read_single_vtu_file(fullpath)
                 if partdata is None:
                     partdata = new_data
                 else:
@@ -227,6 +235,49 @@ class ParticleVTUReader(object):
 
         else:
             raise ValueError("Unknown mode? How did we get here?")
+
+
+    def get_all_vtufiles(self):
+        """!
+        Read in and return all .vtu file names from the .pvd file
+        provided by pvdfilename at initialisation.
+
+        Returns
+        -------
+
+        vtufilenames: list
+            list of .vtu filenames in the .pvd file, with their
+            full path.
+        """
+
+        if self._pvdfile is None:
+            raise ValueError("""
+No .pvd file has been specified.
+You need to provide a .pvd file name during initialisation of
+the ParticleVTUReader() object.
+                             """)
+
+        # backend specified to vtuIO default to avoid warning messages
+        pvdfile = vtuIO.PVDIO(self._pvdfile, interpolation_backend="vtk")
+        allvtufiles = pvdfile.vtufilenames
+        fullpathfiles = [self._get_full_vtufile_path(f) for f in allvtufiles]
+        return fullpathfiles
+
+    def _get_full_vtufile_path(self, vtufile:str):
+        """!
+        The .pvd file will provide relative path names to its
+        own file path for the .vtu files.
+        This function returns the full path of the .vtu file.
+        """
+        if self._pvdfile is None:
+            raise ValueError("""
+No .pvd file has been specified.
+You need to provide a .pvd file name during initialisation of
+the ParticleVTUReader() object.
+                             """)
+        pathprefix = os.path.dirname(self._pvdfile)
+        fullpath = os.path.join(pathprefix, vtufile)
+        return fullpath
 
 
     def _get_snapshot_vtu_files_from_pvd(self, pvdfilename: str, time: float):
@@ -272,7 +323,7 @@ class ParticleVTUReader(object):
         # make sure we found something
         if not snap_indexes.any():
             errmsg=f"""
-            Couldn't find any snapshots? 
+            Couldn't find any snapshots?
             Looking for snashots with time={self._snapshot_time}
             pvd file provides following times: {timesteps}
             pvd file provides following file names: {allvtufiles}
@@ -292,8 +343,8 @@ class ParticleVTUReader(object):
         if self._verbose or not close_enough:
             print(f"WARNING: You requested snapshot at time={self._snapshot_time}")
             print(
-                    "WARNING: Closest snapshot time I found is:", 
-                    timesteps[snap_indexes][0], 
+                    "WARNING: Closest snapshot time I found is:",
+                    timesteps[snap_indexes][0],
                     "; reading that in now"
                     )
 
@@ -303,16 +354,16 @@ class ParticleVTUReader(object):
         return vtufiles
 
 
-    def _read_single_vtu_file(self, vtufilename: str):
+    def read_single_vtu_file(self, vtufilename: str):
         """!
-        Read in a single .vtu file, and return the filled out
-        VTUParticleSet object containing the particle data.
+        Read in particle data from a single .vtu file, and return the filled
+        out VTUParticleSet object containing the particle data.
 
         Parameters
         ----------
 
         vtufilename: str
-            filename to read in from
+            .vtu filename to read in from.
 
 
         Returns
@@ -339,14 +390,14 @@ class ParticleVTUReader(object):
             print("File", vtufilename, "has particle fields:", point_field_names)
 
         data = VTUParticleSet(point_field_names)
-        
+
         for attr in point_field_names:
             part_fields = vtufile.get_point_field(attr)
             setattr(data, data._attribute_translator[attr], part_fields)
 
-            if self._verbose: 
+            if self._verbose:
                 print(
-                        "File", vtufilename, "read in field", attr, 
+                        "File", vtufilename, "read in field", attr,
                         "with shape", part_fields.shape
                      )
 
