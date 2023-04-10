@@ -5,6 +5,9 @@
 #include "tarch/multicore/Core.h"
 
 
+tarch::logging::Log  exahype2::LoadBalancingConfiguration::_log( "exahype2::LoadBalancingConfiguration" );
+
+
 exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
   double loadBalancingQuality,
   int minSizeOfTree,
@@ -15,7 +18,14 @@ exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
   _minSizeOfTree(minSizeOfTree),
   _maxNumberOfTreesThroughoutInitialDistribution( maxNumberOfTreesThroughoutInitialDistribution ),
   _maxNumberOfTrees( maxNumberOfTrees ) {
-  assertion( _maxNumberOfTrees>=_maxNumberOfTreesThroughoutInitialDistribution );
+  assertion2(
+    (_maxNumberOfTrees>=_maxNumberOfTreesThroughoutInitialDistribution)
+    or
+    _maxNumberOfTrees<0
+    or
+    _maxNumberOfTreesThroughoutInitialDistribution<0,
+    _maxNumberOfTrees, _maxNumberOfTreesThroughoutInitialDistribution
+  );
 }
 
 
@@ -25,16 +35,19 @@ bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::load
 
 
 int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNumberOfTrees(int value) const {
+  int result = -1;
   if (value==UseNumberOfThreads) {
-    return tarch::multicore::Core::getInstance().getNumberOfThreads();
+    result = tarch::multicore::Core::getInstance().getNumberOfThreads();
   }
   else if (value==UseTwiceTheNumberOfThreads) {
-    return tarch::multicore::Core::getInstance().getNumberOfThreads() * 2;
+    result = tarch::multicore::Core::getInstance().getNumberOfThreads() * 2;
   }
   else {
     assertion(value>0);
-    return value;
   }
+
+  assertion(result>=0);
+  return result;
 }
 
 

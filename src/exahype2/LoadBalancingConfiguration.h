@@ -3,7 +3,9 @@
 #pragma once
 
 
+#include "tarch/logging/Log.h"
 #include "toolbox/loadbalancing/Configuration.h"
+
 
 namespace exahype2 {
   class LoadBalancingConfiguration;
@@ -16,6 +18,8 @@ namespace exahype2 {
  */
 class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Configuration {
   private:
+    static tarch::logging::Log  _log;
+
     const double   _loadBalancingQuality;
     const int      _minSizeOfTree;
     const int      _maxNumberOfTreesThroughoutInitialDistribution;
