@@ -1,4 +1,4 @@
-# This file is part of the SWIFT2 project. For conditions of distribution and 
+# This file is part of the SWIFT2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from swift2.particle.Particle      import Particle
 from swift2.particle.AlgorithmStep import AlgorithmStep
@@ -13,64 +13,64 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
   Same as LeapfrogFixedInteractionRadius but augmented for full SPH.
   Implements the Minimal SPH scheme.
-  
+
   Simple particle with a fixed interaction radius h which moves according
-  to leapfrog KDK scheme. 
-  By default, it uses global time stepping, 
+  to leapfrog KDK scheme.
+  By default, it uses global time stepping,
   i.e. the combination of maximum velocity and minimal mesh size determines
-  the time step size of the subsequent time step. Besides the default 
+  the time step size of the subsequent time step. Besides the default
   variables x and h, the particle has the following properties:
-  
+
     - a vector a which is the acceleration;
     - a vector v which is the velocity.
-    
+
   You can add further properties via
-    
+
          myparticle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("myFancyArray","Dimensions") )
- 
-  in your code. Or you can create a subclass which adds additional fields 
+
+  in your code. Or you can create a subclass which adds additional fields
   after it has called the baseline constructor.
 
   You will need to add further properties for any SPH project.
-  
+
   ## Force calculation
-  
+
   particle_particle_interaction_over_particle_sets_kernel is a C++ string which defines a force between two
   particles. It has access to three important objects:
-  
+
   - localParticles is a container (list) over pointers to local particles
   - activeParticles is a container (list) over pointers to active particles
   - marker is a cell marker which identifies the current cell.
-  
+
   Please consult the guidebook for a definition of local and active particles
-  but take into account that the local particles always are a subset of the 
+  but take into account that the local particles always are a subset of the
   active particles.
-  
-  Besides the actual particle-to-particle calculation, i.e. a force 
-  calculation, users can also provide kernels that kick in when you touch 
-  particles for the first time before you actually compute any 
-  particle-particle interaction, and there is a plug-in point what you do 
-  just once the particle-particle interaction has terminated. The latter 
+
+  Besides the actual particle-to-particle calculation, i.e. a force
+  calculation, users can also provide kernels that kick in when you touch
+  particles for the first time before you actually compute any
+  particle-particle interaction, and there is a plug-in point what you do
+  just once the particle-particle interaction has terminated. The latter
   point is reached before we do the actual time stepping. In both plug-in
-  points, you have a vertex marker which gives you the position of the 
+  points, you have a vertex marker which gives you the position of the
   vertex to which a particular is associated, and you have the localParticles.
   This is a vector of pointers in this particular case.
- 
+
   ## Attributes
-  
+
   name: String
-    To be in line with other conventions, I recommend you start with an 
-    uppercase letter. This has to be a valid C++ identifier, i.e. don't 
+    To be in line with other conventions, I recommend you start with an
+    uppercase letter. This has to be a valid C++ identifier, i.e. don't
     use any special symbols besides an underscore.
-   
+
   @see peano4::datamanagement::CellMarker
   @see peano4::datamanagement::VertexMarker
-  
+
   """
-  def __init__(self, 
-               name, 
+  def __init__(self,
+               name,
                dimensions_hydro=2,
-               cfl_factor=0.1, 
+               cfl_factor=0.1,
                initial_time_step_size=1e-4,
                constant_time_step_size=True,
                swift_project_namespace="SPH",
@@ -85,7 +85,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                                                 min_h,
                                                                 max_h,
                                                                )
-    
+
     # Simulation properties
     self._name = name
     self._cfl_factor                = cfl_factor
@@ -101,12 +101,13 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     if(is_sph==True): isSPH='true'
     else: isSPH='false'
     self._is_sph = isSPH
-                    
+
     self._sph_flavour = sph_flavour
 
     # SPH parameters (default values)
     self._hydroDimensions = dimensions_hydro
-    self._eta_factor = 1.235
+    #  self._eta_factor = 1.2348
+    self._eta_factor = 2.
     self._h_hydro_min = 1e-6
     self._h_hydro_max = 1.0 / 3.0 / 2    # Approximated value for coarsest grid level
     self._h_tolerance = 1e-4
@@ -123,7 +124,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     # Project namespace to have consistent use of exported Constants in kernels
     # Not used right now.
     self._swift_project_namespace = swift_project_namespace
-    
+
     # Baseline particle properties --------------------------------------------------------------
     self.mass             = dastgen2.attributes.Double("mass",
                                                               valid_mantissa_bits=self._mantissa_size)
@@ -231,8 +232,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
   def algorithm_steps(self):
     """
-    
-    Leapfrog consists basically of four steps per particle. We first 
+
+    Leapfrog consists basically of four steps per particle. We first
     determine the force. Then we update the velocity by half a timestep and move
     the particle by a full timestep. Then the force is re-computed and the
     second half of the velocity update is done.
@@ -240,15 +241,20 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     to avoid a second force loop.
     """
 
-    return [ 
-      AlgorithmStep( 
-        name                           = "FlagBoundaryParticles",          
-        dependencies                   = AlgorithmStep.Dependencies.SELF, 
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+    return [
+      AlgorithmStep(
+        name                           = "FlagBoundaryParticles",
+        dependencies                   = AlgorithmStep.Dependencies.SELF,
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """
                                          """,
         touch_vertex_last_time_kernel  =
-                    """::swift2::kernels::flagBoundaryParticles(localParticles, {0} );""".format("::".join(self._swift_project_namespace)+"::HYDRO_PART_NUMBER"),
+                    #  """::swift2::kernels::flagBoundaryParticles(localParticles, {0}, {{ {1} }}, {{ {2} }});""".format(
+                    """::swift2::kernels::flagBoundaryParticles(localParticles, {0}, {1}, {2});""".format(
+                        "::".join(self._swift_project_namespace)+"::HYDRO_PART_NUMBER",
+                        "::".join(self._swift_project_namespace)+"::DomainSize",
+                        "::".join(self._swift_project_namespace)+"::DomainOffset",
+                        ),
         includes                       = """
                                          #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"
@@ -257,16 +263,16 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/kernels/equation_of_state.h"
                                          """,
       ),
-      AlgorithmStep( 
-        name                           = "DensityLoopWithConstantSmoothingLengthInitial",          
-        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+      AlgorithmStep(
+        name                           = "DensityLoopWithConstantSmoothingLengthInitial",
+        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """
                                          ::swift2::kernels::prepareDensityCalculation( localParticles );
                                          """,
         cell_kernel                    = """
-                                         ::swift2::kernels::computeDensity( 
-                                           localParticles, 
+                                         ::swift2::kernels::computeDensity(
+                                           localParticles,
                                            activeParticles,
                                            {}
                                          );
@@ -282,7 +288,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          """.format(self._hydroDimensions,
                                                     self._eta_factor,
                                                     self._alpha_av),
- 
+
         includes                       = """
                                          #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"
@@ -291,17 +297,17 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/kernels/equation_of_state.h"
                                          """,
       ),
-      AlgorithmStep( 
-        name                           = "ForceLoopInitial",          
-        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+      AlgorithmStep(
+        name                           = "ForceLoopInitial",
+        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """
                                          ::swift2::kernels::prepareHydroForceCalculation( localParticles );
                                          """,
 
         cell_kernel                    = """
-                                         ::swift2::kernels::computeHydroForce( 
-                                           localParticles, 
+                                         ::swift2::kernels::computeHydroForce(
+                                           localParticles,
                                            activeParticles,
                                            {},
                                            {}
@@ -315,7 +321,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                              {}
                                              );
                                          """.format(self._hydroDimensions),
- 
+
         includes                       = """
                                          #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"
@@ -324,9 +330,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/kernels/equation_of_state.h"
                                          """,
       ),
-      AlgorithmStep( 
-        name                           = "Kick1", 
-        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+      AlgorithmStep(
+        name                           = "Kick1",
+        dependencies                   = AlgorithmStep.Dependencies.SELF,
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
         touch_vertex_last_time_kernel  =
@@ -346,9 +352,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/kernels/equation_of_state.h"
                                          """
       ),
-      AlgorithmStep( 
-        name                           = "KickExtra1", 
-        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+      AlgorithmStep(
+        name                           = "KickExtra1",
+        dependencies                   = AlgorithmStep.Dependencies.SELF,
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
         touch_vertex_last_time_kernel  =
@@ -363,9 +369,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/kernels/equation_of_state.h"
                                          """
       ),
-      AlgorithmStep( 
-        name                           = "Drift", 
-        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+      AlgorithmStep(
+        name                           = "Drift",
+        dependencies                   = AlgorithmStep.Dependencies.SELF,
         effect                         = AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
         touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
         touch_vertex_last_time_kernel  = """::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( localParticles );""",
@@ -378,9 +384,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/kernels/equation_of_state.h"
                                          """
       ),
-      AlgorithmStep( 
-        name                           = "PredictHydro", 
-        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+      AlgorithmStep(
+        name                           = "PredictHydro",
+        dependencies                   = AlgorithmStep.Dependencies.SELF,
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
         touch_vertex_last_time_kernel  =
@@ -395,17 +401,17 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/kernels/equation_of_state.h"
                                          """
       ),
-      AlgorithmStep( 
-        name                           = "DensityLoopWithConstantSmoothingLength",          
-        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+      AlgorithmStep(
+        name                           = "DensityLoopWithConstantSmoothingLength",
+        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """
                                          ::swift2::kernels::prepareDensityCalculation( localParticles );
                                          """,
 
         cell_kernel                    = """
-                                         ::swift2::kernels::computeDensity( 
-                                           localParticles, 
+                                         ::swift2::kernels::computeDensity(
+                                           localParticles,
                                            activeParticles,
                                            {}
                                          );
@@ -421,7 +427,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          """.format(self._hydroDimensions,
                                                     self._eta_factor,
                                                     self._alpha_av),
- 
+
         includes                       = """
                                          #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"
@@ -430,17 +436,17 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/kernels/equation_of_state.h"
                                          """,
       ),
-      AlgorithmStep( 
-        name                           = "ForceLoop",          
-        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+      AlgorithmStep(
+        name                           = "ForceLoop",
+        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """
                                          ::swift2::kernels::prepareHydroForceCalculation( localParticles );
                                          """,
 
         cell_kernel                    = """
-                                         ::swift2::kernels::computeHydroForce( 
-                                           localParticles, 
+                                         ::swift2::kernels::computeHydroForce(
+                                           localParticles,
                                            activeParticles,
                                            {},
                                            {}
@@ -454,7 +460,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                              {}
                                              );
                                          """.format(self._hydroDimensions),
- 
+
         includes                       = """
                                          #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"
@@ -463,9 +469,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/kernels/equation_of_state.h"
                                          """,
       ),
-      AlgorithmStep( 
-        name                           = "Kick2", 
-        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+      AlgorithmStep(
+        name                           = "Kick2",
+        dependencies                   = AlgorithmStep.Dependencies.SELF,
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
         touch_vertex_last_time_kernel  =
@@ -480,9 +486,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/kernels/equation_of_state.h"
                                          """
       ),
-      AlgorithmStep( 
-        name                           = "KickExtra2", 
-        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+      AlgorithmStep(
+        name                           = "KickExtra2",
+        dependencies                   = AlgorithmStep.Dependencies.SELF,
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
         touch_vertex_last_time_kernel  =
@@ -497,9 +503,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/kernels/equation_of_state.h"
                                          """
       ),
-      AlgorithmStep( 
-        name                           = "ReduceGlobalQuantities", 
-        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+      AlgorithmStep(
+        name                           = "ReduceGlobalQuantities",
+        dependencies                   = AlgorithmStep.Dependencies.SELF,
         effect                         = AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
         cell_kernel                    = """::swift2::statistics::reduceVelocityAndCutOffRadius( localParticles );""",
         prepare_traversal_kernel       = """
@@ -524,11 +530,11 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   @property
   def eta_factor(self):
     """
-  
+
     Set the eta factor used by the SPH kernel to target a certain number of
     neighbour particles.
     The default value is eta = 1.235.
-  
+
     """
     return self._eta_factor
 
@@ -544,11 +550,11 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   @property
   def alpha_av(self):
     """
-    
+
     Viscosity parameters of the Minimal SPH model. Default SWIFT values are
     alpha_av=0.8
     and beta_av=3.
-  
+
     """
     return self._alpha_av
 
@@ -574,12 +580,12 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   @property
   def h_hydro_min(self):
     """
-    
+
     Set the limits allowed for the SPH smoothing length. Notice that the max value
     is bounded by Peano's cutoff radius as h_max = R_cutoff_max = max_grid_size /
     gamma_k, where gamma_k is the SPH kernel factor that relates h and H.
     Typically gamma_k = 2, so h_max = max_grid_size / 2.
-    
+
     """
     print('get h_hydro_min method called.')
     return self._h_hydro_min
@@ -607,9 +613,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   @property
   def h_tolerance(self):
     """
-    
+
     Tolerance for Newton-Raphson convergence criterion.
-    
+
     """
     print('get h_tolerance method called.')
     return self._h_tolerance
@@ -643,11 +649,11 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   @property
   def mantissa_size(self):
     """
-    
+
     Set the mantissa size of doubles and Peano double arrays if
     we want to use reduced precission via Clang annotations. As a reference,
     floats have mantissa size = 23.
-    
+
     """
     return self._mantissa_size
 
@@ -662,10 +668,10 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
   def get_cpp_namespace_from_project_namespace(self):
     """
-    
+
     Transform namespace into cpp format. Could be used to append namespace to
     constants in kernels (not used currently).
-    
+
     """
     namespace = ""
     for entry in self._swift_project_namespace:
