@@ -14,11 +14,41 @@ from petsc.PETScMain import PETScMain
 
 
 class Project(object):
-  """
+  """!
    
-  Represents an abstract PETSc solver
+Multigrid solver project
+
+A project hosts a set of multigrid solvers for different PDEs (which you might 
+eventually want to couple). Other than that, each project generates exactly 
+one main file and a solver repository. The main file is represented by 
+petsc.PETScMain, while the repository is generated directly by the project.  
+Consult generate_Peano4_project() for the latter.
   
-  Please do not use this class directly. Use one of its subclasses.
+  
+## Algorithmic steps
+  
+Every PETSc project runs through the following steps:
+ 
+  - algorithm_step_create_grid
+  - algorithm_step_enumerate
+  - _algorithm_step_init
+  - algorithm_step_assemble
+  - _algorithm_step_solve
+  - algorithm_step_map_solution_onto_mesh
+  - algorithm_step_plot
+  
+Each of these steps is mapped onto one observer. It is clear that not all
+steps actually lead to mesh traversals and, therefore, are not to be modified
+by users. They are simply there to allow the main function to pick a step and
+to tell all MPI ranks to run the same step on all local trees. I therefore 
+mark these steps as private via a leading underscore.
+
+  
+## Attributes
+  
+  - _solver_instances: [String,String]
+      List of tuples of typename and names of solvers that this project should use simultaneously.
+  
   
   """
   def __init__(self, 
@@ -39,6 +69,8 @@ class Project(object):
     self._build_mode          = peano4.output.CompileMode.Asserts
     self._executable_name = executable
     self._output_path   = "./"
+    
+    self._solver_instances = []
 
     self.algorithm_step_create_grid             = peano4.solversteps.Step( "CreateGrid",          False )
     self.algorithm_step_enumerate               = peano4.solversteps.Step( "Enumerate",           False )
@@ -48,15 +80,6 @@ class Project(object):
     self.algorithm_step_map_solution_onto_mesh  = peano4.solversteps.Step( "MapSolutionOntoMesh", False )
     self.algorithm_step_plot                    = peano4.solversteps.Step( "Plot",                False )
                 
-#    self.algorithm_step_plot.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
-#      filename              = "grid", 
-#      time_stamp_evaluation = "repositories::getMinTimeStamp()",
-#      additional_includes   = """
-##include "repositories/GlobalState.h"
-#"""      
-#    ))
-
-
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
     """
@@ -88,21 +111,35 @@ class Project(object):
     
     
   def set_Peano4_installation(self, src_path, mode=peano4.output.CompileMode.Release ):
-    """
-      src_path: string
-        Path (relative or absolute) to the src directory of Peano. This path 
-        should hold both the headers (in subdirectories) and all the static
-        libraries.
+    """!
+
+src_path: string
+  Path (relative or absolute) to the src directory of Peano. This path 
+  should hold both the headers (in subdirectories) and all the static
+  libraries.
         
-      mode: peano4.output.CompileMode
+mode: peano4.output.CompileMode
+
     """
     self._Peano_src_directory = src_path
     self._build_mode          = mode
 
 
   def __configure_makefile(self):
+    """!
+
+Configure the makefile of the PETSc project
+
+We parse the configure script's/CMAKE outcome first via parse_configure_script_outcome().
+After that, we set the dimension manually as well as the executable name and 
+the build mode. The values for these parameters step from set_Peano4_installation().
+    
+    """
+    self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
     self._project.output.makefile.set_dimension(self._dimensions)
     self._project.output.makefile.set_executable_name(self._executable_name)
+
+    self._project.output.makefile.set_mode(self._build_mode)
 
 
   def set_global_simulation_parameters(self,
@@ -131,46 +168,39 @@ class Project(object):
       
         
   def generate_Peano4_project(self, verbose=False):
-    """
+    """!
+
+Build project
     
-     Build the Peano4 project, i.e. all the action sets et al that you require
-     to run this Peano4 application with PETSc. 
+Construct and return the Peano4 project, i.e. all the action sets et al that 
+you require to run this Peano4 application with PETSc. 
      
-     This routine generates a Peano project, i.e. the domain-specific 
-     view is translated into a Peano model. Once you have called this routine,
-     any changes to the PETSc project configuration do not propagate into the Peano
-     setup anymore. If you alter the project etup, you have to call 
-     generate_Peano4_project() again to get a new snapshot/version of the
-     Peano setup.
+This routine generates a Peano project, i.e. the domain-specific 
+view is translated into a Peano model. Once you have called this routine,
+any changes to the PETSc project configuration do not propagate into the Peano
+setup anymore. If you alter the project setup, you have to call 
+generate_Peano4_project() again to get a new snapshot/version of the
+Peano setup.
+
+The function runs through various steps:
+
+1. We create an instance of PETScMain that represents the C++ main file.
+
+2. We add the essential algorithmic steps to the result project. At this
+   point, they should all be configured properly
+   
+3. We configure the makefile via __configure_makefile().
+
+4. Add the repository holding the instances of the solver.
+
+5. Ensure that the generated readme file holds all relevant literature and 
+   links.
           
     """
     self._project.main = PETScMain(self._project,
                                    self._domain_offset,
-                                   self._domain_size
+                                   self._domain_size,
                                    )
-
-
-    #
-    #  
-    #  self._project.datamodel.add_global_object(current_species_set.particle_model)
-    #  self._project.datamodel.add_vertex(current_species_set)#
-
-    #  self._algorithm_step_create_grid.use_vertex(current_species_set)
-    #  self.algorithm_step_init.use_vertex(current_species_set)
-    #  self.algorithm_step_sort.use_vertex(current_species_set)
-    #  self.algorithm_step_plot.use_vertex(current_species_set)
-
-      # Enable cell statistics for this species
-    #  self._project.datamodel.add_cell(cell_marker_for_statistics)   
-      
-      # Add cell statistics to these action steps
-    #  self._algorithm_step_create_grid.use_cell(cell_marker_for_statistics)
-    #  self.algorithm_step_init.use_cell(cell_marker_for_statistics)
-    #  self.algorithm_step_sort.use_cell(cell_marker_for_statistics)
-    #  self.algorithm_step_plot.use_cell(cell_marker_for_statistics)
-    #  for solverstep in solversteps:
-    #    solverstep.use_vertex(current_species_set)
-    #    solverstep.use_cell(cell_marker_for_statistics)
 
     self._project.solversteps.add_step(self.algorithm_step_create_grid)
     self._project.solversteps.add_step(self.algorithm_step_enumerate)
@@ -181,9 +211,7 @@ class Project(object):
     self._project.solversteps.add_step(self.algorithm_step_plot)
 
     self.__configure_makefile()
-    self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
-
-    self._project.output.makefile.set_mode(self._build_mode)
+    self.__generate_solver_repository()
 
     self._project.output.readme.add_package_description( """
 
@@ -195,6 +223,34 @@ This yet has to be written.
 
     return self._project
 
+
+  def __generate_solver_repository(self):
+    """!
+
+     type_name_of_solver_instances: [String]
+       Name of the solvers that we should instantiate and use in the main.
+    
+    
+    """
+    dictionary = {}
+    dictionary[ "SOLVER_INSTANCES"] = self._solver_instances
+    
+    templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
+    template_name       = templatefile_prefix + ".SolverRepository.template"  
+    generated_repository_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+      template_name + ".h",
+      template_name + ".cpp",
+      "SolverRepository", 
+      self._project.namespace,
+      "repositories", 
+      dictionary,
+      True,
+      True)
+
+    self._project.output.add( generated_repository_files )
+    self._project.output.makefile.add_h_file(   "repositories/SolverRepository.h" )
+    self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
+      
 
   def add_solver( self, solver ):
     """
@@ -226,6 +282,8 @@ This yet has to be written.
     solver.add_to_plot                  (self.algorithm_step_plot)
 
     solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
+    
+    self._solver_instances.append( (solver.typename(), solver.instance_name()) )
     pass
 
 

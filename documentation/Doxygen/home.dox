@@ -75,6 +75,8 @@ mandatory tools from above, but I won't be able to help.
 - Read through the @ref page_installation "installation instructions" and build Peano's core libraries.
 - Skim through the high-level @ref page_architecture "architecture"
 - Pick your project of interest and run through the tutorials and documentation there.
+- Consult the @ref page_conventions "coding conventions" and the info on 
+  @ref page_documentation "Peano's documentation" before you continue.
 
 
  */

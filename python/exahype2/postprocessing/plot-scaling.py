@@ -103,6 +103,7 @@ A generic script to create speedup plots.
   parser.add_argument("--solver-name",        dest="solver_name",     help="Solver name (leave blank if there is only one solver)", default="" )
   parser.add_argument("--export-data",        dest="export_data",     help="Export plot data into a txt file", action="store_true")
   parser.add_argument("--sort-files",         dest="sort_files",      help="Switch file sorting (natural sort)", default=True )
+  parser.add_argument("--title",              dest="title",           help="Title of plot", default=None )
   args = parser.parse_args()
 
   max_x        = -1
@@ -204,5 +205,9 @@ A generic script to create speedup plots.
   output_file_name = args.output
   if output_file_name=="":
       output_file_name = args.file[0].replace( ".tar.gz", "").replace( ".tar", "" )
+      
+  if args.title!=None:
+    plt.title( args.title )
+     
   plt.savefig( output_file_name + ".pdf" )
   plt.savefig( output_file_name + ".png" )

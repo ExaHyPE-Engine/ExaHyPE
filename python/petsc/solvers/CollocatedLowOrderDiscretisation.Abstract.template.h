@@ -40,13 +40,30 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr double     MaxH = {{MAX_H}};
 
     {{CLASSNAME}}();
+    virtual ~{{CLASSNAME}}();
 
+    /**
+     * Initialise a vertex degree of freedom
+     */
+    virtual void init(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h,
+      {% if CARDINALITY==1 %}
+      double&                                       value,
+      double&                                       rhs
+      {% else %}
+      const tarch::la::Vector< {{CARDINALITY}}, double >&  value,
+      const tarch::la::Vector< {{CARDINALITY}}, double >&  rhs
+      {% endif %}
+    ) = 0;
+
+    /**
     virtual void startInitialisation() = 0;
     virtual void finishInitialisation() = 0;
 
     virtual void startEnumeration() = 0;
     virtual void finishEnumeration() = 0;
-
+*/
   protected:
     static tarch::logging::Log  _log;
 

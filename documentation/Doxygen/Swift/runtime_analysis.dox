@@ -1,0 +1,27 @@
+/**
+
+ @page swift_runtime_analysis Runtime analysis
+
+ Swift 2 comes along with a set of Python scripts to analyse the code's runtime 
+ behaviour. 
+ These tools can be found in the namespace swift2.postprocessing.
+ The core ingredient in there is a parser which analyses the standard outputs of Swift. 
+ Once you pipe the standard outputs into a file, you can apply these parser, i.e. 
+ use them within your own postprocessing scripts.
+ There are however also a couple of command line tools which help you to explore the data.
+ These tools use the same parsers, i.e. are a good starting point to familiarise yourself
+ with the parser utilities.
+ 
+
+
+ 
+ ## Peano data
+ 
+ As ExaHyPE 2 is built on top of Peano 4, all the generic Peano scripts  work for Swift, too. 
+
+ @see \ref peano_runtime_analysis
+ @see exahype2.postprocessing.plot-scaling.TimeseriesPlots.py
+
+*/
+
+

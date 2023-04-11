@@ -11,6 +11,8 @@
 \usepackage{listings}
 \usepackage{hyperref}
 
+\lstset{columns=fullflexible}
+
 \hypersetup{%
   colorlinks=true,
   linkcolor=blue,
@@ -24,14 +26,14 @@
 \lstdefinestyle{Python}{
     language        = Python,
     frame           = lines, 
-    basicstyle      = \footnotesize,
+    basicstyle      = \footnotesize\ttfamily,
     keywordstyle    = \color{blue},
     stringstyle     = \color{green},
     commentstyle    = \color{red}\ttfamily
 }
 
 \lstdefinestyle{Bash}{
-   basicstyle=\footnotesize,
+   basicstyle=\footnotesize\ttfamily,
    stringstyle=\color{red},
    keywordstyle=\color{blue},
    commentstyle=\color{darkgrey}\slshape,
@@ -132,7 +134,8 @@ automake --add-missing
 this should generate a number of files which will enable us to configure which optional parts of Peano we want to use using the configure command. For ExaHyPE we require at least the ExaHyPE as well as blockstructured and loadbalancing toolboxes. In order to improve the compilation speed we can additionally enable multithreading. A basic configuration would look as follows:
 
 \begin{lstlisting}[style = Bash]
-./configure --enable-exahype --enable-blockstructured --enable-loadbalancing --with-multithreading=omp
+./configure --enable-exahype --enable-blockstructured --enable-loadbalancing \
+    --with-multithreading=omp
 \end{lstlisting}
 
 Finally we can compile Peano, to do this simply invoke the \textit{make} command:
@@ -174,14 +177,18 @@ As mentioned in the \hyperref[sec:Introduction]{Introduction}, the configuration
 
 \begin{lstlisting}[style = Python]
 import peano4
-import ExaHyPE2
+import exahype2
 \end{lstlisting}
 
 These merely import the necessary packages from Peano4 and ExaHyPE 2 which will let us define and build our project. Speaking of defining our project, this happens in the next step:\\
 
 \begin{lstlisting}[style = Python]
-project = exahype2.Project( ["examples", "exahype2", "tutorial"], "advection",
- ".", executable="Advection" + str(dimensions) + "D" )
+project = exahype2.Project(
+    ["examples", "exahype2", "tutorial"],
+    "advection",
+    ".",
+    executable="Advection" + str(dimensions) + "D"
+)
 \end{lstlisting}
 
 The parameters here are as follows: first the namespace that the project will have in C++, then the name of the project itself, then where the project should be generated and finally the name of the executable.
@@ -189,12 +196,12 @@ Next we will define and add a solver to this project:\\
 
 \begin{lstlisting}[style = Python]
 thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
-  "advection",
-  patch_size=3,
-  unknowns=3, auxiliary_variables=0,
-  min_volume_h=0.01, max_volume_h=0.03,
-  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  time_step_relaxation = 0.1
+    "advection",
+    patch_size=3,
+    unknowns=3, auxiliary_variables=0,
+    min_volume_h=0.01, max_volume_h=0.03,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    time_step_relaxation = 0.1
 )
 \end{lstlisting}
 
@@ -206,20 +213,26 @@ The last thing worth mentioning is the parameter \textit{flux} which we have her
 
 Next we define the parameters for our simulation, this is where we define the volume of our domain and the number of dimensions for example, but also where basic information about the plotting behaviour is defined:
 \begin{lstlisting}[style = Python]
-build_mode = peano4.output.CompileMode.Release
 project.set_global_simulation_parameters(
-  dimensions = 2,
-  offset = [0.0,0.0],
-  size = [1.0,1.0],
-  end_time = 0.01,
-  first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.001
-)\end{lstlisting}
+    dimensions = 2,
+    offset = [0.0,0.0],
+    size = [1.0,1.0],
+    min_end_time = 0.5,
+    max_end_time = 0.5,
+    first_plot_time_stamp = 0.0,
+    time_in_between_plots = 0.025, # snapshots
+    periodic_BC = [False, False, False]
+)
+\end{lstlisting}
 
 Finally, given all the information above we can generate and build a working application.
 
 \begin{lstlisting}[style = Python]
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+build_mode = peano4.output.CompileMode.Release
+project.set_load_balancing(
+    "toolbox::loadbalancing::RecursiveSubdivision",
+    "new ::exahype2::LoadBalancingConfiguration()"
+)
 project.set_Peano4_installation( "../../../", build_mode )
 peano4_project = project.generate_Peano4_project(False)
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=4)
@@ -327,7 +340,7 @@ void ::examples::exahype2::tutorial::advection::flux(
   double * __restrict__ F // F[3]
 )  {
 	
-  if(normal==0){	
+  if(normal==0){
     F[0] = Q[0];
     F[1] = 0.0;
     F[2] = 0.0;
@@ -435,9 +448,9 @@ With eigenvalues:
     \end{array} \right) =
     \left(
     \begin{array}{lr}
-        h u + \sqrt{g (h+b)} \\
-        h u \\
-        h u - \sqrt{g (h+b)} \\
+        u + \sqrt{g (h+b)} \\
+        u \\
+        u - \sqrt{g (h+b)} \\
     \end{array} \right)
 \end{equation*}
 
@@ -456,10 +469,10 @@ Boundary conditions for these auxiliary variables should be defined, but no flux
         
         Once your project has been built, you will need to implement the functions in the new file \textbf{swe.cpp}.
     \item
-        Next, define the initial conditions. For this, we want the initial water height to be \textbf{1.0} everywhere, the initial velocities to be \textbf{0.0} everywhere and the bathimetry should be \textbf{0.0} in a radius of \textbf{0.20} around the center of the domain, and \textbf{0.1} anywhere else.\\
+        Next, define the initial conditions. For this, we want the initial water height to be \textbf{1.0} everywhere, the initial velocities to be \textbf{0.0} everywhere and the bathimetry should be \textbf{0.0} in a radius of \textbf{0.40} around the center of the domain, and \textbf{0.1} anywhere else.\\
         (Hint: You can find the size and offset of the domain in the configuration file. In addition you can use the function \textit{tarch::la::norm2()} to compute the norm of a peano vector)
     \item
-        Then, fill in the maximal eigenvalue. Since the maximal eigenvalue is dependent on the velocity, you will need to take into account the normal direction as this will determine whether you should use the velocity in x or y direction to compute it.        
+        Then, fill in the maximal eigenvalue. Since the maximal eigenvalue is dependent on the velocity, you will need to take into account the normal direction as this will determine whether you should use the velocity in x or y direction to compute it. For the gravity $g$, you can use 9.81 m/s$^2$.
     \item Next, fill in the boundary conditions. For this you can choose reflecting boundary conditions, this means all values should be the same outside as inside of the boundary.
     \item
         Once this is done, fill in the flux.
@@ -487,13 +500,13 @@ If you've completed the previous exercice, you may have noticed that the resolut
 
 \begin{lstlisting}[style = Python]
 thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
-  "swe",
-  patch_size=3,
-  unknowns=3, auxiliary_variables=1,
-  min_volume_h=0.02, max_volume_h=0.06,
-  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  ncp = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  time_step_relaxation = 0.1
+    "swe",
+    patch_size=3,
+    unknowns=3, auxiliary_variables=1,
+    min_volume_h=0.02, max_volume_h=0.06,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    ncp = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    time_step_relaxation = 0.1
 )
 \end{lstlisting}
 
@@ -508,7 +521,7 @@ This adaptive refinement must be defined by adding one additional line to the co
 
 \begin{lstlisting}[style = Python]
 thesolver.set_implementation(
-refinement criterion=ExaHyPE2.solvers.fv.PDETerms.User_Defined_Implementation
+    refinement criterion=ExaHyPE2.solvers.fv.PDETerms.User_Defined_Implementation
 )
 \end{lstlisting}
 
@@ -554,9 +567,9 @@ In a next step, we will attempt to use these to conditionally refine our resolut
 
 
 
-\section{The euler equations}
+\section{The Euler equations}
 
-As a final exercice, we will take a look at a new type of solver for ExaHyPE through the lens of the euler equations. The euler equations describe the movement of a fluid if there is neither loss of energy due to frictional forces nor heat conduction in the system. In the finite volume form and given no external forces, the two-dimensional form of the euler equations appears as follows:
+As a final exercice, we will take a look at a new type of solver for ExaHyPE through the lens of the Euler equations. The Euler equations describe the movement of a fluid if there is neither loss of energy due to frictional forces nor heat conduction in the system. In the finite volume form and given no external forces, the two-dimensional form of the Euler equations appears as follows:
 
 \begin{equation*} \label{Euler_equation}
     \frac{\partial}{\partial t}\left(
@@ -574,11 +587,11 @@ As a final exercice, we will take a look at a new type of solver for ExaHyPE thr
 \end{equation*}
 
 where $\rho$ is the density, $u$ is the velocity, $E_t$ is the energy and $p$ is the pressure.\\
-The two-dimensional euler equations have already been implemented in the configuration file Euler2D.py, as well as its corresponding implementation file euler2D.cpp. As before, in order to implement this equation, four things are needed: the initial condition, the boundary conditions, the maximal eigenvalue and the flux. We do not require a non-conservative product.\\
+The two-dimensional Euler equations have already been implemented in the configuration file Euler2D.py, as well as its corresponding implementation file euler2D.cpp. As before, in order to implement this equation, four things are needed: the initial condition, the boundary conditions, the maximal eigenvalue and the flux. We do not require a non-conservative product.\\
 
 We start with the initial conditions: here we define a starting configuration with a uniform density of \textbf{1.0}, a uniform starting momentum of \textbf{0.0} in both x and y directions and a starting energy that is \textbf{1.0} inside of a circle of radius \textbf{0.2} around the center of the domain and \textbf{1.01} outside of it. Note that we use momentums and not velocities as our variables of choice, this will affect the formulation of some of the equations later.\\
 
-Next we can define the eigenvalues of our system. The eigenvalues of the 2 dimensional euler equation are:
+Next we can define the eigenvalues of our system. The eigenvalues of the 2 dimensional Euler equation are:
 
 \begin{equation*}
     \left(
@@ -617,21 +630,21 @@ Now that we know what our equations look like, we can take a look at the configu
 
 \begin{lstlisting}[style = Python]
 theSolver=exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep(
-  name="euler+"str(dimensions)+"D",  order=3,
-  unknowns=4, auxiliary_variables=0,
-  min_cell_h=0.03, max_cell_h=0.1, time_step_relaxation=0.9
+    name="euler+"str(dimensions)+"D",  order=3,
+    unknowns=4, auxiliary_variables=0,
+    min_cell_h=0.03, max_cell_h=0.1, time_step_relaxation=0.9
 )
 \end{lstlisting}
 
 All we have had to modify is the solver itself, the definition of project and domain has remained the same, and even our solver looks very similar to before. This was always a key goal of ExaHyPE, we want users to be able to play around with solvers themselves and try out for themselves different ways to solve their equations. The implementation files also have the same structure, this means you can use the same implementation file with different solvers.
 
-And finally, just to make sure we understand what we are doing, we can implement the euler equations in three dimensions.
+And finally, just to make sure we understand what we are doing, we can implement the Euler equations in three dimensions.
 
 \newpage
 
 
 
-\section{The three-dimensional euler equations}
+\section{The three-dimensional Euler equations}
 \vspace{0.2cm}
 The three-dimensional Euler equation are very similar to the two-dimensional example:
 
@@ -658,7 +671,7 @@ This has the same eigenvalues as the 2D solution:
 \begin{equation*}
     \lambda = \left( \begin{array}{lr}
                      u-c \\
-                     0 \\
+                     u \\
                      u+c \\
         \end{array} \right)
 \end{equation*}
@@ -689,8 +702,8 @@ If at any time you are stuck and incapable of finding an answer, a solution is p
 
 \begin{figure}[!h]
 \centering
-\includegraphics[width=0.40\linewidth]{pictures/euler3D_start.png}
-\includegraphics[width=0.40\linewidth]{pictures/euler3D_end.png}
+\includegraphics[width=0.40\linewidth]{pictures/Euler_3D_start.png}
+\includegraphics[width=0.40\linewidth]{pictures/Euler_3D_end.png}
 \caption{The computed energy of the 3D Euler equations at times t=0.0 and t=1.0}
 \end{figure}
 

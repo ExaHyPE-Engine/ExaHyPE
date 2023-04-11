@@ -13,9 +13,6 @@ namespace exahype2 {
 /**
  * ExaHyPE 2-specific load balancing configuration
  *
- * We do not impose any constraint while we build up the mesh. Later on, we allow
- * users (via the constructor or Python interface, respectively) to restrict
- * both the size of the trees and the tree count.
  */
 class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::RecursiveSubdivision::Configuration {
   private:
@@ -23,23 +20,57 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
     const int      _minSizeOfTree;
     const int      _maxNumberOfTreesThroughoutInitialDistribution;
     const int      _maxNumberOfTrees;
-  public:
-    static constexpr int  UseNumberOfThreads = -1;
 
     /**
+     * Return how many trees to use if value is picked by user
+     *
+     * If the users sets a real number >0 for the upper number of trees, then
+     * we pick this value. However, if the users picks a magic constant, then
+     * we have to read out the real system configuration and translate it into
+     * a real number, i.e. if the user has picked UseNumberOfThreads for
+     * example, then we have to ask the core how many threads we really have
+     * and return that value.
+     */
+    int translateSetMaxNumberOfTreesIntoRealNumberOfTrees(int value) const;
+  public:
+    static constexpr int  UseNumberOfThreads         = -1;
+    static constexpr int  UseTwiceTheNumberOfThreads = -2;
+
+    /**
+     * Configure load balancing
+     *
      * @param minSizeOfTree If a partition (tree) is smaller than the given
      *   number of cells, we do not split it up further. If you set this
      *   argument to 0, you effectively set no threshold - Peano will try to
      *   split any tree if it thinks it would improve the load balancing.
      *
-     * @param maxNumberOfTrees Set the maximum number of trees (per rank).
+     *   This value is not taken into account for the initial distribution.
+     *   Here, you have to use maxNumberOfTreesThroughoutInitialDistribution
+     *   to constrain over-ambitious domain splitting.
+     *
+     * @param maxNumberOfTreesThroughoutInitialDistribution Set the maximum
+     *   number of trees (per rank) that we use when we split up the domain
+     *   no a rank for the first time. By default, I try to give each thread
+     *   per rank exactly one subpartition to work on. You might want to
+     *   reduce this value.
+     *
+     * @param maxNumberOfTrees This value is used after the initial
+     *   decomposition. If you pick it higher than maxNumberOfTreesThroughoutInitialDistribution,
+     *   then you give the load balancing the opportunity to split up the
+     *   domain further even if all threads have already one subpartition.
+     *   I recommend to to pick it higher than maxNumberOfTreesThroughoutInitialDistribution,
+     *   as the load balancer kicks in throughout the grid construction. By
+     *   the time is uses maxNumberOfTreesThroughoutInitialDistribution threads,
+     *   local adaptivity might not yet be established, i.e. subsequent grid
+     *   refinements will yield imbalances that only further splits can
+     *   compensate.
      *
      */
     LoadBalancingConfiguration(
       double loadBalancingQuality=0.9,
       int    minSizeOfTree = 0,
       int    maxNumberOfTreesThroughoutInitialDistribution=UseNumberOfThreads,
-      int    maxNumberOfTrees=UseNumberOfThreads
+      int    maxNumberOfTrees=UseTwiceTheNumberOfThreads
     );
 
     virtual ~LoadBalancingConfiguration() = default;

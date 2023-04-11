@@ -13,7 +13,7 @@ class PETScMain(peano4.runner.DefaultSequence):
     """
     
      project: peano4.Project
-     
+          
     """
     super(PETScMain,self).__init__(project)
 

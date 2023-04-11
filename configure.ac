@@ -433,6 +433,7 @@ AC_ARG_WITH(toolchain,
 if test "$toolchain" == intel; then
   AC_DEFINE([UseITAC], [1], [UseITAC])
   AC_DEFINE([UseLogService], [ITACLogger], [ITACLogger])
+  CXXFLAGS+=" -DTBB_USE_THREADING_TOOLS"
 fi
 
 

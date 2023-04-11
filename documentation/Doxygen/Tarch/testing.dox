@@ -1,0 +1,156 @@
+/**
+
+\page tarch_tests Unit tests 
+
+
+Peano introduces its own lightweight test concept with picks up best
+practices from the JUnit world. While it is simple and has no external
+dependencies (all test routines are collected within the `tarch`
+subdirectory), it provides a few macros to handle numeric data---which
+might be convenient for AMR applications; so there's some added value.
+It also provides test routines for vectors.
+
+
+Test architecture
+-----------------
+
+A Peano test is a class that implements and extends
+tarch::tests::TestCase. By convention, I place my tests always into
+subdirectories/subnamespaces of the respective component, but this is
+not a must. A test class must implement a `void run()` method. This is
+the only convention. The Peano toolkit by default generates one (empty)
+test per project that can act as a blueprint if you don't want to write
+your test manually. Feel free to delete the class if you don't want to
+write unit tests on your own (though the test itself is empty and thus
+does not harm the test runs).
+
+A proper test class should realise a couple of `void` operations without
+arguments that run the individual tests. A minimalistic test thus looks
+as follows:
+
+~~~~~~~~~~~~~~~~~
+namespace myproject namespace tests class TestCase;
+
+class myproject::tests::TestCase : public tarch::tests::TestCase {
+  private: 
+    /** 
+     * These operations implement the real tests. 
+     */ 
+    void test1(); 
+    void test2(); 
+  public: 
+    TestCase(); 
+    virtual ~TestCase();
+
+    void run() override;
+};
+~~~~~~~~~~~~~~~~~
+
+The test's `run` operation has to register the individual void routines
+running the actual tests:
+
+~~~~~~~~~~~~~~~~~
+void exahype::tests::TestCase::run() {
+  testMethod(test1);
+  testMethod(test2);
+}
+~~~~~~~~~~~~~~~~~
+
+
+Running the tests
+-----------------
+
+Once these steps are handled, you can run the tests within your `main`.
+For the core and tarch routines, I provide factory methods
+
+~~~~~~~~~~~~~~~~~
+tarch::getUnitTests(); 
+peano4::getUnitTests();
+~~~~~~~~~~~~~~~~~
+
+
+which deliver a test suite. To run them, I typically insert snippets
+alike
+
+~~~~~~~~~~~~~~~~~
+int unitTestsErrors = 0; 
+tarch::tests::TestCase* tests = nullptr;
+
+tests = tarch::getUnitTests(); 
+tests->run(); 
+unitTestsErrors += tests->getNumberOfErrors(); 
+delete tests;
+~~~~~~~~~~~~~~~~~
+
+into my main. It returns an output similar to
+
+~~~~~~~~~~~~~~~~~
+running test case collection "exahype2.tests.c" ...... ok 
+running test case collection \"exahype2.tests.solvers\" .. ok running test case
+collection \"exahype2.tests\" \.... ok running test case collection
+\"peano4.grid.tests\" \...\...\...\...\...\..... ok running test case
+collection \"peano4.grid\" ok running test case collection
+\"peano4.heap.tests\" .. ok running test case collection \"peano4.heap\"
+ok running test case collection \"peano4\" ok running test case
+collection \"tarch\" ok running global test case collection ok
+~~~~~~~~~~~~~~~~~
+
+The output returns a hierarchical overview over all tests ran. The
+number of dots per package identifies the number of actual test
+functions in a namespace. If tests fail, the interface reports the exact
+location including file name and line number.
+
+It is convenient to run tests only if you have translated your code with
+a \ref tarch_logging "sufficient debug level". When you write your own tests, I often
+add test attributes to the classes---fields that are not required but
+help me to validate object states. Since I protect these attributes with
+ifdefs reading Peano's debug level, they are removed from the production
+code.
+
+
+Test routines
+-------------
+
+A typical unit tests builds up some classes, befills them with data,
+invokes some operations and finally checks the class state via some
+getters or routines returning results. Peano's way to do the actual
+tests are `validate` macros. You find all these macros in the file
+tarch/tests/TestMacros.h. There are three classes of macros:
+
+-   Standard validation macros similar to assertions that test a boolean
+    condition.
+
+-   Comparison macros that compare two values through the `operator==`
+    (which might be overloaded).
+
+-   Comparison macros that compare doubles, vectors or matrices
+    numerically, i.e. up to a prescribed precision.
+
+All of these macros come along with variants that allow you to plot
+additional information if a test has failed, i.e. to plot the values of
+further variables, e.g. All validation macros automatically set a test
+to failed if they fail, and they write a verbose message on the reason
+why some tests failed to the terminal.
+
+Tests tend to become spaghetti code and some of them are very expensive
+to translate as the compiler's optimiser has a hard time to translate
+the long code fragments. I thus recommend to insert
+
+~~~~~~~~~~~~~~~~~
+#include "tarch/compiler/CompilerSpecificSettings.h"
+
+#ifdef UseTestSpecificCompilerSettings 
+#pragma optimize("", off)
+#endif
+
+// All the implementation
+
+#ifdef UseTestSpecificCompilerSettings 
+#pragma optimize("", on)
+#endif
+~~~~~~~~~~~~~~~~~
+
+into your implementation file around all your code. This switches off
+all optimisation explicitly for the tests.
+
+*/

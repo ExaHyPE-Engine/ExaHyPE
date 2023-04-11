@@ -1,0 +1,95 @@
+/**
+
+@page swift_initial_conditions Initial conditions and particle insertion
+
+There are two main ways to implement initial conditions for the
+simulations:
+
+  - Insert particle by coordinates (```InsertParticlesByCoordinates.py```).
+  - Insert particles from an HDF5 file (```InsertParticlesFromHDF5File.py```).
+
+The former option is typically complemented by an initialisation snippet that
+sets the individual particle attributes (other than positions).
+The latter option automatically sets (at least a subset of) the particle
+attributes.
+
+## Insert particle by coordinates.
+
+
+
+
+A set of snippets for SPH benchmarks can be found at
+
+
+
+
+
+
+## Insert particles from an HDF5 file.
+
+A basic HDF5 reader that is compatible with IC files from the original Swift code is
+implemented in ```InsertParticlesFromHDF5File.py```.
+In order to make use of the HDF5 reader, Peano must have been configured with
+
+          ./configure ... --enable-particles --enable-swift --with-hdf5
+
+
+### With Spack/containers
+
+We assume that ``$HDF5_ROOT`` names the directory that contains your local HDF5 installation,
+e.g. ``/usr`` or ``/usr/lib/x86_64-linux-gnu/hdf5/serial/``.
+In this case, it is recommended to include the following flags:
+
+          ./configure ...  --enable-particles --enable-swift --with-hdf5 \
+                CXXFLAGS="-I/$HDF5_ROOT/include" \
+                LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" \
+                LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"
+
+
+
+### Ubuntu
+
+With Ubuntu, the packages you need are 
+
+- libhdf5-serial-dev
+- hdf5-tools
+
+and then you can configure with 
+
+
+         ./configure --enable-particles --enable-swift --enable-loadbalancing --enable-blockstructured --enable-exahype2 --with-hdf5 CXXFLAGS="--std=c++20 -I/usr/include/hdf5/serial" LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++" --build=x86_64 --host=x86_64
+
+### Python
+
+Some of Swift's Python scripts use HDF5, too, and therefore need the package
+h5py which you can install via pip, e.g.
+
+         pip install h5py
+ 
+ 
+## General remarks on particle insertion
+
+There are a few key policies to follow whenever you insert particles:
+
+1. Particles have to be created on the heap, i.e. via an explicit new
+
+2. Every particle has to be initialised. You do this by calling toolbox::particles::init().
+   As you need need this helper routine, you have to include toolbox/particles/particles.h.
+   
+3. Particles have to be inserted into cells, and you should not try to do this
+   on your own. Instead use the helper function from particles.h:
+   
+~~~~~~~~~~~~~~~~~~~~~~
+      toolbox::particles::insertParticleIntoCell(
+        marker,
+        particle,
+        fineGridVerticesParticleSet
+      );
+~~~~~~~~~~~~~~~~~~~~~~
+
+Obviously, the names for the parameters for toolbox::particles::insertParticleIntoCell() 
+depend on the location from where you call the routine.
+
+
+*/
+         

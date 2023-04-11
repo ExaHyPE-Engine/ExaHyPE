@@ -10,12 +10,6 @@ import shutil
 
 import swift2.particle.tests
 
-# HDF5 Reader
-import peano4.toolbox.particles.sph.fileReader
-
-# SPH initialisation snippets library
-import peano4.toolbox.particles.sph.initSnippets
-
 ########################################################################################
 # Parse user input
 ########################################################################################
@@ -106,7 +100,7 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 ###############################################################################
 
 # Snippet from library
-ICs = peano4.toolbox.particles.sph.initSnippets.TestDensityCalculation()
+ICs = swift2.scenario.TestDensityCalculation()
 initialisation_snippet = ICs.initialisation_snippet
 
 #
@@ -121,7 +115,7 @@ coords[:,0] = np.linspace(0, 1, Npart, endpoint=False)
 
 print('inserting particles at:', coords)
 
-project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
+project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesByCoordinates(
   particle_set         = particle_set,
   initialisation_call  = initialisation_snippet,
   coordinates          = coords,
