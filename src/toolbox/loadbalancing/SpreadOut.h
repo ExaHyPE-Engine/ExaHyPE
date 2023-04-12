@@ -31,17 +31,13 @@ class toolbox::loadbalancing::SpreadOut: public toolbox::loadbalancing::LoadBala
     static tarch::logging::Log  _log;
 
     int _previousNumberOfCells;
+    int _numberOfStableGridIterations;
 
     /**
      * Return 0 if the load balancing should not split (yet) and otherwise
      * return number of splits required.
      */
     int getNumberOfTreesPerRank() const;
-
-    /**
-     * Call after updateLoadBalancing()
-     */
-    void updateState();
 
     void updateLoadBalancing();
 
