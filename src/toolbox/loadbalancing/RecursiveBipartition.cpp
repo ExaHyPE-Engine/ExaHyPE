@@ -72,19 +72,6 @@ bool toolbox::loadbalancing::RecursiveBipartition::doesRankViolateBalancingCondi
 
 
 void toolbox::loadbalancing::RecursiveBipartition::updateState() {
-
-  if (_stepsToWaitForNextLoadBalancingDecision>0) {
-      // @todo Debug
-    logInfo(
-      "updateState()",
-      "don't update load balancing state as we have to wait for another " << _stepsToWaitForNextLoadBalancingDecision << " step(s) before we rebalance"
-    );
-    return;
-  }
-  else {
-    logDebug( "updateState()", "update from current state " << ::toString(_state) );
-  }
-
   switch (_state) {
     case State::InterRankDistribution:
       if (
