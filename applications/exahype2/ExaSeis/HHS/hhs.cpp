@@ -64,45 +64,33 @@ void examples::exahype2::elastic::hhs::initialCondition(
 
 
 
-void examples::exahype2::elastic::hhs::boundaryValues(
-    const double* const x,
-    const double        t,
-    const double        dt,
-    const int           faceIndex,
-    const int           direction,
-    const double* const fluxIn,
-    const double* const stateIn,
-    const double* const gradStateIn,
-    double* const       fluxOut,
-    double* const       stateOut
-) {
-  stateOut[s.sigma+0] = 0.0;
-  stateOut[s.sigma+1] = 0.0;
-  stateOut[s.sigma+2] = 0.0;
-  stateOut[s.sigma+3] = 0.0;
-  stateOut[s.sigma+4] = 0.0;
-  stateOut[s.sigma+5] = 0.0;
-  
+void examples::exahype2::elastic::hhs::boundaryConditions(
+  const double * __restrict__                  Qinside, // Qinside[9+3]
+  double * __restrict__                        Qoutside, // Qoutside[9+3]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
+){
+
+  //stresses
+  Qoutside[s.sigma+0] = 0.0;
+  Qoutside[s.sigma+1] = 0.0;
+  Qoutside[s.sigma+2] = 0.0;
+  Qoutside[s.sigma+3] = 0.0;
+  Qoutside[s.sigma+4] = 0.0;
+  Qoutside[s.sigma+5] = 0.0;
+
   //velocities
-  stateOut[s.v+0] = 0.0;
-  stateOut[s.v+1] = 0.0;
-  stateOut[s.v+2] = 0.0;
-  
+  Qoutside[s.v+0]     = 0.0;
+  Qoutside[s.v+1]     = 0.0;
+  Qoutside[s.v+2]     = 0.0;
+
   //auxiliary variables
-  stateOut[s.rho] = stateIn[s.rho]; //rho
-  stateOut[s.cp] = stateIn[s.cp]; //cp
-  stateOut[s.cs] = stateIn[s.cs]; //cs
+  Qoutside[s.rho]     = Qinside[s.rho];
+  Qoutside[s.cp]      = Qinside[s.cp];
+  Qoutside[s.cs]      = Qinside[s.cs];  
 
-  fluxOut[s.sigma+0] = 0.0;
-  fluxOut[s.sigma+1] = 0.0;
-  fluxOut[s.sigma+2] = 0.0;
-  fluxOut[s.sigma+3] = 0.0;
-  fluxOut[s.sigma+4] = 0.0;
-  fluxOut[s.sigma+5] = 0.0;
-
-  fluxOut[s.v+0] = 0.0;
-  fluxOut[s.v+1] = 0.0;
-  fluxOut[s.v+2] = 0.0;
 }
 
 
@@ -110,104 +98,103 @@ void examples::exahype2::elastic::hhs::boundaryValues(
 
   
 
-void ::examples::exahype2::elastic::hhs::eigenvalues(
-    const double* const Q, // Q[9+3]
-    const int direction,
-    double* const lambda
-  )  {
-  lambda[0] = Q[s.cp];
-  lambda[1] = -Q[s.cp];
-  lambda[2] = Q[s.cs];
-  lambda[3] = -Q[s.cs];
-  for(int i=4; i<s.SizeVariables; i++){
-    lambda[i] = 0.0;
-  }
+double ::examples::exahype2::elastic::hhs::maxEigenvalue(
+  const double* __restrict__ Q, // Q[9+3]
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+){
+
+  return std::max(std::abs(Q[s.cp]), std::abs(Q[s.cs]));
+
 }
 
 
 
 
 void ::examples::exahype2::elastic::hhs::flux(
-  const double* const Q, // Q[9+3]
-  double** const F // F[Dimensions*9]
-)  {
-  F[0][s.sigma+0] = 0.0;
-  F[0][s.sigma+1] = 0.0;
-  F[0][s.sigma+2] = 0.0;
-  F[0][s.sigma+3] = 0.0;
-  F[0][s.sigma+4] = 0.0;
-  F[0][s.sigma+5] = 0.0;
-  F[0][s.v+0] = Q[s.sigma+0]; //sigma_xx
-  F[0][s.v+1] = Q[s.sigma+3]; //sigma_xy
-  F[0][s.v+2] = Q[s.sigma+4]; //sigma_xz
-  
-  F[1][s.sigma+0] = 0.0;
-  F[1][s.sigma+1] = 0.0;
-  F[1][s.sigma+2] = 0.0;
-  F[1][s.sigma+3] = 0.0;
-  F[1][s.sigma+4] = 0.0;
-  F[1][s.sigma+5] = 0.0;
-  F[1][s.v+0] = Q[s.sigma+3]; //sigma_xy
-  F[1][s.v+1] = Q[s.sigma+1]; //sigma_yy
-  F[1][s.v+2] = Q[s.sigma+5]; //sigma_yz
+  const double* __restrict__ Q, // Q[9+3]
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  double* __restrict__ F // F[9]
+) {
 
-#if Dimensions==3
-  F[2][s.sigma+0] = 0.0;
-  F[2][s.sigma+1] = 0.0;
-  F[2][s.sigma+2] = 0.0;
-  F[2][s.sigma+3] = 0.0;
-  F[2][s.sigma+4] = 0.0;
-  F[2][s.sigma+5] = 0.0;
-  F[2][s.v+0] = Q[s.sigma+4]; //sigma_xz
-  F[2][s.v+1] = Q[s.sigma+5]; //sigma_yz
-  F[2][s.v+2] = Q[s.sigma+2]; //sigma_zz
-#endif
+  for(int i=0; i<6; i++){
+    F[s.sigma+i] = 0.0;
+  }
+
+  switch(normal) {
+    case 0:
+      F[s.v+0] = Q[s.sigma+0]; //sigma_xx
+      F[s.v+1] = Q[s.sigma+3]; //sigma_xy
+      F[s.v+2] = Q[s.sigma+4]; //sigma_xz
+      break;
+    case 1:
+      F[s.v+0] = Q[s.sigma+3]; //sigma_xy
+      F[s.v+1] = Q[s.sigma+1]; //sigma_yy
+      F[s.v+2] = Q[s.sigma+5]; //sigma_yz
+      break;
+    case 2:
+      F[s.v+0] = Q[s.sigma+4]; //sigma_xz
+      F[s.v+1] = Q[s.sigma+5]; //sigma_yz
+      F[s.v+2] = Q[s.sigma+2]; //sigma_zz
+  }
 }
 
 
 
 
 
-void ::examples::exahype2::elastic::hhs::nonConservativeProduct(
-  const double* const Q,      //Q[9+3]
-  const double* const* const gradQ,  //Q[9+3]
-  double** const BgradQ       //BgradQ[9]
-)  {
+void ::examples::exahype2::elastic::hhs::nonconservativeProduct(
+  const double *__restrict__ Q, //Q[9+3]
+  const double *__restrict__ deltaQ, //deltaQ[9+3]
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
+  double t,
+  double dt,
+  int normal,
+  double *__restrict__ BgradQ //BgradQ[9]
+){
+
   //Lamé parameters
   double mu = Q[s.rho] * Q[s.cs] * Q[s.cs]; //rho*cs^2
   double lambda = Q[s.rho] * Q[s.cp] * Q[s.cp] - 2 * mu; //rho*cp^2 - 2 mu
 
-  BgradQ[0][s.sigma+0] = (lambda + 2*mu) * gradQ[0][s.v+0]; //xx
-  BgradQ[0][s.sigma+1] = lambda * gradQ[0][s.v+0];          //yy
-  BgradQ[0][s.sigma+2] = lambda * gradQ[0][s.v+0];          //zz
-  BgradQ[0][s.sigma+3] = mu * gradQ[0][s.v+1];              //xy
-  BgradQ[0][s.sigma+4] = mu * gradQ[0][s.v+2];              //xz
-  BgradQ[0][s.sigma+5] = 0.0;                               //yz
-  BgradQ[0][s.v+0] = 0.0;                                   //vx
-  BgradQ[0][s.v+1] = 0.0;                                   //vy
-  BgradQ[0][s.v+2] = 0.0;                                   //vz
+  switch(normal){
+    case 0:
+      BgradQ[s.sigma+0] = (lambda + 2*mu) * deltaQ[s.v+0]; //xx
+      BgradQ[s.sigma+1] = lambda * deltaQ[s.v+0];          //yy
+      BgradQ[s.sigma+2] = lambda * deltaQ[s.v+0];          //zz
+      BgradQ[s.sigma+3] = mu * deltaQ[s.v+1];              //xy
+      BgradQ[s.sigma+4] = mu * deltaQ[s.v+2];              //xz
+      BgradQ[s.sigma+5] = 0.0;                               //yz
+      break;
+    case 1:
+      BgradQ[s.sigma+0] = lambda * deltaQ[s.v+1];          //xx
+      BgradQ[s.sigma+1] = (lambda + 2*mu) * deltaQ[s.v+1]; //yy
+      BgradQ[s.sigma+2] = lambda * deltaQ[s.v+1];          //zz
+      BgradQ[s.sigma+3] = mu * deltaQ[s.v+0];              //xy
+      BgradQ[s.sigma+4] = 0.0;                               //xz
+      BgradQ[s.sigma+5] = mu * deltaQ[s.v+2];              //yz
+      break;
+    case 2:
+      BgradQ[s.sigma+0] = lambda * deltaQ[s.v+2];          //xx
+      BgradQ[s.sigma+1] = lambda * deltaQ[s.v+2];          //yy
+      BgradQ[s.sigma+2] = (lambda + 2*mu) * deltaQ[s.v+2]; //zz
+      BgradQ[s.sigma+3] = 0.0;                               //xy
+      BgradQ[s.sigma+4] = mu * deltaQ[s.v+0];              //xz
+      BgradQ[s.sigma+5] = mu * deltaQ[s.v+1];              //yz
+  }
 
-  BgradQ[1][s.sigma+0] = lambda * gradQ[1][s.v+1];          //xx
-  BgradQ[1][s.sigma+1] = (lambda + 2*mu) * gradQ[1][s.v+1]; //yy
-  BgradQ[1][s.sigma+2] = lambda * gradQ[1][s.v+1];          //zz
-  BgradQ[1][s.sigma+3] = mu * gradQ[1][s.v+0];              //xy
-  BgradQ[1][s.sigma+4] = 0.0;                               //xz
-  BgradQ[1][s.sigma+5] = mu * gradQ[1][s.v+2];              //yz
-  BgradQ[1][s.v+0] = 0.0;                                   //vx
-  BgradQ[1][s.v+1] = 0.0;                                   //vy
-  BgradQ[1][s.v+2] = 0.0;                                   //vz
+  for(int i=0; i<3; i++){
+    BgradQ[s.v+i] = 0.0;
+  }
 
-#if Dimensions==3
-  BgradQ[2][s.sigma+0] = lambda * gradQ[2][s.v+2];          //xx
-  BgradQ[2][s.sigma+1] = lambda * gradQ[2][s.v+2];          //yy
-  BgradQ[2][s.sigma+2] = (lambda + 2*mu) * gradQ[2][s.v+2]; //zz
-  BgradQ[2][s.sigma+3] = 0.0;                               //xy
-  BgradQ[2][s.sigma+4] = mu * gradQ[2][s.v+0];              //xz
-  BgradQ[2][s.sigma+5] = mu * gradQ[2][s.v+1];              //yz
-  BgradQ[2][s.v+0] = 0.0;                                   //vx
-  BgradQ[2][s.v+1] = 0.0;                                   //vy
-  BgradQ[2][s.v+2] = 0.0;                                   //vz
-#endif
 }
 
 

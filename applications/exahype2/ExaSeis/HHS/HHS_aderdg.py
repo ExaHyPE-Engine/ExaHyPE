@@ -5,6 +5,7 @@ import argparse
 
 import exahype2.solvers.aderdg
 from exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStep import GlobalFixedTimeStep
+from exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
 from exahype2.solvers.aderdg.ADERDG import ADERDG
 from exahype2.solvers.aderdg.SingleSweep import SingleSweep
 from exahype2.solvers.aderdg.ADERDG import Polynomials
@@ -26,12 +27,12 @@ dimensions = 3
 max_h          = 1.0
 min_h          = 0.9 * max_h / 3.0
 order = 3
-timestep = 1*10**-4
+#timestep = 1*10**-4
 
-theSolver=GlobalFixedTimeStep(
+theSolver=GlobalAdaptiveTimeStep(
   name="hhs",  order=order,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
-  min_cell_h=min_h, max_cell_h=max_h, time_step_size=timestep,
+  min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9,
   flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
   ncp=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
   point_source=1
@@ -84,8 +85,8 @@ project.set_global_simulation_parameters(
   dimensions            = dimensions,
   offset                = offset[0:dimensions],
   size                  = size[0:dimensions],
-  min_end_time          = 5.0,
-  max_end_time          = 5.0,
+  min_end_time          = 0.75, #5.0,
+  max_end_time          = 0.75, #5.0,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = 0.000,
   periodic_BC           = [False,False,False]
