@@ -1,11 +1,16 @@
 #include "SpreadOut.h"
+#include "loadbalancing.h"
+
+
+#include "peano4/parallel/SpacetreeSet.h"
+
 
 tarch::logging::Log  toolbox::loadbalancing::SpreadOut::_log( "toolbox::loadbalancing::SpreadOut" );
 
 
 toolbox::loadbalancing::SpreadOut::SpreadOut(Configuration* configuration):
   LoadBalancing( configuration ),
-  _stepsToWaitForNextLoadBalancingDecision(0) {
+  _previousNumberOfCells(-1) {
   _state = State::InterRankDistribution;
 }
 
@@ -24,6 +29,8 @@ void toolbox::loadbalancing::SpreadOut::updateState() {
     // @todo Debug
     logInfo( "updateState()", "switch to state " << ::toString(_state) );
   }
+
+  _previousNumberOfCells = _statistics.getGlobalNumberOfInnerUnrefinedCells();
 }
 
 
@@ -39,6 +46,9 @@ int toolbox::loadbalancing::SpreadOut::getNumberOfTreesPerRank() const {
       _configuration->getMaxLocalTreesPerRank(_state) * tarch::mpi::Rank::getInstance().getNumberOfRanks(),
       tarch::mpi::Rank::getInstance().getNumberOfRanks()
     );
+
+    logInfo( "getNumberOfTreesPerRank()", "max total trees=" << MaxTotalTrees );
+
     const int MinTreeSize = std::max(
       _configuration->getMinTreeSize(_state) * MaxTotalTrees,
       tarch::mpi::Rank::getInstance().getNumberOfRanks()
@@ -53,7 +63,7 @@ int toolbox::loadbalancing::SpreadOut::getNumberOfTreesPerRank() const {
 }
 
 
-void toolbox::loadbalancing::RecursiveBipartition::updateLoadBalancing() {
+void toolbox::loadbalancing::SpreadOut::updateLoadBalancing() {
   if ( getNumberOfTreesPerRank()>0 ) {
     logInfo( "updateLoadBalancing()", "try to create " << getNumberOfTreesPerRank() << " per rank with internal state" << toString() );
 
@@ -69,10 +79,10 @@ void toolbox::loadbalancing::RecursiveBipartition::updateLoadBalancing() {
     for (int treeNumber= targetRank==0 ? 1 : 0; treeNumber<getNumberOfTreesPerRank(); treeNumber++ ) {
       int thisTreesCells = cellsPerTree;
       if (static_cast<int>(_statistics.getGlobalNumberOfInnerUnrefinedCells()) % (ranks*getNumberOfTreesPerRank()) >= totalSplits) {
-        thisRanksCells++;
+        thisTreesCells++;
       }
 
-      triggerSplit(0, thisRanksCells, targetRank);
+      triggerSplit(0, thisTreesCells, targetRank);
 
       totalSplits++;
     }
@@ -80,7 +90,7 @@ void toolbox::loadbalancing::RecursiveBipartition::updateLoadBalancing() {
 }
 
 
-void toolbox::loadbalancing::RecursiveBipartition::finishStep() {
+void toolbox::loadbalancing::SpreadOut::finishStep() {
   _statistics.updateGlobalView();
   _blacklist.update();
 
@@ -93,7 +103,7 @@ void toolbox::loadbalancing::RecursiveBipartition::finishStep() {
 }
 
 
-void toolbox::loadbalancing::RecursiveBipartition::triggerSplit( int sourceTree, int numberOfCells, int targetRank ) {
+void toolbox::loadbalancing::SpreadOut::triggerSplit( int sourceTree, int numberOfCells, int targetRank ) {
   bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,numberOfCells,targetRank);
   if (not success) {
     logInfo( "triggerSplit()", "wanted to split local rank " << sourceTree << " but failed" );
