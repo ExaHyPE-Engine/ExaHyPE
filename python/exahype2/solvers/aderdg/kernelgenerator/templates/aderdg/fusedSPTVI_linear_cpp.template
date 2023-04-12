@@ -36,7 +36,7 @@
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
     {{solverName}}& solver,
-    cStoreType* __restrict__ lduh,
+    pCompType* __restrict__ lduh,
     pStoreType* __restrict__ lQhbnd,
     pStoreType* __restrict__ lFhbnd,
     pCompType* __restrict__ lQi,
