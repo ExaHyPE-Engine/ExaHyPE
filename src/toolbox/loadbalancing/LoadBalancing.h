@@ -54,6 +54,8 @@ class toolbox::loadbalancing::LoadBalancing {
     int getGlobalNumberOfTrees() const;
 
     virtual void finishSimulation();
+
+    virtual void finishStep() = 0;
   protected:
     static tarch::logging::Log  _log;
 

@@ -140,7 +140,7 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * increment within the for loop such that module imbalances are at least
      * spread out.
      */
-    void finishStep();
+    void finishStep() override;
 
     /**
      * I need the stats here mainly for debugging purposes. The load balancing

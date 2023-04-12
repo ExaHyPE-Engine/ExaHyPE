@@ -25,15 +25,26 @@ class toolbox::loadbalancing::SpreadOut: public toolbox::loadbalancing::LoadBala
   public:
     SpreadOut(Configuration* configuration = new DefaultConfiguration());
     virtual ~SpreadOut();
+
+    void finishStep() override;
   private:
     static tarch::logging::Log  _log;
 
-    int _stepsToWaitForNextLoadBalancingDecision;
+    int _previousNumberOfCells;
 
     /**
      * Return 0 if the load balancing should not split (yet) and otherwise
      * return number of splits required.
      */
     int getNumberOfTreesPerRank() const;
+
+    /**
+     * Call after updateLoadBalancing()
+     */
+    void updateState();
+
+    void updateLoadBalancing();
+
+    void triggerSplit( int sourceTree, int numberOfCells, int targetRank );
 };
 
