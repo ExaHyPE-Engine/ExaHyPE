@@ -9,74 +9,97 @@ The C++ tools use Peano's tarch and the particles toolbox.
 Overall, the Swift extension follows the @ref page_architecture "blueprint of Peano's application architecture".
 
 
-1. There is a Project
-   
-2. The project hosts one or multiple solvers for a particular partial 
-   differential equation.
-   
-3. The multigrid is basically a factory producing a plain Peano 4 Python 
-   representation of the code.
-   
-4. The Peano 4 Python project then finally produces the C++ code.
-
-The multigrid project defines what is to be solved and how (in terms of numerics).
-The Peano 4 project then represents how this is realised in principle, i.e. it
-accommodates a Python representation of all data models and computational steps.
-The C++ outcome is the actual realisation.
-
-## A first Swift 2 application
-
-Our interface for Swift 2 is almost complete realised in Python.
-We configure the whole simulation in Python, but typically make the key 
-steps of a simulation point to generic C++ routines which are shipped with
-Peano 4.
-Alterantively, we can inject C++ code manually into the Python code (which is
-great for prototyping).
-Once the Python script is executed, it generates a plain C++ code with a
-makefile which waves Peano's core and the SPH kernels together.
-
-We start with the creation of a Swift 2 project:
 
 
-~~~~~~~~~~~~~~~~~~~~~
-project = swift2.Project( namespace=['''benchmarks''', '''swift2''', '''planetorbit'''], 
-                          project_name='''planetorbit''', 
-                          executable=orbit-exec )
-~~~~~~~~~~~~~~~~~~~~~
+## Abstraction levels
+
+At the highest point of the code, i.e. the thing that users see, there is
+a project which hosts particles. Each particle is an instantiation of a 
+particular numerical schemes. Each 
+numerical scheme defines a sequence of steps for the particle. Maybe the
+simples example for such a sequence of steps can be found in swift2.particle.ExplicitEulerFixedInteraction Radius. 
+As summarise: the user models the simulation as a project (which hosts 
+information such as "which timespan do I want to simulate") which hosts
+one or multiple particles, where each particle defines a strict sequence
+of steps. 
+
+Users can now inject their actual physics (interaction forces, e.g.) by 
+injecting source code into the particle. Injecting means typically that 
+users say "use this code snippet to compute the force between two particles".
 
 
-Next, we have to add a particle species.
-The definition of a particle is straightforward. We employ a tool called
-DaStGen 2 which really just is a set of Python classes which represent the 
-attributes of a C++ class: 
-We build up a set of Python objects sketching a C++ struct and Swift 2 and
-DaStGen eventually dump them into proper C++ code from which it is embedded into the 
-actual simulator.   
+Once this first step is complete, users invoke swift2.Project. This is where
+a lot of magic happens: A so-called graph compiler runs through the project
+with its particles and puzzles out 
+
+- how often we have to run through the mesh to realise the numerical schemes;
+- which of the injected code snippets has to be called by which traversal;
+- which of the compute steps can internally run in parallel (task-based parallelism).
+
+With this information, the project creates a straight Peano project which 
+hosts the computational steps, all data and the action sets and observers.
+
+@image html architecture.png
+
+The cartoon above tries to illustrate the core principle behind our code:
+The user here has created a project with one particle which implements an 
+explicit Euler. 
+Explicit Euler here means that the particle runs through three logical steps.
 
 
-~~~~~~~~~~~~~~~~~~~~~
-     import dastgen2
-
-     particle = peano4.toolbox.particles.Particle('''Particle''')
-
-     v_attr = peano4.dastgen2.Peano4DoubleArray('''v''','''Dimensions''')
-     mass_attr = dastgen2.attributes.Double('''mass''')
-
-     particle.data.add_attribute(v_attr)
-     particle.data.add_attribute(mass_attr)
-~~~~~~~~~~~~~~~~~~~~~
-
-
-Though conceptionally a plain C++ pretty printer, the DaStGen2 Python API
-can create some fancy C++ annotations. You can, for example, specify ranges
-in which integers live, or you can prescribe the precision you wanna have 
-for floating point values. If you have a specialised LLVM compiler, these
-annotations will be used to generate aggressively optimised code.
+The graph compiler takes this specification and finds out that we have to 
+employ two mesh traversals to realise this scheme. It therefore builds up 
+a Peano project, where the mesh can handle the particles and which has two
+observers. Each observer has all the action sets which are required to 
+administer the particles (such as sorting them), but that also hold the C++
+code snippets that the user originally has added to the explicit Euler. 
+So these code snippets are piped through and now inserted at the right point
+throughout the mesh traversal. After the graph generator has terminated, the 
+Peano project also is provided with a main function which runs through the
+(two) steps over and over again - in the right order each invoking the right
+observer - until the terminal time is reached. 
 
 
+This Peano project finally is used to generate the actual C+ code which does
+not contain any Python anymore.
+
+@see peano4.solversteps.ActionSet for a description of action sets from a user
+  perspective
+  
+
+## Particle storage and sorting
+
+Particles are held within the mesh in their closest persistent aka non-hanging
+vertex. They can also be distributed among the different levels. We call 
+this storage scheme also dual tree storage. 
+That is, the compute kernels can always assume that particles are held in a 
+consistent way, i.e. at the right mesh level at the right vertex.
+The details can be found in 
+peano4.toolbox.particles.AbstractUpdateParticleGridAssociation.
 
 
+If a computational step in a computational scheme alters the particle positions
+or their interaction radius, it is the graph compiler's job to ensure that a 
+resorting is triggered in the next grid sweep. Along the same lines, any 
+resorting should again trigger an adaptive remeshing, as the mesh structure
+typically follows the particle distribution. 
+The latter is realised by adding the action set peano4.toolbox.particles.ParticleAMR to 
+the relevant computational steps.
 
+
+## Particle-particle interaction
+
+All particle modifications are realised through mesh traversals. That is, an 
+observer runs through the mesh. Whenever it observes a relevant action (such 
+as "hey, I've touched this vertex with its particles for the first time"), the
+observer runs through all the action sets that are associated with it and calls
+the respective functions. In the case above, this would be touchVertexFirstTime().
+
+It is important to note that Peano's mesh traversals result from top-down tree
+traversals always. This allows us to realise particle-particle interactions via
+simple definitions of so-called active and local particle sets. Details on this
+can be found in peano4.toolbox.particles.ParticleParticleInteraction_Sets for 
+example.
 
  */
  

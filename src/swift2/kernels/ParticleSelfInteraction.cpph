@@ -89,7 +89,7 @@ void swift2::kernels::endDensityCalculation(
       /* Finish calculation of the velocity divergence */
       particle->setDiv_v( particle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
       
-      assertion3( std::isfinite(density), particle->toString(), W_a, h_inv_dim);
+      assertion3( std::isfinite(particle->getDensity()), particle->toString(), W_a, h_inv_dim);
       assertion1( particle->getNcount() > 1, particle->toString() );
                 
       
@@ -348,9 +348,9 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
       /* Finish calculation of the velocity divergence */
       particle->setDiv_v( particle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
       
-      assertion3( std::isfinite(density)             , particle->toString(), W_a, h_inv_dim);
-      assertion2( std::isfinite(h_inv_dim)           , particle->toString(), rho_inv);
-      assertion2( std::isfinite(particle->getDiv_v()), particle->toString(), rho_inv);
+      assertion3( std::isfinite(particle->getDensity()), particle->toString(), W_a, h_inv_dim);
+      assertion2( std::isfinite(h_inv_dim)             , particle->toString(), rho_inv);
+      assertion2( std::isfinite(particle->getDiv_v())  , particle->toString(), rho_inv);
       
       //
       // =====================
@@ -444,7 +444,8 @@ void swift2::kernels::endHydroForceCalculation(
 
 template <typename ParticleContainer>
 void swift2::kernels::flagBoundaryParticles(
-  const ParticleContainer&  localParticles
+  const ParticleContainer&  localParticles,
+  const double nparts
 ) {
   for (auto* particle: localParticles) {
     if( 
@@ -455,7 +456,7 @@ void swift2::kernels::flagBoundaryParticles(
     
       /* Flag if particle is at boundary of the simulation box */
       particle->setIsBoundaryParticle(false);
-      const double max_dist_boundary = 3 * (1.0 /HYDRO_PART_NUMBER); 
+      const double max_dist_boundary = 3 * (1.0 / nparts);
 
       for (int d=0; d<Dimensions; d++) {
         if ( particle->getX()(d) < max_dist_boundary || 

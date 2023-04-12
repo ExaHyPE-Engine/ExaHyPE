@@ -6,60 +6,68 @@ from swift2.particle.AlgorithmStep import AlgorithmStep
 import peano4
 
 class ExplicitEulerFixedInteractionRadius(Particle):
-  """
+  """!
   
-  Simple particle with a fixed interaction radius h which moves according
-  to an explicit Euler. By default, the Euler uses global time stepping, 
-  i.e. the combination of maximum velocity and minimal mesh size determines
-  the time step size of the subsequent time step. Besides the default 
-  variables x and h, the particle has the following properties:
+Simple particle with fixed interaction radius subject to explicit Euler
+  
+Simple particle with a fixed interaction radius h which moves according
+to an explicit Euler. By default, the Euler uses global time stepping, 
+i.e. the combination of maximum velocity and minimal mesh size determines
+the time step size of the subsequent time step. The term fixed means that
+the interaction radius does not change throughout the time step. Nothing
+stops you however to adopt the interaction radius in-between any two 
+time steps. However, only change the radius in a step which is marked with
+the AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS.
+
+
+Besides the default variables x and h, the particle has the following properties:
   
     - a vector a which is the acceleration;
     - a vector v which is the velocity.
+
+You can add further properties via
     
-  You can add further properties via
-    
-         myparticle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("myFancyArray","Dimensions") )
+      myparticle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("myFancyArray","Dimensions") )
  
-  in your code. Or you can create a subclass which adds additional fields 
-  after it has called the baseline constructor.
+in your code. Or you can create a subclass which adds additional fields 
+after it has called the baseline constructor.
   
   
-  ## Force calculation
+## Force calculation
   
-  particle_particle_interaction_over_particle_sets_kernel is a C++ string which defines a force between two
-  particles. It has access to three important objects:
-  
-  - localParticles is a container (list) over pointers to local particles
-  - activeParticles is a container (list) over pointers to active particles
-  - marker is a cell marker which identifies the current cell.
-  
-  Please consult the guidebook for a definition of local and active particles
-  but take into account that the local particles always are a subset of the 
-  active particles.
-  
-  Besides the actual particle-to-particle calculation, i.e. a force 
-  calculation, users can also provide kernels that kick in when you touch 
-  particles for the first time before you actually compute any 
-  particle-particle interaction, and there is a plug-in point what you do 
-  just once the particle-particle interaction has terminated. The latter 
-  point is reached before we do the actual time stepping. In both plug-in
-  points, you have a vertex marker which gives you the position of the 
-  vertex to which a particular is associated, and you have the localParticles.
-  This is a vector of pointers in this particular case.
-  
+ particle_particle_interaction_over_particle_sets_kernel is a C++ string which defines a force between two
+ particles. It has access to three important objects:
  
-  ## Attributes
+ - localParticles is a container (list) over pointers to local particles
+ - activeParticles is a container (list) over pointers to active particles
+ - marker is a cell marker which identifies the current cell.
+ 
+ Please consult the guidebook for a definition of local and active particles
+ but take into account that the local particles always are a subset of the 
+ active particles.
+ 
+ Besides the actual particle-to-particle calculation, i.e. a force 
+ calculation, users can also provide kernels that kick in when you touch 
+ particles for the first time before you actually compute any 
+ particle-particle interaction, and there is a plug-in point what you do 
+ just once the particle-particle interaction has terminated. The latter 
+ point is reached before we do the actual time stepping. In both plug-in
+ points, you have a vertex marker which gives you the position of the 
+ vertex to which a particular is associated, and you have the localParticles.
+ This is a vector of pointers in this particular case.
+ 
+
+ ## Attributes
+ 
+ name: String
+   To be in line with other conventions, I recommend you start with an 
+   uppercase letter. This has to be a valid C++ identifier, i.e. don't 
+   use any special symbols besides an underscore.
   
-  name: String
-    To be in line with other conventions, I recommend you start with an 
-    uppercase letter. This has to be a valid C++ identifier, i.e. don't 
-    use any special symbols besides an underscore.
-   
 
 
-  @see peano4::datamanagement::CellMarker
-  @see peano4::datamanagement::VertexMarker
+ @see peano4::datamanagement::CellMarker
+ @see peano4::datamanagement::VertexMarker
   
   """
   def __init__(self, 

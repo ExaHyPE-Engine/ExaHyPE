@@ -1,14 +1,31 @@
 /**
-\page faq_tex
 
-FAQs (programmers' point of view)
-=================================
+@page developer_faq Developer FAQs
 
-Most developers exchange stuff via the  slack. Contact Tobias Weinzierl
+
+Some frequently asked questions and problems are discussed below.
+
+Most developers exchange stuff via our slack. Contact Tobias Weinzierl
 to get an invitation to the slack and post your questions there.
 
-C++ core
---------
+
+## Technical architecture 
+
+- **The logger seems to insert more and more spaces over time, so the trace
+  becomes impossible to read over time.** The command line logger's trace
+  tries to indent such that the terminal messages reflect the callstack 
+  hierarchy (if foo calls bar, all messages from bar are indendented 
+  relative to foo's message). This works in a multithreaded environment, too,
+  though the indentation there might be messed up slightly due to the 
+  threading's non-determinism. The code indents whenever you write logTraceIn().
+  If you get more and more spaces, you almost certainly have forgotten the 
+  corresponding logTraceOut() statement. If you configure your code without
+  any multithreading, and if you then enable assertions, the 
+  tarch::logging::CommandLineLogger will tell you which logTraceOut() statement
+  is missing.
+
+
+## C++ core
 
 -   **Where is the information whether a point or face is at the
     boundary or not?** I do not provide any such feature. Many codes for
@@ -112,5 +129,8 @@ Parallelisation
     Q\[4\], x, t, normal, p ); const double c = std::sqrt(
     std::max(0.0,gamma \* p \* irho) );
 
--   To be continued ...
-*/
+
+
+ */
+ 
+ 

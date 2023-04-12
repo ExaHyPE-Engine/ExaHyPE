@@ -12,7 +12,10 @@ import numpy as np
 
 class InsertParticlesFromHDF5File(ActionSet):
   def __init__(self, particle_set, filename):
-    """
+    """!
+    
+Read position from HDF5 and insert particles
+
     
     Read an HDF5 file and insert particles into the simulation box. This is
     typically used to read an Initial Condition file.
@@ -61,9 +64,6 @@ class InsertParticlesFromHDF5File(ActionSet):
       // Initialise the particle with x=coords and CutOffRadius=0
       toolbox::particles::init(*newParticle, p, 0.0);
       _particleNumberOnThisTree++;
-
-      // Just insert them; will be re-assigned later anyway
-      fineGridVertices{{PARTICLES_CONTAINER}}(0).push_back( newParticle );
 
       /* 
        * Initialise the full set of particle attributes 
@@ -167,6 +167,12 @@ class InsertParticlesFromHDF5File(ActionSet):
 
       indexEntry++;
 
+      toolbox::particles::insertParticleIntoCell(
+        marker,
+        newParticle,
+        fineGridVerticeshydroPartSet
+      );
+
       logInfo( "Init2peano4()", "_spacetreeId: " << _spacetreeId << 
                              ", _particleNumberOnThisTree: " << _particleNumberOnThisTree );
 
@@ -213,6 +219,7 @@ class InsertParticlesFromHDF5File(ActionSet):
 #include "tarch/multicore/Lock.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
+#include "toolbox/particles/particles.h"
 #include "toolbox/particles/FileReaderHDF5.h"
 #include "toolbox/particles/ParticleFactory.h"
 
