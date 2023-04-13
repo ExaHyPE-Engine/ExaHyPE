@@ -55,6 +55,11 @@ bool toolbox::loadbalancing::LoadBalancing::isEnabled(bool globally) const {
 }
 
 
+bool toolbox::loadbalancing::LoadBalancing::hasStagnated() const {
+  return _state == State::Stagnation or _state == State::SwitchedOff;
+}
+
+
 int toolbox::loadbalancing::LoadBalancing::getGlobalNumberOfTrees() const {
   return _statistics.getGlobalNumberOfTrees();
 }

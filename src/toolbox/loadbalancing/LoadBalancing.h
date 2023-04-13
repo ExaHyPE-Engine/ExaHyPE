@@ -45,7 +45,7 @@ class toolbox::loadbalancing::LoadBalancing {
      */
     void enable(bool);
 
-    bool hasSplitRecently() const;
+    virtual bool hasSplitRecently() const;
 
     /**
      * Clarifies whether load balancing is, in principle, enabled. Might however
@@ -54,7 +54,16 @@ class toolbox::loadbalancing::LoadBalancing {
      */
     bool isEnabled(bool globally) const;
 
-    int getGlobalNumberOfTrees() const;
+    /**
+     * Delegate to stats.
+     */
+    virtual int getGlobalNumberOfTrees() const;
+
+    /**
+     * A load balancing can either be stagnating or be switched off for
+     * this predicate to hold.
+     */
+    virtual bool hasStagnated() const;
 
     virtual void finishSimulation();
 
