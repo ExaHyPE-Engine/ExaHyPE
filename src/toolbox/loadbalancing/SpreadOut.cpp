@@ -76,8 +76,12 @@ void toolbox::loadbalancing::SpreadOut::updateLoadBalancing() {
     _numberOfStableGridIterations = 0;
   }
  
-  if ( not tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    _state = State::SwitchedOff;
+  if (
+    not tarch::mpi::Rank::getInstance().isGlobalMaster()
+    and
+    _state == State::InterRankDistribution
+  ) {
+    _state = State::Stagnation;
   }
   
   const int numberOfTreesPerRank = getNumberOfTreesPerRank();
@@ -112,7 +116,7 @@ void toolbox::loadbalancing::SpreadOut::updateLoadBalancing() {
       totalSplits++;
     }
 
-    _state = State::SwitchedOff;
+    _state = State::Stagnation;
   }
   else if (not _statistics.hasConsistentViewOfWorld()) {
     _previousNumberOfCells = -1;
@@ -134,8 +138,12 @@ void toolbox::loadbalancing::SpreadOut::finishStep() {
 }
 
 
-void toolbox::loadbalancing::SpreadOut::triggerSplit( int sourceTree, int numberOfCells, int targetRank ) {
-  logInfo( "triggerSplit(int,int,int)", "trigger split from tree " << sourceTree << " into new tree on rank " << targetRank << " with " << numberOfCells << " cell(s)" );
+void toolbox::loadbalancing::SpreadOut::triggerSplit( int numberOfCells, int targetRank ) {
+  logInfo( "triggerSplit(int,int,int)", "trigger split from tree 0 into new tree on rank " << targetRank << " with " << numberOfCells << " cell(s)" );
+
+  assertionEquals( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size(), 1 );
+
+  const int sourceTree = 0;
   bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,numberOfCells,targetRank);
   if (not success) {
     logInfo( "triggerSplit()", "wanted to split local rank " << sourceTree << " but failed" );

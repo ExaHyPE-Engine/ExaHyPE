@@ -41,6 +41,6 @@ class toolbox::loadbalancing::SpreadOut: public toolbox::loadbalancing::LoadBala
 
     void updateLoadBalancing();
 
-    void triggerSplit( int sourceTree, int numberOfCells, int targetRank );
+    void triggerSplit( int numberOfCells, int targetRank );
 };
 
