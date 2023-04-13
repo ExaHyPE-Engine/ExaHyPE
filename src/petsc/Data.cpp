@@ -30,14 +30,13 @@ void petsc::PetscData::initMatrix(){
   MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
 
   //print out our contents
-  MatView(A, PETSC_VIEWER_STDOUT_WORLD);
+  // MatView(A, PETSC_VIEWER_STDOUT_WORLD);
 
 }
 
-// void petsc::PetscData::initVectors( std::vector< std::pair<double, double> > valuesAndRhs ){
-void petsc::PetscData::initVectors(){
+void petsc::PetscData::initVectors( std::vector< std::pair<double, double> > valuesAndRhs ){
   PetscInt n = _dofs;
-  PetscInt val = 1;
+  // PetscInt val = 1;
 
   //create both vectors
   VecCreate(PETSC_COMM_WORLD, &x);
@@ -53,8 +52,9 @@ void petsc::PetscData::initVectors(){
   VecSetUp(b);
 
   for (PetscInt i = 0; i < n; i++ ){
-    VecSetValue(x, i, val, ADD_VALUES);
-    VecSetValue(b, i, val, ADD_VALUES);
+    std::pair<double, double> localVal = valuesAndRhs.at(i);
+    VecSetValue(x, i, localVal.first, ADD_VALUES);
+    VecSetValue(b, i, localVal.second, ADD_VALUES);
   }
 
   //assemble both

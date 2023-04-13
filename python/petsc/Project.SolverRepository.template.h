@@ -9,6 +9,7 @@
 {% for SOLVER in SOLVER_INSTANCES %}
 
 #include "{{SOLVER[0]}}.h"
+#include "petsc/Data.h"
 
 {% endfor %}
 
@@ -21,6 +22,7 @@ namespace {{N}} {
 
     {% for SOLVER in SOLVER_INSTANCES %}
     extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
+    extern ::petsc::PetscData instanceOfPetsc;
     {% endfor %}
 
     void computeLocalToGlobalMapsForAllSolvers();

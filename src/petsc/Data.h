@@ -24,8 +24,8 @@ class petsc::PetscData{
     void setDoFs(int dofs);
 
     void initMatrix();
-    // void initVectors( std::vector< std::pair<double, double> > valuesAndRhs );
-    void initVectors();
+    void initVectors( std::vector< std::pair<double, double> > valuesAndRhs );
+    // void initVectors();
 
   private:
 
