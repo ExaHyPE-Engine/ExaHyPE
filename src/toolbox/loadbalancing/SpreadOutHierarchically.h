@@ -49,5 +49,7 @@ class toolbox::loadbalancing::SpreadOutHierarchically: public toolbox::loadbalan
     void updateState();
     void updateLoadBalancing();
     void triggerSplit( int numberOfCells, int targetRank );
+    Action getAction() const;
+    int getNumberOfSplitsOnLocalRank() const;
 };
 

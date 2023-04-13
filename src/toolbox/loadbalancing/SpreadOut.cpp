@@ -111,7 +111,7 @@ void toolbox::loadbalancing::SpreadOut::updateLoadBalancing() {
         thisTreesCells++;
       }
 
-      triggerSplit(0, thisTreesCells, targetRank);
+      triggerSplit(thisTreesCells, targetRank);
 
       totalSplits++;
     }
@@ -142,6 +142,7 @@ void toolbox::loadbalancing::SpreadOut::triggerSplit( int numberOfCells, int tar
   logInfo( "triggerSplit(int,int,int)", "trigger split from tree 0 into new tree on rank " << targetRank << " with " << numberOfCells << " cell(s)" );
 
   assertionEquals( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size(), 1 );
+  assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
 
   const int sourceTree = 0;
   bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,numberOfCells,targetRank);
