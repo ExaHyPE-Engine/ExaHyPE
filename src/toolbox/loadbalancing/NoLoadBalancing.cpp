@@ -16,30 +16,11 @@ toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing(
   Configuration* configuration,
   bool deleteInDestructor
 ):
-  LoadBalancing( configuration, deleteInConstructor ) {
+  LoadBalancing( configuration, deleteInDestructor ) {
 }
 
 
 void toolbox::loadbalancing::NoLoadBalancing::finishStep() {
-}
-
-
-bool toolbox::loadbalancing::NoLoadBalancing::hasSplitRecently() const {
-  return false;
-}
-
-
-void toolbox::loadbalancing::NoLoadBalancing::enable(bool value) {
-}
-
-
-bool toolbox::loadbalancing::NoLoadBalancing::isEnabled(bool globally) const {
-  return false;
-}
-
-
-int toolbox::loadbalancing::NoLoadBalancing::getGlobalNumberOfTrees() const {
-  return -1;
 }
 
 
