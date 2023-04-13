@@ -322,11 +322,13 @@ if [ "$toolchain" = "intel" ]; then
   CXXFLAGS="-std=c++20 -W -Wall -Wextra"
   LDFLAGS=""
   PS3="Select multithreading mode: "
-  select shared in none omp sycl; do
+  select shared in none omp tbb sycl; do
     case $shared in
       "none")
         break;;
       "omp")
+        break;;
+      "tbb")
         break;;
       "sycl")
         break;;
@@ -366,8 +368,8 @@ if [ "$toolchain" = "intel" ]; then
             break;;
         esac
       done
-      CXXFLAGS+="-Xsycl-target-frontend -fgpu-inline-threshold=100000 -Wno-unknown-cuda-version -Wno-deprecated-declarations -Wno-linker-warnings -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=$cap" \
-      LDFLAGS+="-Xsycl-target-frontend -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=$cap -lstdc++fs"
+      CXXFLAGS+=" -fsycl -Xsycl-target-frontend -fgpu-inline-threshold=100000 -Wno-unknown-cuda-version -Wno-deprecated-declarations -Wno-linker-warnings -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=$cap" \
+      LDFLAGS+=" -fsycl -Xsycl-target-frontend -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=$cap -lstdc++fs"
       echo "$cc $CXXFLAGS"
       echo "$cxx $CXXFLAGS"
       echo "LDFLAGS: $LDFLAGS"

@@ -4,7 +4,7 @@
 #if defined(GPUOffloadingSYCL)
 GPUCallableMethod void tarch::gpuAbort() {}
 
-void* tarch::allocateRawData(int size, MemoryLocation location) {
+void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
   void* result = nullptr;
   switch (location) {
     case MemoryLocation::Heap:
