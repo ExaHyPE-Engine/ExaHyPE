@@ -973,8 +973,9 @@ if __name__ == "__main__":
     project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
     my_solver.select_dofs_to_print = [0,12,16,17,18,54,59,60]
 
-    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
+    #project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,1000,16))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9))" )
+
 
 
 ########################################################################################

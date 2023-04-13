@@ -23,29 +23,28 @@ namespace toolbox {
 
 class toolbox::loadbalancing::SpreadOut: public toolbox::loadbalancing::LoadBalancing {
   public:
-    /**
-     * @see getAction()
-     */
-    enum class Action {
-      /**
-       * Required for the strategy.
-       */
-      Unspecified,
-      None,
-      SpreadEquallyOverAllRanks,
-      SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning
-    };
-
-    static std::string toString( Action action );
-
     SpreadOut(Configuration* configuration = new DefaultConfiguration());
     virtual ~SpreadOut();
+
+    void finishStep() override;
   private:
     static tarch::logging::Log  _log;
 
-    int _stepsToWaitForNextLoadBalancingDecision;
+    int _previousNumberOfCells;
+
+    /**
+     * Return 0 if the load balancing should not split (yet) and otherwise
+     * return number of splits required.
+     */
+    int getNumberOfTreesPerRank() const;
+
+    /**
+     * Call after updateLoadBalancing()
+     */
+    void updateState();
+
+    void updateLoadBalancing();
+
+    void triggerSplit( int sourceTree, int numberOfCells, int targetRank );
 };
 
