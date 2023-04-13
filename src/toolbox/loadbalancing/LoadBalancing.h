@@ -28,7 +28,10 @@ class toolbox::loadbalancing::LoadBalancing {
      * Data ownership is handed over to the load balancing, i.e. the balancing
      * has to delete the configuration object.
      */
-    LoadBalancing(Configuration* configuration = new DefaultConfiguration());
+    LoadBalancing(
+      Configuration* configuration,
+      bool deleteInDestructor
+    );
     virtual ~LoadBalancing();
 
     /**
@@ -66,6 +69,8 @@ class toolbox::loadbalancing::LoadBalancing {
     Configuration*  _configuration;
 
     State  _state;
+
+    bool _deleteInDestructor;
 
     /**
      * Ensure enough memory is left-over.

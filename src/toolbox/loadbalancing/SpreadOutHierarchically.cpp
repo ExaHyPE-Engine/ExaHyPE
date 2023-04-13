@@ -24,9 +24,10 @@ std::string toolbox::loadbalancing::SpreadOutHierarchically::toString( Action ac
 }
 
 
-toolbox::loadbalancing::SpreadOutHierarchically::SpreadOutHierarchically(Configuration* configuration):
-  LoadBalancing( configuration ),
+toolbox::loadbalancing::SpreadOutHierarchically::SpreadOutHierarchically(Configuration* configuration, bool deleteInDestructor):
+  LoadBalancing( configuration ,deleteInDestructor ),
   _stepsToWaitForNextLoadBalancingDecision(0) {
+  assertion( configuration!=nullptr );
   _state = State::InterRankDistribution;
 }
 

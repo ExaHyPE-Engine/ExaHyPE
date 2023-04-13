@@ -16,10 +16,11 @@
 tarch::logging::Log  toolbox::loadbalancing::RecursiveBipartition::_log( "toolbox::loadbalancing::RecursiveBipartition" );
 
 
-toolbox::loadbalancing::RecursiveBipartition::RecursiveBipartition(Configuration* configuration):
-  LoadBalancing( configuration ),
+toolbox::loadbalancing::RecursiveBipartition::RecursiveBipartition(Configuration* configuration, bool deleteInDestructor):
+  LoadBalancing( configuration, deleteInDestructor ),
   _stepsToWaitForNextLoadBalancingDecision(0),
   _roundRobinToken(0) {
+  assertion( configuration!=nullptr );
   _state = State::InterRankDistribution;
 }
 
