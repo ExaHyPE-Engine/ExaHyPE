@@ -7,19 +7,20 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 
-toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing() {
+toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing():
+  LoadBalancing( nullptr, false ) {
+}
+
+
+toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing(
+  Configuration* configuration,
+  bool deleteInDestructor
+):
+  LoadBalancing( configuration, deleteInConstructor ) {
 }
 
 
 void toolbox::loadbalancing::NoLoadBalancing::finishStep() {
-}
-
-
-void toolbox::loadbalancing::NoLoadBalancing::dumpStatistics() {
-}
-
-
-void toolbox::loadbalancing::NoLoadBalancing::finishSimulation() {
 }
 
 

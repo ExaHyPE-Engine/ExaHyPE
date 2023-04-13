@@ -5,15 +5,18 @@
 tarch::logging::Log  toolbox::loadbalancing::LoadBalancing::_log( "toolbox::loadbalancing::LoadBalancing" );
 
 
-toolbox::loadbalancing::LoadBalancing::LoadBalancing(Configuration* configuration):
+toolbox::loadbalancing::LoadBalancing::LoadBalancing(Configuration* configuration, bool deleteInDestructor):
   _state( State::Undefined ),
-  _configuration(configuration) {
+  _configuration(configuration),
+  _deleteInDestructor(deleteInDestructor) {
   assertion(configuration!=nullptr);
 }
 
 
 toolbox::loadbalancing::LoadBalancing::~LoadBalancing() {
-  delete _configuration;
+  if (_deleteInDestructor) {
+    delete _configuration;
+  }
 }
 
 

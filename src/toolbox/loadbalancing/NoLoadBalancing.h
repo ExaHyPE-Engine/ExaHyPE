@@ -6,6 +6,8 @@
 
 #include "tarch/logging/Log.h"
 
+#include "LoadBalancing.h"
+
 
 namespace toolbox {
   namespace loadbalancing {
@@ -20,32 +22,20 @@ namespace toolbox {
  * A dummy that you can use if you wanna have a class around with a proper
  * load balancing signature.
  */
-class toolbox::loadbalancing::NoLoadBalancing {
+class toolbox::loadbalancing::NoLoadBalancing: public toolbox::loadbalancing::LoadBalancing {
   public:
-	NoLoadBalancing();
-
-    void finishStep();
-
-    void finishSimulation();
+    NoLoadBalancing();
 
     /**
-     * I need the stats here mainly for debugging purposes.
+     * Only there to be compatible with other classes.
      */
-    void dumpStatistics();
+    NoLoadBalancing(
+      Configuration* configuration,
+      bool deleteInDestructor
+    );
+    virtual ~NoLoadBalancing() = default;
 
-    bool hasSplitRecently() const;
-
-    void enable(bool);
-    
-    /**
-     * Local operation
-     */
-    bool isEnabled(bool globally) const;
-
-    /**
-     * @return -1 if this information is not available
-     */
-    int getGlobalNumberOfTrees() const;
+    void finishStep() override;
 };
 
 

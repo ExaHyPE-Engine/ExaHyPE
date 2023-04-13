@@ -121,7 +121,7 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * The ownership of the pointer goes over to the recursive subdivision
      * instance, i.e. you don't have to delete the passed object.
      */
-    RecursiveBipartition(Configuration* configuration = new DefaultConfiguration());
+    RecursiveBipartition(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
     virtual ~RecursiveBipartition();
 
     /**
