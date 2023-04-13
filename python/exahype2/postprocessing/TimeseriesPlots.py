@@ -23,10 +23,10 @@ def plot_runtime_per_step(performance_data,label=None,xaxis=XAxis.RealTime):
   """    
   x_data = []
   y_data = []
-  if sum>1:
+  if xaxis.value>1:
     i=0
     while i<len(performance_data.get_time_step_real_time_stamps()) and i<len(performance_data.get_time_per_time_step()):
-      if i%sum==0:
+      if i%xaxis.value==0:
         x_data.append(performance_data.get_time_step_real_time_stamps()[i])
         y_data.append(performance_data.get_time_per_time_step()[i])
       else:
