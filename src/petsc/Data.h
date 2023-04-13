@@ -1,5 +1,10 @@
+#pragma once
+
 #include <petscsys.h>
 #include <petscmat.h>
+#include <petscvec.h>
+#include <vector>
+
 #include <iostream>
 
 //the above only works because i have $PETSC_DIR configured already
@@ -10,18 +15,26 @@ namespace petsc{
 
 class petsc::PetscData{
   public:
-    PetscData* getInstance();
-    PetscData(int DoFs);
-
+    // PetscData* getInstance();
+    PetscData(int argc, char** argv);
+    PetscData();
     virtual ~PetscData();
+
+    int getDoFs() const;
+    void setDoFs(int dofs);
+
+    void initMatrix();
+    // void initVectors( std::vector< std::pair<double, double> > valuesAndRhs );
+    void initVectors();
 
   private:
 
     int _dofs;
-    void initMatrix();
 
-    //petsc matrix itself
+    //Ax = b
     Mat A;
 
-    static PetscData* instance;
+    Vec x, b;
+
+    // static PetscData* instance;
 };
