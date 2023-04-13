@@ -42,10 +42,11 @@ Consult the file implementation for details.
 
 ## Intel oneAPI toolchain
 
-@image html logos/oneAPI.png
+<img width="10%" src="https://upload.wikimedia.org/wikipedia/en/f/fa/OneAPI-rgb-3000.png" />
 
 Peano provides dedicated support for an Intel/oneAPI toolchain. To activate 
 this toolchain, you have to reconfigure with  
+
 ~~~~~~~~~~~~~~~~~~~~~~~
 ./configure ... --with-toolchain=intel
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -101,9 +102,90 @@ VTResume();
 These functions seem to be deprecated and are not shipped with oneAPI anymore.
 
 
+## NVIDIA NVC++ toolchain
+
+<img width="20%" src="https://www.nvidia.com/content/dam/en-zz/Solutions/about-nvidia/logo-and-brand/01-nvidia-logo-vert-500x200-2c50-p@2x.png" />
+
+The NVIDIA toolchain requires us to make `CXX` and `CC` point to the C++
+compiler, as both are passed the same arguments by configure, which are
+actually only understood by the C++ version.
+
+Some compute kernels of some Peano extensions (such as ExaHyPE) are not 
+available with the NVIDIA tools, as the
+compiler is pretty picky. 
+It refuses, for example, to place temporary array variables on the call stack.
+So you might have to play around with the software configuration.
+
+
+### OpenMP and OpenMP offloading
+
+NVIDIA's compiler does not support all of OpenMP. Therefore, its OpenMP
+implementation is rather picky when it comes to copy constructors and
+other C++ features.  has internal workarounds for all of these items,
+i.e. the build should in principle succeed yet the code might be
+slightly slower than the Intel or native Clang counterpart.
+
+The OpenMP offloading requires us to specify both the GPU OpenMP target
+and a corresponding CUDA version. 
+It is important to recognise that `–with-gpu=omp` activates the
+offloading from 's point of view. However, as long as the NVIDIA
+compiler is not told which device to use, it will give you
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Found 0 devices
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+devices if you run the code.
+
+
+## AMD toolchain
+
+For the AMD toolchain we need to load either ROCm or AOMP. Both modules
+should have AMD's version of Clang. With the AMD toolchain we use AMD's
+modified Clang. We again need to point `CXX` and `CC` to the Clang
+compiler.
+
+### OpenMP
+
+The Clang compiler does not support omp_get_mapped_ptr() at the moment.
+We have implemented a workaround mk_omp_get_mapped_ptr() in
+src/tarch/multicore/omp/MkUtils.h which does the same trick.
+
+For the configuration with OpenMP GPU offloading, we again specify
+`–with-gpu=omp` to make Peano GPU aware. Furthermore, we need to add AMD
+specific offloading instructions:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure  --enable-exahype  --enable-loadbalancing --enable-blockstructured --with-gpu=omp  --with-multithreading=omp CC=clang CXX=clang++  CXXFLAGS="-O3 -std=c++20 -fopenmp -O3 -std=c++20 --offload-arch=<gpu-arch>"  LDFLAGS="-fopenmp --offload-arch=<gpu-arch> -lstdc++fs"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where `<gpu-arch>` is either `gfx906` (MI 50), `gfx908` (MI 100), or
+`gfx90a` (MI 200 series).
+
+
+## Clang (native)
+
+On Ubuntu and many other systems, clang is not shipped automatically
+with OpenMP. Instead, you have to install the package `libomp-dev`.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+./configure CC=clang CXX=clang++  CXXFLAGS="-O3 -std=c++20-mtune=native -march=native -fopenmp"  --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Should you require OpenMP offloading, i.e. GPU, support, you have to add
+the OpenMP target instructions:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~
+./configure CC=clang CXX=clang++  CXXFLAGS="-O3 -std=c++20 -mtune=native -march=native -fopenmp" -fopenmp-targets=nvptx64 --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
 ## Example machine configurations
 
 ### Hamilton
+
+<img width="20%" src="https://nccadmin.webspace.durham.ac.uk/wp-content/themes/core/assets/img/theme/branding-assets/durham-university-logo.svg" />
 
 Hamilton 8 is Durham's internal supercomputer.
 It is a system powered by AMD EPYC processors. 
@@ -149,8 +231,46 @@ module load vtune
   the respective applications. 
 
 
+### NCC
 
--L/apps/developers/tools/vtune/2021.9/1/default/vtune/latest/lib64 -littnotify
+I recommend atm to use `gpu10`, `gpu11` or `gpu12`, i.e. the A100
+machines. By default, I usually work with NVC++ on this cluster, but the
+OneAPI software stack should work, too.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module load nsight-systems cuda llvm 
+module load mvapich2/2.3.5-2
+
+./configure --enable-exahype --enable-loadbalancing-toolbox --with-multithreading=omp --with-mpi=mpicxx --with-gpu=omp CXX=clang++ CXXFLAGS="-fopenmp -fopenmp-targets=nvptx64-nvidia-cuda"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+#### OpenMP with NVC++
+
+I use the setup
+
+~~~~~~~~~~~~~~~~~~~~~~~
+./configure CXX=nvc++ CC=nvc++ CXXFLAGS="-O4 --std=c++17 -mp=gpu -gpu=cc80" LDFLAGS="-mp=gpu -gpu=cc80" --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-blockstructured --enable-loadbalancing CPP=cpp FC=/apps/nvidia-hpc-sdk/Linux_x86_64/22.3/compilers/bin/nvfortran
+~~~~~~~~~~~~~~~~~~~~~~~
+
+on the A100 nodes.
+
+We had some issues (compiler crashes) with NVC++ 2022.5. Those are filed
+with NVIDIA. For the time being, please revert to another compiler
+generation. Version 2022.3 works for example.
+
+Note that there is a bug in the NVIDIA software stack at the moment.
+Many runs will crash with a complaint about a lack of visible devices.
+Ensure hence that you set the following environment before you start
+your experiments:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~
+export CUDA_VISIBLE_DEVICES=0
+~~~~~~~~~~~~~~~~~~~~~~~
+
+### DINE
+
+We have to write this part next week when we start the workshop.
 
  */
  

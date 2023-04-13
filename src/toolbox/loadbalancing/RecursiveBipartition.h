@@ -5,17 +5,17 @@
 
 
 #include "tarch/logging/Log.h"
-#include "tarch/mpi/mpi.h"
 
 #include "peano4/parallel/Node.h"
 
 #include <map>
 
+#include "LoadBalancing.h"
 
 
 namespace toolbox {
   namespace loadbalancing {
-    class RecursiveSubdivision;
+    class RecursiveBipartition;
   }
 }
 
@@ -72,6 +72,8 @@ namespace toolbox {
  *
  * <h2> Broad vs. deep trees </h2>
  *
+ * @todo Update this part with new insight
+ *
  * The splitting has to be reasonably aggressive. If we worked iteratively
  * depth first, i.e. identified the biggest tree, split it, and then continue,
  * then we run into situations where we have a complex master-worker
@@ -82,26 +84,6 @@ namespace toolbox {
  * this) to use the min functions and always try to split from a very heavy
  * tree just that part that you need.
  *
- * <h2> Blacklisting </h2>
- *
- * The recursive subdivision works with one tree at a time: It always identifies the
- * one tree with the biggest load and subdivides this one further. A tree however
- * requires two traversals to split. If a tree is identified as split candidate, the
- * code hence will tell it to split, but will try to split exactly the same tree again
- * in the subsequent iteration.
- *
- * The tree's stats (how many cells does it own) at this point are skewed, as the
- * tree has not yet successfully given away cells. Indeed, a tree needs at least three
- * iterations to 'recover'. The first one initialises the split. The second traversal
- * conducts the split and eventually moves around data, but the ownership in this
- * traversal still is with the master. Therefore, the master still has all the local
- * cells. After the third split, the master has actually given away its cells.
- *
- * Therefore, we work with a blacklist map: Whenever we have identified a tree that is to
- * be split, we memorise it and give it an internal weight of 3. Memorise means it is
- * stored in a map. As long as a rank is on the blacklist map, it may not be selected
- * as potential split tree. After each iteration, we reduce the weight of the blacklisted
- * trees by one. If a weight becomes zero, we eventually remove it from the blacklist.
  *
  * <h2> Cool-down phases </h2>
  *
@@ -112,59 +94,8 @@ namespace toolbox {
  * split all the time (and perhaps then are unsuccessful as the grids have a layout
  * that we can't split actually).
  */
-class toolbox::loadbalancing::RecursiveSubdivision {
+class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancing::LoadBalancing {
   public:
-    enum class State {
-      /**
-       * Code has not yet spread out over all ranks but would like to do so
-       * now.
-       */
-      InterRankDistribution,
-
-      /**
-       * Code has spread over all ranks, but it has not spread over all cores
-       * yet, i.e. there's around one tree per rank and that's it w.r.t. the
-       * global decomposition.
-       */
-      IntraRankDistribution,
-
-      /**
-       * We have completed the first two phases and try to balance between the
-       * ranks now to meet the load balancing quality.
-       */
-      InterRankBalancing,
-
-      /**
-       * The code is satisfied with the load balancing quality between the
-       * ranks and now spawns more partitions per rank to increase the per-rank
-       * concurrency.
-       */
-      IntraRankBalancing,
-
-      /**
-       * You usually don't get this state when we query the configuration, i.e.
-       * if the lb on a rank is in this state, then it will not ask the
-       * configuration.
-       */
-      WaitForRoundRobinToken,
-
-      /**
-       * You usually don't get this state when we query the configuration, i.e.
-       * if the lb on a rank is in this state, then it will not ask the
-       * configuration.
-       */
-      Stagnation,
-
-      /**
-       * You usually don't get this state when we query the configuration, i.e.
-       * if the lb on a rank is in this state, then it will not ask the
-       * configuration.
-       */
-      SwitchedOff
-    };
-
-    static std::string toString( State state);
-
     /**
      * @see getAction()
      */
@@ -183,68 +114,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     static std::string toString( Action action );
 
-    /**
-     * Abstract interface to tweak the behaviour of the recursive subdivision.
-     *
-     * The idea is that the recursive subdivision internally makes decisions what it
-     * would do. These decisions then are tweaked/tailored via the configuration.
-     *
-     * My default implementations all are stateless, but you can always add a state
-     * to the configuration and thus make it alter its answers depending on where
-     * you are in your code.
-     */
-    class Configuration {
-      public:
-        virtual ~Configuration() = default;
-
-        /**
-         * Use the operating system's memory queries to get the memory out and to
-         * veto too many local splits. Each split creates some overhead, so it can
-         * happen that we run out of memory.
-         */
-        virtual bool   makeSplitDependOnMemory(State state) = 0;
-
-        /**
-         * Constraint on the number of trees per rank. The number is always
-         * constrained by peano4::parallel::Node::MaxSpacetreesPerRank, but you
-         * can cut it down further.
-         *
-         * You can use an arbitary large value if you don't care bout a maximum
-         * number of subpartitions per rank. I however do recommend that you
-         * return peano4::parallel::Node::MaxSpacetreesPerRank.
-         */
-        virtual int    getMaxLocalTreesPerRank(State state) = 0;
-
-        /**
-         * Control when to balance between ranks.
-         */
-        virtual double getWorstCaseBalancingRatio(State state) = 0;
-
-        /**
-         * Minimum tree size.
-         */
-        virtual int getMinTreeSize(State state) = 0;
-    };
-
-
-    class DefaultConfiguration: public Configuration {
-      bool makeSplitDependOnMemory(State state) override {
-        return false;
-      }
-
-      int getMaxLocalTreesPerRank(State state) override {
-        return peano4::parallel::Node::MaxSpacetreesPerRank;
-      }
-
-      double getWorstCaseBalancingRatio(State state) override {
-        return 0.9;
-      }
-
-      int getMinTreeSize(State state) override {
-        return 0;
-      }
-    };
-
 
     /**
      * Set up recursive subdivision
@@ -252,8 +121,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * The ownership of the pointer goes over to the recursive subdivision
      * instance, i.e. you don't have to delete the passed object.
      */
-    RecursiveSubdivision(Configuration* configuration = new DefaultConfiguration());
-    ~RecursiveSubdivision();
+    RecursiveBipartition(Configuration* configuration = new DefaultConfiguration());
+    virtual ~RecursiveBipartition();
 
     /**
      * Triggers actual load balancing data exchange, triggers rebalancing, and
@@ -271,8 +140,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * increment within the for loop such that module imbalances are at least
      * spread out.
      */
-    void finishStep();
-    void finishSimulation();
+    void finishStep() override;
 
     /**
      * I need the stats here mainly for debugging purposes. The load balancing
@@ -281,30 +149,21 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
     std::string toString() const;
 
-    bool hasSplitRecently() const;
-
-    /**
-     * Switch on/off.
-     */
-    void enable(bool);
-
-    /**
-     * Clarifies whether load balancing is, in principle, enabled. Might however
-     * mean that the load balancing is currently (temporarily) disabled. In 
-     * this case, the routine still returns true.
-     */
-    bool isEnabled(bool globally) const;
-
-    int getGlobalNumberOfTrees() const;
   private:
+    static tarch::logging::Log  _log;
+
+    int _stepsToWaitForNextLoadBalancingDecision;
+
     /**
-     * It is totally annoying, but it seems that MPI's maxloc and reduction are broken
-     * in some MPI implementations if we use them for integers.
+     * @see updateState()
      */
-    struct ReductionBuffer {
-      double   _unrefinedCells;
-      int      _rank;
-    };
+    int _roundRobinToken;
+
+    /**
+     * This operation checks if the inter-rank load decomposition does
+     * violate the overall load balancing constraints.
+     */
+    bool doesRankViolateBalancingCondition() const;
 
     /**
      * Translate the state and further global knowledge into actions
@@ -341,65 +200,21 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
     Action getAction() const;
 
-    static tarch::logging::Log  _log;
-
-    /**
-     * Each rank that is on this list may not be split. We hold an integer per rank
-     * and decrement this value after each iteration. If the counter equals zero, we
-     * remove the rank entry and therefore make this rank a candidate for further
-     * splits again. The initial weight of an entry entering the blacklist is
-     * determined by _initialBlacklistWeight.
-     */
-    std::map< int, int>    _blacklist;
-    std::map< int, int>    _initialBlacklistWeight;
-
-    /**
-     * Status variable required to compute good load balancing. 
-     */
-    int _localNumberOfInnerUnrefinedCell;
-
-    /**
-     * Status variable required to compute good load balancing
-     */
-    int _globalNumberOfInnerUnrefinedCells;
-
-    int _globalNumberOfTrees;
-
-    int _globalNumberOfRanksWithEnabledLoadBalancing; 
-
-    ReductionBuffer  _lightestRank;
-
-    /**
-     * This is my local accumulator where I keep track of how often I did
-     * split in this iteration. At the end of each iteration, I roll this 
-     * one over into global or send it out. 
-     */
-    int _localNumberOfSplits;
-
-    /**
-     * Lags behind global number by one iteration in an MPI world as data
-     * will arrive with one iteration delay.
-     */
-    int _globalNumberOfSplits;
-
-    int _numberOfStateUpdatesWithoutAnySplit;
-
-    int _stepsToWaitForNextLoadBalancingDecision;
-
-    State  _state;
-
-    void updateGlobalView();
-    
-    /**
-     * This operation checks if the inter-rank load decomposition does
-     * violate the overall load balancing constraints.
-     */
-    bool doesRankViolateBalancingCondition() const;
-
-    void updateBlacklist();
-
     /**
      * Wrapper around the spacetree set which also updates the blacklist.
+     *
+     * ## Rationale
+     *
+     * I originally wanted to add an assertion
+     *
+     *       assertionEquals(_stepsToWaitForNextLoadBalancingDecision,0);
+     *
+     * which is correct for the very first split. However, if a tree splits
+     * multiple times, then the first split will set this counter to something
+     * greater to 0 and therefore the assertion will fail for the next split.
+     * So I removed this statement.
+     *
+     *
      */
     void triggerSplit( int sourceTree, int numberOfCells, int targetRank );
 
@@ -469,44 +284,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * @param Number of splits that the code should run
      */
     int getNumberOfSplitsOnLocalRank() const;
-
-    /**
-     * Ensure enough memory is left-over.
-     */
-    bool fitsIntoMemory(State state) const;
-
-    #ifdef Parallel
-    MPI_Request*    _globalSumRequest;
-    MPI_Request*    _globalLightestRankRequest;
-    MPI_Request*    _globalNumberOfSplitsRequest;
-    MPI_Request*    _globalNumberOfTreesRequest;
-    MPI_Request*    _globalNumberOfRanksWithEnabledLoadBalancingRequest;
-
-    /**
-     * It is totally annoying, but it seems that MPI's maxloc and reduction are broken
-     * in some MPI implementations if we use them for integers.
-     */
-
-    int             _globalNumberOfInnerUnrefinedCellsBufferIn;
-    int             _globalNumberOfInnerUnrefinedCellsBufferOut;
-    ReductionBuffer _lightestRankIn;
-    ReductionBuffer _lightestRankOut;
-    int             _numberOfSplitsIn;
-    int             _numberOfSplitsOut;
-    int             _numberOfTreesIn;
-    int             _numberOfTreesOut;  
-    int             _numberOfRanksWithEnabledLoadBalancingIn;
-    int             _numberOfRanksWithEnabledLoadBalancingOut;
-    #endif
-
-    /**
-     * @see updateState()
-     */
-    int _roundRobinToken;
-
-    Configuration*  _configuration;
-
-    void waitForGlobalStatisticsExchange();
 };
 
 
