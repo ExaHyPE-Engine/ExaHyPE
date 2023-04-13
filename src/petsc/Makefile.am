@@ -8,6 +8,7 @@ endif
 
 PETScSources = \
   LocalToGlobalMap.cpp \
+  Data.cpp \
   UnitTests.cpp
 
 
