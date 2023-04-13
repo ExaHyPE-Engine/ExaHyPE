@@ -105,8 +105,6 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
        */
       Unspecified,
       None,
-      SpreadEquallyOverAllRanks,
-      SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
       SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning,
       SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning,
       SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning
@@ -121,7 +119,7 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * The ownership of the pointer goes over to the recursive subdivision
      * instance, i.e. you don't have to delete the passed object.
      */
-    RecursiveBipartition(Configuration* configuration = new DefaultConfiguration());
+    RecursiveBipartition(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
     virtual ~RecursiveBipartition();
 
     /**
@@ -268,22 +266,6 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
     void updateLoadBalancing();
 
     bool isLocalBalancingBad() const;
-
-    /**
-     * Determine splits for initial load balancing
-     *
-     *
-     * This is part of the action SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
-     * i.e. we use it for the initial local splitting.
-     *
-     * The algorithm is relatively simple: We determine the maximum number of
-     * trees given the minimum of the weight (size) of the heaviest tree, the
-     * weight that we are allowed to pick given the number of threads, and the
-     * number of threads that are available.
-     *
-     * @param Number of splits that the code should run
-     */
-    int getNumberOfSplitsOnLocalRank() const;
 };
 
 

@@ -37,7 +37,7 @@ class toolbox::loadbalancing::SpreadOutHierarchically: public toolbox::loadbalan
 
     static std::string toString( Action action );
 
-    SpreadOutHierarchically(Configuration* configuration = new DefaultConfiguration());
+    SpreadOutHierarchically(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
     virtual ~SpreadOutHierarchically();
 
     void finishStep() override;
