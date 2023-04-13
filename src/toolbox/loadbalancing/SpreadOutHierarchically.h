@@ -32,19 +32,24 @@ class toolbox::loadbalancing::SpreadOutHierarchically: public toolbox::loadbalan
       Unspecified,
       None,
       SpreadEquallyOverAllRanks,
-      SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning
+      SpreadEquallyOverAllThreads
     };
 
     static std::string toString( Action action );
 
     SpreadOutHierarchically(Configuration* configuration = new DefaultConfiguration());
     virtual ~SpreadOutHierarchically();
+
+    void finishStep() override;
   private:
     static tarch::logging::Log  _log;
 
     int _stepsToWaitForNextLoadBalancingDecision;
+
+    void updateState();
+    void updateLoadBalancing();
+    void triggerSplit( int numberOfCells, int targetRank );
+    Action getAction() const;
+    int getNumberOfSplitsOnLocalRank() const;
 };
 

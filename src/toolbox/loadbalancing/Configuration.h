@@ -66,5 +66,5 @@ class toolbox::loadbalancing::DefaultConfiguration: public toolbox::loadbalancin
 
   double getWorstCaseBalancingRatio(State state) override;
 
-  int getMinTreeSize(State state);
+  int getMinTreeSize(State state) override;
 };

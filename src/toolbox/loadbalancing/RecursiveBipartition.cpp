@@ -72,19 +72,6 @@ bool toolbox::loadbalancing::RecursiveBipartition::doesRankViolateBalancingCondi
 
 
 void toolbox::loadbalancing::RecursiveBipartition::updateState() {
-
-  if (_stepsToWaitForNextLoadBalancingDecision>0) {
-      // @todo Debug
-    logInfo(
-      "updateState()",
-      "don't update load balancing state as we have to wait for another " << _stepsToWaitForNextLoadBalancingDecision << " step(s) before we rebalance"
-    );
-    return;
-  }
-  else {
-    logDebug( "updateState()", "update from current state " << ::toString(_state) );
-  }
-
   switch (_state) {
     case State::InterRankDistribution:
       if (
@@ -321,13 +308,10 @@ toolbox::loadbalancing::RecursiveBipartition::Action toolbox::loadbalancing::Rec
         return Action::None;
       }
       break;
-    case State::WaitForRoundRobinToken:
-    case State::Stagnation:
-    case State::SwitchedOff:
-      return Action::None;
+    default:
+      break;
   }
 
-  assertion1(false, ::toString(_state));
   return Action::None;
 }
 
@@ -363,6 +347,7 @@ bool toolbox::loadbalancing::RecursiveBipartition::isLocalBalancingBad() const {
 }
 
 
+// @todo Evtl raus?
 int toolbox::loadbalancing::RecursiveBipartition::getNumberOfSplitsOnLocalRank() const {
   int maxSizeOfLocalRank = getWeightOfHeaviestLocalSpacetree();
   int maxLocalTrees      = std::min( {_configuration->getMaxLocalTreesPerRank(_state)-1, maxSizeOfLocalRank-1, tarch::multicore::Core::getInstance().getNumberOfThreads()-1} );

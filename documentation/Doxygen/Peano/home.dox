@@ -9,7 +9,7 @@
 \li \subpage peano_action_sets
 \li \subpage peano_runtime_analysis
 \li \subpage peano_performance_optimisation
-\li \subpage tarch_accelerator_SYCL
+\li \subpage peano_utilities
 
 
 Peano is a framework for generating dynamically adaptive grids for a wide range
