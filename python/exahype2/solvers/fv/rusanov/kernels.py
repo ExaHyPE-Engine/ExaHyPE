@@ -458,7 +458,7 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-#if !defined(GPUOffloadingSYCL)
+//#if !defined(GPUOffloadingSYCL)
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -475,7 +475,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   {{FLUX_IMPLEMENTATION}}
   {% endif %}
 }
-#endif
+//#endif
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
