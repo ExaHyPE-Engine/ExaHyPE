@@ -964,6 +964,7 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping():
   
   """ 
   return """
+  if ( isLastGridSweepOfTimeStep() ) {
     #ifdef Parallel
     double newMaxEigenvalue = _maxEigenvalue;
     tarch::mpi::Rank::getInstance().allReduce(
@@ -996,6 +997,7 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping():
         logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")" );
       }
     }
+  }
 
 """
 

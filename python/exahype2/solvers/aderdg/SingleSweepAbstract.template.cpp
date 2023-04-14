@@ -275,7 +275,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
 
-  {{FINISH_TIME_STEP_IMPLEMENTATION}}
+
 
 }
 
