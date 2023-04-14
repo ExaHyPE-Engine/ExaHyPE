@@ -29,6 +29,10 @@ class petsc::PetscData{
     //method to convert petsc vec to std array
     //for now, just for the solution vector
     void convertToStdVector();
+
+    /**
+     * getter methods to retrieve values inside the solution vector
+    */
     std::vector<double> getX() const;
     double getX(int i) const;
 
@@ -40,8 +44,10 @@ class petsc::PetscData{
     Mat A;
     Vec x, b;
 
-    //initialise a vector to store x for now, so we can interrogate them 
-    //when we want to map solution back onto mesh
+    /**
+     * initialise a vector to store x for now, so we can interrogate them 
+     * when we want to map solution back onto mesh
+    */
     std::vector<double> _xAsStdVector;
 
     // static PetscData* instance;

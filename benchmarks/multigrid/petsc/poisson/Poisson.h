@@ -53,6 +53,11 @@ class benchmarks::multigrid::petsc::poisson::Poisson: public benchmarks::multigr
 
     std::vector< std::pair<double, double> > _valueAndRhs;
 
+    /**
+     * we store a std::vector of pairs for all the values we encounter.
+     * when we come to initialise the petsc matrix at stage init-PETSc,
+     * we pass these values onto the petscData class using this function. 
+    */
     std::vector< std::pair<double, double> > getValuesAndRhs() const;
 
 };
