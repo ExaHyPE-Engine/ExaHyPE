@@ -7,9 +7,21 @@
 
 #include <iostream>
 
-//the above only works because i have $PETSC_DIR configured already
 
 namespace petsc{
+  /**
+   * Class to store a matrix, solution vector and rhs vector.
+   * Eventually we will implement solvers too. Currently we have methods
+   * to initialise the matrix and also the vectors. 
+   * The matrix is initialised to be a n x n matrix, where n is the number
+   * of DoFs (subject to change). 
+   * The vector x is initialised to be the "value", which ultimately comes from *(fineGridVertexPoisson.getValue().data())
+   * The vector b is initialised to be the "rhs", which ultimately comes from *(fineGridVertexPoisson.getRhs().data())
+   * 
+   * These are just first implementation, but crucially we have initialising 
+   * the PETSc world, formation of matrix and two vectors, and methods to 
+   * pass values back to c++.
+  */
   class PetscData;
 }
 
@@ -24,6 +36,12 @@ class petsc::PetscData{
     void setDoFs(int dofs);
 
     void initMatrix();
+
+    /**
+     * For now, we pass in the values given to the Poisson class
+     * during the InitVertexDof stage. Once we get to the step where
+     * we Init Petsc, we send those values over here. See Poisson-main.cpp
+    */
     void initVectors( std::vector< std::pair<double, double> > valuesAndRhs );
     
     //method to convert petsc vec to std array

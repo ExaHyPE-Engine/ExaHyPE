@@ -150,6 +150,26 @@ peano4_project.generate()
   step. Each activity is a subclass of peano4.solversteps.ActionSet.
 
   @see peano4.petsc.actionsets.InitVertexDoFs for the actual initialisation phase.
+
+  ## Libraries
+
+  We compile with flag -lpetsc to ensure that the PETSc-specific libraries are available to us.
+  (not to be confused with -lPETSc). To ensure these are visible to the compiler, we must add
   
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+  -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+
+  to the CXXFLAGS. This assumes that PETSc is installed locally, and these environment variables
+  are set up. Furthermore. we add the following to the LDFLAGS:
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+  -Wl,-rpath,$PETSC_DIR/$PETSC_ARCH/lib -L$PETSC_DIR/$PETSC_ARCH/lib -L/usr/lib/gcc/x86_64-linux-gnu
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+
+  At time of writing, these can be seen in lines 788-815 of configure.ac, at the top level of Peano.
+
+  
+
   
  */
