@@ -34,7 +34,7 @@ std::string  toolbox::loadbalancing::Statistics::toString() const {
   std::ostringstream msg;
 
   msg << "(local-number-of-inner-unrefined-cells=" << _localNumberOfInnerUnrefinedCells
-      << ",global-number-of-innter-unrefined-cells=" << _globalNumberOfInnerUnrefinedCells
+      << ",global-number-of-inner-unrefined-cells=" << _globalNumberOfInnerUnrefinedCells
       << ",global-number-of-trees=" << _globalNumberOfTrees
       << ",local-load-balancing-enabled=" << _localLoadBalancingEnabled
       << ",global-number-of-ranks-with-enabled-lb=" << _globalNumberOfRanksWithEnabledLoadBalancing
