@@ -25,16 +25,24 @@ class petsc::PetscData{
 
     void initMatrix();
     void initVectors( std::vector< std::pair<double, double> > valuesAndRhs );
-    // void initVectors();
+    
+    //method to convert petsc vec to std array
+    //for now, just for the solution vector
+    void convertToStdVector();
+    std::vector<double> getX() const;
+    double getX(int i) const;
+
 
   private:
-
     int _dofs;
 
     //Ax = b
     Mat A;
-
     Vec x, b;
+
+    //initialise a vector to store x for now, so we can interrogate them 
+    //when we want to map solution back onto mesh
+    std::vector<double> _xAsStdVector;
 
     // static PetscData* instance;
 };

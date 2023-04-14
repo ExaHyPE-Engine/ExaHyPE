@@ -11,7 +11,6 @@ petsc::PetscData::PetscData(){
 }
 
 void petsc::PetscData::initMatrix(){
-
   //matrix size, set it to number of dofs
   PetscInt n = _dofs;
   PetscInt val = 1;
@@ -36,7 +35,6 @@ void petsc::PetscData::initMatrix(){
 
 void petsc::PetscData::initVectors( std::vector< std::pair<double, double> > valuesAndRhs ){
   PetscInt n = _dofs;
-  // PetscInt val = 1;
 
   //create both vectors
   VecCreate(PETSC_COMM_WORLD, &x);
@@ -63,8 +61,45 @@ void petsc::PetscData::initVectors( std::vector< std::pair<double, double> > val
   VecAssemblyBegin(b);
   VecAssemblyEnd(b);
 
-  // VecView(x, PETSC_VIEWER_STDOUT_WORLD);
-  // VecView(b, PETSC_VIEWER_STDOUT_WORLD);
+  //convert our newly initialised vector to a standard vector
+  convertToStdVector();
+}
+
+
+void petsc::PetscData::setDoFs(int dofs){
+  _dofs = dofs;
+}
+
+void petsc::PetscData::convertToStdVector(){
+  //get size of vec
+  PetscInt size;
+  VecGetSize(x, &size);
+
+  //make a temp array to hold the values of the vec
+  const PetscScalar* petscArray;
+
+  //get a read-only ptr to the petsc array
+  VecGetArrayRead(x, &petscArray);
+
+  //TODO - work out why _xAsStdVector[i] = petscArray[i]; causes segfault
+  for (int i = 0; i < size; i++) {
+    _xAsStdVector.push_back( petscArray[i] );
+  }
+
+  //return the read-only ptr to petsc
+  VecRestoreArrayRead(x, &petscArray);
+
+}
+
+std::vector<double> petsc::PetscData::getX() const{
+  return _xAsStdVector;
+}
+
+double petsc::PetscData::getX(int i) const{
+  //check if we have populated it yet
+  if ( !_xAsStdVector.size() )
+    return -1;
+  return _xAsStdVector[i];
 }
 
 petsc::PetscData::~PetscData(){
@@ -75,8 +110,4 @@ petsc::PetscData::~PetscData(){
   // PetscFinalize();
 
   // std::cout << "destroyed objects\n\n";
-}
-
-void petsc::PetscData::setDoFs(int dofs){
-  _dofs = dofs;
 }
