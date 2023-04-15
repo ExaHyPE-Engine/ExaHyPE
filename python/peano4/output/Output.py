@@ -25,16 +25,10 @@ class Output(object):
     self.makefile.clear_files()
 
   def add(self,artefact,append=True):
-    if not using_cuda_backend:
-      if append:
-        self.artefacts.append(artefact)
-      else:
-        self.artefacts = [artefact] + self.artefacts
+    if append:
+      self.artefacts.append(artefact)
     else:
-      if append:
-        self.artefacts.append(artefact)
-      else:
-        self.artefacts = [artefact] + self.artefacts
+      self.artefacts = [artefact] + self.artefacts
 
   def generate(self,overwrite,directory):
     """
