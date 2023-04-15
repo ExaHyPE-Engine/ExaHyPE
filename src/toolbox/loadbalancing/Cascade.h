@@ -8,6 +8,7 @@
 
 namespace toolbox {
   namespace loadbalancing {
+    template<typename HostedLoadBalancing0, typename HostedLoadBalancing1>
     class Cascade;
   }
 }
@@ -26,13 +27,14 @@ template<typename HostedLoadBalancing0, typename HostedLoadBalancing1>
 class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalancing {
   public:
     Cascade(
-      Configuration* configuration,
-      bool deleteInDestructor
+      Configuration* configuration = new DefaultConfiguration(),
+      bool deleteInDestructor = true
     ):
+      LoadBalancing( configuration, deleteInDestructor ),
       _configuration(configuration),
       _deleteInDestructor(deleteInDestructor),
-      _hostedLoadBalancing0(hostedLoadBalancing0, false),
-      _hostedLoadBalancing1(hostedLoadBalancing1, false),
+      _hostedLoadBalancing0(configuration, false),
+      _hostedLoadBalancing1(configuration, false),
       _activeLoadBalancing(0) {
     }
 
@@ -42,11 +44,7 @@ class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalanc
      * may not delete the object directly in the constructor - even though
      * it seems not be used within this class. It is used by the aggregates.
      */
-    virtual ~Cascade() {
-      if (deleteInDestructor) {
-        delete _configuration;
-      }
-    }
+    virtual ~Cascade() = default;
 
 
     /**
@@ -59,7 +57,10 @@ class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalanc
         case 0:
           {
             _hostedLoadBalancing0.finishStep();
-            if (_hostedLoadBalancing0.hasStagnated()()) _activeLoadBalancing++;
+            if (_hostedLoadBalancing0.hasStagnated()) {
+              _activeLoadBalancing++;
+              logInfo( "finishStep()", "one load balancing scheme has stagnated, to switch to " << _activeLoadBalancing );
+            }
           }
           break;
         case 1:
@@ -126,6 +127,8 @@ class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalanc
       }
     }
   private:
+    static tarch::logging::Log  _log;
+
     Configuration*        _configuration;
     bool                  _deleteInDestructor;
 
@@ -137,3 +140,7 @@ class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalanc
      */
     int                   _activeLoadBalancing;
 };
+
+
+template<typename HostedLoadBalancing0, typename HostedLoadBalancing1>
+tarch::logging::Log toolbox::loadbalancing::Cascade<HostedLoadBalancing0, HostedLoadBalancing1>::_log( "toolbox::loadbalancing::Cascade" );

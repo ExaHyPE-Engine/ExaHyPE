@@ -38,15 +38,7 @@ If you pick a minimum cell size, then the grid will build up first until it can 
 Grid decomposition however is both time consuming and requires (temporarily) quite a lot of memory.
 
 
-## Task parallelism
-
-Some ExaHyPE solvers add further task parallelism to this decomposition. 
-In general, the enclave solvers tend to perform better on massively parallel
-systems.
-
-
-
-## Load balancing settings
+### Load balancing settings (best practices)
 
 
 While ExaHyPE makes it relatively straightforward to parallelise a code, 
@@ -63,6 +55,8 @@ Here are some recommendations if you use the recursive load balancing.
 The recommendations describe how to tweak the three parameters that the
 ExaHyPE configuration offers:
 
+- Start with the strategy toolbox::loadbalancing::SpreadOut. This should give 
+  you first feeling if your code is MPI-/threading-ready.
 - Do not set the load balancing quality too high. I am usually fine if the
   balancing between the ranks is about 80%-90% accurate. 
   First get something up and running and test it. After that, you might want to
@@ -83,6 +77,21 @@ ExaHyPE configuration offers:
   evenly - unaware that all the boundary cells can't be distributed. So you will
   have to restrict the number of cells per inter-rank balancing. I recommend to
   to add $3^d$ as fourth argument to ExaHyPE's load balancing configuration.
+- Once MPI+X is up and running, study the @ref exahype_runtime_analysis "ExaHyPE/Peano performance analysis remarks" so
+  you obtain an understanding of your code's behaviour.
+- Once you are reasonably satisfied with the MPI behaviour, try out other 
+  parallelisation schemes. toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition
+  for example seems to give reasonable result.
+
+
+
+## Task parallelism
+
+Some ExaHyPE solvers add further task parallelism to this decomposition. 
+In general, the enclave solvers tend to perform better on massively parallel
+systems.
+
+
 
 
 ## Writing your own parallel extensions

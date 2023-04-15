@@ -11,7 +11,7 @@
  * toolbox::loadbalancing namespace hosts primitive strategies, but you
  * can combine them into more sophisticated cascade of load balancing
  * schemes. You find examples for such cascades in the namespace
- * toolbox::loadbalancing::cascade.
+ * toolbox::loadbalancing::cascade. Most of them are only plain typedefs.
  *
  *
  * ## Usage through Python API
