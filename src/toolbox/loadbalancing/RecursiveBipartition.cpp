@@ -20,7 +20,7 @@ toolbox::loadbalancing::RecursiveBipartition::RecursiveBipartition(Configuration
   LoadBalancing( configuration, deleteInDestructor ),
   _roundRobinToken(0) {
   assertion( configuration!=nullptr );
-  _state = State::InterRankBalancing;
+  _state = State::InterRankDistribution;
 }
 
 
@@ -83,56 +83,36 @@ bool toolbox::loadbalancing::RecursiveBipartition::isInterRankBalancingBad() con
 
 
 void toolbox::loadbalancing::RecursiveBipartition::updateState() {
-  switch (_state) {
-    case State::InterRankDistribution:
-      assertion1(false, ::toString(_state) );
-      break;
-    case State::IntraRankDistribution:
-      assertion1(false, ::toString(_state) );
-      break;
-    case State::WaitForRoundRobinToken:
-      {
-        _roundRobinToken++;
-        _roundRobinToken = _roundRobinToken % tarch::mpi::Rank::getInstance().getNumberOfRanks();
-
-        if (
-          _roundRobinToken==tarch::mpi::Rank::getInstance().getRank()
-          and
-          (isInterRankBalancingBad() or isIntraRankBalancingBad())
-        ) {
-          _state = State::InterRankBalancing;
-          logDebug( "updateState()", "switch to state " << ::toString(_state) );
-        }
-      }
-      break;
-    case State::IntraRankBalancing:
-    case State::InterRankBalancing:
-      {
-        if ( isInterRankBalancingBad() ) {
-          _state = State::InterRankBalancing;
-          logDebug( "updateState()", "stay in state " << ::toString(_state) );
-        }
-        else if ( isIntraRankBalancingBad() ) {
-          _state = State::IntraRankBalancing;
-          logDebug( "updateState()", "switch to state " << ::toString(_state) );
-        }
-        else {
-          _state = State::WaitForRoundRobinToken;
-          logDebug( "updateState()", "switch to state " << ::toString(_state) );
-        }
-      }
-      break;
-    case State::Stagnation:
-      assertion1(false, ::toString(_state) );
-      break;
-    case State::SwitchedOff:
-      break;
+  if ( areRanksUnemployed() ) {
+    _state = State::InterRankDistribution;
+    logDebug( "updateState()", "switch to state " << ::toString(_state) );
   }
+  else if ( isInterRankBalancingBad() and _roundRobinToken==tarch::mpi::Rank::getInstance().getRank()) {
+    _state = State::InterRankBalancing;
+    logDebug( "updateState()", "switch to state " << ::toString(_state) );
+  }
+  else if ( isIntraRankBalancingBad() ) {
+    _state = State::IntraRankBalancing;
+    logDebug( "updateState()", "switch to state " << ::toString(_state) );
+  }
+  else {
+    _state = State::WaitForRoundRobinToken;
+  }
+
+  _roundRobinToken++;
+  _roundRobinToken = _roundRobinToken % tarch::mpi::Rank::getInstance().getNumberOfRanks();
+}
+
+
+bool toolbox::loadbalancing::RecursiveBipartition::areRanksUnemployed() const {
+  return _statistics.getMinimumOfMaximumOfTreesPerRank() == 0
+     and _statistics.getGlobalNumberOfTrees() > 0;
+;
 }
 
 
 bool toolbox::loadbalancing::RecursiveBipartition::isIntraRankBalancingBad() const {
-  if ( not _statistics.hasConsistentViewOfWorld()) {
+  if ( not _statistics.hasConsistentViewOfWorld()) {//
     return false;
   }
   else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()==0 ) {
@@ -177,12 +157,43 @@ bool toolbox::loadbalancing::RecursiveBipartition::isIntraRankBalancingBad() con
 
 
 void toolbox::loadbalancing::RecursiveBipartition::updateLoadBalancing() {
+  // @todo
 //  #if PeanoDebug>0
-//  if ( _state==State::InterRankBalancing or _state==State::IntraRankBalancing ) {
-// #endif
   logInfo( "updateLoadBalancing()", "load balancing's state=" << toString() );
+//  #endif
 
   switch ( _state ) {
+    case State::InterRankDistribution:
+      {
+        int heaviestSpacetree                              = getIdOfHeaviestLocalSpacetree( _configuration->getWorstCaseBalancingRatio(_state) );
+        int numberOfLocalUnrefinedCellsOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
+        if (
+          fitsIntoMemory(_state)
+          and
+          heaviestSpacetree!=NoHeaviestTreeAvailable
+          and
+          not _blacklist.isBlacklisted(heaviestSpacetree)
+          and
+          numberOfLocalUnrefinedCellsOfHeaviestSpacetree > _configuration->getMinTreeSize(_state)
+          and
+          _statistics.getLightestRank()!=tarch::mpi::Rank::getInstance().getRank()
+        ) {
+          int cellsPerCore      = std::max( {1, numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,_configuration->getMinTreeSize(_state)} );
+
+          logInfo(
+            "updateLoadBalancing()",
+            "Not all ranks are used. Lightest global rank is rank " << _statistics.getLightestRank() << ", so assign this rank " << cellsPerCore << " cell(s)"
+          );
+          triggerSplit(heaviestSpacetree, cellsPerCore, _statistics.getLightestRank());
+        }
+        else if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
+          logInfo(
+            "updateLoadBalancing()",
+            "can't split heaviest tree " << heaviestSpacetree << " even though not all ranks are used currently"
+          );
+        }
+      }
+      break;
     case State::InterRankBalancing:
       {
         int heaviestSpacetree                              = getIdOfHeaviestLocalSpacetree();
@@ -209,7 +220,7 @@ void toolbox::loadbalancing::RecursiveBipartition::updateLoadBalancing() {
           );
           triggerSplit(heaviestSpacetree, cellsPerCore, _statistics.getLightestRank());
         }
-        else {
+        else if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
           logInfo(
             "updateLoadBalancing()",
             "can't split heaviest tree " << heaviestSpacetree << " and fork off to remote rank as this tree is on the blacklist or split does not fit into local memory anymore"
@@ -237,7 +248,7 @@ void toolbox::loadbalancing::RecursiveBipartition::updateLoadBalancing() {
           );
           triggerSplit(heaviestSpacetree, cellsPerCore, tarch::mpi::Rank::getInstance().getRank());
         }
-        else {
+        else if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
           logInfo(
             "updateLoadBalancing()",
             "can't split heaviest tree " << heaviestSpacetree << " on local rank as this tree is on the blacklist or split does not fit into local memory anymore"

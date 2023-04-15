@@ -23,9 +23,15 @@ namespace toolbox {
 /**
  * Recursive load balancing micking the behaviour of the guided partitioning in OpenMP
  *
- * This is one of the simplest load balancing strategies one can think about. We
- * try to mimick the behaviour of OpenMP's guided scheduling: We determine the
- * maximum number of unrefined inner cells around and compute an optimal load per
+ * This is one of the simplest load balancing strategies one can think about.
+ * We try to mimick the behaviour of OpenMP's guided scheduling: We determine
+ * the maximum number vs the minimum number of unrefined inner cells within a
+ * check set. If the ratio between the two is worse than the balancing
+ * threshold, we split the maximum tree into two parts.
+ *
+ *
+ *
+ * around and compute an optimal load per
  * rank. If a rank hosts more than the optimal load subject to an inaccuracy factor,
  * we split that one up into two parts and it deploys the new tree to the most
  * underbooked other rank.
@@ -118,6 +124,8 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * - Otherwise, we compare the minimum and maximum tree.
      */
     bool isIntraRankBalancingBad() const;
+
+    bool areRanksUnemployed() const;
 
     /**
      * Wrapper around the spacetree set which also updates the blacklist.
