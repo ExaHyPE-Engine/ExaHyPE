@@ -28,7 +28,10 @@ class toolbox::loadbalancing::LoadBalancing {
      * Data ownership is handed over to the load balancing, i.e. the balancing
      * has to delete the configuration object.
      */
-    LoadBalancing(Configuration* configuration = new DefaultConfiguration());
+    LoadBalancing(
+      Configuration* configuration,
+      bool deleteInDestructor
+    );
     virtual ~LoadBalancing();
 
     /**
@@ -42,7 +45,7 @@ class toolbox::loadbalancing::LoadBalancing {
      */
     void enable(bool);
 
-    bool hasSplitRecently() const;
+    virtual bool hasSplitRecently() const;
 
     /**
      * Clarifies whether load balancing is, in principle, enabled. Might however
@@ -51,7 +54,16 @@ class toolbox::loadbalancing::LoadBalancing {
      */
     bool isEnabled(bool globally) const;
 
-    int getGlobalNumberOfTrees() const;
+    /**
+     * Delegate to stats.
+     */
+    virtual int getGlobalNumberOfTrees() const;
+
+    /**
+     * A load balancing can either be stagnating or be switched off for
+     * this predicate to hold.
+     */
+    virtual bool hasStagnated() const;
 
     virtual void finishSimulation();
 
@@ -66,6 +78,8 @@ class toolbox::loadbalancing::LoadBalancing {
     Configuration*  _configuration;
 
     State  _state;
+
+    bool _deleteInDestructor;
 
     /**
      * Ensure enough memory is left-over.

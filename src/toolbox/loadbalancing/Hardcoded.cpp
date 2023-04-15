@@ -12,8 +12,8 @@ tarch::logging::Log  toolbox::loadbalancing::Hardcoded::_log( "toolbox::loadbala
 
 
 toolbox::loadbalancing::Hardcoded::Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks, bool handOutOnePartitionPerCore):
+  LoadBalancing( nullptr, false ),
   _currentTimeStamp(0),
-  _enabled(true),
   _handOutOnePartitionPerCore(handOutOnePartitionPerCore) {
   assertionEquals4( timeStamps.size(),       numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
   assertionEquals4( splittingTrees.size(),   numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
@@ -63,7 +63,7 @@ void toolbox::loadbalancing::Hardcoded::finishStep() {
     Split split( _splits.front() );
     _splits.pop();
     if ( peano4::parallel::SpacetreeSet::getInstance().isLocalSpacetree( split.splittingTree) ) {
-      if (not _enabled) {
+      if ( _state==State::SwitchedOff ) {
         logError(
           "finishStep()",
           "wanted to split " << split.numberOfCells << " cell(s) from tree " <<
@@ -99,24 +99,4 @@ void toolbox::loadbalancing::Hardcoded::finishStep() {
 
 
 void toolbox::loadbalancing::Hardcoded::finishSimulation() {
-}
-
-
-bool toolbox::loadbalancing::Hardcoded::hasSplitRecently() const {
-  return not _splits.empty();
-}
-
-
-void toolbox::loadbalancing::Hardcoded::enable(bool value) {
-  _enabled = value;
-}
-
-
-bool toolbox::loadbalancing::Hardcoded::isEnabled(bool globally) const {
-  return _enabled;
-}
-
-
-int toolbox::loadbalancing::Hardcoded::getGlobalNumberOfTrees() const {
-  return -1;
 }
