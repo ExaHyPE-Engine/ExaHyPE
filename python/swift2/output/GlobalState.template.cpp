@@ -123,6 +123,13 @@ void startSortingStep() {
   logTraceIn( "SortingStep()" );
 }
 
+void startInitDensityStep() {
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
+  {%- endfor %}
+  logTraceIn( "InitDensityStep()" );
+}
 
 void startTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
@@ -198,6 +205,15 @@ void finishSortingStep() {
   logTraceOut( "SortingStep()" );
 }
 
+void finishInitDensityStep() {
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
+  {%- endfor %}
+
+  loadBalancer.finishStep();
+  logTraceOut( "InitDensityStep()" );
+}
 
 void finishPlotStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}

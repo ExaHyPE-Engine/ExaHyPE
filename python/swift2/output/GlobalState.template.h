@@ -53,11 +53,13 @@
    */
   void startTimeStep();
   void startPlotStep();
+  void startInitDensityStep();
   void startIntermediateStep();
 
   void finishGridConstructionStep();
   void finishInitialisationStep();
   void finishSortingStep();
+  void finishInitDensityStep();
 
   /**
    * Call finishTimeStep() on each individual species and then dump some

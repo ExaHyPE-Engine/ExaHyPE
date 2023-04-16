@@ -37,6 +37,7 @@
 #include "observers/Init.h"
 #include "observers/Plot.h"
 #include "observers/Sort.h"
+#include "observers/InitDensity.h"
 
 {% for STEP in SOLVERSTEP_NAMES %}
 #include "observers/{{STEP}}.h"
@@ -60,6 +61,7 @@ tarch::timing::Measurement   timeStepMeasurement;
 bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
   static bool   gridConstructed                             = false;
   static bool   gridInitialised                             = false;
+  static bool   initialDensityComputed                      = false;
   static bool   initialisationSorted                        = false;
   static double nextMaxPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
   static double nextMinPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
@@ -130,6 +132,13 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     );
 
     initialisationSorted = true;
+  }
+  else if (not initialDensityComputed) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitDensity )
+    );
+
+    initialDensityComputed = true;
   }
   else if (
     ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
@@ -271,6 +280,22 @@ void {{NAMESPACE | join("::")}}::step() {
         sortMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
+    case repositories::StepRepository::Steps::InitDensity:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "initDensity" );
+        watch.start();
+        otterPhaseBegin( "initDensity" );
+        observers::InitDensity  observer;
+        observers::InitDensity::prepareTraversal();
+        repositories::startInitDensityStep();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishInitDensityStep();
+        observers::InitDensity::unprepareTraversal();
+        watch.stop();
+        // TODO: sortMeasurement is wrong here
+        sortMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
     case repositories::StepRepository::Steps::Plot:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
@@ -403,7 +428,7 @@ int main(int argc, char** argv) {
   #if defined(SharedOMP)
   #pragma omp parallel
   {
-  #pragma omp master 
+  #pragma omp master
   {
   #endif
   if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
@@ -427,7 +452,7 @@ int main(int argc, char** argv) {
   }
   }
   #endif
-  
+
   otterTraceFinalise();
 
   peano4::shutdownSingletons();
