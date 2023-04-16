@@ -35,11 +35,7 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
 void tarch::freeMemory(void* data, MemoryLocation location) {
   switch (location) {
     case MemoryLocation::Heap:
-<<<<<<< HEAD
-      delete[] reinterpret_cast<char*>(data); // @TODO: This leaks memory, we should not delete a void* pointer as destructors are not called -> should refactor code into malloc/free instead.
-=======
       free(data);
->>>>>>> gpus
       break;
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
       #if defined(__NVCOMPILER_CUDA__)
