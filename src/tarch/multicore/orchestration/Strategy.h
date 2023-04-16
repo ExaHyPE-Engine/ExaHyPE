@@ -63,21 +63,20 @@ class tarch::multicore::orchestration::Strategy {
     virtual int getNumberOfTasksToHoldBack() = 0;
 
     /**
-     * Determines how many tasks have to be fused and on which target
-     * device we should run the fused result. Therefore, the routine
-     * returns a pair. The first one is the task count, and it is an
-     * exact quantity, i.e. if you specify 4, you'll always have four
-     * tasks fused. The second entry is a device identifier, i.e. an
-     * abstract device count. The tasks still might ignore this instruction
-     * (if a task can't run on a GPU, e.g., but you say GPU 10, then it
-     * will ignore this fact), but it is an indicator. I usually
-     * enumerate devices ascendingly with integers starting from 0, but
-     * it is really up to your backend of choice to determine which numbers
-     * to use and how they map onto physical devices.
+     * How many tasks to fuse and to which device to deploy
      *
-     * You can also return tarch::multicore::Task::Host to indicate that
-     * this is a fused task that shall run on the host rather than a
-     * device.
+     * Return a triple modelled via a FuseInstruction object.
+     *
+     * - The first entry specifies which device to use to deploy the
+     *   tasks to.
+     *   You can also return tarch::multicore::Task::Host to indicate that
+     *   this is a fused task that shall run on the host rather than a
+     *   device.
+     * - The second entry is the minimal number of tasks to fuse. If
+     *   there are less than these tasks in the queue, don't fuse.
+     * - The third entry is the maximum number of tasks to fuse. Never
+     *   batch more than this count into one (meta) task.
+     *
      */
     virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice() = 0;
 

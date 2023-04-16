@@ -36,7 +36,7 @@ build_modes = {
 }
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Acoustic Wave Application Script')
-parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     required=True,              help="|".join(solvers.keys()) )
+parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     default="FVRusanovGlobalAdaptiveEnclave", help="|".join(solvers.keys()) )
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default="Release",          help="|".join(build_modes.keys()) )
 parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
 parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch")
@@ -111,7 +111,13 @@ my_solver.set_implementation(
 """
 )
 
-my_project = exahype2.Project( ["applications", "exahype2", "acousticwave"], "AcousticWaveApplication", ".", executable="acoustic-wave-application-" + str(args.dim) + "d-patch-size-" + str(args.patch_size) + "-cell-size-" + str(args.max_cell_size))
+my_project = exahype2.Project(
+  namespace     = ["applications", "exahype2", "acousticwave"],
+  project_name  = "AcousticWaveApplication",
+  directory     = ".",
+  executable    = "acoustic-wave-application-" + str(args.dim) + "d-patch-size-" + str(args.patch_size) + "-cell-size-" + str(args.max_cell_size)
+)
+
 my_project.add_solver( my_solver )
 my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
 my_project.set_Peano4_installation("../../../", build_modes[args.build_mode])

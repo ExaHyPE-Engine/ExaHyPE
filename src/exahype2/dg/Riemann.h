@@ -23,7 +23,7 @@ namespace exahype2 {
   namespace dg {
 
     /**
-     * @page AMR Discontinuous Galerkin adaptive mesh refinement
+     * @page exahype2_dg_DG_AMD Discontinuous Galerkin adaptive mesh refinement
      *
      * The AMR management is distributed among two files: The present header file
      * hosts a couple of routines which realise the steps required for AMR. We

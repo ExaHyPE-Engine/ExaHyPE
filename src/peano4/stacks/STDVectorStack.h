@@ -118,7 +118,7 @@ class peano4::stacks::STDVectorStack {
 
 
     /**
-     * One is not allowed to copy a stack but it has to be empty.
+     * One is allowed to copy a stack but it has to be empty.
      */
     STDVectorStack&  operator=( const STDVectorStack<T>& stack ) {
       assertionEquals( stack._currentElement, 0 );
@@ -217,31 +217,20 @@ class peano4::stacks::STDVectorStack {
         }
 
 
-        T* set(int index, const T& value) {
-          assertion2( index>=0, index, _size );
-          assertion2( index<_size, index, _size );
-          _stack->_data[_baseElement+index] = std::move( value );
-          return &(_stack->_data[_baseElement+index]);
-        }
-
-
         /**
-         * Overloaded version of set() with move semantics.
+         * Set an entry
          *
          * But in Peano's context, we only need the move semantics logically,
-         * as we only migrate stuff over stacks. However, I already catch
-         * entries with references, therefore I cannot move those guys around.
-         * So I need the other set() flavour, too.
-         *
-         * It is not clear to me if the compiler will always pick the most
-         * efficient version.
+         * as we only migrate stuff over stacks. Therefore, I tried to play
+         * around with move semantics, but this always broke the code. So I
+         * thought I'd better stop doing this and use plain old copies here.
          *
          * @return Pointer to element set
          */
-        T* set(int index, T&& value) {
+        T* set(int index, const T& value) {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
-          _stack->_data[_baseElement+index] = std::move( value );
+          _stack->_data[_baseElement+index] = value;
           return &(_stack->_data[_baseElement+index]);
         }
 
@@ -273,7 +262,8 @@ class peano4::stacks::STDVectorStack {
     /**
      * Pops element from a stack.
      *
-     * I original implemented this routine with a plain move, i.e. as
+     * I have played around with an implementation of this routine via moves,
+     * i.e. as
      *
      * <pre>
     T pop() {
@@ -285,19 +275,13 @@ class peano4::stacks::STDVectorStack {
      *
      * I put the move into this routine to highlight that we are actually
      * moving stuff out of the container. However, this move is not required
-     * and, according to the C++ standard, degenerates to the identify here.
-     *
-     * I now try to work with a reference operator to avoid copying. Not sure if
-     * this makes a difference or is semantically admissible. The point is: In
-     * Peano, we never pop multiple times and then add again stuff: data are
-     * subsequentially popped and then pushed to another stack. So we can work
-     * with a reference here - notably as we work with a std::stack behind the
-     * scenes.
+     * and, according to the C++ standard, degenerates to the identify here. I'm
+     * also not sure if it preserved the semantics.
      */
-    T& pop() {
+    T pop() {
       assertion1(_currentElement>0,_currentElement);
       _currentElement--;
-      return _data[_currentElement];
+      return std::move( _data[_currentElement] );
     }
 
 
@@ -334,26 +318,10 @@ class peano4::stacks::STDVectorStack {
       assertion( _currentElement <= static_cast<int>(_data.size()) );
       if (_currentElement >= static_cast<int>(_data.size()) ) {
         assertion(_currentElement - static_cast<int>(_data.size()) <= 1 );
-        _data.push_back( std::move(element) );
+        _data.push_back( element );
       }
       else {
-        _data[_currentElement] = std::move( element );
-      }
-      _currentElement++;
-    }
-
-
-    /**
-     * We overload w.r.t. the move operator. This is allowed in C++.
-     */
-    void push( const T&& element ) {
-      assertion( _currentElement <= static_cast<int>(_data.size()) );
-      if (_currentElement >= static_cast<int>(_data.size()) ) {
-        assertion(_currentElement - static_cast<int>(_data.size()) <= 1 );
-        _data.push_back( std::move(element) );
-      }
-      else {
-        _data[_currentElement] = std::move(element);
+        _data[_currentElement] = element;
       }
       _currentElement++;
     }
@@ -373,6 +341,7 @@ class peano4::stacks::STDVectorStack {
       PopBlockStackView result(numberOfElements, _currentElement, this);
       return result;
     }
+
 
     /**
      * Push a block on the output stack
@@ -413,6 +382,7 @@ class peano4::stacks::STDVectorStack {
       _currentElement = 0;
     }
 
+
     /**
      * Always pairs up with a finish... call. When we trigger the send, the
      * code still might insert additional elements, i.e. starting does not
@@ -441,6 +411,7 @@ class peano4::stacks::STDVectorStack {
       }
       #endif
     }
+
 
     /**
      * @see startSend()
@@ -519,6 +490,7 @@ class peano4::stacks::STDVectorStack {
       #endif
     }
 
+
     /**
      * I need this one to find out whether I'm waiting for data.
      *
@@ -528,6 +500,7 @@ class peano4::stacks::STDVectorStack {
     int sendingOrReceiving() const {
       return _ioMode==IOMode::None ? -1 : _ioRank;
     }
+
 
     /**
      * Reversing a stream is something I need extremely rarely. The biggest application

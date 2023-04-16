@@ -75,7 +75,9 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
 
   public:
     /**
-     * This is the kind of routine that does boundary data exchange, i.e.
+     * Realise domain boundary exchange (over multiple scales)
+     *
+     * This routine realises the boundary data exchange, i.e. it
      * send outs in iteration n and receives (see counterpart routine), but
      * the received data is used only in traversal n+1. The whole exchange
      * thus asynchronous (logically).
@@ -85,6 +87,59 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * the actual vertex data exchange. As these routines all are invoked
      * via tasks, this routine is typically invoked by multiple threads
      * concurrently.
+     *
+     *
+     * ## Deep copy semantics for shared memory
+     *
+     * Whenever we copy a container over to another thread, we use the
+     * clone(). When we study the memory ownership, it is important to
+     * memorise that the boundary exchange containers are copies of "real"
+     * containers of the code. That is, the mesh looks at a face or vertex
+     * and stores its content persistently within the tree. Once it has
+     * done this, it analyses if this face or vertex is adjacent to a domain
+     * boundary. If so, it copies the data of interest into the boundary
+     * container. After the traversal, this copy is either sent out to
+     * another rank, or we clone() it into the container of another tree
+     * on the same rank (shared memory data exchange). After that, the
+     * original boundary container is cleared.
+     *
+     *
+     * If you work with containers over pointers, the clone()
+     * should create a deep copy, whereas otherwise any push and pull only
+     * moves pointers around. That is, a container holding boundary data
+     * basically holds pointers to data that is also held by containers
+     * administering interior data. After the traversal, it is the clone()
+     * which ensures that we actually create copies, i.e. work with
+     * real halo data which is replicated if data belongs to another tree -
+     * even if that tree resides on the same rank. Therefore, we can clear()
+     * the output stack. All data there had been pointers to data which are
+     * still held by the local tree.
+     *
+     *
+     * It is the responsibility of the actual merge to ensure that data on the
+     * input containers are probably merged into the local data. If these data
+     * are pointers, it is the responsibility of the merge to ensure that they
+     * are properly deleted. The input stack will be empty after the traversal,
+     * as the grid management will pull all data and pipe it into merges, but
+     * if they hold pointers, you have to take special care.
+     *
+     * @see python4/peano4/toolbox/particles/ParticleSet.template.h and the
+     *   merge() implementation therein for an example of a merge of a set of
+     *   pointers.
+     *
+     *
+     * ## Copy semantics for distributed memory
+     *
+     * If you launch a distributed memory exchange, it is the responsibility
+     * of the container to create a real copy on the incoming rank. If your
+     * container managed pointers, this is obviously a deep copy. It is also
+     * the container's responsibility to ensure that all data are freed when
+     * we call clear() after the send is complete.
+     *
+     * If your container holds pointers, it holds pointers which are also held
+     * by some containers that are responsible for the interior. So the clear()
+     * is just fine, as it eliminates redundant pointers.
+     *
      *
      * @param symmetricDataCardinality If two ranks A and B are adjacent to
      *   each other, and if A send n entries to B, then B received exactly

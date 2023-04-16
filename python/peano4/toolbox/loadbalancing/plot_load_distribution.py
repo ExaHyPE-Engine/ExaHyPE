@@ -28,9 +28,6 @@ def get_ranks_and_threads( filename ):
   return (ranks, threads)
 
 
-#
-# @todo Wir sollten nach Ranks unterscheiden und fuer jeden Rank einmal plotten (mit anderer Farbe)
-#
 def parse_file( filename, rank, verbose ):
   """
     Returns tuple of (x_data,y_data_local,y_data_remote)
@@ -78,11 +75,73 @@ def parse_file( filename, rank, verbose ):
   return ( x_data, y_data_local, y_data_remote )
    
    
-def plot_cells_per_rank( filename, verbose, plot_remote_cells, sum_per_rank, show_optimum ):
+def flatten( x_data, y_data ):
+  """
+  
+  x_data: [Float]
+    Sequence of time stamps
+  
+  y_data: [[Float]]
+    Multiple quantities per time stamp. There might be different numbers
+    of quantities per time stamp.
+  
+  We return a tuple [Float],[Float].
+  
+  """
+  x_data_flattened = []
+  y_data_flattened = []
+  
+  assert len(x_data)==len(y_data)
+  for i in range(0,len(x_data)):
+    for data_point in y_data[i]:
+      x_data_flattened.append( x_data[i] )
+      y_data_flattened.append( data_point )
+  
+  return x_data_flattened, y_data_flattened
+
+
+def compute_sums( x_data, y_data ):
+  """
+  x_data: [Float]
+    Sequence of time stamps
+  
+  y_data: [[Float]]
+    Multiple quantities per time stamp. There might be different numbers
+    of quantities per time stamp.
+  
+  We return a sequence [Float] with the sum of all entries per time stamp.
+  """
+  result = []
+  
+  assert len(x_data)==len(y_data)
+  for i in range(0,len(x_data)):
+    result.append( 0.0 )
+    for data_point in y_data[i]:
+      result[-1] = result[-1] + data_point
+      
+  return result
+
+
+def remove_duplicates(x_data,y_data):
+  assert len(x_data)==len(y_data)
+  zipped_input  = zip(x_data, y_data)
+  zipped_output = []
+  for i in zipped_input:
+    if not i in zipped_output:
+      zipped_output.append(i)
+  return [x[0] for x in zipped_output], [x[1] for x in zipped_output]
+  
+  
+     
+def plot_cells_per_rank( filename, 
+                         verbose, 
+                         plot_remote_cells, 
+                         sum_per_rank, 
+                         show_optimum,
+                         plot_local_cells = True 
+                         ):
   (ranks,threads) = get_ranks_and_threads( filename )
-  #
-  # Should be one colour per rank
-  #
+
   Colours = [ "#0000ff", "#00ff00", "#ff0000", "#00ffff", "#ff00ff", "#ffff00", "#aaaaaa" ]
   Symbols = [ "o",       "s",       "<",       ">",       "^",       "v"]
 
@@ -93,51 +152,42 @@ def plot_cells_per_rank( filename, verbose, plot_remote_cells, sum_per_rank, sho
   symbol_counter = 0
   colour_counter = 0
   line_counter   = 0
-  my_alpha       = 0.1+(1.0-0.1)/len(Ranks)
+  my_alpha       = 0.1+(1.0-0.3)/len(Ranks)
   
   final_number_of_cells = 0
   
   for rank in Ranks:
-    x_data_sum = []
     y_data_sum = []  
-    if verbose:
-      print( "parse data of rank " + str(rank) )
+
     ( x_data, y_data_local, y_data_remote ) = parse_file( filename, rank, verbose )
-    
-    for i in range(0,len(x_data)):
-      x_data_sum.append( x_data[i] )
-      y_data_sum.append( 0.0 )
-      one_snapshot_x_data = [ x_data[i] for j in y_data_local[i]]
-      for j in y_data_local[i]:
-        y_data_sum[-1]    += j
-        
-      if verbose:
-        print( "plot " + str(one_snapshot_x_data) + " x " + str(y_data_local[i]) + " with symbol/colour/alpha " + str(symbol_counter) + "/" + str(colour_counter) + "/" + str(my_alpha) )
-        
-      if i==0 and rank>=0:
-        plt.scatter(one_snapshot_x_data, y_data_local[i], marker=Symbols[symbol_counter], color=Colours[colour_counter],  alpha=my_alpha, label="Rank " + str(rank) )  
-      elif i==0:
-        plt.scatter(one_snapshot_x_data, y_data_local[i], marker=Symbols[symbol_counter], color=Colours[colour_counter],  alpha=my_alpha, label="Load per tree" )  
-      else:
-        plt.scatter(one_snapshot_x_data, y_data_local[i], marker=Symbols[symbol_counter], color=Colours[colour_counter],  alpha=my_alpha)
+
+    if verbose:
+      print( "found {} timestamps for rank {}".format( len(x_data), rank ))
+      
+    if plot_local_cells:
+      x_data_flattened, y_data_flattened = flatten( x_data, y_data_local )
+      x_data_flattened, y_data_flattened = remove_duplicates( x_data_flattened, y_data_flattened )
+      plt.scatter(x_data_flattened, 
+                  y_data_flattened, 
+                  marker=Symbols[symbol_counter], 
+                  color=Colours[colour_counter],  
+                  alpha=my_alpha, 
+                  label="#cells per tree on rank " + str(rank) )  
           
-      if rank==0 and i==0 and plot_remote_cells:
-        plt.scatter(one_snapshot_x_data, y_data_remote[i], marker=Symbols[symbol_counter], color=Colours[colour_counter], alpha=my_alpha, facecolors='none', label="remote cells")
-      elif plot_remote_cells:
-        plt.scatter(one_snapshot_x_data, y_data_remote[i], marker=Symbols[symbol_counter], color=Colours[colour_counter], alpha=my_alpha, facecolors='none')
-    
-    line_symbol = "-"
-    if line_counter==1:
-      line_symbol = "--"
-    if line_counter==2:
-      line_symbol = ":"
-    
-    if sum_per_rank and rank==0: 
-      plt.plot(x_data_sum, y_data_sum, line_symbol+Symbols[symbol_counter], color=Colours[colour_counter], markevery=symbol_counter*3+2, label="Rank 0 (sum of cells)" )
-    else:
-      plt.plot(x_data_sum, y_data_sum, line_symbol+Symbols[symbol_counter], color=Colours[colour_counter], markevery=symbol_counter*3+2 )
+    if plot_remote_cells:
+      x_data_flattened, y_data_flattened = flatten( x_data, y_data_remote )
+      x_data_flattened, y_data_flattened = remove_duplicates( x_data_flattened, y_data_flattened )
+      plt.scatter(x_data_flattened, 
+                  y_data_flattened, marker=Symbols[symbol_counter], color=Colours[colour_counter], alpha=my_alpha, facecolors='none', label="Remote #cells per tree")
+
+    sums = compute_sums(x_data, y_data_local )
+    if sum_per_rank:
+      if rank==0: 
+        plt.plot(x_data, sums, line_symbol+Symbols[symbol_counter], color=Colours[colour_counter], markevery=symbol_counter*3+2, label="total #cells of rank 0" )
+      else:
+        plt.plot(x_data, sums, line_symbol+Symbols[symbol_counter], color=Colours[colour_counter], markevery=symbol_counter*3+2 )
         
-    final_number_of_cells += y_data_sum[-1]
+    final_number_of_cells += sums[-1]
 
     symbol_counter += 1
     colour_counter += 1
@@ -147,8 +197,10 @@ def plot_cells_per_rank( filename, verbose, plot_remote_cells, sum_per_rank, sho
       colour_counter = 0
       line_counter  += 1
 
-  if show_optimum:
-    plt.plot([0,x_data_sum[-1]], [final_number_of_cells/len(Ranks),final_number_of_cells/len(Ranks)], "--", color="#000000", label="opt. #cells/rank" )
+  if sum_per_rank and show_optimum: 
+    plt.plot([0,x_data[-1]], [final_number_of_cells/len(Ranks),final_number_of_cells/len(Ranks)], ":", color="#000000", label="opt. #cells per rank" )
+  if show_optimum: 
+    plt.plot([0,x_data[-1]], [final_number_of_cells/len(Ranks)/threads,final_number_of_cells/len(Ranks)/threads], "--", color="#000000", label="opt. #cells per tree" )
       
       
  
@@ -226,5 +278,8 @@ if __name__ == "__main__":
 
   plt.ylim( bottom=9 )
   plt.legend(ncol=args.columns_in_legend)
-  plt.savefig( args.file + "-cells-per-rank.pdf" )
-  plt.savefig( args.file + "-cells-per-rank.png" )
+  output_filename = args.file + "-cells-per-rank"
+  plt.savefig( output_filename + ".pdf" )
+  plt.savefig( output_filename + ".png" )
+  print( "wrote output to " + output_filename + "[-cells-per-rank|-tree-per-rank].[png|pdf]")
+  

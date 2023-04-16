@@ -20,7 +20,7 @@
 {%- endfor %}
 
 
-tarch::logging::Log _log( "GlobalState" );
+tarch::logging::Log _log( "{{NAMESPACE | join("::")}}::GlobalState" );
 
 {% if LOAD_BALANCER!="" -%}
 {{LOAD_BALANCER}}              loadBalancer({{LOAD_BALANCER_ARGUMENTS}});
@@ -93,10 +93,12 @@ double getMaxTimeStepSize() {
 
 
 void startGridConstructionStep() {
+  logTraceIn( "GridConstructionStep()" );
 }
 
 
 void startIntermediateStep() {
+  logTraceIn( "IntermediateStep()" );
 }
 
 
@@ -109,6 +111,7 @@ void startInitialisationStep() {
   if (not ::swift2::commandlinesettings::enableDynamicLoadBalancing() ) {
     loadBalancer.enable(false);
   }
+  logTraceIn( "InitialisationStep()" );
 }
 
 
@@ -117,6 +120,7 @@ void startSortingStep() {
   vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
   vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
   {%- endfor %}
+  logTraceIn( "SortingStep()" );
 }
 
 
@@ -126,10 +130,12 @@ void startTimeStep() {
   vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
   globaldata::{{PARTICLE}}::getSpecies().startTimeStep();
   {%- endfor %}
+  logTraceIn( "TimeStep()" );
 }
 
 
 void startPlotStep() {
+  logTraceIn( "PlotStep()" );
 }
 
 
@@ -142,13 +148,13 @@ void finishTimeStep() {
 
   loadBalancer.finishStep();
 
-  logInfo("finishTimeStep()", "min mesh size=" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0) );
-  logInfo("finishTimeStep()",
+  logInfo("TimeStep()", "min mesh size=" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0) );
+  logInfo("TimeStep()",
     "#local cells=(" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells() <<
     "/" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalRefinedCells() <<
     ")\t(unrefined/refined)"
    );
-  logInfo("finishTimeStep()",
+  logInfo("TimeStep()",
     "#remote cells=(" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfRemoteUnrefinedCells() <<
     "/" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfRemoteRefinedCells() <<
     ")\t(unrefined/refined)"
@@ -157,6 +163,7 @@ void finishTimeStep() {
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
+  logTraceIn( "TimeStep()" );
 }
 
 
@@ -166,6 +173,7 @@ void finishGridConstructionStep() {
   {%- endfor %}
 
   loadBalancer.finishStep();
+  logTraceIn( "GridConstructionStep()" );
 }
 
 
@@ -176,6 +184,7 @@ void finishInitialisationStep() {
   {%- endfor %}
 
   loadBalancer.finishStep();
+  logTraceIn( "InitialisationStep()" );
 }
 
 
@@ -186,6 +195,7 @@ void finishSortingStep() {
   {%- endfor %}
 
   loadBalancer.finishStep();
+  logTraceIn( "SortingStep()" );
 }
 
 
@@ -193,6 +203,7 @@ void finishPlotStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
+  logTraceIn( "PlotStep()" );
 }
 
 
@@ -200,6 +211,7 @@ void finishIntermediateStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
+  logTraceIn( "IntermediateStep()" );
 }
 
 {% for item in NAMESPACE -%}

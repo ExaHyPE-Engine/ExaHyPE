@@ -1,0 +1,13 @@
+/**
+
+@page exahype_benchmarks Benchmarks
+
+\li \subpage benchmarks_exahype2_euler_kernel_benchmarks
+
+ExaHyPE comes along with a set of benchmarks. 
+These benchmarks should all run more or less out-of-the-box.
+Before you start, ensure that you have configured and built Peano as specified for @ref exahype_home "ExaHyPE 2".
+
+
+ */
+ 

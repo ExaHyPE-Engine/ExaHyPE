@@ -172,8 +172,14 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
   else {
     _gridControlEvents = merge( observer.getGridControlEvents() );
 
-    if (_gridControlEvents.size()==1) {
-      logInfo( "traverse(...)", "got one grid control event: " << _gridControlEvents[0].toString() );
+    const int MagicUpperLimitToWhichIDumpEvents = 4;
+    if ( _gridControlEvents.empty() ) {
+      logInfo( "traverse(...)", "got no grid refinement events" );
+    }
+    else if (_gridControlEvents.size()<=MagicUpperLimitToWhichIDumpEvents) {
+      std::ostringstream msg;
+      for (auto& p: _gridControlEvents) msg << p.toString();
+      logInfo( "traverse(...)", "got " << _gridControlEvents.size() << " grid control events: " << msg.str() );
     }
     else if (not _gridControlEvents.empty()) {
       logInfo( "traverse(...)", "got " << _gridControlEvents.size() << " grid control events"  );
@@ -1166,14 +1172,11 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
     if (refine) {
       bool haveTriggeredRefinementForAtLeastOneVertex = false;
       dfor2(i)
-        tarch::la::Vector<Dimensions,double> x = state.getX() + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(i), state.getH() );
-
         if (
           isVertexAdjacentToLocalSpacetree( fineGridVertices[iScalar], true, true )
           and
           fineGridVertices[iScalar].getState()==GridVertex::State::Unrefined
         ) {
-          logDebug( "evaluateGridControlEvents(...)", "refine vertex " << fineGridVertices[iScalar].toString() << " at " << x );
           fineGridVertices[iScalar].setState( GridVertex::State::RefinementTriggered );
           haveTriggeredRefinementForAtLeastOneVertex = true;
         }

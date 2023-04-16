@@ -15,17 +15,17 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
   void* result = nullptr;
   switch (location) {
     case MemoryLocation::Heap:
-      result = new (std::align_val_t(AlignmentOnHeap)) char[size];
+      result = aligned_alloc(AlignmentOnHeap, size);
       break;
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
       #if defined(__NVCOMPILER_CUDA__) // __NVCC__
-        CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size));
+      CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size));
       #elif defined(__HIPCC__)
-        hipMallocManaged(&result, size, hipMemAttachGlobal);
+      hipMallocManaged(&result, size, hipMemAttachGlobal);
       #elif defined(__AMDGPU__) or defined(__clang__) // fall back to non-managed memory when on AMD/LLVM
-        result = new (std::align_val_t(AlignmentOnHeap)) char[size];
+      result = aligned_alloc(AlignmentOnHeap, size);
       #else
-        result = new (std::align_val_t(AlignmentOnHeap)) char[size];
+      result = aligned_alloc(AlignmentOnHeap, size);
       #endif
       break;
   }
@@ -35,17 +35,21 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
 void tarch::freeMemory(void* data, MemoryLocation location) {
   switch (location) {
     case MemoryLocation::Heap:
+<<<<<<< HEAD
       delete[] reinterpret_cast<char*>(data); // @TODO: This leaks memory, we should not delete a void* pointer as destructors are not called -> should refactor code into malloc/free instead.
+=======
+      free(data);
+>>>>>>> gpus
       break;
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
       #if defined(__NVCOMPILER_CUDA__)
-        CHECK_CUDA_ERROR(cudaFree(data));
+      CHECK_CUDA_ERROR(cudaFree(data));
       #elif defined(__HIPCC__)
-        hipFree(data);
+      hipFree(data);
       #elif defined(__AMDGPU__) or defined(__clang__) // fall back to non-managed memory when on AMD/LLVM
-        delete[] data;
+      free(data);
       #else
-        delete[] data;
+      free(data);
       #endif
       break;
   }

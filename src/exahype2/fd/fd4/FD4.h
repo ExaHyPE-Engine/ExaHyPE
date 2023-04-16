@@ -7,6 +7,9 @@
 #include "exahype2/CellData.h"
 
 
+#include "KernelVariants.h"
+
+
 namespace exahype2 {
   namespace fd {
     namespace fd4 {
@@ -66,9 +69,79 @@ namespace exahype2 {
         bool                    evaluateDifferentialSource, //for ncp
         bool                    evaluateAlgebraicSource, //real source
         bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+        DifferentialSourceTermVariant variant,
         Flux                    flux,
         NonconservativeProduct  DifferentialSource,
         Source                  AlgebraicSource
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      ;
+
+
+      template <
+        typename Solver,
+        int                     numberOfGridCellsPerPatchPerAxis,
+        int                     haloSize,
+        int                     unknowns,
+        int                     auxiliaryVariables,
+        typename TempDataEnumerator
+      >
+      static void timeStep_batched_heap_static_calls(
+        ::exahype2::CellData&   patchData,
+        double                  KOSigma,
+        bool                    evaluateFlux,
+        bool                    evaluateDifferentialSource, //for ncp
+        bool                    evaluateAlgebraicSource, //real source
+        bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+        DifferentialSourceTermVariant variant
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      ;
+
+
+      template <
+        typename Solver,
+        int                     numberOfGridCellsPerPatchPerAxis,
+        int                     haloSize,
+        int                     unknowns,
+        int                     auxiliaryVariables,
+        typename TempDataEnumerator
+      >
+      static void timeStep_patchwise_heap_static_calls(
+        ::exahype2::CellData&   patchData,
+        double                  KOSigma,
+        bool                    evaluateFlux,
+        bool                    evaluateDifferentialSource, //for ncp
+        bool                    evaluateAlgebraicSource, //real source
+        bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+        DifferentialSourceTermVariant variant
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      ;
+
+
+      template <
+        typename Solver,
+        int                     numberOfGridCellsPerPatchPerAxis,
+        int                     haloSize,
+        int                     unknowns,
+        int                     auxiliaryVariables,
+        typename TempDataEnumerator
+      >
+      static void timeStep_batched_heap_multicore_static_calls(
+        ::exahype2::CellData&   patchData,
+        double                  KOSigma,
+        bool                    evaluateFlux,
+        bool                    evaluateDifferentialSource, //for ncp
+        bool                    evaluateAlgebraicSource, //real source
+        bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+        DifferentialSourceTermVariant variant
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -79,3 +152,20 @@ namespace exahype2 {
 }
 
 
+
+#if defined(GPUOffloadingOMP) or defined(SharedOMP)
+#include "exahype2/fd/fd4/omp/FD4.h"
+#endif
+
+#if defined(GPUOffloadingCPP) or defined(SharedCPP)
+#include "exahype2/fd/fd4/cpp/FD4.h"
+#endif
+
+#if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+#include "exahype2/fd/fd4/sycl/FD4.h"
+#endif
+
+
+#include "../FD_Helper.cpph"
+#include "FD4_batched_static_calls.cpph"
+#include "FD4_patchwise_static_calls.cpph"

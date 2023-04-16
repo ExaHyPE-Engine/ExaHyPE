@@ -6,6 +6,9 @@
 // **********************************************************************************************
 #pragma once
 
+#include <limits>
+#include <string>
+
 {INCLUDES}
 
 {OPEN_NAMESPACE}

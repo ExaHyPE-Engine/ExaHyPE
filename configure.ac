@@ -433,6 +433,7 @@ AC_ARG_WITH(toolchain,
 if test "$toolchain" == intel; then
   AC_DEFINE([UseITAC], [1], [UseITAC])
   AC_DEFINE([UseLogService], [ITACLogger], [ITACLogger])
+  CXXFLAGS+=" -DTBB_USE_THREADING_TOOLS"
 fi
 
 
@@ -608,6 +609,22 @@ if test "$use_otter" == true; then
 fi
 
 
+#
+# libxsmm
+#
+AC_ARG_WITH(libxsmm,
+  AS_HELP_STRING([--with-libxsmm],[enable libxsmm [default=false]]),
+  [ AC_MSG_CHECKING(for libxsmm)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_libxsmm=false ;;
+      *)     AC_MSG_RESULT(yes);   use_libxsmm=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for libxsmm); AC_MSG_RESULT(no); use_libxsmm=false ])
+AM_CONDITIONAL([UseLibXSMM],[test "x$use_libxsmm" = xtrue])
+
+if test "$use_libxsmm" == true; then
+  AC_DEFINE([UseLibXSMM], [UseLibXSMM], [UseLibXSMM])
+fi
 
 #
 # ===============================================================
@@ -773,6 +790,43 @@ fi
 
 
 
+if test "$use_libxsmm" != false; then
+  #Libxsmm
+  echo "Checking whether libxsmm needs to be installed or built"
+  if @<:@ ! -d Submodules @:>@; then
+    mkdir Submodules
+    echo "Created libxsmm directory in Submodules"
+  fi
+  if @<:@ ! -e Submodules/libxsmm/.git @:>@; then
+    echo "Initializing libxsmm in Submodules/libxsmm, this may take a while"
+    cd Submodules
+    git clone https://github.com/libxsmm/libxsmm.git
+    cd libxsmm
+    git checkout 9b7bbb95c
+    #Clean documentation to save space
+    rm -rf samples/ #over 100M of not needed stuff
+    rm -rf documentation/ #around 10M of documentation
+    cd ../..
+  fi
+  
+  # build libxsmm
+  if @<:@ ! -d Submodules/libxsmm/bin @:>@ || @<:@ ! -e Submodules/libxsmm/bin/libxsmm_gemm_generator @:>@; then
+    REBUILD_LIBXSMM=true
+  fi
+  if @<:@ "$REBUILD_LIBXSMM" = true @:>@; then
+    echo "Building libxsmm gemm generator"
+    cd Submodules/libxsmm
+    git restore samples
+    make realclean --silent
+    make generator --silent
+    rm -rf samples
+    cd ../..
+  fi
+  echo "Finished building libxsmm generator"
+
+
+fi
+
 
 #
 # SWIFT2
@@ -862,18 +916,20 @@ AC_SUBST(LDADD_PEANO_3D_ASSERTS)
 AC_SUBST(LDADD_PEANO_3D_TRACE)
 AC_SUBST(LDADD_PEANO_3D_DEBUG)
 
-
 #
-# Kick out makefiles. I'm not sure but it seems that you have to add the directories to 
+# Kick out makefiles. I'm not sure but it seems that you have to add the directories to
 # Makefile.am in the src subdirectories, too
 #
-AC_CONFIG_FILES([Makefile 
-  src/Makefile 
-  src/toolbox/blockstructured/Makefile src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile src/toolbox/particles/Makefile
-  examples/grid/Makefile examples/regulargridupscaling/Makefile 
+AC_CONFIG_FILES([Makefile
+  src/Makefile
+  src/toolbox/blockstructured/Makefile
+  src/toolbox/multiprecision/Makefile
+  src/toolbox/finiteelements/Makefile
+  src/toolbox/loadbalancing/Makefile
+  src/toolbox/particles/Makefile
   src/convert/Makefile
-  src/exahype2/Makefile src/swift2/Makefile
+  src/exahype2/Makefile
+  src/swift2/Makefile
   src/unittests/Makefile
 ])
 AC_OUTPUT
-

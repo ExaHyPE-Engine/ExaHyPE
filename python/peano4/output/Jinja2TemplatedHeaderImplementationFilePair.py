@@ -12,7 +12,26 @@ from .Helper import using_cuda_backend
 from .Overwrite import Overwrite
 
 class Jinja2TemplatedHeaderImplementationFilePair(object):
-  def __init__(self,headfile_template,cppfile_template,classname,namespace,subdirectory,dictionary,default_overwrite=True,apply_iteratively=False):
+  """!
+  
+Reperesents a pair of C++ header and implementation files 
+
+The content of these files is represented by jinja2 templates. While
+sorting out these templates, the class defines a couple of default
+dictionary entries besides the ones manually handed over by the user.
+
+  """
+
+
+  def __init__(self,
+               headfile_template,
+               cppfile_template,
+               classname,
+               namespace,
+               subdirectory,
+               dictionary,
+               default_overwrite=True,
+               apply_iteratively=False):
     """
       The template files should be fully qualified
       classname is a string

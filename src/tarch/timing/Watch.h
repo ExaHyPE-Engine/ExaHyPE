@@ -68,7 +68,11 @@ class tarch::timing::Watch {
     /**
      * Holds the time at the beginning of the time measurement.
      */
-    std::chrono::high_resolution_clock::time_point _startTime;
+    std::chrono::steady_clock::time_point _startTime; // steady_clock replaced
+                                                      // the
+                                                      // high_resolution_clock
+                                                      // as the latter can be
+                                                      // jumpy.
 
     /**
      * Holds the elapsed processor time.

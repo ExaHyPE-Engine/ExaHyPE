@@ -16,6 +16,9 @@ namespace exahype2 {
   namespace fd {
       constexpr int PickAllEntriesFromOutputVector = -1;
 
+      /**
+       *
+       */
       void reduceMaxEigenvalue_patchwise_functors(
         ::exahype2::CellData&   patchData,
         int                     numberOfGridCellsPerPatchPerAxis,
@@ -26,7 +29,7 @@ namespace exahype2 {
       );
 
       namespace internal {
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -49,7 +52,7 @@ namespace exahype2 {
         /**
          * The complicated way to write =0.
          */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -93,7 +96,7 @@ namespace exahype2 {
         static void addAlgebraicSourceTerm_LoopBody(
           const double* __restrict__                   QIn,
           const QInEnumeratorType&                     QInEnumerator,
-          exahype2::fd::Source                    AlgebraicSource,
+          exahype2::fd::Source                         AlgebraicSource,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -102,6 +105,41 @@ namespace exahype2 {
           double                                       dt,
           double* __restrict__                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
+        ) InlineMethod;
+
+        /**
+         * Overloaded version which uses static invocation instead of a
+         * functor.
+         */
+        template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
+        static void addAlgebraicSourceTerm_LoopBody(
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType&                     QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
+        ) InlineMethod;
+
+        /**
+         * Specialised version.
+         */
+        template <typename Solver>
+        static void addAlgebraicSourceTerm_LoopBody(
+          const double* __restrict__                   QIn,
+          const exahype2::enumerator::AoSLexicographicEnumerator&                     QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator
         ) InlineMethod;
 
         template <class QOutEnumeratorType>
@@ -117,15 +155,44 @@ namespace exahype2 {
           double                                       dt
         ) InlineMethod;
 
-
         /**
          * Specialisation without the gather.
          */
         template <>
-        static double reduceMaxEigenvalue_LoopBody(
+        double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
           const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator,
           exahype2::fd::MaxEigenvalue                  maxEigenvalue,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt
+        ) InlineMethod;
+
+        /**
+         * Overloaded version with static function calls.
+         */
+        template <typename Solver, class QOutEnumeratorType>
+        static double reduceMaxEigenvalue_LoopBody(
+          const double* __restrict__                   QOut,
+          const QOutEnumeratorType&                    QOutEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt
+        ) InlineMethod;
+
+        /**
+         * Overloaded version with static function calls.
+         */
+        template <typename Solver>
+        static double reduceMaxEigenvalue_LoopBody(
+          const double* __restrict__                   QOut,
+          const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,

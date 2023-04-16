@@ -158,11 +158,6 @@ if "fd4" in args.solver:
                                                                refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
 #                                                              pde_terms_without_state = args.optimise_stateless
                                                                )
-  # 126 hab ich ohne
-  # 115 mit default
-  # 117 mit True, True
-  thesolver.switch_to_heap_storage(True, True)
-  
   executable_name = executable_name + "-FD4-" + str(patch_size)
   
   thesolver._action_set_postprocess_solution = exahype2.solvers.rkfd.actionsets.CellWisePostprocessSolution(thesolver)
@@ -216,6 +211,8 @@ if "dyn" in args.type:
   thesolver.add_solver_constants("static constexpr bool DynamicAMR = true;" )
 else:
   thesolver.add_solver_constants("static constexpr bool DynamicAMR = false;" )
+
+thesolver.switch_to_heap_storage(True, True)
   
         
 #

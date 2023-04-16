@@ -61,11 +61,6 @@ class peano4::parallel::Node {
      */
     static constexpr int        StacksPerCommunicationPartner = 4;
 
-    /**
-     * The MPI standard specifies that the tag upper bound must be at least 32767.
-     */
-    static constexpr int ReservedMPITagsForDataExchange = MaxSpacetreesPerRank * StacksPerCommunicationPartner;
-
     #if !defined(Parallel)
     typedef int MPI_Comm;
     #endif
@@ -127,6 +122,7 @@ class peano4::parallel::Node {
      * I originally wanted to embed these guys into the singleton's
      * constructor. However, the singleton might not yet be up when
      * I run the (mpi) tests.
+     *
      */
     static void initMPIDatatypes();
     static void shutdownMPIDatatypes();

@@ -157,7 +157,7 @@ std::tuple<int, int> toolbox::particles::eliminateSpatialDuplicates(
         and
         (*pp)->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
       ) {
-        logWarning( "eliminateSpatialDuplicates()", "particle " << (*pp)->toString() << " found twice as local in domain" );
+        logDebug( "eliminateSpatialDuplicates()", "particle " << (*pp)->toString() << " found twice as local in domain" );
 
         delete *p;
         particleSet.erase(p);

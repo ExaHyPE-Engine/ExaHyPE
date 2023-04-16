@@ -28,14 +28,16 @@ machine_implementations = {
 class PlotType(Enum):
   Bar = 1
   Line = 2
+
 plot_types = {
   "bar":PlotType.Bar,
   "line":PlotType.Line,
 }
 
 class ScalingType(Enum):
-  Weak = 1
-  Strong = 2
+  Weak = 1 # We keep increase the number of patches as we increase the number of threads/devices
+  Strong = 2 # We keep the number of patches constant and increase the number of threads/devices
+
 scaling_types = {
   "weak":ScalingType.Weak,
   "strong":ScalingType.Strong,
@@ -44,21 +46,20 @@ scaling_types = {
 class MeasurementType(Enum):
   TimeToSolution = 1
   Throughput = 2
+
 measurement_types = {
   "time-to-solution":MeasurementType.TimeToSolution,
   "throughput":MeasurementType.Throughput
 }
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Kernel Benchmarks Scaling - Plotting Script')
-parser.add_argument("-d",     "--dim",                    dest="dim",                     type=int,                               default=2,                help="Number of space dimensions")
-parser.add_argument("-ps",    "--patch-size",             dest="patch_size",              type=int,                               default=17,               help="Number of finite volumes per axis (dimension) per patch")
-parser.add_argument("-max",   "--max-fused",              dest="max_fused",               type=int,                               default=16384,            help="Maximum number of fused patches that are studied.")
+parser.add_argument("-max",   "--max-patches",            dest="max_patches",             type=int,                               default=16384,            help="Maximum number of patches that are studied.")
 parser.add_argument("-f",     "--file",                   dest="file",                                                            default="",               help="Specify to convert an output file into a plot.")
-parser.add_argument("-fc",    "--files-to-compare",       dest="files_to_compare",                                                default="",               help="Specify (multiple) output file(s) to compare to.", nargs="*")
+parser.add_argument("-fc",    "--files-to-compare",       dest="files_to_compare",                                                default="",               help="Specify (multiple) output file(s) to compare against.", nargs="*")
 parser.add_argument("-pt",    "--plot-type",              dest="plot_type",               choices=plot_types.keys(),              default="line",           help="Type of plot to create")
 parser.add_argument("-st",    "--scaling-type",           dest="scaling_type",            choices=scaling_types.keys(),           default="strong",         help="Type of scaling to create plots for.")
 parser.add_argument("-mt",    "--measurement-type",       dest="measurement_type",        choices=measurement_types.keys(),       default="time-to-solution",   help="Type of scaling to create plots for.")
-parser.add_argument("-mi",    "--machine-implementation", dest="machine_implementation",  choices=machine_implementations.keys(), default="device",         help="The machine implementation to create plots for.")
+parser.add_argument("-mi",    "--machine-implementation", dest="machine_implementation",  choices=machine_implementations.keys(), default="host",         help="The machine implementation to create plots for.")
 parser.add_argument("-ds",    "--data-structure",         dest="data_structure",          choices=data_structures.keys(),         default="AoSoA",          help="The data structure to create plots for.")
 parser.add_argument("-kv",    "--kernel-variant",         dest="kernel_variant",          choices=kernel_variants.keys(),         default="batched",        help="The kernel variant to create plots for.")
 args = parser.parse_args()
@@ -82,18 +83,21 @@ if args.file:
   input_file = open( args.file, "r" )
 
   y_values = []
-  thread_count = []
-  total_patches = []
-  fused_cells_or_patches = 0
+  patch_count = 0
+  thread_count = 0
+  number_of_threads = []
+  number_of_patches = []
   number_of_entries_written = 0
 
   for line in input_file:
-    if scaling_types[args.scaling_type] == ScalingType.Weak:
-      if "Number of patches fused:" in line:
-        fused_cells_or_patches = int(line.split(":")[-1])
-    else:
-      if "Number of total patches:" in line:
-        fused_cells_or_patches = int(line.split(":")[-1])
+    if "Number of threads:" in line:
+      thread_count = int(line.split(":")[-1])
+      number_of_threads.append(thread_count)
+    if "Number of patches:" in line:
+      patch_count = int(line.split(":")[-1])
+      if scaling_types[args.scaling_type] == ScalingType.Weak:
+        patch_count /= thread_count
+      number_of_patches.append(patch_count)
     new_measurement = "stateless kernels" in line
     new_measurement = new_measurement and kernel_variants[args.kernel_variant] in line
     if data_structures[args.data_structure]=="SoA" or data_structures[args.data_structure]=="AoS":
@@ -102,16 +106,13 @@ if args.file:
     else:
       new_measurement = new_measurement and data_structures[args.data_structure] in line
     new_measurement = new_measurement and machine_implementations[args.machine_implementation] in line
-    if new_measurement and fused_cells_or_patches==args.max_fused:
-      threads=int(line.split("threads")[0].split(",")[-1])
-      thread_count.append(threads)
-      total_patches.append( r"$2^{%s}$" % int(np.log2(fused_cells_or_patches * threads)))
+    if new_measurement and patch_count==args.max_patches:
       if measurement_types[args.measurement_type] == MeasurementType.TimeToSolution:
         y_values.append( float(line.split("/")[0].split(":")[-1]) )
-        #print(float(line.split("/")[0].split(":")[-1]))
+        print(float(line.split("/")[0].split(":")[-1]))
       else:
         y_values.append( float(line.split("/")[-1]) )
-        #print(float(line.split("/")[-1]))
+        print(float(line.split("/")[-1]))
 
   bar_width = 1.0/(len(args.files_to_compare)+2)
 
@@ -124,10 +125,10 @@ if args.file:
         return (1 / np.power(2, x)) * y[0]
       if plot_types[args.plot_type] == PlotType.Bar:
         ax.bar(x_values, y_values, width=bar_width, label=str(args.file).split('.')[0])
-        ax.plot( x_values, ref(x_values, y_values), linewidth=1.0, linestyle='dashed', label="Ideal", color='black')
+        ax.plot(x_values, ref(x_values, y_values), linewidth=1.0, linestyle='dashed', label="Ideal", color='black')
       else:
-        ax.plot( x_values, y_values, linewidth=1.5, marker=str(markers[number_of_entries_written]), markersize=4.0, label=str(args.file).split('.')[0] )
-        ax.plot( x_values, ref(x_values, y_values), linewidth=1.0, linestyle='dashed', label="Ideal", color='black')
+        ax.plot(x_values, y_values, linewidth=1.5, marker=str(markers[number_of_entries_written]), markersize=4.0, label=str(args.file).split('.')[0] )
+        ax.plot(x_values, ref(x_values, y_values), linewidth=1.0, linestyle='dashed', label="Ideal", color='black')
       number_of_entries_written += 1
 
   if args.files_to_compare:
@@ -140,10 +141,10 @@ if args.file:
 
       for line in input_file_to_compare:
         if scaling_types[args.scaling_type] == ScalingType.Weak:
-          if "Number of patches fused:" in line:
+          if "Number of fused patches:" in line:
             fused_cells_or_patches_to_compare = int(line.split(":")[-1])
         else:
-          if "Number of total patches:" in line:
+          if "Number of global patches:" in line:
             fused_cells_or_patches_to_compare = int(line.split(":")[-1])
         new_measurement_to_compare = "stateless kernels" in line
         new_measurement_to_compare = new_measurement_to_compare and kernel_variants[args.kernel_variant] in line
@@ -175,10 +176,11 @@ if args.file:
   plt.style.use("ggplot")
 
   if plot_types[args.plot_type] == PlotType.Bar and args.files_to_compare:
-    plt.xticks(np.arange(len(thread_count)) + bar_width / (len(args.files_to_compare)+1), thread_count)
+    plt.xticks(np.arange(len(number_of_threads)) + bar_width / (len(args.files_to_compare)+1), number_of_threads)
   else:
-    plt.xticks(np.arange(len(thread_count)), thread_count)
-  #plt.yscale( "log", base=10 )
+    plt.xticks(np.arange(len(number_of_threads)), number_of_threads)
+
+  # plt.yscale( "log", base=10 )
 
   plt.legend(loc='upper right', fancybox=True, shadow=True)
   plt.xlabel("Number of threads")
@@ -188,7 +190,7 @@ if args.file:
   else:
     plt.ylabel("Time per FV update (s)")
 
-  plt.title("Euler, " + r"$ P = {}, p = {}^{} $".format( args.max_fused, args.patch_size, args.dim))
+  plt.title("Euler, " + r"$ P = {}, p = {}^{} $".format( args.max_patches, 17, 2))
   plt.grid(color='grey', alpha=0.5, linestyle='dashed', linewidth=0.5)
 
   if number_of_entries_written>0:

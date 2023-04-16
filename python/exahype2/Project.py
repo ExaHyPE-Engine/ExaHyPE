@@ -13,16 +13,16 @@ import exahype2.solvers
 
 class Project(object):
   """
-  Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4 
-  project with a particular set of actions (algorithmic phases) 
-  that you can choose from and with particular solver types. It 
+  Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4
+  project with a particular set of actions (algorithmic phases)
+  that you can choose from and with particular solver types. It
   realises a builder mechanism, i.e. you build up your ExaHyPE2
   project and then you finally tell the project "give me the Peano4
   project". From hereon, you can use this Peano4 project to actually
   set up the Peano4 application.
 
   The project will have a marker per cell that encodes stuff alike
-  a boundary marker. But it is also used to coordinate different 
+  a boundary marker. But it is also used to coordinate different
   solver types.
 
   @see generate_Peano4_project()
@@ -57,7 +57,7 @@ class Project(object):
     self.plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
     self.perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
 
-  def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
+  def set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
     """
       load_balancer_name: string
         Should be full-qualified name of the load balancer. 
@@ -454,7 +454,7 @@ thus appreciate any citation of the original release paper
       solver.add_actions_to_plot_solution( self.plot_solution, self._output_path )
       solver.add_actions_to_perform_time_step( self.perform_time_step )
 
-      solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
+      solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._dimensions )
 
     self.__generate_solver_repository();
 

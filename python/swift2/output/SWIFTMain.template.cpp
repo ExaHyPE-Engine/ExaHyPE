@@ -65,7 +65,6 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
   static double nextMinPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
   static bool   haveJustWrittenSnapshot                     = false;
   static tarch::la::Vector<Dimensions,double> minH          = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
-  static int    globalNumberOfTrees                         = 0;
   bool          continueToSolve                             = true;
 
   if (false) {} // just there to make my script's syntax easier
@@ -213,6 +212,9 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
 }
 
 
+tarch::timing::Watch  watch( "::", "step()", false );
+
+
 void {{NAMESPACE | join("::")}}::step() {
   int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
   auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
@@ -224,12 +226,11 @@ void {{NAMESPACE | join("::")}}::step() {
   #endif
   logInfo( "step()", "run " << repositories::StepRepository::toString(stepName) );
 
-  tarch::timing::Watch  watch( "::", "step()", false );
-
   switch ( stepName ) {
     case repositories::StepRepository::Steps::CreateGrid:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
+        watch.start();
         observers::CreateGrid  observer;
         observers::CreateGrid::prepareTraversal();
         repositories::startGridConstructionStep();
@@ -243,6 +244,7 @@ void {{NAMESPACE | join("::")}}::step() {
     case repositories::StepRepository::Steps::Init:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "init" );
+        watch.start();
         otterPhaseBegin( "init" );
         observers::Init  observer;
         observers::Init::prepareTraversal();
@@ -257,6 +259,7 @@ void {{NAMESPACE | join("::")}}::step() {
     case repositories::StepRepository::Steps::Sort:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "sort" );
+        watch.start();
         otterPhaseBegin( "sort" );
         observers::Sort  observer;
         observers::Sort::prepareTraversal();
@@ -271,6 +274,7 @@ void {{NAMESPACE | join("::")}}::step() {
     case repositories::StepRepository::Steps::Plot:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
+        watch.start();
         otterPhaseSwitch( "plot" );
         observers::Plot  observer;
         observers::Plot::prepareTraversal();
@@ -285,6 +289,7 @@ void {{NAMESPACE | join("::")}}::step() {
     case repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[0]}}:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "time-step" );
+        watch.start();
         otterPhaseSwitch( "{{SOLVERSTEP_NAMES[0]}}" );
         observers::{{SOLVERSTEP_NAMES[0]}}  observer;
         observers::{{SOLVERSTEP_NAMES[0]}}::prepareTraversal();
@@ -390,7 +395,7 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-  otterTraceInitialise(OTTER_SRC_ARGS());
+  otterTraceInitialise();
 
 
   #if defined(SharedOMP)
@@ -420,6 +425,8 @@ int main(int argc, char** argv) {
   }
   }
   #endif
+  
+  otterTraceFinalise();
 
   peano4::shutdownSingletons();
   {{NAMESPACE | join("::")}}::repositories::DataRepository::shutdownDatatypes();

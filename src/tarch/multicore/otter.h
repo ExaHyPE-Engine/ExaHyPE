@@ -2,7 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+
 #include "config.h"
+
 
 /**
  * @namespace otter
@@ -22,30 +24,32 @@
  * and macros here are always consistent with the latest Otter version.
  */
 namespace otter {
+
   #if !defined(UseOtter)
   #endif
 }
 
-#if defined(UseOtter)
-#include <otter/otter-serial.h>
-#else
-#define OTTER_SRC_ARGS()
 
-#define otterTraceInitialise(context)
+#if defined(UseOtter)
+#include <otter/otter-task-graph.h>
+#else
+
+// use sub header:
+// https://github.com/Otter-Taskification/otter/blob/dev/include/otter/otter-task-graph-stub.h
+
+#define OTTER_SRC_ARGS()
+#define otter_task_context void
+#define otter_sync_children
+#define otter_sync_descendants
+#define otterTraceInitialise()
 #define otterTraceFinalise()
-#define otterParallelBegin(context)
-#define otterParallelEnd()
-#define otterTaskBegin(context)
-#define otterTaskEnd()
-#define otterLoopBegin(context)
-#define otterLoopEnd()
-#define otterLoopIterationBegin(context)
-#define otterLoopIterationEnd()
-#define otterSynchroniseChildTasks(context)
-#define otterSynchroniseDescendantTasks(context)
-// #define otterTraceStart()  - should not be there. We can do this via phases
-// #define otterTraceStop()
-#define otterPhaseBegin(name)
+#define otterTraceStart()
+#define otterTraceStop()
+#define otterTaskBegin(...) ((void*)0)
+#define otterTaskEnd(...)
+#define otterSynchroniseTasks(...)
+#define otterPhaseBegin(...)
 #define otterPhaseEnd()
-#define otterPhaseSwitch(name)
+#define otterPhaseSwitch(...)
+
 #endif

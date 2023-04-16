@@ -266,13 +266,14 @@ peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
 
 
 bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
-  otterTaskBegin();
+  // AT: ideally would have a parent task to pass here to record ancestry
+  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
   _spacetreeSet.createObserverCloneIfRequired(_observer,_spacetree._id);
   if (_invertTreeTraversalDirectionBeforeWeStart) {
     _spacetree._root.setInverted( not _spacetree._root.getInverted() );
   }
   _spacetree.traverse( *_spacetreeSet._clonedObserver[_spacetree._id], true );
-  otterTaskEnd();
+  otterTaskEnd(task);
   return false;
 }
 

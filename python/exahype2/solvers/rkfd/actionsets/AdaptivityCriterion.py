@@ -60,8 +60,8 @@ class AdaptivityCriterion(AbstractRKFDActionSet):
     dfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
         refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
           fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-          ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume), 
-          ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ),
+          ::exahype2::fd::getGridCellCentre( marker.x(), marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume), 
+          ::exahype2::fd::getGridCellSize( marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ),
           0.0
         );
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
@@ -84,8 +84,8 @@ class AdaptivityCriterion(AbstractRKFDActionSet):
     dfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
         refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
           fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-          ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume), 
-          ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ),
+          ::exahype2::fd::getGridCellCentre( marker.x(), marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, volume), 
+          ::exahype2::fd::getGridCellSize( marker.h(), {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ),
           repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
         );
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
@@ -145,7 +145,7 @@ class AdaptivityCriterion(AbstractRKFDActionSet):
   def get_body_of_getGridControlEvents(self):
     if self._implement_previous_refinement_instructions:
       return """
-    return repositories::refinementControl.getGridControlEvents();
+    return ::exahype2::RefinementControlService::getInstance().getGridControlEvents();
 """ 
     else:
       return """
@@ -162,7 +162,7 @@ class AdaptivityCriterion(AbstractRKFDActionSet):
 
     if self._build_up_new_refinement_instructions and operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
       result = """
-  repositories::refinementControl.merge( _localRefinementControl );
+  ::exahype2::RefinementControlService::getInstance().merge( _localRefinementControl );
 """
     
     if self._build_up_new_refinement_instructions and operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
@@ -212,3 +212,10 @@ class AdaptivityCriterion(AbstractRKFDActionSet):
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+
+
+  def get_includes(self):
+    return super( AdaptivityCriterion, self ).get_includes() + """
+#include "exahype2/RefinementControlService.h"
+"""
+    

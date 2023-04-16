@@ -150,12 +150,12 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
 
     
-  def add_implementation_files_to_project(self,namespace,output):
+  def add_implementation_files_to_project(self, namespace, output, dimensions):
     """
       Add the enclave task for the GPU
     """
 
-    super(SeparateSweepsWithEnclaveTasking, self).add_implementation_files_to_project(namespace, output)
+    super(SeparateSweepsWithEnclaveTasking, self).add_implementation_files_to_project(namespace, output, dimensions)
     templatefile_prefix = os.path.join(os.path.dirname(os.path.realpath(__file__)), "SolveVolumeIntegral.EnclaveTask.template")
 
     implementationDictionary = {}

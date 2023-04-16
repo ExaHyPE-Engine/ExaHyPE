@@ -1,3 +1,5 @@
+#pragma once
+
 namespace {
   /**
    * A lot of the loop routines expect a voxel (or face) index which is
@@ -14,14 +16,14 @@ namespace {
    * which is way less elegant, yet knows how often the underlying while
    * loop is to be unrolled.
    */
-  tarch::la::Vector<Dimensions,int> volumeIndex2d( int x, int y ) InlineMethod {
+  tarch::la::Vector<Dimensions,int> volumeIndex2d( int x, int y ) {
     tarch::la::Vector<Dimensions,int> result;
     result(0) = x;
     result(1) = y;
     return result;
   }
 
-  tarch::la::Vector<Dimensions,int> volumeIndex3d( int x, int y, int z ) InlineMethod {
+  tarch::la::Vector<Dimensions,int> volumeIndex3d( int x, int y, int z ) {
     tarch::la::Vector<Dimensions,int> result;
     result(0) = x;
     result(1) = y;

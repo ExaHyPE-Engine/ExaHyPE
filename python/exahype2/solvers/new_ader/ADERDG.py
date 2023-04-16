@@ -323,7 +323,8 @@ class ADERDG( object ):
 #include "../repositories/SolverRepository.h"
 """,
       precision="PlotterPrecision",
-      time_stamp_evaluation="repositories::getMinTimeStamp()", plot_cell_data=False
+      time_stamp_evaluation="repositories::getMinTimeStamp()", plot_cell_data=False,
+      select_dofs = self.select_dofs_to_print
     ))
 
     if self._plot_grid_properties:    

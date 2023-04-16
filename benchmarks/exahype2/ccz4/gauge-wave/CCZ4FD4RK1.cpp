@@ -1,0 +1,45 @@
+#include "CCZ4FD4RK1.h"
+#include "exahype2/RefinementControl.h"
+
+
+tarch::logging::Log   benchmarks::exahype2::ccz4::CCZ4FD4RK1::_log( "benchmarks::exahype2::ccz4::CCZ4FD4RK1" );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

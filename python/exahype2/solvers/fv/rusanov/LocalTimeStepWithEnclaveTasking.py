@@ -16,7 +16,8 @@ from .kernels import create_compute_new_time_step_size_kernel_for_local_time_ste
 from .kernels import create_abstract_solver_user_declarations_for_local_time_stepping
 from .kernels import create_abstract_solver_user_definitions_for_local_time_stepping
 
-from .kernels import SolverVariant
+from exahype2.solvers.fv.kernels import SolverVariant    
+from exahype2.solvers.fv.kernels import KernelVariant    
 
 from exahype2.solvers.fv.kernels import create_halo_layer_construction_with_interpolation_for_reconstructed_patch
 from exahype2.solvers.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
@@ -125,22 +126,22 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._compute_kernel_call            = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True, 
-      solver_variant = SolverVariant.WithVirtualFunctions,
-      kernel_name    = "timeStepWithRusanov_patchwise_heap_functors"
+      solver_variant         = SolverVariant.WithVirtualFunctions,
+      kernel_variant         = KernelVariant.PatchWiseAoSHeap
     )
     
     self._fused_compute_kernel_call_cpu  = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True, 
       solver_variant = SolverVariant.Stateless,
-      kernel_name    = "timeStepWithRusanov_batched_heap_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>"
+      kernel_variant         = KernelVariant.PatchWiseAoSHeap
     )
 
     self._fused_compute_kernel_call_gpu  = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True, 
-      solver_variant = SolverVariant.Accelerator,
-      kernel_name    = "timeStepWithRusanov_batched_map_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>"
+      solver_variant = SolverVariant.AcceleratorWithExplicitCopy,
+      kernel_variant         = KernelVariant.GenericAoS
     )
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)

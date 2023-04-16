@@ -11,9 +11,10 @@ from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
 
-from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
+from exahype2.solvers.fv.kernels import SolverVariant    
+from exahype2.solvers.fv.kernels import KernelVariant    
 
-from .kernels import SolverVariant
+from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
 class GlobalAdaptiveTimeStep( SingleSweep ):
   def __init__(self,
@@ -83,7 +84,7 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True,
       solver_variant         = SolverVariant.WithVirtualFunctions,
-      kernel_name    = "timeStepWithRusanov_patchwise_heap_functors"
+      kernel_variant         = KernelVariant.PatchWiseAoSHeap
     )
 
     solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)

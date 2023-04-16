@@ -429,3 +429,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
 }
 
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchH,
+  double                                       t,
+  double                                       dt
+) const {
+  return true;
+}

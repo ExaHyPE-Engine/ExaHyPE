@@ -14,7 +14,8 @@ class InsertParticlesByCoordinates(ActionSet):
   def __init__(self,
                particle_set,
                coordinates,
-               initialisation_call = ""
+               initialisation_call,
+               additional_includes = ""
                ):
     """
 
@@ -32,6 +33,15 @@ class InsertParticlesByCoordinates(ActionSet):
       coordinate is ignored if you compile in 2d. If you pass in 2d coordinates,
       then the code will fail (assertion) if you try to compile it in 3d.
 
+    initialisation_call: String (C++ code snippet)
+      Arbitrary code snippet which can work over a pointer particle. The object
+      to which this pointer points to is properly allocated, and its 
+      coordinates are set. Furthermore, the object's cut-off radius is 
+      initialised with zero. You can alter the particle attributes now, i.e.
+      initialise the domain-specific data. Please also ensure you assign the 
+      particle a proper cut-off (interaction) radius if the radius is of 
+      relevance for your application.
+
     """
 
     self.d = {}
@@ -39,7 +49,9 @@ class InsertParticlesByCoordinates(ActionSet):
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self.d[ "N" ]                        = len(coordinates)
     self.d[ "INITIALISATION_CALL" ]      = initialisation_call
+    
     self._coordinates                    = coordinates
+    self.additional_includes             = additional_includes
     
 
   __Template_TouchCellFirstTime = jinja2.Template("""
@@ -61,13 +73,14 @@ class InsertParticlesByCoordinates(ActionSet):
     {
       globaldata::{{PARTICLE}}* particle = new globaldata::{{PARTICLE}}();
       
-      {{INITIALISATION_CALL}}
-      
       #if Dimensions==2
       toolbox::particles::init(*particle,{coordinates[i][0],coordinates[i][1]},0.0);
       #else
       toolbox::particles::init(*particle,{coordinates[i][0],coordinates[i][1],coordinates[i][2]},0.0);
       #endif
+      
+      // See documentation of constructor on initialisation snippet
+      {{INITIALISATION_CALL}}
 
       toolbox::particles::insertParticleIntoCell(
         marker,
@@ -105,7 +118,7 @@ class InsertParticlesByCoordinates(ActionSet):
 #include "globaldata/{{PARTICLE}}.h"
 #include "toolbox/particles/particles.h"
 #include "toolbox/particles/ParticleFactory.h"
-""" )
+""" + self.additional_includes )
     return result.render(**self.d)
 
 

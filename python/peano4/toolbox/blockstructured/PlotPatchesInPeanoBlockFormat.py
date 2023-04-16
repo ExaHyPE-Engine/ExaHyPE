@@ -1,16 +1,18 @@
-# This file is part of the Peano project. For conditions of distribution and
+﻿# This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
+import jinja2
 
 
 class PlotPatchesInPeanoBlockFormat(ActionSet):
   """
   Very simple plotter that should be used in combination with Patches.
-  At the moment, I only support plain double patches, i.e. you have to 
-  use the default source code generator for your stuff. This plotter 
-  works only for cell patches, i.e. patches associated with faces or 
-  vertices are not supported.
+  Patches with varying datatypes are supported via the "dataType" parameter,
+  but this defaults to doubles. This parameter should contain the C-style-
+  name of the type of the variable in the patch, e.g. float, double, etc.
+  This plotter works only for cell patches, i.e. patches associated with 
+  faces or vertices are not supported.
   
   At the moment, I can only plot one dataset (patch type) per plotter.
   In theory, the underlying Peano plotter however could dump multiple
@@ -18,7 +20,6 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   
   Also, this dump expects incoming data to be AoS.
   """
-  
   
   def __init__(self,
                filename,
@@ -29,7 +30,10 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
                metadata = "", 
                mapping = [], 
                guard="true", 
-               additional_includes="", precision=3):
+               additional_includes="", 
+               precision=3,
+               select_dofs = None,
+               dataType="double"):
     """
     
       plot_cell_data: Boolean
@@ -42,7 +46,13 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
       mapping: Series of d-tuples which describe how to distort quadrature/sampling
         points within a reference cube/square. Can be empty alternatively.
          
+      select_dofs: [Int] or None
+        You can make the plotter only plot some of the dofs of interest
+           
     """
+
+    valid_datatypes = {"float", "double", "long double"}
+
     self._plot_cell_data           = plot_cell_data
     
     self.d = {}
@@ -51,16 +61,17 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     
     self.additional_includes       = additional_includes
 
-    dofs_per_axis = 0    
-    #if plot_cell_data:
     dofs_per_axis = patch.dim[0]
-    #else:
-    #  dofs_per_axis = patch.dim[0]-1
-
       
     self.d[ "DOFS_PER_AXIS" ]      = str(dofs_per_axis)
-      
+
+    if select_dofs==None:     
+      self.d[ "PLOTTED_UNKNOWNS" ]         = str(patch.no_of_unknowns)
+    else:
+      self.d[ "PLOTTED_UNKNOWNS" ]         = str(len(select_dofs))
     self.d[ "UNKNOWNS" ]           = str(patch.no_of_unknowns)
+    self.d[ "SELECT_DOFS" ]        = select_dofs
+    
     self.d[ "NAME" ]               = dataset_name
     self.d[ "DESCRIPTION" ]        = description
     self.d[ "METADATA" ]           = metadata
@@ -96,7 +107,11 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
       if i!=patch.dim[0]:
         print( "Error: patch plotter requires patch to have same dimension along all coordinate axes")
 
+    if dataType not in valid_datatypes:
+      raise Exception("Chosen datatype " + datatype + " for plotting of patches is not a recognized choice.")
+
     self.d[ "PRECISION" ]        = precision
+    self.d[ "DATATYPE"  ]        = dataType
     self.d[ "TIMESTAMP" ]        = time_stamp_evaluation
 
 
@@ -145,10 +160,9 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
 
   __Template_TouchCellFirstTime_CellPlot = """ 
-  if ( {GUARD_PREDICATE} ) {{
+  if ( {{GUARD_PREDICATE}} ) {
     int vertexIndices[TwoPowerD];
   
-    //const double PatchScaling = 0.95;
     const double PatchScaling = 1.0;
 
     assertion( _writer!=nullptr );
@@ -162,21 +176,31 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     int cellIndex  = _dataWriter->getFirstCellWithinPatch(patchIndex);
     int currentDoF = 0;
   
-    dfor(k,{DOFS_PER_AXIS}) {{
-      double* data = fineGridCell{NAME}.value + currentDoF;
+    dfor(k,{{DOFS_PER_AXIS}}) {
+      {% if SELECT_DOFS==None %}
+      {{DATATYPE}}* data = fineGridCell{{NAME}}.value + currentDoF;
+      {% else %}
+      {{DATATYPE}} data[] = { 
+          fineGridCell{{NAME}}.value[ currentDoF + {{SELECT_DOFS[0]}} ]
+        {% for i in SELECT_DOFS[1:] %}
+        , fineGridCell{{NAME}}.value[ currentDoF + {{i}} ]
+        {% endfor %}
+      };
+      {% endif %}
       _dataWriter->plotCell( cellIndex, data );
       cellIndex++;
-      currentDoF += {UNKNOWNS};
-    }}
-  }}
+      currentDoF += {{UNKNOWNS}};
+    }
+  }
 """
+
+#    self.d[ "SELECT_DOFS" ]        = select_dofs
 
 
   __Template_TouchCellFirstTime_VertexPlot = """ 
-  if ( {GUARD_PREDICATE} ) {{
+  if ( {{GUARD_PREDICATE}} ) {
     int vertexIndices[TwoPowerD];
   
-    //const double PatchScaling = 0.95;
     const double PatchScaling = 1.0;
 
     assertion( _writer!=nullptr );
@@ -190,13 +214,22 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     int vertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
     int currentDoF = 0;
   
-    dfor(k,{DOFS_PER_AXIS}) {{
-      double* data = fineGridCell{NAME}.value + currentDoF;
+    dfor(k,{{DOFS_PER_AXIS}}) {
+      {% if SELECT_DOFS==None %}
+      {{DATATYPE}}* data = fineGridCell{{NAME}}.value + currentDoF;
+      {% else %}
+      {{DATATYPE}} data[] = { 
+          fineGridCell{{NAME}}.value[ currentDoF + {{SELECT_DOFS[0]}} ]
+        {% for i in SELECT_DOFS[1:] %}
+        , fineGridCell{{NAME}}.value[ currentDoF + {{i}} ]
+        {% endfor %}
+      };
+      {% endif %}
       _dataWriter->plotVertex( vertexIndex, data );
       vertexIndex++;
-      currentDoF += {UNKNOWNS};
-    }}
-  }}
+      currentDoF += {{UNKNOWNS}};
+    }
+  }
 """
 
 
@@ -207,51 +240,51 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   counter++;
 
   std::ostringstream snapshotFileName;
-  snapshotFileName << "{FILENAME}-" << counter;
+  snapshotFileName << "{{FILENAME}}-" << counter;
 
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {{
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
-  }}
+  }
 
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions, snapshotFileName.str(), "{FILENAME}",
+    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
-    {TIMESTAMP}
+    {{TIMESTAMP}}
   );    
       
   #if Dimensions==2
-  {MAPPING_2D}
+  {{MAPPING_2D}}
   #else
-  {MAPPING_3D}
+  {{MAPPING_3D}}
   #endif
 """
 
 
 
   __Template_BeginTraversal_CellPlot = __Template_BeginTraversal_Generic + """
-  _dataWriter = _writer->createCellDataWriter( "{NAME}", {DOFS_PER_AXIS}, {UNKNOWNS}, "{DESCRIPTION}", "{METADATA}", mapping );
-  _dataWriter->setPrecision( {PRECISION} );
+  _dataWriter = _writer->createCellDataWriter( "{{NAME}}", {{DOFS_PER_AXIS}}, {{PLOTTED_UNKNOWNS}}, "{{DESCRIPTION}}", "{{METADATA}}", mapping );
+  _dataWriter->setPrecision( {{PRECISION}} );
 """
 
 
   __Template_BeginTraversal_VertexPlot = __Template_BeginTraversal_Generic + """
-  _dataWriter = _writer->createVertexDataWriter( "{NAME}", {DOFS_PER_AXIS}, {UNKNOWNS}, "{DESCRIPTION}", "{METADATA}", mapping );
-  _dataWriter->setPrecision( {PRECISION} );
+  _dataWriter = _writer->createVertexDataWriter( "{{NAME}}", {{DOFS_PER_AXIS}}, {{PLOTTED_UNKNOWNS}}, "{{DESCRIPTION}}", "{{METADATA}}", mapping );
+  _dataWriter->setPrecision( {{PRECISION}} );
 """
 
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME and self._plot_cell_data:
-      result = self.__Template_TouchCellFirstTime_CellPlot.format(**self.d)
+      result = jinja2.Template( self.__Template_TouchCellFirstTime_CellPlot ).render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME and not self._plot_cell_data:
-      result = self.__Template_TouchCellFirstTime_VertexPlot.format(**self.d)
+      result = jinja2.Template( self.__Template_TouchCellFirstTime_VertexPlot ).render(**self.d)
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL and self._plot_cell_data:
-      result = self.__Template_BeginTraversal_CellPlot.format(**self.d)             
+      result = jinja2.Template( self.__Template_BeginTraversal_CellPlot ).render(**self.d)             
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL and not self._plot_cell_data:
-      result = self.__Template_BeginTraversal_VertexPlot.format(**self.d)             
+      result = jinja2.Template( self.__Template_BeginTraversal_VertexPlot ).render(**self.d)             
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
-      result = self.__Template_EndTraversal.format(**self.d)             
+      result = jinja2.Template( self.__Template_EndTraversal ).render(**self.d)             
     return result
 
 

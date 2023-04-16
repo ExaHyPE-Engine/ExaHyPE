@@ -1,0 +1,136 @@
+/**
+
+@page developer_faq Developer FAQs
+
+
+Some frequently asked questions and problems are discussed below.
+
+Most developers exchange stuff via our slack. Contact Tobias Weinzierl
+to get an invitation to the slack and post your questions there.
+
+
+## Technical architecture 
+
+- **The logger seems to insert more and more spaces over time, so the trace
+  becomes impossible to read over time.** The command line logger's trace
+  tries to indent such that the terminal messages reflect the callstack 
+  hierarchy (if foo calls bar, all messages from bar are indendented 
+  relative to foo's message). This works in a multithreaded environment, too,
+  though the indentation there might be messed up slightly due to the 
+  threading's non-determinism. The code indents whenever you write logTraceIn().
+  If you get more and more spaces, you almost certainly have forgotten the 
+  corresponding logTraceOut() statement. If you configure your code without
+  any multithreading, and if you then enable assertions, the 
+  tarch::logging::CommandLineLogger will tell you which logTraceOut() statement
+  is missing.
+
+
+## C++ core
+
+-   **Where is the information whether a point or face is at the
+    boundary or not?** I do not provide any such feature. Many codes for
+    example use the grid to represent complicated domains, and thus
+    would need such a feature anyway. So what you have to do is to add a
+    bool to each vertex/face and set this boolean yourself.
+
+-   To be continued ...
+
+Parallelisation
+---------------
+
+-   **Why do I (temporarily) get an adaptive grid even though I specify
+    a regular one?** This phenomenon arises if your adaptive refinements
+    and (dynamic) load balancing happen at the same time. Load balancing
+    is realised by transfering a whole tree part (subpartition
+    incl. coarser scales) to another rank after a grid sweep. Refinement
+    happens in multiple stages: After a grid traversal, the rank takes
+    all the refinement instructions and then realises them throughout
+    the subsequent grid sweep. So if a rank gets a refinement command
+    and then gives away parts of its mesh, then it might not be able to
+    realise this refinement. At the same time, the rank accepting the
+    new partition is not aware of the refinement requests yet. So it
+    might get the refinement request, but with one step delay: It sets
+    up the local partition, evaluates the refinement criterion, is
+    informed about a refinement wish for this area, and subsequently
+    realises it. For most codes, that delay by one iteration is not a
+    problem as the newly established rank will just realise the
+    refinement one grid sweep later, but the point is: refine and erase
+    commands in  are always a wishlist to the kernel. The kernel can
+    decide to ignore it---at least for one grid sweep.
+
+-   **Why do I get imbalanced partitions even though I tried to tell my
+    load balancer of choice to balance brilliantly?**  is based upon
+    three-partitioning, i.e. whenever it refines a cell it yields $3^d$
+    new cells. Most users scale up in multiples of two. As $3^d$ cannot
+    be divided into two equally-sized chunks, we always have some
+    imbalance.
+
+-   **Why do some load balancing schemes report that they have to
+    extrapolate data?** A typical message you get is "global number of
+    cells lags behind local one. ..."' Most of my toolbox load balancing
+    relies on asynchronous (non-blocking) collectives to gather
+    information about the total grid structure. As a consequence, this
+    information always might lag behind the actual status quo (load
+    balancing info is sent out while the mesh refines, e.g.). Some load
+    balancing schemes can detect such inconsistencies---they only arise
+    due to AMR and typically are sorted out an iteration later
+    anyway---and apply heuristics. If they detect that the global cell
+    number seems to be too small, e.g., they assume that every rank
+    meanwhile has refined once more and multiply the global cell count
+    with $3^d$.
+
+-   **I get a timeout but  claims that there are still messages in the
+    MPI queue. How do I know what certain MPI messages tags mean?** All
+    tags used in  are registered through the operation
+    `tarch::mpi::Rank::reserveFreeTag`. If you translate with any
+    positive value of `PeanoDebug` (the trace, debug and assert library
+    variants of  do so, e.g.) then you get a list of tag semantics at
+    startup. These lists are the same as the ones you use in release
+    mode, i.e. when this information is not dumped. Please note that the
+    info goes straight to cout, i.e. you can't filter it. That's because
+    the tag allocation usually happens before our logging landscape is
+    up and configured properly.
+
+-   To be continued ...
+
+-   **I have previously introduced auxiliary (material) parameters and
+    now the code crashes every now and then.** Ensure that you
+    initialise all data in your code. That includes any potential
+    auxiliary variables. I usually use
+
+    for (int i=0; i\<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++)
+    Q\[i\] = 0.0;
+
+    as a first step within `initialCondition()`. So I ensure first that
+    there is no garbage in the data. Further to that, ensure that you
+    also set proper boundary data for any auxiliary value. You might not
+    need these data, as you do not use the auxiliary variables to
+    exchange information between patches, but you have to set proper
+    values nevertheless. Otherwise, all of 's assertions will fail as it
+    detects data corruption.
+
+-   **My higher order solver yields physically slightly unreasonable
+    data for the Riemann solves.** If you use a higher-order scheme  has
+    to project your polynomial solution onto the faces. For this, it
+    uses pre-assembled matrices which are stored in double precision.
+    However, round-off errors might lead to situations where you get
+    small deviations---we have seen densities around $-10^{-8}$ for the
+    Euler equations, e.g. Usually, such round-off errors are fine, but
+    you might run into problems if you take the square root of such tiny
+    negative values, e.g. It is therefore important that you apply the
+    maximum function:
+
+    // Naive code leading into problems: // nonCriticalAssertion8(
+    p\>=0.0, Q\[0\], Q\[1\], Q\[2\], Q\[3\], Q\[4\], x, t, normal ); //
+    const double c = std::sqrt( gamma \* p \* irho );
+
+    // working code: nonCriticalAssertion9(
+    tarch::la::greaterEquals(p,0.0), Q\[0\], Q\[1\], Q\[2\], Q\[3\],
+    Q\[4\], x, t, normal, p ); const double c = std::sqrt(
+    std::max(0.0,gamma \* p \* irho) );
+
+
+
+ */
+ 
+ 

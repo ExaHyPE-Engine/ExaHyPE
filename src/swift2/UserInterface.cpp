@@ -210,10 +210,19 @@ bool swift2::parseCommandLineArguments(int argc, char** argv) {
         return false;
       }
     }
-
-//    bool enableDynamicLoadBalancing = true;
-
-
+    else if ( select.compare( "--dynamic-load-balancing" ) == 0 ) {
+      std::string value = argv[argument+1];
+      if (value==std::string("on")) {
+        enableDynamicLoadBalancing = true;
+      }
+      else if (value==std::string("off")) {
+        enableDynamicLoadBalancing = false;
+      }
+      else {
+        logError( "parseCommandLineArguments(...)", "load balancing value has to be on or off. Value had been " << value );
+        return false;
+      }
+    }
     else {
       printUsage(argv);
       return false;

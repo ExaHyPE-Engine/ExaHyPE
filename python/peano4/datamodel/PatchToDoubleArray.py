@@ -19,7 +19,7 @@ class FloatTypes():
       elif float_type=="half":
         raise Exception("Float type half not currently available")
       else:
-        raise Exception("Float type not recognized")
+        raise Exception("Float type " + float_type + " not recognized")
 
 
 class PatchToDoubleArray():

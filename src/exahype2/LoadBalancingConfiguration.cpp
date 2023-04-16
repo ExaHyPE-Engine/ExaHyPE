@@ -12,6 +12,7 @@ exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
   _minSizeOfTree(minSizeOfTree),
   _maxNumberOfTreesThroughoutInitialDistribution( maxNumberOfTreesThroughoutInitialDistribution ),
   _maxNumberOfTrees( maxNumberOfTrees ) {
+  assertion( _maxNumberOfTrees>=_maxNumberOfTreesThroughoutInitialDistribution );
 }
 
 
@@ -20,14 +21,28 @@ bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::load
 }
 
 
+int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNumberOfTrees(int value) const {
+  if (value==UseNumberOfThreads) {
+    return tarch::multicore::Core::getInstance().getNumberOfThreads();
+  }
+  else if (value==UseTwiceTheNumberOfThreads) {
+    return tarch::multicore::Core::getInstance().getNumberOfThreads() * 2;
+  }
+  else {
+    assertion(value>0);
+    return value;
+  }
+}
+
+
 int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::RecursiveSubdivision::State state) {
   if (
     state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankDistribution
   ) {
-    return _maxNumberOfTreesThroughoutInitialDistribution==UseNumberOfThreads ? tarch::multicore::Core::getInstance().getNumberOfThreads() : _maxNumberOfTreesThroughoutInitialDistribution;
+    return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTreesThroughoutInitialDistribution);
   }
   else {
-    return _maxNumberOfTrees==UseNumberOfThreads ? tarch::multicore::Core::getInstance().getNumberOfThreads() : _maxNumberOfTrees;
+    return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTrees);
   }
 }
 

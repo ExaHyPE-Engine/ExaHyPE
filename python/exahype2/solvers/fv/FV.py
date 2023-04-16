@@ -212,6 +212,7 @@ class FV(object):
     self._solver_template_file_class_name = None
 
     self._plot_description = ""
+    self.select_dofs_to_print = None
 
     self._action_set_initial_conditions                       = None
     self._action_set_initial_conditions_for_grid_construction = None
@@ -249,6 +250,9 @@ class FV(object):
     self._restriction   = "averaging"
 
     self._kernel_namespace = kernel_namespace
+
+    self._hold_cell_data_on_heap_with_smart_pointer = False
+    self._hold_face_data_on_heap_with_smart_pointer = False
 
     self.create_data_structures()
     self.create_action_sets()
@@ -310,7 +314,7 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
 
 Real type of this solver: """ + str(type(self)) + """
 
-We assume of domain size of (0,""" + str(domain_size) + """)^d. Peano 4 will cut this domain equidistantly 
+We assume that you use a domain size of (0,""" + str(domain_size) + """)^d. Peano 4 will cut this domain equidistantly 
 and recursively into three parts along each coordinate axis. This yields a spacetree.
 
 The spacetree will at least have """ + str(self.get_min_number_of_spacetree_levels(domain_size)) + """ levels.
@@ -406,6 +410,13 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
 
+    if self._hold_cell_data_on_heap_with_smart_pointer:
+      self._patch.generator           = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
+    if self._hold_face_data_on_heap_with_smart_pointer:
+      self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_old,    "double") 
+      self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_new,    "double") 
+      self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_update, "double") 
+    
     self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_old)
     self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_new)
     self._patch.generator.merge_method_definition             = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._patch)
@@ -708,7 +719,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 #include "../repositories/SolverRepository.h"
 """,
       precision="PlotterPrecision",
-      time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())"
+      time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+      select_dofs = self.select_dofs_to_print
     ))
 
     if self._plot_grid_properties:    
@@ -754,7 +766,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     pass
 
 
-  def add_implementation_files_to_project(self,namespace,output):
+  def add_implementation_files_to_project(self,namespace,output, dimensions):
     """
     
      The ExaHyPE2 project will call this operation when it sets
@@ -1027,3 +1039,23 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._restriction = value
     self.create_data_structures()
     self.create_action_sets()
+
+
+  def switch_to_heap_storage(self,
+                             hold_cell_data_on_heap_with_smart_pointer,
+                             hold_face_data_on_heap_with_smart_pointer
+                             ):
+    """
+    
+    By default, we hold all data on the call stacks. You can explicitly switch
+    to storage on the heap via smart pointers.
+    
+    @see create_data_structures()
+    
+    """
+    self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
+    self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
+    
+    self.create_data_structures()
+    self.create_action_sets()
+

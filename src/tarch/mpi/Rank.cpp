@@ -26,13 +26,9 @@
 #endif
 
 
-namespace {
-  int tagCounter = 0;
-}
-
-
-
 tarch::logging::Log tarch::mpi::Rank::_log("tarch::mpi::Rank");
+int     tarch::mpi::Rank::_maxTags     = -1;
+int     tarch::mpi::Rank::_tagCounter  = 0;
 
 
 tarch::mpi::Rank  tarch::mpi::Rank::_singleton;
@@ -40,16 +36,16 @@ tarch::mpi::Rank  tarch::mpi::Rank::_singleton;
 
 
 void tarch::mpi::Rank::releaseTag(int tag) {
-  if (tag==tagCounter-1) {
-    tagCounter--;
+  if (tag==_tagCounter-1) {
+    _tagCounter--;
   }
 }
 
 
 int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName, int numberOfTags) {
   assertion2(numberOfTags>=1,fullQualifiedMessageName,numberOfTags);
-  const int result = tagCounter;
-  tagCounter += numberOfTags;
+  const int result = _tagCounter;
+  _tagCounter += numberOfTags;
 
   // I protect the tag manually (not via log filter), as many tags are actually
   // grabbed before most applications initialise their log filters properly.
@@ -64,6 +60,9 @@ int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName
               << " the free tag " << result << " (" << numberOfTags << " consecutive tags reserved)" << std::endl;
   }
   #endif
+
+  validateMaxTagIsSupported();
+
   return result;
 }
 
@@ -91,7 +90,7 @@ void tarch::mpi::Rank::plotMessageQueues() {
   MPI_Status   status;
   MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, _communicator, &flag, &status);
   if (flag==0) {
-    _log.error("plotMessageQueues()", "there are no messages from any sender in MPI queue");
+    logError("plotMessageQueues()", "there are no messages from any sender in MPI queue");
   }
   else {
     logError(
@@ -126,7 +125,7 @@ void tarch::mpi::Rank::triggerDeadlockTimeOut(
         << " seconds for " << numberOfExpectedMessages
         << " message(s) from node " << communicationPartnerRank << " with tag " << tag
         << ". Timeout. " << comment;
-    _log.error( "triggerDeadlockTimeOut(...)", out.str() );
+    logError( "triggerDeadlockTimeOut(...)", out.str() );
 
     plotMessageQueues();
 
@@ -157,12 +156,24 @@ void tarch::mpi::Rank::writeTimeOutWarning(
       << " message(s) from node " << communicationPartnerRank << " with tag " << tag
     );
 
-    logWarning(
-      "writeTimeOutWarning(...)",
-      "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
-    );
+    if ( _deadlockTimeOut.count()>0 ) {
+      logWarning(
+        "writeTimeOutWarning(...)",
+        "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
+      );
+    }
+    else {
+      logWarning(
+        "writeTimeOutWarning(...)",
+        "deadlock detection switched off as deadlock time out is set to " << _deadlockTimeOut.count() << ", i.e. you will continue to get warnings, but code will not shut down"
+      );
+    }
 
-    if (_timeOutWarning<_deadlockTimeOut/2) {
+    if (
+      _timeOutWarning<_deadlockTimeOut/2
+      or
+      _deadlockTimeOut.count()<=0
+    ) {
       std::chrono::seconds newTimeOutWarning = _timeOutWarning*2;
       logWarning(
         "writeTimeOutWarning(...)",
@@ -439,7 +450,22 @@ void tarch::mpi::Rank::logStatus() const {
   #endif
   statusMessage << ", #processors=" << _numberOfProcessors;
 
-  _log.info( "logStatus()", statusMessage.str() );
+  logInfo( "logStatus()", statusMessage.str() );
+}
+
+
+bool tarch::mpi::Rank::validateMaxTagIsSupported() {
+  if (
+    _maxTags <= 0
+    or
+    _tagCounter<_maxTags
+    ) {
+    return true;
+  }
+  else {
+    logWarning( "validateMaxTagIsSupported()", "maximum tag value is " << _maxTags << " though we would need " << _tagCounter << " tags. Code will likely crash" );
+    return false;
+  }
 }
 
 
@@ -460,19 +486,30 @@ bool tarch::mpi::Rank::init(int* argc, char*** argv) {
   #endif
 
   if (result!=MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)";
+    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;
     return false;
   }
 
   result = MPI_Comm_size( MPI_COMM_WORLD, &_numberOfProcessors );
   if (result!=MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)";
+    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;
     return false;
   }
 
   result = MPI_Comm_rank( MPI_COMM_WORLD, &_rank );
   if (result!=MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)";
+    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;
+    return false;
+  }
+
+  int   answerFlag;
+  void* rawMaxTag;
+  MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &rawMaxTag, &answerFlag);
+  if (answerFlag) {
+    _maxTags = *(int*)rawMaxTag;
+  }
+  else {
+    std::cerr << "init(int*,char***)\t was not able to query what the maximum tag value is" << std::endl;
     return false;
   }
 
@@ -525,6 +562,9 @@ void tarch::mpi::Rank::setTimeOutWarning( int value ) {
 void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
   assertion( value>=0 );
   _deadlockTimeOut = std::chrono::seconds(value);
+  if (value==0) {
+    logInfo( "setDeadlockTimeOut(int)", "set deadlock timeout to " << _deadlockTimeOut.count() << " and hence disabled timeout checks" );
+  }
 }
 
 

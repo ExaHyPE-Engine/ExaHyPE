@@ -52,6 +52,14 @@ class LeapfrogFixedInteractionRadius(Particle):
   vertex to which a particular is associated, and you have the localParticles.
   This is a vector of pointers in this particular case.
   
+ 
+  ## Attributes
+  
+  name: String
+    To be in line with other conventions, I recommend you start with an 
+    uppercase letter. This has to be a valid C++ identifier, i.e. don't 
+    use any special symbols besides an underscore.
+   
   @see peano4::datamanagement::CellMarker
   @see peano4::datamanagement::VertexMarker
   
@@ -126,19 +134,14 @@ class LeapfrogFixedInteractionRadius(Particle):
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
         touch_vertex_first_time_kernel = self.touch_particles_of_set_first_time_kernel,
-        cell_kernel                    = """
-                                         ::swift2::kernels::genericInteraction<globaldata::{}>( 
+        cell_kernel                    = """::swift2::kernels::gravity::computeGravitationalForce( 
                                            localParticles, 
-                                           activeParticles,
-                                           [&] (globaldata::{}* localParticle, const globaldata::{} * const globalParticle) -> void {{
-                                             {}
-                                           }}
-                                         );
-                                         """.format(self.name, self.name, self.name, self.particle_particle_interaction_over_particle_sets_kernel),
+                                           activeParticles
+                                         );""",
         touch_vertex_last_time_kernel  = self.touch_particles_of_set_last_time_kernel,
         includes                       = """
                                          #include "Constants.h"
-                                         #include "swift2/kernels/ParticleParticleInteraction.h"
+                                         #include "swift2/kernels/gravity/TwoBodyProblem.h"
                                          """,
       ),
       AlgorithmStep( 
@@ -180,19 +183,14 @@ class LeapfrogFixedInteractionRadius(Particle):
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
         touch_vertex_first_time_kernel = self.touch_particles_of_set_first_time_kernel,
-        cell_kernel                    = """
-                                         ::swift2::kernels::genericInteraction<globaldata::{}>( 
+        cell_kernel                    = """::swift2::kernels::gravity::computeGravitationalForce( 
                                            localParticles, 
-                                           activeParticles,
-                                           [&] (globaldata::{}* localParticle, const globaldata::{} * const globalParticle) -> void {{
-                                             {}
-                                           }}
-                                         );
-                                         """.format(self.name, self.name, self.name, self.particle_particle_interaction_over_particle_sets_kernel),
+                                           activeParticles
+                                         );""",
         touch_vertex_last_time_kernel  = self.touch_particles_of_set_last_time_kernel,
         includes                       = """
                                          #include "Constants.h"
-                                         #include "swift2/kernels/ParticleParticleInteraction.h"
+                                         #include "swift2/kernels/gravity/TwoBodyProblem.h"
                                          """,
       ),
       AlgorithmStep( 

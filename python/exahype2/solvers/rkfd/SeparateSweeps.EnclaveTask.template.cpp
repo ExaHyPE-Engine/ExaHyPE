@@ -21,6 +21,7 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #include "tarch/multicore/smartScheduling.h"
+#include "tarch/multicore/otter.h"
 
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
@@ -49,6 +50,18 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   double* __restrict__                        targetPatch
 ) {
   ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
+
+  {% if STATELESS_PDE_TERMS %}
+  if ( repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
+      marker.x(),
+      marker.h(),
+      t,
+      dt
+  )) {
+    ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+  }
+  else
+  {% endif %}
 
   ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}}
 
@@ -354,7 +367,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   bool foundOffloadingBranch = false;
 
-  otterParallelBegin();
 
   #if defined(GPUOffloadingOMP)
   if (targetDevice>=0) {
@@ -382,7 +394,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
   }
 
-  otterParallelEnd();
 
   //
   // ==================

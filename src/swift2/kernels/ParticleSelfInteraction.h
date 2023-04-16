@@ -160,7 +160,8 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void flagBoundaryParticles(
-      const ParticleContainer&  localParticles
+      const ParticleContainer&  localParticles,
+      const double nparts
     );
 
 

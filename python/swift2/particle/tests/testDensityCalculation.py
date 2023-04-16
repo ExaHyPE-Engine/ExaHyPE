@@ -56,9 +56,8 @@ class testDensityCalculation(Particle):
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
         touch_vertex_first_time_kernel = """
-                                         ::swift2::kernels::prepareDensityCalculation<globaldata::{}>( localParticles );
-                                         """.format(self.name),
-
+                                         ::swift2::kernels::prepareDensityCalculation( localParticles );
+                                         """,
         cell_kernel                    = """
                                          ::swift2::kernels::computeDensity( 
                                            localParticles, 
@@ -68,14 +67,13 @@ class testDensityCalculation(Particle):
                                          """.format(self.hydroDimensions),
 
         touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength<globaldata::{}>(
+                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
                                              localParticles,
                                              {},
                                              {},
                                              {}
                                              );
-                                         """.format(self.name,
-                                                    self.hydroDimensions,
+                                         """.format(self.hydroDimensions,
                                                     self.etaFactor,
                                                     self.alphaAV),
  
@@ -141,13 +139,11 @@ class testDensityCalculation(Particle):
     self.rho_dh   = dastgen2.attributes.Double("rho_dh")
     self.hleft    = dastgen2.attributes.Double("hLeft")
     self.hright   = dastgen2.attributes.Double("hRight")
-    self.Omega    = dastgen2.attributes.Double("Omega")        # PHANTOM SPH (~1/f)
     self.data.add_attribute(self.f)
     self.data.add_attribute(self.wcount_dh)
     self.data.add_attribute(self.rho_dh)
     self.data.add_attribute(self.hleft)
     self.data.add_attribute(self.hright)
-    self.data.add_attribute(self.Omega)
 
     # Newton-Raphson iterations ----------------------------------------------------
     self.smoothL_prev   = dastgen2.attributes.Double("smoothingLengthPrevious")

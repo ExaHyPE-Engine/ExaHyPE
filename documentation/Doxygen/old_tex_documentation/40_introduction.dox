@@ -1,0 +1,23 @@
+/**
+
+\page introduction_40
+
+Peano's core is a plain C++ application using MPI plus a shared memory
+library. It can add support for HDF5, vtk, and so forth; depends how
+your code is configured. These underlying libraries/APIs are hidden away
+from user code by the core. At the same time, we provide a Python API
+which hides away most of the core. At one point, you will however be
+required to program  directly with C++.
+
+In the following sections, I run through some of the C++ techniques and
+features of . Many users will never see the majority of them, as they
+are hidden away---in particular if you work with high-level wrappers
+around  such as . However, some low-level stuff is interesting for
+everybody: How to use the logging and tracing, what support of unit
+tests does exist, or how to program dimension-generic loops. Other stuff
+is more techi, and serves more as a documentation guideline for core
+developers. Yet, they also provide rationale why certain things in
+ behave the way they do, once you have a large application up and
+running.
+
+*/

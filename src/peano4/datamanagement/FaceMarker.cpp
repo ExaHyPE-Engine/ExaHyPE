@@ -149,6 +149,20 @@ tarch::la::Vector<Dimensions,int>  peano4::datamanagement::FaceMarker::getRelati
 }
 
 
+tarch::la::Vector<Dimensions-1,int>  peano4::datamanagement::FaceMarker::getRelativePositionWithinFatherFace() const {
+  tarch::la::Vector<Dimensions-1,int> result;
+  const int normal = getSelectedFaceNumber()%Dimensions;
+  int pos = 0;
+  for(int d=0; d<Dimensions; d++){
+    if(d!=normal){
+      result[pos] = _relativePositionOfCellWithinFatherCell[d];
+      pos++;
+    }
+  }
+  return result;
+}
+
+
 bool peano4::datamanagement::FaceMarker::isInteriorFaceWithinPatch() const {
   int normal             = getSelectedFaceNumber() % Dimensions;
   return

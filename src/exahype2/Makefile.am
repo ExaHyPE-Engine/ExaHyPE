@@ -15,19 +15,13 @@ ExaHyPE2Sources = \
   NonCriticalAssertions.cpp \
   PlotFilter.cpp \
   RefinementControl.cpp \
+  RefinementControlService.cpp \
   TimeStepping.cpp \
   UserInterface.cpp \
   UnitTests.cpp \
-  aderdg/CorrectorAoS.cpp \
-  aderdg/Generic.cpp \
-  aderdg/KernelUtils.cpp \
-  aderdg/PredictorAoS.cpp \
-  aderdg/RiemannAoS.cpp \
-  aderdg/RusanovNonlinearAoS.cpp \
-  aderdg/tests/ADERDGTest.cpp \
-  aderdg_kernels/Basis/GaussLegendreBasis.cpp \
-  aderdg_kernels/Basis/GaussLobattoBasis.cpp \
-  aderdg_kernels/AderUtils.cpp \
+  aderdg/kernels/Basis/GaussLegendreBasis.cpp \
+  aderdg/kernels/Basis/GaussLobattoBasis.cpp \
+  aderdg/kernels/AderUtils.cpp \
   dg/BoundaryConditions.cpp \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
@@ -47,6 +41,8 @@ ExaHyPE2Sources = \
   fd/PatchUtils.cpp \
   fd/LoopBody.cpp \
   fd/fd4/FD4_patchwise_functors.cpp \
+  fd/tests/SommerfeldBCTest.cpp\
+  fd/fd4/LoopBody.cpp \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PatchAccess.cpp \

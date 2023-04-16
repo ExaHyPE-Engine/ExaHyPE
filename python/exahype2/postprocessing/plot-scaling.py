@@ -6,6 +6,8 @@ import os
 import exahype2.postprocessing
 import sys
 
+from tkinter import Tcl
+import numpy as np
 
 import matplotlib.pyplot as plt
 
@@ -25,7 +27,20 @@ def add_linear_speedup_trend_line():
     
     plt.plot( [1,max_x], [max_serial_y,max_serial_y/max_x], "--", color="#ababab" )
     plt.plot( [1,max_x], [min_serial_y,min_serial_y/max_x], "--", color="#ababab" )
+
+
+def compute_min_max(x_data, y_data):
+    global max_x        
+    global max_serial_y
+    global min_serial_y
+
+    if len(x_data)>0:
+      max_x        = max(max_x,x_data[-1])
     
+    for i in range(0,len(x_data)):
+      serialised_value = y_data[i] * x_data[i]
+      max_serial_y = max(max_serial_y,serialised_value)
+      min_serial_y = min(min_serial_y,serialised_value)
 
 
 def visualise( data_points, symbol_counter, colour_counter):
@@ -35,12 +50,9 @@ def visualise( data_points, symbol_counter, colour_counter):
     global min_serial_y
     
     (x_data, y_data) = exahype2.postprocessing.extract_times_per_step( data_points, args.max_cores_per_rank )    
-    
-    if len(x_data)>0:
-      max_x        = max(max_x,x_data[-1])
-      max_serial_y = max(max_serial_y,y_data[0])
-      min_serial_y = min(min_serial_y,y_data[0])
-    
+
+    compute_min_max(x_data, y_data)
+        
     if args.plot_efficiency:
       normalised_fasted_time = y_data[0] * x_data[0]
       for i in range(0,len(x_data)):
@@ -67,6 +79,9 @@ def visualise( data_points, symbol_counter, colour_counter):
         raise Exception( "Unable to extract " + str(args.file.index(file)) + "th entry from " + args.labels + ": " + str(args.labels.split(",")) )
       plt.plot( x_data, y_data, symbol, label=my_label, color=my_color, markevery=my_markevery )
     
+      # Save plot data into a file
+      if( args.export_data ): 
+        np.savetxt(args.output + ".txt", np.c_[x_data,y_data], fmt=['%1.f','%1.2f'])
 
 
 if __name__ == "__main__":
@@ -86,6 +101,9 @@ A generic script to create speedup plots.
   parser.add_argument("--labels",             dest="labels",          help="Plot labels. You can use $...$ to use the math mode, but you will have to escape the dollars with a \\. Separate with , and ensure there's exactly one entry per file", default="" )
   parser.add_argument("--output",             dest="output",          help="output file prefix (file name extension is added automatically)", default="" )
   parser.add_argument("--solver-name",        dest="solver_name",     help="Solver name (leave blank if there is only one solver)", default="" )
+  parser.add_argument("--export-data",        dest="export_data",     help="Export plot data into a txt file", action="store_true")
+  parser.add_argument("--sort-files",         dest="sort_files",      help="Switch file sorting (natural sort)", default=True )
+  parser.add_argument("--title",              dest="title",           help="Title of plot", default=None )
   args = parser.parse_args()
 
   max_x        = -1
@@ -122,6 +140,9 @@ A generic script to create speedup plots.
       try:
         tar = tarfile.open( file, "r:gz" )
         data_files = tar.getnames()
+
+        # Sort input data
+        if args.sort_files: data_files = Tcl().call('lsort', '-dict', data_files)
     
         data_points = []
         for data_file in data_files:
@@ -184,5 +205,9 @@ A generic script to create speedup plots.
   output_file_name = args.output
   if output_file_name=="":
       output_file_name = args.file[0].replace( ".tar.gz", "").replace( ".tar", "" )
+      
+  if args.title!=None:
+    plt.title( args.title )
+     
   plt.savefig( output_file_name + ".pdf" )
   plt.savefig( output_file_name + ".png" )

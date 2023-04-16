@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   sodipodi:docname="generic-python-workflow.svg"
+   inkscape:export-filename="generic-python-workflow.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="0.75811588"
+     inkscape:cx="263.15238"
+     inkscape:cy="561.91937"
+     inkscape:window-width="1920"
+     inkscape:window-height="1005"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#ffffff;stroke:#000000;stroke-width:0.705556;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none;paint-order:fill markers stroke"
+       id="rect234"
+       width="147.62938"
+       height="19.564314"
+       x="34.136017"
+       y="14.838961"
+       ry="2.5313337" />
+    <text
+       xml:space="preserve"
+       style="font-size:9.525px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="42.233246"
+       y="27.699038"
+       id="text844"><tspan
+         sodipodi:role="line"
+         id="tspan842"
+         style="stroke-width:0.264583"
+         x="42.233246"
+         y="27.699038">Domain-specific Python API</tspan></text>
+    <rect
+       style="fill:#ffffff;stroke:#000000;stroke-width:0.705556;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none;paint-order:fill markers stroke"
+       id="rect234-3"
+       width="147.62938"
+       height="19.564314"
+       x="34.113537"
+       y="61.962208"
+       ry="2.5313337" />
+    <text
+       xml:space="preserve"
+       style="font-size:9.525px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="57.556618"
+       y="74.822281"
+       id="text844-6"><tspan
+         sodipodi:role="line"
+         id="tspan842-7"
+         style="stroke-width:0.264583"
+         x="57.556618"
+         y="74.822281">Peano 4 Python project</tspan></text>
+    <rect
+       style="fill:#ffffff;stroke:#000000;stroke-width:0.705556;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none;paint-order:fill markers stroke"
+       id="rect234-3-5"
+       width="147.62938"
+       height="19.564314"
+       x="33.811829"
+       y="110.06187"
+       ry="2.5313337" />
+    <text
+       xml:space="preserve"
+       style="font-size:9.525px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="57.25491"
+       y="122.92192"
+       id="text844-6-3"><tspan
+         sodipodi:role="line"
+         id="tspan842-7-5"
+         style="stroke-width:0.264583"
+         x="57.25491"
+         y="122.92192">Peano 4 User code (C++)</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 96.889915,39.419281 v 7.383732 H 89.392994 L 102.16579,59.57581 114.46341,47.278194 h -6.92595 v -8.650507"
+       id="path2629" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 96.835548,85.811691 v 7.383732 h -7.496921 l 12.772793,12.772797 12.29762,-12.297616 h -6.92595 v -8.650507"
+       id="path2629-6" />
+    <text
+       xml:space="preserve"
+       style="font-size:9.525px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="119.57261"
+       y="48.613537"
+       id="text2665"><tspan
+         sodipodi:role="line"
+         id="tspan2663"
+         style="stroke-width:0.264583"
+         x="119.57261"
+         y="48.613537">&lt;&lt;create&gt;&gt;</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:9.525px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="122.37112"
+       y="98.900017"
+       id="text2665-2"><tspan
+         sodipodi:role="line"
+         id="tspan2663-9"
+         style="stroke-width:0.264583"
+         x="122.37112"
+         y="98.900017">&lt;&lt;create&gt;&gt;</tspan></text>
+  </g>
+</svg>

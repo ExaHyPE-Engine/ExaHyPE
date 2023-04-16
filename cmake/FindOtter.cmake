@@ -1,6 +1,6 @@
 include(FindPackageHandleStandardArgs)
 
-find_path(Otter_INCLUDE_DIR NAMES otter/otter-serial.h)
+find_path(Otter_INCLUDE_DIR NAMES otter/otter-task-graph.h)
 
 # Provide find library first with *.a to prefer static libraries
 # libotter-ompt requires OpenMP standard at least 5.0
@@ -8,14 +8,14 @@ if(OpenMP_FOUND)
   if(OpenMP_CXX_VERSION VERSION_LESS "5.0")
     message(WARNING "Otter with OpenMP Tracing requires OpenMP 5.0 or newer.\
 OpenMP ${OpenMP_CXX_VERSION} was provided, reverting to serial otter")
-    find_library(Otter_LIBRARY NAMES libotter-serial.a otter-serial)
+    find_library(Otter_LIBRARY NAMES libotter-task-graph.a otter-task-graph)
   else()
     #find_library(Otter_LIBRARY NAMES libotter-ompt.a otter-ompt)
-    find_library(Otter_LIBRARY NAMES libotter-serial.a otter-serial)
+    find_library(Otter_LIBRARY NAMES libotter-task-graph.a otter-task-graph)
   endif()
 else()
-  find_library(Otter_LIBRARY NAMES libotter-serial.a otter-serial)
-  message(STATUS "Link to otter-serial as OpenMP Is not Found")
+  find_library(Otter_LIBRARY NAMES libotter-task-graph.a otter-task-graph)
+  message(STATUS "Link to otter-task-graph as OpenMP Is not Found")
 endif()
 
 find_package_handle_standard_args(Otter

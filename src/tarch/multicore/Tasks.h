@@ -2,14 +2,17 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+
 #include "multicore.h"
 #include "tarch/multicore/orchestration/Strategy.h"
+
 
 #include <functional>
 #include <vector>
 #include <list>
 #include <string>
 #include <limits>
+
 
 namespace tarch {
   /**
@@ -48,6 +51,7 @@ namespace tarch {
    * tasks on-the-fly. We need the thread-local queues to be fast. With only one global
    * queue, we found that a lot of codes basically compete for the locks to spanwn tasks
    * into this queue.
+   *
    *
    * @see tarch::multicore::orchestration::StrategyFactory
    */
@@ -190,6 +194,7 @@ namespace tarch {
         virtual bool isSmartMPITask() const;
     };
 
+
     /**
      * Helper class if you wanna administer tasks with in a queue
      *
@@ -218,6 +223,7 @@ namespace tarch {
         bool run() override;
     };
 
+
     /**
      * Frequently used implementation for job with a functor.
      */
@@ -234,12 +240,14 @@ namespace tarch {
         bool run() override;
     };
 
+
     /**
      * @param threadCount -1 if you are interested in global number of tasks or a
      *   non-negative integer if you are only interested in one particular thread
      *   and its specific tasks.
      */
     int getNumberOfPendingTasks(int threadCount);
+
 
     /**
      * Process a few tasks from my backlog of tasks
@@ -266,6 +274,7 @@ namespace tarch {
      */
     bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max(), bool fifo=true);
 
+
     /**
      * Spawns a single task in a non-blocking fashion
      *
@@ -280,10 +289,12 @@ namespace tarch {
      * task thus is mapped 1:1 to OpenMP, e.g. Otherwise, the routine does take the task and
      * enqueues is the local queue nonblockingTasks.
      *
+     *
      * <h2> SmartMPI </h2>
      *
      * If you compile with SmartMPI, this is the one and only point where the control flow
      * diverges: If a task is smart, the routine takes the task and forwards it to SmartMPI.
+     *
      *
      * @see tarch::multicore::spawnAndWait()
      * @see processPendingTasks(int)
@@ -336,7 +347,77 @@ namespace tarch {
       void deferRunningThreadAndContinueWithOtherTasks();
     }
 
+
     namespace internal {
+      /**
+       * Progression routine within spawnAndWaitAsExplicitTasksWithPolling()
+       *
+       * This function has to be called within spawnAndWaitAsExplicitTasksWithPolling()
+       * whenever a thread has finished its local partition and should now
+       * process further tasks. The polling thing consists of three parts:
+       *
+       * - A guard loop ensures that we don't poll too long or too often.
+       * - First, I find out which thread I'm running on and how many tasks
+       *   I may fuse. These two things potentially are expensive to find out
+       *   and they don't change, so I do this only once.
+       * - The actual loop body ensures that we progress tasks.
+       *
+       *
+       * ## Guard loop
+       *
+       * The guard loop consists of three checks that all have to hold:
+       *
+       * - If the number of pending (BSP) tasks equals zero, we terminate
+       *   immediately. That is, we only continue to progress while another
+       *   thread traverses a subdomain and hence might produce new tasks.
+       * - If the number of pending tasks is bigger or equal to the number
+       *   of physical threads, we terminate immediately. This can happen
+       *   if we have more subdomains that have to be mapped onto tasks than
+       *   we have actual threads. So better terminate this task immediately
+       *   to give the runtime the opportunity to process real compute tasks.
+       * - If not all tasks have been spawned yet, we also terminate
+       *   immediately. If the runtime hasn't had the opportunity yet to
+       *   kick off the other tasks, we better ensure that happens asap.
+       *
+       * I originally wanted to integrate this guard loop into the routine.
+       * However, that does not work. The task loop is defined over some
+       * atomics, and the type of such atomics depends on the chosen
+       * environment. They have a different type for OpenMP vs TBB, e.g. So
+       * the user has to wrap the function call into a code snippet similar
+       * to
+       *
+       *          bool continueToProcessPendingTasks =
+       *            pendingTasks>0
+       *            and
+       *            pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
+       *            and
+       *            spawnedTasks==NumberOfThreads;
+       *          while ( continueToProcessPendingTasks ) {
+       *            continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+       *             strategy
+       *            );
+       *          }
+       *
+       * This snippet highlights a fourth consideration: If we have tried to
+       * process a pending task but failed, then we terminate as well. This is
+       * not necessary for all solvers, but
+       *
+       * - if other compute kernels/tasks fork further, an active polling keeps
+       *   the current thread busy, i.e. strips those other kernels off the
+       *   opportunity to grab threads in return. So active polling severely
+       *   slows down the calculation. In the worst case, it leads to deadlocks.
+       * - if there is an extreme ill-balance, a lot of threads will end up
+       *   competing for the global lock. In return, the task still computing
+       *   will struggle to enqueue new tasks rapidly. Once again, aggressive
+       *   polling would slow down the simulation even though it should, in
+       *   theory, be faster.
+       *
+       * @return Has processed some tasks
+       */
+      bool progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+        tarch::multicore::orchestration::Strategy*     strategy
+      );
+
       int  mapPendingTasksOntoNativeTasks(int maxTasks);
 
       /**
@@ -362,7 +443,7 @@ namespace tarch {
        * way better to work with one queue per thread, so we can spawn enclave
        * tasks without any additional locks.
        */
-      void configureInternalTaskQueues(int numerOfThreads);
+      void configureInternalTaskQueues(int numberOfTasks);
 
       /**
        * Commit local task queues into global queue
@@ -404,6 +485,7 @@ namespace tarch {
        * So I avoid repeated locks, lock once and then flush all of the task queues
        * in one go before I release the lock.
        *
+       *
        * @param threadNumber -1 if you want to flush all thread buffers
        */
       void copyInternalTaskQueuesOverIntoGlobalQueue(int threadNumber);
@@ -418,4 +500,8 @@ namespace tarch {
   }
 }
 
+
 bool operator<( const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs );
+
+
+

@@ -1,3 +1,5 @@
+#pragma once
+
 namespace {
   /**
    * A lot of the loop routines expect a voxel (or face) index which is

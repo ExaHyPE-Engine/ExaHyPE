@@ -1,6 +1,8 @@
+// Copyright (C) 2009 Technische Universitaet Muenchen
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
+
 
 namespace tarch {
   namespace multicore {
@@ -8,6 +10,7 @@ namespace tarch {
     class RecursiveLock;
   }
 }
+
 
 /**
  * Create a lock around a boolean semaphore region
@@ -18,9 +21,8 @@ class tarch::multicore::RecursiveLock {
   private:
     RecursiveSemaphore&  _semaphore;
     bool                 _lockIsAquired;
-
   public:
-    RecursiveLock(tarch::multicore::RecursiveSemaphore& semaphore, bool aquireLockImmediately = true);
+    RecursiveLock( tarch::multicore::RecursiveSemaphore& semaphore, bool aquireLockImmediately = true );
     ~RecursiveLock();
 
     bool tryLock();
@@ -28,3 +30,4 @@ class tarch::multicore::RecursiveLock {
     void lock();
     void free();
 };
+
