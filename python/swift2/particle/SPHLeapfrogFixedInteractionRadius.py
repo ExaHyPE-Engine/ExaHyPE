@@ -106,8 +106,10 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
     # SPH parameters (default values)
     self._hydroDimensions = dimensions_hydro
+    # TODO MLADEN: temporary for debugging
     #  self._eta_factor = 1.2348
     self._eta_factor = 2.
+    # TODO MLADEN: Check these values later. Looks like this is only valid for specific setups.
     self._h_hydro_min = 1e-6
     self._h_hydro_max = 1.0 / 3.0 / 2    # Approximated value for coarsest grid level
     self._h_tolerance = 1e-4
@@ -227,7 +229,326 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self.data.add_attribute(self.Ncount)
     self.data.add_attribute(self.part_id)
 
-    pass
+    # Algorithm Steps --------------------------------------------------------------
+    self.algorithm_steps_dict = {}
+    self._setup_algorithm_steps_dict()
+
+    return
+
+  def _setup_algorithm_steps_dict(self):
+    """
+    Sets up a dict of the algorithm steps for this scheme
+    so they can be accessed at various points.
+    """
+
+    flagBoundaryParticlesStep = AlgorithmStep(
+      name                           = "FlagBoundaryParticles",
+      dependencies                   = AlgorithmStep.Dependencies.SELF,
+      effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+      touch_vertex_first_time_kernel = """
+                                       """,
+      touch_vertex_last_time_kernel  =
+                  """::swift2::kernels::flagBoundaryParticles(localParticles, {0}, {1}, {2});""".format(
+                      "::".join(self._swift_project_namespace)+"::HYDRO_PART_NUMBER",
+                      "::".join(self._swift_project_namespace)+"::DomainSize",
+                      "::".join(self._swift_project_namespace)+"::DomainOffset",
+                      ),
+      includes                       = """
+                                       #include "Constants.h"
+                                       #include "swift2/kernels/ParticleParticleInteraction.h"
+                                       #include "swift2/kernels/ParticleSelfInteraction.h"
+                                       #include "swift2/kernels/kernel_hydro.h"
+                                       #include "swift2/kernels/equation_of_state.h"
+                                       """,
+    )
+    self.algorithm_steps_dict["FlagBoundaryParticles"] = flagBoundaryParticlesStep
+
+
+    densityWithConstantSmoothingLengthFirst = AlgorithmStep(
+      name                           = "DensityWithConstantSmoothingLengthFirst",
+      dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
+      effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+      touch_vertex_first_time_kernel = """
+                                       ::swift2::kernels::prepareDensityCalculation( localParticles );
+                                       """,
+      cell_kernel                    = """
+                                       ::swift2::kernels::computeDensity(
+                                         localParticles,
+                                         activeParticles,
+                                         {}
+                                       );
+                                       """.format(self._hydroDimensions),
+
+      touch_vertex_last_time_kernel  = """
+                                       ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
+                                           localParticles,
+                                           {},
+                                           {},
+                                           {}
+                                           );
+                                       """.format(self._hydroDimensions,
+                                                  self._eta_factor,
+                                                  self._alpha_av),
+
+      includes                       = """
+                                       #include "Constants.h"
+                                       #include "swift2/kernels/ParticleParticleInteraction.h"
+                                       #include "swift2/kernels/ParticleSelfInteraction.h"
+                                       #include "swift2/kernels/kernel_hydro.h"
+                                       #include "swift2/kernels/equation_of_state.h"
+                                       """,
+    )
+    self.algorithm_steps_dict["DensityWithConstantSmoothingLengthFirst"] = densityWithConstantSmoothingLengthFirst
+
+    forceFirst = AlgorithmStep(
+      name                           = "ForceLoopInitial",
+      dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
+      effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+      touch_vertex_first_time_kernel = """
+                                       ::swift2::kernels::prepareHydroForceCalculation( localParticles );
+                                       """,
+
+      cell_kernel                    = """
+                                       ::swift2::kernels::computeHydroForce(
+                                         localParticles,
+                                         activeParticles,
+                                         {},
+                                         {}
+                                       );
+                                       """.format(self._hydroDimensions,
+                                                  self._beta_av),
+
+      touch_vertex_last_time_kernel  = """
+                                       ::swift2::kernels::endHydroForceCalculation(
+                                           localParticles,
+                                           {}
+                                           );
+                                       """.format(self._hydroDimensions),
+
+      includes                       = """
+                                       #include "Constants.h"
+                                       #include "swift2/kernels/ParticleParticleInteraction.h"
+                                       #include "swift2/kernels/ParticleSelfInteraction.h"
+                                       #include "swift2/kernels/kernel_hydro.h"
+                                       #include "swift2/kernels/equation_of_state.h"
+                                       """,
+    )
+    self.algorithm_steps_dict["ForceFirst"] = forceFirst
+
+    kick1 = AlgorithmStep(
+      name                           = "Kick1",
+      dependencies                   = AlgorithmStep.Dependencies.SELF,
+      effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+      touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+      touch_vertex_last_time_kernel  =
+                  """::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
+                      localParticles, 1, {} );""".format(self._is_sph),
+      prepare_traversal_kernel       =
+                  """::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>({},{},{});""".format(self._name,
+                                                                                                            self._cfl_factor,
+                                                                                                            self._initial_time_step_size,
+                                                                                                            self._adjustTimeStepSize),
+      includes                       = """
+                                       #include "Constants.h"
+                                       #include "swift2/timestepping/Leapfrog.h"
+                                       #include "swift2/timestepping/GlobalTimeStepping.h"
+                                       #include "swift2/timestepping/TimeStepping.h"
+                                       #include "swift2/kernels/kernel_hydro.h"
+                                       #include "swift2/kernels/equation_of_state.h"
+                                       """
+    )
+    self.algorithm_steps_dict["Kick1"] = kick1
+
+    kick1Extra = AlgorithmStep(
+      name                           = "Kick1Extra",
+      dependencies                   = AlgorithmStep.Dependencies.SELF,
+      effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+      touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+      touch_vertex_last_time_kernel  =
+                  """::swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
+                      localParticles );""",
+      includes                       = """
+                                       #include "Constants.h"
+                                       #include "swift2/timestepping/Leapfrog.h"
+                                       #include "swift2/timestepping/GlobalTimeStepping.h"
+                                       #include "swift2/timestepping/TimeStepping.h"
+                                       #include "swift2/kernels/kernel_hydro.h"
+                                       #include "swift2/kernels/equation_of_state.h"
+                                       """
+    )
+    self.algorithm_steps_dict["Kick1Extra"] = kick1Extra
+
+    drift = AlgorithmStep(
+      name                           = "Drift",
+      dependencies                   = AlgorithmStep.Dependencies.SELF,
+      effect                         = AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
+      touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+      touch_vertex_last_time_kernel  = """::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( localParticles );""",
+      includes                       = """
+                                       #include "Constants.h"
+                                       #include "swift2/timestepping/Leapfrog.h"
+                                       #include "swift2/timestepping/GlobalTimeStepping.h"
+                                       #include "swift2/timestepping/TimeStepping.h"
+                                       #include "swift2/kernels/kernel_hydro.h"
+                                       #include "swift2/kernels/equation_of_state.h"
+                                       """
+    )
+
+    self.algorithm_steps_dict["Drift"] = drift
+
+    predictHydro = AlgorithmStep(
+      name                           = "PredictHydro",
+      dependencies                   = AlgorithmStep.Dependencies.SELF,
+      effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+      touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+      touch_vertex_last_time_kernel  =
+                  """::swift2::timestepping::computePredictHydro(
+                      localParticles, {} );""".format(self._hydroDimensions),
+      includes                       = """
+                                       #include "Constants.h"
+                                       #include "swift2/timestepping/Leapfrog.h"
+                                       #include "swift2/timestepping/GlobalTimeStepping.h"
+                                       #include "swift2/timestepping/TimeStepping.h"
+                                       #include "swift2/kernels/kernel_hydro.h"
+                                       #include "swift2/kernels/equation_of_state.h"
+                                       """
+    )
+    self.algorithm_steps_dict["PredictHydro"] = predictHydro
+
+    densityWithConstantSmoothingLength = AlgorithmStep(
+      name                           = "DensityLoopWithConstantSmoothingLength",
+      dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
+      effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+      touch_vertex_first_time_kernel = """
+                                       ::swift2::kernels::prepareDensityCalculation( localParticles );
+                                       """,
+
+      cell_kernel                    = """
+                                       ::swift2::kernels::computeDensity(
+                                         localParticles,
+                                         activeParticles,
+                                         {}
+                                       );
+                                       """.format(self._hydroDimensions),
+
+      touch_vertex_last_time_kernel  = """
+                                       ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
+                                           localParticles,
+                                           {},
+                                           {},
+                                           {}
+                                           );
+                                       """.format(self._hydroDimensions,
+                                                  self._eta_factor,
+                                                  self._alpha_av),
+
+      includes                       = """
+                                       #include "Constants.h"
+                                       #include "swift2/kernels/ParticleParticleInteraction.h"
+                                       #include "swift2/kernels/ParticleSelfInteraction.h"
+                                       #include "swift2/kernels/kernel_hydro.h"
+                                       #include "swift2/kernels/equation_of_state.h"
+                                       """,
+    )
+    self.algorithm_steps_dict["Density"] = densityWithConstantSmoothingLength
+
+    force = AlgorithmStep(
+      name                           = "ForceLoop",
+      dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
+      effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+      touch_vertex_first_time_kernel = """
+                                       ::swift2::kernels::prepareHydroForceCalculation( localParticles );
+                                       """,
+
+      cell_kernel                    = """
+                                       ::swift2::kernels::computeHydroForce(
+                                         localParticles,
+                                         activeParticles,
+                                         {},
+                                         {}
+                                       );
+                                       """.format(self._hydroDimensions,
+                                                  self._beta_av),
+
+      touch_vertex_last_time_kernel  = """
+                                       ::swift2::kernels::endHydroForceCalculation(
+                                           localParticles,
+                                           {}
+                                           );
+                                       """.format(self._hydroDimensions),
+
+      includes                       = """
+                                       #include "Constants.h"
+                                       #include "swift2/kernels/ParticleParticleInteraction.h"
+                                       #include "swift2/kernels/ParticleSelfInteraction.h"
+                                       #include "swift2/kernels/kernel_hydro.h"
+                                       #include "swift2/kernels/equation_of_state.h"
+                                       """,
+    )
+    self.algorithm_steps_dict["Force"] = force
+
+    kick2 = AlgorithmStep(
+      name                           = "Kick2",
+      dependencies                   = AlgorithmStep.Dependencies.SELF,
+      effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+      touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+      touch_vertex_last_time_kernel  =
+                  """::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
+                      localParticles, 2, {} );""".format(self._is_sph),
+      includes                       = """
+                                       #include "Constants.h"
+                                       #include "swift2/timestepping/Leapfrog.h"
+                                       #include "swift2/timestepping/GlobalTimeStepping.h"
+                                       #include "swift2/timestepping/TimeStepping.h"
+                                       #include "swift2/kernels/kernel_hydro.h"
+                                       #include "swift2/kernels/equation_of_state.h"
+                                       """
+    )
+    self.algorithm_steps_dict["Kick2"] = kick2
+
+    kick2Extra = AlgorithmStep(
+      name                           = "KickExtra2",
+      dependencies                   = AlgorithmStep.Dependencies.SELF,
+      effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+      touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+      touch_vertex_last_time_kernel  =
+                  """::swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
+                      localParticles );""",
+      includes                       = """
+                                       #include "Constants.h"
+                                       #include "swift2/timestepping/Leapfrog.h"
+                                       #include "swift2/timestepping/GlobalTimeStepping.h"
+                                       #include "swift2/timestepping/TimeStepping.h"
+                                       #include "swift2/kernels/kernel_hydro.h"
+                                       #include "swift2/kernels/equation_of_state.h"
+                                       """
+    )
+    self.algorithm_steps_dict["Kick2Extra"] = kick2Extra
+
+    reduceGlobals = AlgorithmStep(
+      name                           = "ReduceGlobalQuantities",
+      dependencies                   = AlgorithmStep.Dependencies.SELF,
+      effect                         = AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
+      cell_kernel                    = """::swift2::statistics::reduceVelocityAndCutOffRadius( localParticles );""",
+      prepare_traversal_kernel       = """
+                                       globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
+                                       globaldata::{PARTICLE}::getSpecies().clearVelocity();
+                                       """.replace( "{PARTICLE}", self._name ),
+      unprepare_traversal_kernel     = """
+                                       globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
+                                       ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
+                                       """.replace( "{PARTICLE}", self._name ),
+      includes                       = """
+                                       #include "Constants.h"
+                                       #include "swift2/statistics/Reports.h"
+                                       #include "swift2/statistics/Statistics.h"
+                                       #include "swift2/kernels/kernel_hydro.h"
+                                       #include "swift2/kernels/equation_of_state.h"
+                                       """
+    )
+    self.algorithm_steps_dict["ReduceGlobalQuantities"] = reduceGlobals
+
+    return
 
 
   def algorithm_steps(self):
@@ -239,291 +560,25 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     second half of the velocity update is done.
     Some variations of this KDK form re-arrange the steps executed per timestep
     to avoid a second force loop.
+
+    Definitions of the algorithm steps stored in the algorithm_steps_dict are
+    placed in _setup_algorithm_steps_dict(self). The dict is set up during
+    instantiation of this class.
     """
 
     return [
-      AlgorithmStep(
-        name                           = "FlagBoundaryParticles",
-        dependencies                   = AlgorithmStep.Dependencies.SELF,
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel = """
-                                         """,
-        touch_vertex_last_time_kernel  =
-                    #  """::swift2::kernels::flagBoundaryParticles(localParticles, {0}, {{ {1} }}, {{ {2} }});""".format(
-                    """::swift2::kernels::flagBoundaryParticles(localParticles, {0}, {1}, {2});""".format(
-                        "::".join(self._swift_project_namespace)+"::HYDRO_PART_NUMBER",
-                        "::".join(self._swift_project_namespace)+"::DomainSize",
-                        "::".join(self._swift_project_namespace)+"::DomainOffset",
-                        ),
-        includes                       = """
-                                         #include "Constants.h"
-                                         #include "swift2/kernels/ParticleParticleInteraction.h"
-                                         #include "swift2/kernels/ParticleSelfInteraction.h"
-                                         #include "swift2/kernels/kernel_hydro.h"
-                                         #include "swift2/kernels/equation_of_state.h"
-                                         """,
-      ),
-      AlgorithmStep(
-        name                           = "DensityLoopWithConstantSmoothingLengthInitial",
-        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel = """
-                                         ::swift2::kernels::prepareDensityCalculation( localParticles );
-                                         """,
-        cell_kernel                    = """
-                                         ::swift2::kernels::computeDensity(
-                                           localParticles,
-                                           activeParticles,
-                                           {}
-                                         );
-                                         """.format(self._hydroDimensions),
-
-        touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
-                                             localParticles,
-                                             {},
-                                             {},
-                                             {}
-                                             );
-                                         """.format(self._hydroDimensions,
-                                                    self._eta_factor,
-                                                    self._alpha_av),
-
-        includes                       = """
-                                         #include "Constants.h"
-                                         #include "swift2/kernels/ParticleParticleInteraction.h"
-                                         #include "swift2/kernels/ParticleSelfInteraction.h"
-                                         #include "swift2/kernels/kernel_hydro.h"
-                                         #include "swift2/kernels/equation_of_state.h"
-                                         """,
-      ),
-      AlgorithmStep(
-        name                           = "ForceLoopInitial",
-        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel = """
-                                         ::swift2::kernels::prepareHydroForceCalculation( localParticles );
-                                         """,
-
-        cell_kernel                    = """
-                                         ::swift2::kernels::computeHydroForce(
-                                           localParticles,
-                                           activeParticles,
-                                           {},
-                                           {}
-                                         );
-                                         """.format(self._hydroDimensions,
-                                                    self._beta_av),
-
-        touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endHydroForceCalculation(
-                                             localParticles,
-                                             {}
-                                             );
-                                         """.format(self._hydroDimensions),
-
-        includes                       = """
-                                         #include "Constants.h"
-                                         #include "swift2/kernels/ParticleParticleInteraction.h"
-                                         #include "swift2/kernels/ParticleSelfInteraction.h"
-                                         #include "swift2/kernels/kernel_hydro.h"
-                                         #include "swift2/kernels/equation_of_state.h"
-                                         """,
-      ),
-      AlgorithmStep(
-        name                           = "Kick1",
-        dependencies                   = AlgorithmStep.Dependencies.SELF,
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-        touch_vertex_last_time_kernel  =
-                    """::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
-                        localParticles, 1, {} );""".format(self._is_sph),
-        prepare_traversal_kernel       =
-                    """::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>({},{},{});""".format(self._name,
-                                                                                                              self._cfl_factor,
-                                                                                                              self._initial_time_step_size,
-                                                                                                              self._adjustTimeStepSize),
-        includes                       = """
-                                         #include "Constants.h"
-                                         #include "swift2/timestepping/Leapfrog.h"
-                                         #include "swift2/timestepping/GlobalTimeStepping.h"
-                                         #include "swift2/timestepping/TimeStepping.h"
-                                         #include "swift2/kernels/kernel_hydro.h"
-                                         #include "swift2/kernels/equation_of_state.h"
-                                         """
-      ),
-      AlgorithmStep(
-        name                           = "KickExtra1",
-        dependencies                   = AlgorithmStep.Dependencies.SELF,
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-        touch_vertex_last_time_kernel  =
-                    """::swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
-                        localParticles );""",
-        includes                       = """
-                                         #include "Constants.h"
-                                         #include "swift2/timestepping/Leapfrog.h"
-                                         #include "swift2/timestepping/GlobalTimeStepping.h"
-                                         #include "swift2/timestepping/TimeStepping.h"
-                                         #include "swift2/kernels/kernel_hydro.h"
-                                         #include "swift2/kernels/equation_of_state.h"
-                                         """
-      ),
-      AlgorithmStep(
-        name                           = "Drift",
-        dependencies                   = AlgorithmStep.Dependencies.SELF,
-        effect                         = AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-        touch_vertex_last_time_kernel  = """::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( localParticles );""",
-        includes                       = """
-                                         #include "Constants.h"
-                                         #include "swift2/timestepping/Leapfrog.h"
-                                         #include "swift2/timestepping/GlobalTimeStepping.h"
-                                         #include "swift2/timestepping/TimeStepping.h"
-                                         #include "swift2/kernels/kernel_hydro.h"
-                                         #include "swift2/kernels/equation_of_state.h"
-                                         """
-      ),
-      AlgorithmStep(
-        name                           = "PredictHydro",
-        dependencies                   = AlgorithmStep.Dependencies.SELF,
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-        touch_vertex_last_time_kernel  =
-                    """::swift2::timestepping::computePredictHydro(
-                        localParticles, {} );""".format(self._hydroDimensions),
-        includes                       = """
-                                         #include "Constants.h"
-                                         #include "swift2/timestepping/Leapfrog.h"
-                                         #include "swift2/timestepping/GlobalTimeStepping.h"
-                                         #include "swift2/timestepping/TimeStepping.h"
-                                         #include "swift2/kernels/kernel_hydro.h"
-                                         #include "swift2/kernels/equation_of_state.h"
-                                         """
-      ),
-      AlgorithmStep(
-        name                           = "DensityLoopWithConstantSmoothingLength",
-        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel = """
-                                         ::swift2::kernels::prepareDensityCalculation( localParticles );
-                                         """,
-
-        cell_kernel                    = """
-                                         ::swift2::kernels::computeDensity(
-                                           localParticles,
-                                           activeParticles,
-                                           {}
-                                         );
-                                         """.format(self._hydroDimensions),
-
-        touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
-                                             localParticles,
-                                             {},
-                                             {},
-                                             {}
-                                             );
-                                         """.format(self._hydroDimensions,
-                                                    self._eta_factor,
-                                                    self._alpha_av),
-
-        includes                       = """
-                                         #include "Constants.h"
-                                         #include "swift2/kernels/ParticleParticleInteraction.h"
-                                         #include "swift2/kernels/ParticleSelfInteraction.h"
-                                         #include "swift2/kernels/kernel_hydro.h"
-                                         #include "swift2/kernels/equation_of_state.h"
-                                         """,
-      ),
-      AlgorithmStep(
-        name                           = "ForceLoop",
-        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel = """
-                                         ::swift2::kernels::prepareHydroForceCalculation( localParticles );
-                                         """,
-
-        cell_kernel                    = """
-                                         ::swift2::kernels::computeHydroForce(
-                                           localParticles,
-                                           activeParticles,
-                                           {},
-                                           {}
-                                         );
-                                         """.format(self._hydroDimensions,
-                                                    self._beta_av),
-
-        touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endHydroForceCalculation(
-                                             localParticles,
-                                             {}
-                                             );
-                                         """.format(self._hydroDimensions),
-
-        includes                       = """
-                                         #include "Constants.h"
-                                         #include "swift2/kernels/ParticleParticleInteraction.h"
-                                         #include "swift2/kernels/ParticleSelfInteraction.h"
-                                         #include "swift2/kernels/kernel_hydro.h"
-                                         #include "swift2/kernels/equation_of_state.h"
-                                         """,
-      ),
-      AlgorithmStep(
-        name                           = "Kick2",
-        dependencies                   = AlgorithmStep.Dependencies.SELF,
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-        touch_vertex_last_time_kernel  =
-                    """::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
-                        localParticles, 2, {} );""".format(self._is_sph),
-        includes                       = """
-                                         #include "Constants.h"
-                                         #include "swift2/timestepping/Leapfrog.h"
-                                         #include "swift2/timestepping/GlobalTimeStepping.h"
-                                         #include "swift2/timestepping/TimeStepping.h"
-                                         #include "swift2/kernels/kernel_hydro.h"
-                                         #include "swift2/kernels/equation_of_state.h"
-                                         """
-      ),
-      AlgorithmStep(
-        name                           = "KickExtra2",
-        dependencies                   = AlgorithmStep.Dependencies.SELF,
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-        touch_vertex_last_time_kernel  =
-                    """::swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
-                        localParticles );""",
-        includes                       = """
-                                         #include "Constants.h"
-                                         #include "swift2/timestepping/Leapfrog.h"
-                                         #include "swift2/timestepping/GlobalTimeStepping.h"
-                                         #include "swift2/timestepping/TimeStepping.h"
-                                         #include "swift2/kernels/kernel_hydro.h"
-                                         #include "swift2/kernels/equation_of_state.h"
-                                         """
-      ),
-      AlgorithmStep(
-        name                           = "ReduceGlobalQuantities",
-        dependencies                   = AlgorithmStep.Dependencies.SELF,
-        effect                         = AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-        cell_kernel                    = """::swift2::statistics::reduceVelocityAndCutOffRadius( localParticles );""",
-        prepare_traversal_kernel       = """
-                                         globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
-                                         globaldata::{PARTICLE}::getSpecies().clearVelocity();
-                                         """.replace( "{PARTICLE}", self._name ),
-        unprepare_traversal_kernel     = """
-                                         globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
-                                         ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
-                                         """.replace( "{PARTICLE}", self._name ),
-        includes                       = """
-                                         #include "Constants.h"
-                                         #include "swift2/statistics/Reports.h"
-                                         #include "swift2/statistics/Statistics.h"
-                                         #include "swift2/kernels/kernel_hydro.h"
-                                         #include "swift2/kernels/equation_of_state.h"
-                                         """
-      ),
+        self.algorithm_steps_dict["FlagBoundaryParticles"],
+        self.algorithm_steps_dict["DensityWithConstantSmoothingLengthFirst"],
+        self.algorithm_steps_dict["ForceFirst"],
+        self.algorithm_steps_dict["Kick1"],
+        self.algorithm_steps_dict["Kick1Extra"],
+        self.algorithm_steps_dict["Drift"],
+        self.algorithm_steps_dict["PredictHydro"],
+        self.algorithm_steps_dict["Density"],
+        self.algorithm_steps_dict["Force"],
+        self.algorithm_steps_dict["Kick2"],
+        self.algorithm_steps_dict["Kick2Extra"],
+        self.algorithm_steps_dict["ReduceGlobalQuantities"],
     ]
 
 
@@ -533,7 +588,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
     Set the eta factor used by the SPH kernel to target a certain number of
     neighbour particles.
-    The default value is eta = 1.235.
+    The default value is eta = 1.2348.
 
     """
     return self._eta_factor
@@ -673,10 +728,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     constants in kernels (not used currently).
 
     """
-    namespace = ""
-    for entry in self._swift_project_namespace:
-      namespace = namespace + "::" + entry
+    namespace = "::".join(self._swift_project_namespace) + "::"
 
-    namespace = namespace + "::"
     print(namespace)
 
