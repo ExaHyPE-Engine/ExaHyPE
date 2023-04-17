@@ -1,7 +1,6 @@
 #include "Data.h"
 
 petsc::PetscData::PetscData(int argc, char** argv) {
-  PetscInitialize(&argc, &argv, PETSC_NULL, PETSC_NULL);
   std::cout << "initialised petsc \n\n";
 }
 
@@ -11,6 +10,8 @@ petsc::PetscData::PetscData(){
 }
 
 void petsc::PetscData::initMatrix(){
+  PetscInitialize(&argc, &argv, PETSC_NULL, PETSC_NULL);
+  
   //matrix size, set it to number of dofs
   PetscInt n = _dofs;
   PetscInt val = 1;
