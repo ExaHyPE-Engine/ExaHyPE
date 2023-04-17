@@ -16,14 +16,12 @@ toolbox::loadbalancing::Blacklist::BlacklistData::BlacklistData(int treeNumber):
 
 
 toolbox::loadbalancing::Blacklist::Blacklist() {
-//  _initialBlacklistWeight(),
-
 }
 
 
 std::string toolbox::loadbalancing::Blacklist::toString() const {
   std::ostringstream msg;
-  mgs << "{";
+  msg << "{";
   if (_blacklist.empty()) {
     msg << ",blacklist is empty";
   }

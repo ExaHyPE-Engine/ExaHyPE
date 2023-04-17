@@ -132,6 +132,8 @@ class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalanc
       _hostedLoadBalancing0.enable(value);
       _hostedLoadBalancing1.enable(value);
       LoadBalancing::enable(value);
+      logInfo( "enable(bool)", "lb0=" << _hostedLoadBalancing0.toString() );
+      logInfo( "enable(bool)", "lb1=" << _hostedLoadBalancing1.toString() );
     }
 
   private:
