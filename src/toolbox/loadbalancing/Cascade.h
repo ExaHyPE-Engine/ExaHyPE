@@ -126,6 +126,14 @@ class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalanc
           break;
       }
     }
+
+
+    void enable(bool value) override {
+      _hostedLoadBalancing0.enable(value);
+      _hostedLoadBalancing1.enable(value);
+      LoadBalancing::enable(value);
+    }
+
   private:
     static tarch::logging::Log  _log;
 
