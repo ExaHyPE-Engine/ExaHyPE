@@ -51,6 +51,8 @@ class toolbox::loadbalancing::Statistics {
     int getGlobalNumberOfTrees() const;
     int getNumberOfStateUpdatesWithoutAnySplit() const;
     int getLightestRank() const;
+    int getMinimumOfMaximumOfTreesPerRank() const;
+    int getMaximumTreesPerRank() const;
 
     void incLocalNumberOfSplits( int delta=1 );
 
@@ -62,6 +64,7 @@ class toolbox::loadbalancing::Statistics {
      * is lagging behind. In this case, this routine returns false;
      */
     bool hasConsistentViewOfWorld() const;
+
   private:
     static tarch::logging::Log _log;
 
@@ -107,6 +110,9 @@ class toolbox::loadbalancing::Statistics {
 
     int _numberOfStateUpdatesWithoutAnySplit;
 
+    int _minimumOfMaximumTreesPerRank;
+    int _maximumTreesPerRank;
+
     bool _viewConsistent;
 
     #ifdef Parallel
@@ -115,6 +121,8 @@ class toolbox::loadbalancing::Statistics {
     MPI_Request*    _globalNumberOfSplitsRequest;
     MPI_Request*    _globalNumberOfTreesRequest;
     MPI_Request*    _globalNumberOfRanksWithEnabledLoadBalancingRequest;
+    MPI_Request*    _globalMinimumOfMaximumTreesPerRankRequest;
+    MPI_Request*    _globalMaximumTreesPerRankRequest;
     #endif
 
     /**
@@ -131,6 +139,9 @@ class toolbox::loadbalancing::Statistics {
     int             _numberOfTreesOut;
     int             _numberOfRanksWithEnabledLoadBalancingIn;
     int             _numberOfRanksWithEnabledLoadBalancingOut;
+    int             _numberOfMaximumTreesOut;
+    int             _minimumOfMaximumTreesIn;
+    int             _maximumTreesIn;
 
 };
 

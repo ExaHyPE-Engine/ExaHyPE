@@ -32,8 +32,8 @@ std::string toolbox::loadbalancing::Blacklist::toString() const {
       msg << "(#" << p.first << ":";
 
       if (p.second.lifetime>0) {
-        msg << p.second.lifetime << "/"
-            << p.second.numberOfUnrefinedCells;
+        msg << "lifetime=" << p.second.lifetime << "/"
+            << ",#cells=" << p.second.numberOfUnrefinedCells;
       }
       else {
         msg << "inactive";

@@ -5,15 +5,18 @@
 tarch::logging::Log  toolbox::loadbalancing::LoadBalancing::_log( "toolbox::loadbalancing::LoadBalancing" );
 
 
-toolbox::loadbalancing::LoadBalancing::LoadBalancing(Configuration* configuration):
+toolbox::loadbalancing::LoadBalancing::LoadBalancing(Configuration* configuration, bool deleteInDestructor):
   _state( State::Undefined ),
-  _configuration(configuration) {
+  _configuration(configuration),
+  _deleteInDestructor(deleteInDestructor) {
   assertion(configuration!=nullptr);
 }
 
 
 toolbox::loadbalancing::LoadBalancing::~LoadBalancing() {
-  delete _configuration;
+  if (_deleteInDestructor) {
+    delete _configuration;
+  }
 }
 
 
@@ -49,6 +52,11 @@ void toolbox::loadbalancing::LoadBalancing::enable( bool value ) {
 bool toolbox::loadbalancing::LoadBalancing::isEnabled(bool globally) const {
   logDebug( "isEnabled(bool)", toString() );
   return globally ? (_statistics.getGlobalNumberOfRanksWithEnabledLoadBalancing()>0) : (_state != State::SwitchedOff);
+}
+
+
+bool toolbox::loadbalancing::LoadBalancing::hasStagnated() const {
+  return _state == State::Stagnation or _state == State::SwitchedOff;
 }
 
 

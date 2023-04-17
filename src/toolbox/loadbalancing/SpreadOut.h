@@ -23,7 +23,7 @@ namespace toolbox {
 
 class toolbox::loadbalancing::SpreadOut: public toolbox::loadbalancing::LoadBalancing {
   public:
-    SpreadOut(Configuration* configuration = new DefaultConfiguration());
+    SpreadOut(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
     virtual ~SpreadOut();
 
     void finishStep() override;
