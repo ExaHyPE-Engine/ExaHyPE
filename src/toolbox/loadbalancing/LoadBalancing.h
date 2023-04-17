@@ -43,7 +43,7 @@ class toolbox::loadbalancing::LoadBalancing {
     /**
      * Switch on/off.
      */
-    void enable(bool);
+    virtual void enable(bool);
 
     virtual bool hasSplitRecently() const;
 
