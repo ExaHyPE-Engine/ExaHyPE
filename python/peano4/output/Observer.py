@@ -5,6 +5,7 @@ import re
 import jinja2
 
 from .Helper import write_file
+from .Helper import using_cuda_backend
 
 from .Overwrite import Overwrite
 
@@ -1794,6 +1795,10 @@ tarch::logging::Log {{FULL_QUALIFIED_CLASSNAME}}::_log( "{{FULL_QUALIFIED_CLASSN
   def __generate_implementation(self,overwrite,full_qualified_filename):
     if write_file(overwrite,self.default_overwrite,full_qualified_filename):
       import inspect, os
+      cuda = using_cuda_backend()
+      if cuda:
+        full_qualified_filename = full_qualified_filename.replace(".cpp", ".cu")
+
       print( "{} written by {}".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__))))
 
       output_file = open( full_qualified_filename, "w" )

@@ -42,8 +42,8 @@ class TemplatedHeaderFile(object):
       print( "[{}] writes {}".format(inspect.getfile(self.__class__), full_qualified_filename ))
       with open( os.path.realpath(template_file), "r" ) as input:
         template = input.read()
-      with open( full_qualified_filename, "w" ) as output:
-        output.write( template.format(**self.d) )
+        with open( full_qualified_filename, "w" ) as output:
+          output.write( template.format(**self.d) )
 
   def generate(self,overwrite,directory):
     if not os.path.exists( directory + "/" + self.subdirectory ):

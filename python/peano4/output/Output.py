@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .Makefile import Makefile
 from .Readme   import Readme
+from .Helper import using_cuda_backend
 
 class Output(object):
   """

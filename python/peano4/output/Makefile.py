@@ -8,6 +8,7 @@ import jinja2
 
 from .Helper import write_file
 from .Helper import find_cmake_build_dir
+from .Helper import using_cuda_backend
 
 from .Overwrite import Overwrite
 
@@ -16,6 +17,7 @@ from .CompileMode import CompileMode
 class Makefile(object):
   """ Represents the created makefile of a Peano4 project """
   default_overwrite = True
+  cuda = using_cuda_backend()
 
   def __init__(self):
     self.clear()
@@ -154,9 +156,11 @@ the SISC paper
   def clear_files(self):
     self.hfiles                     = []
     self.cppfiles                   = []
+    self.cufiles                    = []
     self.fortranfiles               = []
     self.generated_hfiles           = []
     self.generated_cppfiles         = []
+    self.generated_cufiles          = []
     self.generated_fortranfiles     = []
 
   def set_dimension(self,dimension):
@@ -411,11 +415,21 @@ did search for a file """ + input_file )
         Use this flag for generated files which can be tracked
         by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
     """
-    if self.generated_cppfiles.count(filename)==0 and self.cppfiles.count(filename)==0:
+    if not using_cuda_backend():
       if generated:
-        self.generated_cppfiles.append( filename )
+        if self.generated_cppfiles.count(filename)==0:
+          self.generated_cppfiles.append(filename)
       else:
-        self.cppfiles.append( filename )
+        if self.cppfiles.count(filename)==0:
+          self.cppfiles.append(filename)
+    else:
+      filename = filename.replace(".cpp", ".cu")
+      if generated:
+        if self.generated_cufiles.count(filename)==0:
+          self.generated_cufiles.append(filename)
+      else:
+        if self.cufiles.count(filename)==0:
+          self.cufiles.append(filename)
 
   def remove_cpp_file(self,filename,generated=True):
     if generated:
@@ -494,9 +508,11 @@ then this message can typically be ignored.
     self.d[ "CMAKE_BUILD_DIR" ]               = cmake_build_dir
     self.d[ 'H_HEADERS' ]                     = self.hfiles
     self.d[ 'CXX_SOURCES' ]                   = self.cppfiles
+    self.d[ 'CU_SOURCES' ]                   = self.cufiles
     self.d[ 'FORTRAN_SOURCES' ]               = self.fortranfiles
     self.d[ 'GENERATED_H_HEADERS' ]           = self.generated_hfiles
     self.d[ 'GENERATED_CXX_SOURCES' ]         = self.generated_cppfiles
+    self.d[ 'GENERATED_CU_SOURCES' ]         = self.generated_cufiles
     self.d[ 'GENERATED_FORTRAN_SOURCES' ]     = self.generated_fortranfiles
     self.d[ 'GENERATOR' ]                     = sys.argv[0]
 

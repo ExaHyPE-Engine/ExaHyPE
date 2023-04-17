@@ -8,6 +8,8 @@ import dastgen2
 import peano4.dastgen2.MPI
 
 
+from peano4.output.Helper import using_cuda_backend
+
 class DaStGen2Generator(object):
   def __init__(self,data):
     self._data = data
@@ -35,8 +37,12 @@ class DaStGen2Generator(object):
     self._data.data.set_full_qualified_name(full_qualified_name)
 
     self._data.data.write_header_file( self._data.namespace[-1] + "/" + self._data.name + ".h" )
-    self._data.data.write_implementation_file(  self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
-    output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
+    if using_cuda_backend():
+      self._data.data.write_implementation_file(  self._data.namespace[-1] + "/" + self._data.name + ".cu" )
+      output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cu" )
+    else:
+      self._data.data.write_implementation_file(  self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
+      output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
 
 
 

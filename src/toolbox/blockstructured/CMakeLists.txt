@@ -11,11 +11,12 @@ foreach(mode IN LISTS BUILD_MODES)
 
     target_sources(ToolboxBlockStructured${dimension}d_${mode_lower} PRIVATE ${SOURCES})
     target_include_directories(ToolboxBlockStructured${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    string(REPLACE " " ";" COMPILE_OPTIONS ${CMAKE_CXX_FLAGS_${mode_upper}})
-    target_compile_options(ToolboxBlockStructured${dimension}d_${mode_lower} PUBLIC ${COMPILE_OPTIONS})
+    target_compile_options(ToolboxBlockStructured${dimension}d_${mode_lower} PRIVATE ${ENABLE_NVHPC_CUDA_API})
+    target_link_options(ToolboxBlockStructured${dimension}d_${mode_lower} PRIVATE ${ENABLE_NVHPC_CUDA_API})
     target_compile_definitions(ToolboxBlockStructured${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS} Dimensions=${dimension})
     target_link_options(ToolboxBlockStructured${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
-    target_link_libraries(ToolboxBlockStructured${dimension}d_${mode_lower} PUBLIC project_options project_warnings Peano4Core${dimension}d_${mode_lower})
+    target_link_libraries(ToolboxBlockStructured${dimension}d_${mode_lower} PUBLIC project_options  Peano4Core${dimension}d_${mode_lower})
+    target_link_libraries(ToolboxBlockStructured${dimension}d_${mode_lower} PRIVATE project_warnings)
 
     install(TARGETS ToolboxBlockStructured${dimension}d_${mode_lower}
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
