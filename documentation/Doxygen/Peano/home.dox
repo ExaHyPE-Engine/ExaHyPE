@@ -16,6 +16,7 @@
 \li \subpage peano_introduction_tex
 \li \subpage peano_amr_tex
 \li \subpage peano_domain_decomposition
+\li \subpage peano_parallel
 
 
 Peano is a framework for generating dynamically adaptive grids for a wide range
