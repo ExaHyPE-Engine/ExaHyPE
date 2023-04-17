@@ -109,7 +109,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
           handle.parallel_for(
             ::sycl::range<3>{numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch,unknowns+auxiliaryVariables},
             [=] (::sycl::item<3> i) {
-  printf("called time step with rusanov");
               int x          = i[0];
               int y          = i[1];
               int unknown    = i[2];
