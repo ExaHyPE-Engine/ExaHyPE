@@ -1,5 +1,7 @@
 /**
-\page domain_decomposition
+\page peano_domain_decomposition Domain decomposition
+
+@todo fix images and/or convert them from pdf to png and/or work out how to embed them correctly
 
 Domain decomposition and data flow {#section:design:domain-decomposition}
 ==================================
