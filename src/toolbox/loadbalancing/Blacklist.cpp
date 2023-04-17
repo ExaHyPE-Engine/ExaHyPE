@@ -23,11 +23,11 @@ toolbox::loadbalancing::Blacklist::Blacklist() {
 
 std::string toolbox::loadbalancing::Blacklist::toString() const {
   std::ostringstream msg;
+  mgs << "{";
   if (_blacklist.empty()) {
     msg << ",blacklist is empty";
   }
   else {
-    msg << ",blacklist={";
     for (auto p: _blacklist) {
       msg << "(#" << p.first << ":";
 
@@ -43,8 +43,8 @@ std::string toolbox::loadbalancing::Blacklist::toString() const {
           << ",#deg-children=" << p.second.numberOfDegeneratedChildren
           << ")";
     }
-    msg << "}";
   }
+  msg << "}";
 
   return msg.str();
 }
