@@ -272,14 +272,25 @@ export CUDA_VISIBLE_DEVICES=0
 
 #### SYCL offloading with oneAPI
 
-I used this to configure Peano
+I used this to configure Peano with Intel's TBB enabled
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-./configure CC=clang++ CXX=clang++ LIBS="-fsycl -ltbb" CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
+source /opt/intel/oneapi/setvars.sh
+module load cuda
+
+./configure CC=clang++ CXX=clang++ LIBS="-ltbb" -LFLAGS="-fsycl -fsycl-targets-targets=nvptx64-nvidia-cuda" CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+Note: Codeplay's website has some useful information on compiler flags.
 
 It also needs at least 2023.0.0 version of oneApi with Codeplay's nvidia
-GPU plugin.
+GPU plugin; the LLVM compiler doesn't support the
+`-Xsycl-target-backend=` flag, so please check your Makefile.
+
+When running the executable on the GPU, include `SYCL_DEVICE_FILTER=gpu`
+before the terminal command to explicitly tell SYCL to run the code on GPU. 
+In the case of a runtime error, it is also useful to add `SYCL_PI_TRACE=2`
+to check where the error was raised.
 
 ### DINE
 
