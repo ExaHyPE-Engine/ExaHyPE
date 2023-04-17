@@ -1,0 +1,161 @@
+/**
+
+@page exahype_parallelisation Parallelisation
+
+ExaHyPE employs @ref peano_parallelisation "Peano's domain decomposition" and adds
+tasking on top.
+Peano's domain decomposition is used for both MPI and multithreading, while the tasking
+only affects the shared memory parallelisation.
+Both parallelisation paradigms are controlled via the Python API.
+
+
+## Domain decomposition
+
+In ExaHyPE, you enable load balancing by adding
+
+~~~~~~~~~~~~~~~~~~~~~~~
+project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9))" )
+~~~~~~~~~~~~~~~~~~~~~~~
+
+There are multiple different load balancing schemes available 
+through @ref toolbox_loadbalancing "Peano's generic load balancing toolbox".
+
+
+It is important to study the constructor parameter list of 
+exahype2::LoadBalancingConfiguration. These arguments allow you
+to constrain the properties of the domain.
+for example, you can instruct the load balancing that you want it to be well-balanced 
+accross ranks up to 80% and you also to constrain the tree (subpartition) size 
+by 200 cells.
+This means that no domain on a rank will be split if this rank's load is around 20% off, and a partition
+will never split up if it has less than 200 cells.
+
+
+There is a always a trade-off between the different settings: 
+If you increase the quality of the domain decomposition, then the time per time step will go down.
+However, the load balancing will need way longer. 
+If you pick a minimum cell size, then the grid will build up first until it can accommodate the constraint, and then it will decompose.
+Grid decomposition however is both time consuming and requires (temporarily) quite a lot of memory.
+
+
+### Load balancing settings (best practices)
+
+
+While ExaHyPE makes it relatively straightforward to parallelise a code, 
+the tuning of a particular experiment is often tricky.
+As ExaHyPE is an engine supporting multiple application (domains) and as the
+``perfect'' load balancing strategy depends strongly on the application type
+plus the chosen experiments plus the machine used, it can only provide vague
+heuristics of settings that work in most of the cases. 
+To get really good performance, you will have to play around with the load
+balancing settings.
+
+
+Here are some recommendations if you use the recursive load balancing.
+The recommendations describe how to tweak the three parameters that the
+ExaHyPE configuration offers:
+
+- Start with the strategy toolbox::loadbalancing::SpreadOut. This should give 
+  you first feeling if your code is MPI-/threading-ready.
+- Do not set the load balancing quality too high. I am usually fine if the
+  balancing between the ranks is about 80%-90% accurate. 
+  First get something up and running and test it. After that, you might want to
+  increase the quality closer to 100%. However, the higher this quality
+  threshold the longer your grid setup and balancing time.
+- If your code tends to hang in MPI, try to kick the simulation off with
+  only one partition per rank, i.e. set the maximum number of trees for a 
+  partition to 1.
+  Once this passes through, increase the last counter to at most the number of
+  cores per rank. 
+- If you work without periodic boundary conditions, the initial load
+  balancing will likely be poor if the mesh is too shallow: The code cannot
+  deploy cells along the periodic boundary to other ranks. These always have to
+  be handled by rank 0. So it makes sense to set the minimal mesh size (second
+  argument) to at least @f$ 3^d+1 @f$. This prolongs the load distribution
+  sufficiently long until enough cells are available. The knock-on problem then
+  is that we have a lot of cells and the load balancing tries to split them up
+  evenly - unaware that all the boundary cells can't be distributed. So you will
+  have to restrict the number of cells per inter-rank balancing. I recommend to
+  to add $3^d$ as fourth argument to ExaHyPE's load balancing configuration.
+- Once MPI+X is up and running, study the @ref exahype_runtime_analysis "ExaHyPE/Peano performance analysis remarks" so
+  you obtain an understanding of your code's behaviour.
+- Once you are reasonably satisfied with the MPI behaviour, try out other 
+  parallelisation schemes. toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition
+  for example seems to give reasonable result.
+
+
+
+## Task parallelism
+
+Some ExaHyPE solvers add further task parallelism to this decomposition. 
+In general, the enclave solvers tend to perform better on massively parallel
+systems.
+
+
+
+
+## Writing your own parallel extensions
+
+Most users that write extensions to ExaHyPE which need some global data
+exchange are users which add new fields to their solver. Examples are global
+statistics that they want to track over the solution or global variables that
+they control.
+
+Each MPI rank holds one instance of the solver. 
+All threads per MPI rank share the same instance of the solver.
+Peano splits up the domain into chunks along the space-filling curve. 
+If you use an enclave solver, it then splits up these chunks further into tasks.
+That is, operations per cell such as the Riemann solves and the patch
+postprocessing can run in parallel on each thread.
+
+If you add new attributes to your solver, this attribute exists on each solver
+on each rank. 
+You therefore have to 
+
+- ensure that no two threads access the attribute at the same time;
+- ensure that the attributes of the individual solver instances per rank
+  remain consistent.
+
+The first item is relatively simple: You might, for example, decide to protect
+all accesses to your own variables via a semaphore. 
+There is no specific place to take care of the protection: 
+Just protect the actual data access.
+
+
+The second item requires slightly more work, as you have to globally reduce the
+attribute: After each time step, you have to ensure that all ranks exchange
+their attributes with each other, and you then have to merge these data.
+I recommend not to use MPI's data exchange routine directly, but to use Peano's 
+wrappers around these routines. 
+
+
+The actual data exchange should be done at the end of a each time step. 
+For this, you add
+
+~~~~~~~~~~~~~~~~~~~
+  void finishTimeStep() override;
+~~~~~~~~~~~~~~~~~~~
+
+
+
+to your solver. The implementation should first invoke the superclass
+and then add the additional data exchange.
+
+
+~~~~~~~~~~~~~~~~~~~
+void mynamespace::MyFancySolver::finishTimeStep() {
+  MyFancyAbstractSolver::finishTimeStep();
+  #ifdef Parallel
+  // additional data exchange
+  #endif
+}
+~~~~~~~~~~~~~~~~~~~
+
+
+ExaHyPE internally realises these two steps for all of its solver attributes
+such as the maximum mesh size or the admissible time step sizes.
+This is the reason why you have to call the superclass implementation, too.
+
+
+ */
+ 

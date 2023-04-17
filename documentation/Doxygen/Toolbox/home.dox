@@ -5,6 +5,7 @@
 \tableofcontents
 
 \li \subpage toolbox_blockstuctured
+\li \subpage toolbox_loadbalancing
 
 A toolbox is a set of routines and algorithms for a specific challenge which 
 are not tied to one particular extension or application domain. We can think

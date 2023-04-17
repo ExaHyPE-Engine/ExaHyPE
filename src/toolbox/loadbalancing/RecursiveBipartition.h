@@ -23,96 +23,30 @@ namespace toolbox {
 /**
  * Recursive load balancing micking the behaviour of the guided partitioning in OpenMP
  *
- * This is one of the simplest load balancing strategies one can think about. We
- * try to mimick the behaviour of OpenMP's guided scheduling: We determine the
- * maximum number of unrefined inner cells around and compute an optimal load per
- * rank. We first spread out over all ranks, and then ensure that there is at least
- * one tree per core. From thereon, we examine whether we violate the per-rank
- * load balancing. If a rank does this, it splits its heaviest tree and deploys the
- * new subtree to the most underbooked rank.
+ * This is one of the simplest load balancing strategies one can think about.
+ * We try to mimick the behaviour of OpenMP's guided scheduling: We determine
+ * the maximum number vs the minimum number of unrefined inner cells within a
+ * check set. If the ratio between the two is worse than the balancing
+ * threshold, we split the maximum tree into two parts.
  *
  *
- * <h2> Implementation remarks </h2>
  *
- * The strategy runs through different phases.
+ * around and compute an optimal load per
+ * rank. If a rank hosts more than the optimal load subject to an inaccuracy factor,
+ * we split that one up into two parts and it deploys the new tree to the most
+ * underbooked other rank.
  *
- * <h3> Phase 1: The tree is too small so there would not be enough cells if we had even only one cell per tree </h3>
+ * In a second phase, we apply the same scheme on the rank: If a rank's local trees
+ * are too different, the heaviest tree on the rank has to split further.
  *
- * We wait and do nothing. After all, this might be the first step of the grid
- * construction, so we are well-advised to wait for a few iterations to get
- * an idea what the final grid will look like and in particular to get enough
- * cells so we can keep all threads/ranks busy.
+ * After this second phase, we enter a second phase where we pass around a
+ * token. Whichever rank holds the token, checks the balancing. If is is bad,
+ * we return to step number one.
  *
- * <h3> Phase 2: We have not yet used all ranks </h3>
- *
- * First of all, we make all ranks busy. This can be done in one rush: Rank 0
- * splits up equally sized tree to each and every rank. As phase 1 has
- * terminated already, we know that there are enough cells around.
- *
- * <h3> Phase 3: Get reasonably many cores into the game </h3>
- *
- * We'd like to occupy a lot of cores. We should trigger
- * this step asap. At the same time, we might already be in a situation where
- * the per-rank mesh is pretty detailed, i.e. too many forks in one rush might
- * be too ambitious.
- *
- * This phase still is rank-local, i.e. I do not spread between ranks.
- * Consequently, I should not overdecompose. It might be reasonable to wait
- * with further splits and to balance later on a case-by-case base such that
- * we can deploy cells to other ranks, too. This throttling is implemented via
- * getNumberOfSplitsOnLocalRank().
- *
- * <h3> Phase 4: Load balancing between the ranks (dynamic) </h3>
- *
- * This is the dynamic load balancing phase. Take the biggest tree, check
- * whether it is too heavy and split it. When you split it, search for the
- * rank with the lowest total load and get the new subtree there. To avoid
- * that too many ranks deploy to one rank at the same time, we use kind of
- * a round-robin token here.
- *
- * <h2> Broad vs. deep trees </h2>
- *
- * @todo Update this part with new insight
- *
- * The splitting has to be reasonably aggressive. If we worked iteratively
- * depth first, i.e. identified the biggest tree, split it, and then continue,
- * then we run into situations where we have a complex master-worker
- * topology. This restricts our flexibility as we have to preserve the
- * topology. The broader a tree the better.
- *
- * Therefore, it is absolutely mandatory (and it took me a while to recognise
- * this) to use the min functions and always try to split from a very heavy
- * tree just that part that you need.
- *
- *
- * <h2> Cool-down phases </h2>
- *
- * It is important that we have some kind of cool-down phases, i.e. certain blocks of
- * sweeps where no rebalancing is done no matter how imbalanced we are. Splits are
- * notoriously expensive as they serialise parts of the traversals. Furthermore, we
- * will never reach a stationary grid throughout the grid construction phase if we
- * split all the time (and perhaps then are unsuccessful as the grids have a layout
- * that we can't split actually).
+ * The scheme never enters stagnation.
  */
 class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancing::LoadBalancing {
   public:
-    /**
-     * @see getAction()
-     */
-    enum class Action {
-      /**
-       * Required for the strategy.
-       */
-      Unspecified,
-      None,
-      SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning
-    };
-
-    static std::string toString( Action action );
-
-
     /**
      * Set up recursive subdivision
      *
@@ -150,53 +84,48 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
   private:
     static tarch::logging::Log  _log;
 
-    int _stepsToWaitForNextLoadBalancingDecision;
-
     /**
+     * If it equals the rank, then we are allowed to do something
+     *
      * @see updateState()
      */
     int _roundRobinToken;
 
     /**
+     * Is the balancing between the ranks ok
+     *
      * This operation checks if the inter-rank load decomposition does
-     * violate the overall load balancing constraints.
+     * violate the overall load balancing constraints. The global balancing
+     * is determined by a cascade of checks:
+     *
+     * - If we have an inconsistent data view, i.e. if the stats are not valid,
+     *   we have to assume that everything is fine.
+     * - If we have fewer trees globally than we have ranks, the balancing is
+     *   by definition poor.
+     * - If we host more trees than allowed, the balancing by definition is
+     *   good, since we could not refine further anyway.
+     * - Otherwise, we look if the max load per rank and the min load per rank
+     *   differ more than the tolerance.
      */
-    bool doesRankViolateBalancingCondition() const;
+    bool isInterRankBalancingBad() const;
 
     /**
-     * Translate the state and further global knowledge into actions
+     * Is the balancing on the rank ok
      *
+     * Similar to isInterRankBalancingBad(), this operation runs through a
+     * series of checks:
      *
-     * ## InterRankDistribution
-     *
-     * This is the initial state, where our ambition has to be to get as many
-     * ranks into the computation as quickly as possible. The only constraint
-     * to take into account is that the user might have defined a certain
-     * minimal tree size that they want to use. So as long as the local cell
-     * count times the number of ranks is bigger than this minimal tree size,
-     * we can spread out, i.e. return Action::SpreadEquallyOverAllRanks.
-     *
-     * There are a few further exceptions to the rule: If we have less then two
-     * ranks, we ignore the step and rely on updateState() to toggle the state
-     * so we start another strategy next. If we are not the global master, we
-     * don't do anything either. It is the global master that has to decide.
-     * Once it has spread out, the global number of trees will eventually
-     * become bigger than one and we will leave the InterRankDistribution
-     * state. But this is not our job. It is realised within updateState(). If
-     * we are on the global master and have just spread out, we should not do
-     * anything either. It needs at least two cycles to realise the initial
-     * domain decomposition, so we should not trigger the spreading twice in
-     * a row - otherwise the global rank zero will be left empty. So if we have
-     * just split on the global master, lets just return None and wait for one
-     * more cycle.
-     *
-     * Load balancing recommendation: Most load balancing configurations set
-     * the minimal tree size for this stage to zero, so they simply say "spread
-     * out as aggressively as possible, we care about minimal mesh sizes per
-     * subdomain later".
-     *
+     * - If there are no trees on the rank, then the result is false. By
+     *   definition, everything is well-balanced.
+     * - If there is only one tree, the balancing is by definition bad, as
+     *   we cannot make a balancing statement.
+     * - If we host more trees than allowed, the balancing by definition is
+     *   good, since we could not refine further anyway.
+     * - Otherwise, we compare the minimum and maximum tree.
      */
-    Action getAction() const;
+    bool isIntraRankBalancingBad() const;
+
+    bool areRanksUnemployed() const;
 
     /**
      * Wrapper around the spacetree set which also updates the blacklist.
@@ -264,8 +193,6 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * Please call this routine before you invoke updateState().
      */
     void updateLoadBalancing();
-
-    bool isLocalBalancingBad() const;
 };
 
 
