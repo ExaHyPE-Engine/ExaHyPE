@@ -23,14 +23,15 @@ namespace {{N}} {
     {% for SOLVER in SOLVER_INSTANCES %}
     extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
 
+    {% endfor %}
+
     /**
      * here we insert an instance of our PetscData class. 
      * Not sure if this is the best place to put it, but then we 
      * can interact with it by referring to repositories::instanceOfPetsc
     */
     extern ::petsc::PetscData instanceOfPetsc;
-    {% endfor %}
-
+    
     void computeLocalToGlobalMapsForAllSolvers();
     int getTotalNumberOfDegreesOfFreedom();
 
