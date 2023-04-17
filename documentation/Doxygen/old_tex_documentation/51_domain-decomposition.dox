@@ -89,6 +89,7 @@ local data structures. This merge happens on the destination prior to
 any other operation.
 
 ![image](51_domain-decomposition/boundary-data-flow.pdf){width="50%"}
+@image html 51_domain-decomposition/boundary-data-flow.pdf
 
  consequently realises a data exchange that is similar to Jacobi
 smoothers: Whatever you do on one tree won't be visible on the other
