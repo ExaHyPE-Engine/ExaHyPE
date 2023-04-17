@@ -5,7 +5,6 @@ petsc::PetscData::PetscData(int argc, char** argv) {
 }
 
 petsc::PetscData::PetscData(){
-  PetscInitialize(PETSC_NULL, PETSC_NULL, PETSC_NULL, PETSC_NULL);
   std::cout << "used default (null) petsc initialiser\n\n";
 }
 
