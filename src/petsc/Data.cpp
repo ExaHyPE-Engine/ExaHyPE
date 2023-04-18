@@ -8,34 +8,20 @@ petsc::PetscData::PetscData(){
   std::cout << "used default (null) petsc initialiser\n\n";
 }
 
-void petsc::PetscData::initMatrix(){
+void petsc::PetscData::initMatrixAndVectors( int dofs ){
+  setDoFs( dofs );
+  // init petsc
   PetscInitialize(PETSC_NULL, PETSC_NULL, PETSC_NULL, PETSC_NULL);
 
   //matrix size, set it to number of dofs
   PetscInt n = _dofs;
-  PetscInt val = 1;
 
   MatCreate(PETSC_COMM_WORLD, &A);
   MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, n, n);
   MatSetFromOptions(A);
   MatSetUp(A);
 
-  for (PetscInt i = 0; i < n; i++){
-    MatSetValue(A, i, i, val, INSERT_VALUES);
-  }
-  
-  //assemble
-  MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
-
-  //print out our contents
-  // MatView(A, PETSC_VIEWER_STDOUT_WORLD);
-
-}
-
-void petsc::PetscData::initVectors( std::vector< std::pair<double, double> > valuesAndRhs ){
-  PetscInt n = _dofs;
-
+  //next, do same with the two vectors...
   //create both vectors
   VecCreate(PETSC_COMM_WORLD, &x);
   VecCreate(PETSC_COMM_WORLD, &b);
@@ -48,22 +34,43 @@ void petsc::PetscData::initVectors( std::vector< std::pair<double, double> > val
 
   VecSetUp(x);
   VecSetUp(b);
-
-  for (PetscInt i = 0; i < n; i++ ){
-    std::pair<double, double> localVal = valuesAndRhs.at(i);
-    VecSetValue(x, i, localVal.first, ADD_VALUES);
-    VecSetValue(b, i, localVal.second, ADD_VALUES);
-  }
-
-  //assemble both
-  VecAssemblyBegin(x);
-  VecAssemblyEnd(x);
-  VecAssemblyBegin(b);
-  VecAssemblyEnd(b);
-
-  //convert our newly initialised vector to a standard vector
-  convertToStdVector();
 }
+
+// void petsc::PetscData::assembleMatrix(){
+
+
+//   for (PetscInt i = 0; i < n; i++){
+//     MatSetValue(A, i, i, val, INSERT_VALUES);
+//   }
+  
+//   //assemble
+//   MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
+//   MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
+
+//   //print out our contents
+//   // MatView(A, PETSC_VIEWER_STDOUT_WORLD);
+
+// }
+
+// void petsc::PetscData::assembleVectors( std::vector< std::pair<double, double> > valuesAndRhs ){
+//   PetscInt n = _dofs;
+
+
+//   for (PetscInt i = 0; i < n; i++ ){
+//     std::pair<double, double> localVal = valuesAndRhs.at(i);
+//     VecSetValue(x, i, localVal.first, ADD_VALUES);
+//     VecSetValue(b, i, localVal.second, ADD_VALUES);
+//   }
+
+//   //assemble both
+//   VecAssemblyBegin(x);
+//   VecAssemblyEnd(x);
+//   VecAssemblyBegin(b);
+//   VecAssemblyEnd(b);
+
+//   //convert our newly initialised vector to a standard vector
+//   convertToStdVector();
+// }
 
 
 void petsc::PetscData::setDoFs(int dofs){

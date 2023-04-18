@@ -35,14 +35,21 @@ class petsc::PetscData{
     int getDoFs() const;
     void setDoFs(int dofs);
 
-    void initMatrix();
+    /**
+     * method to intialise the matrix and two vectors
+     * each we _dofs entries
+     * \param int dofs
+    */
+    void initMatrixAndVectors( int dofs );
+
+    // void initMatrix();
 
     /**
      * For now, we pass in the values given to the Poisson class
      * during the InitVertexDof stage. Once we get to the step where
      * we Init Petsc, we send those values over here. See Poisson-main.cpp
     */
-    void initVectors( std::vector< std::pair<double, double> > valuesAndRhs );
+    // void initVectors( std::vector< std::pair<double, double> > valuesAndRhs );
     
     //method to convert petsc vec to std array
     //for now, just for the solution vector
@@ -68,5 +75,4 @@ class petsc::PetscData{
     */
     std::vector<double> _xAsStdVector;
 
-    // static PetscData* instance;
 };

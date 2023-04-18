@@ -21,12 +21,5 @@ void benchmarks::multigrid::petsc::poisson::Poisson::init(
   double&                                       rhs
   
 ) {
-  // add this values to our vector. we pass these on to Petsc later
-  // TODO - make sure these are in order. push_back is not what we want to 
-  // do here.
-  _valueAndRhs.push_back( std::make_pair( value, rhs ) );
-}
 
-std::vector< std::pair<double, double> > benchmarks::multigrid::petsc::poisson::Poisson::getValuesAndRhs() const{
-  return _valueAndRhs;
 }
