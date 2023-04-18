@@ -39,12 +39,19 @@ message(STATUS "On Git Branch: ${GIT_BRANCH} (${GIT_COMMIT_HASH})")
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 set(CMAKE_C_EXTENSIONS OFF)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_INLINES_HIDDEN YES)
+
+set(CMAKE_Fortran_STANDARD 90)
+set(CMAKE_Fortran_STANDARD_REQUIRED TRUE)
+set(CMAKE_Fortran_EXTENSIONS OFF)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
@@ -52,19 +59,19 @@ option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 set(OPT_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
 include(FetchContent)
 FetchContent_Declare(
-    _project_options
-    GIT_REPOSITORY https://github.com/aminya/project_options.git
-    GIT_TAG main
+  _project_options
+  GIT_REPOSITORY https://github.com/aminya/project_options.git
+  GIT_TAG main
 )
 FetchContent_MakeAvailable(_project_options)
 
-set(LANGUAGES C CXX)
+set(LANGUAGES C CXX Fortran)
 include(CheckLanguage)
-check_language(Fortran)
-if(CMAKE_Fortran_COMPILER)
-  list(APPEND LANGUAGES Fortran)
-  enable_language(Fortran)
-endif()
+#check_language(Fortran)
+#if(CMAKE_Fortran_COMPILER)
+#  list(APPEND LANGUAGES Fortran)
+#  enable_language(Fortran)
+#endif()
 if("${WITH_GPU}" STREQUAL "cuda")
   check_language(CUDA)
   if(NOT CMAKE_CUDA_COMPILER)
@@ -339,11 +346,6 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
-file(COPY "${PROJECT_SOURCE_DIR}/python" DESTINATION "${CMAKE_BINARY_DIR}")
-file(COPY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_BINARY_DIR}")
-file(COPY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_BINARY_DIR}")
-file(COPY "${PROJECT_SOURCE_DIR}/.continuous_integration/jupyterlab.sh" DESTINATION "${CMAKE_BINARY_DIR}")
-
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/python" DESTINATION "${CMAKE_INSTALL_PREFIX}")
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_INSTALL_PREFIX}")
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_INSTALL_PREFIX}")
@@ -351,10 +353,10 @@ install(DIRECTORY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_INST
 file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
 include(${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
+
 add_subdirectory(src)
 
 display_separator("Project Configuration Summary")
-
 display_variable(AVAILABLE_PROCESSOR_COUNT)
 display_variable(WITH_TOOLCHAIN)
 display_variable(WITH_MULTITHREADING)
@@ -371,8 +373,12 @@ display_variable(ENABLE_PARTICLES)
 display_variable(ENABLE_BLOCKSTRUCTURED)
 
 display_subseparator("Options to Build")
+display_variable(CMAKE_C_COMPILER)
+display_variable(CMAKE_C_STANDARD)
 display_variable(CMAKE_CXX_COMPILER)
 display_variable(CMAKE_CXX_STANDARD)
+display_variable(CMAKE_Fortran_COMPILER)
+display_variable(CMAKE_Fortran_STANDARD)
 display_variable(CMAKE_BUILD_TYPE)
 display_variable(CMAKE_CONFIGURATION_TYPES)
 display_variable(CMAKE_CXX_FLAGS)
