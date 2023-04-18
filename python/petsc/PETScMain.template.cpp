@@ -195,9 +195,7 @@ void step() {
         const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
         logInfo( "step()", "total no of dofs=" << totalNumberOfDegreesOfFreedom );
 
-        repositories::instanceOfPetsc.setDoFs( totalNumberOfDegreesOfFreedom );
-        repositories::instanceOfPetsc.initMatrix();
-        repositories::instanceOfPetsc.initVectors( repositories::instanceOfPoisson.getValuesAndRhs() );
+        repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );
         
         watch.stop();
         initMeasurement.setValue( watch.getCalendarTime() );
