@@ -17,6 +17,27 @@ namespace exahype2 {
       namespace internal {
 
         /**
+         * This function calculates the auxiliary variables as gradietns of the primary
+         * variables. The graident is calculated using a 5-point stencil in 1D which has
+         * 2 neighbouring cells on each side of the central one. The computation requires    
+   * us to have access to 2 halo layers on each side of a given patch.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        template <class QInEnumeratorType, class QOutEnumeratorType>
+        static void computeAuxiliaryVariables_LoopBody(
+          double* __restrict__                           QIn,
+          const QInEnumeratorType&                       QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&    patchCentre,
+          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          int                                            patchIndex,
+          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          int                                            normal,
+          const QOutEnumeratorType&                      QOutEnumerator
+        ) InlineMethod;
+
+        /**
          * This function calculates the source term that involves B_i\nabla_iQ where
          * i is the spatial dimension. These involve first gradients of quantitiets 
          * which are now calculated using a standard fourth-order finite difference  

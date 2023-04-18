@@ -6,7 +6,7 @@
 
 \li \subpage peano_main
 \li \subpage peano_architecture
-\li \subpage peano_parallelisation
+\li \subpage peano_domain_decomposition
 \li \subpage peano_action_sets
 \li \subpage peano_runtime_analysis
 \li \subpage peano_performance_optimisation
