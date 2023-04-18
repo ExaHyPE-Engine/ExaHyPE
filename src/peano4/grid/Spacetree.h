@@ -44,7 +44,24 @@ namespace peano4 {
 
 
 /**
- * Represents one tree
+ * Represents one tree and its traversal automaton
+ *
+ * The spacetree is tied to an automaton (state) which equals the automaton as
+ * described in the Peano 3 TOMS release paper. It is also "married" to a stack
+ * which holds the spacetree vertices, which are the bare multiscale mesh
+ * vertices without any user data.
+ *
+ * So each instance of this tree is a subdomain although we hold all the
+ * different levels, so it represents a cascade of (sub-)domains. Further to
+ * that, it is a proper spacetree where each node as either none or @f$ 3^d @f$
+ * children. Therefore, some children will be labelled as "remote". They are
+ * there, as we always store complete trees, but they might actually be owned
+ * by another tree. The fast multipole terminology in this context is often
+ * "essential tree", i.e. we hold only the essential tree.
+ *
+ * The core routine of this class is really traverse() which tells the spacetree
+ * to run through its local tree once and to notify an observer, passed in as
+ * argument, about steps throughout this traversal.
  */
 class peano4::grid::Spacetree {
   public:
@@ -83,6 +100,9 @@ class peano4::grid::Spacetree {
      * - Non-local cells (obviously)
      * - Local cells whose master is not local. If we'd move such cells to
      *   another rank, we'd destroy the logical topology between the trees.
+     *
+     * To understand how trees are forked off into separate subtrees, it
+     * makes sense to study \ref peano_domain_decomposition "Peano's overall domain decomposition rationale".
      */
     bool isCellSplitCandidate(
       GridVertex                         coarseGridVertices[TwoPowerD],

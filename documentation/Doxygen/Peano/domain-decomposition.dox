@@ -1,10 +1,9 @@
 /**
-\page domain_decomposition
 
-Domain decomposition and data flow {#section:design:domain-decomposition}
-==================================
+\page peano_domain_decomposition Domain decomposition
 
- starts from spacetrees and thinks in whole trees and only supports two
+
+Peano starts from spacetrees and thinks in whole trees and only supports two
 types of decomposition operations: a split and a join. At the same time,
 it does not distinguish shared memory and distributed memory
 parallelisation. It only thinks in terms of trees. The trees and their
@@ -28,8 +27,8 @@ trees, we distinguish three different types of parallel data flow:
     stream data from one rank to the other if we fork. Joins do not
     stream logically.
 
-Multigrid topology
-------------------
+
+## Multigrid topology
 
 A tree in Peano is split along the Peano space-filing curve. This
 implies that the decomposition of the finest mesh is a non-overlapping
@@ -40,15 +39,9 @@ Also Peano's coarser cells are uniquely assigned to one tree. Between
 the ranks, we have a tree topology again. That is, a splitting of a tree
 is always realised such that there's a unique master-worker topology.
 
-![ Two examples of a tree decomposition.
-[\[figure:51\_domain-decomposition:tree-topology\]]{#figure:51_domain-decomposition:tree-topology
-label="figure:51_domain-decomposition:tree-topology"}
-](51_domain-decomposition/tree-topology.pdf){#figure:51_domain-decomposition:tree-topology
-width="80%"}
+@image html tree-topology.png
 
-Some examples in Figure
-[1.1](#figure:51_domain-decomposition:tree-topology){reference-type="ref"
-reference="figure:51_domain-decomposition:tree-topology"} sketch the
+Some examples in the figure above sketch the
 implications: In the left example, the yellow tree has split up into
 yellow and green. The green tree has further split into green and red.
 The code usually tries to keep whole trees, i.e. children and parents,
@@ -72,8 +65,8 @@ strive for as wide tree topologies as possible. Otherwise, your meshes
 $a$ into five parts $a,b,c,d,e$ with $b,c,d,e$ being children of $a$
 rather than splitting $a$ into $b,c$ and then $b$ and $c$ again.
 
-Data flow on stationary domains
--------------------------------
+
+## Data flow on stationary domains
 
 ### Horizontal data flow
 
@@ -88,7 +81,7 @@ data is available on the destination rank and can be merged into the
 local data structures. This merge happens on the destination prior to
 any other operation.
 
-![image](51_domain-decomposition/boundary-data-flow.pdf){width="50%"}
+@image html boundary-data-flow.png
 
  consequently realises a data exchange that is similar to Jacobi
 smoothers: Whatever you do on one tree won't be visible on the other
@@ -103,8 +96,9 @@ This yet has to be written.
 
 This yet has to be written.
 
-Splits
-------
+
+
+## Splits
 
 Whenever you split a tree, Peano creates the new trees (either as
 threads on the local node or remotely via MPI). Each new tree receives a
@@ -114,7 +108,7 @@ start to coarsen. If they are not responsible for tree parts, they
 successively remove this part. After one or two iterations, each rank
 thus really works only on local tree.
 
- uses information from the actively used data to decide which data to
+Peano uses information from the actively used data to decide which data to
 replicate. If you have cell and vertex and face data but you use some of
 these data only in some substeps of you algorithm, please ensure that
 those steps that trigger the domain decomposition and those that run
@@ -123,6 +117,54 @@ what data is to be replicated when it splits trees.
 
 Splits require significant memory temporarily. It thus might be
 convenient not to split a tree too often in one rush.
+
+     * <h2> Split process </h2>
+     *
+     * @image html SpacetreeSet_split.png
+     *
+     * If you split a tree, the original tree, i.e. the source of the data,
+     * makes the new tree run through two states: split triggered and splitting.
+     *
+     * In a usual run, Peano's trees do exchange data in a way similar to the
+     * Jacobi smoothing: Each tree traverses its domain and sends out all
+     * boundary data. I call this horizontal communication as it is data exchange
+     * between non-overlapping domains which can be arranged on one grid level.
+     * In the next iteration, the data from neighbours has arrived and can be
+     * merged in. We obtain a criss-cross communication pattern (blue steps)
+     * where an iteration feeds into the neighbour's iteration n+1.
+     *
+     * While a new id is booked by one tree if a split is triggered, this new tree
+     * does not yet physically exist. The original (source) tree keeps the
+     * complete ownership of all data, i.e. it does all refines and coarses and
+     * also creates all events. However, it already enters the new, yet to be
+     * created, tree's indices into all adjacency lists with are consequently
+     * sent out to the other ranks. This is the yellow step above. After the grid
+     * sweep, we mark the new tree id as splitting. At this point, all neighbours
+     * continue to send to the original tree, as they are not yet aware of any
+     * domain partition updates.
+     *
+     * While an id is associated with splitting (orange), we know that all the other
+     * trees around start to send data to the new tree that is yet to be
+     * created: they receive the information about the updated adjacency and can
+     * send out their stuff to the new tree. Which does not exist yet (grey).
+     *
+     * So the splitting rank (orange) traverses its domain and invokes all
+     * events. It has the semantic ownership. It merges in all boundary data from
+     * neighbours, but is does not send out the boundary data (anymore).
+     * After the splitting tree traversal has terminated, we establish
+     * the new tree by duplicating all the local data. This includes the
+     * user data, too.
+     *
+     * The new tree (light green) subsequently is traversed once as empty
+     * tree. That is, all data travel over the stacks, but no events are invoked
+     * and no communication is happening. The purpose of this empty traversal is
+     * to get all data inot the right order.
+     *
+     * Once the empty traversal has terminated, we run over the new tree
+     * again. This time, we label it as new (dark green). While we still do not
+     * invoke any event, we now do send out data. This is the sole purpose of the
+     * new traversal.
+
 
 ### Temporal ordering of tree traversals
 
@@ -169,7 +211,6 @@ substeps:
         does not invoke any user events. It however sends out the data
         the others expect from us.
 
-![image](51_domain-decomposition/split-data-flow.pdf){width="35%"}
 
 ### User data
 
@@ -187,8 +228,9 @@ split, the logical ownership of all data resides with the master,
 i.e. it is the master automaton who asks the user code what operations
 to invoke on the data.
 
-Joins
------
+
+
+## Joins
 
 Joins are completely hidden from the user, i.e. there's no way to
 actively join trees. To understand why Peano issues joins from time to
@@ -311,6 +353,102 @@ traversals on the worker side.
 Throughout the join, no data flows logically, as the master already has
 the mesh. Furthermore, only data that is actually owned by the worker is
 handed over to the master.
+
+
+
+## Distributed memory programming
+
+Distributed memory programming in Peano can be tricky, as we have a lot
+of different threads per rank and the ranks run pretty asynchronously.
+Therefore, it is always a bad idea to use blocking or synchronising
+routines. Here are a few recommendations:
+
+1.  Do not use a blocking send or receive, even if routines are
+    logically blocking. Instead, use a non-blocking routine and poll the
+    termination via `MPI_Test`. While you poll, invoke
+    `receiveDanglingMessages()` on the services to allow  to free the
+    queue from other messages such as load balancing requests which
+    might be in your way.
+
+2.  Register your own routine as a service (see
+    `tarch::services::Service`) and equip it with a
+    `receiveDanglingMessages()` routine which probes the MPI queues. If
+    a message of relevance is in the MPI queue, receive it. If you can't
+    react directly, buffer it internally. This routine ensures that the
+    MPI buffers can't overflow. Overflows force MPI to fall back from
+    eager to rendeszouz communication which can lead to deadlocks.
+
+3.  Do never impose any synchronisation unless absolutely required.
+    Notably, try to avoid synchronisation within the action sets! In the
+    ideal case, you implement a Jacobi-like data exchange: The action
+    sets send stuff out. There's a service (see above) which receives
+    the data. This data is then used by the action set (or another one)
+    in the subsequent grid pass.
+
+4.  If you have a global operation, use a non-blocking collective and
+    wait for the collective's test in the subsequent grid run-through.
+
+If a message consists of multiple parts, you might have to fuse it into
+one message to avoid that the first part of a message is received and
+queue polling (on another thread) then grabs the second part
+misinterpreting it for the first part of yet another message.
+
+### Synchronisation
+
+I also offer a boolean semaphore accross all MPI ranks. This one is
+quite expensive, as it has to lock both all threads and all ranks and
+thus send quite some messages forth and back.
+
+The usage is similar to the shared memory lock, but you have to give the
+semaphore a unique name (you might construct a string using the
+`__LINE__` and `__FILE__` macro). It is the name that  uses to ensure
+that the semaphore is unique accross all ranks. In this way, the
+semaphore is similar to an OpenMP named critical section. I recommend to
+avoid MPI barrier whenever possible. Details can be found in
+`tarch::mpi::Rank::barrier()`.
+
+### Exchange global data between ranks (reduction) {#section:parallel-programming:shared-mem:reductions}
+
+If you reduce data betwen the ranks, I recommend that you use 's
+wrappers. They have two advantages: They automatically provide deadlock
+tracking, and they poll the MPI queues, i.e. if the code stalls as too
+many other messages for other purposes (global load balancing, plotting,
+...) drop in, and remove these messages from the buffers such that MPI
+can make progress. The usage is detailed in
+`tarch::mpi::Rank::allReduce`, but the code usually resembles:
+
+
+## Design patterns for global variables between action sets
+
+Realising global variables shared between action sets is in principle
+impossible: Action sets are not persistent. They are created per
+traversal per tree. Furthermore, you have absolutely no knowledge how
+many trees any rank hosts. The only thing you know is that all trees
+will kind of start their traversal around the same time.
+
+However, there is a design pattern that you can use. It relies on the
+observations that (i) all the `beginTraversal()` events are triggered
+*after* all the global trees have synchronised. (ii) Tree 0 exists
+always.
+
+-   There are two *static* datasets per rank. This is the only valid
+    data in-between any two grid traversals. One is the current data,
+    one is the data from the previous sweep.
+
+-   Every action sets builds up its local current data and commits this
+    data to the static global dataset in `endTraversal()`. This local
+    reduction has to be protected by a (rank-local) semaphore.
+
+-   In the main routine, each rank calls a routine which reduces the
+    static current data set to rank 0. Rank 0 then broadcasts the
+    reduced data and each rank rolls over the reduced data into the
+    static old data set. The current data is cleared.
+
+-   Every action set copies the old data set into its local copy.
+
+These MPI/thread-global barriers can be very expensive and have the
+potential to lead to deadlocks/timeouts. Use them with care and localise
+their behaviour.
 
 
 */
