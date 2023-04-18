@@ -1,8 +1,5 @@
 /**
-\page parallel
-
-Parallel programming {#section:parallel-programming}
-====================
+\page peano_parallel Parallel programming
 
 Peano has originally been written for MPI+X on CPU-based architectures.
 On the MPI side, I provide some wrappers around mainstream MPI routines
