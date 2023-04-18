@@ -19,6 +19,8 @@
 
 #include "peano4/utils/Globals.h"
 
+#include "petsc/LocalToGlobalMap.h"
+
 #include "Constants.h"
 
 
@@ -57,13 +59,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       {% endif %}
     ) = 0;
 
-    /**
-    virtual void startInitialisation() = 0;
-    virtual void finishInitialisation() = 0;
-
-    virtual void startEnumeration() = 0;
-    virtual void finishEnumeration() = 0;
-*/
+    ::petsc::LocalToGlobalMap&  getLocalToGlobalMap();
   protected:
     static tarch::logging::Log  _log;
 
@@ -71,6 +67,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     double     _maxH;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
+
+    ::petsc::LocalToGlobalMap  _localToGlobalMap;
 };
 
 

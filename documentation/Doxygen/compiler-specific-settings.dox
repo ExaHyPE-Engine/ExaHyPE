@@ -175,11 +175,9 @@ with OpenMP. Instead, you have to install the package `libomp-dev`.
 Should you require OpenMP offloading, i.e. GPU, support, you have to add
 the OpenMP target instructions:
 
-
 ~~~~~~~~~~~~~~~~~~~~~~~
 ./configure CC=clang CXX=clang++  CXXFLAGS="-O3 -std=c++20 -mtune=native -march=native -fopenmp" -fopenmp-targets=nvptx64 --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp
 ~~~~~~~~~~~~~~~~~~~~~~~
-
 
 ## Example machine configurations
 
@@ -258,6 +256,10 @@ We had some issues (compiler crashes) with NVC++ 2022.5. Those are filed
 with NVIDIA. For the time being, please revert to another compiler
 generation. Version 2022.3 works for example.
 
+Some nodes (e.g. gpu3) have Titan XP which doesn't support OpenMP
+offloading; only GPUs with compute capability >=70 can offload with 
+OpenMP. You can check the GPU model with `nvidia-smi -L`.
+
 Note that there is a bug in the NVIDIA software stack at the moment.
 Many runs will crash with a complaint about a lack of visible devices.
 Ensure hence that you set the following environment before you start
@@ -267,6 +269,28 @@ your experiments:
 ~~~~~~~~~~~~~~~~~~~~~~~
 export CUDA_VISIBLE_DEVICES=0
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+#### SYCL offloading with oneAPI
+
+I used this to configure Peano with Intel's TBB enabled
+
+~~~~~~~~~~~~~~~~~~~~~~~
+source /opt/intel/oneapi/setvars.sh
+module load cuda
+
+./configure CC=clang++ CXX=clang++ LIBS="-ltbb" -LFLAGS="-fsycl -fsycl-targets-targets=nvptx64-nvidia-cuda" CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Note: Codeplay's website has some useful information on compiler flags.
+
+It also needs at least 2023.0.0 version of oneApi with Codeplay's nvidia
+GPU plugin; the LLVM compiler doesn't support the
+`-Xsycl-target-backend=` flag, so please check your Makefile.
+
+When running the executable on the GPU, include `SYCL_DEVICE_FILTER=gpu`
+before the terminal command to explicitly tell SYCL to run the code on GPU. 
+In the case of a runtime error, it is also useful to add `SYCL_PI_TRACE=2`
+to check where the error was raised.
 
 ### DINE
 

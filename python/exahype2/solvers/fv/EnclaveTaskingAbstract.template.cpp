@@ -309,14 +309,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       );
 
     tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStepSize,
-      &_maxTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-
-    tarch::mpi::Rank::getInstance().allReduce(
       &newLocalMinTimeStamp,
       &_localMinTimeStampThisTimeStep,
       1, MPI_DOUBLE,
