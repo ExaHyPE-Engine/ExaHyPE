@@ -10,16 +10,18 @@
 
 #include "config.h"
 
-
-
-
-tarch::logging::Log _log("examples::unittests");
-
-
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
-#include "exahype2/UnitTests.h"
 
+#ifdef UseExaHyPE
+#include "exahype2/UnitTests.h"
+#endif
+
+#ifdef UseSWIFT
+#include "swift2/UnitTests.h"
+#endif
+
+tarch::logging::Log _log("examples::unittests");
 
 void runTests() {
   int unitTestsErrors = 0;
@@ -37,6 +39,13 @@ void runTests() {
   
   #ifdef UseExaHyPE
   tests = exahype2::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+  #endif
+
+  #ifdef UseSWIFT
+  tests = swift2::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
@@ -69,10 +78,10 @@ int main(int argc, char** argv) {
     tarch::logging::LogFilter::FilterListEntry::TargetTrace, tarch::logging::LogFilter::FilterListEntry::AnyRank, "exahype2", tarch::logging::LogFilter::FilterListEntry::BlackListEntry, tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetDebug, tarch::logging::LogFilter::FilterListEntry::AnyRank, "examples", tarch::logging::LogFilter::FilterListEntry::BlackListEntry, tarch::logging::LogFilter::FilterListEntry::AlwaysOn
+    tarch::logging::LogFilter::FilterListEntry::TargetDebug, tarch::logging::LogFilter::FilterListEntry::AnyRank, "toolbox", tarch::logging::LogFilter::FilterListEntry::BlackListEntry, tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetTrace, tarch::logging::LogFilter::FilterListEntry::AnyRank, "examples", tarch::logging::LogFilter::FilterListEntry::BlackListEntry, tarch::logging::LogFilter::FilterListEntry::AlwaysOn
+    tarch::logging::LogFilter::FilterListEntry::TargetTrace, tarch::logging::LogFilter::FilterListEntry::AnyRank, "toolbox", tarch::logging::LogFilter::FilterListEntry::BlackListEntry, tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
 
 

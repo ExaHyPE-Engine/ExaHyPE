@@ -10,5 +10,6 @@ from .DynamicArrayOverPrimitivesToStdVector import DynamicArrayOverPrimitivesToS
 from .Model                      import Model
 from .Patch                      import Patch
 from .PatchToDoubleArray         import PatchToDoubleArray
+from .PatchToDoubleArrayOnHeap   import PatchToDoubleArrayOnHeap
 
 

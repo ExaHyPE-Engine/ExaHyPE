@@ -1,6 +1,7 @@
 #include "EnclaveTask.h"
 #include "EnclaveBookkeeping.h"
 
+#include "tarch/accelerator/Device.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/otter.h"
 
@@ -13,7 +14,7 @@ exahype2::EnclaveTask::EnclaveTask(
   const ::peano4::datamanagement::CellMarker&    marker,
   double                                         t,
   double                                         dt,
-  double*                                        inputValues,
+  double* __restrict__                           inputValues,
   int                                            numberOfInputValues,
   int                                            numberOfResultValues,
   Functor                                        functor
@@ -32,15 +33,14 @@ exahype2::EnclaveTask::EnclaveTask(
   logTraceOut( "EnclaveTask(...)" );
 }
 
-
 bool exahype2::EnclaveTask::run() {
   logTraceInWith1Argument( "run()", getTaskId() );
 
-  otterTaskBegin();
+  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
   computeTask();
 
   EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
-  otterTaskEnd();
+  otterTaskEnd(task);
   logTraceOut( "run()" );
   return false;
 }
@@ -50,7 +50,7 @@ void exahype2::EnclaveTask::computeTask() {
   assertion( _numberOfResultValues>0 );
   assertion( _inputValues!=nullptr );
 
-  _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+  _outputValues = tarch::allocateMemory<double>( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
   logDebug( "computeTask()", "lambda=" << _maxEigenvalue );
   _functor();

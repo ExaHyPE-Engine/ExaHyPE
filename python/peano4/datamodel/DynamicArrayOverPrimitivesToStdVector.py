@@ -28,7 +28,7 @@ class DynamicArrayOverPrimitivesToStdVector(object):
     """
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     generated_files = peano4.output.TemplatedHeaderImplementationFilePair(
-      templatefile_prefix+".h.template",
+      templatefile_prefix+".template.h",
       None,
       self.data.name, 
       self.data.namespace,

@@ -6,33 +6,24 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#ifndef _INCLUDE_TARCH_MPI_INTEGERMESSAGE_
-#define _INCLUDE_TARCH_MPI_INTEGERMESSAGE_
+#pragma once
 
 #include <string>
-  
 
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-#include "peano4/utils/Globals.h"
-
 
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
 
-
-  
 namespace tarch{
 namespace mpi{
-
   struct IntegerMessage;
 }
 }
-
-
 
 struct tarch::mpi::IntegerMessage {
   public:
@@ -54,15 +45,29 @@ struct tarch::mpi::IntegerMessage {
     
 
     #ifdef Parallel
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
      * the lazy initialisation is done and the datatype is also cached.
      */
     [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getDatatype();
-    
-    
+    static MPI_Datatype  getForkDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getJoinDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getBoundaryExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getGlobalCommunciationDatatype();
+    PRAGMA_POP
+
     /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
@@ -79,7 +84,7 @@ struct tarch::mpi::IntegerMessage {
      * Free the underlying MPI datatype.
      */
     static void shutdownDatatype();
-            
+    
     /**
      * In DaStGen (the first version), I had a non-static version of the send
      * as well as the receive. However, this did not work with newer C++11 
@@ -97,18 +102,15 @@ struct tarch::mpi::IntegerMessage {
      * the message went through. In systems with heavy MPI usage, this can 
      * help to avoid deadlocks.
      */
-    static void send(const tarch::mpi::IntegerMessage& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(tarch::mpi::IntegerMessage& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(const tarch::mpi::IntegerMessage& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(   tarch::mpi::IntegerMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
 
     std::string toString() const;
   
   private:
-      int   _value;
-
-
-
+    int   _value;
 
     #ifdef Parallel
     private:
@@ -124,10 +126,4 @@ struct tarch::mpi::IntegerMessage {
       static MPI_Datatype  Datatype;
       #endif
     #endif
-
-
-
 };
-
-#endif
-  

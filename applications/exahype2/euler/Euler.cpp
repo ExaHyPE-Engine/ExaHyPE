@@ -1,14 +1,15 @@
 #include "Euler.h"
+
 #include "exahype2/RefinementControl.h"
 
-#include "Constants.h"
 #include "exahype2/NonCriticalAssertions.h"
 
 #include "exahype2/fv/PatchAccess.h"
+#include "Constants.h"
 
 
 
-tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype2::euler::Euler" );
+//tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype2::euler::Euler" );
 
 
 

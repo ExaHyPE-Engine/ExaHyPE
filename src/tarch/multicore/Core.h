@@ -1,10 +1,12 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_CORE_H_
-#define _TARCH_MULTICORE_CORE_H_
+#pragma once
 
 
 #include <thread>
+#include <set>
+#include <string>
+
 #include "tarch/logging/Log.h"
 
 
@@ -19,6 +21,17 @@ namespace tarch {
      * to access the same number of cores exclusively.
      */
     int getNumberOfUnmaskedThreads();
+
+    /**
+     * Creates a string representation of those threads which are available
+     * to the processes. You get a string similar to
+     *
+     *       0000xxxx0000xxxx00000000000000
+     *
+     * The example above means that cores 4-7 and 12-15 are available to the
+     * process, the other cores are not.
+     */
+    std::string printUnmaskedThreads();
   }
 }
 
@@ -46,8 +59,7 @@ class tarch::multicore::Core {
 
     Core();
 
-    int _numberOfThreads;
-    int _numberOfDevices;
+    int               _numberOfThreads;
   public:
     /**
      * The default is what the system management typically gives you. So if
@@ -69,12 +81,16 @@ class tarch::multicore::Core {
     static Core& getInstance();
 
     /**
-     * Configure the whole thing. If numberOfThreads equals the default, the
-     * routine will use the hardware concurrency to determine the number of
-     * threads that should be used. On SLURM-based HPC platforms, this will
-     * be wrong if multiple MPI ranks are placed on one node. It is also a
-     * bad choice if hyperthreading should not/can not be used. Use the helper
-     * function getNumberOfUnmaskedThreads().
+     * Configure the whole node, i.e. all cores available on a node. If
+     * numberOfThreads equals the default, the routine will use the hardware
+     * concurrency to determine the number of threads that should be used.
+     * On SLURM-based HPC platforms, this will be wrong if multiple MPI ranks
+     * are placed on one node. It is also a bad choice if hyperthreading
+     * should not/can not be used. Use the helper function
+     * getNumberOfUnmaskedThreads().
+     *
+     *
+     *
      *
      * @param numberOfThreads Number of threads that shall be used. This
      *        parameter either is greater than zero (which defines the number
@@ -101,7 +117,6 @@ class tarch::multicore::Core {
      * @return Number of threads available.
      */
     int getNumberOfThreads() const;
-    int getNumberOfGPUs() const;
 
     /**
      * @return Physical core the process is running on
@@ -113,6 +128,3 @@ class tarch::multicore::Core {
      */
     int getThreadNumber() const;
 };
-
-
-#endif

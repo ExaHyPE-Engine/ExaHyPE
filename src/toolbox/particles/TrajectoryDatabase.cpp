@@ -11,13 +11,34 @@ tarch::logging::Log toolbox::particles::TrajectoryDatabase::_log( "toolbox::part
 
 toolbox::particles::TrajectoryDatabase::Entry::Entry( const TrajectoryDatabase& database, const tarch::la::Vector<Dimensions,double>&  x_, double  timestamp_ ):
   x(x_),
-  timestamp(timestamp_) {
-  if (database._numberOfDataPointsPerParticle>0) {
-    data = new double[database._numberOfDataPointsPerParticle];
+  timestamp(timestamp_),
+  numberOfDataEntries(database._numberOfDataPointsPerParticle) {
+  if (numberOfDataEntries>0) {
+    data = new double[numberOfDataEntries];
+    std::fill_n( data, numberOfDataEntries, 0.0 );
   }
   else {
     data =nullptr;
   }
+}
+
+
+toolbox::particles::TrajectoryDatabase::Entry::Entry( const Entry& copy ):
+  x(copy.x),
+  timestamp(copy.timestamp),
+  numberOfDataEntries(copy.numberOfDataEntries) {
+  if (numberOfDataEntries>0) {
+    data = new double[numberOfDataEntries];
+    std::copy_n( copy.data, numberOfDataEntries, data );
+  }
+  else {
+    data =nullptr;
+  }
+}
+
+
+toolbox::particles::TrajectoryDatabase::Entry::~Entry() {
+  delete[] data;
 }
 
 
@@ -52,13 +73,6 @@ void toolbox::particles::TrajectoryDatabase::clear(bool lockSemaphore) {
     lock.lock();
   }
 
-  for (auto& particle: _data) {
-    for (auto& snapshot: particle.second) {
-      if (snapshot.data!=nullptr) {
-        delete[] snapshot.data;
-      }
-    }
-  }
   _data.clear();
 }
 
@@ -71,16 +85,11 @@ void toolbox::particles::TrajectoryDatabase::clearHistory(bool lockSemaphore) {
   }
 
   for (auto& particle: _data) {
-    std::list<Entry>::iterator snapshot = particle.second.begin();
-    snapshot++; // keep first entry
-    while (snapshot!=particle.second.end()) {
-      delete[] snapshot->data;
+    if ( particle.second.size()>1 ) {
+      std::list<Entry>::iterator snapshot = particle.second.begin();
       snapshot++;
+      particle.second.erase(snapshot, particle.second.end());
     }
-
-    snapshot = particle.second.begin();
-    snapshot++;
-    particle.second.erase(snapshot, particle.second.end());
   }
 }
 

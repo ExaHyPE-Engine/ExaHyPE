@@ -1,20 +1,16 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LOGGING_LOG_FILTER_H_
-#define _TARCH_LOGGING_LOG_FILTER_H_
-
+#pragma once
 
 #include <string>
 #include <set>
 #include <stack>
-
 
 namespace tarch {
   namespace logging {
     class LogFilter;
   }
 }
-
 
 /**
  * Peano4's log filter is used by every single log instance. Please note that
@@ -24,6 +20,7 @@ namespace tarch {
 class tarch::logging::LogFilter {
   private:
     std::string  _activeProgramPhase;
+
   public:
     /**
      * Represents one entry of the filter list. Syntax:
@@ -37,6 +34,7 @@ class tarch::logging::LogFilter {
       static const std::string TargetInfo;
       static const std::string TargetDebug;
       static const std::string TargetTrace;
+      static const std::string TargetWarning;
 
       static const std::string AlwaysOn;
 
@@ -96,7 +94,6 @@ class tarch::logging::LogFilter {
     std::stack<std::string>  _indentTraces;
     #endif
 
-
     /**
      * By default, everything is on
      */
@@ -136,9 +133,7 @@ class tarch::logging::LogFilter {
     bool writeDebug(const std::string& trace);
     bool writeInfo(const std::string& trace);
     bool writeTrace(const std::string& trace);
+    bool writeWarning(const std::string& trace);
 
     void switchProgramPhase(const std::string& activeProgramPhase);
 };
-
-
-#endif

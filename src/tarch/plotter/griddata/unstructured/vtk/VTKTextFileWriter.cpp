@@ -94,7 +94,7 @@ bool tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::writeToFile
   std::ofstream out;
   out.open( filename.c_str() );
   if ( (!out.fail()) && out.is_open() ) {
-    _log.debug( "close()", "opened data file " + filename );
+    logDebug( "close()", "opened data file " + filename );
     out << std::setprecision(_precision);
 
     out << HEADER << std::endl << std::endl;
@@ -120,12 +120,12 @@ bool tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::writeToFile
       out << _cellDataDescription << std::endl << std::endl;
     }
 
-    _log.debug( "close()", "data written to " + filename );
+    logDebug( "close()", "data written to " + filename );
     _writtenToFile = true;
     return true;
   }
   else {
-  	_log.error( "close()", "unable to write output file " + filename );
+  	logError( "close()", "unable to write output file " + filename );
   	return false;
   }
 }

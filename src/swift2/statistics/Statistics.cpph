@@ -1,0 +1,21 @@
+#include "peano4/parallel/SpacetreeSet.h"
+
+
+template <typename Particle>
+void swift2::statistics::reduceVelocityAndCutOffRadius(
+  const std::list< Particle* >&  localParticles
+) {
+  if (not localParticles.empty()) {
+    double vMin = std::numeric_limits<double>::max();
+    double vMax = 0.0;
+    double rMin = std::numeric_limits<double>::max();
+    double rMax = 0.0;
+    for (const auto* particle: localParticles) {
+      vMin = std::min( vMin, tarch::la::norm2( particle->getV() ) );
+      vMax = std::max( vMax, tarch::la::norm2( particle->getV() ) );
+      rMin = std::min( rMin, particle->getCutOffRadius() );
+      rMax = std::max( rMax, particle->getCutOffRadius() );
+    }
+    Particle::getSpecies().setVelocity(vMin,vMax,rMin,rMax);
+  }
+}

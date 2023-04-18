@@ -26,6 +26,51 @@ class CellCenteredFiniteDifferences(object):
     Abstract solver for patch-based finite diffences
 
     All solvers in ExaHyPE are cell-centered discretisations.    
+    
+    
+    ## Adaptive mesh refinement
+    
+    We have, at the moment, no hard-coded AMR operator set available unless
+    you work with an overlap of one. In this case, you find operators in the 
+    toolbox. Very few pre-manufactured operators there are ready to go for 
+    higher overlaps (the injection operator is an example). In general, you 
+    will have to inject your own transfer operators.
+    
+    It depends on the flavour that you want to use for your interpolation and
+    restriction. A simple interpolation for an overlap of three and a patch_size
+    of five would be
+        
+            self._interpolation = "tensor_product< " + self._name + ">"
+            self.add_solver_constants(   "static constexpr double  NormalInterpolationMatrix1d[]     = {0.0, 1.0, 0.0};" )
+            self.add_solver_constants( " ""static constexpr double  TangentialInterpolationMatrix1d[] = {
+                    1.0,0.0,0.0,0.0,0.0,
+                    1.0,0.0,0.0,0.0,0.0,
+                    1.0,0.0,0.0,0.0,0.0,
+                    0.0,1.0,0.0,0.0,0.0,               
+                    0.0,1.0,0.0,0.0,0.0,
+                    
+                    0.0,1.0,0.0,0.0,0.0,
+                    0.0,0.0,1.0,0.0,0.0,
+                    0.0,0.0,1.0,0.0,0.0,
+                    0.0,0.0,1.0,0.0,0.0,
+                    0.0,0.0,0.0,1.0,0.0,
+                    
+                    0.0,0.0,0.0,1.0,0.0,
+                    0.0,0.0,0.0,1.0,0.0,
+                    0.0,0.0,0.0,0.0,1.0,
+                    0.0,0.0,0.0,0.0,1.0,
+                    0.0,0.0,0.0,0.0,1.0
+            };" "" )
+
+    ## Reduce memory movements
+
+    You can switch for individual fields to a heap-based scheme by changing 
+    the generator:
+    
+           self._patch.generator        = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
+           self._patch._patch_estimates = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
+
+    Alternatively, use the switch_to_heap_storage() routine.
 
   """
   
@@ -92,6 +137,8 @@ class CellCenteredFiniteDifferences(object):
     self._solver_template_file_class_name = None
 
     self._plot_description = ""
+
+    self.select_dofs_to_print = None
     
     self._action_set_initial_conditions                       = None
     self._action_set_initial_conditions_for_grid_construction = None
@@ -125,11 +172,15 @@ class CellCenteredFiniteDifferences(object):
     self._refinement_criterion_implementation = None
     self._initial_conditions_implementation   = None
 
-    self._interpolation = "linear_with_constant_extrapolation"
-    self._restriction   = "inject"
-    
+    self._interpolation = "#error Not yet defined"
+    self._restriction   = "#error Not yet defined"
+
+    self._hold_cell_data_on_heap_with_smart_pointer = False
+    self._hold_face_data_on_heap_with_smart_pointer = False
+
     self.create_data_structures()
     self.create_action_sets()
+
 
 
   def __str__(self):
@@ -177,20 +228,20 @@ h_volume_max:           """ + str( self._max_meshcell_h ) + """
     return 3**self.get_max_number_of_spacetree_levels(domain_size)
 
 
-  def get_coarsest_number_of_finite_volumes(self,domain_size):
+  def get_coarsest_number_of_compute_grid_cells(self,domain_size):
     return self.get_coarsest_number_of_patches(domain_size)*self._patch_size
 
 
-  def get_finest_number_of_finite_volumes(self,domain_size):
+  def get_finest_number_of_compute_grid_cells(self,domain_size):
     return self.get_finest_number_of_patches(domain_size)*self._patch_size
 
     
-  def get_coarsest_volume_size(self,domain_size):
-    return domain_size/self.get_coarsest_number_of_finite_volumes(domain_size)
+  def get_coarsest_compute_grid_cell_size(self,domain_size):
+    return domain_size/self.get_coarsest_number_of_compute_grid_cells(domain_size)
 
 
-  def get_finest_volume_size(self,domain_size):
-    return domain_size/self.get_finest_number_of_finite_volumes(domain_size)
+  def get_finest_compute_grid_cell_size(self,domain_size):
+    return domain_size/self.get_finest_number_of_compute_grid_cells(domain_size)
 
   
   def create_readme_descriptor(self, domain_offset, domain_size):
@@ -201,22 +252,29 @@ h_volume_max:           """ + str( self._max_meshcell_h ) + """
 
 Real type of this solver: """ + str(type(self)) + """
 
-We assume of domain size of (0,""" + str(domain_size) + """)^d. Peano 4 will cut this domain equidistantly 
+We assume that you use a domain size of (0,""" + str(domain_size) + """)^d. Peano 4 will cut this domain equidistantly 
 and recursively into three parts along each coordinate axis. This yields a spacetree.
 
 The spacetree will at least have """ + str(self.get_min_number_of_spacetree_levels(domain_size)) + """ levels.
 The spacetree will at most have """ + str(self.get_max_number_of_spacetree_levels(domain_size)) + """ levels.
 
-The spacetree will thus span at least """ + str(self.get_coarsest_number_of_patches(domain_size)) + """ cells (or patches) per coordinate axis. This means a """ + str(self.get_coarsest_number_of_patches(domain_size)) + """^d grid of patches.
-The spacetree will thus span at most """ + str(self.get_finest_number_of_patches(domain_size)) + """ cells (or patches) per coordinate axis. This means a """ + str(self.get_finest_number_of_patches(domain_size)) + """^d grid of patches.
+The spacetree will thus span at least """ + str(self.get_coarsest_number_of_patches(domain_size)) + """ octants/cells (see clarification below) per coordinate axis. This means a """ + str(self.get_coarsest_number_of_patches(domain_size)) + """^d grid of octants.
+The spacetree will thus span at most """ + str(self.get_finest_number_of_patches(domain_size)) + """ octants/cells (see clarification below) per coordinate axis. This means a """ + str(self.get_finest_number_of_patches(domain_size)) + """^d grid of octants.
 
-ExaHyPE 2 embeds """ + str(self._patch_size) + """^d patches of Finite Volumes into the finest tree level.
+ExaHyPE 2 embeds """ + str(self._patch_size) + """^d patches of compute cells into the finest tree level. 
+We refer to elements of this level as octant above.
+They are squares/cubes and many papers refer to them as cells, but they are not 
+the actual compute data structure. The compute data structure is the cells that
+are embedded into these finest level spacetree cells. We therefore prefer the 
+term octant for the latter, whereas we use the term (compute) cell for the 
+entities that are actually used for the computations, i.e. hold degrees of 
+freedom, and are actually visible within Paraview, e.g.
 
-The coarsest possible mesh will consist of """ + str(self.get_coarsest_number_of_finite_volumes(domain_size)) + """ Finite Volumes per coordinate axis.
-The finest possible mesh will consist of """ + str(self.get_finest_number_of_finite_volumes(domain_size)) + """ Finite Volumes per coordinate axis.
+The coarsest possible mesh will consist of """ + str(self.get_coarsest_number_of_compute_grid_cells(domain_size)) + """ compute cells per coordinate axis.
+The finest possible mesh will consist of """ + str(self.get_finest_number_of_compute_grid_cells(domain_size)) + """ compute cells per coordinate axis.
 
-The coarsest mesh width of """ + str(self.get_coarsest_volume_size(domain_size)) + """ is thus just smaller than the maximum volume size """ + str(self._max_meshcell_h) + """.
-The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + """ is thus just smaller than the minimum volume size """ + str(self._min_meshcell_h) + """.
+The coarsest mesh width of """ + str(self.get_coarsest_compute_grid_cell_size(domain_size)) + """ is thus just smaller than the maximum volume size """ + str(self._max_meshcell_h) + """.
+The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain_size)) + """ is thus just smaller than the minimum volume size """ + str(self._min_meshcell_h) + """.
 
 """ 
   
@@ -287,6 +345,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      specialised) run through all create_data_structure() variants 
      within the inheritance tree.
      
+     
      :: Arguments
      
      _patch: Patch (NxNxN)
@@ -317,10 +376,19 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._patch_overlap_old    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
+
+    if self._hold_cell_data_on_heap_with_smart_pointer:
+      self._patch.generator           = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
+      self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
+    if self._hold_face_data_on_heap_with_smart_pointer:
+      self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_old,    "double") 
+      self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_new,    "double") 
+      self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_update, "double") 
     
-    self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_old)
-    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_new)
-    
+    self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_old)
+    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_new)
+    self._patch.generator.merge_method_definition             = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._patch)
+
     self._patch_overlap_old.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
@@ -332,7 +400,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
    
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    
+
     self._patch_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
 
@@ -412,6 +480,15 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      scheme. Therefore, I have to hold the interpolation and restriction
      scheme seperatae.
      
+     :: Injecting your own guards
+     
+     If you inject your own guards, you should combine them with a storage
+     predicate, i.e. _store_cell_data_default_guard() and 
+     _load_cell_data_default_guard(). The action sets themselves will not
+     combine the guard with further boolean expressions. Also, you have to 
+     study carefully if a predicate accepts a unique guard or a set of 
+     guards.
+     
     """
     self._action_set_initial_conditions                          = exahype2.solvers.rkfd.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
     self._action_set_initial_conditions_for_grid_construction    = exahype2.solvers.rkfd.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
@@ -419,7 +496,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._action_set_AMR_commit_without_further_analysis         = exahype2.solvers.rkfd.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     self._action_set_handle_boundary                             = exahype2.solvers.rkfd.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
     self._action_set_project_patch_onto_faces                    = exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces(self)
-    self._action_set_roll_over_update_of_faces                   = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard() )
+    self._action_set_roll_over_update_of_faces                   = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard())
     self._action_set_copy_new_faces_onto_old_faces               = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkfd.actionsets.DynamicAMR( solver=self, interpolation=self._interpolation, restriction=self._restriction )
 
@@ -554,11 +631,11 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_initial_conditions ) 
-    step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_postprocess_solution )
     
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -643,14 +720,15 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 #include "../repositories/SolverRepository.h"
 """,
       precision="PlotterPrecision",
-      time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())"
+      time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+      select_dofs = self.select_dofs_to_print
     ))
 
     if self._plot_grid_properties:    
       step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
-        guard_guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
+        guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
         additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
@@ -681,8 +759,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_update_cell )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_compute_final_linear_combination )
-    step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_postprocess_solution )
 
 
   @abstractmethod
@@ -690,7 +768,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     pass
 
 
-  def add_implementation_files_to_project(self,namespace,output):
+  def add_implementation_files_to_project(self,namespace,output,dimensions):
     """
     
      The ExaHyPE2 project will call this operation when it sets
@@ -707,7 +785,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       templatefile_prefix += self.__class__.__name__
     else:
       templatefile_prefix += self._solver_template_file_class_name
-
+    
     abstractHeaderDictionary = {}
     implementationDictionary = {}
     self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
@@ -807,15 +885,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     d[ "KERNEL_NAMESPACE"]                    = self._kernel_namespace
 
-    # RungeKuttaDG hat einige er Implementeirungen hier oben schon, weil es ja fuer alle Riemann Loeser gilt
-    #    d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
-    #d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
-    #d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
-    #d[ "POINT_SOURCES_IMPLEMENTATION"]        = self._point_sources_implementation
-
-    # setimplementation ist also hier
-    
-    
+   
   @property
   def unknowns(self):
     return self._unknowns
@@ -889,7 +959,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
   {
     int index = 0;
     dfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
-      enforceCCZ4constraints( targetPatch+index );
+      enforceCCZ4constraints( newQ+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
@@ -897,10 +967,10 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     Within this kernel, you have at least the following variables available:
 
-    - targetPatch This is a pointer to the whole data structure (one large
+    - newQ This is a pointer to the whole data structure (one large
         array).
         The patch is not supplemented by a halo layer.
-    - reconstructedPatch This is a pointer to the data snapshot before the
+    - oldQWithHalo This is a pointer to the data snapshot before the
         actual update. This data is combined with the halo layer, i.e. if you
         work with 7x7 patches and a halo of 2, the pointer points to a 11x11
         patch.
@@ -939,18 +1009,58 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
   @interpolation.setter
   def interpolation(self,value):
+    """
+    
+    Set the interpolation scheme. If you rely on a built-in operation, then this
+    call is all you have to do. Some ExaHyPE solvers however require each solver
+    to provide special matrices/operators for some interpolation/restriction 
+    variants. If this is the case, you still have to add these matrices manually
+    to your solver.
+    
+    """
     self._interpolation = value
+
     self.create_data_structures()
     self.create_action_sets()
 
 
   @property
   def restriction(self):
+    """
+    
+    Set the restriction scheme. If you rely on a built-in operation, then this
+    call is all you have to do. Some ExaHyPE solvers however require each solver
+    to provide special matrices/operators for some interpolation/restriction 
+    variants. If this is the case, you still have to add these matrices manually
+    to your solver.
+    
+    """
     return self._restriction
 
 
   @restriction.setter
   def restriction(self,value):
     self._restriction = value
+    
     self.create_data_structures()
     self.create_action_sets()
+
+
+  def switch_to_heap_storage(self,
+                             hold_cell_data_on_heap_with_smart_pointer,
+                             hold_face_data_on_heap_with_smart_pointer
+                             ):
+    """
+    
+    By default, we hold all data on the call stacks. You can explicitly switch
+    to storage on the heap via smart pointers.
+    
+    @see create_data_structures()
+    
+    """
+    self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
+    self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
+    
+    self.create_data_structures()
+    self.create_action_sets()
+

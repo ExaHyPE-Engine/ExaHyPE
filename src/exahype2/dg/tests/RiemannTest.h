@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_DG_TESTS_RIEMANN_TEST_H_
-#define _EXAHYPE2_DG_TESTS_RIEMANN_TEST_H_
+#pragma once
 
 
 #include "tarch/tests/TestCase.h"
@@ -61,7 +60,13 @@ class exahype2::dg::tests::RiemannTest : public tarch::tests::TestCase {
      * all 0. The remainig entries then exhibit the 1,-1 pattern.
      *
      */
-    void testProjectVolumetricDataOntoFacesForConstantSolution();
+    void testProjectVolumetricDataOntoFacesForConstantSolutionOrder3();
+
+    /**
+     * Projection that's used if DG degenerates to a Finite Volumes scheme
+     * for the Euler equation, i.e. for 5 unknowns.
+     */
+    void testProjectVolumetricDataOntoFacesForConstantSolutionOrder0();
 
   public:
     RiemannTest();
@@ -72,4 +77,3 @@ class exahype2::dg::tests::RiemannTest : public tarch::tests::TestCase {
 };
 
 
-#endif

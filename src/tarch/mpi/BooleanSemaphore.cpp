@@ -1,11 +1,9 @@
 #include "BooleanSemaphore.h"
 #include "Rank.h"
 
-
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
-
 
 tarch::logging::Log  tarch::mpi::BooleanSemaphore::_log( "tarch::mpi::BooleanSemaphore" );
 
@@ -14,45 +12,33 @@ int tarch::mpi::BooleanSemaphore::_semaphoreCounter(1);
 
 tarch::mpi::BooleanSemaphore::BooleanSemaphoreService  tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::_singleton;
 
-
 void tarch::mpi::BooleanSemaphore::enterCriticalSection() {
   BooleanSemaphoreService::getInstance().acquireLock(_semaphoreNumber);
 }
-
 
 void tarch::mpi::BooleanSemaphore::leaveCriticalSection() {
   BooleanSemaphoreService::getInstance().releaseLock(_semaphoreNumber);
 }
 
-
-tarch::mpi::BooleanSemaphore::BooleanSemaphore( const std::string& identifier ):
+tarch::mpi::BooleanSemaphore::BooleanSemaphore( [[maybe_unused]] const std::string& identifier ):
   _semaphoreNumber( _semaphoreCounter ) {
   _semaphoreCounter++;
 }
 
+tarch::mpi::BooleanSemaphore::~BooleanSemaphore() {}
 
-tarch::mpi::BooleanSemaphore::~BooleanSemaphore() {
-}
+tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::BooleanSemaphoreService() {}
 
-
-tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::BooleanSemaphoreService() {
-}
-
-
-tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::~BooleanSemaphoreService() {
-}
-
+tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::~BooleanSemaphoreService() {}
 
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::init() {
   _semaphoreTag = tarch::mpi::Rank::reserveFreeTag("global semaphores");
   tarch::services::ServiceRepository::getInstance().addService( this, "tarch::mpi::BooleanSemaphore::BooleanSemaphoreService" );
 }
 
-
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::shutdown() {
   tarch::services::ServiceRepository::getInstance().removeService( this );
 }
-
 
 std::string tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::toString() const {
   std::ostringstream msg;
@@ -68,7 +54,6 @@ std::string tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::toString() co
   msg << ")";
   return msg.str();
 }
-
 
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::serveLockRequests() {
   assertion(tarch::mpi::Rank::getInstance().isGlobalMaster());
@@ -96,7 +81,6 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::serveLockRequests() 
   }
   #endif
 }
-
 
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::receiveDanglingMessages() {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -128,22 +112,18 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::receiveDanglingMessa
   }
 }
 
-
 int tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::getNumberOfLockedSemaphores() {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     tarch::multicore::Lock lock(_mapAccessSemaphore);
     return _pendingLockRequests.size();
-  }
-  else {
+  } else {
     return 0;
   }
 }
 
-
 tarch::mpi::BooleanSemaphore::BooleanSemaphoreService& tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::getInstance() {
   return _singleton;
 }
-
 
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::addMapEntryLazily(int number) {
   assertion1( number>0, number );
@@ -151,7 +131,6 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::addMapEntryLazily(in
     _map.insert( std::pair<int,bool>(number,false) );
   }
 }
-
 
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int number ) {
   if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
@@ -189,28 +168,14 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int num
 
     logDebug( "acquireLock()", "wait for confirmation from global master rank" );
     MPI_Request request;
-    auto  timeOutWarning          = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-    auto  timeOutShutdown         = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-    bool triggeredTimeoutWarning = false;
+    tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+    tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
 
     MPI_Irecv( &number, 1, MPI_INT, tarch::mpi::Rank::getGlobalMasterRank(), _semaphoreTag, tarch::mpi::Rank::getInstance().getCommunicator(), &request );
     int flag = 0;
     while ( not flag ) {
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::", "acquireLock(int)", tarch::mpi::Rank::getGlobalMasterRank(), _semaphoreTag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::", "acquireLock(int)", tarch::mpi::Rank::getGlobalMasterRank(), _semaphoreTag );
-      }
-
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::", "acquireLock(int)", tarch::mpi::Rank::getGlobalMasterRank(), _semaphoreTag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::", "acquireLock(int)", tarch::mpi::Rank::getGlobalMasterRank(), _semaphoreTag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
 
       // See documentation on dangling messages
@@ -222,7 +187,6 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int num
     #endif
   }
 }
-
 
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::releaseLock( int number ) {
   if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
@@ -248,4 +212,3 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::releaseLock( int num
     #endif
   }
 }
-

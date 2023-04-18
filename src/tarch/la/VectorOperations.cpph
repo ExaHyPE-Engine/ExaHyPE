@@ -1,6 +1,5 @@
 #include <limits>
 
-
 template<int Size, typename Scalar>
 int tarch::la::count(
   const Vector<Size,Scalar >&  vector,
@@ -15,8 +14,6 @@ int tarch::la::count(
   return result;
 }
 
-
-
 template<int Size, typename Scalar>
 bool tarch::la::allEntriesAreTheSame(const Vector<Size,Scalar>& vector) {
   bool   result     = true;
@@ -25,7 +22,6 @@ bool tarch::la::allEntriesAreTheSame(const Vector<Size,Scalar>& vector) {
   }
   return result;
 }
-
 
 template<int Size, typename Scalar>
 int tarch::la::isEntryNan(
@@ -93,14 +89,35 @@ double tarch::la::norm1 (
 
 
 template<int Size, typename Scalar>
-Scalar tarch::la::norm2 (
+Scalar tarch::la::norm2Squared (
   const Vector<Size,Scalar>&  vector
 ) {
   Scalar result( vector(0)*vector(0) );
   for (int i=1; i < Size; i++) {
     result += vector(i) * vector(i);
   }
-  return std::sqrt(result);
+  return result;
+}
+
+
+template<int Size, typename Scalar>
+Scalar tarch::la::norm2(
+  const Vector<Size,Scalar>&  vector
+) {
+  return std::sqrt( norm2Squared(vector) );
+}
+
+
+template<int Size>
+double tarch::la::norm2Squared (
+  const Vector<Size,std::complex<double> >&  vector
+) {
+  double result( 0.0 );
+  for (int i=0; i < Size; i++) {
+    result += (vector(i).real() * vector(i).real() );
+    result += (vector(i).img() * vector(i).img() );
+  }
+  return result;
 }
 
 
@@ -108,11 +125,7 @@ template<int Size>
 double tarch::la::norm2 (
   const Vector<Size,std::complex<double> >&  vector
 ) {
-  double result( 0.0 );
-  for (int i=0; i < Size; i++) {
-    result += (vector(i) * vector(i)).real();
-  }
-  return result;
+  return std::sqrt( norm2Squared(vector) );
 }
 
 

@@ -10,11 +10,12 @@ exahype2::dg::tests::RiemannTest::RiemannTest():
 
 
 void exahype2::dg::tests::RiemannTest::run() {
-  testMethod( testProjectVolumetricDataOntoFacesForConstantSolution );
+  testMethod( testProjectVolumetricDataOntoFacesForConstantSolutionOrder3 );
+  testMethod( testProjectVolumetricDataOntoFacesForConstantSolutionOrder0 );
 }
 
 
-void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolution() {
+void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder3() {
   const int order        = 3;
   const int nodesPerAxis = order+1;
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
@@ -141,3 +142,57 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   validateNumericalEquals( QzR[1], -1.0 );
   #endif
 }
+
+
+void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder0() {
+  const int order        = 0;
+
+  double QIn[]     = {0.1,0.2,0.3,0.4,0.5};
+  double leftQ[]   = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  double rightQ[]  = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  double bottomQ[] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  double topQ[]    = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  #if Dimensions==3
+  double frontQ[]  = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  double backQ[]   = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  #endif
+
+
+  #if Dimensions==2
+  ::exahype2::dg::projectVolumetricDataOntoFaces(
+    QIn,
+    0,
+    5,
+    0,
+    BasisFunctionValuesLeftP0,
+    leftQ,
+    rightQ,
+    bottomQ,
+    topQ
+  );
+  #endif
+  #if Dimensions==3
+  ::exahype2::dg::projectVolumetricDataOntoFaces(
+    QIn,
+    0,
+    5,
+    0,
+    BasisFunctionValuesLeftP0,
+    leftQ,
+    rightQ,
+    bottomQ,
+    topQ,
+    frontQ,
+    backQ
+  );
+  #endif
+
+  validateNumericalEquals( leftQ[0], 0.0 );
+  validateNumericalEquals( leftQ[1], 0.0 );
+  validateNumericalEquals( leftQ[2], 0.0 );
+  validateNumericalEquals( leftQ[3], 0.0 );
+  validateNumericalEquals( leftQ[4], 0.0 );
+  validateNumericalEquals( leftQ[5], 0.1 );
+}
+
+

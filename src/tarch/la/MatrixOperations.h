@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LA_MATRIXOPERATIONS_H_
-#define _TARCH_LA_MATRIXOPERATIONS_H_
+#pragma once
 
 
 #include "tarch/la/Matrix.h"
@@ -74,4 +73,3 @@ std::ostream&  operator<<(std::ostream& os, const tarch::la::Matrix<Rows,Cols,Sc
 
 #include "tarch/la/MatrixOperations.cpph"
 
-#endif

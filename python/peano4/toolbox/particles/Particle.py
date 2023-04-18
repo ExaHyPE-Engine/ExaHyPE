@@ -8,26 +8,54 @@ import dastgen2
 
 
 class Particle(DaStGen2):
-  """
+  """!
   
-    Represent a single particle. This is a DaStGen2 wrapper, i.e. I 
-    define a DaStGen object and add some particular fields that I always 
-    need to administer the particles.
-    
-    If you use these particles, please do not add them to your use 
-    definitions of the actions/observers. For pidt, you need a second
-    ParticleSet and this one is used by the observers.
-    
-    You have to add the particle to your project though via 
-    
-    my_project.add_global_object
+  Single particle
 
-    If you want to attributes to a particle, use the data subattribute.
-    An all-time classic is the call
+  Represent a single particle. This is a DaStGen2 wrapper, i.e. I 
+  define a DaStGen object and add some particular fields that I always 
+  need to administer the particles.
+
+
+  ## Usage
+      
+  If you use these particles, please do not add them to your use 
+  definitions of the actions/observers. For pidt, you need a second
+  ParticleSet and this one is used by the observers.
+  
+  You have to add the particle to your project though via 
     
-    <pre>
-    add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
-    </pre>
+          my_project.add_global_object
+
+  If you want to attributes to a particle, use the data subattribute.
+  An all-time classic is the call
+  
+         add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
+         
+  ## Pre-defined fields
+  
+  I actually need only very few fields in Peano's particle toolbox:
+  
+  - A position x. You can change this position in your code, but please 
+    invoke a particle re-sort once you change a particle's position. Usually,
+    I employ the pidt (particle in dual tree) scheme, i.e. particles are 
+    always stored in the closest vertex. If you alter the position of a 
+    particle, you might destroy this association and have to re-assign the
+    object to another vertex.
+  - A cut-off radius. Every particle in Peano has a cut-off, i.e. a maximal
+    interaction radius. As I only compare particles stored in one vertex to 
+    particles stored in a cell-connected vertex, the cut-off radius also 
+    implicitly determines the tree grid level that I use to hold a particle.
+    The bigger the cut-off, the higher up in the mesh I have to store a 
+    particle.
+  - Two states. These states should not be used by the user. They are 
+    exclusively made for the actionset UpdateParallelState. A tree owns the 
+    particles that are contained within its local tree cells. Furthermore,
+    a tree knows about the particles which are associated to a vertex that's
+    adjacent to a local mesh. These particles are virtual. We effectively
+    work with a halo of h/2 per mesh level. Details can be found in 
+    UpdateParallelState. The flags are there to manage the lifecycle of these
+    virtual particles. Never read them or use them.
   
   """
   def __init__(self,name):
@@ -42,9 +70,12 @@ class Particle(DaStGen2):
     peano4.datamodel.DaStGen2.__init__( self, name )
     
     self.name = name
-    self._position_identifier = "x"
     
-    self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray(self._position_identifier,"Dimensions") )
-    self.data.add_attribute( dastgen2.attributes.Enumeration("ParallelState", ["Local","Virtual"]) )
-    self.data.add_attribute( dastgen2.attributes.Enumeration("NewParallelState", ["Local","Virtual"]) )
+    self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("x","Dimensions") )
     self.data.add_attribute( dastgen2.attributes.Double( "cutOffRadius" ) )
+    
+    #
+    # Both states are not to be used by algorithms. They are for the grid management.
+    #
+    self.data.add_attribute( dastgen2.attributes.Enumeration("ParallelState", [ "Local", "Virtual" ]) )
+    self.data.add_attribute( dastgen2.attributes.Enumeration("NewParallelState", [ "Local", "Virtual" ]) )

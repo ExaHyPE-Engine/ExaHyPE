@@ -12,4 +12,4 @@ from .GlobalAdaptiveTimeStepWithEnclaveTasking      import GlobalAdaptiveTimeSte
 #from .LocalTimeStepWithEnclaveTasking               import LocalTimeStepWithEnclaveTasking
 
 from .kernels import SolverVariant
-from .kernels import RiemannKernelVariant
+from .kernels import KernelVariant

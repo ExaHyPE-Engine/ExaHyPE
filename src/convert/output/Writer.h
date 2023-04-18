@@ -1,5 +1,4 @@
-#ifndef _CONVERT_OUTPUT_WRITER_H_
-#define _CONVERT_OUTPUT_WRITER_H_
+#pragma once
 
 
 #include "convert/data/PatchData.h"
@@ -25,4 +24,3 @@ class convert::output::Writer {
 };
 
 
-#endif

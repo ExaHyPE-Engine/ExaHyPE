@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_RUSANOV_FUNCTORS_H_
-#define _EXAHYPE2_FV_RUSANOV_FUNCTORS_H_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -57,4 +56,3 @@ namespace exahype2 {
   }
 }
 
-#endif

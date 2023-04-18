@@ -6,8 +6,7 @@
 // This is generated. Don't change it! Every rerun of the Python API will
 // overwrite your changes.
 //
-#ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
-#define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+#pragma once
 
 
 #include "exahype2/RefinementControl.h"
@@ -38,8 +37,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     /**
      * We do not impose any constraints on the patch/cell size.
      */
-    static constexpr double MaxAdmissiblePatchH  = std::numeric_limits<double>::max();
-    static constexpr double MinAdmissiblePatchH  = 0.0;
+    static constexpr double MaxAdmissibleCellH  = std::numeric_limits<double>::max();
+    static constexpr double MinAdmissibleCellH  = 0.0;
 
     {{CLASSNAME}}();
 
@@ -99,6 +98,5 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 };
 
 
-#endif
 
 {# Empty line here #}

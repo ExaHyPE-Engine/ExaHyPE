@@ -192,7 +192,7 @@ class Visualiser(object):
       for p in self._filter:
         if p.run_on_individual_pieces_of_data:
           print( "apply filter " + str(p) + " to snapshot")
-          parser.cell_data, parser.dof, parser.dimensions, parser.unknowns, parser.description, parser.mapping = p.render(parser.cell_data, parser.dof, parser.dimensions, parser.unknowns, parser.description, parser.mapping)
+          parser.cell_data, parser.dof, parser.dimensions, parser.unknowns, parser.is_data_associated_to_cell, parser.description, parser.mapping = p.render(parser.cell_data, parser.dof, parser.dimensions, parser.unknowns, parser.is_data_associated_to_cell, parser.description, parser.mapping)
   
     self._cell_data  = []
     self._dof, self._dimensions, self._unknowns, self._description, self._is_data_associated_to_cell, self._mapping = validate(parsers)
@@ -216,5 +216,5 @@ class Visualiser(object):
       for p in self._filter:
        if p.run_on_concatenated_data:
          print( "apply filter " + str(p) )
-         self._cell_data, self._dof, self._dimensions, self._unknowns, self._description, self._mapping = p.render(self._cell_data, self._dof, self._dimensions, self._unknowns, self._description, self._mapping)
+         self._cell_data, self._dof, self._dimensions, self._unknowns, self.is_data_associated_to_cell, self._description, self._mapping = p.render(self._cell_data, self._dof, self._dimensions, self._unknowns, self._is_data_associated_to_cell, self._description, self._mapping)
      

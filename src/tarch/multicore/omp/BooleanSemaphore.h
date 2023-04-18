@@ -3,7 +3,6 @@
 #if !defined( _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_OMP_H_) && defined(SharedOMP)
 #define _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_OMP_H_
 
-
 namespace tarch {
   namespace multicore {
     class BooleanSemaphore;
@@ -11,10 +10,8 @@ namespace tarch {
   }
 }
 
-
 #include <string>
 #include <omp.h>
-#include "omp.h"
 
 class tarch::multicore::BooleanSemaphore {
   private:
@@ -28,14 +25,16 @@ class tarch::multicore::BooleanSemaphore {
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore( const BooleanSemaphore& semaphore ) {}
+    inline BooleanSemaphore([[maybe_unused]] const BooleanSemaphore& semaphore) {}
 
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore& operator=( const BooleanSemaphore& semaphore ) {return *this;}
+    inline BooleanSemaphore& operator = ([[maybe_unused]] const BooleanSemaphore& semaphore) { return *this; }
+
   public:
     BooleanSemaphore();
     ~BooleanSemaphore();
 };
+
 #endif

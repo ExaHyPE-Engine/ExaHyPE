@@ -1,11 +1,11 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.rkfd.OneSweepPerRungeKuttaStep import OneSweepPerRungeKuttaStep
+from exahype2.solvers.rkfd.SeparateSweeps import SeparateSweeps
 from exahype2.solvers.rkfd.PDETerms    import PDETerms
 
 import jinja2
 
-from .kernels import create_compute_Riemann_kernel_for_FD4
+from .kernels import create_compute_kernel_for_FD4
 
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_declarations
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_definitions
@@ -13,12 +13,12 @@ from exahype2.solvers.rkfd.kernels import create_solver_declarations
 from exahype2.solvers.rkfd.kernels import create_solver_definitions
 #
 from exahype2.solvers.rkfd.kernels import SolverVariant
-from exahype2.solvers.rkfd.kernels import RiemannKernelVariant
+from exahype2.solvers.rkfd.kernels import KernelVariant
 
 from exahype2.solvers.rkfd.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
 
-class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
+class GlobalAdaptiveTimeStep( SeparateSweeps ):
   def __init__(self, 
     name, patch_size, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 
@@ -34,18 +34,20 @@ class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
     super(GlobalAdaptiveTimeStep,self).__init__(name, 
                                              patch_size, 
                                              3, #overlap, 
-                                             rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace="fd4") 
+                                             rk_order, 
+                                             unknowns, 
+                                             auxiliary_variables, 
+                                             min_meshcell_h, 
+                                             max_meshcell_h, 
+                                             plot_grid_properties,
+                                             kernel_namespace="fd4"
+                                             ) 
 
     self._time_step_relaxation = time_step_relaxation
+    self._compute_eigenvalue                  = True
 
     self._KO_Sigma                            = KOSigma
-
-    self._compute_eigenvalue                  = True
     
-    self._user_action_set_includes += """
-#include "exahype2/fd/fd4/FD4.h"
-"""
-
     self.set_implementation(flux=flux, 
       ncp=ncp, 
       eigenvalues=eigenvalues, 
@@ -81,12 +83,14 @@ class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
 
     if not                  KOSigma==None:  self._KO_Sigma                                  = KOSigma
 
-    self._compute_kernel_call = create_compute_Riemann_kernel_for_FD4(
-      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
-      compute_max_eigenvalue_of_next_time_step=True,
-      solver_variant = SolverVariant.WithVirtualFunctions,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap,
-      KOSigma=self._KO_Sigma
+    self._compute_kernel_call = create_compute_kernel_for_FD4(
+      self._flux_implementation, 
+      self._ncp_implementation, 
+      self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step = True,
+      solver_variant                           = SolverVariant.WithVirtualFunctions,
+      kernel_variant                           = KernelVariant.PatchWiseAoSHeap,
+      KOSigma                                  = self._KO_Sigma
     )
 
     solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)
@@ -108,3 +112,9 @@ class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
     
     self.create_action_sets()
 
+
+  @property
+  def user_action_set_includes(self):
+    return super(GlobalAdaptiveTimeStep, self).user_action_set_includes + """
+#include "exahype2/fd/fd4/FD4.h"
+"""

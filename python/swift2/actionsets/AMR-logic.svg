@@ -1,0 +1,535 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="AMR-logic.svg"
+   inkscape:export-filename="/home/tobias/git/Peano/python/swift2/actionsets/AMR-logic.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="1.8116734"
+     inkscape:cx="397.14663"
+     inkscape:cy="248.11315"
+     inkscape:window-width="1846"
+     inkscape:window-height="1136"
+     inkscape:window-x="74"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2">
+    <marker
+       style="overflow:visible;"
+       id="Arrow1Lend"
+       refX="0.0"
+       refY="0.0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(0.8) rotate(180) translate(12.5,0)"
+         style="fill-rule:evenodd;fill:context-stroke;stroke:context-stroke;stroke-width:1.0pt;"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         id="path862" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow1Lend-2"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend"
+       inkscape:isstock="true">
+      <path
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path862-3" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow1Lend-7"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend"
+       inkscape:isstock="true">
+      <path
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path862-4" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow1Lend-7-2"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend"
+       inkscape:isstock="true">
+      <path
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path862-4-5" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow1Lend-7-2-4"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend"
+       inkscape:isstock="true">
+      <path
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path862-4-5-4" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Arrow1Lend-7-0"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend"
+       inkscape:isstock="true">
+      <path
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path862-4-7" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.6;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
+       d="M 32.509928,14.106301 V 146.99292"
+       id="path857" />
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="39.00695"
+       y="152.59464"
+       id="text2815"><tspan
+         sodipodi:role="line"
+         id="tspan2813"
+         style="stroke-width:0.264583"
+         x="39.00695"
+         y="152.59464">Grid traversals</tspan></text>
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371"
+       cx="32.509926"
+       cy="20.175097"
+       r="3.0098875" />
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371-3"
+       cx="32.509926"
+       cy="35.427185"
+       r="3.0098875" />
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371-3-6"
+       cx="32.509926"
+       cy="51.289413"
+       r="3.0098875" />
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371-3-6-7"
+       cx="32.509926"
+       cy="84.746017"
+       r="3.0098875" />
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371-3-6-7-5"
+       cx="32.509926"
+       cy="100.34577"
+       r="3.0098875" />
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371-3-6-7-5-0"
+       cx="32.509926"
+       cy="127.18332"
+       r="3.0098875" />
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="5.9683919"
+       y="34.823826"
+       id="text6653"><tspan
+         sodipodi:role="line"
+         id="tspan6651"
+         style="stroke-width:0.264583"
+         x="5.9683919"
+         y="34.823826">update</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="5.9683919"
+         y="40.115486"
+         id="tspan6655">position</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="40.623852"
+       y="83.375107"
+       id="text6653-9"><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="40.623852"
+         y="83.375107"
+         id="tspan6655-6">hand out AMR events</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="40.623852"
+         y="88.666771"
+         id="tspan11804">and trigger refinement</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="40.01096"
+       y="101.26991"
+       id="text6653-9-0"><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="40.01096"
+         y="101.26991"
+         id="tspan11804-2">realise refinement</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583;fill:#008000"
+       x="40.178734"
+       y="34.261444"
+       id="text8429"><tspan
+         sodipodi:role="line"
+         id="tspan8427"
+         style="stroke-width:0.264583;fill:#008000"
+         x="40.178734"
+         y="34.261444">update particle-grid</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583;fill:#008000"
+         x="40.178734"
+         y="39.553104"
+         id="tspan8431">assocation</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;fill:#008000;stroke-width:0.264583"
+       x="52.62883"
+       y="108.65218"
+       id="text8429-6"><tspan
+         sodipodi:role="line"
+         id="tspan8427-1"
+         style="fill:#008000;stroke-width:0.264583"
+         x="52.62883"
+         y="108.65218">update particle-grid</tspan><tspan
+         sodipodi:role="line"
+         style="fill:#008000;stroke-width:0.264583"
+         x="52.62883"
+         y="113.94384"
+         id="tspan8431-8">assocation</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583;fill:#0000ff"
+       x="39.731678"
+       y="50.512333"
+       id="text8429-3"><tspan
+         sodipodi:role="line"
+         id="tspan8427-5"
+         style="stroke-width:0.264583;fill:#0000ff"
+         x="39.731678"
+         y="50.512333">update particle-grid</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583;fill:#0000ff"
+         x="39.731678"
+         y="55.803993"
+         id="tspan8431-6">assocation</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;fill:#0000ff;stroke-width:0.264583"
+       x="39.54493"
+       y="125.93874"
+       id="text8429-3-7"><tspan
+         sodipodi:role="line"
+         id="tspan8427-5-9"
+         style="fill:#0000ff;stroke-width:0.264583"
+         x="39.54493"
+         y="125.93874">update particle-grid</tspan><tspan
+         sodipodi:role="line"
+         style="fill:#0000ff;stroke-width:0.264583"
+         x="39.54493"
+         y="131.23039"
+         id="tspan8431-6-2">assocation</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="50.57217"
+       y="62.8032"
+       id="text8429-3-2"><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="50.57217"
+         y="62.8032"
+         id="tspan8431-6-1">update parallel</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="50.57217"
+         y="68.094864"
+         id="tspan8918">state</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;fill:#008000;stroke-width:0.264583"
+       x="50.519852"
+       y="74.710136"
+       id="text8429-3-2-2"><tspan
+         sodipodi:role="line"
+         style="fill:#008000;stroke-width:0.264583"
+         x="50.519852"
+         y="74.710136"
+         id="tspan10757">evaluate AMR</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.6;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Lend-2)"
+       d="M 144.43011,14.390167 V 147.27678"
+       id="path857-7" />
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="150.92712"
+       y="152.87851"
+       id="text2815-5"><tspan
+         sodipodi:role="line"
+         id="tspan2813-9"
+         style="stroke-width:0.264583"
+         x="150.92712"
+         y="152.87851">Grid traversals</tspan></text>
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371-2"
+       cx="144.52428"
+       cy="35.989315"
+       r="3.0098875" />
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371-2-7"
+       cx="144.43713"
+       cy="19.861931"
+       r="3.0098875" />
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371-3-2"
+       cx="144.4301"
+       cy="51.586067"
+       r="3.0098875" />
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371-3-6-8"
+       cx="144.4301"
+       cy="78.560806"
+       r="3.0098875" />
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371-3-6-7-9"
+       cx="144.4301"
+       cy="112.0174"
+       r="3.0098875" />
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371-3-6-7-5-7"
+       cx="144.4301"
+       cy="127.61715"
+       r="3.0098875" />
+    <circle
+       style="fill:#000000;stroke:#000000;stroke-width:0.600001;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path4371-3-6-7-5-0-3"
+       cx="144.4301"
+       cy="154.45435"
+       r="3.0098875" />
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="117.88857"
+       y="50.982708"
+       id="text6653-6"><tspan
+         sodipodi:role="line"
+         id="tspan6651-1"
+         style="stroke-width:0.264583"
+         x="117.88857"
+         y="50.982708">update</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="117.88857"
+         y="56.274368"
+         id="tspan6655-2">position</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="151.30743"
+       y="35.014484"
+       id="text6653-9-9"><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="151.30743"
+         y="35.014484"
+         id="tspan6655-6-3">hand out AMR events</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="151.30743"
+         y="40.306149"
+         id="tspan11804-1">and trigger refinement</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="151.6846"
+       y="52.474022"
+       id="text6653-9-0-9"><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="151.6846"
+         y="52.474022"
+         id="tspan11804-2-4">realise refinement</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;fill:#008000;stroke-width:0.264583"
+       x="152.09891"
+       y="61.532837"
+       id="text8429-7"><tspan
+         sodipodi:role="line"
+         id="tspan8427-8"
+         style="fill:#008000;stroke-width:0.264583"
+         x="152.09891"
+         y="61.532837">update particle-grid</tspan><tspan
+         sodipodi:role="line"
+         style="fill:#008000;stroke-width:0.264583"
+         x="152.09891"
+         y="66.824501"
+         id="tspan8431-4">assocation</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;fill:#008000;stroke-width:0.264583"
+       x="164.549"
+       y="135.92342"
+       id="text8429-6-5"><tspan
+         sodipodi:role="line"
+         id="tspan8427-1-0"
+         style="fill:#008000;stroke-width:0.264583"
+         x="164.549"
+         y="135.92342">update particle-grid</tspan><tspan
+         sodipodi:role="line"
+         style="fill:#008000;stroke-width:0.264583"
+         x="164.549"
+         y="141.21507"
+         id="tspan8431-8-3">assocation</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;fill:#0000ff;stroke-width:0.264583"
+       x="151.65184"
+       y="77.783722"
+       id="text8429-3-6"><tspan
+         sodipodi:role="line"
+         id="tspan8427-5-1"
+         style="fill:#0000ff;stroke-width:0.264583"
+         x="151.65184"
+         y="77.783722">update particle-grid</tspan><tspan
+         sodipodi:role="line"
+         style="fill:#0000ff;stroke-width:0.264583"
+         x="151.65184"
+         y="83.075386"
+         id="tspan8431-6-0">assocation</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="162.49234"
+       y="90.074593"
+       id="text8429-3-2-0"><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="162.49234"
+         y="90.074593"
+         id="tspan8431-6-1-6">update parallel</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="162.49234"
+         y="95.366257"
+         id="tspan8918-1">state</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;fill:#008000;stroke-width:0.264583"
+       x="151.57961"
+       y="21.174156"
+       id="text8429-3-2-2-5"><tspan
+         sodipodi:role="line"
+         style="fill:#008000;stroke-width:0.264583"
+         x="151.57961"
+         y="21.174156"
+         id="tspan10757-5">evaluate AMR</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.23333px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="53.775269"
+       y="137.89011"
+       id="text8429-3-2-4"><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="53.775269"
+         y="137.89011"
+         id="tspan8431-6-1-7">update parallel</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="53.775269"
+         y="143.18176"
+         id="tspan8918-6">state</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
+       d="m 44.449687,58.301066 v 15.499146 h 4.604136"
+       id="path15915" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend-2)"
+       d="m 44.449687,58.301066 v 0 l -0.04024,7.035631 5.175544,-0.140545"
+       id="path15917"
+       sodipodi:nodetypes="cccc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend-7)"
+       d="m 45.889444,102.6995 0.01103,7.59973 h 4.604136"
+       id="path15915-5"
+       sodipodi:nodetypes="ccc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend-7-0)"
+       d="m 156.02008,84.352889 0.011,7.59973 h 4.60414"
+       id="path15915-5-8"
+       sodipodi:nodetypes="ccc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend-7-2)"
+       d="M 22.107115,35.572278 40.215174,35.412102"
+       id="path15915-5-4"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend-7-2-4)"
+       d="m 133.52429,51.53699 16.7758,10.666189"
+       id="path15915-5-4-3"
+       sodipodi:nodetypes="cc" />
+  </g>
+</svg>

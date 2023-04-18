@@ -136,7 +136,7 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
   def get_body_of_getGridControlEvents(self):
     if self._implement_previous_refinement_instructions:
       return """
-    return repositories::refinementControl.getGridControlEvents();
+    return ::exahype2::RefinementControlService::getInstance().getGridControlEvents();
 """ 
     else:
       return """
@@ -153,7 +153,7 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
 
     if self._build_up_new_refinement_instructions and operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
       result = """
-  repositories::refinementControl.merge( _localRefinementControl );
+  ::exahype2::RefinementControlService::getInstance().merge( _localRefinementControl );
 """
     
     if self._build_up_new_refinement_instructions and operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
@@ -175,7 +175,13 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
     return result
 
   
-  def set_event_lifetime(self,value):
+  @property
+  def event_lifetime(self):
+    return self._event_lifetime
+
+
+  @event_lifetime.setter
+  def event_lifetime(self,value):
     """
     
      By default, a refinement/coarsening event is only alive for one grid sweep. 
@@ -185,7 +191,8 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
      invoke this setter.
      
     """
-    self._event_lifetime = value
+    self._event_lifetime = value * self._solver._rk_order
+
 
   def get_attributes(self):
     return """
@@ -195,3 +202,9 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+
+
+  def get_includes(self):
+    return super( AdaptivityCriterion, self ).get_includes() + """
+#include "exahype2/RefinementControlService.h"
+"""

@@ -17,9 +17,7 @@
 #define UseTestSpecificCompilerSettings
 
 
-#ifndef noCompilerICC
-  #define CompilerICC
-#endif
+#pragma once
 
 #define CompilerHasProcStat
 
@@ -60,3 +58,8 @@
  * eat stuff. icpc is GNU-based and therefore we do not define the static keyword here.
  */
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions
+
+#define OpenMPTaskGroup
+#define PRAGMA_PUSH
+#define SILENCE_UNKNOWN_ATTRIBUTE
+#define PRAGMA_POP

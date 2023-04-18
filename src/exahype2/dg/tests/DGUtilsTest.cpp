@@ -2,6 +2,9 @@
 #include "TestUtils.h"
 #include "../DGUtils.h"
 
+#include "peano4/datamanagement/CellMarker.h"
+
+
 /*
  * We use precomputed values for lagrange polynomials as basis function
  *  on Gauss-Legendre nodes
@@ -12,8 +15,112 @@ exahype2::dg::tests::DGUtilsTest::DGUtilsTest():
 
 
 void exahype2::dg::tests::DGUtilsTest::run(){
-  testMethod( testComputeGradientOnConstantSolution );
   testMethod( testGetIndex );
+  testMethod( testComputeGradientOnConstantSolution );
+  testMethod( testEvaluatePolynomialOrder1 );
+  testMethod( testEvaluatePolynomialOrder2 );
+}
+
+
+void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
+  const int order = 1;
+
+  peano4::grid::GridTraversalEvent    dummyEvent;
+
+  #if Dimensions==2
+  dummyEvent.setX( {0.4,0.6} );
+  dummyEvent.setH( {0.2,0.2} );
+  double Q0[] = {1.2,1.2,1.2,1.2};
+  tarch::la::Vector<Dimensions,double>  xCentre     = {0.5,0.7};
+  tarch::la::Vector<Dimensions,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0]};
+  #else
+  dummyEvent.setX( {0.4,0.6,0.8} );
+  dummyEvent.setH( {0.2,0.2,0.2} );
+  double Q0[] = {1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2};
+  tarch::la::Vector<Dimensions,double>  xCentre = {0.5,0.7,0.9};
+  tarch::la::Vector<Dimensions,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0],0.8+0.2*QuadratureNodes1dP1[0]};
+  #endif
+
+  peano4::datamanagement::CellMarker  cellMarker(dummyEvent);
+
+  double result;
+  result = exahype2::dg::evaluatePolynomial(
+    cellMarker,
+    order,
+    QuadratureNodes1dP1,
+    1,
+    Q0,
+    xLeftBottom,
+    0
+  );
+  validateNumericalEqualsWithParams1( result, 1.2, cellMarker.toString() );
+
+  result = exahype2::dg::evaluatePolynomial(
+    cellMarker,
+    order,
+    QuadratureNodes1dP1,
+    1,
+    Q0,
+    xCentre,
+    0
+  );
+  validateNumericalEqualsWithParams1( result, 1.2, cellMarker.toString() );
+}
+
+
+void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder2() {
+  const int order = 2;
+
+  peano4::grid::GridTraversalEvent    dummyEvent;
+
+  #if Dimensions==2
+  dummyEvent.setX( {0.4,0.6} );
+  dummyEvent.setH( {0.2,0.2} );
+  double Q0[] = { 1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2 };
+  tarch::la::Vector<Dimensions,double>  xCentre     = {0.5,0.7};
+  tarch::la::Vector<Dimensions,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP2[0],0.6+0.2*QuadratureNodes1dP2[0]};
+  #else
+  dummyEvent.setX( {0.4,0.6,0.8} );
+  dummyEvent.setH( {0.2,0.2,0.2} );
+  double Q0[] = { 1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2 };
+  tarch::la::Vector<Dimensions,double>  xCentre = {0.5,0.7,0.9};
+  tarch::la::Vector<Dimensions,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0],0.8+0.2*QuadratureNodes1dP1[0]};
+  #endif
+
+  peano4::datamanagement::CellMarker  cellMarker(dummyEvent);
+
+  double result;
+  result = exahype2::dg::evaluatePolynomial(
+    cellMarker,
+    order,
+    QuadratureNodes1dP2,
+    1,
+    Q0,
+    xLeftBottom,
+    0
+  );
+  validateNumericalEqualsWithParams1( result, 1.2, cellMarker.toString() );
+
+  result = exahype2::dg::evaluatePolynomial(
+    cellMarker,
+    order,
+    QuadratureNodes1dP2,
+    1,
+    Q0,
+    xCentre,
+    0
+  );
+  validateNumericalEqualsWithParams1( result, 1.2, cellMarker.toString() );
 }
 
 
@@ -40,13 +147,14 @@ void exahype2::dg::tests::DGUtilsTest::testGetIndex() {
 
 
 void exahype2::dg::tests::DGUtilsTest::testComputeGradientOnConstantSolution() {
+  #if Dimensions==2
   const int order        = 3;
   const int nodesPerAxis = order+1;
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
 
   // 1 unknown, 1 auxiliary variable
   double cellQin[2*nodesPerCell];
-  double gradientValues[Dimensions];
+  double gradientValues[2*Dimensions];
   for(int i=0; i<2*nodesPerCell; i++){
     cellQin[i] = 1.0;
   }
@@ -65,5 +173,5 @@ void exahype2::dg::tests::DGUtilsTest::testComputeGradientOnConstantSolution() {
       validateNumericalEquals(gradientValues[var], 0.0);
     }
   }
-
+  #endif
 }

@@ -6,6 +6,7 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/otter.h"
+#include "tarch/accelerator/Device.h"
 
 #include "tarch/logging/Statistics.h"
 
@@ -78,7 +79,7 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
 
   tarch::multicore::releaseTaskNumber(number);
 
-  otterSynchroniseDescendantTasks();
+  otterSynchroniseTasks(NULL, otter_sync_descendants);
 
   return storedData;
 }

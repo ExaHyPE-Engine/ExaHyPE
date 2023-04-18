@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_FINITE_ELEMENTS_STENCIL_FACTORY_H_
-#define _TOOLBOX_FINITE_ELEMENTS_STENCIL_FACTORY_H_
+#pragma once
 
 
 #include "Stencil.h"
@@ -332,4 +331,3 @@ u0  u1  u2
 
 
 
-#endif

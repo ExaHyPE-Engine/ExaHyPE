@@ -41,3 +41,7 @@
  */
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
+#undef OpenMPTaskGroup
+#define PRAGMA_PUSH
+#define SILENCE_UNKNOWN_ATTRIBUTE
+#define PRAGMA_POP

@@ -36,9 +36,7 @@ class DaStGen2Generator(object):
 
     self._data.data.write_header_file( self._data.namespace[-1] + "/" + self._data.name + ".h" )
     self._data.data.write_implementation_file(  self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
-    #self.__generate_dastgen_input_file()
     output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
-    #output.add( peano4.output.InvokeExternalTool( "java -jar " + self.DaStGenJarFile + " " + self.__DaStGenArguments + " " + self.__get_file_name() + " .", self.data.namespace[-1] ), False )
 
 
 
@@ -54,17 +52,22 @@ class DaStGen2(DoF):
     data: dastgen2.DataModel
       Add elements to this guy to enrich your data model.
     
-    _peano4_aspect: peano4.dastgen2.MPI
+    peano4_mpi_and_storage_aspect: peano4.dastgen2.MPI
       This aspect adds the Peano-specific MPI routines to the data type, 
       i.e. routines used for boundary and re-balancing exchange. Modify 
       this one if you want to control certain data exchange or merge
       patterns.
 
+
+    ## Data storage
+    
+    I can control when to store data through the peano4_mpi_and_storage_aspect.
+   
    
     ## MPI
     
     If you want to add your own MPI merge implementation, you have to 
-    alter the attribute _peano4_aspect.
+    alter the attribute peano4_mpi_and_storage_aspect.
     
     ## Arguments
     
@@ -129,11 +132,9 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
     self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugX", "Dimensions", ifdefs=["PeanoDebug>0"] ) )
     self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugH", "Dimensions", ifdefs=["PeanoDebug>0"] ) )
     
-    self._dastgen2_aspect = dastgen2.aspects.MPI()
-    self._peano4_aspect   = peano4.dastgen2.MPI(peano4.datamodel.DoFAssociation.Undef)
+    self.peano4_mpi_and_storage_aspect = peano4.dastgen2.MPI(peano4.datamodel.DoFAssociation.Undef)
 
-    self.data.add_aspect( self._dastgen2_aspect )
-    self.data.add_aspect( self._peano4_aspect )
+    self.data.add_aspect( self.peano4_mpi_and_storage_aspect )
 
 
   def configure(self,namespace,association):
@@ -154,8 +155,20 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
       
     """
     super(DaStGen2, self).configure(namespace,association)
-    #self.data.add_aspect( dastgen2.aspects.MPI() )
-    #self.data.add_aspect( peano4.dastgen2.MPI(association) )
-    self._peano4_aspect.dof_association = association
+    self.peano4_mpi_and_storage_aspect.dof_association = association
     
+        
+  @property
+  def additional_load_and_store_arguments(self):
+    return self._additional_load_and_store_arguments
+    
+
+  @additional_load_and_store_arguments.setter
+  def additional_load_and_store_arguments(self,new_arguments):
+    self.peano4_mpi_and_storage_aspect.additional_load_and_store_arguments = [ (x[1],x[2]) for x in new_arguments]
+    for new_argument in new_arguments:
+      self.peano4_mpi_and_storage_aspect.includes.append( """
+#include \"""" + new_argument[1].replace("::","/") + """.h"
+""")
+    self._additional_load_and_store_arguments = new_arguments
 

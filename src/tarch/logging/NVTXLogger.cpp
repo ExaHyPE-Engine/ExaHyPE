@@ -16,7 +16,7 @@
 #include "config.h"
 
 #ifdef UseNVIDIA
-#include <nvToolsExt.h>
+#include <nvtx3/nvToolsExt.h>
 #endif
 
 
@@ -138,7 +138,6 @@ void tarch::logging::NVTXLogger::error(long int timestampNanoseconds, int rank, 
   std::cerr.flush();
 
   close();
-  tarch::mpi::Rank::abort(-1);
 }
 
 

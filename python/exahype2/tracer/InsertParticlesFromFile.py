@@ -11,7 +11,11 @@ import dastgen2.attributes.Integer
 import numpy as np
 
 class InsertParticlesFromFile(ActionSet):
-  def __init__(self, particle_set, filename, scale_factor=1.0):
+  def __init__(self, 
+               particle_set, 
+               filename, 
+               scale_factor=1.0
+               ):
     """
 
     particle_set: ParticleSet
@@ -37,14 +41,22 @@ class InsertParticlesFromFile(ActionSet):
     tarch::multicore::Lock lock( _semaphore );
   
     std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), true);  
-    for (auto& p: coords) {
+    for (auto* p: coords) {
       globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
+      
       newParticle->setNumber(0, _spacetreeId);
       newParticle->setNumber(1, _particleNumberOnThisTree);
-      toolbox::particles::init(*newParticle,p,0.0);
       _particleNumberOnThisTree++;
-      // just insert them; will be re-assigned then anyway
-      fineGridVertices{{PARTICLES_CONTAINER}}(0).push_back( newParticle );
+      
+      logInfo( "touchVertexFirstTime(...)", "insert particle " << particle->toString() << " into " << marker.toString() );
+
+      toolbox::particles::init(*newParticle,p,0.0);
+
+      toolbox::particles::insertParticleIntoCell(
+        marker,
+        newParticle,
+        fineGridVertices{{PARTICLES_CONTAINER}}
+      );
     }
     
     logDebug( "touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " << marker.toString() << " on tree " << _spacetreeId );
@@ -85,6 +97,7 @@ class InsertParticlesFromFile(ActionSet):
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "toolbox/particles/FileReader.h"
+#include "toolbox/particles/particles.h"
 #include "toolbox/particles/ParticleFactory.h"
 #include <fstream>
 #include <string>
@@ -101,7 +114,7 @@ toolbox::particles::FileReader     """ + full_qualified_classname + """::_fileRe
 
 
   def get_constructor_body(self):
-    return """
+    return super( InsertParticlesFromFile ).get_constructor_body() + """
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
   
@@ -118,7 +131,7 @@ toolbox::particles::FileReader     """ + full_qualified_classname + """::_fileRe
 
 
   def get_attributes(self):
-     return """
+     return super( InsertParticlesFromFile ).get_attributes() + """
   static tarch::multicore::BooleanSemaphore _semaphore;
      
   int                                    _particleNumberOnThisTree;

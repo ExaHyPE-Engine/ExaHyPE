@@ -266,13 +266,14 @@ peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
 
 
 bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
-  otterTaskBegin();
+  // AT: ideally would have a parent task to pass here to record ancestry
+  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
   _spacetreeSet.createObserverCloneIfRequired(_observer,_spacetree._id);
   if (_invertTreeTraversalDirectionBeforeWeStart) {
     _spacetree._root.setInverted( not _spacetree._root.getInverted() );
   }
   _spacetree.traverse( *_spacetreeSet._clonedObserver[_spacetree._id], true );
-  otterTaskEnd();
+  otterTaskEnd(task);
   return false;
 }
 
@@ -532,7 +533,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   }
 
   // I use this boolean flag from time to time to debug the code.
-  const bool runSequentially = false;
+  [[maybe_unused]] const bool runSequentially = false;
 
   logTraceInWith1Argument( "traverse(TraversalObserver&)-primary", primaryTasks.size() );
   tarch::multicore::spawnAndWait( primaryTasks );

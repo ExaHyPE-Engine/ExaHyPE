@@ -1,9 +1,7 @@
 // Copyright (C) 2009 Technische Universitaet Muenchen
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MPI_BOOLEAN_SEMAPHORE_H_
-#define _TARCH_MPI_BOOLEAN_SEMAPHORE_H_
-
+#pragma once
 
 #include "tarch/mpi/mpi.h"
 #include "tarch/logging/Log.h"
@@ -14,7 +12,6 @@
 #include <map>
 #include <vector>
 
-
 namespace tarch {
   namespace mpi {
     class BooleanSemaphore;
@@ -22,7 +19,6 @@ namespace tarch {
     class Rank;
   }
 }
-
 
 /**
  * Boolean semaphore across MPI ranks
@@ -63,11 +59,11 @@ class tarch::mpi::BooleanSemaphore {
          * requests access to the number of the semaphore it is asking
          * for.
          */
-        std::vector< std::pair<int,int> >   _pendingLockRequests;
+        std::vector< std::pair<int, int> >   _pendingLockRequests;
 
         BooleanSemaphoreService();
 
-        BooleanSemaphoreService( const BooleanSemaphoreService& copy ) = delete;
+        BooleanSemaphoreService( const BooleanSemaphoreService& ) = delete;
 
         /**
          * If a remote rank does request a lock, I don't reserve it
@@ -96,6 +92,7 @@ class tarch::mpi::BooleanSemaphore {
          *    may not equal zero.
          */
         void addMapEntryLazily(int number);
+
       public:
         void init();
         void shutdown() override;
@@ -139,6 +136,7 @@ class tarch::mpi::BooleanSemaphore {
 
         std::string toString() const;
     };
+
   private:
     friend class Rank;
     friend class tarch::mpi::Lock;
@@ -162,12 +160,12 @@ class tarch::mpi::BooleanSemaphore {
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore( const BooleanSemaphore& semaphore ) = delete;
+    BooleanSemaphore( const BooleanSemaphore& ) = delete;
 
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore& operator=( const BooleanSemaphore& semaphore ) = delete;
+    BooleanSemaphore& operator = ( const BooleanSemaphore& ) = delete;
 
   public:
     /**
@@ -183,6 +181,3 @@ class tarch::mpi::BooleanSemaphore {
 
     ~BooleanSemaphore();
 };
-
-
-#endif

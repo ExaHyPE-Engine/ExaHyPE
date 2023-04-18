@@ -4,7 +4,7 @@
 
 \section{Clang toolchain}
 
- Both NVC++ and Intel's OneAPI compilers build upon Clang. However, they modify
+ The NVC++, Intel's OneAPI and AMD compilers build upon Clang. However, they modify
  the baseline compiler. Therefore, they have separated sections in this chapter
  (below).
  The present section focuses on the baseline Clang compiler suite:
@@ -39,67 +39,6 @@ OpenMP target instructions:
  --with-multithreading=omp 
 \end{bash}
 
-
-% -fopenmp 
-% -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda
-% 
-% 08:38
-% when compiling llvm openmp,  you need to pass flags for the architecture you want, on ncc I do:
-% 
-% ... -DLIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES="61;70;75;80;86" ...
-% 
-% that captures all devices we have available. This will produce the following files:
-% 
-% libomptarget-nvptx-sm_61.bc
-% libomptarget-nvptx-sm_70.bc
-% libomptarget-nvptx-sm_75.bc
-% libomptarget-nvptx-sm_80.bc
-% libomptarget-nvptx-sm_86.bc
-% 
-% Holger Schulz  08:46
-% If you want to specify the target device at compile time you can do e.g.:
-% 
-% -fopenmp -fopenmp-targets=nvptx64 -Xopenmp-target -march=sm_80
-
-% -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda
-% 
-% 
-% 
-
-
-
-
-\section{Intel OneAPI toolchain}
-
-\begin{remark}
- OneAPI is what we currently use on Hamilton 8, i.e.~our AMD EPYC testbeds.
- However, the modules there are built against old versions of GCC which do not
- provide the C++ standard library that we need for \Peano.
- Therefore, you have to manually load the newest GCC \emph{after} you have
- loaded the OneAPI module.
-\end{remark}
-
-
-\noindent
-Before we start, you either load a fitting OneAPI module, or you set the
-environment variables via Intel's script:
-
-\begin{bash}
-source /opt/intel/oneapi/setvars.sh
-\end{bash}
-
-\noindent
-The \texttt{source} command is included within a proper module.
-The LLVM-based Intel compiler is straightforward to use:
-
-\begin{bash}
-./configure CC=icx CXX=icpx \
- CXXFLAGS="-Ofast -std=c++20 -xAVX -mtune=native -march=native" \ 
- --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured
-\end{bash}
-
-\noindent
-which sets the most aggressive generic optimisation.
 
 
 
@@ -155,68 +94,8 @@ Please note that you will have to link against \texttt{libtbb.so} via
 
 
 
-\paragraph{Intel MPI}
-%
-Intel's \texttt{mpiicpc} wrapper serves both the legacy Intel compiler and the
-new LLVM version. 
-We recommend to switch to the new build:
-
-\begin{bash}
-export I_MPI_CXX=icpx
-\end{bash}
-
-\noindent
-before you invoke
-
-\begin{bash}
-./configure CC=icx CXX=icpx ... --with-mpi=mpiicpc
-\end{bash}
-
-\noindent
-Obviously, you have to fill in the remaining flags that you need for your build.
-Notably, do not forget to add a multithreading backend, as \Peano\ does not
-particularly like sole MPI builds without multithreading.
 
 
-
-\paragraph{Intel OneAPI toolchain (ITAC)}
-% 
-For Intel's ITAC, we have to load the itac module and reconfigure.
-We found many supercomputers to deploy itac to modules of its own, i.e.~it is
-not loaded by default.
-
-
-\begin{bash}
-./configure CXXFLAGS="-DLogService=ITACLogger \
- --with-toolchain=intel
-\end{bash}
-
-\noindent
-switches the logging to ITAC and activates the Intel toolchain.
-Please note that it depends on your log filter file (Chapter
-\ref{section:logging}) what data is piped into ITAC and which data isn't.
-
-
-
-
-
-\section{NVIDIA NVC++ toolchain}
-
-The NVIDIA toolchain requires us to make \texttt{CXX}
-and \texttt{CC} point to the C++ compiler, as both are passed the same
-arguments by configure, which are actually only understood by the C++ version.
-
-\begin{bash}
-export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
-./configure CXX=$NVCPP CC=$NVCPP \
- CXXFLAGS="-O3 --std=c++17" \
- --enable-exahype --enable-blockstructured --enable-loadbalancing
-\end{bash}
-
-\noindent
-Some compute kernels are not available with the NVIDIA tools, as the compiler is
-pretty picky when it decides which temporary variables it might place on the
-call stack.
 
 
 \paragraph{OpenMP and OpenMP offloading}
@@ -268,113 +147,41 @@ Found 0 devices
 
 \noindent
 if you run the kernel benchmark from page \pageref{page:exahype:kernel-benchmark}.
-% On my local laptop with an NVIDIA GeForce RTX 3060, I had to install the NVIDIA 
-% 
-% 
-% GeForce RTX 2060 Max-Q
-% 
-% 01:00.0 VGA compatible controller: NVIDIA Corporation TU106M [GeForce RTX 2060 Max-Q] (rev a1)
-% 
-% 
-% export PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/cuda/bin:$PATH
-% export LD_LIBRARY_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/cuda/lib64:$LD_LIBRARY_PATH
 
 
+\section{AMD toolchain}
+For the AMD toolchain we need to load either ROCm or AOMP.
+Both modules should have AMD's version of Clang.
+With the AMD toolchain we use AMD's modified Clang. We again need to point \texttt{CXX}
+and \texttt{CC} to the Clang compiler.
 
-% \section{AMD MI50 test cluster}
-% 
-% 
-% The HIP compiler can't do OpenMP offloading at the moment, i.e.~a simple
-% translation with hipcc does not work. 
-% Instead, we use the command \texttt{hipconfig --cpp\_config} to identify HIP's
-% compiler settings and then run the code.
-% 
-% 
-% Simple clang++ should translate the code for the host:
-% \begin{code}
-% ./configure --enable-exahype CXX="clang++" LDFLAGS="-lm" 
-% ./configure --enable-exahype --with-multithreading=omp CXX="clang++ CXXFLAGS="-DnoGPUOffloading" LDFLAGS="-lm"
-% \end{code}
-% 
-% % The HIP compiler is not yet able to offload computations to the GPU:
-% % \begin{code}
-% % ./configure --enable-exahype --with-multithreading=omp CXX="clang++" \
-% %   CXXFLAGS="-D__HIP_PLATFORM_HCC__=  -I/opt/rocm-3.5.1/hip/include -I/opt/rocm-3.5.1/llvm/bin/../lib/clang/11.0.0 -I/opt/rocm-3.5.1/hsa/include -D__HIP_ROCclr" \
-% %   LDFLAGS="-lm"
-% % \end{code}
-% 
-% % If I use the clang compiler from rocl, the stuff does not yet work:
-% % \begin{code}
-% % ./configure --enable-exahype --with-multithreading=omp \
-% %  CXX="/opt/rocm-3.5.0/aomp/bin/clang++" \
-% %  CXXFLAGS="-D__HIP_PLATFORM_HCC__=  -I/opt/rocm-3.5.1/hip/include -I/opt/rocm-3.5.1/llvm/bin/../lib/clang/11.0.0 -I/opt/rocm-3.5.1/hsa/include -D__HIP_ROCclr -I/opt/rocm-3.5.0/aomp/include/ -fopenmp" \
-% %  LDFLAGS="-lm -fopenmp"
-% % \end{code}
-% 
-% 
-% \noindent
-% Therefore, we rely on the fact that ROCM is installed at \texttt{/opt/rocm} and
-% configure as follows:
-% 
-% \begin{code}
-% ./configure --enable-exahype --with-multithreading=omp \
-%  CXX="/opt/rocm/aomp/bin/clang++" \
-%  CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906" \
-%  LDFLAGS="-lm -fopenmp"
-% \end{code}
-% 
-% 
-% % ./configure --enable-exahype --with-multithreading=omp \
-% %  CXX="/opt/rocm/aomp/bin/clang" \
-% %  CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906" \
-% %  LDFLAGS="-lm -fopenmp"
-% 
-% 
-% 
-% % ./configure --enable-exahype --with-multithreading=omp \
-% %  CXX="/opt/rocm/aomp/bin/clang++" \
-% %  CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 --hip-device-lib-path=/opt/rocm-3.5.1/lib" \
-% %  LDFLAGS="-lm -fopenmp"
+\paragraph{OpenMP}
+\begin{remark}
+  The Clang compiler does not support \texttt{omp\_get\_mapped\_ptr} at the moment.
+  We have implemented a workaround \texttt{mk\_omp\_get\_mapped\_ptr} in \texttt{src/tarch/multicore/omp/MkUtils.h}
+  which does the same trick.
+ \end{remark}
 
+For the configuration with OpenMP GPU offloading, we again specify \texttt{--with-gpu=omp} to make Peano GPU aware.
+Furthermore, we need to add AMD specific offloading instructions:
 
+\begin{bash}
+  ./configure \
+  --enable-exahype \
+  --enable-loadbalancing \
+  --enable-blockstructured \
+  --with-gpu=omp \
+  --with-multithreading=omp \
+  CC=clang CXX=clang++ \
+  CXXFLAGS="-O3 -std=c++20 -fopenmp -O3 -std=c++20 --offload-arch=<gpu-arch>" \
+  LDFLAGS="-fopenmp --offload-arch=<gpu-arch> -lstdc++fs"
+\end{bash}
 
+where \texttt{<gpu-arch>} is either \texttt{gfx906} (MI 50), \texttt{gfx908} (MI 100), or \texttt{gfx90a} (MI 200 series).
 
 \section{Some particular supercomputer testbeds}
 
-\subsection{Hamilton 8}
 
-One Hamilton 8 (AMD EPYC), we prefer to use the OneAPI toolchain via the
-pre-installed modules.
-It is important to load an appropriate GCC backend, too.
-
-
-\begin{bash}
-module purge
-module load oneapi
-export FLAVOUR_NOCONFLICT=1
-module load gcc
-
-./configure CC=icx CXX=icpx ... 
-\end{bash}
-
-
-\noindent
-The \texttt{oneapi} is built against a GCC version which is too old and lacks
-important features within its standard library.
-Therefore, you have to manuall load the latest \texttt{gcc}.
-This is usually prevented by the system and leads to a conflict (so that you
-can't have multiple GCC versions loaded).
-We therefore have to disable conflict checks a priori.
-
-
-For MPI, I recommend to use IntelMPI:
-
-\begin{bash}
-module load intelmpi
-
-export I_MPI_CXX=icpx
-./configure CC=icx CXX=icpx ... --with-mpi=mpiicpc
-\end{bash}
 
 
 \subsection{NCC}
@@ -390,13 +197,19 @@ I use the setup
 module load nvidia-hpc
 
 ./configure CXX=nvc++ CC=nvc++ \ 
- CXXFLAGS="-O4 --std=c++17 -mp=gpu -gpu=cc80 LDFLAGS=-mp=gpu -gpu=cc80" \ 
+ CXXFLAGS="-O4 --std=c++17 -mp=gpu -gpu=cc80" LDFLAGS="-mp=gpu -gpu=cc80" \ 
  --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-blockstructured --enable-loadbalancing \ 
  CPP=cpp FC=/apps/nvidia-hpc-sdk/Linux_x86_64/22.3/compilers/bin/nvfortran 
 \end{bash}
 
 \noindent
 on the A100 nodes.
+
+\begin{remark}
+ We had some issues (compiler crashes) with NVC++ 2022.5. Those are filed with
+ NVIDIA. For the time being, please revert to another compiler generation.
+ Version 2022.3 works for example.
+\end{remark}
 
 
 Note that there is a bug in the NVIDIA software stack at the moment. 
@@ -412,17 +225,30 @@ export CUDA_VISIBLE_DEVICES=0
 \subsection{DINE (Durham Intelligent NIC Environment)}
 
 
-Log into the first DINE node as by documentation (\texttt{ssh -X b101}) and run
+Log into the first DINE node as by documentation (\texttt{ssh -X b101}).
+
+
+
+\paragraph{Configuration with Intel MPI and OneAPI}
 
 \begin{code}
 module purge
-module load python/3.6.5 gnu_comp/10.2.0 openmpi/4.0.5
+module load oneAPI
+module load gnu_comp/11.1.0
+module load python/3.10.1
+module load intel_mpi
 
-./configure --enable-exahype --enable-loadbalancing --enable-blockstructured \
-  --with-multithreading=omp --with-mpi=mpicxx \
-  CXXFLAGS="--std=c++17 -fopenmp -march=native -O3" \
-  LDFLAGS="-fopenmp"
+export I_MPI_CXX=icpx
+
+./configure CXX=icpx CC=icx --enable-exahype --enable-loadbalancing \
+  --enable-blockstructured --with-multithreading=omp --with-mpi=mpiicpc \
+  CXXFLAGS="-std=c++17 -fiopenmp -march=native -fast -Wno-unused-command-line-argument" \
+  LDFLAGS="-fiopenmp"
 \end{code}
+
+
+
+
 
 
 \noindent
@@ -439,6 +265,22 @@ With the module combination from above, the single-sided communication flag seem
 mpirun -n myNoOfRank -cpus-per-rank CoresPerRank ./peano4 ...
  \end{code}  
 \end{remark}
+
+
+\begin{code}
+module purge
+module load oneAPI
+module load python/3.10.1
+module load intel_mpi
+
+export I_MPI_CXX=icpx
+
+./configure --enable-exahype --enable-loadbalancing --enable-blockstructured \
+  --with-multithreading=omp --with-mpi=mpicxx \
+  CXXFLAGS="--std=c++17 -fopenmp -march=native -O3" \
+  LDFLAGS="-fopenmp"
+\end{code}
+
  
 
 \subsection{Cosma}

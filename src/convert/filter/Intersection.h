@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _CONVERT_FILTER_INTERSECTION_H_
-#define _CONVERT_FILTER_INTERSECTION_H_
+#pragma once
 
 
 #include "Filter.h"
@@ -30,4 +29,3 @@ class convert::filter::Intersection: public convert::filter::Filter {
 };
 
 
-#endif

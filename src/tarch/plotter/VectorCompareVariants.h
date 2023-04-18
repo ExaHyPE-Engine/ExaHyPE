@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_PLOTTER_VECTOR_COMPARE_VARIANTS_H_
-#define _TARCH_PLOTTER_VECTOR_COMPARE_VARIANTS_H_
+#pragma once
 
 #include "tarch/la/VectorCompare.h"
 
@@ -38,4 +37,3 @@ namespace tarch {
 }
 
 
-#endif

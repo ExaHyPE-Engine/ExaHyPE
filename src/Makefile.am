@@ -13,7 +13,10 @@ SUBDIRS = . \
   toolbox/multiprecision \
   toolbox/particles \
   exahype2 \
-  unittests convert
+  swift2 \
+  petsc \
+  convert \
+  unittests
 
 #
 # I want Peano4 to be as fast as possible and thus build it as static library
@@ -25,13 +28,11 @@ lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a    
                 libPeano4Core2d.a libPeano4Core2d_debug.a libPeano4Core2d_asserts.a libPeano4Core2d_trace.a libPeano4Core2d_stats.a \
                 libPeano4Core3d.a libPeano4Core3d_debug.a libPeano4Core3d_asserts.a libPeano4Core3d_trace.a libPeano4Core3d_stats.a
 
-
 libTarch_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
 libTarch_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE)
 libTarch_asserts_a_CXXFLAGS = $(CXXFLAGS_PEANO_2D_ASSERTS)
 libTarch_debug_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_DEBUG)
 libTarch_stats_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_STATS)
-
 
 libPeano4Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE) 
 libPeano4Core2d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_STATS) 
@@ -81,8 +82,6 @@ Peano4Core_SOURCES = \
   peano4/stacks/STDVectorStack.cpp \
   peano4/utils/Loop.cpp
 
-
-
 Tarch_SOURCES= tarch/tarch.cpp \
  tarch/UnitTests.cpp \
  tarch/la/tests/DynamicMatrixTest.cpp \
@@ -96,6 +95,16 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/la/Scalar.cpp \
  tarch/la/Vector.cpp \
  tarch/la/DynamicMatrix.cpp \
+ tarch/accelerator/accelerator.cpp \
+ tarch/accelerator/Device.cpp \
+ tarch/accelerator/cpp/accelerator.cpp \
+ tarch/accelerator/cpp/Device.cpp \
+ tarch/accelerator/omp/accelerator.cpp \
+ tarch/accelerator/omp/Device.cpp \
+ tarch/accelerator/omp/GPUMemoryManager.cpp \
+ tarch/accelerator/sycl/accelerator.cpp \
+ tarch/accelerator/sycl/Device.cpp \
+ tarch/accelerator/cuda/ErrorCheck.cpp \
  tarch/multicore/BooleanSemaphore.cpp \
  tarch/multicore/multicore.cpp \
  tarch/multicore/Core.cpp \
@@ -119,13 +128,13 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/multicore/tbb/Core.cpp \
  tarch/multicore/tbb/RecursiveSemaphore.cpp \
  tarch/multicore/tbb/Tasks.cpp \
- tarch/multicore/sycl/SYCL.cpp \
  tarch/multicore/sycl/multicore.cpp \
  tarch/multicore/sycl/BooleanSemaphore.cpp \
  tarch/multicore/sycl/Core.cpp \
  tarch/multicore/sycl/RecursiveSemaphore.cpp \
  tarch/multicore/sycl/Tasks.cpp \
  tarch/multicore/orchestration/AllOnGPU.cpp \
+ tarch/multicore/orchestration/BackfillAndDeployRoundRobin.cpp \
  tarch/multicore/orchestration/Hardcoded.cpp \
  tarch/multicore/orchestration/StrategyFactory.cpp \
  tarch/tests/TestCaseCollection.cpp \
@@ -178,7 +187,6 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/services/Service.cpp \
  tarch/services/ServiceRepository.cpp 
 
-
 #
 # Map defined source sequences onto libraries
 #
@@ -198,4 +206,3 @@ libPeano4Core3d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core3d_asserts_a_SOURCES = $(Peano4Core_SOURCES)
 libPeano4Core3d_debug_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core3d_stats_a_SOURCES   = $(Peano4Core_SOURCES)
-

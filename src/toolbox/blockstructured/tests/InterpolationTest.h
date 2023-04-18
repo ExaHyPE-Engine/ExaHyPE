@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_BLOCKSTRUCTURED_TESTS_INTERPOLATED_TEST_H_
-#define _TOOLBOX_BLOCKSTRUCTURED_TESTS_INTERPOLATED_TEST_H_
+#pragma once
 
 #include "tarch/tests/TestCase.h"
 #include "tarch/logging/Log.h"
@@ -63,4 +62,3 @@ parameter tarch::la::DynamicMatrix::vectorToString(fineGridFaceEulerQUpdate.valu
     void run() override;
 };
 
-#endif

@@ -4,6 +4,7 @@
 
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/Core.h"
 
 #include "LogFilter.h"
 
@@ -226,8 +227,8 @@ void tarch::logging::CommandLineLogger::info(long int timestampNanoseconds, int 
 
 void tarch::logging::CommandLineLogger::warning(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
     std::string outputMessage = constructMessageString(
-      "warning",
-	  timestampNanoseconds, rank, threadId, trace, message
+      LogFilter::FilterListEntry::TargetWarning,
+      timestampNanoseconds, rank, threadId, trace, message
     );
 
     tarch::multicore::Lock lockCout( _semaphore );
@@ -289,26 +290,32 @@ void tarch::logging::CommandLineLogger::indent( bool indent, const std::string& 
   tarch::multicore::Lock lockCout( _semaphore );
   if (indent) {
     _indent+=NumberOfIndentSpaces;
-     #if !defined(SharedMemoryParallelisation)
-    _indentTraces.push(trace);
-     #endif
+    if ( tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
+      _indentTraces.push(trace);
+    }
   }
   else {
-    #if !defined(SharedMemoryParallelisation)
-    assertionEquals2(
-      _indentTraces.top(),
-      trace,
-      message,
-      indent
-    );
-    _indentTraces.pop();
-    assertion5(
-      _indent >= NumberOfIndentSpaces,
-      _indent, NumberOfIndentSpaces,
-      "more logTraceOut calls than logTraceIn calls invoked before",
-      trace, message
-    );
-    #endif
+    if ( tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
+      assertion3(
+        not _indentTraces.empty(),
+        trace,
+	message,
+        indent
+      );
+      assertionEquals2(
+        _indentTraces.top(),
+        trace,
+        message,
+        indent
+      );
+      _indentTraces.pop();
+      assertion5(
+        _indent >= NumberOfIndentSpaces,
+        _indent, NumberOfIndentSpaces,
+        "more logTraceOut calls than logTraceIn calls invoked before",
+        trace, message
+      );
+    }
     _indent-=NumberOfIndentSpaces;
   }
   #endif

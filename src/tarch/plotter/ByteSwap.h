@@ -1,5 +1,4 @@
-#ifndef _TARCH_PLOTTER_BYTESWAP_H
-#define _TARCH_PLOTTER_BYTESWAP_H
+#pragma once
 
 namespace tarch {
   namespace plotter {
@@ -26,4 +25,3 @@ namespace tarch {
 
 #include "tarch/plotter/ByteSwap.cpph"
 
-#endif

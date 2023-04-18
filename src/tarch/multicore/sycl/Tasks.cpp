@@ -3,14 +3,11 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/sycl/Core.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
 #include "tarch/mpi/Rank.h"
-
-#include "tarch/logging/Statistics.h"
-
-
 
 #if defined(SharedSYCL)
 #include <tbb/task_group.h>
@@ -24,12 +21,8 @@ namespace {
    */
   std::atomic<int> nonblockingTasksCounter          = 0;
 
-  const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
-  const std::string BackfillWhileWaitingForBSPTasks( "tarch::multicore::backfill");
-
   /**
    * Native mapping of a task loop onto a SYCL loop
-   *
    *
    * @see spawnTask()
    *
@@ -40,17 +33,14 @@ namespace {
     assertion( not tasks.empty() );
 
     for (auto& p: tasks) {
-      tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).submit([&](auto &h) {
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+      tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
         while (p->run()) {}
         delete p;
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
       });
     }
 
-    tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).wait();
+    tarch::multicore::getHostSYCLQueue().wait();
   }
-
 
   /**
    * Aggressive BSP-type variant to run through tasks which ensures high
@@ -73,53 +63,35 @@ namespace {
     std::atomic<int>       spawnedTasks  = 0;
 
     for (auto& p: tasks) {
-      tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).submit([&,p](auto &h) {
+      tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
+        h.host_task([&]() {
           spawnedTasks++;
 
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
           while (p->run()) {}
           delete p;
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
   
           pendingTasks--;
 
-          const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
-          const int  threadNumber = tarch::multicore::Core::getInstance().getThreadNumber();
-
-          while (
+          bool continueToProcessPendingTasks =
             pendingTasks>0
             and
-            // Without this yield, the code will deadlock if you have more trees
-            // than cores. As the first p trees on p cores will finish and then
-            // poll. The other >p trees/tasks will starve
             pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
             and
-            spawnedTasks==NumberOfThreads
-          ) {
-            tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-            int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks(threadNumber);
-
-            bool processedSomeTasks = false;
-            if (numberOfPendingTasks>=fusion.minTasks) {
-              processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
-            }
-            else if (numberOfPendingTasks>0) {
-              tarch::multicore::internal::processThreadLocalTask(threadNumber);
-              }
-            else { // no local tasks left over
-              tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
-              const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-              ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
-              processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
-            }
+            spawnedTasks==NumberOfThreads;
+          while ( continueToProcessPendingTasks ) {
+            continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+              strategy
+            );
           }
+       });
       });
     }
 
-    tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).wait();
+    // @todo This is not nice. I don't want to wait for all events. I would like
+    // to wait for BSP events only
+    tarch::multicore::getHostSYCLQueue().wait();
   }
 }
-
 
 /**
  * Read spawnAndWaitAsTaskLoop() first.
@@ -132,18 +104,15 @@ namespace {
  * that this is not the case and that SYCL/DPC++ refuses to translate this
  * code: you have to spawn explicitly as host task.
  *
- *
  * @author Andrew Mallinson
  * @author Tobias Weinzierl
- *
  *
  * @see spawnAndWaitAsTaskLoop()
  */
 void tarch::multicore::native::spawnTask(Task*  job) {
   nonblockingTasksCounter++;
 
-  sycl::event e = tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).submit([&](auto &h) {
-//    h.single_task([=]() {
+  sycl::event e = tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
     h.host_task([=]() {
       while (job->run()) {}
       delete job;
@@ -153,7 +122,6 @@ void tarch::multicore::native::spawnTask(Task*  job) {
 
   e.wait();
 }
-
 
 /**
  * Use a taskloop and label it as nogroup, i.e. we only synchronise over the
@@ -177,11 +145,9 @@ void tarch::multicore::native::spawnAndWait(
   }
 }
 
-
 int tarch::multicore::native::getNumberOfPendingTasks() {
   return nonblockingTasksCounter;
 }
-
 
 /**
  * It is not clear what happens if I use tasksOfSameType directly within the task.
@@ -203,10 +169,8 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
   }
 }
 
-
 void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
-  tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).wait();
+  tarch::multicore::getHostSYCLQueue().wait();
 }
-
 
 #endif

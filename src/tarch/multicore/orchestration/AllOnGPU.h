@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_ORCHESTRATION_ALLONGPU_H_
-#define _TARCH_MULTICORE_ORCHESTRATION_ALLONGPU_H_
+#pragma once
 
 
 #include "Strategy.h"
@@ -17,10 +16,10 @@ namespace tarch {
 
 
 /**
- * A hard coded strategy that can realise a few standard tasking patterns
- *
- *
- *
+ * Deploy all tasks to the GPU. Hold back all tasks in local queues until we hit
+ * the end of the BSP section. After that, let the code deploy all the tasks onto
+ * a GPU in one big rush, i.e. the orchestration strategy deploys all GPU tasks
+ * onto one GPU only.
  */
 class tarch::multicore::orchestration::AllOnGPU: public tarch::multicore::orchestration::Strategy {
   private:
@@ -38,6 +37,14 @@ class tarch::multicore::orchestration::AllOnGPU: public tarch::multicore::orches
      */
     int getNumberOfTasksToHoldBack() override;
 
+    /**
+     * Return how many tasks to fuse at least, at most and to which device
+     * to deploy them.
+     *
+     * @return (-1,std::numeric_limits<int>::max(),0) within the BSP section,
+     *   such that the lower limit is never exceeded. Return the device
+     *   otherwise with a min size of 1.
+     */
     FuseInstruction getNumberOfTasksToFuseAndTargetDevice() override;
 
     /**
@@ -52,4 +59,3 @@ class tarch::multicore::orchestration::AllOnGPU: public tarch::multicore::orches
 
 };
 
-#endif

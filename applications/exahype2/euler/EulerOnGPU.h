@@ -6,8 +6,7 @@
 // This is generated. If you change fundamental properties, you will have to 
 // generate this file. Backup your manual changes before you do so.
 //
-#ifndef _examples_exahype2_euler_EulerOnGPU_H_
-#define _examples_exahype2_euler_EulerOnGPU_H_
+#pragma once
 
 #include "AbstractEulerOnGPU.h"
 #include "tarch/logging/Log.h"
@@ -214,4 +213,3 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
 };
 
 
-#endif

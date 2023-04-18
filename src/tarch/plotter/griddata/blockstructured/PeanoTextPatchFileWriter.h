@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_PLOTTER_GRID_DATA_BLOCK_STRUCTURED_PEANO_TEXT_PATCH_FILE_WRITER_H_
-#define _TARCH_PLOTTER_GRID_DATA_BLOCK_STRUCTURED_PEANO_TEXT_PATCH_FILE_WRITER_H_
+#pragma once
 
 
 #include "tarch/logging/Log.h"
@@ -141,6 +140,14 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
          void plotVertex( int index, double value ) override;
          void plotVertex( int index, double* values ) override;
 
+          /*
+          * Somewhat hacky, added to overload the plotVertex function in order to allow plotting of patches with
+          * different variable types. Should likely have been handled more cleanly but since template functions cannot
+          * be virtual this needed to be handled on the lowest level.
+          */
+         template<typename T>
+         void plotVertex( int index, T* values );
+
          void close() override;
 
          /**
@@ -209,4 +216,3 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
 };
 
 
-#endif

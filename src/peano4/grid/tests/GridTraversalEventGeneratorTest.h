@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_GRID_TESTS_GRID_TRAVERSAL_EVENT_GENERATOR_TEST_H_
-#define _PEANO4_GRID_TESTS_GRID_TRAVERSAL_EVENT_GENERATOR_TEST_H_
+#pragma once
 
 #include "tarch/tests/TestCase.h"
 #include "tarch/logging/Log.h"
@@ -139,4 +138,3 @@ ataTo=[30097328,0,30097744,0],cellData=30098160,relativePositionToFather=[0,2],i
 };
 
 
-#endif

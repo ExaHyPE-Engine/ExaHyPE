@@ -50,7 +50,7 @@ class Step:
     self.action_sets = []
 
   
-  def add_action_set(self,action_set):
+  def add_action_set(self,action_set,append_at_end=True):
     """
      Each step holds a set of action_sets. They describe what the step actually
      should do whenever it loads a vertex, runs into a cell, and so forth. By
@@ -62,7 +62,10 @@ class Step:
      the step. All the delete, leave, ... operations are invokved in reversed
      order.
     """
-    self.action_sets.append(action_set)
+    if append_at_end:
+      self.action_sets.append(action_set)
+    else:
+      self.action_sets.insert(0, action_set)
 
     
   def set_project(self,project):

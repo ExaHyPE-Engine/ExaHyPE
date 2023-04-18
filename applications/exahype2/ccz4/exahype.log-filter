@@ -9,20 +9,16 @@ debug  examples                            -1     black always-on
 debug  exahype2                            -1     black always-on
 
 info  tarch                                -1     white always-on
-info  tarch                                -1     black timestep
 info  peano4                               -1     white always-on
 info  examples                             -1     white always-on
 info  exahype2                             -1     white always-on
-info  toolbox                              -1     black always-on
+info  toolbox                              -1     white always-on
+info  peano4::grid::Spacetree              -1     black always-on
+info  exahype2::RefinementControlService   -1     black always-on
 
-info  exahype2::RefinementControl	   -1	  black always-on
-
-info  ::step                               -1     black always-on
-info  ::step                                0     white always-on
- 
-trace  tarch                               -1     black always-on
+trace  tarch                               -1     black always-on    
 trace  peano4                              -1     black always-on
-trace  examples                            -1     black always-on
+trace  applications                        -1     black always-on
 trace  exahype2                            -1     black always-on
 trace  toolbox                             -1     black always-on
 

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_ORCHESTRATION_GENETIC_OPTIMISATION_H_
-#define _TARCH_MULTICORE_ORCHESTRATION_GENETIC_OPTIMISATION_H_
+#pragma once
 
 
 #include "Strategy.h"
@@ -83,4 +82,3 @@ class tarch::multicore::orchestration::GeneticOptimisation: public tarch::multic
 };
 
 
-#endif

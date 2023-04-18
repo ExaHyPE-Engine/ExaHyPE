@@ -16,8 +16,8 @@ from .kernels import create_compute_time_step_size_kernel_for_adaptive_time_step
 from .kernels import create_compute_new_time_step_size_kernel_for_adaptive_time_stepping
 from .kernels import create_constructor_implementation_for_adaptive_time_stepping
 
-from .kernels import SolverVariant
-from .kernels import RiemannKernelVariant
+from exahype2.solvers.fv.kernels import SolverVariant    
+from exahype2.solvers.fv.kernels import KernelVariant    
 
 from .kernels import create_abstract_solver_user_declarations_for_adaptive_time_stepping
 from .kernels import create_abstract_solver_user_definitions_for_adaptive_time_stepping
@@ -52,7 +52,16 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     """
     self._interpolate_linearly_in_time        = interpolate_linearly_in_time
     
-    super(SubcyclingAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties,pde_terms_without_state) 
+    super(SubcyclingAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, 
+                                                                      patch_size, 
+                                                                      overlap, 
+                                                                      unknowns, 
+                                                                      auxiliary_variables, 
+                                                                      min_volume_h, 
+                                                                      max_volume_h, 
+                                                                      plot_grid_properties,
+                                                                      pde_terms_without_state,
+                                                                      kernel_namespace="rusanov") 
     
     self._time_step_relaxation = time_step_relaxation
 
@@ -108,22 +117,22 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._compute_kernel_call            = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True, 
-      solver_variant = SolverVariant.WithVirtualFunctions,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap
+      solver_variant         = SolverVariant.WithVirtualFunctions,
+      kernel_variant         = KernelVariant.PatchWiseAoSHeap
     )
     
     self._fused_compute_kernel_call_cpu  = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True, 
       solver_variant = SolverVariant.Stateless,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseInSitu
+      kernel_variant         = KernelVariant.PatchWiseAoSHeap
     )
 
     self._fused_compute_kernel_call_gpu  = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
-      compute_max_eigenvalue_of_next_time_step=True, 
-      solver_variant = SolverVariant.Accelerator,
-      riemann_kernel_variant = RiemannKernelVariant.BatchedAoSoAHeap
+      compute_max_eigenvalue_of_next_time_step = True, 
+      solver_variant                           = SolverVariant.AcceleratorWithExplicitCopy,
+      kernel_variant         = KernelVariant.GenericAoS
     )
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
@@ -164,7 +173,7 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     if self._interpolate_linearly_in_time:
       self._action_set_update_cell._Template_TouchCellFirstTime_Fill_Halos = create_halo_layer_construction_with_interpolation_for_reconstructed_patch(self._name)
       
-    self._action_set_AMR.set_event_lifetime( 2*int(self._max_volume_h/self._min_volume_h+1) )
+    self._action_set_AMR.event_lifetime = 2*int(self._max_volume_h/self._min_volume_h+1)
     
 
   @property

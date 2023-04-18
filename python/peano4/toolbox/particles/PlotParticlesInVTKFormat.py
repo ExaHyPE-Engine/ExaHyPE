@@ -179,7 +179,7 @@ class PlotParticlesInVTKFormat(ActionSet):
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
   assertion( _positionWriter!=nullptr );
-  for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}}) {
+  for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
     if (
       p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
     ) {

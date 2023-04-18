@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_PLOTTER_GRIDDATA_UNSTRUCTURED_VTU_VTUTEXTFILEWRITER_H_
-#define _TARCH_PLOTTER_GRIDDATA_UNSTRUCTURED_VTU_VTUTEXTFILEWRITER_H_
+#pragma once
 
 
 #include "tarch/logging/Log.h"
@@ -351,4 +350,3 @@ class tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter:
     };
 };
 
-#endif

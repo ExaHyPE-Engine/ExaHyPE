@@ -15,7 +15,7 @@ Default plotter for various standard ExaHyPE dumps. The plotter examines
 and illustrates the runtime per time step behaviour.
 
 """)
-  parser.add_argument("file", nargs="+",    help="filename of the file to parse. Can we multiple files")
+  parser.add_argument("file", nargs="+",    help="filename of the file to parse. You can specify multiple files")
   parser.add_argument("-v",     "--verbose",     dest="verbose",    help="increase output verbosity",   action="store_true", default=False )
   parser.add_argument("-log-y", "--log-ysaxis",  dest="log_yscale", help="increase output verbosity",   action="store_true", default=False )
   parser.add_argument("-t",     "--type",    dest="type",    help="Pick plot variant", choices=[
@@ -49,7 +49,7 @@ and illustrates the runtime per time step behaviour.
     elif args.type == "updates-vs-simulated-time":
       exahype2.postprocessing.plot_updates_per_step( performance_data,dataset[1], exahype2.postprocessing.XAxis.SimulatedTime )
     elif args.type == "runtime-vs-time-step":
-      exahype2.postprocessing.plot_runtime_per_time_step( performance_data,dataset[1] )
+      exahype2.postprocessing.plot_runtime_per_step( performance_data,dataset[1] )
     elif args.type == "runtime-vs-simulated-time":
       exahype2.postprocessing.plot_runtime_against_simulated_time( performance_data,dataset[1] )
     else:

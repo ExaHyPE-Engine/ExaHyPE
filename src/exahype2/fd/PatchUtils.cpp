@@ -7,6 +7,8 @@
 
 #include "exahype2/NonCriticalAssertions.h"
 
+#include "toolbox/blockstructured/Enumeration.h"
+
 
 
 /*
@@ -89,3 +91,6 @@ void exahype2::fd::validatePatch (
     location, triggerNonCriticalAssertion, minValues, maxValues
   );
 }
+
+
+

@@ -1,18 +1,28 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_RUSANOV_RUSANOV_H_
-#define _EXAHYPE2_FV_RUSANOV_RUSANOV_H_
-
-
+#pragma once
 
 #include "Functors.h"
 #include "LoopBody.h"
 
 #include "exahype2/CellData.h"
 
+#include "Rusanov_Helper.cpph"
+
+#if defined(GPUOffloadingOMP) or defined(SharedOMP)
+#include "exahype2/fv/rusanov/omp/Rusanov.h"
+#endif
+
+#if defined(GPUOffloadingCPP) or defined(SharedCPP)
+#include "exahype2/fv/rusanov/cpp/Rusanov.h"
+#endif
+
+#if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+#include "exahype2/fv/rusanov/sycl/Rusanov.h"
+#endif
 
 /**
- * @page Rusanov ExaHyPE's Rusanov kernel implementation
+ * @page exahype2_fv_Rusanov ExaHyPE's Rusanov kernel implementation
  *
  * ExaHyPE's Finite Volume compute kernels rely on a block-structured mesh.
  * Each cell of the spacetree carries a patch of @f$ p \times p \times p @f$
@@ -584,12 +594,88 @@ namespace exahype2 {
       __attribute__((always_inline))
       #endif
       ;
+
+
+      /**
+       * Dummy version delegating to one well-defined proper kernel. By
+       * offering such a routine, we can generate generic compute code
+       * in Python without knowing which kernel variants are on offer for
+       * a particular GPU backend.
+       */
+      template <
+        typename Solver,
+        int      numberOfVolumesPerAxisInPatch,
+        int      haloSize,
+        int      unknowns,
+        int      auxiliaryVariables,
+        typename TempDataEnumerator
+      >
+      static void timeStepWithRusanov_generic_static_calls(
+        ::exahype2::CellData&   patchData,
+        bool                    evaluateFlux,
+        bool                    evaluateNonconservativeProduct,
+        bool                    evaluateSource,
+        bool                    evaluateMaximumEigenvalueAfterTimeStep
+      ) {
+        timeStepWithRusanov_patchwise_heap_static_calls<
+          Solver,
+          numberOfVolumesPerAxisInPatch,
+          haloSize,
+          unknowns,
+          auxiliaryVariables,
+          TempDataEnumerator
+        >(
+          patchData,
+          evaluateFlux,
+          evaluateNonconservativeProduct,
+          evaluateSource,
+          evaluateMaximumEigenvalueAfterTimeStep
+        );
+      }
+
+
+      template <
+        typename Solver,
+        int      numberOfVolumesPerAxisInPatch,
+        int      haloSize,
+        int      unknowns,
+        int      auxiliaryVariables,
+        typename TempDataEnumerator
+      >
+      static void timeStepWithRusanov_batched_heap_multicore_static_calls(
+        ::exahype2::CellData&   patchData,
+        bool                    evaluateFlux,
+        bool                    evaluateNonconservativeProduct,
+        bool                    evaluateSource,
+        bool                    evaluateMaximumEigenvalueAfterTimeStep
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      {
+        #if defined(SharedOMP)
+        omp::timeStepWithRusanov_batched_heap_multicore_static_calls<
+          Solver,
+          numberOfVolumesPerAxisInPatch,
+          haloSize,
+          unknowns,
+          auxiliaryVariables,
+          TempDataEnumerator
+        >(
+          patchData,
+          evaluateFlux,
+          evaluateNonconservativeProduct,
+          evaluateSource,
+          evaluateMaximumEigenvalueAfterTimeStep
+        );
+        #else
+        assertionMsg(false, "not supported");
+        #endif
+      }
     }
   }
 }
 
-
-#include "Rusanov_Helper.cpph"
 #include "Rusanov_patchwise_functors.cpph"
 #include "Rusanov_patchwise_static_calls.cpph"
 #include "Rusanov_patchwise_in_situ_static_calls.cpph"
@@ -597,18 +683,3 @@ namespace exahype2 {
 #include "Rusanov_batched_functors.cpph"
 #include "Rusanov_batched_static_calls.cpph"
 #include "Rusanov_batched_in_situ_static_calls.cpph"
-
-
-#if defined(GPUOffloadingOMP)
-#include "exahype2/fv/rusanov/omp/Rusanov.h"
-#endif
-
-#if defined(GPUOffloadingCPP)
-#include "exahype2/fv/rusanov/cpp/Rusanov.h"
-#endif
-
-#if defined(GPUOffloadingSYCL)
-#include "exahype2/fv/rusanov/sycl/Rusanov.h"
-#endif
-
-#endif

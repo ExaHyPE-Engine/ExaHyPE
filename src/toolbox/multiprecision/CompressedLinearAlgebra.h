@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_MULTIPRECISION_COMPRESSED_LINEAR_ALGEBRA_H_
-#define _TOOLBOX_MULTIPRECISION_COMPRESSED_LINEAR_ALGEBRA_H_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -57,5 +56,4 @@ namespace toolbox {
 
 #include "CompressedLinearAlgebra.cpph"
 
-#endif
 

@@ -6,8 +6,7 @@
 
 #include "tarch/la/Vector.h"
 
-#ifndef __TP_PT__
-#define __TP_PT__
+#pragma once
 
 
 inline std::istream& ignoreline(std::fstream& in, std::ifstream::pos_type& pos)
@@ -212,7 +211,6 @@ inline void Interpolation(
 	result[0]=raw4[0][0]; result[1]=raw4[0][1]; result[2]=raw4[0][2];result[3]=raw4[0][3];
 }
 
-#endif
 
 
 

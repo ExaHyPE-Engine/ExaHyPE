@@ -6,15 +6,13 @@
 // This is generated. Don't change it! Every rerun of the Python API will
 // overwrite your changes.
 //
-#ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
-#define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+#pragma once
 
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "tarch/multicore/Tasks.h"
 
 
-#include "exahype2/fv/rusanov/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 #include "repositories/SolverRepository.h"
@@ -87,17 +85,38 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     static int getEnclaveTaskTypeId();
 
     /**
+     * Simple call to compute kernels.
+     *
+     * The finite volume solver assumes that _inputValues are reconstructed
+     * values, i.e. a temporary data field. So we don't have to allocate
+     * anything but we have to free stuff after the run. This is done here in
+     * the Finite Volume solver. We assume that the input data has been
+     * allocated through tarch::allocateMemory() with the flag
+     * ManagedSharedAcceleratorDeviceMemory.
+     *
      * @return Max eigenvalue over cell
      */
     static double applyKernelToCell(
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      t,
       double                                      dt,
-      double* __restrict__                        reconstructedPatch, 
+      double* __restrict__                        reconstructedPatch,
       double* __restrict__                        targetPatch
     );
     
-    
+
+    /**
+     * Task constructor
+     *
+     * The task construction injects a call to applyKernelToCell() into
+     * the generic enclave superclass. I assuem that reconstructedPatch
+     * is created on the heap before - typically in the actual action
+     * set. As applyKernelToCell() erases the
+     * reconstructedPatch argument, we don't have to call a free in the
+     * task constructor of the functor that we pass to the enclave
+     * task (superclass). Likewisely, the superclass EnclaveTask tasks
+     * care of the allocation of the output data.
+     */
     {{CLASSNAME}}(
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      t,
@@ -125,7 +144,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 
 
 
-#endif
 
 
 {# Empty line here #}

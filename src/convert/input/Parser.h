@@ -1,5 +1,4 @@
-#ifndef _CONVERT_INPUT_PARSER_H_
-#define _CONVERT_INPUT_PARSER_H_
+#pragma once
 
 
 namespace convert {
@@ -20,4 +19,3 @@ class convert::input::Parser {
 	static std::string removeHyphens( const std::string& value );
 };
 
-#endif

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_PARTICLE_TRAJECTORY_DATABASE_
-#define _TOOLBOX_PARTICLE_TRAJECTORY_DATABASE_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -66,7 +65,14 @@ class toolbox::particles::TrajectoryDatabase {
       tarch::la::Vector<Dimensions,double>  x;
       double                                timestamp;
       double*                               data;
+      /**
+       * Have to memorise this guy to be able to write a proper copy
+       * constructor.
+       */
+      const int                             numberOfDataEntries;
 
+      Entry( const Entry& );
+      ~Entry();
       Entry( const TrajectoryDatabase& database, const tarch::la::Vector<Dimensions,double>&  x_, double  timestamp_ );
     };
 
@@ -246,4 +252,3 @@ class toolbox::particles::TrajectoryDatabase {
 };
 
 
-#endif

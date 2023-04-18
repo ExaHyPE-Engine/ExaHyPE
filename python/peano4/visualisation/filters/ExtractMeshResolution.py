@@ -14,7 +14,8 @@ class ExtractMeshResolution( Filter ):
       self.max_h = min_h
     pass
     
-  def render(self, cell_data, dof, dimension, unknowns, description, mapping):
+    
+  def render(self, cell_data, dof, dimension, unknowns, is_data_associated_to_cell, description, mapping):
     """
     
       Overwrite this one for the particular filter. 
@@ -42,5 +43,5 @@ class ExtractMeshResolution( Filter ):
 
     print( "extracted " + str( len(new_cell_data) ) + " from the " + str( len(cell_data) ) + " patch(es)" )
 
-    return new_cell_data, dof, dimension, unknowns, description, mapping
+    return new_cell_data, dof, dimension, unknowns, is_data_associated_to_cell, description, mapping
   

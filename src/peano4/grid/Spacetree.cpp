@@ -16,6 +16,7 @@
 
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/logging/Statistics.h"
 
 
 tarch::logging::Log  peano4::grid::Spacetree::_log( "peano4::grid::Spacetree" );
@@ -170,17 +171,22 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
   }
   else {
     _gridControlEvents = merge( observer.getGridControlEvents() );
-    if (_gridControlEvents.size()==1) {
-      logInfo( "traverse(...)", "got one grid control event: " << _gridControlEvents[0].toString() );
+
+    const int MagicUpperLimitToWhichIDumpEvents = 4;
+    if ( _gridControlEvents.empty() ) {
+      logInfo( "traverse(...)", "got no grid refinement events" );
     }
-    else if (_gridControlEvents.size()==2) {
-      logInfo( "traverse(...)", "got two grid control events: " << _gridControlEvents[0].toString() << " and " << _gridControlEvents[1].toString() );
-    }
-    else if (_gridControlEvents.size()==3) {
-      logInfo( "traverse(...)", "got three grid control events: " << _gridControlEvents[0].toString() << ", " << _gridControlEvents[1].toString() << " and " << _gridControlEvents[2].toString() );
+    else if (_gridControlEvents.size()<=MagicUpperLimitToWhichIDumpEvents) {
+      std::ostringstream msg;
+      for (auto& p: _gridControlEvents) msg << p.toString();
+      logInfo( "traverse(...)", "got " << _gridControlEvents.size() << " grid control events: " << msg.str() );
     }
     else if (not _gridControlEvents.empty()) {
       logInfo( "traverse(...)", "got " << _gridControlEvents.size() << " grid control events"  );
+    }
+
+    if (not _gridControlEvents.empty()) {
+      tarch::logging::Statistics::getInstance().log( "grid-control-events", ::peano4::grid::toString(_gridControlEvents) );
     }
   }
 
@@ -888,7 +894,7 @@ std::set<int>  peano4::grid::Spacetree::getNeighbourTrees( const GridVertex& ver
       isVertexAdjacentToLocalSpacetree(vertex,false,true);
 
   if (isLocalVertex) {
-    auto adjacentRanks = vertex.getAdjacentRanks();
+    auto adjacentRanks = calledByReceivingProcess ? vertex.getBackupOfAdjacentRanks() : vertex.getAdjacentRanks();
 
     for (int i=0; i<TwoPowerD; i++) {
       if (doesRankIndexIdentifyHorizontalDataExchange(adjacentRanks(i),calledByReceivingProcess)) {
@@ -1166,14 +1172,11 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
     if (refine) {
       bool haveTriggeredRefinementForAtLeastOneVertex = false;
       dfor2(i)
-        tarch::la::Vector<Dimensions,double> x = state.getX() + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(i), state.getH() );
-
         if (
           isVertexAdjacentToLocalSpacetree( fineGridVertices[iScalar], true, true )
           and
           fineGridVertices[iScalar].getState()==GridVertex::State::Unrefined
         ) {
-          logDebug( "evaluateGridControlEvents(...)", "refine vertex " << fineGridVertices[iScalar].toString() << " at " << x );
           fineGridVertices[iScalar].setState( GridVertex::State::RefinementTriggered );
           haveTriggeredRefinementForAtLeastOneVertex = true;
         }
@@ -1371,6 +1374,7 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
       if (enterCellTraversalEvent.getIsVertexLocal(inVertexPositionWithinCell)) {
         std::set<int> neighbours = getNeighbourTrees(fineGridVertices[inVertexPositionWithinCell], true);
         for (auto p: neighbours) {
+          logDebug( "receiveAndMergeUserData(...)", "receive neighbour data from neighbour " << p << " for vertex " << fineGridVertices[inVertexPositionWithinCell].toString() );
           const int fromStack   = peano4::parallel::Node::getInputStackNumberForHorizontalDataExchange( p );
           observer.receiveAndMergeVertex(
             inVertexPositionWithinCell,
@@ -1519,7 +1523,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
           observer.sendVertex(
             outVertexPositionWithinCell,
             toStack,
-            TraversalObserver::SendReceiveContext::Rebalancing,
+            TraversalObserver::SendReceiveContext::ForkDomain,
             leaveCellTraversalEvent
           );
         }
@@ -1591,7 +1595,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
           observer.sendFace(
             outFacePositionWithinCell,
             toStack,
-            TraversalObserver::SendReceiveContext::Rebalancing,
+            TraversalObserver::SendReceiveContext::ForkDomain,
             leaveCellTraversalEvent
           );
         }
@@ -1611,7 +1615,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
       const int toStack   = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange( p );
       observer.sendCell(
         toStack,
-        TraversalObserver::SendReceiveContext::Rebalancing,
+        TraversalObserver::SendReceiveContext::ForkDomain,
         leaveCellTraversalEvent
       );
     }

@@ -9,31 +9,20 @@ from enum import Enum
 class SolverVariant(Enum):
   WithVirtualFunctions = 0,
   Stateless            = 1,
-  Accelerator          = 2
+  Multicore            = 2,
+  AcceleratorWithExplicitCopy = 3
 
 
-class RiemannKernelVariant(Enum):
-  PatchWiseAoSStack                = 0
-  PatchWiseAoSoAStack              = 1
-  PatchWiseSoAStack                = 2
-  BatchedAoSStack                  = 10
-  BatchedAoSoAStack                = 11
-  BatchedSoAStack                  = 12
-  PatchWiseSplitTermsAoSStack      = 20
-  PatchWiseSplitTermsAoSoAStack    = 21
+class KernelVariant(Enum):
   PatchWiseAoSHeap                 = 30
   PatchWiseAoSoAHeap               = 31
   PatchWiseSoAHeap                 = 32
   BatchedAoSHeap                   = 40
   BatchedAoSoAHeap                 = 41
   BatchedSoAHeap                   = 42
-  PatchWiseSplitTermsAoSHeap       = 50
-  PatchWiseSplitTermsAoSoAHeap     = 51
   TaskGraphAoSHeap                 = 60
   TaskGraphAoSoAHeap               = 61
   TaskGraphSoAHeap                 = 62
-  PatchWiseInSitu                  = 90
-  BatchedInSitu                    = 91
     
 
 def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
@@ -692,10 +681,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const tarch::la::Vector<Dimensions,double>&  gridCellH,
   double                                       t,
   double                                       dt,
-  double * __restrict__                        S  // S[{{NUMBER_OF_UNKNOWNS}}
+  double * __restrict__                        S  // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith4Arguments( "sourceTerm(...)", gridCellX, gridCellH, t, dt );
-  // @todo implement
+
+  // @todo implement and ensure that all entries of S are properly set
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    S[i] = 0.0;
+  }
+  
   logTraceOut( "sourceTerm(...)" );
 }
 {% endif %}

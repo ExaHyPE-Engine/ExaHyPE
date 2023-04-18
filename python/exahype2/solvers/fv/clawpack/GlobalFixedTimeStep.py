@@ -128,7 +128,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     #self.user_action_set_includes += rpn
 
 
-  def add_implementation_files_to_project(self,namespace,output):
+  def add_implementation_files_to_project(self,namespace,output, dimensions):
     """
 
       We just tell the superclass too add its implementation files, 
@@ -136,7 +136,7 @@ class GlobalFixedTimeStep( SingleSweep ):
       constructor.
           
     """
-    super(GlobalFixedTimeStep,self).add_implementation_files_to_project(namespace,output)
+    super(GlobalFixedTimeStep,self).add_implementation_files_to_project(namespace,output, dimensions)
     for f in self._Riemann_solver_implementation_files:
       output.makefile.add_Fortran_file(f)
 
@@ -155,7 +155,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     """
     code  = "int postProcessingIndex = 0;\n"
     code += "dfor(volume, %i) "%self._patch_size;
-    code += "{\n  double* Q = targetPatch + postProcessingIndex;\n"
+    code += "{\n  double* Q = newQ + postProcessingIndex;\n"
     code += kernel
     code += "  postProcessingIndex += {};\n}}\n".format(self._unknowns + self._auxiliary_variables);
     self.set_postprocess_updated_patch_kernel( code )
@@ -184,6 +184,6 @@ class GlobalFixedTimeStep( SingleSweep ):
       self._source_term_call    = create_empty_source_term_kernel()
     else:
       self._source_term_call    = create_user_defined_source_term_kernel()
-    self._Riemann_solver_call   = create_compute_Riemann_kernel_for_ClawPack(self._clawpack_Riemann_solver, self._discriminate_normal)
+    self._compute_kernel_call   = create_compute_Riemann_kernel_for_ClawPack(self._clawpack_Riemann_solver, self._discriminate_normal)
       
     super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)

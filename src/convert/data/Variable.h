@@ -1,5 +1,4 @@
-#ifndef _CONVERT_DATA_VARIABLE_H_
-#define _CONVERT_DATA_VARIABLE_H_
+#pragma once
 
 #include <string>
 
@@ -58,4 +57,3 @@ class convert::data::Variable {
 
 
 
-#endif /* PEANOVARIABLE_H_ */

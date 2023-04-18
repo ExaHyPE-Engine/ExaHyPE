@@ -1,16 +1,9 @@
 #include "{{CLASSNAME}}.h"
 
-// user includes
 {{SOLVER_INCLUDES}}
 
 #include "config.h"
 
-
-#if GPUOffloadingSYCL>0
-#include "tarch/multicore/sycl/SYCL.h"
-#endif
-
-#include "exahype2/fv/rusanov/Rusanov.h"
 #include "exahype2/CellData.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
@@ -24,6 +17,7 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #include "tarch/multicore/smartScheduling.h"
+#include "tarch/multicore/otter.h"
 
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
@@ -38,11 +32,9 @@
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId( peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
 
-
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
   return _enclaveTaskTypeId;
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
@@ -51,9 +43,21 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   double* __restrict__                        reconstructedPatch,
   double* __restrict__                        targetPatch
 ) {
-  ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
+  ::exahype2::CellData patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
 
-  ::exahype2::fv::rusanov::{{COMPUTE_KERNEL_CALL}}
+  {% if STATELESS_PDE_TERMS %}
+  if ( repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
+      marker.x(),
+      marker.h(),
+      t,
+      dt
+  )) {
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+  }
+  else
+  {% endif %}
+
+  ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}}
 
   ::exahype2::fv::validatePatch(
     targetPatch,
@@ -64,7 +68,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // outcome has to be valid
 
-  tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::Heap );
+  tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
 
   {% if COMPUTE_MAX_EIGENVALUE %}
   return patchData.maxEigenvalue[0];
@@ -73,8 +77,20 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   {% endif %}
 }
 
-
-//_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue
+{% if STATELESS_PDE_TERMS %}
+#if defined(GPUOffloadingOMP)
+bool checkOMPOffloading() {
+  bool canOffload = true;
+  #pragma omp target map(tofrom : canOffload)
+  {
+    if (!omp_is_initial_device()) {
+      canOffload = true;
+    }
+  }
+  return canOffload;
+}
+#endif
+{% endif %}
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const ::peano4::datamanagement::CellMarker& marker,
@@ -108,8 +124,15 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   #ifdef UseSmartMPI
   , smartmpi::Task(_enclaveTaskTypeId)
   #endif
-{}
-
+{
+{% if STATELESS_PDE_TERMS %}
+#if defined(GPUOffloadingOMP)
+  if (!checkOMPOffloading()) {
+    throw std::runtime_error("ExaHyPE 2 was built with OpenMP GPU offloading support, but the chosen solver cannot offload to the GPU.");
+  }
+#endif
+{% endif %}
+}
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
   #ifdef UseSmartMPI
@@ -118,7 +141,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
   return false;
   #endif
 }
-
 
 #ifdef UseSmartMPI
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
@@ -129,7 +151,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
   }
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::moveTask(int rank, int tag, MPI_Comm communicator) {
   ::tarch::mpi::DoubleMessage  tMessage(_t);
@@ -158,7 +179,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::moveTask(int rank, int tag, MPI_
     " via tag " << tag
   );
 }
-
 
 smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank, int tag, MPI_Comm communicator) {
   peano4::grid::GridTraversalEvent dummyEvent;
@@ -200,7 +220,6 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
   return result;
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
   _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
@@ -215,7 +234,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRan
 
   forwardTaskOutputToRank(rank, tag, communicator);
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
   logInfo(
@@ -246,7 +264,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
 
   // tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
 }
-
 
 smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int rank, int tag, MPI_Comm communicator, const bool intentionToForward) {
   logInfo( "receiveOutcome(...)", "rank=" << rank << ", tag=" << tag );
@@ -310,7 +327,6 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 }
 #endif
 
-
 {% if STATELESS_PDE_TERMS %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
   return repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
@@ -320,7 +336,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
     _dt
   );
 }
-
 
 /**
  * Also merge the current task
@@ -337,7 +352,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_id;
-    patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+    patchData.QOut[currentTask]        = tarch::allocateMemory<double>( _numberOfResultValues, tarch::MemoryLocation::Heap );
     delete p;
     currentTask++;
   }
@@ -347,8 +362,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   patchData.t[currentTask]           = _t;
   patchData.dt[currentTask]          = _dt;
   patchData.id[currentTask]          = _id;
-  patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
-
+  patchData.QOut[currentTask]        = tarch::allocateMemory<double>( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
   //
   // ==============
@@ -357,19 +371,18 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   bool foundOffloadingBranch = false;
 
-  otterParallelBegin();
 
   #if defined(GPUOffloadingOMP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::rusanov::omp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::omp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
   #if defined(GPUOffloadingHIP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::rusanov::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
@@ -377,15 +390,22 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
 
-    ::exahype2::fv::rusanov::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+  }
+  #endif
+
+  #if defined(GPUOffloadingCPP)
+  if (targetDevice>=0 or targetDevice==Host) {
+    foundOffloadingBranch = true;
+
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::cpp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
   if (not foundOffloadingBranch) {
-    ::exahype2::fv::rusanov::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
   }
 
-  otterParallelEnd();
 
   //
   // ==================
@@ -393,7 +413,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // ==================
   //
   for (int i=0; i<patchData.numberOfCells; i++) {
-    tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::Heap );
+    tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
   }
 

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LA_TESTS_SCALARTEST_H_
-#define _TARCH_LA_TESTS_SCALARTEST_H_
+#pragma once
 
 #include "tarch/tests/TestCase.h"
 
@@ -44,4 +43,3 @@ public:
   virtual void setUp () {}
 };
 
-#endif /* _TARCH_LA_TESTS_SCALARTEST_H_ */

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_FINITEELEMEMTS_TESTS_STENCIL_FACTORY_TEST_H_
-#define _TOOLBOX_FINITEELEMEMTS_TESTS_STENCIL_FACTORY_TEST_H_
+#pragma once
 
 #include "tarch/tests/TestCase.h"
 #include "tarch/logging/Log.h"
@@ -30,4 +29,3 @@ class toolbox::finiteelements::tests::StencilFactoryTest: public tarch::tests::T
 };
 
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef __TP_CONSERVED_VECTOR_NAMES__
-#define __TP_CONSERVED_VECTOR_NAMES__
+#pragma once
 
 /**
  * This file contains aliases for making access to the long state vector Q
@@ -121,5 +120,4 @@ const int Qlen = 54;
 
 } // namespace Z4VectorShortcuts
 } // namespace TP
-#endif /* __TP_CONSERVED_VECTOR_NAMES__ */
 

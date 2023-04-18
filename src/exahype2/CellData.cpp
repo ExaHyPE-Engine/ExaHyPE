@@ -1,5 +1,5 @@
 #include "CellData.h"
-
+#include "tarch/accelerator/accelerator.h"
 
 exahype2::CellData::CellData(
   double*   QIn_,
@@ -19,10 +19,9 @@ exahype2::CellData::CellData(
   id[0]          = -1;
 }
 
-
 exahype2::CellData::CellData( int numberOfCells_ ):
   numberOfCells(numberOfCells_) {
-  QIn           = new (std::align_val_t(AlignmentOnHeap)) double*[numberOfCells];
+  QIn           = tarch::allocateMemory<double*>(numberOfCells_, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
   cellCentre    = new (std::align_val_t(AlignmentOnHeap)) tarch::la::Vector<Dimensions,double>[numberOfCells];
   cellSize      = new (std::align_val_t(AlignmentOnHeap)) tarch::la::Vector<Dimensions,double>[numberOfCells];
   t             = new (std::align_val_t(AlignmentOnHeap)) double[numberOfCells];
@@ -32,9 +31,8 @@ exahype2::CellData::CellData( int numberOfCells_ ):
   maxEigenvalue = new (std::align_val_t(AlignmentOnHeap)) double[numberOfCells];
 }
 
-
 exahype2::CellData::~CellData() {
-  delete[] QIn;
+  tarch::freeMemory( QIn, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
   delete[] cellCentre;
   delete[] cellSize;
   delete[] t;
@@ -43,7 +41,6 @@ exahype2::CellData::~CellData() {
   delete[] id;
   delete[] maxEigenvalue;
 }
-
 
 std::string exahype2::CellData::toString() const {
   std::ostringstream msg;
@@ -60,4 +57,3 @@ std::string exahype2::CellData::toString() const {
   msg << "]";
   return msg.str();
 }
-

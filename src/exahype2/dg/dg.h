@@ -1,12 +1,11 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_DG_DG_H_
-#define _EXAHYPE2_DG_DG_H_
+#pragma once
 
 
 
 /**
- * @page DG Discontinuous Galerkin
+ * @page exahype2_dg Discontinuous Galerkin
  *
  * ExaHyPE's discontinuous Galerkin realisation provides support for plain
  * higher-order DG with Riemann solvers of your choice. The C++ code is a mere
@@ -429,7 +428,7 @@
  * You find some discussions of the treatment of the non-conservative product in papers by Michael Dumbser
  * et al, e.g. I found the discussion around @f$ P_NP_M @f$ patch-conservative products in his paper
  * "Space-time adaptive ADER discontinuous Galerkin schemes for nonlinear hyperelasticity with material failure"
- * particularly helpful (<a href="https://arxiv.org/abs/2003.02760>">arXiv:2003.02760</a>). Have a look
+ * particularly helpful (<a href="https://arxiv.org/abs/2003.02760">arXiv:2003.02760</a>). Have a look
  * notably into (21). Other useful sources of information can be found in this
  * <a href="https://www.math.u-bordeaux.fr/~rabgrall/dfg-cnrs/talks/diehl.pdf">presentation</a>, e.g.
  *
@@ -544,5 +543,4 @@
 
 
 
-#endif
 

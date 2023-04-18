@@ -1,9 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_RUSANOV_LOOP_BODY_H_
-#define _EXAHYPE2_FV_RUSANOV_LOOP_BODY_H_
-
-
+#pragma once
 
 #include "Functors.h"
 
@@ -12,7 +9,7 @@
 #include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
 
 #include "tarch/multicore/multicore.h"
-
+#include "tarch/accelerator/accelerator.h"
 
 namespace exahype2 {
   namespace fv {
@@ -104,7 +101,7 @@ namespace exahype2 {
          * @param volumeIndex: Which volume is to be updated within the target
          *   patch. This index refers to the target index.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -165,7 +162,6 @@ namespace exahype2 {
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
-
         /**
          * Specialisation of the other copySolutionAndAddSourceTerm_LoopBody()
          * which exploits knowledge that we do not have to gather input data,
@@ -194,8 +190,7 @@ namespace exahype2 {
           const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
         )  InlineMethod;
 
-
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -218,8 +213,7 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -241,7 +235,6 @@ namespace exahype2 {
         #if defined(GPUOffloadingOMP)
         #pragma omp end declare target
         #endif
-
 
         /**
          * Compute maximum eigenvalue for one voxel in one direction.
@@ -276,7 +269,6 @@ namespace exahype2 {
           QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
         )  InlineMethod;
 
-
         /**
          * Specialisation if input data is already in AoS format. This holds for
          * all of our kernels unless you explicitly reorder the input.
@@ -297,11 +289,10 @@ namespace exahype2 {
           QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
         ) InlineMethod;
 
-
         /**
          * Specialisation invoking the static eigenvalue variant (for GPUs).
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -325,11 +316,10 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Specialisation for static eigenvalue call plus AoS input data.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -352,7 +342,6 @@ namespace exahype2 {
         #if defined(GPUOffloadingOMP)
         #pragma omp end declare target
         #endif
-
 
         /**
          * This is the actual eigenvalue loop which reduces the directional
@@ -378,7 +367,6 @@ namespace exahype2 {
           double                                       dt
         ) InlineMethod;
 
-
         /**
          * Specialisation anticipating that the ordering of the output
          * data will be AoS in almost all the cases. So it makes sense
@@ -397,11 +385,10 @@ namespace exahype2 {
           double                                       dt
         ) InlineMethod;
 
-
         /**
          * Specialised version for GPU. See generic variant for documentation.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -422,14 +409,13 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Optimised version for the GPU which is furthermore optimised
          * towards one specific unknown enumeration. This is the enumeration
          * we encounter in almost all of the cases, so it makes sense to
          * specialise for this one.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -449,7 +435,6 @@ namespace exahype2 {
         #if defined(GPUOffloadingOMP)
         #pragma omp end declare target
         #endif
-
 
         /**
          * Compute the flux in one direction for a volume and store it.
@@ -477,7 +462,6 @@ namespace exahype2 {
           QFluxEnumeratorType                 QFluxEnumerator
         ) InlineMethod;
 
-
         /**
          * This one does not have to be declared as simd. For whatever
          * reason ...
@@ -497,14 +481,19 @@ namespace exahype2 {
           exahype2::enumerator::AoSLexicographicEnumerator  QFluxEnumerator
         ) InlineMethod;
 
-
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
         #pragma omp declare target
         #endif
-        template <typename Solver, class QInEnumeratorType, class QFluxEnumeratorType>
+        template <
+          typename Solver,
+          int numberOfUnknowns,
+          int numberOfAuxiliaryVariables,
+          class QInEnumeratorType,
+          class QFluxEnumeratorType
+        >
         static void computeFlux_LoopBody(
           const double* __restrict__                   QIn,
           const QInEnumeratorType &                    QInEnumerator,
@@ -523,8 +512,7 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -554,8 +542,7 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -579,7 +566,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Update one volume with the flux contribution
          *
@@ -588,7 +574,7 @@ namespace exahype2 {
          *
          * @todo Remove flux in the centre, as it is eliminated
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -613,7 +599,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Constructs the average of the flux and adds it to the left and right
          * neighbour cell with inverted sign. This is the counterpart of the other
@@ -624,7 +609,7 @@ namespace exahype2 {
          * 0 and 0 is its right face). For N cells in a row, there's a face N-1
          * but no face N anymore.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -649,10 +634,8 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Uses the eigenvalues to damp the solution update.
-         *
          *
          * ## Rationale for alternative realisations
          *
@@ -679,22 +662,22 @@ namespace exahype2 {
          * Along the same lines, all of these arguments motivate why we do not specialise
          * the template further. We need to do this scattering/gathering anyway, so
          * what's the point of specialising for particular data formats?
-	 *
-	 * ## OpenMP offloading flaws
-	 *
-	 * With NVC++, there are at least two flaws that you might run into. Both did 
-	 * not yield a compiler error on my system but resulted in a GPU crash, which 
-	 * is kind of frustrating:
-	 *
-	 * - The std::max() call cannot be resolved. Weirdly, my NVC++ does not 
-	 *   complain about this. In other places, it does complain. 
-	 * - The NVC++ seems to struggle with the auto reference if you capture 
-	 *   pointers via &. Actually, we 
-	 *   see that the tempMaxEigenvalue pointer is messed up. If we capture 
-	 *   via copy, everything is fine.
-	 *
+         *
+         * ## OpenMP offloading flaws
+         *
+         * With NVC++, there are at least two flaws that you might run into. Both did 
+         * not yield a compiler error on my system but resulted in a GPU crash, which 
+         * is kind of frustrating:
+         *
+         * - The std::max() call cannot be resolved. Weirdly, my NVC++ does not 
+         *   complain about this. In other places, it does complain. 
+         * - The NVC++ seems to struggle with the auto reference if you capture 
+         *   pointers via &. Actually, we 
+         *   see that the tempMaxEigenvalue pointer is messed up. If we capture 
+         *   via copy, everything is fine.
+         *
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -721,12 +704,11 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Face-wise version of routine, i.e. it takes the eigenvalues and
          * updates the left and right adjacent volume of it.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -751,7 +733,6 @@ namespace exahype2 {
         #if defined(GPUOffloadingOMP)
         #pragma omp end declare target
         #endif
-
 
         /**
          * We count faces starting with zero, i.e. effectively shift the indices
@@ -780,7 +761,6 @@ namespace exahype2 {
           int                                            pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
 
-
         /**
          *
          * ## Template parameters
@@ -789,7 +769,7 @@ namespace exahype2 {
          * parameters, as we create data and we want to keep these data on the
          * call stack.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -820,7 +800,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Add the non-conservative flux contributions to one volume.
          *
@@ -838,7 +817,7 @@ namespace exahype2 {
          * integral on the left-hand side and a face integral on the right-hand
          * side, and therefore a further scaling by one over the volume size.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -863,13 +842,12 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Face-oriented flavour of ncp
          *
          * The non-conservative flux is always computed per face. So we know that
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -897,7 +875,4 @@ namespace exahype2 {
   }
 }
 
-
 #include "LoopBody.cpph"
-
-#endif

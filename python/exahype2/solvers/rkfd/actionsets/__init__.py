@@ -7,7 +7,7 @@ from .ProjectPatchOntoFaces import ProjectPatchOntoFaces
 from .RollOverUpdatedFace   import RollOverUpdatedFace
 from .DynamicAMR            import DynamicAMR
 from .PostprocessSolution   import EmptyPostprocessSolution
-from .PostprocessSolution   import VolumeWisePostprocessSolution
+from .PostprocessSolution   import CellWisePostprocessSolution
 
 from .ComputeFinalLinearCombination  import ComputeFinalLinearCombination
 

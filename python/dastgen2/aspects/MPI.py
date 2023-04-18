@@ -1,21 +1,24 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from dastgen2 import *
+import dastgen2
 from dastgen2.DataModel import construct_ifdef_string
 
 
-class MPI(object):
+class MPI( object ):
   """ 
   
   Represents the MPI aspect injected into a DaStGen model.
     
   """
+  
+  
   def __init__(self):
     pass
 
 
   def set_model(self,data_model):
     self._data_model = data_model
+
 
   def get_include(self):
     return """
@@ -24,6 +27,7 @@ class MPI(object):
   #include <functional>
 #endif
 """
+
   
   def get_attributes(self):
     return """
@@ -52,7 +56,19 @@ class MPI(object):
      * the lazy initialisation is done and the datatype is also cached.
      */
     [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getDatatype();
+    static MPI_Datatype  getForkDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getJoinDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getBoundaryExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getGlobalCommunciationDatatype();
     
     
     /**
@@ -71,7 +87,7 @@ class MPI(object):
      * Free the underlying MPI datatype.
      */
     static void shutdownDatatype();
-            
+    
     /**
      * In DaStGen (the first version), I had a non-static version of the send
      * as well as the receive. However, this did not work with newer C++11 
@@ -89,8 +105,8 @@ class MPI(object):
      * the message went through. In systems with heavy MPI usage, this can 
      * help to avoid deadlocks.
      */
-    static void send(const """ + full_qualified_name + """& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(""" + full_qualified_name + """& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(const """ + full_qualified_name + """& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(   """ + full_qualified_name + """& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 """
 
@@ -105,9 +121,34 @@ MPI_Datatype """ + full_qualified_name + """::Datatype;
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype """ + full_qualified_name + """::getDatatype() {
+MPI_Datatype """ + full_qualified_name + """::getForkDatatype() {
   return Datatype;
 }
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype """ + full_qualified_name + """::getGlobalCommunciationDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype """ + full_qualified_name + """::getJoinDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype """ + full_qualified_name + """::getBoundaryExchangeDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype """ + full_qualified_name + """::getMultiscaleDataExchangeDatatype() {
+  return Datatype;
+}
+
 
 int """ + full_qualified_name + """::getSenderRank() const {
   return _senderDestinationRank;
@@ -188,14 +229,32 @@ void """ + full_qualified_name + """::initDatatype() {
 
   #else
   // invoke routine once to trigger lazy initialisation
-  getDatatype();
+  getForkDatatype();
+  getJoinDatatype();
+  getBoundaryExchangeDatatype();
+  getMultiscaleDataExchangeDatatype();
+  getGlobalCommunciationDatatype();
   #endif
 }
 
 
 void """ + full_qualified_name + """::shutdownDatatype() {
-  MPI_Datatype type = getDatatype();
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  MPI_Datatype type;
+  type = getForkDatatype();
   MPI_Type_free( &type );
+  type = getJoinDatatype();
+  MPI_Type_free( &type );
+  type = getBoundaryExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getMultiscaleDataExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getGlobalCommunciationDatatype();
+  MPI_Type_free( &type );
+  #else
+  MPI_Datatype type = Datatype;
+  MPI_Type_free( &type );
+  #endif
 }
 
 
@@ -211,11 +270,19 @@ void """ + full_qualified_name + """::receive(""" + full_qualified_name + """& b
 }
 
 
-void """ + full_qualified_name + """::send(const """ + full_qualified_name + """& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {
+void """ + full_qualified_name + """::send(
+  const """ + full_qualified_name + """& buffer, 
+  int destination, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {
   MPI_Request sendRequestHandle; 
   int         flag = 0; 
   MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle ); 
-  MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
+  MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
+  startCommunicationFunctor(); 
   while (!flag) { 
     waitFunctor();
     MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
@@ -223,21 +290,29 @@ void """ + full_qualified_name + """::send(const """ + full_qualified_name + """
 }
 
 
-void """ + full_qualified_name + """::receive(""" + full_qualified_name + """& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {   
+void """ + full_qualified_name + """::receive(
+  """ + full_qualified_name + """& buffer, 
+  int source, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {   
   MPI_Status  status;
   MPI_Request receiveRequestHandle; 
   int         flag = 0; 
   MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle ); 
-  MPI_Test( &receiveRequestHandle, &flag, &status ); 
+  MPI_Test( &receiveRequestHandle, &flag, &status );
+  startCommunicationFunctor(); 
   while (!flag) { 
     waitFunctor();
     MPI_Test( &receiveRequestHandle, &flag, &status ); 
   }
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
-
 #endif
 """ 
+
     return result;    
 
 

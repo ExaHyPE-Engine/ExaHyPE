@@ -69,40 +69,53 @@ void tarch::tests::TreeTestCaseCollection::run( const std::string& prefix ) {
 
   if (
     _subTests.empty()
-	and
-	_testCases.empty()
+    and
+    _testCases.empty()
   ) {
-	logInformation += "... WARNING: no tests defined ... ";
+    logInformation += "... WARNING: no tests defined ... ";
+    double x = 3.0/0.0;
+    logInformation += std::to_string(x);
   }
 
+  // run nested test cases recursively
   std::string fullQualifiedName = _testCaseName.length()>0 ? prefix  +_testCaseName + "." : prefix;
   for (std::map<std::string, TreeTestCaseCollection*>::iterator p = _subTests.begin(); p!=_subTests.end(); p++ ) {
     (*p).second->run( fullQualifiedName );
     _errors += (*p).second->getNumberOfErrors();
   }
-  if (_errors == 0) {
-    for (std::list<tarch::tests::TestCase*>::iterator p = _testCases.begin(); p!=_testCases.end(); p++ ) {
-      tarch::tests::TestCase* currentTestCase = *p;
+
+  for (std::list<tarch::tests::TestCase*>::iterator p = _testCases.begin(); p!=_testCases.end(); p++ ) {
+    tarch::tests::TestCase* currentTestCase = *p;
+    logInformation += ".";
+    currentTestCase->run();
+    int additionalErrors = currentTestCase->getNumberOfErrors();
+    if (additionalErrors>0) {
+      logInformation += "x";
+      _errors += currentTestCase->getNumberOfErrors();
+    }
+    else {
       logInformation += ".";
-      currentTestCase->run();
-      int additionalErrors = currentTestCase->getNumberOfErrors();
-      if (additionalErrors>0) {
-        logInformation += "x";
-        _errors += currentTestCase->getNumberOfErrors();
-      }
-      else {
-        logInformation += ".";
-      }
     }
   }
-  if (_errors==0) {
-    logInformation += " ok";
+
+  if ( _errors==0 and _testCases.empty() and _subTests.empty() ) {
+    logInformation += " pass (no local tests)";
+  }
+  else if ( _errors==0 and _testCases.empty() ) {
+    logInformation += " pass (no local tests, subtests all successful)";
+  }
+  else if (_errors==0 and _testCases.size()==1) {
+    logInformation += " ok (1 test)";
+  }
+  else if (_errors==0) {
+    logInformation += " ok (" + std::to_string(_testCases.size()) + " tests)";
   }
   else {
     logInformation += " failed";
   }
-  if (_writeToLog) {
-    _log.info("run()",logInformation );
+
+  if ( _writeToLog and _testCaseName!="" ) {
+    logInfo("run()",logInformation );
   }
 }
 

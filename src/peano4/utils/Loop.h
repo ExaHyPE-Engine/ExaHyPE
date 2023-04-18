@@ -8,8 +8,7 @@
  * @version $Revision: 1.10 $
  * @author Tobias Weinzierl
  */
-#ifndef _PEANO4_UTILS_LOOP_H_
-#define _PEANO4_UTILS_LOOP_H_
+#pragma once
 
 #include "peano4/utils/Globals.h"
 
@@ -662,4 +661,3 @@ namespace peano4 {
   
 #define endzfor }}    
 
-#endif

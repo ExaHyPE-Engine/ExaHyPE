@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_CELL_DATA_H_
-#define _EXAHYPE2_CELL_DATA_H_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -36,9 +35,14 @@ namespace exahype2 {
    * PatchData object over both allocated input and output data.
    */
   struct CellData {
-    double**   QIn;
+    /**
+     * QIn may not be const, as some kernels delete it straightaway once
+     * the input data has been handled.
+     */
+    double**                                QIn;
     tarch::la::Vector<Dimensions,double>*   cellCentre;
     tarch::la::Vector<Dimensions,double>*   cellSize;
+
     double*    t;
     double*    dt;
     /**
@@ -75,7 +79,7 @@ namespace exahype2 {
      * read it later.
      */
     CellData(
-      double*   QIn,
+      double*                                       QIn,
       const tarch::la::Vector<Dimensions,double>&   cellCentre_,
       const tarch::la::Vector<Dimensions,double>&   cellSize_,
       double    t,
@@ -91,4 +95,3 @@ namespace exahype2 {
   };
 }
 
-#endif

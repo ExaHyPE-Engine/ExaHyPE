@@ -91,7 +91,7 @@ bool tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::writeToFile
   std::ofstream out;
   out.open( (_fileName + ".vtu").c_str() );
   if ( (!out.fail()) && out.is_open() ) {
-    _log.debug( "writeToFile()", "opened data file " + _fileName );
+    logDebug( "writeToFile()", "opened data file " + _fileName );
 
     out << HEADER << std::endl << std::endl
         << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl
@@ -109,11 +109,11 @@ bool tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::writeToFile
       </UnstructuredGrid>\n\
     </VTKFile>\n";
 
-    _log.debug( "writeToFile()", "data written to " + _fileName );
+    logDebug( "writeToFile()", "data written to " + _fileName );
     _writtenToFile = true;
   }
   else {
-  	_log.error( "writeToFile()", "unable to write output file " + _fileName );
+  	logError( "writeToFile()", "unable to write output file " + _fileName );
   	return false;
   }
 
@@ -133,7 +133,7 @@ void tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::writeMetaDa
   std::ofstream metaOut;
   metaOut.open( (metaDataFilename + ".pvtu").c_str() );
   if ( (!metaOut.fail()) && metaOut.is_open() ) {
-    _log.debug( "writeMetaDataFileForParallelSnapshot()", "opened data file " + metaDataFilename );
+    logDebug( "writeMetaDataFileForParallelSnapshot()", "opened data file " + metaDataFilename );
 
     metaOut << "<?xml version=\"1.0\"?>" << std::endl
             << "<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl
@@ -176,7 +176,7 @@ void tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::writeMetaDa
     metaOut.close();
   }
   else {
-    _log.error( "writeMetaDataFileForParallelSnapshot()", "unable to write meta data file " + metaDataFilename );
+    logError( "writeMetaDataFileForParallelSnapshot()", "unable to write meta data file " + metaDataFilename );
   }
 }
 

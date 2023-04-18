@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_PLOTTER_GRIDDATA_UNSTRUCTURED_UNSTRUCTURED_GRID_WRITER_H_
-#define _TARCH_PLOTTER_GRIDDATA_UNSTRUCTURED_UNSTRUCTURED_GRID_WRITER_H_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -158,4 +157,3 @@ class tarch::plotter::griddata::unstructured::UnstructuredGridWriter {
 };
 
 
-#endif

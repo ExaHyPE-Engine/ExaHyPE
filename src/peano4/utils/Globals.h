@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_UTILS_GLOBALS_H_
-#define _PEANO4_UTILS_GLOBALS_H_
+#pragma once
 
   template <int base, int exponent>
   class BasePowerExponent {
@@ -63,4 +62,3 @@
   #define Dimensions_TIMES_Dimensions (Dimensions*Dimensions)
 */
 
-#endif

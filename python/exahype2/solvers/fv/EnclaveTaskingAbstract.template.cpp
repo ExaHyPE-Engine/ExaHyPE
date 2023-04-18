@@ -99,10 +99,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
     _maxTimeStepSizeThisTimeStep = std::max(timeStepSize,_maxTimeStepSizeThisTimeStep);
     assertion2(_minTimeStepSizeThisTimeStep<=_maxTimeStepSizeThisTimeStep, _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep );
 
+    _patchUpdates++;
+    
     _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
     _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
-
-    _patchUpdates++;
   }
 
   assertion1(timeStamp<std::numeric_limits<double>::max()/10.0,timeStamp);
@@ -309,14 +309,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       );
 
     tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStepSize,
-      &_maxTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-
-    tarch::mpi::Rank::getInstance().allReduce(
       &newLocalMinTimeStamp,
       &_localMinTimeStampThisTimeStep,
       1, MPI_DOUBLE,
@@ -362,6 +354,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
     _solverState = SolverState::PlottingInitialCondition;
   }
   else {
+    assertion( mayPlot()  or ::exahype2::hasNonCriticalAssertionBeenViolated() );
+
     _solverState = SolverState::Plotting;
   }
 }
@@ -410,7 +404,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}
 
 
-{% if STATELESS_PDE_TERMS %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchH,
@@ -419,7 +412,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
 ) const {
   return true;
 }
-{% endif %}
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {

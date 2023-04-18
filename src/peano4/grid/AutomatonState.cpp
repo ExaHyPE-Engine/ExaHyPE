@@ -195,23 +195,12 @@ void peano4::grid::AutomatonState::sendAndPollDanglingMessages(const peano4::gri
   peano4::grid::AutomatonState::send(
     message, destination, tag,
     [&]() {
-      auto  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-      bool triggeredTimeoutWarning = false;
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::AutomatonState", "sendAndPollDanglingMessages()",destination, tag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::AutomatonState", "sendAndPollDanglingMessages()", destination, tag );
-      }
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::AutomatonState", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::AutomatonState", "sendAndPollDanglingMessages()", destination, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
@@ -223,23 +212,12 @@ void peano4::grid::AutomatonState::receiveAndPollDanglingMessages(peano4::grid::
   peano4::grid::AutomatonState::receive(
     message, source, tag,
     [&]() {
-      auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-      bool triggeredTimeoutWarning = false;
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::AutomatonState", "receiveAndPollDanglingMessages()", source, tag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::AutomatonState", "receiveAndPollDanglingMessages()", source, tag );
-      }
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::AutomatonState", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::AutomatonState", "receiveAndPollDanglingMessages()", source, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
@@ -255,9 +233,34 @@ MPI_Datatype peano4::grid::AutomatonState::Datatype;
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype peano4::grid::AutomatonState::getDatatype() {
+MPI_Datatype peano4::grid::AutomatonState::getForkDatatype() {
   return Datatype;
 }
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::grid::AutomatonState::getGlobalCommunciationDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::grid::AutomatonState::getJoinDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::grid::AutomatonState::getBoundaryExchangeDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::grid::AutomatonState::getMultiscaleDataExchangeDatatype() {
+  return Datatype;
+}
+
 
 int peano4::grid::AutomatonState::getSenderRank() const {
   return _senderDestinationRank;
@@ -339,14 +342,32 @@ void peano4::grid::AutomatonState::initDatatype() {
 
   #else
   // invoke routine once to trigger lazy initialisation
-  getDatatype();
+  getForkDatatype();
+  getJoinDatatype();
+  getBoundaryExchangeDatatype();
+  getMultiscaleDataExchangeDatatype();
+  getGlobalCommunciationDatatype();
   #endif
 }
 
 
 void peano4::grid::AutomatonState::shutdownDatatype() {
-  MPI_Datatype type = getDatatype();
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  MPI_Datatype type;
+  type = getForkDatatype();
   MPI_Type_free( &type );
+  type = getJoinDatatype();
+  MPI_Type_free( &type );
+  type = getBoundaryExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getMultiscaleDataExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getGlobalCommunciationDatatype();
+  MPI_Type_free( &type );
+  #else
+  MPI_Datatype type = Datatype;
+  MPI_Type_free( &type );
+  #endif
 }
 
 
@@ -362,11 +383,19 @@ void peano4::grid::AutomatonState::receive(peano4::grid::AutomatonState& buffer,
 }
 
 
-void peano4::grid::AutomatonState::send(const peano4::grid::AutomatonState& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {
+void peano4::grid::AutomatonState::send(
+  const peano4::grid::AutomatonState& buffer, 
+  int destination, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {
   MPI_Request sendRequestHandle; 
   int         flag = 0; 
   MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle ); 
-  MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
+  MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
+  startCommunicationFunctor(); 
   while (!flag) { 
     waitFunctor();
     MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
@@ -374,17 +403,24 @@ void peano4::grid::AutomatonState::send(const peano4::grid::AutomatonState& buff
 }
 
 
-void peano4::grid::AutomatonState::receive(peano4::grid::AutomatonState& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {   
+void peano4::grid::AutomatonState::receive(
+  peano4::grid::AutomatonState& buffer, 
+  int source, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {   
   MPI_Status  status;
   MPI_Request receiveRequestHandle; 
   int         flag = 0; 
   MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle ); 
-  MPI_Test( &receiveRequestHandle, &flag, &status ); 
+  MPI_Test( &receiveRequestHandle, &flag, &status );
+  startCommunicationFunctor(); 
   while (!flag) { 
     waitFunctor();
     MPI_Test( &receiveRequestHandle, &flag, &status ); 
   }
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
-
 #endif

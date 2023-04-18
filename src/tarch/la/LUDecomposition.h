@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LA_LUDECOMPOSITION_H_
-#define _TARCH_LA_LUDECOMPOSITION_H_
+#pragma once
 
 #include "tarch/la/Vector.h"
 #include "tarch/la/Matrix.h"
@@ -69,4 +68,3 @@ namespace tarch {
 #include "tarch/la/LUDecomposition.cpph"
 
 
-#endif

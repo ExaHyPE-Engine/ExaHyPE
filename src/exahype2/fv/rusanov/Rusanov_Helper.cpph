@@ -1,3 +1,4 @@
+#pragma once
 
 namespace {
   /**
@@ -15,24 +16,18 @@ namespace {
    * which is way less elegant, yet knows how often the underlying while
    * loop is to be unrolled.
    */
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
-  #endif
-  tarch::la::Vector<Dimensions,int> volumeIndex2d( int x, int y ) InlineMethod {
+  tarch::la::Vector<Dimensions,int> volumeIndex2d( int x, int y ) {
     tarch::la::Vector<Dimensions,int> result;
     result(0) = x;
     result(1) = y;
     return result;
   }
 
-  tarch::la::Vector<Dimensions,int> volumeIndex3d( int x, int y, int z ) InlineMethod {
+  tarch::la::Vector<Dimensions,int> volumeIndex3d( int x, int y, int z ) {
     tarch::la::Vector<Dimensions,int> result;
     result(0) = x;
     result(1) = y;
     result(2) = z;
     return result;
   }
-  #if defined(GPUOffloadingOMP)
-  #pragma omp end declare target
-  #endif
 }

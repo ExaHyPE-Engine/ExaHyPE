@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_DATAMANAGEMENT_FACE_MARKER_H_
-#define _PEANO4_DATAMANAGEMENT_FACE_MARKER_H_
+#pragma once
 
 
 #include "peano4/utils/Globals.h"
@@ -58,7 +57,7 @@ struct peano4::datamanagement::FaceMarker {
     FaceMarker(const peano4::grid::GridTraversalEvent& event, int select=0);
 
     /**
-     * Selects a face witin a cell, i.e. now the marker knows to which
+     * Selects a face within a cell, i.e. now the marker knows to which
      * face it corresponds. After that, the routine returns a this
      * reference.
      *
@@ -147,6 +146,12 @@ struct peano4::datamanagement::FaceMarker {
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell(int i) const;
 
     /**
+     * Return relative position of a subface within its father face. The
+     * result is from (0,1,2)^(Dimensions-1)
+     */
+    tarch::la::Vector<Dimensions-1,int>  getRelativePositionWithinFatherFace() const;
+    
+    /**
      * The term patch here refers to a 3x3 or 3x3x3 refinement. The routine
      * determines whether the face is on the boundary of this patch of not.
      */
@@ -154,4 +159,3 @@ struct peano4::datamanagement::FaceMarker {
 };
 
 
-#endif

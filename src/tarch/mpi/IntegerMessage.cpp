@@ -44,23 +44,12 @@ void tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(const tarch::mpi::I
   tarch::mpi::IntegerMessage::send(
     message, destination, tag,
     [&]() {
-      auto  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-      bool triggeredTimeoutWarning = false;
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::IntegerMessage", "sendAndPollDanglingMessages()",destination, tag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::IntegerMessage", "sendAndPollDanglingMessages()", destination, tag );
-      }
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::IntegerMessage", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::IntegerMessage", "sendAndPollDanglingMessages()", destination, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
@@ -72,23 +61,12 @@ void tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(tarch::mpi::Inte
   tarch::mpi::IntegerMessage::receive(
     message, source, tag,
     [&]() {
-      auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-      bool triggeredTimeoutWarning = false;
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::IntegerMessage", "receiveAndPollDanglingMessages()", source, tag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::IntegerMessage", "receiveAndPollDanglingMessages()", source, tag );
-      }
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::IntegerMessage", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::IntegerMessage", "receiveAndPollDanglingMessages()", source, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
@@ -104,9 +82,34 @@ MPI_Datatype tarch::mpi::IntegerMessage::Datatype;
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype tarch::mpi::IntegerMessage::getDatatype() {
+MPI_Datatype tarch::mpi::IntegerMessage::getForkDatatype() {
   return Datatype;
 }
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype tarch::mpi::IntegerMessage::getGlobalCommunciationDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype tarch::mpi::IntegerMessage::getJoinDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype tarch::mpi::IntegerMessage::getBoundaryExchangeDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype tarch::mpi::IntegerMessage::getMultiscaleDataExchangeDatatype() {
+  return Datatype;
+}
+
 
 int tarch::mpi::IntegerMessage::getSenderRank() const {
   return _senderDestinationRank;
@@ -158,14 +161,32 @@ void tarch::mpi::IntegerMessage::initDatatype() {
 
   #else
   // invoke routine once to trigger lazy initialisation
-  getDatatype();
+  getForkDatatype();
+  getJoinDatatype();
+  getBoundaryExchangeDatatype();
+  getMultiscaleDataExchangeDatatype();
+  getGlobalCommunciationDatatype();
   #endif
 }
 
 
 void tarch::mpi::IntegerMessage::shutdownDatatype() {
-  MPI_Datatype type = getDatatype();
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  MPI_Datatype type;
+  type = getForkDatatype();
   MPI_Type_free( &type );
+  type = getJoinDatatype();
+  MPI_Type_free( &type );
+  type = getBoundaryExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getMultiscaleDataExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getGlobalCommunciationDatatype();
+  MPI_Type_free( &type );
+  #else
+  MPI_Datatype type = Datatype;
+  MPI_Type_free( &type );
+  #endif
 }
 
 
@@ -181,11 +202,19 @@ void tarch::mpi::IntegerMessage::receive(tarch::mpi::IntegerMessage& buffer, int
 }
 
 
-void tarch::mpi::IntegerMessage::send(const tarch::mpi::IntegerMessage& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {
+void tarch::mpi::IntegerMessage::send(
+  const tarch::mpi::IntegerMessage& buffer, 
+  int destination, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {
   MPI_Request sendRequestHandle; 
   int         flag = 0; 
   MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle ); 
-  MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
+  MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
+  startCommunicationFunctor(); 
   while (!flag) { 
     waitFunctor();
     MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
@@ -193,17 +222,24 @@ void tarch::mpi::IntegerMessage::send(const tarch::mpi::IntegerMessage& buffer, 
 }
 
 
-void tarch::mpi::IntegerMessage::receive(tarch::mpi::IntegerMessage& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {   
+void tarch::mpi::IntegerMessage::receive(
+  tarch::mpi::IntegerMessage& buffer, 
+  int source, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {   
   MPI_Status  status;
   MPI_Request receiveRequestHandle; 
   int         flag = 0; 
   MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle ); 
-  MPI_Test( &receiveRequestHandle, &flag, &status ); 
+  MPI_Test( &receiveRequestHandle, &flag, &status );
+  startCommunicationFunctor(); 
   while (!flag) { 
     waitFunctor();
     MPI_Test( &receiveRequestHandle, &flag, &status ); 
   }
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
-
 #endif

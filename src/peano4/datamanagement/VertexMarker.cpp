@@ -141,10 +141,10 @@ bool peano4::datamanagement::VertexMarker::isLocal(int i) const {
 }
 
 
-bool peano4::datamanagement::VertexMarker::isContainedInAdjacentCells( const tarch::la::Vector<Dimensions,double>& x, double scaleAdjacentCells ) const {
+bool peano4::datamanagement::VertexMarker::isContainedInAdjacentCells( const tarch::la::Vector<Dimensions,double>& x, double scaleAdjacentCells, double tolerance ) const {
   bool  result = true;
   for (int d=0; d<Dimensions; d++) {
-    result &= tarch::la::smallerEquals( std::abs(x(d) - (this->x())(d)), scaleAdjacentCells * _h(d));
+    result &= tarch::la::smallerEquals( std::abs(x(d) - (this->x())(d)), scaleAdjacentCells * _h(d), tolerance);
   }
   return result;
 }

@@ -6,8 +6,7 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#ifndef _INCLUDE_PEANO4_GRID_GRIDVERTEX_
-#define _INCLUDE_PEANO4_GRID_GRIDVERTEX_
+#pragma once
 
 #include <string>
   
@@ -15,7 +14,9 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
 #ifdef Parallel
@@ -79,14 +80,28 @@ struct peano4::grid::GridVertex {
     
 
     #ifdef Parallel
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
      * the lazy initialisation is done and the datatype is also cached.
      */
     [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getDatatype();
-    
+    static MPI_Datatype  getForkDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getJoinDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getBoundaryExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getGlobalCommunciationDatatype();
+    PRAGMA_POP
     
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -104,7 +119,7 @@ struct peano4::grid::GridVertex {
      * Free the underlying MPI datatype.
      */
     static void shutdownDatatype();
-            
+    
     /**
      * In DaStGen (the first version), I had a non-static version of the send
      * as well as the receive. However, this did not work with newer C++11 
@@ -122,14 +137,15 @@ struct peano4::grid::GridVertex {
      * the message went through. In systems with heavy MPI usage, this can 
      * help to avoid deadlocks.
      */
-    static void send(const peano4::grid::GridVertex& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(peano4::grid::GridVertex& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(const peano4::grid::GridVertex& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(   peano4::grid::GridVertex& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
-
     std::string toString() const;
-  
+
   private:
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     [[clang::pack]]  State   _state;
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
     [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _adjacentRanks[TwoPowerD];
@@ -143,22 +159,21 @@ struct peano4::grid::GridVertex {
     [[clang::pack_range(0,TwoPowerD)]]  int   _numberOfAdjacentRefinedLocalCells;
 #if PeanoDebug>0
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-    [[clang::truncate_mantissa()]]  double   _x[Dimensions];
+    [[clang::truncate_mantissa(23)]]  double   _x[Dimensions];
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,double>   _x;
 #endif
-#endif 
-      int   _level;
+#endif
+    PRAGMA_POP
 
-
-
+    int   _level;
 
     #ifdef Parallel
     private:
       int                  _senderDestinationRank;
 
-      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
+      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
       /**
        * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
        * initialisation of the datatype. However, Peano calls init explicitly
@@ -168,10 +183,6 @@ struct peano4::grid::GridVertex {
       static MPI_Datatype  Datatype;
       #endif
     #endif
-
-
-
 };
 
-#endif
   

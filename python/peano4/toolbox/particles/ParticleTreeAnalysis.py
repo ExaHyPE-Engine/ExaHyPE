@@ -11,6 +11,29 @@ import dastgen2.attributes.Integer
 
 
 
+def create_cell_marker(name):
+  """
+  
+  Create the cell marker that is used by all statistics
+  
+  You can either create such a cell marker yourself, or you can make the 
+  particle tree analysis create one for you.
+  
+  @see ParticleTreeAnalysis.__init__()
+  
+  
+  """
+  cell_marker     = peano4.datamodel.DaStGen2( name )
+      
+  cell_marker.data.add_attribute( dastgen2.attributes.Integer("NewNumberOfParticles") )
+  cell_marker.data.add_attribute( dastgen2.attributes.Integer("NumberOfParticles") )
+  cell_marker.data.add_attribute( dastgen2.attributes.Boolean("NewParentOfRefinedCell") )
+  cell_marker.data.add_attribute( dastgen2.attributes.Boolean("ParentOfRefinedCell") )
+  
+  return cell_marker
+
+
+
 class ParticleTreeAnalysis(ActionSet):
   """
   
@@ -59,16 +82,30 @@ class ParticleTreeAnalysis(ActionSet):
     my_algorithmic_step = peano4.solversteps.Step( ... )
     my_algorithmic_step.use_cell(my_tree_analysis.cell_marker)
 
+
+    
+    ## Attributes
+    
+    particle_set: ParticleSet
+      This is the particle set which is to be analysed.
+      
+    cell_marker: peano4.datamodel.DaStGen2 or None
+      If you pass in None, the class will create an appropriate
+      cell marker itself. You can also add in a cell marker that
+      shall be used. In both cases, you have to ensure that your
+      code handles the cell marker accordingly, i.e. ensures that
+      the markers are streamed properly.
     
   """
-  def __init__(self,particle_set):
-    self._cell_data_name = particle_set.name + "CellStatistics"
-    self.cell_marker     = peano4.datamodel.DaStGen2( self._cell_data_name )
-    
-    self.cell_marker.data.add_attribute( dastgen2.attributes.Integer("NewNumberOfParticles") )
-    self.cell_marker.data.add_attribute( dastgen2.attributes.Integer("NumberOfParticles") )
-    self.cell_marker.data.add_attribute( dastgen2.attributes.Boolean("NewParentOfRefinedCell") )
-    self.cell_marker.data.add_attribute( dastgen2.attributes.Boolean("ParentOfRefinedCell") )
+  def __init__(self,
+               particle_set,
+               cell_marker = None):
+    if cell_marker!=None:
+      self.cell_marker     = cell_marker
+      self._cell_data_name = cell_marker.name
+    else:
+      self._cell_data_name = particle_set.name + "CellStatistics"
+      self.cell_marker     = create_cell_marker(self._cell_data_name)
     
     self.d = {
       "CELL_DATA_NAME":    self._cell_data_name,

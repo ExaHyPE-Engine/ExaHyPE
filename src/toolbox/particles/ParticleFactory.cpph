@@ -24,10 +24,9 @@ void toolbox::particles::init(
 
   particle.setX(x);
   particle.setCutOffRadius( cutOffRadius );
-  //particle.setMoveState( T::MoveState::New );
 
-  particle.setParallelState(T::ParallelState::Virtual);
-  particle.setNewParallelState(T::NewParallelState::Virtual);
+  particle.setParallelState(T::ParallelState::Local);
+  particle.setNewParallelState(T::NewParallelState::Local);
 }
 
 

@@ -36,8 +36,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
     
     ::exahype2::fv::copyPatch(
-      reconstructedPatch,
-      targetPatch,
+      oldQWithHalo,
+      newQ,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -117,8 +117,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      reconstructedPatch,
-      targetPatch
+      oldQWithHalo,
+      newQ
     );
 
     {{POSTPROCESS_UPDATED_PATCH}}
@@ -144,7 +144,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      targetPatch
+      newQ
     );
     
     repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigvenvalue );    
@@ -302,7 +302,7 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
       
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
-       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete:
       raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
 
     self.create_action_sets()
@@ -328,7 +328,7 @@ if (Q[1]>43.2) {
     self.set_postprocess_updated_patch_kernel( """
 int postProcessingIndex = 0;
 dfor( volume, """ + str(self._patch_size) + """ ) {
-  double* Q = targetPatch + postProcessingIndex;
+  double* Q = newQ + postProcessingIndex;
   """ + kernel + """
   postProcessingIndex += """ + str(self._unknowns) + """;
   postProcessingIndex += """ + str(self._auxiliary_variables) + """;

@@ -6,8 +6,7 @@
 // This is generated. Don't change it! Every rerun of the Python API will
 // overwrite your changes.
 //
-#ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
-#define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+#pragma once
 
 
 {{SOLVER_INCLUDES}}
@@ -17,6 +16,7 @@
 
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/accelerator/accelerator.h"
 
 #include "peano4/utils/Globals.h"
 
@@ -70,7 +70,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static constexpr double MinAdmissiblePatchH  = {{MIN_VOLUME_H}} * NumberOfFiniteVolumesPerAxisPerPatch;
     static constexpr double MinAdmissibleVolumeH = {{MIN_VOLUME_H}};
     static constexpr double MinAdmissibleCellH   = MinAdmissiblePatchH;
-
 
     {{CLASSNAME}}();
 
@@ -135,8 +134,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     void finishGridConstructionStep() override;
 
-
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -148,9 +145,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * operation is still invoked.
      */
     void finishGridInitialisationStep() override;
-
-
-
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -186,7 +180,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * operation is still invoked.
      */
     void finishPlottingStep() override;
-
 
     /**
      * @param currentTimeStep If you set this to false, you'll get the
@@ -286,6 +279,5 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 };
 
 
-#endif
 
 {# Empty line here #}

@@ -29,7 +29,7 @@ class ShrinkPatches( Filter ):
     pass
   
   
-  def render(self, cell_data, dof, dimensions, unknowns, description, mapping):
+  def render(self, cell_data, dof, dimensions, unknowns, is_data_associated_to_cell, description, mapping):
     for i in cell_data:
       if dimensions==3:
         i.offset = ( i.offset[0] + i.size[0]*(1.0-self.scaling)/2.0, 
@@ -40,5 +40,6 @@ class ShrinkPatches( Filter ):
         i.offset = ( i.offset[0] + i.size[0]*(1.0-self.scaling)/2.0, 
                      i.offset[1] + i.size[1]*(1.0-self.scaling)/2.0)
         i.size = ( i.size[0]*self.scaling, i.size[1]*self.scaling )        
-    return cell_data, dof, dimensions, unknowns, description, mapping
+        
+    return cell_data, dof, dimensions, unknowns, is_data_associated_to_cell, description, mapping
   

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_PARALLEL_NODE_H_
-#define _PEANO4_PARALLEL_NODE_H_
+#pragma once
 
 
 #include "tarch/logging/Log.h"
@@ -61,11 +60,6 @@ class peano4::parallel::Node {
      * flow.
      */
     static constexpr int        StacksPerCommunicationPartner = 4;
-
-    /**
-     * The MPI standard specifies that the tag upper bound must be at least 32767.
-     */
-    static constexpr int ReservedMPITagsForDataExchange = MaxSpacetreesPerRank * StacksPerCommunicationPartner;
 
     #if !defined(Parallel)
     typedef int MPI_Comm;
@@ -128,6 +122,7 @@ class peano4::parallel::Node {
      * I originally wanted to embed these guys into the singleton's
      * constructor. However, the singleton might not yet be up when
      * I run the (mpi) tests.
+     *
      */
     static void initMPIDatatypes();
     static void shutdownMPIDatatypes();
@@ -215,6 +210,8 @@ class peano4::parallel::Node {
      * Unfortunately, bitsets do not work properly within the pair type as they
      * seem not to define the comparison operator properly. So I use an int
      * here and wrap it into a bitset whenever necessary.
+     *
+     * @see toString()
      */
     typedef std::pair<int, int > PeriodicBoundaryStackIdentifier;
 
@@ -245,6 +242,8 @@ class peano4::parallel::Node {
      * it in a set.
      */
     static std::set< PeriodicBoundaryStackIdentifier >  getOutputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TwoPowerD,int>& flags);
+
+    static std::string toString( const std::set< PeriodicBoundaryStackIdentifier >& data );
 
     /**
      * Identify output stack for periodic boundary data written by face
@@ -402,4 +401,3 @@ class peano4::parallel::Node {
     static std::string getSemanticsForTag( int tag );
 };
 
-#endif

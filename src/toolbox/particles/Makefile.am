@@ -9,10 +9,15 @@ endif
 
 ToolboxParticles_SOURCES = \
   FileReader.cpp \
+  FileReaderHDF5.cpp \
+  MultiscaleTransitions.cpp \
   Tracer.cpp \
   TrajectoryDatabase.cpp \
+  UnitTests.cpp \
   particles.cpp \
-  potentials/Springs.cpp
+  potentials/Springs.cpp \
+  tests/MultiscaleTransitionsTest.cpp \
+  tests/TestParticle.cpp
   
 
 libToolboxParticles2d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 

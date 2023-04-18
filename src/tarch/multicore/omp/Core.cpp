@@ -3,13 +3,9 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-#include "tarch/multicore/sycl/SYCL.h"
-
-
 #ifdef CompilerHasSysinfo
 #include <sched.h>
 #endif
-
 
 #if defined(SharedOMP)
 
@@ -17,42 +13,22 @@
 
 #include "config.h"
 
-#if defined(UseNVIDIA)
-#include <cuda_runtime_api.h>
-#include <cuda.h>
-#endif
-
-
 tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
-
 tarch::multicore::Core::Core():
-  _numberOfThreads( omp_get_max_threads() ),
-  _numberOfDevices( 0 ) {
+  _numberOfThreads( omp_get_max_threads() ) {
+
   internal::configureInternalTaskQueues(_numberOfThreads);
-
-  #if defined(GPUOffloadingOMP)
-  _numberOfDevices = omp_get_num_devices();
-  #endif
-
-  #if defined(GPUOffloadingSYCL)
-  initSYCLQueues();
-  _numberOfDevices = getNumberOfSYCLQueues();
-  #endif
 }
 
-
-tarch::multicore::Core::~Core() {
-}
-
+tarch::multicore::Core::~Core() {}
 
 tarch::multicore::Core& tarch::multicore::Core::getInstance() {
   static Core instance;
   return instance;
 }
 
-
-void tarch::multicore::Core::configure( int numberOfThreads ) {
+void tarch::multicore::Core::configure( int numberOfThreads) {
   if ( omp_get_num_procs() != omp_get_max_threads() ) {
     logWarning( "configure(int)", "omp_get_num_procs reports " << omp_get_num_procs() << " while omp_get_max_threads reports " << omp_get_max_threads() << ". Take smaller value to avoid overbooking" );
   }
@@ -66,50 +42,39 @@ void tarch::multicore::Core::configure( int numberOfThreads ) {
     omp_set_num_threads(numberOfThreads);
     _numberOfThreads = numberOfThreads;
     logInfo( "configure(int)", "manually reset number of threads used to " << numberOfThreads );
-  }
-  else {
+  } else {
     omp_set_num_threads(maxThreads);
     _numberOfThreads = omp_get_max_threads();
   }
 
   if (_numberOfThreads>getNumberOfUnmaskedThreads()) {
     logWarning( "configure(int)", "number of configured threads (" << _numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")" );
+    logWarning( "configure(int)", "unmasked threads: " << printUnmaskedThreads() );
   }
 
   internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
-
-void tarch::multicore::Core::shutdown() {
-}
-
+void tarch::multicore::Core::shutdown() {}
 
 bool tarch::multicore::Core::isInitialised() const {
   return true;
 }
 
-
 int tarch::multicore::Core::getNumberOfThreads() const {
   return _numberOfThreads;
 }
-
-
-int tarch::multicore::Core::getNumberOfGPUs() const {
-  return _numberOfDevices;
-}
-
 
 int tarch::multicore::Core::getThreadNumber() const {
   return omp_get_thread_num();
 }
 
-
 int tarch::multicore::Core::getCoreNumber() const {
   #ifdef CompilerHasSysinfo
-  return sched_getcpu();
+    return sched_getcpu();
   #else
-  //  https://stackoverflow.com/questions/33745364/sched-getcpu-equivalent-for-os-x
-  return 0;
+    //  https://stackoverflow.com/questions/33745364/sched-getcpu-equivalent-for-os-x
+    return 0;
   #endif
 }
 

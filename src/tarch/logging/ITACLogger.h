@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LOGGING_ITAC_LOGGER_H_
-#define _TARCH_LOGGING_ITAC_LOGGER_H_
+#pragma once
 
 
 #ifdef Parallel
@@ -31,24 +30,25 @@ namespace tarch {
  * Command Line Logger
  *
  * Standard log output device. Implements the LogHandle. Usually there's only
- * one instance of this class for only the Log type aggregates it in a static
- * way. For a detailed description of this compiler flags please browse through
- * the static consts of the class or the howto page.
+ * one instance of this class, as the Log type (which is implicitly used by all
+ * log and trace macros) forwards all data to a singleton.
  *
- * An interesting issue is the behaviour of the command line logger in the
- * parallel mode if debug is switched on. In this case the number of messages
- * soon becomes unreadable for any human. Thus, the command line logger
- * internally creates one output file rank.log for each rank and writes all the
- * information into this file. info, warnings and errors are written (in short form)
- * to std::cout / std::cerr, too.
+ * ## Error and warnings
  *
- * If the debug mode is not set, all information is written to std::cout.
+ * All error and warning messages are dumped to \texttt{cerr}. The logger
+ * automatically aborts the application if it encounters an error, once the
+ * error message is written and \texttt{cerr} is flushed.
  *
- * Note, that if multithreading is switched on (TBB-flag), the access to std::cout or the
- * logfile respectively is synchronized. The other methods are not thread-safe and should
- * be called only in safe context for defined behaviour.
+ * ## Info and debugging
  *
- * @version $Revision: 1.19 $
+ * Debug information is piped to \texttt{cout}. The same happens with writes to
+ * the \texttt{info} log level.
+ *
+ * ## Thread safety
+ *
+ * All logs are protected by a semaphore to avoid race conditions.
+ *
+ *
  * @author  Tobias Weinzierl, Wolfgang Eckhardt
  */
 class tarch::logging::ITACLogger {
@@ -187,4 +187,3 @@ class tarch::logging::ITACLogger {
     void close();
 };
 
-#endif

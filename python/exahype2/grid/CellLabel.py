@@ -104,8 +104,23 @@ def create_cell_label(solver_name):
      
   """
   result = peano4.datamodel.DaStGen2( UpdateCellLabel.get_attribute_name( solver_name ) )
+  
   result.data.add_attribute( dastgen2.attributes.Integer("SemaphoreNumber") )
   result.data.add_attribute( dastgen2.attributes.Double("TimeStamp") )
   result.data.add_attribute( dastgen2.attributes.Double("TimeStepSize") )
   result.data.add_attribute( dastgen2.attributes.Boolean("HasUpdated") )
+    
+  result.peano4_mpi_and_storage_aspect.merge_implementation = """
+  switch (context) {
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
+      assertionMsg( false, "cells should never be subject of a boundary exchange" );
+      break;
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain:
+      *this = neighbour;
+      break;
+    default:
+      assertionMsg( false, "not implemented yet" );
+  }
+"""
+
   return result

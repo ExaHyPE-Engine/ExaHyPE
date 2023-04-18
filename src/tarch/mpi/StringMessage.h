@@ -6,32 +6,23 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#ifndef _INCLUDE_TARCH_MPI_STRINGMESSAGE_
-#define _INCLUDE_TARCH_MPI_STRINGMESSAGE_
+#pragma once
 
 #include <string>
-  
 
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
-#include "peano4/utils/Globals.h"
-
 
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
 
-
-  
 namespace tarch{
 namespace mpi{
-
   struct StringMessage;
 }
 }
-
-
 
 /**
  * The string message looks like the other messages which I generate through
@@ -80,8 +71,22 @@ struct tarch::mpi::StringMessage {
      * the message went through. In systems with heavy MPI usage, this can 
      * help to avoid deadlocks.
      */
-    static void send(const tarch::mpi::StringMessage& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(tarch::mpi::StringMessage& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(
+      const tarch::mpi::StringMessage& buffer,
+      int destination,
+      int tag,
+      std::function<void()> startCommunicationFunctor,
+      std::function<void()> waitFunctor,
+      MPI_Comm communicator
+    );
+    static void receive(
+      tarch::mpi::StringMessage& buffer,
+      int source,
+      int tag,
+      std::function<void()> startCommunicationFunctor,
+      std::function<void()> waitFunctor,
+      MPI_Comm communicator
+    );
 
     /**
      * In older DaStGen version, I tried to find out whether a particular 
@@ -102,6 +107,3 @@ struct tarch::mpi::StringMessage {
 
     int _senderDestinationRank;
 };
-
-#endif
-  

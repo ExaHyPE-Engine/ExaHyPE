@@ -1,5 +1,4 @@
-#ifndef __TwoPunctures_Utilities__
-#define __TwoPunctures_Utilities__
+#pragma once
 
 /* TwoPunctures:  File  "utilities.h"*/
 /* these functions have no dependency on the TP parameters */
@@ -68,4 +67,3 @@ typedef free_d3tensor TP_free_d3tensor;
 } // namespac Utilities
 } // namespace TP
 
-#endif /* __TwoPunctures_Utilities__ */

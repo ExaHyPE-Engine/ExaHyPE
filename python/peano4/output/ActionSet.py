@@ -1,19 +1,26 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .Helper import Overwrite
-from .Helper import writeFile
-
 import os
 import re
-import peano4.solversteps.ActionSet
 
+from .Helper import write_file
+
+from .Overwrite import Overwrite
+
+import peano4.solversteps.ActionSet
 
 class ActionSet(object):
   def __init__(self,classname,namespace,subdirectory,implementation = None):
-    """
+    """!
+     
+     Implementation of an Action Set
+    
+     Please consult peano4.solversteps.ActionSet for a description.
+     
      implementation Should be of type peano4.solversteps.Mapping or None. If
                     it is None, then the generated stuff will be a sole
                     interface.
+                    
     """
     self.classname    = classname
     self.namespace    = namespace
@@ -26,7 +33,6 @@ class ActionSet(object):
     self.typedefs       = []
     self.implementation = implementation
 
-
   def add_operation(self,name,signature):
     """
      signature is a long tuple. The first entry is the name of the routine,
@@ -35,10 +41,8 @@ class ActionSet(object):
     """
     self.operations.append(signature)
 
-
   def __generate_includes(self, outputfile):
     for i in self.include_files: outputfile.write( '#include "{}"\n'.format(i) )
-
 
   def __get_operation_arguments(self,operation):
     result = "(\n      "
@@ -53,7 +57,6 @@ class ActionSet(object):
 
     result += ")"
     return result
-
 
   def __generate_operation(self,outputfile,operation):
     """
@@ -71,7 +74,6 @@ class ActionSet(object):
         outputfile.write( " = 0")
       outputfile.write( ";\n\n")
 
-
   def __get_full_qualified_class_name(self):
     full_qualified_classname = ""
     for i in self.namespace:
@@ -80,14 +82,13 @@ class ActionSet(object):
     full_qualified_classname += self.classname
     return full_qualified_classname
 
-
   def __generate_header(self,overwrite,directory):
     filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h";
     default_overwrite = True
     if self.implementation.user_should_modify_template():
       default_overwrite = False
 
-    if writeFile(overwrite,default_overwrite,filename):
+    if write_file(overwrite,default_overwrite,filename):
       import inspect, os
       print( "{} written by {}".format(filename, os.path.basename(inspect.getfile(self.__class__))))
 
@@ -145,25 +146,25 @@ class ActionSet(object):
 """ )
           outputfile.write( "    " + self.classname + "(int treeNumber);\n\n" )
           outputfile.write( "    ~" + self.classname + "();\n\n" )
-          outputfile.write( "    std::vector< peano4::grid::GridControlEvent > getGridControlEvents() const;\n\n" )
+          outputfile.write( """
+    std::vector< peano4::grid::GridControlEvent > getGridControlEvents() const;
+    static void prepareTraversal();
+    static void unprepareTraversal();
+""" )
 
           for i in self.operations: self.__generate_operation(outputfile,i)
-
           outputfile.write( "};\n\n\n" )
           outputfile.write( "#endif\n\n" )
 
-
-
   def get_cpp_file_name(self):
     return self.subdirectory + "/" + self.classname + ".cpp"
-
 
   def __generate_implementation(self,overwrite,directory):
     filename = directory + "/" + self.get_cpp_file_name()
     default_overwrite = True
     if self.implementation.user_should_modify_template():
       default_overwrite = False
-    if writeFile(overwrite,default_overwrite,filename):
+    if write_file(overwrite,default_overwrite,filename):
       import inspect, os
       print( "{} written by {}".format(filename, os.path.basename(inspect.getfile(self.__class__))))
       outputfile = open( filename, "w" )
@@ -189,6 +190,13 @@ class ActionSet(object):
       outputfile.write( self.implementation.get_body_of_getGridControlEvents() )
       outputfile.write( "}\n\n\n" )
 
+      outputfile.write( "void " + self.__get_full_qualified_class_name() + "::prepareTraversal() {\n" )
+      outputfile.write( self.implementation.get_body_of_prepareTraversal() )
+      outputfile.write( "}\n\n\n" )
+
+      outputfile.write( "void " + self.__get_full_qualified_class_name() + "::unprepareTraversal() {\n" )
+      outputfile.write( self.implementation.get_body_of_unprepareTraversal() )
+      outputfile.write( "}\n\n\n" )
 
       for operation in self.operations:
         outputfile.write( operation[1] )
@@ -200,10 +208,8 @@ class ActionSet(object):
         outputfile.write( "\n" )
         outputfile.write( "}\n\n\n" )
 
-
   def generate(self,overwrite,directory):
     if not os.path.exists( directory + "/" + self.subdirectory ):
       os.mkdir(directory + "/" + self.subdirectory)
     self.__generate_header(overwrite,directory)
     self.__generate_implementation(overwrite,directory)
-

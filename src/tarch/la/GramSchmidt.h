@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LA_GRAMSCHMIDT_H_
-#define _TARCH_LA_GRAMSCHMIDT_H_
+#pragma once
 
 #include "tarch/la/Matrix.h"
 #include "tarch/la/VectorOperations.h"
@@ -49,4 +48,3 @@ namespace tarch {
 
 #include "tarch/la/GramSchmidt.cpph"
 
-#endif

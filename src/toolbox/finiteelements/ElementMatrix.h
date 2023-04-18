@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_FINITE_ELEMENTS_ELEMENT_MATRIX_H_
-#define _TOOLBOX_FINITE_ELEMENTS_ELEMENT_MATRIX_H_
+#pragma once
 
 
 #include "Stencil.h"
@@ -274,4 +273,3 @@ namespace toolbox {
 
 #include "ElementMatrix.cpph"
 
-#endif

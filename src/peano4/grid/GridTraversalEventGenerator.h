@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_GRID_GRID_TRAVERSAL_EVENT_GENERATOR_H_
-#define _PEANO4_GRID_GRID_TRAVERSAL_EVENT_GENERATOR_H_
+#pragma once
 
 #include "tarch/tests/TestCase.h"
 #include "tarch/logging/Log.h"
@@ -46,7 +45,9 @@ namespace peano4 {
  * - createHangingVertex: Can be called arbitrarily often per grid traversal for a
  *   hanging vertex. You don't know how often hanging vertices are created/destroyed,
  *   but you can be sure that this action is triggered before anything else gets
- *   access to a hanging vertex.
+ *   access to a hanging vertex. Please note that we call touchVertexFirstTime()
+ *   for any newly created vertex. However, we do not call touchVertexFirstTime()
+ *   for hanging vertices.
  * - destroyHangingVertex: Every createHangingVertex() pairs up with one of these
  *   guys. As hanging vertices are non-persistent, it is at least called once per
  *   traversal per hanging vertex. However, Peano might decide to create hanging
@@ -474,4 +475,3 @@ class peano4::grid::GridTraversalEventGenerator {
 };
 
 
-#endif

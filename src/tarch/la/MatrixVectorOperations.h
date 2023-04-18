@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LA_MATRIXVECTOROPERATIONS_H_
-#define _TARCH_LA_MATRIXVECTOROPERATIONS_H_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -47,4 +46,3 @@ namespace tarch {
 
 #include "MatrixVectorOperations.cpph"
 
-#endif

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_DATAMANAGEMENT_CELL_MARKER_H_
-#define _PEANO4_DATAMANAGEMENT_CELL_MARKER_H_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -79,6 +78,8 @@ struct peano4::datamanagement::CellMarker {
     tarch::la::Vector<Dimensions,double>  x() const;
 
     /**
+     * Is x contained within cell identified by marker object
+     *
      * Check whether the point x is contained within the marker. This is an
      * operation which works with smaller equals and greater equals and
      * numerical tolerances. Therefore, the routine includes any x that is
@@ -86,28 +87,28 @@ struct peano4::datamanagement::CellMarker {
      * example that resides exactly on the cell boundary, subject to the
      * chosen floating point precision in the tarch::la library, will be
      * considered to belong both to its left and its right neighbour.
+     *
+     * On top of the fact that we work with closed intervals, it is
+     * important to realise that we work with floating point comparisons
+     * from the tarch::la library. Therefore, we employ some built-in
+     * floating point precision. You might want to switch to another precision.
+     * Most popular is a relative size that takes the dimensions of the marker
+     * into account:
+     *
+     *        marker.isContained(
+     *          p->getX(), tarch::la::relativeEps( marker.h()(0) )
+     *        )
+     *
+     * This variant uses relativeEps() as defined in tarch/la/Scalar.h.
+     *
+     *
+     * @param tolerance Absolute tolerance when we compare two values.
+     *
      */
-    bool isContained( const tarch::la::Vector<Dimensions,double>& x ) const;
-
-    /**
-     * See the discussion of isContained(). This is a biased variant of the
-     * code which assumes the left face along each coordinate axis to belong
-     * to a cell, while the right one does not. As we are biased anyway, we
-     * don't work with numerical comparisons but rely on bit-wise operations.
-     *
-     * ## Problems
-     *
-     * I cannot guarantee 100% that the biased contained routine clearly
-     * distinguishes all particles: If you have two cells, a left one and a
-     * right one, then x-h/2 for the right one might be slightly different to
-     * x+h/2 for the left one. As a consequence, there could, in theory, be
-     * particles which are not contained (in a biased way) in the left one and
-     * neither in the right one. They could also be contained in both.
-     *
-     * I've never spotted this scenario, but that does not mean it could not
-     * happen.
-     */
-    bool isContainedWithBias( const tarch::la::Vector<Dimensions,double>& x ) const;
+    bool isContained(
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
+    ) const;
 
     bool overlaps( const tarch::la::Vector<Dimensions,double>& offset, const tarch::la::Vector<Dimensions,double>& size ) const;
 
@@ -201,8 +202,22 @@ struct peano4::datamanagement::CellMarker {
      * the message went through. In systems with heavy MPI usage, this can
      * help to avoid deadlocks.
      */
-    static void send(const CellMarker& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(CellMarker& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(
+      const CellMarker& buffer,
+      int destination,
+      int tag,
+      std::function<void()> startCommunicationFunctor,
+      std::function<void()> waitFunctor,
+      MPI_Comm communicator
+    );
+    static void receive(
+      CellMarker& buffer,
+      int source,
+      int tag,
+      std::function<void()> startCommunicationFunctor,
+      std::function<void()> waitFunctor,
+      MPI_Comm communicator
+    );
 
     static void sendAndPollDanglingMessages(const CellMarker& message, int destination, int tag, MPI_Comm communicator  );
     static void receiveAndPollDanglingMessages(CellMarker& message, int source, int tag, MPI_Comm communicator  );
@@ -213,4 +228,3 @@ struct peano4::datamanagement::CellMarker {
 };
 
 
-#endif

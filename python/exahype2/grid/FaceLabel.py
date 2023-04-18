@@ -4,11 +4,13 @@ from peano4.solversteps.ActionSet import ActionSet
 
 import dastgen2
 import peano4.datamodel.DaStGen2
+import jinja2
 
 
 class UpdateFaceLabel(ActionSet):
   def get_attribute_name(solver_name):
     return solver_name + "FaceLabel"
+
   
   """
   
@@ -29,6 +31,16 @@ class UpdateFaceLabel(ActionSet):
    - OldTimeStamp: Double[2]
      Time stamp of previous time step. The old time stamp is required for the
      in-time interpolation, e.g.
+     
+   ## Initialisation
+   
+   The initialisation sets the boundary flag if the face is on the boundary.
+   It also sets the time stamps all to zero. This is actually a tricky thing
+   to do, so I'm not sure if it is a good idea: the DG solvers for example
+   require the face time stamps to be set properly. The Finite Volumes solver
+   in return benefits if it is not (properly) initialised, as it then is 
+   simpler to spot inconsistencies and missing data updates.
+   
   
   """
   def __init__(self, solver_name):
@@ -44,8 +56,37 @@ class UpdateFaceLabel(ActionSet):
     return ""
 
 
-  #def get_body_of_getGridControlEvents(self):
-  #  return self.__Template_GridControlEvents.format(**self.d)
+  _Template_TouchFaceFirstTime = """
+  fineGridFace{{FACE_LABEL_NAME}}.setUpdated( false );
+"""
+
+
+  _Template_CreateFace = """
+  logTraceInWith1Argument( "createPersistent/HangingFace(...)", marker.toString() );
+      
+  tarch::la::Vector<Dimensions, double> offset(DomainOffset);
+  tarch::la::Vector<Dimensions, double> size(DomainSize);
+  bool isBoundary = false;
+  for (int d=0; d<Dimensions; d++) {
+    isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
+    isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
+  }
+  fineGridFace{{FACE_LABEL_NAME}}.setBoundary( isBoundary );
+
+  fineGridFace{{FACE_LABEL_NAME}}.setUpdatedTimeStamp( 0.0 );
+  fineGridFace{{FACE_LABEL_NAME}}.setNewTimeStamp( 0.0 );
+  fineGridFace{{FACE_LABEL_NAME}}.setOldTimeStamp( 0.0 );
+
+  logTraceOutWith1Argument( "createPersistent/HangingFace(...)", fineGridFace{{FACE_LABEL_NAME}}.toString() );
+"""
+
+
+  _Template_CreateHangingFace = """
+"""  
+  
+  
+  _Template_DestroyHangingFace = """
+"""  
 
 
   def get_action_set_name(self):
@@ -58,25 +99,19 @@ class UpdateFaceLabel(ActionSet):
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
+    
+    d = {}
+    d[ "FACE_LABEL_NAME" ] = UpdateFaceLabel.get_attribute_name(self._solver_name)
+    
     if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_FACE or operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
-      result += """
-  logTraceInWith1Argument( "createPersistent/HangingFace(...)", marker.toString() );
-      
-  tarch::la::Vector<Dimensions, double> offset(DomainOffset);
-  tarch::la::Vector<Dimensions, double> size(DomainSize);
-  bool isBoundary = false;
-  for (int d=0; d<Dimensions; d++) {{
-    isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
-    isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
-  }}
-  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setBoundary( isBoundary );
-  logTraceOutWith1Argument( "createPersistent/HangingFace(...)", fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.toString() );
-"""
+      result = jinja2.Template( self._Template_CreateFace ).render( **d )
+    if operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
+      result = jinja2.Template( self._Template_CreateHangingFace ).render( **d )
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = """
-  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setUpdated( false );
-"""
-
+      result = jinja2.Template( self._Template_TouchFaceFirstTime ).render( **d )
+    if operation_name==ActionSet.OPERATION_DESTROY_HANGING_FACE:
+      result = jinja2.Template( self._Template_DestroyHangingFace ).render( **d )
+      
     return result
 
 
@@ -108,17 +143,25 @@ def create_face_label(solver_name):
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("NewTimeStamp","2") )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("OldTimeStamp","2") )
   
-  result._peano4_aspect.merge_implementation = """
-  _Boundary = _Boundary or neighbour._Boundary;
+  result.peano4_mpi_and_storage_aspect.merge_implementation = """
+  switch (context) {
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
+      {
+        _Boundary = _Boundary or neighbour._Boundary;
   
-  const int normal         = marker.getSelectedFaceNumber() % Dimensions;
-  const int neighbourEntry = marker.outerNormal()(normal)<0.0 ? 0 : 1;
+        const int normal         = marker.getSelectedFaceNumber() % Dimensions;
+        const int neighbourEntry = marker.outerNormal()(normal)<0.0 ? 0 : 1;
   
-  _Updated[ neighbourEntry ]          = neighbour._Updated[ neighbourEntry ];
-  _UpdatedTimeStamp( neighbourEntry ) = neighbour._UpdatedTimeStamp( neighbourEntry );
-  _NewTimeStamp( neighbourEntry )     = neighbour._NewTimeStamp( neighbourEntry );
-  _OldTimeStamp( neighbourEntry )     = neighbour._OldTimeStamp( neighbourEntry );
-  
+        _Updated[ neighbourEntry ]          = neighbour._Updated[ neighbourEntry ];
+        _UpdatedTimeStamp( neighbourEntry ) = neighbour._UpdatedTimeStamp( neighbourEntry );
+        _NewTimeStamp( neighbourEntry )     = neighbour._NewTimeStamp( neighbourEntry );
+        _OldTimeStamp( neighbourEntry )     = neighbour._OldTimeStamp( neighbourEntry );
+      }
+      break;
+    default:
+      assertionMsg( false, "not implemented yet" );
+  }
 """
 
   return result

@@ -11,7 +11,7 @@
 
 
 tarch::tests::TestCase* peano4::getUnitTests() {
-  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection("peano4");
+  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
 
   result->addTestCase( new peano4::grid::tests::SpacetreeTest() );
   result->addTestCase( new peano4::grid::tests::GridControlEventTest() );

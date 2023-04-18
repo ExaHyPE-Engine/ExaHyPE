@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_NON_CRITICAL_ASSERTIONS_H_
-#define _EXAHYPE2_NON_CRITICAL_ASSERTIONS_H_
+#pragma once
 
 
 #include <sstream>
@@ -9,7 +8,7 @@
 
 
 /**
- * @page Assertions Noncritical assertions
+ * @page exahype2_NoncriticalAssertions Noncritical assertions
  *
  * A noncritical assertion is an assertion which indicates that something went
  * horribly wrong due to a programming error. You should never use an assertion
@@ -21,11 +20,8 @@
  * a plot of the grid) and then terminates deterministically. This way, you can
  * inspect the solution just when the assertion had been violated.
  *
- * As noncritical assertions rely internally on MPI RMA, you have to call init
- * and shutdown for the environment. Do so immediately after you've initialised
- * MPI or just before you shut it down, respectively.
  *
- * <h2> Behaviour </h2>
+ * ## Behaviour
  *
  * As a noncritical assertion does not immediately terminate the code, you might
  * get a whole sequence of these guys in a row. Skip them all and read only the
@@ -34,7 +30,8 @@
  * only filter error messages from one rank. That is, you'll still get up to one
  * error/assertion message per rank.
  *
- * <h2> Macros and behaviour in release mode </h2>
+ *
+ * ## Macros and behaviour in release mode
  *
  * In line with the assertions, I offer a set of macros for non-critical
  * assertions, too. Again, they reduce to nop if you run in release mode, i.e.
@@ -46,18 +43,47 @@
  * this call then won't be removed if you compile in release mode.
  *
  *
+ * ## Realisation
+ *
+ * Logically, the assertions are implemented via a single integer. As long as
+ * this integer is not set, all is fine. If a non-critical assertion fails, we
+ * set the variable - which is local per rank - to the number of the failing
+ * rank.
+ *
+ * The global simulation driver, i.e. main, checks the flag prior to every
+ * solver step. If the flag is set, it stops time stepping and instead dumps
+ * the solution before it quits.
+ *
+ * The crucial question here remains how you sync the individual ranks. If a
+ * rank goes down, it has to notify rank 0 that it had an issue, as rank 0
+ * makes the global decisions.
+ *
+ * I did play around with RMA and windows to realise the information
+ * propagation. My idea had been that any rank where a non-critical assertion
+ * arises dumps a flag into the window on rank 0 and rank 0 then takes it from
+ * there. This approach does not work straightforwardly, as you always need
+ * some synchronisation (fences, e.g.) in MPI.
+ *
+ * Therefore, I decided to switch back to old-fashioned P2P messages. The rank
+ * that observes a failing assertion records this assertion and sends a message
+ * to rank 0. Whenever rank 0 is asked if a problem has popped up, it first
+ * looks into its own local variable (did a non-critical assertion arise on
+ * rank 0), and then it looks if there's an assertion message in the queue. To
+ * make this approach work, we need a dedicated assertion tag which is not used
+ * for any other purpose: After all, the assertion message logically might have
+ * to overtook other messages.
+ *
  */
 namespace exahype2 {
   /**
-   * The management of the critical assertions relies on a shared memory region
-   * (windows). To free the window, all ranks have to enter this routine at the
-   * same time. In Peano 4, you hence have to call this routine after the Node
-   * is shutdown(). Otherwise, the main rank would run into this routine, but the
-   * other ranks migth not know that they have to go down, too. But please call
-   * it before you shut down the total code, i.e. before you invoke
+   *
    * peano4::shutdownParallelEnvironment().
    */
   void shutdownNonCritialAssertionEnvironment();
+
+  /**
+   * Register the assertion tag from the global communicator.
+   */
   void initNonCritialAssertionEnvironment();
 
   /**
@@ -65,6 +91,18 @@ namespace exahype2 {
    */
   void enableNonCriticalAssertions(bool value);
 
+  /**
+   * Trigger a non-critical assertion
+   *
+   * You can either use this routine, or you can use the macros. They invoke
+   * this routine eventually.
+   *
+   * The routine reports only details about the very first non-critical
+   * assertion. All follow-up logs on this rank are ignored, i.e. we only
+   * get a note and no detail. Once logged locally, we send the assertion
+   * message to the global master if we are not working on the global
+   * marker ourselves.
+   */
   void triggerNonCriticalAssertion( std::string file, int line, std::string expression, std::string parameterValuePairs );
   bool hasNonCriticalAssertionBeenViolated();
 }
@@ -283,5 +321,4 @@ namespace exahype2 {
 #endif
 
 
-#endif
 

@@ -1,18 +1,13 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LA_SCALAROPERATIONS_H_
-#define _TARCH_LA_SCALAROPERATIONS_H_
+#pragma once
 
 
 #include "tarch/la/Scalar.h"
 
-#ifndef NAN
-#define NAN 0.0/0.0
-#endif
+#pragma once
 
-#ifndef INFINITY
-#define INFINITY 1.0/0.0
-#endif
+#pragma once
 
 
 #include <complex>
@@ -38,12 +33,34 @@ namespace tarch {
      */
     int aPowI(int i,int a);
 
+    /**
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
     bool greater( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
+
+    /**
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
     bool greaterEquals( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
+
+    /**
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
     bool equals( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
+
+    /**
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
     bool smaller( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
+
+    /**
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
     bool smallerEquals( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
+    /**
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
     bool equals( const std::complex<double>& lhs, const std::complex<double>& rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
@@ -57,4 +74,3 @@ namespace tarch {
 }
 
 
-#endif

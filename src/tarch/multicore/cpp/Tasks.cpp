@@ -1,4 +1,5 @@
 #include "tarch/Assertions.h"
+#include "tarch/logging/Statistics.h"
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Tasks.h"
@@ -9,13 +10,11 @@
 #include "tarch/logging/Statistics.h"
 
 #if defined(GPUOffloadingCPP)
-
 #include <vector>
 #include <iterator>
 #include <execution>
 #include <algorithm>
 #include <numeric>
-
 #endif
 
 #if defined(SharedCPP)
@@ -27,9 +26,7 @@
 namespace {
   std::atomic<int> nonblockingTasksCounter          = 0;
 
-  const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
-  const std::string BackfillWhileWaitingForBSPTasks( "tarch::multicore::backfill");
-
+  const std::string BSPConcurrencyLevelStatisticsIdentifier( "tarch::multicore::bsp-concurrency-level" );
 
   /**
    * Native mapping of a task loop onto a task loop
@@ -50,21 +47,20 @@ namespace {
       tasks.end(),
       [](auto&& item) -> void {
         #if !defined(GPUOffloadingCPP)
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
         #endif
         while (item->run()) {
           #if !defined(GPUOffloadingCPP)
-          std::this_thread::yield();
+            std::this_thread::yield();
           #endif
         }
         delete item;
         #if !defined(GPUOffloadingCPP)
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
         #endif
       }
     );
   }
-
 
   /**
    * Aggressive BSP-type variant to run through tasks which ensures high
@@ -88,57 +84,35 @@ namespace {
       spawnedTasks++;
 
       #if !defined(GPUOffloadingCPP)
-      ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
       #endif
       if (iterationCounter<tasks.size()) {
         while (tasks[iterationCounter]->run()) {
           #if !defined(GPUOffloadingCPP)
-          std::this_thread::yield();
+            std::this_thread::yield();
           #endif
         }
         delete tasks[iterationCounter];
       }
 
       #if !defined(GPUOffloadingCPP)
-      ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
       #endif
 
       pendingTasks--;
 
-      const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
-      const int  threadNumber = tarch::multicore::Core::getInstance().getThreadNumber();
-
-      while (
+      bool continueToProcessPendingTasks =
         pendingTasks>0
         and
-        // Without this yield, the code will deadlock if you have more trees
-        // than cores. As the first p trees on p cores will finish and then
-        // poll. The other >p trees/tasks will starve
         pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
         and
-        spawnedTasks==NumberOfThreads
-      ) {
-        tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-        int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks(threadNumber);
-
-        bool processedSomeTasks = false;
-        if (numberOfPendingTasks>=fusion.minTasks) {
-          processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
-        }
-        else if (numberOfPendingTasks>0) {
-          tarch::multicore::internal::processThreadLocalTask(threadNumber);
-        }
-        else { // no local tasks left over
-          tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
-          const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-          #if !defined(GPUOffloadingCPP)
-          ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
-          #endif
-          processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
-        }
+        spawnedTasks==NumberOfThreads;
+      while ( continueToProcessPendingTasks ) {
+        continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+          strategy
+        );
       }
     };
-
 
     std::vector< std::thread* > threads;
 
@@ -153,7 +127,6 @@ namespace {
   }
 }
 
-
 void tarch::multicore::native::spawnTask(Task*  job) {
   nonblockingTasksCounter++;
 
@@ -161,7 +134,7 @@ void tarch::multicore::native::spawnTask(Task*  job) {
     [job] () -> void {
       while (job->run()) {
         #if !defined(GPUOffloadingCPP)
-        std::this_thread::yield();
+          std::this_thread::yield();
         #endif
       }
       delete job;
@@ -170,7 +143,6 @@ void tarch::multicore::native::spawnTask(Task*  job) {
 
   nonblockingTasksCounter--;
 }
-
 
 /**
  * Use a taskloop and label it as nogroup, i.e. we only synchronise over the
@@ -188,17 +160,14 @@ void tarch::multicore::native::spawnAndWait(
 ) {
   if (strategy->processPendingTasksWhileWaitingInBSPSection()) {
     spawnAndWaitAsExplicitTasksWithPolling(tasks,strategy);
-  }
-  else {
+  } else {
     spawnAndWaitAsTaskLoop(tasks);
   }
 }
 
-
 int tarch::multicore::native::getNumberOfPendingTasks() {
   return nonblockingTasksCounter;
 }
-
 
 /**
  * It is not clear what happens if I use tasksOfSameType directly within the task.
@@ -225,10 +194,9 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
   );
 }
 
-
 void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
   #if !defined(GPUOffloadingCPP)
-  std::this_thread::yield();
+    std::this_thread::yield();
   #endif
 }
 

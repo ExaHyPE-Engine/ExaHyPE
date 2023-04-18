@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_TESTS_TREETESTCASECOLLECTION_H_
-#define _TARCH_TESTS_TREETESTCASECOLLECTION_H_
+#pragma once
 
 #include "tarch/tests/TestCase.h"
 #include "tarch/logging/Log.h"
@@ -54,10 +53,19 @@ class tarch::tests::TreeTestCaseCollection: public tarch::tests::TestCase {
     /**
      * Creates a test case collection.
      *
-     * @param testCaseCollectionName Name of the test case collection. May not contain ::
+     * @param testCaseCollectionName Name of the test case collection. May not
+     *   contain ::. If you pass in the empty string "", it is a mere
+     *   container. It still runs all sub test cases, but it does not dump any
+     *   progress info on this particular package: Usually you get
+     *
+     *         a.b.c ... ok
+     *         a.b ... ok
+     *         a ... pass (no local tests)
+     *
+     *   If a is "", then no message is written.
      */
     TreeTestCaseCollection(
-      const std::string& testCaseCollectionName,
+      const std::string& testCaseCollectionName = "",
       bool deleteTestCases = true,
       bool writeToLog = true
     );
@@ -97,4 +105,3 @@ class tarch::tests::TreeTestCaseCollection: public tarch::tests::TestCase {
 };
 
 
-#endif

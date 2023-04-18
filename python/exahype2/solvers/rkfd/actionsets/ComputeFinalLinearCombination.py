@@ -44,30 +44,38 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
           timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
         {% endfor %}
-      }
+       }
     }
 
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-    double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    double* newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     
     {{POSTPROCESS_UPDATED_PATCH}}
 
     ::exahype2::fd::validatePatch(
-      targetPatch,
+      newQ,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
-      0, // halo
+      0,  // we do not have an overlap of {{OVERLAP}} here within the cell data, only within reconstructed values
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
     ); // outcome has to be valid
 
     {% if COMPUTE_MAX_EIGENVALUE %}
-    ::exahype2::CellData  patchData( nullptr, marker.x(), marker.h(), timeStamp, timeStepSize, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+    ::exahype2::CellData  patchData( 
+      nullptr,      // QIn
+      marker.x(), 
+      marker.h(), 
+      timeStamp, 
+      timeStepSize, 
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value 
+    );
 
     ::exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
       patchData,
       {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
+      0,                            // only reconstructed data have overlap of {{OVERLAP}}, not the real data
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       [&](

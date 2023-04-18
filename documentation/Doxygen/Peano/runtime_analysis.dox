@@ -1,0 +1,48 @@
+/**
+
+ @page peano_runtime_analysis Runtime analysis
+
+ Peano and its core toolboxes dump certain information to the terminal after each and 
+ every time step. 
+ Peano's Python API comes along with parsers to extract this information once dumped to the terminal,
+ and it also provides a few command line scripts which invoke the parsers and hand the data 
+ over to matplotlib.
+
+ I consider all the Peano command line scripts to be demonstrators what you can do with the parsers'
+ data. 
+ Typically, they are not production-ready.
+ In this context, they are great for first data inspection, and then they can serve as starting point
+ for "proper" scripts whose outcome goes into papers.
+ 
+ Please note that Peano's runtime analysis cannot replace a proper performance 
+ analysis tool. In this context, it is worth studying @ref compiler_specific_settings "the vendor-specific settings"
+ that are supported for various tools.
+ 
+ 
+ 
+ ## Load balancing toolbox
+ 
+ 
+ In the toolbox.loadbalancing toolbox, you find a script plot-load-distribution.py which creates 
+ plots over the data distribution.
+ The invocation is close to trivial 
+ 
+ <code>
+python3 ~/git/Peano/python/peano4/toolbox/loadbalancing/plot_load_distribution.py mpi/ccz4-backfill-fv-0.05-4-ranks.results 
+ </code>
+ 
+ though you might want to study the help dumped if you pass --help.
+ 
+
+ The script works for shared and distributed memory and gives you a scatter plot
+ over the load distribution and tells you also how many trees aka subpartitions
+ you employ per rank.
+ 
+ @image html runtime_analysis_loadbalancing_example00.png 
+ @image html runtime_analysis_loadbalancing_example01.png 
+
+
+
+*/
+
+

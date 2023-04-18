@@ -43,7 +43,7 @@ void peano4::parallel::tests::PingPongTest::testBuiltInType() {
 
 
 namespace {
-  int testErrors = 0;
+  [[maybe_unused]] int testErrors = 0;
 
   class PingPongSendTask: public tarch::multicore::Task {
     private:
@@ -303,7 +303,7 @@ void peano4::parallel::tests::PingPongTest::testDaStGenTypeIntegerMessage() {
   tarch::mpi::IntegerMessage out;
   out.setValue(23);
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
-    MPI_Send(&out,1,tarch::mpi::IntegerMessage::getDatatype(),1,0,MPI_COMM_WORLD);
+    MPI_Send(&out,1,tarch::mpi::IntegerMessage::getGlobalCommunciationDatatype(),1,0,MPI_COMM_WORLD);
     tarch::mpi::IntegerMessage::send(
       out, 1, 0,
       tarch::mpi::Rank::getInstance().getCommunicator()
@@ -312,7 +312,7 @@ void peano4::parallel::tests::PingPongTest::testDaStGenTypeIntegerMessage() {
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==1) {
     tarch::mpi::IntegerMessage inThroughMPI;
     inThroughMPI.setValue(72);
-    MPI_Recv(&inThroughMPI,1,tarch::mpi::IntegerMessage::getDatatype(),0,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+    MPI_Recv(&inThroughMPI,1,tarch::mpi::IntegerMessage::getGlobalCommunciationDatatype(),0,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
     validateEqualsWithParams2( inThroughMPI.getValue(),     out.getValue(), inThroughMPI.toString(),     out.toString() );
 
     tarch::mpi::IntegerMessage inThroughDaStGen;
@@ -336,11 +336,11 @@ void peano4::parallel::tests::PingPongTest::testDaStGenArray() {
   out[2].setStepIdentifier(25);
   out[3].setStepIdentifier(26);
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
-    MPI_Send(out,4,StartTraversalMessage::getDatatype(),1,0,MPI_COMM_WORLD);
+    MPI_Send(out,4,StartTraversalMessage::getGlobalCommunciationDatatype(),1,0,MPI_COMM_WORLD);
   }
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==1) {
     StartTraversalMessage in[10];
-    MPI_Recv(in,4,StartTraversalMessage::getDatatype(),0,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+    MPI_Recv(in,4,StartTraversalMessage::getGlobalCommunciationDatatype(),0,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
     validateEqualsWithParams8(
       in[0].getStepIdentifier(), out[0].getStepIdentifier(),
 	  in[0].toString(), out[0].toString(),

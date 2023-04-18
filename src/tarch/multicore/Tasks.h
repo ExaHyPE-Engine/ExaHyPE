@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_TASKS_H_
-#define _TARCH_MULTICORE_TASKS_H_
+#pragma once
 
 
 #include "multicore.h"
@@ -350,13 +349,90 @@ namespace tarch {
 
 
     namespace internal {
+      /**
+       * Progression routine within spawnAndWaitAsExplicitTasksWithPolling()
+       *
+       * This function has to be called within spawnAndWaitAsExplicitTasksWithPolling()
+       * whenever a thread has finished its local partition and should now
+       * process further tasks. The polling thing consists of three parts:
+       *
+       * - A guard loop ensures that we don't poll too long or too often.
+       * - First, I find out which thread I'm running on and how many tasks
+       *   I may fuse. These two things potentially are expensive to find out
+       *   and they don't change, so I do this only once.
+       * - The actual loop body ensures that we progress tasks.
+       *
+       *
+       * ## Guard loop
+       *
+       * The guard loop consists of three checks that all have to hold:
+       *
+       * - If the number of pending (BSP) tasks equals zero, we terminate
+       *   immediately. That is, we only continue to progress while another
+       *   thread traverses a subdomain and hence might produce new tasks.
+       * - If the number of pending tasks is bigger or equal to the number
+       *   of physical threads, we terminate immediately. This can happen
+       *   if we have more subdomains that have to be mapped onto tasks than
+       *   we have actual threads. So better terminate this task immediately
+       *   to give the runtime the opportunity to process real compute tasks.
+       * - If not all tasks have been spawned yet, we also terminate
+       *   immediately. If the runtime hasn't had the opportunity yet to
+       *   kick off the other tasks, we better ensure that happens asap.
+       *
+       * I originally wanted to integrate this guard loop into the routine.
+       * However, that does not work. The task loop is defined over some
+       * atomics, and the type of such atomics depends on the chosen
+       * environment. They have a different type for OpenMP vs TBB, e.g. So
+       * the user has to wrap the function call into a code snippet similar
+       * to
+       *
+       *          bool continueToProcessPendingTasks =
+       *            pendingTasks>0
+       *            and
+       *            pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
+       *            and
+       *            spawnedTasks==NumberOfThreads;
+       *          while ( continueToProcessPendingTasks ) {
+       *            continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+       *             strategy
+       *            );
+       *          }
+       *
+       * This snippet highlights a fourth consideration: If we have tried to
+       * process a pending task but failed, then we terminate as well. This is
+       * not necessary for all solvers, but
+       *
+       * - if other compute kernels/tasks fork further, an active polling keeps
+       *   the current thread busy, i.e. strips those other kernels off the
+       *   opportunity to grab threads in return. So active polling severely
+       *   slows down the calculation. In the worst case, it leads to deadlocks.
+       * - if there is an extreme ill-balance, a lot of threads will end up
+       *   competing for the global lock. In return, the task still computing
+       *   will struggle to enqueue new tasks rapidly. Once again, aggressive
+       *   polling would slow down the simulation even though it should, in
+       *   theory, be faster.
+       *
+       * @return Has processed some tasks
+       */
+      bool progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+        tarch::multicore::orchestration::Strategy*     strategy
+      );
+
       int  mapPendingTasksOntoNativeTasks(int maxTasks);
 
       /**
        *
+       * The routine searches through the global task queue and tries to
+       * fuse tasks. Therefore, calling the routine is kind of pointless
+       * if you haven't committed the tasks to the global queue yet. In
+       * all places where you invoke the routine, it is thus important
+       * that you've committed any thread-local tasks to the global queue
+       * if you think that fusion should be successful.
+       *
        * # Thread safety
        *
        * The method locks and unlocks the queue. So don't lock it yourself.
+       *
        */
       bool fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction);
 
@@ -370,10 +446,45 @@ namespace tarch {
       void configureInternalTaskQueues(int numberOfTasks);
 
       /**
+       * Commit local task queues into global queue
+       *
        * If we work with thread-local queues, we have to flush them over into the
        * global queue eventually. To do so, this routine is to be called either
        * per thread or with a -1 to roll all local queues over into the one global
        * task queue.
+       *
+       * ## Deadlocks
+       *
+       * We found that the commitment to the global queue is prone to starvation
+       * effects: If we have 127 threads hammering the global queue for work and
+       * if there's one thread left over, the one thread will struggle to get its
+       * message into the global queue. This is particularly cumbersome, if the
+       * local thread doesn't have any message:
+       *
+       * My original implementation locked the global queue and then copied the
+       * local tasks over. If the local tasks are empty, the copy is becoming a
+       * trivial operation. In the situation sketched above, it however is
+       * problematic, as I still would request a global lock, even though nothing
+       * will be copied over. Therefore, we found it advantageous to add a separate
+       * case distinction: If we don't have a local task, we should not even lock
+       * the queue (and, obviously, don't have to copy over either).
+       *
+       * This insight materialises in
+       *
+       *           else if ( not localNonblockingTasks[threadNumber].empty() ) {
+       *
+       *
+       * ## Flush all queues
+       *
+       * In line with the observation above (and in terms of code redundancy), we
+       * might make the flush a loop over all queues and then call the individual
+       * flush per queue. This would mean that we potentially lock the global
+       * queue p times for p threads.
+       *
+       * I usually flush all queues if and only if I'm at the end of a BSP section.
+       * So I avoid repeated locks, lock once and then flush all of the task queues
+       * in one go before I release the lock.
+       *
        *
        * @param threadNumber -1 if you want to flush all thread buffers
        */
@@ -393,5 +504,4 @@ namespace tarch {
 bool operator<( const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs );
 
 
-#endif
 

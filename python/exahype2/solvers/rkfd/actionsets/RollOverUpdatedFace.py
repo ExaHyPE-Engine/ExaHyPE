@@ -104,19 +104,20 @@ class RollOverUpdatedFace(AbstractRKFDActionSet):
     
     """
     AbstractRKFDActionSet.__init__(self,solver)
-    self.d = {}
-    self.d[ "GUARD" ]           = guard
-    self.d[ "UNKNOWNS" ]        = str(solver._patch_overlap_update.no_of_unknowns)
-    self.d[ "DOFS_PER_AXIS" ]   = str(solver._patch.dim[0])
-    self.d[ "OVERLAP" ]         = str(int(solver._patch_overlap_update.dim[0]/2))
-    self.d[ "UPDATE_ACCESSOR" ] = "fineGridFace" + solver._patch_overlap_update.name
-    self.d[ "OLD_ACCESSOR" ]    = "fineGridFace" + solver._patch_overlap_old.name
-    self.d[ "NEW_ACCESSOR" ]    = "fineGridFace" + solver._patch_overlap_new.name
-    self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + solver._face_label.name
+    self.guard = guard
 
 
   def get_body_of_operation(self,operation_name):
     result = ""
+    self.d = {}
+    self.d[ "GUARD" ]           = self.guard
+    self.d[ "UNKNOWNS" ]        = str(self._solver._patch_overlap_update.no_of_unknowns)
+    self.d[ "DOFS_PER_AXIS" ]   = str(self._solver._patch.dim[0])
+    self.d[ "OVERLAP" ]         = str(int(self._solver._patch_overlap_update.dim[0]/2))
+    self.d[ "UPDATE_ACCESSOR" ] = "fineGridFace" + self._solver._patch_overlap_update.name
+    self.d[ "OLD_ACCESSOR" ]    = "fineGridFace" + self._solver._patch_overlap_old.name
+    self.d[ "NEW_ACCESSOR" ]    = "fineGridFace" + self._solver._patch_overlap_new.name
+    self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + self._solver._face_label.name
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_LAST_TIME:
       self._solver._init_dictionary_with_default_parameters(self.d)
       self._solver.add_entries_to_text_replacement_dictionary(self.d)

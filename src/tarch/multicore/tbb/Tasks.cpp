@@ -1,4 +1,5 @@
 #include "tarch/Assertions.h"
+#include "tarch/logging/Statistics.h"
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Tasks.h"
@@ -7,8 +8,6 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
 #include "tarch/mpi/Rank.h"
-
-#include "tarch/logging/Statistics.h"
 
 
 
@@ -19,13 +18,12 @@
 namespace {
   tarch::multicore::BooleanSemaphore  suspensionPointSemaphore;
 
+  const std::string BSPConcurrencyLevelStatisticsIdentifier( "tarch::multicore::bsp-concurrency-level" );
+
   /**
    * Seems that there is no atomic in tbb. So I use the standard one.
    */
   std::atomic<int> nonblockingTasksCounter          = 0;
-
-  const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
-  const std::string BackfillWhileWaitingForBSPTasks( "tarch::multicore::backfill");
 
   /**
    * We seem to need this task group. Has to be investigated.
@@ -106,10 +104,10 @@ namespace {
     for (auto& p: tasks) {
       taskGroup.run(
         [&tasks,p]() -> void {
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
           while (p->run()) {}
           delete p;
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
         }
       );
     }
@@ -144,44 +142,25 @@ namespace {
         [&spawnedTasks,&pendingTasks,&tasks,i,NumberOfThreads,&strategy] () -> void {
           spawnedTasks++;
 
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
           if (i<tasks.size()) {
             while (tasks[i]->run()) {}
             delete tasks[i];
           }
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
   
           pendingTasks--;
 
-          const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
-          const int  threadNumber = tarch::multicore::Core::getInstance().getThreadNumber();
-
-          while (
+          bool continueToProcessPendingTasks =
             pendingTasks>0
             and
-            // Without this yield, the code will deadlock if you have more trees
-            // than cores. As the first p trees on p cores will finish and then
-            // poll. The other >p trees/tasks will starve
             pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
             and
-            spawnedTasks==NumberOfThreads
-          ) {
-            tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-            int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks(threadNumber);
-
-            bool processedSomeTasks = false;
-            if (numberOfPendingTasks>=fusion.minTasks) {
-              processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
-            }
-            else if (numberOfPendingTasks>0) {
-              tarch::multicore::internal::processThreadLocalTask(threadNumber);
-              }
-            else { // no local tasks left over
-              tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
-              const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-              ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
-              processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
-            }
+            spawnedTasks==NumberOfThreads;
+          while ( continueToProcessPendingTasks ) {
+            continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+              strategy
+            );
           }
         }
       );

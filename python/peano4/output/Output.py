@@ -3,39 +3,32 @@
 from .Makefile import Makefile
 from .Readme   import Readme
 
-
 class Output(object):
   """
   Represents the total output generated from the Peano4 data model plus all
   the operations on it. This is basically a big collection.
   """
-  
   def __init__(self):
-    self.artefacts = []
-    self.readme   = Readme()
-    self.makefile = Makefile()
-
+    self.artefacts  = []
+    self.readme     = Readme()
+    self.makefile   = Makefile()
 
   def clear(self):
     """
-    
       The clear eliminates all artefacts, but it does not erase the Makefile. 
       This is important as I don't want to loose all the makefile info. If 
       you want to clear the makefile, too, you have to invoke a clear on it.
-    
     """
-    self.artefacts = []
-    self.readme   = Readme()
+    self.artefacts  = []
+    self.readme     = Readme()
     self.makefile.clear_files()
 
-          
   def add(self,artefact,append=True):
     if append:
       self.artefacts.append(artefact)
     else:
       self.artefacts = [artefact] + self.artefacts
-        
-    
+
   def generate(self,overwrite,directory):
     """
     Iterates over all stored artefacts and, hence, finally generates all the
@@ -49,4 +42,4 @@ class Output(object):
     self.readme.add_entry( self.makefile.readme_entry )
     self.readme.add_package_description( self.makefile.readme_package_descriptor )
 
-    self.readme.generate(directory) 
+    self.readme.generate(directory)

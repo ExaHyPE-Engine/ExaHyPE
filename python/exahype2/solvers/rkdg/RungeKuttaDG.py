@@ -15,7 +15,6 @@ from peano4.solversteps.ActionSet import ActionSet
 from exahype2.solvers.ButcherTableau              import RungeKutta_steps
 
 from .PDETerms                    import PDETerms
-from .kernels                     import get_face_overlap_merge_implementation
 
 import jinja2
 import math
@@ -24,6 +23,9 @@ from abc import abstractmethod
 
 import exahype2
 import exahype2.solvers.rkdg.actionsets
+
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import compute_number_of_face_projection_quantities
 
 
 class RungeKuttaDG(object):
@@ -53,7 +55,7 @@ class RungeKuttaDG(object):
     code, read the Discontinous Galerkin page in dg.h.
     
     
-    # Data structures
+    ## Data structures
 
     Each cell hosts a DG polynomial of order _dg_order. Technically, we store this polynomial
     in a regular array (blockstructured data) with (_dg_order+1)^d entries. On top of this 
@@ -74,7 +76,7 @@ class RungeKuttaDG(object):
     More details are provided in create_data_structures().
 
     
-    :: Control flow between this class and subclasses
+    ## Control flow between this class and subclasses
     
     There are three key routines: the constructor, create_data_structures() and 
     create_action_sets(). The constructor sets/memorises some solver variables (such as the 
@@ -93,7 +95,8 @@ class RungeKuttaDG(object):
     create_action_sets() of the superclass first, before you do fancy stuff. This 
     way, all the important action sets are in place.
     
-    :: General control flow and realisation of solver steps
+    
+    ## General control flow and realisation of solver steps
     
     A proper numerical time step is mapped onto a cascade of time step sweeps. Per sweep, 
     we realise the following steps (so step in a computational sense), though their exact
@@ -120,7 +123,7 @@ class RungeKuttaDG(object):
       thing, so will be destroyed immediately once we leave a cell.  
          
          
-    :: Mandatory step of subclasses
+    ## Mandatory step of subclasses
     
     There are different nuances of subclasses/algorithmic realisations, i.e. few solvers inherit
     directly from RungeKuttaDG. However, even those subclasses still require you do provide some
@@ -135,12 +138,23 @@ class RungeKuttaDG(object):
       size for a cell.
       
     self._compute_new_time_step_size          = "const double newTimeStepSize = timeStepSize;"
-             
-    # Attributes
-    
-    polynomial_basis: solvers.LagrangeBasis
-      Any proper polynomial basis such as solvers.GaussLegendreBasis             
       
+        
+    ## Semantics of FaceLabel
+    
+    - The update time stamp is the one we udpate in each and every 
+      Runge-Kutta step.
+    
+    - The new time stamp is the valid one, i.e. the one that 
+      corresponds to the face's EstimateProjection after a time step.
+      
+    - The old time stamp is the one that corresponds to the (old)
+      face projection. 
+      
+    - We set the updated flag if and only if we have finished the
+      last Runge-Kutta step. 
+    
+    
   """
   
       
@@ -148,7 +162,8 @@ class RungeKuttaDG(object):
                name, 
                rk_order, 
                polynomial_basis, 
-               number_of_face_projections, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
+               face_projections: FaceProjections, 
+               unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
     """
     
   Constructor of the Runge-Kutta Discontinuous Galerkin solver
@@ -169,11 +184,13 @@ class RungeKuttaDG(object):
   polynomials: Polynomials
      Picks which kind of polynomial to use.
      
-  number_of_face_projections: Integer
+  face_projections: Integer
      How many projections do we need per face. If you are only
      interested in the left and right solution along a face, pass in 1. If you
      want to have the fluxes or derivatives as well, pass in 2. The latter version
      is the type of data structure you need for Rusanov, e.g.
+     
+     There are a couple of pre-defined values for this guy. 
      
   unknowns: int
      Number of unknowns per Finite Volume voxel.
@@ -218,12 +235,20 @@ class RungeKuttaDG(object):
       
       So you may implicitly assume that these guys do exist always.
     """
+    assert rk_order>=1, "Runge-Kutta order has to be greater or equal to one"
+    
     self._name              = name
     
-    self._rk_order                   = rk_order
-    self._basis                      = polynomial_basis
-    self._number_of_face_projections = number_of_face_projections
+    self._rk_order          = rk_order
+    self._basis             = polynomial_basis
+    self._face_projections  = face_projections
     
+    self._volumetric_solver_call         = "#error Please set the solver property _volumetric_kernel in the Python class"
+    self._Riemann_solver_call            = "#error Please set the solver property _Riemann_solver in the Python class"
+    self._add_solver_contributions_call  = "#error Please set the solver property _add_solver_contributions_call in the Python class"
+    self._multiply_with_inverted_mass_matrix_call = "#error Please set the solver property _multiply_with_inverted_mass_matrix_call in the Python class"
+    self._kernel_namespace               = "#error Please set the solver property _kernel_namespace in the Python class"
+     
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
 
@@ -240,7 +265,8 @@ class RungeKuttaDG(object):
 
     self._solver_template_file_class_name = None
 
-    self.plot_description = ""
+    self.plot_description                 = ""
+    self.select_dofs_to_print             = None
     
     self._action_set_postprocess_solution = None   
 
@@ -249,8 +275,9 @@ class RungeKuttaDG(object):
     self._compute_time_step_size              = None
     self._compute_new_time_step_size          = None
     
-    self._preprocess_reconstructed_patch      = ""
-    self._postprocess_updated_patch           = ""
+    self._preprocess_cell                     = ""
+    self._postprocess_updated_cell_after_Runge_Kutta_step         = ""
+    self._postprocess_updated_cell_after_final_linear_combination = ""
 
     self._flux_implementation                 = None
     self._ncp_implementation                  = None
@@ -273,6 +300,9 @@ class RungeKuttaDG(object):
     self._finish_time_step_implementation          = ""
     
     self._constructor_implementation = ""
+
+    self._hold_cell_data_on_heap_with_smart_pointer = False
+    self._hold_face_data_on_heap_with_smart_pointer = False
     
     self.create_data_structures()
     self.create_action_sets()
@@ -324,7 +354,7 @@ h_cell_max:             """ + str( self._max_cell_h ) + """
 
 Real type of this solver: """ + str(type(self)) + """
 
-We assume of domain size of (0,""" + str(domain_size) + """)^d. Peano 4 will cut this domain equidistantly 
+We assume that you use a domain size of (0,""" + str(domain_size) + """)^d. Peano 4 will cut this domain equidistantly 
 and recursively into three parts along each coordinate axis. This yields a spacetree.
 
 The spacetree will at least have """ + str(self.get_min_number_of_spacetree_levels(domain_size)) + """ levels.
@@ -407,9 +437,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
      _rhs_estimates: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1)xno of RK steps )
        These are the Runge-Kutta extrapolations. It is important that the
-       rk_order is mixed into the first argument, as the triple is automatically
-       truncated to a tuple if the code is translated with 2d. Please note that the 
-       term rhs refers to the right-hand side of an ODE
+       rk_order is mixed into the first argument, as the triple is 
+       automatically truncated to a tuple if the code is translated with 2d. 
+       Please note that the term rhs refers to the right-hand side of an ODE
        
        @f$ \partial Q = F(Q) @f$
        
@@ -418,13 +448,29 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      _linear_combination_of_estimates: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1) )
        Non-persistent helper data structure.
 
-     _current_time_step_projection: Patch ( 2xnumber_of_face_projectionsx(_dg_order+1)x(_dg_order+1) )
-       This is the projection of the polynomial data of the current guess onto the 
-       faces. It is important that the first dimension is only a 2. This way, we can
-       (logically) handle the projected data again as an overlap of two patches with 
-       the width 1.  
+     _current_time_step_projection: Patch ( 2xface_projectionsx(_dg_order+1)x(_dg_order+1) )
+       This is the projection of the polynomial data of the current guess onto 
+       the faces. It is important that the first dimension is only a 2. This 
+       way, we can (logically) handle the projected data again as an overlap 
+       of two patches with the width 1.  
 
-     _estimates_projection: Patch ( 2xnumber_of_face_projectionsx(_dg_order+1)x(_dg_order+1) )
+     _estimate_projection: Patch ( Nxface_projectionsx(_dg_order+1)x(_dg_order+1) )
+       The N is usually 2. Usually this estimate projection holds the data 
+       from the latest Runge-Kutta step. This implies that it never ever holds
+       the projection of the solution unless after the very first Runge-Kutta 
+       step. After that, it is always a linear combination of estimates.
+       
+       To avoid this plain behaviour, I make the last and final linear 
+       combination project the solution again onto the faces, i.e. after
+       the very last step of the Runge-Kutta scheme, there will be a valid
+       representation of the solution _estimate_projection. Consult the 
+       documentation of exahype2.solvers.rkdg.actionsets.ComputeFinalLinearCombination
+       for some further information. Also consult the semantics of the FaceLabel
+       in this context.
+       
+     _old_solution_projection: Same as _estimate_projection
+       This is a backup of the final solution stored in _estimate_projection.
+       It correlates to 
 
      _face_label: FaceLabel
        See class description. General information such as "is boundary". 
@@ -443,30 +489,95 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
          
        
     """
-    self._current_time_step                 = peano4.datamodel.Patch( (self._basis.dofs_per_axis,self._basis.dofs_per_axis,self._basis.dofs_per_axis),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._rhs_estimates                     = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._basis.dofs_per_axis),self._basis.dofs_per_axis,self._basis.dofs_per_axis),     self._unknowns, self._unknown_identifier() + "RhsEstimates" )
-    self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._basis.dofs_per_axis,self._basis.dofs_per_axis,self._basis.dofs_per_axis),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombination")
-    self._estimate_projection       = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._basis.dofs_per_axis),self._basis.dofs_per_axis),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "EstimateProjection" )
-    self._Riemann_solution                  = peano4.datamodel.Patch( (2,self._basis.dofs_per_axis,self._basis.dofs_per_axis),  self._unknowns, self._unknown_identifier() + "RiemannSolution" )
+    self._current_time_step                 = peano4.datamodel.Patch( (self._basis.dofs_per_axis,                                      
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),                      
+                                                                       self._unknowns+self._auxiliary_variables, 
+                                                                       self._unknown_identifier() )
+    self._rhs_estimates                     = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._basis.dofs_per_axis),
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),     
+                                                                       self._unknowns, 
+                                                                       self._unknown_identifier() + "RhsEstimates" )
+    self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),                      
+                                                                       self._unknowns+self._auxiliary_variables, 
+                                                                       self._unknown_identifier() + "LinearCombination")
+    self._estimate_projection               = peano4.datamodel.Patch( (compute_number_of_face_projection_quantities(self._face_projections)*2,
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),  
+                                                                       self._unknowns+self._auxiliary_variables, 
+                                                                       self._unknown_identifier() + "EstimateProjection" )
+    self._old_solution_projection           = peano4.datamodel.Patch( (compute_number_of_face_projection_quantities(self._face_projections)*2,
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),  
+                                                                       self._unknowns+self._auxiliary_variables, 
+                                                                       self._unknown_identifier() + "OldSolutionProjection" )
+    self._Riemann_solution                  = peano4.datamodel.Patch( (2,
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),  
+                                                                       self._unknowns, 
+                                                                       self._unknown_identifier() + "RiemannSolution" )
            
-    self._estimate_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._estimate_projection)
-      #get_face_overlap_merge_implementation(self._estimate_projection)
-    self._estimate_projection.generator.includes     += """
+    if self._hold_cell_data_on_heap_with_smart_pointer:
+      self._current_time_step.generator               = peano4.datamodel.PatchToDoubleArrayOnHeap(self._current_time_step,               "double")
+      self._rhs_estimates.generator                   = peano4.datamodel.PatchToDoubleArrayOnHeap(self._rhs_estimates,                   "double")
+      self._linear_combination_of_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._linear_combination_of_estimates, "double")
+
+    if self._hold_face_data_on_heap_with_smart_pointer:
+      self._estimate_projection.generator     = peano4.datamodel.PatchToDoubleArrayOnHeap(self._estimate_projection,     "double") 
+      self._old_solution_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._old_solution_projection, "double") 
+      self._Riemann_solution.generator        = peano4.datamodel.PatchToDoubleArrayOnHeap(self._Riemann_solution,        "double") 
+
+    self._estimate_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
+    self._estimate_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
+    self._estimate_projection.generator.includes                   += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
+    self._estimate_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._estimate_projection)
+    
+    self._old_solution_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
+    self._old_solution_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
+    self._old_solution_projection.generator.includes                   += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
 
-    self._estimate_projection.generator.store_persistent_condition = self._store_cell_data_default_guard()
-    self._estimate_projection.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._current_time_step.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._current_time_step.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._current_time_step.generator.includes                   += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
+    self._current_time_step.generator.merge_method_definition   = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._current_time_step)
 
-    self._linear_combination_of_estimates.store_persistent_condition = "false"
-    self._linear_combination_of_estimates.load_persistent_condition = "false"
+    self._rhs_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._rhs_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._rhs_estimates.generator.includes                   += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
+
+    self._linear_combination_of_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._linear_combination_of_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._linear_combination_of_estimates.generator.includes                   += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
 
     self._estimate_projection.generator.send_condition               = "false"
     self._estimate_projection.generator.receive_and_merge_condition  = "false"
+    
+    self._old_solution_projection.generator.send_condition               = "false"
+    self._old_solution_projection.generator.receive_and_merge_condition  = "false"
 
     self._Riemann_solution.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._Riemann_solution.generator.load_persistent_condition  = self._load_face_data_default_guard()
+    self._Riemann_solution.generator.includes                   += """
+#include "repositories/SolverRepository.h" 
+"""
 
     self._Riemann_solution.generator.send_condition               = "false"
     self._Riemann_solution.generator.receive_and_merge_condition  = "false"
@@ -488,7 +599,11 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     self._cell_label = exahype2.grid.create_cell_label( self._name )
     self._face_label = exahype2.grid.create_face_label( self._name )
-        
+
+
+  def _query_fine_grid_cell_in_action_set_if_it_holds_solution(self):
+    return self._store_cell_data_default_guard()
+          
 
   @abstractmethod
   def create_action_sets(self):
@@ -511,21 +626,21 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      within the inheritance tree.
      
     """
-    self._action_set_initial_conditions                                               = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
-    self._action_set_initial_conditions_for_grid_construction                         = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
+    self._action_set_initial_conditions                                               = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._query_fine_grid_cell_in_action_set_if_it_holds_solution(), "true" )
+    self._action_set_initial_conditions_for_grid_construction                         = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._query_fine_grid_cell_in_action_set_if_it_holds_solution(), "false")
     self._action_set_AMR                                                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, 
                                                                                                                                              guard=self._store_cell_data_default_guard() + " and (repositories::" + self.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep() or repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation)", 
                                                                                                                                              build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
     self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     self._action_set_linear_combination_of_estimates                                  = exahype2.solvers.rkdg.actionsets.LinearCombinationOfEstimates(self)
     # @todo TW The following two action sets should run in parallel I guess 
-    self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces(solver=self)
+    self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces(solver=self,face_projections=self._face_projections)
     self._action_set_solve_volume_integral                                            = exahype2.solvers.rkdg.actionsets.SolveVolumeIntegral(self)
     self._action_set_handle_boundary                                                  = exahype2.solvers.rkdg.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
     self._action_set_solve_Riemann_problem                                            = exahype2.solvers.rkdg.actionsets.SolveRiemannProblem(self)
     self._action_set_add_volume_and_face_solution                                     = exahype2.solvers.rkdg.actionsets.AddVolumeAndFaceSolution(self)
-    self._action_set_compute_final_linear_combination_and_project_solution_onto_faces = exahype2.solvers.rkdg.actionsets.ComputeFinalLinearCombination(solver=self,guard=self._store_cell_data_default_guard())
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkdg.actionsets.DynamicAMR(solver=self,guard=self._store_cell_data_default_guard())
+    self._action_set_compute_final_linear_combination_and_project_solution_onto_faces = exahype2.solvers.rkdg.actionsets.ComputeFinalLinearCombination(solver=self,guard=self._store_cell_data_default_guard(),face_projections=self._face_projections)
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkdg.actionsets.DynamicAMR(solver=self,face_projections=self._face_projections)
     
     if self._action_set_postprocess_solution==None:
       self._action_set_postprocess_solution                                             = exahype2.solvers.rkdg.actionsets.EmptyPostprocessSolution(solver=self)
@@ -587,6 +702,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     datamodel.add_cell(self._linear_combination_of_estimates)
     datamodel.add_face(self._face_label)
     datamodel.add_face(self._estimate_projection)
+    datamodel.add_face(self._old_solution_projection)
     datamodel.add_face(self._Riemann_solution)
 
  
@@ -605,6 +721,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     step.use_cell(self._linear_combination_of_estimates)
     step.use_face(self._face_label)
     step.use_face(self._estimate_projection)
+    step.use_face(self._old_solution_projection)
     step.use_face(self._Riemann_solution)
     
   
@@ -721,7 +838,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
           
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
-      patch=self._current_time_step, 
+      patch=self._current_time_step,
       dataset_name=self._unknown_identifier(), 
       description=self.plot_description,
       mapping=mapping,
@@ -731,14 +848,16 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 #include "../repositories/SolverRepository.h"
 """,
       precision="PlotterPrecision",
-      time_stamp_evaluation="repositories::getMinTimeStamp()", plot_cell_data=False
+      time_stamp_evaluation="repositories::getMinTimeStamp()", 
+      plot_cell_data=False,
+      select_dofs = self.select_dofs_to_print
     ))
 
     if self._plot_grid_properties:    
       step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
-        guard_guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
+        guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
         additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
@@ -752,12 +871,32 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
   def add_actions_to_perform_time_step(self, step):
     """
  
-    @todo: 
-       
-    AMR
+    The tricky part here is that we have to get the order right.
     
-    It is important that we do the inter-grid transfer operators before we 
-    apply the boundary conditions.
+    - Update of the labels: This can be done as very first step, as it 
+      might feed into follow-up steps.
+    - linear combination: This has to be the first step of a Runge-Kutta
+      scheme. Without this first step, there's absolutely nothing we can 
+      do properly.
+    - couple resolutions and AMR: Once we have the linear combination,
+      we can couple different resolutions.
+    - project linear combination onto faces: This should be done as soon
+      as possible but after we've determined the linear combination. After
+      all, we need the solution representation on the faces asap.
+    - solve volume integral: can run in parallel to the projection onto
+      the faces.
+    - handle boundary: doesn't really matter when we insert it, as it plugs
+      into the first face load, while all the other stuff so far are volumetric
+      operations.
+      It is important that we do the inter-grid transfer operators before we 
+      apply the boundary conditions.
+    - solve Riemann problem: the constraint here is that it has to come after
+      the boundary handling.
+    - add volume and face solution: last
+    
+    If we use enclave tasking, we have to be careful when we insert the merger.
+    See SeparateSweepsWithEnclaveTasking.add_actions_to_perform_time_step() for
+    a discussion of the details.
     
     """
     d = {}
@@ -766,8 +905,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
-    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_linear_combination_of_estimates )
+    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_project_linear_combination_onto_faces )
     step.add_action_set( self._action_set_solve_volume_integral )
     step.add_action_set( self._action_set_handle_boundary )
@@ -783,7 +922,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     pass
 
 
-  def add_implementation_files_to_project(self,namespace,output):
+  def add_implementation_files_to_project(self,namespace,output, dimensions):
     """
     
      The ExaHyPE2 project will call this operation when it sets
@@ -843,7 +982,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
       This one is called by all algorithmic steps before I invoke
       add_entries_to_text_replacement_dictionary().
 
-      See the remarks on set_postprocess_updated_patch_kernel to understand why
+      See the remarks on set_postprocess_updated_cell_kernel to understand why
       we have to apply the (partially befilled) dictionary to create a new entry
       for this very dictionary.
 
@@ -858,7 +997,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
-
+    
     d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._basis.dofs_per_axis) * (self._basis.dofs_per_axis);
     d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._basis.dofs_per_axis) * (self._basis.dofs_per_axis) * (self._basis.dofs_per_axis);
     
@@ -883,8 +1022,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     
     #d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
     #d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "PREPROCESS_RECONSTRUCTED_CELL" ]      = jinja2.Template(self._preprocess_cell, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "POSTPROCESS_UPDATED_CELL_AFTER_RUNGE_KUTTA_STEP" ]           = jinja2.Template(self._postprocess_updated_cell_after_Runge_Kutta_step,         undefined=jinja2.DebugUndefined).render( **d )
+    d[ "POSTPROCESS_UPDATED_CELL_AFTER_FINAL_LINEAR_COMBINATION" ]   = jinja2.Template(self._postprocess_updated_cell_after_final_linear_combination, undefined=jinja2.DebugUndefined).render( **d )
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
@@ -904,7 +1044,16 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d[ "POINT_SOURCES_IMPLEMENTATION"]        = self._point_sources_implementation
     
     d[ "COMPUTE_MAX_EIGENVALUE" ]             = self._compute_eigenvalue
+
+    d["KERNEL_NAMESPACE"]                        = self._kernel_namespace
+    
     self._basis.init_dictionary_with_default_parameters(d,False)
+    
+    # Has to come last, as we already use the other entries    
+    d["VOLUMETRIC_SOLVER_CALL"]                  = jinja2.Template(self._volumetric_solver_call, undefined=jinja2.DebugUndefined).render( **d )
+    d["RIEMANN_SOLVER_CALL"]                     = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
+    d["ADD_SOLVER_CONTRIBUTIONS_CALL"]           = jinja2.Template(self._add_solver_contributions_call, undefined=jinja2.DebugUndefined).render( **d )
+    d["MULTIPLY_WITH_INVERTED_MASS_MATRIX_CALL"] = jinja2.Template(self._multiply_with_inverted_mass_matrix_call, undefined=jinja2.DebugUndefined).render( **d )
 
   
   @property
@@ -989,4 +1138,134 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self.create_data_structures()
     self.create_action_sets()
 
+  
+  @property
+  def postprocess_updated_cell_after_Runge_Kutta_step(self):
+    return self._postprocess_updated_cell
+
+
+  @property
+  def postprocess_updated_cell_after_final_linear_combination(self):
+    return self._postprocess_updated_cell
+
+
+  @postprocess_updated_cell_after_Runge_Kutta_step.setter
+  def postprocess_updated_cell_after_Runge_Kutta_step(self, kernel):
+    """
+
+    Define a postprocessing routine over the data
+    
+    This routine allows you to update the patch data immediately after the 
+    patch update. The routine provides the whole patch, and therefore you 
+    can write stuff similar to 
+    
+         my_solver.postprocess_updated_cell = " ""
+         {
+           constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+           int index = 0;
+           for (int i=0;i<itmax;i++) {
+             applications::exahype2::ccz4::enforceCCZ4constraints( dQdt+index );
+             index += {{NUMBER_OF_UNKNOWNS}};
+           }
+         }
+         
+         
+    ## Difference to Finite Volume solvers
+    
+    Different to the Finite Volume solvers, you don't have the auxiliary
+    variables in this routine. You also don't have the new solution, but the
+    time derivative instead.
+    
+    
+    ## Available constants
+
+    This list is not complete. You might want to consult the generated code to 
+    spot more variables that are on offer. Whenever I use the brackets below,
+    these are symbolic constants which will be befilled with the proper constants
+    when the postprocessing code snippet is inserted into the generated code.
+    The other variables are directly available, i.e. no text replacement is done
+    here.
+    
+    - {{DG_ORDER}}  Spatial discretisation order.
+    - timeStamp
+    - timeStepSize
+    - dQdt
+
+    ## Runge-Kutta steps
+    
+    This postprocessing is called after each and every Runge-Kutta step.
+
+    """
+    self._postprocess_updated_cell_after_Runge_Kutta_step = kernel
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  @postprocess_updated_cell_after_final_linear_combination.setter
+  def postprocess_updated_cell_after_final_linear_combination(self, kernel):
+    """
+
+    Define a postprocessing routine over the data
+    
+    This routine allows you to update the patch data immediately after the 
+    patch update. The routine provides the whole patch, and therefore you 
+    can write stuff similar to 
+    
+         my_solver.postprocess_updated_cell = " ""
+         {
+           constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+           int index = 0;
+           for (int i=0;i<itmax;i++) {
+             applications::exahype2::ccz4::enforceCCZ4constraints( dQdt+index );
+             index += {{NUMBER_OF_UNKNOWNS}};
+           }
+         }
+         
+         
+    ## Difference to Finite Volume solvers
+    
+    Different to the Finite Volume solvers, you don't have the auxiliary
+    variables in this routine. You also don't have the new solution, but the
+    time derivative instead.
+    
+    
+    ## Available constants
+
+    This list is not complete. You might want to consult the generated code to 
+    spot more variables that are on offer. Whenever I use the brackets below,
+    these are symbolic constants which will be befilled with the proper constants
+    when the postprocessing code snippet is inserted into the generated code.
+    The other variables are directly available, i.e. no text replacement is done
+    here.
+    
+    - {{DG_ORDER}}  Spatial discretisation order.
+    
+
+    ## Runge-Kutta steps
+    
+    This postprocessing is called after each and every Runge-Kutta step.
+
+    """
+    self._postprocess_updated_cell_after_final_linear_combination = kernel
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  def switch_to_heap_storage(self,
+                             hold_cell_data_on_heap_with_smart_pointer,
+                             hold_face_data_on_heap_with_smart_pointer
+                             ):
+    """
+    
+    By default, we hold all data on the call stacks. You can explicitly switch
+    to storage on the heap via smart pointers.
+    
+    @see create_data_structures()
+    
+    """
+    self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
+    self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
+    
+    self.create_data_structures()
+    self.create_action_sets()
 

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MPI_RANK_H_
-#define _TARCH_MPI_RANK_H_
+#pragma once
 
 
 #include "tarch/logging/Log.h"
@@ -91,13 +90,54 @@ class tarch::mpi::Rank {
     #endif
 
     /**
-     * How long shall the application wait until it writes a time-out warning
+     * Timeout warning
+     *
+     * How long shall the application wait until it writes a time-out warning.
+     * Different to _deadlockTimeOut, this value changes over time: If we write
+     * a warning message, we increase this value. So, by default, you can make
+     * is rather small. The code then will increase it once you have written a
+     * warning to avoid that the terminal is flooded with these warnings. It
+     * will never by bigger than _deadlockTimeOut though due to this growth.
+     *
+     * Despite the growth discussion, you can use a timeout warning that is
+     * greater than zero and set _deadlockTimeOut to zero. In this case, you
+     * will get warnings that the code thinks it runs into a deadlock, but you
+     * do not get a timeout ever.
+     *
+     * @see writeTimeOutWarning()
+     * @see _deadlockTimeOut
      */
     std::chrono::seconds _timeOutWarning;
 
+    /**
+     * Time to timeout
+     *
+     * This counter specifies the seconds until a timeout is triggered. If the
+     * field equals zero, no timeouts will ever happen.
+     */
     std::chrono::seconds _deadlockTimeOut;
 
+    std::chrono::system_clock::time_point  _globalTimeOutWarning;
+    std::chrono::system_clock::time_point  _globalTimeOutDeadlock;
+
+    /**
+     * Global toggle to enable/disable timeouts
+     *
+     * This flag helps user codes to enable/disable timeouts (temporarily).
+     * Note that the flag is not the only way how to disable the timeouts.
+     * Alternatively, you can set _deadlockTimeOut to zero.
+     */
     bool    _areTimeoutsEnabled;
+
+    /**
+     * Set by init() and actually stores the number of valid tags.
+     */
+    static int     _maxTags;
+
+    /**
+     * Count  the tags that have already been handed out.
+     */
+    static int     _tagCounter;
 
     /**
      * The standard constructor assignes the attributes default values and
@@ -127,6 +167,14 @@ class tarch::mpi::Rank {
     void receiveDanglingMessagesFromReceiveBuffers();
 
   public:
+    /**
+     * Just try to find out if a tag is actually supported. This works after
+     * we've called the init() routine. if we call this routine before, it
+     * will always pass. If the tag is not supported, we write a warning and
+     * return false.
+     */
+    static bool validateMaxTagIsSupported();
+
     /**
      * Return a Free Tag
      *
@@ -189,18 +237,29 @@ class tarch::mpi::Rank {
     /**
      * Wrapper around allreduce
      *
-     * Peano relies heavily on unexpected, asynchronous message exchange to admin
-     * the workload. Ranks tell other ranks on the fly, for example, if they
-     * delete trees or create new ones. They also use MPI messages to realise
-     * global semaphores.
+     * Use this wrapper in Peano to reduce a value to all ranks. We recommend
+     * not to use plain MPI within Peano applications, as Peano relies on MPI+X
+     * and is strongly dynamic, i.e. you never know how many threads a rank
+     * currently employs and if one of the ranks maybe just has started to send
+     * around point to point load balancing messages.
      *
-     * As a consequence, any reduction runs risk to introduce a deadlock: Rank A
-     * enters an allreduce. Rank B sends something to A and then would enter the
-     * allreduce. However, this send of A (and perhaps an immediate receive of a
-     * confirmation message) might not go through, as A is busy in the reduction.
-     * Therefore, we should never use an allreduce but instead issue a non-blocking
-     * allreduce. While the reduce is pending, we should be able to do something
-     * else such as answering to further request messages.
+     *
+     * ## Rationale
+     *
+     * Peano relies heavily on unexpected, asynchronous message exchange to
+     * admin the workload. Ranks tell other ranks on the fly, for example, if
+     * they delete trees or create new ones. They also use MPI messages to
+     * realise global semaphores.
+     *
+     * As a consequence, any reduction runs risk to introduce a deadlock: Rank
+     * A enters an allreduce. Rank B sends something to A (for example a
+     * request that it would like to load balance later) and then would enter
+     * the allreduce. However, this send of a message to A (and perhaps an
+     * immediate receive of a confirmation message) might not go through, as A
+     * is busy in the reduction. Therefore, we should never use an allreduce
+     * but instead issue a non-blocking allreduce. While the reduce is pending,
+     * we should be able to do something else such as answering to further
+     * request messages.
      *
      * This allreduce allows us to do so. The default waitor is a receive of
      * pending messages. So most codes use the allReduce as follows:
@@ -217,15 +276,26 @@ class tarch::mpi::Rank {
      *
      * ## Rationale behind ifdefs
      *
-     * I wanted to make this routine a normal one that degenerates to nop if you
-     * don't translate with MPI support. However, that doesn't work as the signature
-     * requires MPI-specific datatypes.
+     * I wanted to make this routine a normal one that degenerates to nop if
+     * you don't translate with MPI support. However, that doesn't work as the
+     * signature requires MPI-specific datatypes.
      *
      *
      * ## Multithreading
      *
-     * This reduction is completely agnostic of any multithreading. Therefore, I do
-     * recommend not to use this routine within any action set.
+     * This reduction is completely agnostic of any multithreading. Therefore,
+     * I do recommend not to use this routine within any action set.
+     *
+     *
+     * ## Attribute semantics
+     *
+     * The routine adheres to the plain MPI semantics. As it passes the MPI_Op
+     * argument through to MPI, we also support all reduction operators.
+     *
+     * In line with MPI, please ensure that the receive buffer already holds
+     * the local contribution. Notably, the routine does not copy over the
+     * content from sendbuf into recvbuf.
+     *
      */
     void allReduce(
       const void *sendbuf, void *recvbuf, int count,
@@ -282,13 +352,25 @@ class tarch::mpi::Rank {
      * environment. Afterwards the original parameters from the user are stored
      * within them.
      *
-     * !! Implementation details
+     * ## Implementation details
      *
      * init never uses the log device to report any errors as the log device
      * usually in turn uses Node's getters. Furthermore, the _initIsCalled flag
      * has thus to be set before the log state operation is invoked.
      *
+     *
+     * ## Upper tag bound
+     *
+     * We try to find out how many tags the system does support. Here, the MPI
+     * standard is a little bit weird, as it requires a pointer to a void pointer
+     * and then we can read the data from there. So it seems we get a pointer to
+     * a system variable back rather than the system variable.
+     *
+     * Thanks to Andrew Mallinson (Intel) for pointing this out.
+     *
      * @return true if initialisation has been successful
+     *
+     * @see shutdown
      */
     bool init(int* argc, char*** argv);
 
@@ -358,7 +440,7 @@ class tarch::mpi::Rank {
     bool isGlobalMaster() const;
 
     /**
-     * Triggers a time out and shuts down the cluster:
+     * Triggers a time out and shuts down the cluster if a timeout is violated
      *
      * The implementation does not use MPI_Abort, since it seems that this
      * operation requires all nodes running. Instead of,
@@ -384,6 +466,20 @@ class tarch::mpi::Rank {
       const std::string&  comment = ""
     );
 
+    /**
+     * Writes a warning if relevant
+     *
+     * This operation writes a warning if the code might assume that it runs
+     * into a timeout (or excessive wait). The routine assumes that timeouts
+     * are enabled and that the user has called
+     *
+     * setDeadlockTimeoutTimeStamp()
+     *
+     * before. To avoid an excessive list of timeout warnings, a warning is
+     * always followed by moving the next warning timestamp (so you don't get
+     * dozens of timeouts) and the code also creases the time span that it
+     * uses from hereon to report on timeouts.
+     */
     void writeTimeOutWarning(
       const std::string&  className,
       const std::string&  methodName,
@@ -400,43 +496,15 @@ class tarch::mpi::Rank {
     void ensureThatMessageQueuesAreEmpty( int fromRank, int tag );
 
     /**
-     * If you want to make any receive operation to be able to recognize a
-     * time-out, you have to insert the following code snipped before your
-     * receive call.
-     *
-     * \code
-     *   MPI_Status  status;
-     *   int         flag = 0;
-     *   clock_t     timeOutWarning   = Rank::getInstance().getDeadlockWarningTimeStamp();
-     *   clock_t     timeOutShutdown  = Rank::getInstance().getDeadlockTimeOutTimeStamp();
-     *   bool        triggeredTimeoutWarning = false;
-     *   MPI_Iprobe( source, CommunicationTag, Rank::getInstance().getCommunicator(), &flag, &status );
-     *
-     *   while (!flag) {
-     *     if ( Rank::getInstance().isTimeOutWarningEnabled() && (std::chrono::system_clock::now()>timeOutWarning) && (!triggeredTimeoutWarning)) {
-     *       Rank::getInstance().writeTimeOutWarning( "parallel::SendReceiveBuffer", "receiveAllMessages()", source );
-     *       triggeredTimeoutWarning = true;
-     *     }
-     *     if ( Rank::getInstance().isTimeOutDeadlockEnabled() && (std::chrono::system_clock::now()>timeOutShutdown)) {
-     *       Rank::getInstance().triggerDeadlockTimeOut( "parallel::SendReceiveBuffer", "receiveAllMessages()", source );
-     *     }
-     *     MPI_Iprobe( source, CommunicationTag, Rank::getInstance().getCommunicator(), &flag, &status );
-     *   }
-     * \endcode
-     *
-     * @return Time stamp when next warning should be written if no message has
-     *         been received meanwhile.
+     * Memorise global timeout
      */
-    std::chrono::system_clock::time_point getDeadlockWarningTimeStamp() const;
+    void setDeadlockWarningTimeStamp();
 
     /**
      * @return Time stamp when next application should terminate because of a
      *         time out if no message has been received meanwhile.
      */
-    std::chrono::system_clock::time_point getDeadlockTimeOutTimeStamp() const;
-
-    bool isTimeOutDeadlockEnabled() const;
-    bool isTimeOutWarningEnabled() const;
+    void setDeadlockTimeOutTimeStamp();
 
     bool isInitialised() const;
 
@@ -476,4 +544,3 @@ class tarch::mpi::Rank {
     static void abort(int errorCode);
 };
 
-#endif

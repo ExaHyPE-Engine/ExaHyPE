@@ -39,14 +39,14 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
 }
 
 
-tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createFuseAll(int numberOfTasksToFuse, bool fuseImmediately, int targetDevice) {
+tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createFuseAll(int numberOfTasksToFuse, bool fuseImmediately, bool processTasksWhileWaitingInBSPArea, int targetDevice) {
   return new Hardcoded(
-    std::numeric_limits<int>::max(), // numberOfTasksToHoldBack
-    numberOfTasksToFuse,             // tasksToFuse
-    numberOfTasksToFuse,             // tasksToFuse
-    targetDevice,                    // deviceForFusedTasks
-    fuseImmediately,                 // fuseTasksImmediatelyWhenSpawned
-    not fuseImmediately              // processPendingTasksWhileWaiting
+    std::numeric_limits<int>::max(),  // numberOfTasksToHoldBack
+    numberOfTasksToFuse,              // tasksToFuse
+    numberOfTasksToFuse,              // tasksToFuse
+    targetDevice,                     // deviceForFusedTasks
+    fuseImmediately,                  // fuseTasksImmediatelyWhenSpawned
+    processTasksWhileWaitingInBSPArea // processPendingTasksWhileWaiting
   );
 }
 

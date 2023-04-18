@@ -1,7 +1,9 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 
-from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
+from .AbstractRungeKuttaDGActionSet                 import AbstractRungeKuttaDGActionSet
+from .ProjectLinearCombinationOfEstimatesOntoFaces  import FaceProjections
+from .ProjectLinearCombinationOfEstimatesOntoFaces  import compute_number_of_face_projection_quantities
 
 from exahype2.solvers.ButcherTableau                import ButcherTableau
 
@@ -29,6 +31,20 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
   - The estimates do not alter the auxiliary variables.
   - We can thus just keep the previous auxiliary variables implicitly.  
   
+  
+  ## Face projections
+  
+  As I discuss in detail in solvers.rkdg.RungeKuttaDG.create_data_structures(),
+  the field _estimate_projection usually holds the projection of a DG estimate,
+  but not the real solution. At some points, I however need the real solution
+  after a time step. Local time stepping for example depends upon it. So the
+  final combination projects the solution again onto the faces.
+  
+  In return, we could skip the projection within the first Runge-Kutta step 
+  where we effectively take the data and write it to the faces once again.
+  But this is too much of an optimisation, I just retrigger the projection
+  there agin.
+  
   """
   
   TemplateProject = """
@@ -50,9 +66,9 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
 
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-    double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    double* newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     
-    {{POSTPROCESS_UPDATED_PATCH}}
+    {{POSTPROCESS_UPDATED_CELL_AFTER_FINAL_LINEAR_COMBINATION}}
 
     {% if COMPUTE_MAX_EIGENVALUE %}
     ::exahype2::CellData  cellData( nullptr, marker.x(), marker.h(), timeStamp, timeStepSize, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
@@ -86,10 +102,63 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
     repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
     
+    {% if NUMBER_OF_FACE_PROJECTIONS!=1 %}
+    #error Have to tweak compute final projection
+    {% endif %}
+    
+    #if Dimensions==2
+    ::exahype2::dg::projectVolumetricDataOntoFaces(
+      newQ,
+      {{ORDER}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value  //up
+    );
+    #elif Dimensions==3
+    ::exahype2::dg::projectVolumetricDataOntoFaces(
+      newQ,
+      {{ORDER}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value, //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(4).value, //up
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //front
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(5).value  //back
+    );
+    #endif
   }
 """
+
+  TemplateUpdateFace = """
+  if ( repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() ) {
+    for (int leftRight=0; leftRight<2; leftRight++) {
+      if ( fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdated(leftRight) ) {
+        fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp( leftRight, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(leftRight) );
+        fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp( leftRight, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(leftRight) );
+        
+        ::exahype2::dg::copyOneSideOfFaceProjection(
+          {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
+          {{ORDER}},
+          {{NUMBER_OF_FACE_PROJECTIONS}},
+          marker.getSelectedFaceNumber() % Dimensions,
+          leftRight==1,
+          fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
+          fineGridFace{{UNKNOWN_IDENTIFIER}}OldSolutionProjection.value
+        ); 
+      }
+    }
+  }
+""" 
+
   
-  def __init__(self,solver,guard):
+  def __init__(self,solver,guard,face_projections: FaceProjections):
     """
     
     guard_project: String (C++ code)
@@ -103,19 +172,24 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
     super(ComputeFinalLinearCombination,self).__init__(solver)
     self.guard            = guard
     self._butcher_tableau = ButcherTableau(self._solver._rk_order)
+    self._face_projections = face_projections
+    assert  self._face_projections==FaceProjections.Solution, "not supported"
     
 
   def get_body_of_operation(self,operation_name):
     result = ""
+    d = {}
+    self._solver._init_dictionary_with_default_parameters(d)
+    self._solver.add_entries_to_text_replacement_dictionary(d)
+    d[ "PREDICATE" ]         = self.guard
+    d[ "WEIGHTS" ]           = self._butcher_tableau.final_estimate_weights()
+    d[ "NUMBER_OF_FACE_PROJECTIONS" ] = compute_number_of_face_projection_quantities(self._face_projections)
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]         = self.guard
-      d[ "WEIGHTS" ]           = self._butcher_tableau.final_estimate_weights()
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 
-    # @todo Projektion auf die Raender und umschalten der Zeiten fehlt noch. Aus das Flag und das Berechnen der Folgezeitschrittweite (falls gewollt)
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_LAST_TIME:
+      result = jinja2.Template(self.TemplateUpdateFace).render(**d)
+      pass 
     return result
 
 

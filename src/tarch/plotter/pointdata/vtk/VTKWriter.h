@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_PLOTTER_POINTDATA_VTK_WRITER_H_
-#define _TARCH_PLOTTER_POINTDATA_VTK_WRITER_H_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -162,4 +161,3 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
     PointWriter::PointDataWriter*    createPointDataWriter( const std::string& identifier, int recordsPerPoint ) override;
 };
 
-#endif

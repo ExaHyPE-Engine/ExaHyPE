@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_PATCH_UTILS_H_
-#define _EXAHYPE2_FV_PATCH_UTILS_H_
+#pragma once
 
 
 #include <vector>
@@ -57,6 +56,26 @@ namespace exahype2 {
     }
 
 
+    static tarch::la::Vector<2,double>  getFaceSize(
+      const tarch::la::Vector<2,double>&  h,
+      int                                 numberOfVolumesPerAxisInPatch
+    )
+    //InlineMethod
+    {
+      return getVolumeSize(h,numberOfVolumesPerAxisInPatch);
+    }
+
+
+    static tarch::la::Vector<3,double>  getFaceSize(
+      const tarch::la::Vector<3,double>&  h,
+      int                                 numberOfVolumesPerAxisInPatch
+    )
+    //InlineMethod
+    {
+      return getVolumeSize(h,numberOfVolumesPerAxisInPatch);
+    }
+
+
     /**
      * In ExaHyPE's Finite Volume setup, a cell hosts a patch of Finite Volumes.
      * When we iterate over these volumes, we typically have to know the centre
@@ -106,6 +125,60 @@ namespace exahype2 {
     }
 
 
+    static tarch::la::Vector<2,double>  getFaceCentre(
+      const tarch::la::Vector<2,double>&  x,
+      const tarch::la::Vector<2,double>&  h,
+      int                                 numberOfVolumesPerAxisInPatch,
+      int                                 overlap,
+      int                                 normal,
+      const tarch::la::Vector<2,int>&     index
+    )
+    //InlineMethod
+    {
+      tarch::la::Vector<2,double> volumeSize = getFaceSize(h,numberOfVolumesPerAxisInPatch);
+      tarch::la::Vector<2,double> result;
+
+      for (int d=0; d<2; d++) {
+        if (d==normal) {
+          result(d) = x(d) - overlap * volumeSize(d) + 0.5 * volumeSize(d);
+        }
+        else {
+          result(d) = x(d) - 0.5 * h(d) + 0.5 * volumeSize(d);
+        }
+        result(d) += index(d) * volumeSize(d);
+      }
+
+      return result;
+    }
+
+
+    static tarch::la::Vector<3,double>  getFaceCentre(
+      const tarch::la::Vector<3,double>&  x,
+      const tarch::la::Vector<3,double>&  h,
+      int                                 numberOfVolumesPerAxisInPatch,
+      int                                 overlap,
+      int                                 normal,
+      const tarch::la::Vector<3,int>&     index
+    )
+    //InlineMethod
+    {
+      tarch::la::Vector<3,double> volumeSize = getVolumeSize(h,numberOfVolumesPerAxisInPatch);
+      tarch::la::Vector<3,double> result     = x - 0.5 * h + 0.5 * volumeSize;
+
+      for (int d=0; d<3; d++) {
+        if (d==normal) {
+          result(d) = x(d) - overlap * volumeSize(d) + 0.5 * volumeSize(d);
+        }
+        else {
+          result(d) = x(d) - 0.5 * h(d) + 0.5 * volumeSize(d);
+        }
+        result(d) += index(d) * volumeSize(d);
+      }
+
+      return result;
+    }
+
+
     /**
      * With GCC 10, it was impossible to return/copy the vector class. We
      * almost never need it however, as we work with cubes. This specialisation
@@ -136,6 +209,7 @@ namespace exahype2 {
       int    unknowns
     );
 
+
     /**
      * Just runs over the patch and ensures that no entry is non or infinite. In
      * ExaHyPE, we primarily work with split approaches. That is, diagonal halo
@@ -161,6 +235,7 @@ namespace exahype2 {
       double* maxValues = nullptr
     );
 
+
     /**
      * Plot patch.
      *
@@ -178,8 +253,6 @@ namespace exahype2 {
     );
 
 
-
-
     std::string plotPatchOverlap(
       const double* __restrict__ Q,
       int    unknowns,
@@ -189,7 +262,24 @@ namespace exahype2 {
       int    normal,
       bool   prettyPrint = false
     );
+
+
+    /**
+     * A face always holds a left and a right overlap
+     *
+     * This routine copies over half of the overlap
+     *
+     * @param isRightLayer
+     */
+    void copyHalfOfHalo(
+      int    unknownsPlusAuxiliaryVariables,
+      int    numberOfGridCellsPerPatchPerAxis,
+      int    haloSize,  // same as overlap
+      int    normal,
+      bool   isRightLayer,
+      const double* __restrict__   srcQ,
+      double* __restrict__         destQ
+    );
   }
 }
 
-#endif

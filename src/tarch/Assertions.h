@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_ASSERTIONS_H_
-#define _TARCH_ASSERTIONS_H_
+#pragma once
 
 #ifdef Parallel
 #include <mpi.h>
@@ -1076,4 +1075,3 @@
     #define assertionFail(message)
   #endif
 
-#endif

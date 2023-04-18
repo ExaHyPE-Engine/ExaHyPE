@@ -6,8 +6,7 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#ifndef _INCLUDE_PEANO4_GRID_GRIDCONTROLEVENT_
-#define _INCLUDE_PEANO4_GRID_GRIDCONTROLEVENT_
+#pragma once
 
 #include <string>
   
@@ -15,7 +14,9 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
 #ifdef Parallel
@@ -69,14 +70,28 @@ struct peano4::grid::GridControlEvent {
     
 
     #ifdef Parallel
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
      * the lazy initialisation is done and the datatype is also cached.
      */
     [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getDatatype();
-    
+    static MPI_Datatype  getForkDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getJoinDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getBoundaryExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getGlobalCommunciationDatatype();
+    PRAGMA_POP
     
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -94,7 +109,7 @@ struct peano4::grid::GridControlEvent {
      * Free the underlying MPI datatype.
      */
     static void shutdownDatatype();
-            
+    
     /**
      * In DaStGen (the first version), I had a non-static version of the send
      * as well as the receive. However, this did not work with newer C++11 
@@ -112,21 +127,21 @@ struct peano4::grid::GridControlEvent {
      * the message went through. In systems with heavy MPI usage, this can 
      * help to avoid deadlocks.
      */
-    static void send(const peano4::grid::GridControlEvent& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(peano4::grid::GridControlEvent& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(const peano4::grid::GridControlEvent& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(   peano4::grid::GridControlEvent& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
 
     std::string toString() const;
   
   private:
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     [[clang::pack]]  RefinementControl   _refinementControl;
     tarch::la::Vector<Dimensions,double>   _offset;
     tarch::la::Vector<Dimensions,double>   _width;
     tarch::la::Vector<Dimensions,double>   _h;
-
-
-
+    PRAGMA_POP
 
     #ifdef Parallel
     private:
@@ -142,10 +157,6 @@ struct peano4::grid::GridControlEvent {
       static MPI_Datatype  Datatype;
       #endif
     #endif
-
-
-
 };
 
-#endif
   

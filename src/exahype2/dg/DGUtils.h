@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_DG_DG_UTILS_H_
-#define _EXAHYPE2_DG_DG_UTILS_H_
+#pragma once
 
 
 #include <vector>
@@ -56,6 +55,25 @@ namespace exahype2 {
       const tarch::la::Vector<3,int>&     index,
       int                                 polynomialOrder,
       const double* __restrict__          quadraturePoints
+    );
+
+    /**
+     * Compute integral over shape function over cell defined by index
+     *
+     * @param cellSize  Size of the cell hosting the polygonials.
+     *   This vector determines the scaling, i.e. the @f$ h^d @f$
+     *   factor, of the outcome.
+     * @param index     Determine the quadrature point within the cell
+     *   that is to be evaluated.
+     * @param quadratureWeights    Array of the weights of a 1d shape
+     *   function, i.e. the outcome of the 1d integral. As we work with
+     *   a tensor product approach, we can evaluate each direction
+     *   independently.
+     */
+    double  getQuadratureWeight(
+      const tarch::la::Vector<3,double>&  cellSize,
+      const tarch::la::Vector<3,int>&     index,
+      const double* __restrict__          quadratureWeights
     );
 
 
@@ -178,12 +196,12 @@ namespace exahype2 {
      * usually used for debugging
      */
 
-    std::string plotPatch(
+    std::string plotCell(
         const double* __restrict__ Q,
         const int order,
         const int unknowns,
         const int auxiliaryVariables
-        );
+    );
 
     /*
      * Plot Face
@@ -196,13 +214,74 @@ namespace exahype2 {
      * See the discussion around ExaHyPE's lexicographic ordering.
      */
     std::string plotFace(
-        const double* __restrict__ Q,
-        const int order,
-        const int unknowns,
-        const int auxiliaryVariables
-        );
+      const double* __restrict__ Q,
+      const int order,
+      const int unknowns,
+      const int auxiliaryVariables,
+      int       normal,
+      int       numberOfQuantitiesProjectedOntoFace
+    );
 
+    /**
+     * Evaluate the DG polynomial
+     *
+     * Evaluate the Lagrangian polynomial within the cell specified by marker in
+     * one point. Return the value unknown within this interpolated point.
+     *
+     * ## Realisation
+     *
+     * We loop with a d-dimensional for loop over all quadrature points within
+     * the cell. Each iteration of this loop over currentDoF evalutes the impact
+     * of the polynomial anchored at currentDoF onto the position of interest.
+     * To find out what this polynomial looks like, we have to loop over all
+     * quadrature points again, besides those guys that coincide in one
+     * coordinate with the shape function at currentDoF. This inner loop over
+     * quadraturePoint exploits the fact that the Lagrange polynomials are
+     * constructed through a product over terms, while the overall d-dimensional
+     * shape function results from a tensor product. Therefore, we can evaluate
+     * the shape function over one big loop multiplying the enumerator and
+     * denominator.
+     *
+     * Once the shape function's value at point x is evaluated, we multiple it
+     * with the actual weight of this function. The outcome is added to the
+     * result, as we work with a standard nodal basis.
+     *
+     * @param marker         Marker that specifies the cell, i.e. its size and
+     *   offset.
+     * @param order          Order of the polynomial.
+     * @param QuadratureNodes1d  Arrangement of the quadrature points on the 1d
+     *   unit interval, i.e. from 0 to 1.
+     * @param unknownsPerDoF Total number of unknowns within a degree of
+     *   freedom. Shoudl incorporate the number of material parameters.
+     * @param Q              Pointer to data stored as AoS. The size of this
+     *   data field is @f$ (order+1)^d \cdot unknownsPerDoF @f$.
+     * @param x              Point of interest where the overall polynomial
+     *   solution is to be evaluated.
+     * @param unknown        Unknown of interest.
+     */
+    template<typename QStoreType>
+    QStoreType evaluatePolynomial(
+      const peano4::datamanagement::CellMarker&    marker,
+      int                                          order,
+      const double* __restrict__                   QuadratureNodes1d,
+      int                                          unknownsPerDoF,
+      const QStoreType* __restrict__               Q,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      int                                          unknown
+    );
+
+    /**
+     * Delegate to PatchUtils of the Finite Volume scheme
+     */
+    void copyOneSideOfFaceProjection(
+      int    unknownsPlusAuxiliaryVariables,
+      int    order,
+      int    numberOfProjectedQuantities,
+      int    normal,
+      int    isRightFaceHalf,
+      const double* __restrict__   srcQ,
+      double* __restrict__         destQ
+    );
   }
 }
 
-#endif

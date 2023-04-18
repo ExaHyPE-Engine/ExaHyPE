@@ -1,5 +1,4 @@
-#ifndef __INITIAL_DATA_ADAPTER_CPP_FORTRAN_MHD__
-#define __INITIAL_DATA_ADAPTER_CPP_FORTRAN_MHD__
+#pragma once
 
 
 extern "C" {
@@ -7,4 +6,3 @@ extern "C" {
 }
 /* extern "C" */
 
-#endif /* __INITIAL_DATA_ADAPTER_CPP_FORTRAN_MHD__ */

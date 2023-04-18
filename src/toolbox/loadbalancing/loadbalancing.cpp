@@ -6,8 +6,9 @@
 
 #include "peano4/grid/GridStatistics.h"
 
-
 #include "tarch/tarch.h"
+
+#include <stdlib.h>
 
 
 namespace {
@@ -54,6 +55,7 @@ int toolbox::loadbalancing::getIdOfHeaviestLocalSpacetree() {
   std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
   int result = NoHeaviestTreeAvailable;
   int maxLocalUnrefinedCells = -1;
+
   for (auto p: idsOfLocalSpacetrees) {
     if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>maxLocalUnrefinedCells
@@ -62,6 +64,40 @@ int toolbox::loadbalancing::getIdOfHeaviestLocalSpacetree() {
     ) {
       maxLocalUnrefinedCells = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
       result = p;
+    }
+  }
+  return result;
+}
+
+
+int toolbox::loadbalancing::getIdOfHeaviestLocalSpacetree(double tolerance) {
+  std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
+  int result = NoHeaviestTreeAvailable;
+  int maxLocalUnrefinedCells = -1;
+
+  for (auto p: idsOfLocalSpacetrees) {
+    if (
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>maxLocalUnrefinedCells
+      and
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>=ThreePowerD
+    ) {
+      maxLocalUnrefinedCells = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
+    }
+  }
+
+  logInfo( "getIdOfHeaviestLocalSpacetree(double)", "try to find one maximum tree which has weight close to " << maxLocalUnrefinedCells << ", i.e. has more than " << (tolerance * static_cast<double>(maxLocalUnrefinedCells)) << " cells"  );
+  if (maxLocalUnrefinedCells>0) {
+    for (auto p: idsOfLocalSpacetrees) {
+      if (
+        static_cast<double>( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() ) >= tolerance * static_cast<double>(maxLocalUnrefinedCells)
+        and
+        peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>=ThreePowerD
+        and
+        (rand() % 2 == 1 or result == NoHeaviestTreeAvailable)
+      ) {
+        logInfo( "getIdOfHeaviestLocalSpacetree(double)", "tree " << p << " meets criterion with weight of " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
+        result = p;
+      }
     }
   }
   return result;

@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_ENUMERATOR_ENUMERATOR_H_
-#define _EXAHYPE2_ENUMERATOR_ENUMERATOR_H_
+#pragma once
 
 
 #include "AoSLexicographicEnumerator.h"
@@ -12,7 +11,7 @@
 
 
 /**
- * @page Enumerator ExaHyPE 2 enumerators
+ * @page exahype2_enumerator ExaHyPE 2 enumerators
  *
  * ## Finite Volumes
  *
@@ -52,4 +51,3 @@
  * of cells.
  *
  */
-#endif

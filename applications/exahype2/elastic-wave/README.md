@@ -1,0 +1,55 @@
+# Elastodynamics in First Order Form
+The elastic wave equation describes propagation of waves in elastic solids. They are commonly derived from the conservation of momentum and the constitutive relation, defined by Hookes's law. With the assumption that the relation between stress and strain can be linearised for relatively small deformations this results in the linear elastic wave equation.
+A material is described by it's density $`\rho`$, shear modulus $`\mu`$ and the Lame constant $`\lambda`$.
+
+This application implements the elastic wave equation in it's first order formulation:
+
+```math
+    \partial_t \begin{pmatrix}
+                u\\v\\ \sigma_{xx} \\ \sigma_{yy} \\ \sigma_{xy}
+               \end{pmatrix}
+               + \nabla \cdot F
+               \begin{pmatrix}
+                u\\v\\ \sigma_{xx} \\ \sigma_{yy} \\ \sigma_{xy}
+               \end{pmatrix} = 0,
+```
+
+With $`F=\left(F_1,F_2\right)`$ being a tensor describing the linear flux:
+
+```math
+F_1 =
+\begin{pmatrix}
+ 0 & 0 & 1/\rho &  0 & 0 \\
+ 0 & 0 &      0 &  0 & 1/\rho \\
+ \left(\lambda + 2\mu \right) & 0 & 0 & 0 & 0  \\
+ \lambda&0&0&0&0 \\
+ 0&\mu&0&0&0
+\end{pmatrix}
+```
+and
+```math
+F_2 =
+\begin{pmatrix}
+ 0 & 0 & 0 &  0 & 1/\rho \\
+ 0 & 0 &   0 &  1/\rho &  0\\
+ 0 & \lambda & 0 & 0 & 0  \\
+ 0 & \left(\lambda + 2\mu \right) & 0 & 0 & 0 \\
+ \mu & 0 & 0 & 0 & 0
+\end{pmatrix}
+```
+
+In elastic materials, there are two types of waves which can propagate through the domain
+p-waves and s-waves, their speeds are
+ 
+```math
+c_s=\sqrt{\frac{\mu}{\rho}}
+```
+and
+```math
+c_p=\sqrt{\frac{\lambda + 2 \mu}{\rho}}
+```
+
+These speeds also define the eigenvalues of the flux:
+```math
+\left( -c_p, -c_s , 0 , c_s , c_p \right)
+```

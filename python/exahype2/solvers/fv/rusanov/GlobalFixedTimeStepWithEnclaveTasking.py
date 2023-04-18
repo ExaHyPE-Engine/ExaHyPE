@@ -11,8 +11,8 @@ from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
 
-from .kernels import SolverVariant
-from .kernels import RiemannKernelVariant
+from exahype2.solvers.fv.kernels import SolverVariant    
+from exahype2.solvers.fv.kernels import KernelVariant    
 
 from exahype2.solvers.fv.FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 
@@ -39,7 +39,16 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
       to max_volume_h.
   
     """
-    super(GlobalFixedTimeStepWithEnclaveTasking,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties,pde_terms_without_state) 
+    super(GlobalFixedTimeStepWithEnclaveTasking,self).__init__(name, 
+                                                               patch_size, 
+                                                               overlap, 
+                                                               unknowns, 
+                                                               auxiliary_variables, 
+                                                               min_volume_h, 
+                                                               max_volume_h, 
+                                                               plot_grid_properties,
+                                                               pde_terms_without_state,
+                                                               kernel_namespace="rusanov") 
     
     self._normalised_time_step_size = normalised_time_step_size
 
@@ -86,22 +95,22 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._compute_kernel_call            = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=False, 
-      solver_variant = SolverVariant.WithVirtualFunctions,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap
+      solver_variant         = SolverVariant.WithVirtualFunctions,
+      kernel_variant         = KernelVariant.PatchWiseAoSHeap
     )
     
     self._fused_compute_kernel_call_cpu  = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=False, 
       solver_variant = SolverVariant.Stateless,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseInSitu
+      kernel_variant         = KernelVariant.PatchWiseAoSHeap
     )
 
     self._fused_compute_kernel_call_gpu  = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
-      compute_max_eigenvalue_of_next_time_step=False, 
-      solver_variant = SolverVariant.Accelerator,
-      riemann_kernel_variant = RiemannKernelVariant.BatchedAoSoAHeap
+      compute_max_eigenvalue_of_next_time_step = False, 
+      solver_variant                           = SolverVariant.AcceleratorWithExplicitCopy,
+      kernel_variant         = KernelVariant.GenericAoS
     )
 
     solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size,True)

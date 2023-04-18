@@ -2,7 +2,7 @@
 
 
 template <>
-void peano4::stacks::STDVectorStack<double>::startSend(int rank, int tag, MPI_Comm comm) {
+void peano4::stacks::STDVectorStack<double>::startSend(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm) {
   #ifdef Parallel
   assertion( _ioMode==IOMode::None );
   _ioMode = IOMode::MPISend;
@@ -23,7 +23,7 @@ void peano4::stacks::STDVectorStack<double>::startSend(int rank, int tag, MPI_Co
 
 
 template <>
-void peano4::stacks::STDVectorStack<double>::startReceive(int rank, int tag, MPI_Comm comm, int numberOfElements) {
+void peano4::stacks::STDVectorStack<double>::startReceive(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm, int numberOfElements) {
   #ifdef Parallel
   logTraceInWith3Arguments( "startReceive(int,int,int)", rank, tag, numberOfElements );
   assertion3( _ioMode==IOMode::None, rank, tag, numberOfElements );

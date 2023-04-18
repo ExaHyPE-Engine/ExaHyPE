@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_DATAMANAGEMENT_VERTEX_MARKER_H_
-#define _PEANO4_DATAMANAGEMENT_VERTEX_MARKER_H_
+#pragma once
 
 
 #include "peano4/utils/Globals.h"
@@ -16,11 +15,30 @@ namespace peano4 {
 }
 
 
+/**
+ * Forward declarations for test purposes
+ */
+
+namespace toolbox {
+  namespace particles {
+    namespace tests {
+      class MultiscaleTransitionsTest;
+    }
+  }
+}
+
+
+
 std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::VertexMarker& marker );
 
 
 struct peano4::datamanagement::VertexMarker {
   private:
+    /**
+     * For unit tests
+     */
+    friend class toolbox::particles::tests::MultiscaleTransitionsTest;
+
     /**
      * Centre of the underlying cell
      */
@@ -45,6 +63,13 @@ struct peano4::datamanagement::VertexMarker {
      * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
      */
     tarch::la::Vector<Dimensions,int>  _relativePositionOfCellWithinFatherCell;
+
+    /**
+     * Some unit tests prefer to construct a marker manually, so I offer a
+     * dummy default constructor. The normal code should and does not use a
+     * default constructor.
+     */
+    VertexMarker() = default;
   public:
     VertexMarker(const peano4::grid::GridTraversalEvent& event, int select = 0);
 
@@ -63,6 +88,10 @@ struct peano4::datamanagement::VertexMarker {
      * @return Position of ith vertex
      */
     tarch::la::Vector<Dimensions,double> x(int i) const;
+
+    /**
+     * @return Position in space of currently selected vertex.
+     */
     tarch::la::Vector<Dimensions,double> x() const;
 
     tarch::la::Vector<Dimensions,double>  h() const;
@@ -145,8 +174,18 @@ struct peano4::datamanagement::VertexMarker {
     /**
      * Will return true if x is contained within the adjacent cells. You can use
      * shrink those cells via the additional parameter if you want.
+     *
+     * The geometric operation is defined over the closed interval, i.e. we
+     * look into the adjacent cubes to the vertex and their faces still count as
+     * "inside". If x is exactly on the face of a cube adjacent to the vertex,
+     * we will get back a true. Indeed, the cubes are even slightly bigger due
+     * to machine precision.
      */
-    bool isContainedInAdjacentCells( const tarch::la::Vector<Dimensions,double>& x, double scaleAdjacentCells = 1.0 ) const;
+    bool isContainedInAdjacentCells(
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       scaleAdjacentCells = 1.0,
+      double                                       tolerance          = tarch::la::NUMERICAL_ZERO_DIFFERENCE
+    ) const;
 
     /**
      * Each vertex is surrounded by @f$ 2^d @f$ cells. In reality,
@@ -173,4 +212,3 @@ struct peano4::datamanagement::VertexMarker {
 
 
 
-#endif

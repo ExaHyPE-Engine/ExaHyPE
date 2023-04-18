@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_PARTICLES_FILE_READER_
-#define _TOOLBOX_PARTICLES_FILE_READER_
+#pragma once
 
 
 #include "peano4/utils/Globals.h"
@@ -76,4 +75,3 @@ class toolbox::particles::FileReader {
     bool getNumberOfCoordinates() const;
 };
 
-#endif

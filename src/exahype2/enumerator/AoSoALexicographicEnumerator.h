@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_ENUMERATOR_AOSOA_LEXICOGRAPHIC_ENUMERATOR_H_
-#define _EXAHYPE2_ENUMERATOR_AOSOA_LEXICOGRAPHIC_ENUMERATOR_H_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -61,7 +60,7 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&  volumeIndex,
           int unknown
         ) const InlineMethod {
-          if (Dimensions==2) {
+          if constexpr (Dimensions==2) {
             return (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
                  + unknown * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                  + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
@@ -83,8 +82,8 @@ namespace exahype2 {
         /**
          * Returns the total size.
          */
-        int size() const {
-          if (Dimensions==2) {
+        int size() const InlineMethod {
+          if constexpr (Dimensions==2) {
             return _numberOfPatches
                 * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                 * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
@@ -113,5 +112,4 @@ namespace exahype2 {
 }
 
 
-#endif
 

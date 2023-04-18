@@ -1,5 +1,4 @@
-#ifndef _CONVERT_DATA_PATCH_DATA_H_
-#define _CONVERT_DATA_PATCH_DATA_H_
+#pragma once
 
 #include <string>
 #include <iostream>
@@ -63,4 +62,3 @@ class convert::data::PatchData {
     void copyData( const PatchData& otherData, int dofsPerAxis, int unknownsPerDoF );
 };
 
-#endif

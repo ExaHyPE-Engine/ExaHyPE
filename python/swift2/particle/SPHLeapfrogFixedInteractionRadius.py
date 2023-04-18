@@ -1,0 +1,676 @@
+# This file is part of the SWIFT2 project. For conditions of distribution and 
+# use, please see the copyright notice at www.peano-framework.org
+from swift2.particle.Particle      import Particle
+from swift2.particle.AlgorithmStep import AlgorithmStep
+
+import peano4
+import dastgen2
+import peano4.dastgen2
+
+
+class SPHLeapfrogFixedInteractionRadius(Particle):
+  """
+
+  Same as LeapfrogFixedInteractionRadius but augmented for full SPH.
+  Implements the Minimal SPH scheme.
+  
+  Simple particle with a fixed interaction radius h which moves according
+  to leapfrog KDK scheme. 
+  By default, it uses global time stepping, 
+  i.e. the combination of maximum velocity and minimal mesh size determines
+  the time step size of the subsequent time step. Besides the default 
+  variables x and h, the particle has the following properties:
+  
+    - a vector a which is the acceleration;
+    - a vector v which is the velocity.
+    
+  You can add further properties via
+    
+         myparticle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("myFancyArray","Dimensions") )
+ 
+  in your code. Or you can create a subclass which adds additional fields 
+  after it has called the baseline constructor.
+
+  You will need to add further properties for any SPH project.
+  
+  ## Force calculation
+  
+  particle_particle_interaction_over_particle_sets_kernel is a C++ string which defines a force between two
+  particles. It has access to three important objects:
+  
+  - localParticles is a container (list) over pointers to local particles
+  - activeParticles is a container (list) over pointers to active particles
+  - marker is a cell marker which identifies the current cell.
+  
+  Please consult the guidebook for a definition of local and active particles
+  but take into account that the local particles always are a subset of the 
+  active particles.
+  
+  Besides the actual particle-to-particle calculation, i.e. a force 
+  calculation, users can also provide kernels that kick in when you touch 
+  particles for the first time before you actually compute any 
+  particle-particle interaction, and there is a plug-in point what you do 
+  just once the particle-particle interaction has terminated. The latter 
+  point is reached before we do the actual time stepping. In both plug-in
+  points, you have a vertex marker which gives you the position of the 
+  vertex to which a particular is associated, and you have the localParticles.
+  This is a vector of pointers in this particular case.
+ 
+  ## Attributes
+  
+  name: String
+    To be in line with other conventions, I recommend you start with an 
+    uppercase letter. This has to be a valid C++ identifier, i.e. don't 
+    use any special symbols besides an underscore.
+   
+  @see peano4::datamanagement::CellMarker
+  @see peano4::datamanagement::VertexMarker
+  
+  """
+  def __init__(self, 
+               name, 
+               dimensions_hydro=2,
+               cfl_factor=0.1, 
+               initial_time_step_size=1e-4,
+               constant_time_step_size=True,
+               swift_project_namespace="SPH",
+               sph_flavour = 'minimal',
+               is_sph = True,
+               particles_per_cell = 0, # makes no sense, and should likely be forbidden
+               min_h = 0.3,
+               max_h = 0.3,
+               ):
+    super( SPHLeapfrogFixedInteractionRadius , self ).__init__( name,
+                                                                particles_per_cell,
+                                                                min_h,
+                                                                max_h,
+                                                               )
+    
+    # Simulation properties
+    self._name = name
+    self._cfl_factor                = cfl_factor
+    self._initial_time_step_size    = initial_time_step_size
+
+    # Whether we want constant dt
+    if(constant_time_step_size==True): adjustTimeStepSize='false'
+    else: adjustTimeStepSize='true'
+    self._adjustTimeStepSize = adjustTimeStepSize
+
+    # SPH-check Boolean for Cpp kernels. Maybe these can be replaced by
+    # compiler directives to get better performance.
+    if(is_sph==True): isSPH='true'
+    else: isSPH='false'
+    self._is_sph = isSPH
+                    
+    self._sph_flavour = sph_flavour
+
+    # SPH parameters (default values)
+    self._hydroDimensions = dimensions_hydro
+    self._eta_factor = 1.235
+    self._h_hydro_min = 1e-6
+    self._h_hydro_max = 1.0 / 3.0 / 2    # Approximated value for coarsest grid level
+    self._h_tolerance = 1e-4
+    self._h_max_iterations = 10
+
+    # Minimal SPH parameters
+    self._alpha_av = 0.8
+    self._beta_av = 3.0
+
+    # Mantissa size. Can be used for Pawel's clang truncation.
+    # Default value corresponds to IEEE doubles.
+    self._mantissa_size = 52
+
+    # Project namespace to have consistent use of exported Constants in kernels
+    # Not used right now.
+    self._swift_project_namespace = swift_project_namespace
+    
+    # Baseline particle properties --------------------------------------------------------------
+    self.mass             = dastgen2.attributes.Double("mass",
+                                                              valid_mantissa_bits=self._mantissa_size)
+    self.velocity         = peano4.dastgen2.Peano4DoubleArray("v","Dimensions",
+                                                              valid_mantissa_bits=self._mantissa_size)
+    self.acceleration     = peano4.dastgen2.Peano4DoubleArray("a","Dimensions",
+                                                              valid_mantissa_bits=self._mantissa_size)
+    self.data.add_attribute( self.mass )
+    self.data.add_attribute( self.velocity )
+    self.data.add_attribute( self.acceleration )
+
+    # Basic SPH properties
+    self.density = dastgen2.attributes.Double("density",
+                                              valid_mantissa_bits=self._mantissa_size)
+    self.pressure= dastgen2.attributes.Double("pressure",
+                                              valid_mantissa_bits=self._mantissa_size)
+    self.smoothL = dastgen2.attributes.Double("smoothingLength",
+                                              valid_mantissa_bits=self._mantissa_size)
+    self.u       = dastgen2.attributes.Double("u",
+                                              valid_mantissa_bits=self._mantissa_size)
+    self.uDot    = dastgen2.attributes.Double("uDot",
+                                              valid_mantissa_bits=self._mantissa_size)
+    self.data.add_attribute( self.density )
+    self.data.add_attribute( self.pressure )
+    self.data.add_attribute( self.smoothL )
+    self.data.add_attribute( self.u )
+    self.data.add_attribute( self.uDot )
+
+    # Variable smoothing length scheme ---------------------------------------------
+    self.f        = dastgen2.attributes.Double("f",
+                                               valid_mantissa_bits=self._mantissa_size)
+    self.wcount_dh= dastgen2.attributes.Double("wcount_dh",
+                                               valid_mantissa_bits=self._mantissa_size)
+    self.rho_dh   = dastgen2.attributes.Double("rho_dh",
+                                               valid_mantissa_bits=self._mantissa_size)
+    self.hleft    = dastgen2.attributes.Double("hLeft",
+                                               valid_mantissa_bits=self._mantissa_size)
+    self.hright   = dastgen2.attributes.Double("hRight",
+                                               valid_mantissa_bits=self._mantissa_size)
+    self.data.add_attribute(self.f)
+    self.data.add_attribute(self.wcount_dh)
+    self.data.add_attribute(self.rho_dh)
+    self.data.add_attribute(self.hleft)
+    self.data.add_attribute(self.hright)
+
+    # Newton-Raphson iterations ----------------------------------------------------
+    self.smoothL_prev   = dastgen2.attributes.Double("smoothingLengthPrevious",
+                                                     valid_mantissa_bits=self._mantissa_size)
+    self.wcount         = dastgen2.attributes.Double("wcount",
+                                                     valid_mantissa_bits=self._mantissa_size)
+    self.hDot           = dastgen2.attributes.Double("hDot",
+                                                     valid_mantissa_bits=self._mantissa_size)
+    self.residual       = dastgen2.attributes.Double("residual",
+                                                     valid_mantissa_bits=self._mantissa_size)
+    self.iteration_count= dastgen2.attributes.Integer("iterCount")
+    self.has_converged  = dastgen2.attributes.Boolean("hasConverged")
+    self.data.add_attribute(self.smoothL_prev)
+    self.data.add_attribute(self.wcount)
+    self.data.add_attribute(self.hDot)
+    self.data.add_attribute(self.residual)
+    self.data.add_attribute(self.iteration_count)
+    self.data.add_attribute(self.has_converged)
+
+    # Artificial viscosity scheme -------------------------------------------------
+    self.balsara   = dastgen2.attributes.Double("balsara",
+                                                valid_mantissa_bits=self._mantissa_size)
+    if( self._hydroDimensions == 3 ):
+      self.rot_v= peano4.dastgen2.Peano4DoubleArray("rot_v", "Dimensions",
+                                                valid_mantissa_bits=self._mantissa_size)
+    else: # Curl is a scalar in lower dimensions
+      self.rot_v     = dastgen2.attributes.Double("rot_v",
+                                                valid_mantissa_bits=self._mantissa_size)    # In 2D sims it only has 1 component (z)
+    self.div_v     = dastgen2.attributes.Double("div_v",
+                                                valid_mantissa_bits=self._mantissa_size)
+    self.v_sig_AV  = dastgen2.attributes.Double("v_sig_AV",
+                                                valid_mantissa_bits=self._mantissa_size)
+    self.soundSpeed= dastgen2.attributes.Double("soundSpeed",
+                                                valid_mantissa_bits=self._mantissa_size)
+    self.data.add_attribute(self.balsara)
+    self.data.add_attribute(self.rot_v)
+    self.data.add_attribute(self.div_v)
+    self.data.add_attribute(self.v_sig_AV)
+    self.data.add_attribute(self.soundSpeed)
+
+    # Extended arrays for time integration consistency
+    self.v_full = peano4.dastgen2.Peano4DoubleArray("v_full","Dimensions",
+                                                    valid_mantissa_bits=self._mantissa_size)
+    self.u_full = dastgen2.attributes.Double("u_full",
+                                                    valid_mantissa_bits=self._mantissa_size)
+    self.data.add_attribute(self.v_full)
+    self.data.add_attribute(self.u_full)
+
+    # Extra ------------------------------------------------------------------------
+    self.has_no_neighbours= dastgen2.attributes.Boolean("hasNoNeighbours")
+    self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
+    self.Ncount           = dastgen2.attributes.Integer("Ncount")              # integer number count
+    self.part_id          = dastgen2.attributes.Integer("partid")
+    self.data.add_attribute(self.has_no_neighbours)
+    self.data.add_attribute(self.is_boundary_part)
+    self.data.add_attribute(self.Ncount)
+    self.data.add_attribute(self.part_id)
+
+    pass
+
+
+  def algorithm_steps(self):
+    """
+    
+    Leapfrog consists basically of four steps per particle. We first 
+    determine the force. Then we update the velocity by half a timestep and move
+    the particle by a full timestep. Then the force is re-computed and the
+    second half of the velocity update is done.
+    Some variations of this KDK form re-arrange the steps executed per timestep
+    to avoid a second force loop.
+    """
+
+    return [ 
+      AlgorithmStep( 
+        name                           = "FlagBoundaryParticles",          
+        dependencies                   = AlgorithmStep.Dependencies.SELF, 
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+        touch_vertex_first_time_kernel = """
+                                         """,
+        touch_vertex_last_time_kernel  =
+                    """::swift2::kernels::flagBoundaryParticles(localParticles, {0} );""".format("::".join(self._swift_project_namespace)+"::HYDRO_PART_NUMBER"),
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/kernels/ParticleParticleInteraction.h"
+                                         #include "swift2/kernels/ParticleSelfInteraction.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """,
+      ),
+      AlgorithmStep( 
+        name                           = "DensityLoopWithConstantSmoothingLengthInitial",          
+        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+        touch_vertex_first_time_kernel = """
+                                         ::swift2::kernels::prepareDensityCalculation( localParticles );
+                                         """,
+        cell_kernel                    = """
+                                         ::swift2::kernels::computeDensity( 
+                                           localParticles, 
+                                           activeParticles,
+                                           {}
+                                         );
+                                         """.format(self._hydroDimensions),
+
+        touch_vertex_last_time_kernel  = """
+                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
+                                             localParticles,
+                                             {},
+                                             {},
+                                             {}
+                                             );
+                                         """.format(self._hydroDimensions,
+                                                    self._eta_factor,
+                                                    self._alpha_av),
+ 
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/kernels/ParticleParticleInteraction.h"
+                                         #include "swift2/kernels/ParticleSelfInteraction.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """,
+      ),
+      AlgorithmStep( 
+        name                           = "ForceLoopInitial",          
+        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+        touch_vertex_first_time_kernel = """
+                                         ::swift2::kernels::prepareHydroForceCalculation( localParticles );
+                                         """,
+
+        cell_kernel                    = """
+                                         ::swift2::kernels::computeHydroForce( 
+                                           localParticles, 
+                                           activeParticles,
+                                           {},
+                                           {}
+                                         );
+                                         """.format(self._hydroDimensions,
+                                                    self._beta_av),
+
+        touch_vertex_last_time_kernel  = """
+                                         ::swift2::kernels::endHydroForceCalculation(
+                                             localParticles,
+                                             {}
+                                             );
+                                         """.format(self._hydroDimensions),
+ 
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/kernels/ParticleParticleInteraction.h"
+                                         #include "swift2/kernels/ParticleSelfInteraction.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """,
+      ),
+      AlgorithmStep( 
+        name                           = "Kick1", 
+        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+        touch_vertex_last_time_kernel  =
+                    """::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
+                        localParticles, 1, {} );""".format(self._is_sph),
+        prepare_traversal_kernel       =
+                    """::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>({},{},{});""".format(self._name,
+                                                                                                              self._cfl_factor,
+                                                                                                              self._initial_time_step_size,
+                                                                                                              self._adjustTimeStepSize),
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/timestepping/Leapfrog.h"
+                                         #include "swift2/timestepping/GlobalTimeStepping.h"
+                                         #include "swift2/timestepping/TimeStepping.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """
+      ),
+      AlgorithmStep( 
+        name                           = "KickExtra1", 
+        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+        touch_vertex_last_time_kernel  =
+                    """::swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
+                        localParticles );""",
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/timestepping/Leapfrog.h"
+                                         #include "swift2/timestepping/GlobalTimeStepping.h"
+                                         #include "swift2/timestepping/TimeStepping.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """
+      ),
+      AlgorithmStep( 
+        name                           = "Drift", 
+        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+        effect                         = AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
+        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+        touch_vertex_last_time_kernel  = """::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( localParticles );""",
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/timestepping/Leapfrog.h"
+                                         #include "swift2/timestepping/GlobalTimeStepping.h"
+                                         #include "swift2/timestepping/TimeStepping.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """
+      ),
+      AlgorithmStep( 
+        name                           = "PredictHydro", 
+        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+        touch_vertex_last_time_kernel  =
+                    """::swift2::timestepping::computePredictHydro(
+                        localParticles, {} );""".format(self._hydroDimensions),
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/timestepping/Leapfrog.h"
+                                         #include "swift2/timestepping/GlobalTimeStepping.h"
+                                         #include "swift2/timestepping/TimeStepping.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """
+      ),
+      AlgorithmStep( 
+        name                           = "DensityLoopWithConstantSmoothingLength",          
+        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+        touch_vertex_first_time_kernel = """
+                                         ::swift2::kernels::prepareDensityCalculation( localParticles );
+                                         """,
+
+        cell_kernel                    = """
+                                         ::swift2::kernels::computeDensity( 
+                                           localParticles, 
+                                           activeParticles,
+                                           {}
+                                         );
+                                         """.format(self._hydroDimensions),
+
+        touch_vertex_last_time_kernel  = """
+                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
+                                             localParticles,
+                                             {},
+                                             {},
+                                             {}
+                                             );
+                                         """.format(self._hydroDimensions,
+                                                    self._eta_factor,
+                                                    self._alpha_av),
+ 
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/kernels/ParticleParticleInteraction.h"
+                                         #include "swift2/kernels/ParticleSelfInteraction.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """,
+      ),
+      AlgorithmStep( 
+        name                           = "ForceLoop",          
+        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+        touch_vertex_first_time_kernel = """
+                                         ::swift2::kernels::prepareHydroForceCalculation( localParticles );
+                                         """,
+
+        cell_kernel                    = """
+                                         ::swift2::kernels::computeHydroForce( 
+                                           localParticles, 
+                                           activeParticles,
+                                           {},
+                                           {}
+                                         );
+                                         """.format(self._hydroDimensions,
+                                                    self._beta_av),
+
+        touch_vertex_last_time_kernel  = """
+                                         ::swift2::kernels::endHydroForceCalculation(
+                                             localParticles,
+                                             {}
+                                             );
+                                         """.format(self._hydroDimensions),
+ 
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/kernels/ParticleParticleInteraction.h"
+                                         #include "swift2/kernels/ParticleSelfInteraction.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """,
+      ),
+      AlgorithmStep( 
+        name                           = "Kick2", 
+        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+        touch_vertex_last_time_kernel  =
+                    """::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
+                        localParticles, 2, {} );""".format(self._is_sph),
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/timestepping/Leapfrog.h"
+                                         #include "swift2/timestepping/GlobalTimeStepping.h"
+                                         #include "swift2/timestepping/TimeStepping.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """
+      ),
+      AlgorithmStep( 
+        name                           = "KickExtra2", 
+        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+        touch_vertex_last_time_kernel  =
+                    """::swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
+                        localParticles );""",
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/timestepping/Leapfrog.h"
+                                         #include "swift2/timestepping/GlobalTimeStepping.h"
+                                         #include "swift2/timestepping/TimeStepping.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """
+      ),
+      AlgorithmStep( 
+        name                           = "ReduceGlobalQuantities", 
+        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+        effect                         = AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
+        cell_kernel                    = """::swift2::statistics::reduceVelocityAndCutOffRadius( localParticles );""",
+        prepare_traversal_kernel       = """
+                                         globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
+                                         globaldata::{PARTICLE}::getSpecies().clearVelocity();
+                                         """.replace( "{PARTICLE}", self._name ),
+        unprepare_traversal_kernel     = """
+                                         globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
+                                         ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
+                                         """.replace( "{PARTICLE}", self._name ),
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/statistics/Reports.h"
+                                         #include "swift2/statistics/Statistics.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """
+      ),
+    ]
+
+
+  @property
+  def eta_factor(self):
+    """
+  
+    Set the eta factor used by the SPH kernel to target a certain number of
+    neighbour particles.
+    The default value is eta = 1.235.
+  
+    """
+    return self._eta_factor
+
+
+  @eta_factor.setter
+  def eta_factor(self, eta_factor):
+    print('Set eta_factor method called.')
+    if(eta_factor <= 0):
+      raise ValueError("SPH eta factor value not valid.")
+    self._eta_factor = eta_factor
+
+
+  @property
+  def alpha_av(self):
+    """
+    
+    Viscosity parameters of the Minimal SPH model. Default SWIFT values are
+    alpha_av=0.8
+    and beta_av=3.
+  
+    """
+    return self._alpha_av
+
+  @alpha_av.setter
+  def alpha_av(self, alpha_av):
+    print('Set alpha_av method called.')
+    if(alpha_av <= 0):
+      raise ValueError("Value for the alpha_av viscosiy parameter not valid.")
+    self._alpha_av = alpha_av
+
+  @property
+  def beta_av(self):
+    return self._alpha_av
+
+  @beta_av.setter
+  def beta_av(self, beta_av):
+    print('Set beta_av method called.')
+    if(beta_av <= 0):
+      raise ValueError("Value for the beta_av viscosiy parameter not valid.")
+    self._beta_av = beta_av
+
+
+  @property
+  def h_hydro_min(self):
+    """
+    
+    Set the limits allowed for the SPH smoothing length. Notice that the max value
+    is bounded by Peano's cutoff radius as h_max = R_cutoff_max = max_grid_size /
+    gamma_k, where gamma_k is the SPH kernel factor that relates h and H.
+    Typically gamma_k = 2, so h_max = max_grid_size / 2.
+    
+    """
+    print('get h_hydro_min method called.')
+    return self._h_hydro_min
+
+  @h_hydro_min.setter
+  def h_hydro_min(self, h_hydro_min):
+    print('Set h_hydro_min method called.')
+    if(h_hydro_min > self._h_hydro_max):
+      raise ValueError("Min value of smoothing length larger than max allowed.")
+    self._h_hydro_min = h_hydro_min
+
+  @property
+  def h_hydro_max(self):
+    print('get h_hydro_max method called.')
+    return self._h_hydro_max
+
+  @h_hydro_max.setter
+  def h_hydro_max(self, h_hydro_max):
+    print('Set h_hydro_max method called.')
+    if(h_hydro_max < self._h_hydro_min):
+      raise ValueError("max value of smoothing length smaller than min allowed.")
+    self._h_hydro_max = h_hydro_max
+
+
+  @property
+  def h_tolerance(self):
+    """
+    
+    Tolerance for Newton-Raphson convergence criterion.
+    
+    """
+    print('get h_tolerance method called.')
+    return self._h_tolerance
+
+
+  @h_tolerance.setter
+  def h_tolerance(self, h_tolerance):
+    print('Set h_tolerance method called.')
+    if(h_tolerance > 1):
+      raise ValueError("Value of h_tolerance cannot be larger than 1.")
+    self._h_tolerance = h_tolerance
+
+
+  @property
+  def h_max_iterations(self):
+    """
+    Max number of iterations to adapt the SPH smoothing length
+    """
+    print('get h_max_iterations method called.')
+    return self._h_max_iterations
+
+
+  @h_max_iterations.setter
+  def h_max_iterations(self, h_max_iterations):
+    print('set h_max_iterations method called.')
+    if(h_max_iterations > 50):
+      raise ValueError("Value of h_max_iterations is too large.")
+    self._h_max_iterations = h_max_iterations
+
+
+  @property
+  def mantissa_size(self):
+    """
+    
+    Set the mantissa size of doubles and Peano double arrays if
+    we want to use reduced precission via Clang annotations. As a reference,
+    floats have mantissa size = 23.
+    
+    """
+    return self._mantissa_size
+
+
+  @mantissa_size.setter
+  def mantissa_size(self, mantissa_size):
+    print('Set mantissa_size method called.')
+    if(mantissa_size < 0):
+      raise ValueError("Mantissa size has to be larger than 0.")
+    self._mantissa_size = mantissa_size
+
+
+  def get_cpp_namespace_from_project_namespace(self):
+    """
+    
+    Transform namespace into cpp format. Could be used to append namespace to
+    constants in kernels (not used currently).
+    
+    """
+    namespace = ""
+    for entry in self._swift_project_namespace:
+      namespace = namespace + "::" + entry
+
+    namespace = namespace + "::"
+    print(namespace)
+

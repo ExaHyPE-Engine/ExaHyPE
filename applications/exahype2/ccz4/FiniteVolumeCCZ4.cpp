@@ -37,30 +37,45 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* t
 		tp->TP_epsilon=1e-6;}
 		
 	if (CCZ4swi==1){
-		tp->par_b=4.0;
+		tp->par_b=2.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
-		tp->target_M_plus=1.0;//adm mass
+		tp->target_M_plus=0.5;//adm mass
 		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.0; tp->par_P_plus[2]=0.0;//linear momentum
 		tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
-		tp->target_M_minus=1.0;//adm mass
+		tp->target_M_minus=0.5;//adm mass
 		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=0.0; tp->par_P_minus[2]=0.0;//linear momentum
 		tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
 		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 		tp->TP_epsilon=1e-6;}
 	
-	if (CCZ4swi==2){
-		tp->par_b=4.251;
+  //following data reference: https://journals.aps.org/prd/pdf/10.1103/PhysRevD.69.024006
+	if (CCZ4swi==2 and CCZ4BBHType==1){
+		tp->par_b=3.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
 		tp->give_bare_mass=true;//use puncture mass instead of adm mass
-		tp->par_m_plus=0.494; tp->par_m_minus=0.494;
+		tp->par_m_plus=0.47656; tp->par_m_minus=0.47656;
 		//tp->target_M_plus=999;//adm mass
-		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.1091; tp->par_P_plus[2]=0.0;//linear momentum
+		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.13808; tp->par_P_plus[2]=0.0;//linear momentum
 		tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
 		//tp->target_M_minus=999;//adm mass
-		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.1091; tp->par_P_minus[2]=0.0;//linear momentum
+		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.13808; tp->par_P_minus[2]=0.0;//linear momentum
 		tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
 		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 		tp->TP_epsilon=1e-6;}
+
+  if (CCZ4swi==2 and CCZ4BBHType==2){
+    tp->par_b=2.0;
+    tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
+    tp->give_bare_mass=true;//use puncture mass instead of adm mass
+    tp->par_m_plus=0.46477; tp->par_m_minus=0.46477;
+    //tp->target_M_plus=999;//adm mass
+    tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.19243; tp->par_P_plus[2]=0.0;//linear momentum
+    tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
+    //tp->target_M_minus=999;//adm mass
+    tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.19243; tp->par_P_minus[2]=0.0;//linear momentum
+    tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin    
+    tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
+    tp->TP_epsilon=1e-6;}
 
 	if (CCZ4swi==3){
 		double D=10.0, q=36.0/29.0, chip=0.31, chim=-0.46, M=1.0;
@@ -96,7 +111,7 @@ applications::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   }
   #endif
   else {
-    std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
+    //std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
   }
 }
 
@@ -116,6 +131,9 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   }
   else if ( Scenario==1 ) {
     applications::exahype2::ccz4::linearWave(Q, volumeX, 0);
+  }
+  else if ( Scenario==4 ) {
+    applications::exahype2::ccz4::flat(Q, volumeX, 0);
   }
   #ifdef IncludeTwoPunctures
   else if ( Scenario==2 ) {
@@ -294,21 +312,22 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   double t
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-  //if (volumeCentre(0)>1.2) {result=::exahype2::RefinementCommand::Refine;}
-  double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
-  if (CCZ4ReSwi==1){ //radius based
-    if (radius<0.05) {result=::exahype2::RefinementCommand::Refine;}
-  }
-  if (CCZ4ReSwi==2){ //single black hole
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
-      constexpr int NumberOfRefinementLayers = 3;
-//    current "standard" refinement pattern
-      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5};
-      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.0};
-//    with some alter
-//      double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
-//      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15};
 
+  const double radius = tarch::la::norm2( volumeCentre );
+  //
+  // see documentation in header file
+  //
+  if (CCZ4ReSwi==1) { //radius based
+    if (radius<0.2) {
+      result=::exahype2::RefinementCommand::Refine;
+    }
+  }
+  if (CCZ4ReSwi==2) { //
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      constexpr int NumberOfRefinementLayers = 2;
+//    current "standard" refinement pattern
+      double Radius[NumberOfRefinementLayers] = {4, 2.5};
+      double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {
         if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
@@ -317,9 +336,16 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
       }
     }
   }
-  if (CCZ4ReSwi==3){ //binary black holes
-  double radius1=(volumeCentre(0)-4.251)*(volumeCentre(0)-4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
-  double radius2=(volumeCentre(0)+4.251)*(volumeCentre(0)+4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+  if (CCZ4ReSwi==3) { //binary black holes
+    //double radius1=(volumeCentre(0)-4.251)*(volumeCentre(0)-4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
+    //double radius2=(volumeCentre(0)+4.251)*(volumeCentre(0)+4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
+
+    tarch::la::Vector<Dimensions,double> leftBH  = {-4.241, 0.0, 0.0};
+    tarch::la::Vector<Dimensions,double> rightBH = { 4.241, 0.0, 0.0};
+
+    const double radius1 = tarch::la::norm2( volumeCentre - leftBH  );
+    const double radius2 = tarch::la::norm2( volumeCentre - rightBH );
+
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       if ( ((radius1<5) or (radius2<5)) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
       else if ((radius1<2.5) or (radius2<2.5)) { result=::exahype2::RefinementCommand::Refine; }
@@ -345,12 +371,11 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
       }
     }
   }
-  if (CCZ4ReSwi==6){ //single black hole, higher level of amr
+  if (CCZ4ReSwi==8){ //single black hole, higher level of amr
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
-      constexpr int NumberOfRefinementLayers = 5;
- //   with some alter
-      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5, 0.5, 0.2};
-      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.04, 0.01, 0.004};
+      constexpr int NumberOfRefinementLayers = 1;
+      double Radius[NumberOfRefinementLayers] = {2};
+      double MaxH[NumberOfRefinementLayers]   = {0.04};
 
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {
@@ -360,14 +385,46 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
       }
     }
   }
-  if (CCZ4ReSwi==5){ //single black hole, cubic refinement??
+  if (CCZ4ReSwi==5){ //single black hole, decent refinement
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       constexpr int NumberOfRefinementLayers = 3;
-      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5};
-      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.0};
+//    current "standard" refinement pattern
+      double Radius[NumberOfRefinementLayers] = {3.0, 1.0, 0.5};
+      double MaxH[NumberOfRefinementLayers]   = {0.2, 0.06, 0.02};
+//    with some alter
+//      double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
+//      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15};
+
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {
-        if ( std::abs(volumeCentre(0))<Radius[i] and std::abs(volumeCentre(1))<Radius[i] and std::abs(volumeCentre(2))<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
+        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
+          result=::exahype2::RefinementCommand::Refine;
+        }
+      }
+    }
+  }
+  if (CCZ4ReSwi==6){
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      constexpr int NumberOfRefinementLayers = 2;
+      double Radius[NumberOfRefinementLayers] = {5, 3.5};
+      double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
+
+      result = ::exahype2::RefinementCommand::Keep;
+      for (int i=0; i<NumberOfRefinementLayers; i++) {
+        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
+          result=::exahype2::RefinementCommand::Refine;
+        }
+      }
+    }
+  }
+  if (CCZ4ReSwi==7){ 
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      constexpr int NumberOfRefinementLayers = 2;
+      double Radius[NumberOfRefinementLayers] = {3.0, 1.5};
+      double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
+      result = ::exahype2::RefinementCommand::Keep;
+      for (int i=0; i<NumberOfRefinementLayers; i++) {
+        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
           result=::exahype2::RefinementCommand::Refine;
         }
       }

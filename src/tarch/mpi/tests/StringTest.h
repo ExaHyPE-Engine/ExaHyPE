@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MPI_TESTS_STRING_TEST_H_
-#define _TARCH_MPI_TESTS_STRING_TEST_H_
+#pragma once
 
 
 #include "tarch/tests/TestCase.h"
@@ -38,4 +37,3 @@ class tarch::mpi::tests::StringTest: public tarch::tests::TestCase {
     void run() override;
 };
 
-#endif

@@ -6,6 +6,7 @@
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/accelerator/Device.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/BooleanSemaphore.h"
 #include "tarch/tarch.h"
@@ -74,9 +75,9 @@ void peano4:: writeCopyrightMessage() {
     buildInfo += ", no gpu support";
     #endif
 
-    if (tarch::multicore::Core::getInstance().getNumberOfGPUs()>0) {
+    if (tarch::accelerator::Device::getInstance().getNumberOfDevices()>0) {
       buildInfo += " (";
-      buildInfo += std::to_string( tarch::multicore::Core::getInstance().getNumberOfGPUs() );
+      buildInfo += std::to_string( tarch::accelerator::Device::getInstance().getNumberOfDevices() );
       buildInfo += " gpus)";
     }
 

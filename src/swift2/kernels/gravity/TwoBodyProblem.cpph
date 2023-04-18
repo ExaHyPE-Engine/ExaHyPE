@@ -1,0 +1,47 @@
+#include "swift2/kernels/kernel_hydro.h"
+#include "swift2/kernels/equation_of_state.h"
+
+
+template <typename ParticleContainer>
+void swift2::kernels::gravity::computeGravitationalForce(
+  const ParticleContainer&   localParticles,
+  const ParticleContainer&   activeParticles
+) {
+  for (auto* localParticle: localParticles ) {
+    if ( not localParticle->getCellHasUpdatedParticle() ) {
+      for (auto* activeParticle: activeParticles ) {
+
+        #if Dimensions==2
+        tarch::la::Vector<Dimensions,double> pos_sun = {benchmarks::swift2::planetorbit::SUN_X_COORD,benchmarks::swift2::planetorbit::SUN_Y_COORD};
+        #else
+        tarch::la::Vector<Dimensions,double> pos_sun = {benchmarks::swift2::planetorbit::SUN_X_COORD,benchmarks::swift2::planetorbit::SUN_Y_COORD,0.0};
+        #endif
+
+         /* G_NEWTON in internal units */
+        double const L3 = benchmarks::swift2::planetorbit::LENGTH_UNIT * benchmarks::swift2::planetorbit::LENGTH_UNIT * benchmarks::swift2::planetorbit::LENGTH_UNIT;
+        double const T2 = benchmarks::swift2::planetorbit::PERIOD * benchmarks::swift2::planetorbit::PERIOD;
+        double const GN = benchmarks::swift2::planetorbit::G_NEWTON * benchmarks::swift2::planetorbit::M_SUN * T2 / L3;
+
+        tarch::la::Vector<Dimensions,double> earthSunDistance = localParticle->getX() - pos_sun;
+        const double r = tarch::la::norm2(earthSunDistance);
+        if (tarch::la::greater(r,0.0) ) {
+          const double r_inv =  1.0 / r;     
+          localParticle->setA( - GN * earthSunDistance * (r_inv * r_inv * r_inv) );
+
+          /* Update Energy */
+          const double vel = tarch::la::norm2( localParticle->getV() );
+          const double E_kin = 0.5 * vel * vel;
+          const double E_pot = - GN * r_inv;
+
+          /* Update total energy (overall minus sign) */
+          localParticle->setEnergyKin( E_kin );
+          localParticle->setEnergyPot(-E_pot );
+          localParticle->setEnergyTot( - ( E_kin + E_pot ) );
+        }
+
+
+      }
+    }
+  }
+}
+

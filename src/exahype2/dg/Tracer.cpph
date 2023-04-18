@@ -1,0 +1,51 @@
+#include "DGUtils.h"
+
+
+template <typename Particle, int SourceIndex, int DestIndex>
+void exahype2::dg::projectValueOntoParticle(
+  const peano4::datamanagement::CellMarker&    marker,
+  int                                          order,
+  const double* __restrict__                   QuadratureNodes1d,
+  int                                          unknownsPerDoF,
+  const double* __restrict__                   Q,
+  Particle&                                    particle
+) {
+  particle.setData(DestIndex) =
+    ::exahype2::dg::evaluatePolynomial(
+      marker,
+      order,
+      QuadratureNodes1d,
+      unknownsPerDoF,
+      Q,
+      particle.getX(),
+      SourceIndex
+    );
+}
+
+
+template <typename Particle, typename QStoreType>
+void exahype2::dg::projectAllValuesOntoParticle(
+  const peano4::datamanagement::CellMarker&    marker,
+  int                                          order,
+  const double* __restrict__                   QuadratureNodes1d,
+  int                                          unknownsPerDoF,
+  const QStoreType* __restrict__               Q,
+  Particle&                                    particle
+) {
+  for (int unknown=0; unknown<unknownsPerDoF; unknown++) {
+    QStoreType value = ::exahype2::dg::evaluatePolynomial(
+        marker,
+        order,
+        QuadratureNodes1d,
+        unknownsPerDoF,
+        Q,
+        particle.getX(),
+        unknown
+      );
+
+    assertion(value==value);
+    particle.setData(
+      unknown, value
+    );
+  }
+}

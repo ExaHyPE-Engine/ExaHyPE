@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_ENCLAVE_TASK_H_
-#define _EXAHYPE2_ENCLAVE_TASK_H_
+#pragma once
 
 
 #include "config.h"
@@ -21,6 +20,8 @@ namespace exahype2 {
 
 
 /**
+ * Base class for all enclave tasks
+ *
  * Please study the enclave task in tandem with the EnclaveBookkeeping. Enclave
  * tasks use the bookkeeping to register themselves (obtain a task number). The
  * bookkeeping thus is aware which enclave tasks are outstanding still. Once an
@@ -42,7 +43,13 @@ namespace exahype2 {
  * ## Data ownership
  *
  * - The run() operation allocates the output data and then invokes the functor.
- * - I assume that the functor releases the input data.
+ * - I assume that the functor frees the input data.
+ * - The task allocated the output value within _outputValues itself before it
+ *   invokes the actual task functor. This happens in computeTask(). We have the
+ *   following sequence: run() calls computeTask() calls the user's functor. The
+ *   size of the output field is specified in the constructor argument. The
+ *   output will be on the heap and is eventually passed over to the enclave
+ *   bookkeeping.
  *
  * ## SmartMPI
  * 
@@ -62,10 +69,13 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
 
     const ::peano4::datamanagement::CellMarker   _marker;
     /**
-     * These are the reconstructed values
+     * These are the reconstructed values in the Finite Volume sense and the
+     * linear combination in the DG solver. In both cases, the enclave task
+     * will free the memory once it has terminated, so the attribute may not
+     * be const here.
      */
-    double*                                      _inputValues;
-    double*                                      _outputValues;
+    double* __restrict__                         _inputValues;
+    double* __restrict__                         _outputValues;
     const double                                 _t;
     const double                                 _dt;
     int                                          _numberOfInputValues;
@@ -81,13 +91,15 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
      * <pre>
     static int enclaveTaskTypeId = peano4::parallel::Tasks::getTaskType("{{SOLVER_INSTANCE}}");
 </pre>    
+     *
+     * @see _inputValues for a discussion of const qualifiers
      */
     EnclaveTask(
       int                                            enclaveTaskTypeId,
       const ::peano4::datamanagement::CellMarker&    marker,
       double                                         t,
       double                                         dt,
-      double*                                        inputValues,
+      double* __restrict__                           inputValues,
       int                                            numberOfInputValues,
       int                                            numberOfResultValues,
       Functor                                        functor
@@ -115,4 +127,3 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
 
 
 
-#endif

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_GRID_SPACETREE_H_
-#define _PEANO4_GRID_SPACETREE_H_
+#pragma once
 
 
 
@@ -910,4 +909,3 @@ class peano4::grid::Spacetree {
 };
 
 
-#endif

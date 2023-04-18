@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_STACKS_STDVECTOR_STACK_H_
-#define _PEANO4_STACKS_STDVECTOR_STACK_H_
+#pragma once
 
 
 #include <vector>
@@ -19,6 +18,7 @@
 
 
 #include "peano4/grid/GridVertex.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
 namespace peano4 {
@@ -27,6 +27,11 @@ namespace peano4 {
     class STDVectorStack;
 
     typedef STDVectorStack< peano4::grid::GridVertex >   GridVertexStack;
+
+    #if defined(Parallel)
+    template <class T>
+    MPI_Datatype translateContextIntoDatatype( peano4::grid::TraversalObserver::SendReceiveContext context );
+    #endif
   }
 }
 
@@ -96,7 +101,7 @@ class peano4::stacks::STDVectorStack {
      * One is allowed to clone/copy a stack, but it has to be empty.
      * Usually only when we cut the domain into pieces.
      */
-    STDVectorStack<T>( const STDVectorStack<T>& stack ):
+    STDVectorStack( const STDVectorStack<T>& stack ):
       _data(),
       _currentElement(0),
       _ioMode(IOMode::None)
@@ -113,9 +118,9 @@ class peano4::stacks::STDVectorStack {
 
 
     /**
-     * One is not allowed to copy a stack but it has to be empty.
+     * One is allowed to copy a stack but it has to be empty.
      */
-    STDVectorStack<T>&  operator=( const STDVectorStack<T>& stack ) {
+    STDVectorStack&  operator=( const STDVectorStack<T>& stack ) {
       assertionEquals( stack._currentElement, 0 );
       assertionEquals( _currentElement, 0 );
       assertion( _data.empty() );
@@ -166,7 +171,13 @@ class peano4::stacks::STDVectorStack {
           return _size;
         }
 
-        T get(int index) {
+        const T& get(int index) const {
+          assertion2( index>=0, index, _size );
+          assertion2( index<_size, index, _size );
+          return _stack->_data[_baseElement+index];
+        }
+
+        T& get(int index) {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
           return _stack->_data[_baseElement+index];
@@ -193,7 +204,7 @@ class peano4::stacks::STDVectorStack {
          */
         PushBlockStackView(int size, int base, peano4::stacks::STDVectorStack<T>* stack):
           _size(size),
-		  _baseElement(base),
+          _baseElement(base),
           _stack(stack) {
         }
 
@@ -205,7 +216,15 @@ class peano4::stacks::STDVectorStack {
           return _size;
         }
 
+
         /**
+         * Set an entry
+         *
+         * But in Peano's context, we only need the move semantics logically,
+         * as we only migrate stuff over stacks. Therefore, I tried to play
+         * around with move semantics, but this always broke the code. So I
+         * thought I'd better stop doing this and use plain old copies here.
+         *
          * @return Pointer to element set
          */
         T* set(int index, const T& value) {
@@ -215,19 +234,20 @@ class peano4::stacks::STDVectorStack {
           return &(_stack->_data[_baseElement+index]);
         }
 
+
+        const T& get(int index) const {
+          assertion2( index>=0, index, _size );
+          assertion2( index<_size, index, _size );
+          return _stack->_data[_baseElement+index];
+        }
+
+
         T& get(int index) {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
           return _stack->_data[_baseElement+index];
         }
 
-        #if PeanoDebug>=1
-        T get(int index) const {
-          assertion2( index>=0, index, _size );
-          assertion2( index<_size, index, _size );
-          return _stack->_data[_baseElement+index];
-        }
-        #endif
 
         std::string toString() const {
           std::ostringstream msg;
@@ -238,13 +258,30 @@ class peano4::stacks::STDVectorStack {
         }
     };
 
+
     /**
      * Pops element from a stack.
+     *
+     * I have played around with an implementation of this routine via moves,
+     * i.e. as
+     *
+     * <pre>
+    T pop() {
+      assertion1(_currentElement>0,_currentElement);
+      _currentElement--;
+      return std::move( _data[_currentElement] );
+    }
+       </pre>
+     *
+     * I put the move into this routine to highlight that we are actually
+     * moving stuff out of the container. However, this move is not required
+     * and, according to the C++ standard, degenerates to the identify here. I'm
+     * also not sure if it preserved the semantics.
      */
     T pop() {
       assertion1(_currentElement>0,_currentElement);
       _currentElement--;
-      return _data[_currentElement];
+      return std::move( _data[_currentElement] );
     }
 
 
@@ -259,6 +296,19 @@ class peano4::stacks::STDVectorStack {
       return _data[_currentElement-1-shift];
     }
 
+
+    /**
+     * Get top element or shiftth top element. We start to count with
+     * 0, i.e. a shift of 0 (default) really returns the top element.
+     * A shift of 3 returns the fourth element from the stack
+     */
+    const T& top(int shift=0) const {
+      assertion1(shift>=0,shift);
+      assertion2(_currentElement>shift, _currentElement, shift);
+      return _data[_currentElement-1-shift];
+    }
+
+
     /**
      * Pushes element to a stack.
      *
@@ -268,13 +318,14 @@ class peano4::stacks::STDVectorStack {
       assertion( _currentElement <= static_cast<int>(_data.size()) );
       if (_currentElement >= static_cast<int>(_data.size()) ) {
         assertion(_currentElement - static_cast<int>(_data.size()) <= 1 );
-        _data.push_back(element);
+        _data.push_back( element );
       }
       else {
         _data[_currentElement] = element;
       }
       _currentElement++;
     }
+
 
     /**
      * This operation grabs numberOfElements from the input stack en block and
@@ -290,6 +341,7 @@ class peano4::stacks::STDVectorStack {
       PopBlockStackView result(numberOfElements, _currentElement, this);
       return result;
     }
+
 
     /**
      * Push a block on the output stack
@@ -330,12 +382,13 @@ class peano4::stacks::STDVectorStack {
       _currentElement = 0;
     }
 
+
     /**
      * Always pairs up with a finish... call. When we trigger the send, the
      * code still might insert additional elements, i.e. starting does not
      * mean all the data that is to be sent out is already in the container.
      */
-    void startSend(int rank, int tag, MPI_Comm comm) {
+    void startSend(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm) {
       #ifdef Parallel
       assertion( _ioMode==IOMode::None );
       assertion( _ioMPIRequest==nullptr );
@@ -346,7 +399,11 @@ class peano4::stacks::STDVectorStack {
       logDebug( "startSend(int,int,bool)", toString());
 
       _ioMPIRequest = new MPI_Request;
-      int result = MPI_Isend( _data.data(), _currentElement, T::getDatatype(), _ioRank, _ioTag, comm, _ioMPIRequest);
+      int result = MPI_Isend(
+        _data.data(),
+        _currentElement,
+        translateContextIntoDatatype<T>( context ),
+        _ioRank, _ioTag, comm, _ioMPIRequest);
       if  (result!=MPI_SUCCESS) {
         logError( "startSend(int,int,bool)", "was not able to send to node " << rank << " on tag " << tag
           << ": " << tarch::mpi::MPIReturnValueToString(result)
@@ -355,10 +412,11 @@ class peano4::stacks::STDVectorStack {
       #endif
     }
 
+
     /**
      * @see startSend()
      */
-    void startReceive(int rank, int tag, MPI_Comm comm, int numberOfElements) {
+    void startReceive(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm, int numberOfElements) {
       #ifdef Parallel
       assertion3( _ioMode==IOMode::None, rank, tag, numberOfElements );
       assertion3( numberOfElements>0, rank, tag, numberOfElements );
@@ -374,7 +432,11 @@ class peano4::stacks::STDVectorStack {
       assertion( _ioMPIRequest == nullptr );
       _ioMPIRequest = new MPI_Request;
 
-      int result = MPI_Irecv( _data.data(), _data.size(), T::getDatatype(), _ioRank, _ioTag, comm, _ioMPIRequest);
+      int result = MPI_Irecv(
+        _data.data(),
+        _data.size(),
+        translateContextIntoDatatype<T>( context ),
+        _ioRank, _ioTag, comm, _ioMPIRequest);
       if  (result!=MPI_SUCCESS) {
         logError( "startReceive(int,int,int)", "was not able to receive " << numberOfElements << " values from node " << rank << " on tag " << tag
            << ": " << tarch::mpi::MPIReturnValueToString(result)
@@ -428,6 +490,7 @@ class peano4::stacks::STDVectorStack {
       #endif
     }
 
+
     /**
      * I need this one to find out whether I'm waiting for data.
      *
@@ -437,6 +500,7 @@ class peano4::stacks::STDVectorStack {
     int sendingOrReceiving() const {
       return _ioMode==IOMode::None ? -1 : _ioRank;
     }
+
 
     /**
      * Reversing a stream is something I need extremely rarely. The biggest application
@@ -467,11 +531,32 @@ tarch::logging::Log peano4::stacks::STDVectorStack<T>::_log( "peano4::stacks::ST
 
 
 template <>
-void peano4::stacks::STDVectorStack<double>::startSend(int rank, int tag, MPI_Comm comm);
+void peano4::stacks::STDVectorStack<double>::startSend(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm);
 
 
 template <>
-void peano4::stacks::STDVectorStack<double>::startReceive(int rank, int tag, MPI_Comm comm, int numberOfElements);
+void peano4::stacks::STDVectorStack<double>::startReceive(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm, int numberOfElements);
 
 
+#if defined(Parallel)
+template <class T>
+MPI_Datatype peano4::stacks::translateContextIntoDatatype( peano4::grid::TraversalObserver::SendReceiveContext context ) {
+   switch (context) {
+     case peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
+       return T::getBoundaryExchangeDatatype();
+     case peano4::grid::TraversalObserver::SendReceiveContext::MultiscaleExchange:
+       return T::getMultiscaleDataExchangeDatatype();
+     case peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain:
+       return T::getForkDatatype();
+     case peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain:
+       return T::getJoinDatatype();
+     case peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
+       assertionMsg(false, "periodic boundary data is never exchanged via MPI" );
+       return T::getGlobalCommunciationDatatype();
+   }
+   assertionMsg(false, "no valid case statement found. This may not happen" );
+   return T::getGlobalCommunciationDatatype();
+}
 #endif
+
+

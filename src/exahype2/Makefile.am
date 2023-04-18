@@ -15,24 +15,18 @@ ExaHyPE2Sources = \
   NonCriticalAssertions.cpp \
   PlotFilter.cpp \
   RefinementControl.cpp \
+  RefinementControlService.cpp \
   TimeStepping.cpp \
   UserInterface.cpp \
   UnitTests.cpp \
-  aderdg/CorrectorAoS.cpp \
-  aderdg/Generic.cpp \
-  aderdg/KernelUtils.cpp \
-  aderdg/PredictorAoS.cpp \
-  aderdg/RiemannAoS.cpp \
-  aderdg/RusanovNonlinearAoS.cpp \
-  aderdg/tests/ADERDGTest.cpp \
-  aderdg_kernels/Basis/GaussLegendreBasis.cpp \
-  aderdg_kernels/Basis/GaussLobattoBasis.cpp \
-  aderdg_kernels/AderUtils.cpp \
+  aderdg/kernels/Basis/GaussLegendreBasis.cpp \
+  aderdg/kernels/Basis/GaussLobattoBasis.cpp \
+  aderdg/kernels/AderUtils.cpp \
   dg/BoundaryConditions.cpp \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
   dg/Riemann.cpp \
-  dg/rusanov/Riemann.cpp \
+  dg/rusanov/Rusanov.cpp \
   dg/tests/CellIntegralTest.cpp \
   dg/tests/DGUtilsTest.cpp \
   dg/tests/RiemannTest.cpp \
@@ -47,9 +41,15 @@ ExaHyPE2Sources = \
   fd/PatchUtils.cpp \
   fd/LoopBody.cpp \
   fd/fd4/FD4_patchwise_functors.cpp \
+  fd/tests/SommerfeldBCTest.cpp\
+  fd/fd4/LoopBody.cpp \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PatchAccess.cpp \
+  fv/PostprocessingKernels.cpp \
+  fv/Tracer.cpp \
+  fv/tests/InterpolationRestrictionTest.cpp \
+  fd/fd4/FD4_patchwise_functors.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp

@@ -5,8 +5,7 @@
  *
  */
 
-#ifndef _APPLICATIONS_EXAHYPE2_CCZ4_INITIAL_VALUES__
-#define _APPLICATIONS_EXAHYPE2_CCZ4_INITIAL_VALUES__
+#pragma once
 
 #include "tarch/la/Vector.h"
 
@@ -35,6 +34,11 @@ namespace applications {
         const tarch::la::Vector<Dimensions,double>&  X,
         double t
       );
+      void flat(
+        double * __restrict__ Q, // Q[64+0],
+        const tarch::la::Vector<Dimensions,double>&  X,
+        double t
+      );
 
       #ifdef IncludeTwoPunctures
       void ApplyTwoPunctures(
@@ -49,4 +53,3 @@ namespace applications {
   }
 }
 
-#endif /* __EXAHYPE_USER_PDE__ */

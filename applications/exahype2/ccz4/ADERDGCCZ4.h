@@ -6,8 +6,7 @@
 // This is generated. If you change fundamental properties, you will have to 
 // generate this file. Backup your manual changes before you do so.
 //
-#ifndef _examples_exahype2_ccz4_ADERDG_CCZ4_H_
-#define _examples_exahype2_ccz4_ADERDG_CCZ4_H_
+#pragma once
 
 
 #include "AbstractADERDGCCZ4.h"
@@ -83,4 +82,3 @@ class examples::exahype2::ccz4::ADERDGCCZ4: public AbstractADERDGCCZ4 {
 };
 
 
-#endif

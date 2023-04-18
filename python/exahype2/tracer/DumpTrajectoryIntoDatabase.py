@@ -83,7 +83,7 @@ if ( not marker.willBeRefined() and fineGridCell{{SOLVER_NAME}}CellLabel.getHasU
   double IniRecord={{INI_RECORD}};
   double LastRecord={{LAST_RECORD}};
   for (int i=0; i<TwoPowerD; i++) {
-    for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
+    for (auto* p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
       if (
         p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
         and

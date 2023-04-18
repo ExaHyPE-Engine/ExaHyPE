@@ -1,5 +1,4 @@
-#ifndef __TWO_PUNCTURES_LOGGING__
-#define __TWO_PUNCTURES_LOGGING__
+#pragma once
 
 // Output and error reporting beyond Cactus:
 // A standalone approach for TwoPunctures.
@@ -84,4 +83,3 @@ class error: public std::exception
 
 } // ns
 
-#endif /* __TWO_PUNCTURES_LOGGING__ */

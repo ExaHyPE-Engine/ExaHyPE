@@ -1,63 +1,83 @@
 #include "LoadBalancingConfiguration.h"
 
 
-exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration( double loadBalancingQuality, int minSizeOfTree, int maxNumberOfTrees, int maxSizeOfDeployedRemoteMPITree ):
+#include "tarch/Assertions.h"
+#include "tarch/multicore/Core.h"
+
+
+tarch::logging::Log  exahype2::LoadBalancingConfiguration::_log( "exahype2::LoadBalancingConfiguration" );
+
+
+exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
+  double loadBalancingQuality,
+  int minSizeOfTree,
+  int maxNumberOfTreesThroughoutInitialDistribution,
+  int maxNumberOfTrees
+):
   _loadBalancingQuality(loadBalancingQuality),
   _minSizeOfTree(minSizeOfTree),
-  _maxNumberOfTrees(maxNumberOfTrees),
-  _maxSizeOfDeployedRemoteMPITree(maxSizeOfDeployedRemoteMPITree) {
+  _maxNumberOfTreesThroughoutInitialDistribution( maxNumberOfTreesThroughoutInitialDistribution ),
+  _maxNumberOfTrees( maxNumberOfTrees ) {
+  assertion2(
+    (_maxNumberOfTrees>=_maxNumberOfTreesThroughoutInitialDistribution)
+    or
+    _maxNumberOfTrees<0
+    or
+    _maxNumberOfTreesThroughoutInitialDistribution<0,
+    _maxNumberOfTrees, _maxNumberOfTreesThroughoutInitialDistribution
+  );
 }
 
 
-bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::loadbalancing::RecursiveSubdivision::Configuration::Phase phase) {
+bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::loadbalancing::State state) {
   return false;
 }
 
 
-int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::RecursiveSubdivision::Configuration::Phase phase) {
-  if (
-    phase==Configuration::Phase::InitialIntraRankDistribution
-    or
-    phase==Configuration::Phase::APosterioriBalancingPerRank
-  ) {
-    return _maxNumberOfTrees;
+int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNumberOfTrees(int value) const {
+  int result = -1;
+  if (value==UseNumberOfThreads) {
+    result = tarch::multicore::Core::getInstance().getNumberOfThreads();
+  }
+  else if (value==UseTwiceTheNumberOfThreads) {
+    result = tarch::multicore::Core::getInstance().getNumberOfThreads() * 2;
   }
   else {
-    return std::numeric_limits<int>::max();
+    assertion(value>0);
+  }
+
+  assertion(result>=0);
+  return result;
+}
+
+
+int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) {
+  if (
+    state==toolbox::loadbalancing::State::IntraRankDistribution
+  ) {
+    return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTreesThroughoutInitialDistribution);
+  }
+  else {
+    return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTrees);
   }
 }
 
 
-double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::RecursiveSubdivision::Configuration::Phase phase) {
+double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::State state) {
   return _loadBalancingQuality;
 }
 
 
-int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::RecursiveSubdivision::Configuration::Phase phase) {
+int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::State state) {
   if (
-    phase==Configuration::Phase::InterRankBalancing
+    state==toolbox::loadbalancing::State::InterRankDistribution
     or
-    phase==Configuration::Phase::APosterioriBalancingPerRank
+    state==toolbox::loadbalancing::State::IntraRankDistribution
   ) {
     return 0;
   }
   else {
     return _minSizeOfTree;
-  }
-}
-
-
-
-int exahype2::LoadBalancingConfiguration::getMaxTreeSize(toolbox::loadbalancing::RecursiveSubdivision::Configuration::Phase phase) {
-  if (
-    phase==Configuration::Phase::InitialInterRankDistribution
-    or
-    phase==Configuration::Phase::InitialIntraRankDistribution
-  ) {
-    return _maxSizeOfDeployedRemoteMPITree;
-  }
-  else {
-    return std::numeric_limits<int>::max();
   }
 }
 

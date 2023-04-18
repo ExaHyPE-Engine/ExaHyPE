@@ -70,6 +70,7 @@ class PerformanceData(object):
     self.parse(verbose)
     pass
 
+
   def __convert_machine_readable_timestamp_to_seconds(self,data):
     """
    
@@ -142,13 +143,24 @@ class PerformanceData(object):
             self._threads = 1
             self._cores_per_node = 1
           elif "tbb" in line or "omp" in line:
-            self._threads = int( line.split( "threads" )[0].split( "(")[-1] )
+            threads_parsed=line.split( "threads" )[0].split( "(")[-1]
+            if not threads_parsed.replace(" ","").isdigit():
+              print('Warning: failed to find a number of threads in:', threads_parsed)
+              print('Assuming threads=1')
+              self._threads = 1
+            else:
+              self._threads = int( threads_parsed )
             self._cores_per_node = self._threads
+            if verbose:
+              print( "file has been written with {} cores/threads per node".format(self._threads) )
+
             
           if "no mpi" in line:
             self._ranks = 1
           elif "mpi" in line:
             self._ranks = int( line.split( "ranks)" )[0].split( "(")[-1] )
+            if verbose:
+              print( "file has been written with {} ranks".format(self._ranks) )
 
         predicate = "rank:0" in line and "Abstract" + self._solver_name in line
 
@@ -228,8 +240,14 @@ class PerformanceData(object):
       self.valid = False
     
     if self._number_of_time_steps<=0:
-      print( "file " + self._file_name + " is invalid as number of time steps equals zero" )
-      self.valid = False
+      print( "** Warning: number of time steps could not be found **" )
+      if self.total_time_stepping_steps>0:
+        print( "Setting number of time steps = "
+              +str(self.total_time_stepping_steps) + " based on the time stepping information")
+      else:
+        print( "file " + self._file_name + " is invalid as number of time steps equals zero" )
+        self.valid = False
+      
     
     
   def get_time_per_time_step(self):

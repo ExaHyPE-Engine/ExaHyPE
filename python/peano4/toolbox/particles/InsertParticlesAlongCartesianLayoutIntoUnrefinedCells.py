@@ -8,7 +8,15 @@ import jinja2
 
 class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
 
-  def __init__(self,particle_set,distance_between_particles,initialisation_call,computational_domain_offset,round_down = False, noise=True,additional_includes="",guard="true"):
+  def __init__(self,
+               particle_set,
+               distance_between_particles,
+               computational_domain_offset,
+               initialisation_call = "",
+               noise=True,
+               additional_includes="",
+               guard="true"
+               ):
     """
       Insert particles
       
@@ -31,6 +39,20 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
          
       guard: String (C code)
          A simple boolean expression. You can decide if a particle is inserted or not.
+
+      initialisation_call: String (C++ code snippet)
+        Arbitrary code snippet which can work over a pointer particle. The object
+        to which this pointer points to is properly allocated, and its 
+        coordinates are set. Furthermore, the object's cut-off radius is 
+        initialised with zero. You can alter the particle attributes now, i.e.
+        initialise the domain-specific data. Please also ensure you assign the 
+        particle a proper cut-off (interaction) radius if the radius is of 
+        relevance for your application.
+        
+        Please note that we create a lot of particles and then decide if we 
+        actually insert them. Only those particles where we come to the 
+        conclusion that we should insert them (as they overlap with the cell)
+        are actually then initialised through this code snippet.
 
     """
     self.d = {}
@@ -61,9 +83,10 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
       domainOffset,
       {{NOISE}}
     );
-    for (auto& particle: newParticles) {
-      {{INITIALISATION_CALL}}
+    for (auto* particle: newParticles) {
       if ( {{GUARD}} ) {
+        // See documentation of constructor on initialisation snippet
+        {{INITIALISATION_CALL}}
         toolbox::particles::insertParticleIntoCell(
           marker,
           particle,

@@ -31,12 +31,13 @@ tarch::timing::Watch::~Watch() {
   }
 
   if (_plotResultInDestructor) {
-    std::ostringstream message;
-    message << "total number of clock ticks within block (cpu-time,calendar-time): "
-            << "(" << getCPUTime() << "s"
-            << "," << getCalendarTime() << "s"
-            << ")";
-    _log.info( _operationName, message.str() );
+    logInfo(
+      _operationName,
+      "total number of clock ticks within block (cpu-time,calendar-time): "
+                  << "(" << getCPUTime() << "s"
+                  << "," << getCalendarTime() << "s"
+                  << ")"
+    );
   }
 
 }
@@ -44,15 +45,15 @@ tarch::timing::Watch::~Watch() {
 
 void tarch::timing::Watch::start() {
   _startClockTicks = std::clock();
-  _startTime = std::chrono::high_resolution_clock::now();
-  _isRunning           = true;
+  _startTime       = std::chrono::steady_clock::now();
+  _isRunning       = true;
 }
 
 
 void tarch::timing::Watch::stop() {
   _elapsedClockTicks   = std::clock() - _startClockTicks;
-  _elapsedTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - _startTime).count();
-  _elapsedTime = _elapsedTime / 1000000000.0; // Convert to seconds
+  _elapsedTime         = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - _startTime).count();
+  _elapsedTime         = _elapsedTime / 1000000000.0; // Convert to seconds
   _isRunning           = false;
 }
 
