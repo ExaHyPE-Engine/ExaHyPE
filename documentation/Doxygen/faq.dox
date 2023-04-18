@@ -56,6 +56,11 @@ CXXFLAGS=--std=c++0x
   variables. After that, you manually load a newer GCC which redirects all of 
   these variables. 
 
+  If there are multiple `gcc` versions present, it is possible for CLANG to
+  automatically select an outdated version thus creates problem when
+  compiling. You can check what is the selection version with `clang++ -v`.
+  Use this to select the other listed options: 
+  `--gcc-install-dir=/path/to/new/gcc`.
 
 - ***My compiler reports***
   ~~~~~~~~~~~~~~~~~~~

@@ -1,19 +1,89 @@
 /**
 
-@page exahype_visualisation Visualisation
+@page exahype_visualisation Visualisation and output
 
-ExaHyPE 2  relies on Peano's standard output routines to write file dumps. 
+ExaHyPE 2  relies on Peano's standard output routines to write file dumps,
+and it employs Peano's standard terminal routines to dump runtime information.
+Further to that, you can enable @ref tarch_logging "Peano's statistics" if you require more in-depth 
+(profile) information.
+
+
+## Solution output
+
 As the files can be rather large, the simulation configuration allows you to
 specify exactly how often you want to see file dumps, and you can also add
 spatial filters.
 The latter help you to visualise only subdomains.
 As we rely on Peano's infrastructure, you can use the ```render.py``` script in
 python/peano4/visualisation to convert the output files into vtu files.
-Consult also @ref tarch_patch_files "Peano's generic discussion" of various
-visualisation pathways.
 
 
-## Multiscale data
+Consult @ref tarch_patch_files "Peano's generic discussion" of various
+visualisation pathways as well as the patch file format.
+By default, ExaHyPE dumps all data as one large vector Q per Finite
+Volume/integration point, i.e. you get a set of scalars.
+It also dumps all the resolution levels of the grid simultaneously.
+Therefore, one of the first postprocessing steps usually is to remove all data
+from the output data set besides the fine grid level.
+
+
+
+### Output filters
+
+By default, ExaHyPE maps each Finite Volume and each DG quadrature point onto
+a vertex in the output file, i.e. it maps the compute mesh onto an unstructured
+(visualisation) mesh.
+This can result in large data dumps.
+
+
+Peano follows the philosophy that postprocessing should be done
+by postprocessing tools. 
+While Peano's render script provides a filter such that you see only the patch or
+cell average, each dump of the whole
+ simulation data might already be too heavy for many applications. Therefore, you can add filters.
+They restrict the memory footprint a priori.
+A further obvious strategy to bring the memory footprint down is to print less often.
+
+
+Filters can be added to your setup via
+
+~~~~~~~~~~~~~~~~~
+probe_point = [0,0.693,0]
+project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
+project.add_plot_filter( offset,size,10 )
+~~~~~~~~~~~~~~~~~
+
+The example above sets a probe, i.e. every plot step only the patch data around
+the probe is dumped. Every 10 snapshot steps however, the whole domain is
+written.
+I assume that offset and size are configured accordingly.
+
+
+Further to the filters, each solver has an attribute select_dofs_to_print.
+It is set to ```None```` by default which means that all quantities per degree
+of freedom are dumped into the output.
+You can pick only a few entries though via
+
+~~~~~~~~~~~~~~~~~
+my_solver.select_dofs_to_print = [4,5,8]
+~~~~~~~~~~~~~~~~~
+
+
+### Output directory
+
+The command
+
+~~~~~~~~~~~~~~~~~
+project.set_output_path( "/scratch/myfolder" )
+~~~~~~~~~~~~~~~~~
+
+configures Peano with a proper output path. Without this command, all output
+data is written to the working path.
+
+
+
+
+### Multiscale data
 
 All Peano 4 output files dump various resolutions of the data. 
 ExaHyPE 2  atm however does only use the finest mesh resolution to compute
@@ -24,7 +94,7 @@ option ```-filter-fine-grid```.
 This makes the script throw away all coarser resolutions.
 
 
-## Finite Volumes
+### Finite Volumes
 
 If you dump Finite Volume data, it becomes difficult to spot how the resulting
 Finite Volumes are organised in patches:
@@ -35,7 +105,7 @@ If you are interested in seeing the patch boundaries, use the
 You then will see gaps (voids) between the individual patches.
 
 
-## Discontinuous Galerkin
+### Discontinuous Galerkin
 
 If you use ExaHyPE's Discontinuous Galerkin solvers with non-Lobatto nodes, 
 the file dumps will look pretty ragged.
@@ -55,6 +125,47 @@ anymore.
 Alternatively, 
 you can averaging over cells and display only the average.
 Consult the script's help.
+
+
+## Logging output
+
+ExaHyPE searches for a text file exahype.log-filter in the working
+directory.
+If no such file is found (or the file is corrupted), then it will use some
+default filter rules, i.e. dump the information to the terminal that I consider
+to be most important.
+If you want to adopt the output, I strongly recommend that you add a log filter
+configuration file. 
+
+
+Often, users are only interested in a particular phase of the simulation or want 
+to specify different log entries per program phase. The program phases offered
+by default are
+
+- create-grid-but-postpone-refinement
+- create-grid
+- create-grid-and-converge-load-balancing
+- init-grid
+- plot-solution
+- time-step
+
+The syntax of log filter files is discussed in the
+@ref tarch_logging "generic logging documentation of Peano".
+
+
+## Tracers
+
+ExaHyPE's tracers rely on Peano's particle and particle-in-dual-tree
+mechanism.
+They are not genuine ExaHyPE plugin, but rather connect to a completely
+different toolbox of Peano, which has nothing to do with the core ExaHyPE.
+
+
+Peano's particle handling comes along with a set of standard postprocessing
+scripts.
+As we rely on this toolbox, you can use those scripts straightaway.
+They can be found in
+python/peano4/toolbox/particles/postprocessing.
 
 
 */
