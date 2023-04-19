@@ -16,7 +16,10 @@ void exahype2::fv::rusanov::internal::copySolution_LoopBody(
   double* __restrict__                      QOut,
   const QOutEnumeratorType&                 QOutEnumerator
 ) {
-  QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
+  //QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
+  QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = 0;
+  //printf("  QIN: %f  ",  QIn[QInEnumerator(patchIndex,volumeIndex,unknown)]);
+  //printf("  QOUT: %f  ", QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ]);
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
