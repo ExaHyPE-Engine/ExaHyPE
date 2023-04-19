@@ -42,7 +42,7 @@ void exahype2::fv::rusanov::sycl::GPUCellData::destroy(
   ::sycl::queue& queue
 ) {
   for (int i=0; i<numberOfCells; i++) {
-    std::memcpy( hostObject.QOut[i], QIn[i], outEnumerator.size()*sizeof(double) );
+    std::memcpy( hostObject.QOut[i], QOut[i], outEnumerator.size()*sizeof(double) );
 
     ::sycl::free( QIn[i], queue);
     ::sycl::free( QOut[i], queue);
