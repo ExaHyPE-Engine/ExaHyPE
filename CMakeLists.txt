@@ -257,6 +257,8 @@ if(WITH_GPU)
     if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
       target_link_libraries(project_options INTERFACE -mp=gpu -gpu=${WITH_GPU_ARCH})
       target_compile_options(project_options INTERFACE -mp=gpu -gpu=${WITH_GPU_ARCH})
+      #target_compile_options(project_options INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:-mp=gpu;-gpu=${WITH_GPU_ARCH}>")
+      #target_link_options(project_options INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:-mp=gpu;-gpu=${WITH_GPU_ARCH}>")
     endif()
   elseif(WITH_GPU STREQUAL "sycl")
     set(WITH_MULTITHREADING CACHE "tbb")
@@ -264,17 +266,20 @@ if(WITH_GPU)
   elseif(WITH_GPU STREQUAL "cuda")
     string(SUBSTRING "${WITH_GPU_ARCH}" 3 5 GPU_ARCH_SUFFIX)
     set(CMAKE_CUDA_ARCHITECTURES ${GPU_ARCH_SUFFIX} CACHE INTERNAL "CUDA Architecture" FORCE)
+    #set_target_properties(project_options PROPERTIES CUDA_ARCHITECTURES ${GPU_ARCH_SUFFIX})
     set(CMAKE_CUDA_STANDARD 17)
   endif()
 endif()
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-    list(TRANSFORM CMAKE_CXX_FLAGS_RELEASE REPLACE "-O3" "-O4")
-    list(TRANSFORM CMAKE_CUDA_FLAGS_RELEASE REPLACE "-O3" "-O4")
+  #-march=native
+  list(TRANSFORM CMAKE_CXX_FLAGS_RELEASE REPLACE "-O3" "-O4")
+  list(TRANSFORM CMAKE_CUDA_FLAGS_RELEASE REPLACE "-O3" "-O4")
 endif()
 set(RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
 set(RELEASE_LDFLAGS -g)
 
+#-O2 -fno-omit-frame-pointer
 set(DEBUG_DEFINITIONS -DPeanoDebug=4)
 set(DEBUG_LDFLAGS -g)
 
@@ -346,7 +351,13 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
+file(COPY "${PROJECT_SOURCE_DIR}/python" DESTINATION "${CMAKE_BINARY_DIR}")
+file(COPY "${PROJECT_SOURCE_DIR}/tutorials" DESTINATION "${CMAKE_BINARY_DIR}")
+file(COPY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_BINARY_DIR}")
+file(COPY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_BINARY_DIR}")
+
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/python" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/tutorials" DESTINATION "${CMAKE_INSTALL_PREFIX}")
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_INSTALL_PREFIX}")
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_INSTALL_PREFIX}")
 
