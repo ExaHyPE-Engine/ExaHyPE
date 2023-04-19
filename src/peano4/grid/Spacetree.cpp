@@ -1635,6 +1635,7 @@ bool peano4::grid::Spacetree::isCellSplitCandidate(
 
   return isSpacetreeNodeLocal(fineGridVertices,false,false) and
     isSpacetreeNodeLocal(coarseGridVertices,false,false) and
+    // @todo
     areAllVerticesNonHanging(fineGridVertices) and
     not isOneVertexAdjacentToPeriodicBC;
 }
@@ -1644,10 +1645,52 @@ void peano4::grid::Spacetree::splitOrJoinCell(
   GridVertex  coarseGridVertices[TwoPowerD],
   GridVertex  fineGridVertices[TwoPowerD]
 ) {
-  static int newlyCreatedCells = 0;
+  const int NoSplit = -1;
 
   if (not _splitTriggered.empty()) {
     const bool isSplitCandidate = isCellSplitCandidate(coarseGridVertices,fineGridVertices);
+    const bool isRefined        = isSpacetreeNodeRefined(fineGridVertices);
+
+    if (isSplitCandidate and isRefined) {
+      int reducedMarker = _splittedCells.back();
+      for (int i=0; i<ThreePowerD; i++) {
+        int topMarker = _splittedCells.back();
+        _splittedCells.pop_back();
+        if (topMarker!=reducedMarker) {
+          reducedMarker = NoSplit;
+        }
+      }
+
+      if (reducedMarker>=0) {
+        updateVertexRanksWithinCell( fineGridVertices, reducedMarker );
+      }
+
+      _splittedCells.push_back(reducedMarker);
+    }
+    else if (not isSplitCandidate and isRefined) {
+      for (int i=0; i<ThreePowerD; i++) {
+        _splittedCells.pop_back();
+      }
+      _splittedCells.push_back(NoSplit);
+    }
+    else if (isSplitCandidate and not isRefined) {
+      int targetSpacetreeId = getSplittingTree();
+      if (targetSpacetreeId>=0) {
+        updateVertexRanksWithinCell( fineGridVertices, targetSpacetreeId );
+      }
+      _splittedCells.push_back(targetSpacetreeId);
+    }
+    else if (not isSplitCandidate and not isRefined) {
+      _splittedCells.push_back(NoSplit);
+    }
+    else {
+      assertionMsg(false, "should not be entered as all combination are covered already");
+    }
+
+
+/*
+  static int newlyCreatedCells = 0;
+
 
     if (isSpacetreeNodeRefined(fineGridVertices)) {
       assertion1( _splittedCells.size()>=ThreePowerD, _splittedCells.size() );
@@ -1679,9 +1722,11 @@ void peano4::grid::Spacetree::splitOrJoinCell(
 
         newlyCreatedCells++;
 
-        // This 0 here is a fake, but it does not make a difference, as fine
-        // grid cells within a 3x3 patch always have the same type
-        if ( _gridTraversalEventGenerator.getCellType( coarseGridVertices, 0 )!=CellType::New or newlyCreatedCells%ThreePowerD==ThreePowerD-1) {
+        if (
+          _gridTraversalEventGenerator.getCellType( coarseGridVertices, 0 )!=CellType::New
+          or
+          newlyCreatedCells%ThreePowerD==ThreePowerD-1
+        ) {
           updateSplittingCounter( targetSpacetreeId );
           newlyCreatedCells = 0;
         }
@@ -1692,6 +1737,7 @@ void peano4::grid::Spacetree::splitOrJoinCell(
         _splittedCells.push_back(-1);
       }
     }
+*/
   }
 
 /*

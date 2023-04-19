@@ -418,39 +418,38 @@ class peano4::grid::Spacetree {
     std::vector<int>  _splittedCells;
 
     /**
-     * We do realise a @f$LR(3^d)@f$ grammar to identify admissible splits.
-     * First, this routine checks whether splits are active. If so, we do
-     * study the split condition or we run into the move branch (which is
-     * essentially a split of the whole tree to a different tree).
      *
-     * <h2> Split </h2>
+     * ## Splits
      *
-     * A node may be split if the parent is still no the same node (so we
-     * always have an intermediate mesh layer and preserve the tree topology)
-     * and if the node does not act as parent to another rank. If we did
-     * omit the latter check, a split might alter the tree topology. Which
-     * we don't like.
+     * The split logic is protected by one big check if splits are active.
+     * If no splits are triggered, there is no need to check things further.
+     * Any further logic is guided by the fact if a spacetree node is refined
+     * and if it is a potential split candidate. The latter is determined by
+     * evaluating isCellSplitCandidate().
      *
-     * The first check is trivial. The second check is realised through a
-     * pushback container and an LR(k) lookup.
+     * Our logic is that we focus first of all on the fine grid cells: We aim
+     * to split a certain number of fine grid cells into a new tree. If all
+     * children of a refined node are split into the same new tree, and if this
+     * (parent) node is a potential split candidate, too, then we move it to
+     * the newly created tree as well.
+     *
+     * We realise an @f$ LR(3^d) @f$ grammar to identify the latter situation.
+     * This grammar uses the container (stack) _splittedCells over integers.
      *
      * - Every leaf pushes a marker into this container: _id if it is and
      *   remains local, the new id if the node has been split, and a -1
      *   otherwise.
      * - A refined cell induces a reduce on the container. @f$ 3^d@f$ markers
-     *   are removed and analysed: If they all have the same ip as the next
+     *   are removed and analysed: If they all have the same id as the next
      *   split marker to be used, we add it.
-     *
      * - A refined cell finally adds its marker again.
      *
      * It is important that I evaluate the reduce analysis even if no splits
      * are do be done anymore. Because it might happen that I have just done
      * exactly 9 splits for example (2d) and thus, the parent of these 9
-     * guys should go to the remote node, too.
-     *
-     * <h2> Count down the split counter </h2>
-     *
-     *
+     * guys should go to the remote node, too. The punchline is that only
+     * leaves check if they have to fork. The behaviour of refined octants
+     * follows the decisions made for their children before.
      *
      */
     void splitOrJoinCell(
@@ -880,6 +879,14 @@ class peano4::grid::Spacetree {
      * @return Id of splitting tree or -1 if there's none.
      */
     int getSplittingTree() const;
+
+    /**
+     * Reduce splitting counter
+     *
+     * Every tree in the list of trees for which we have to trigger a split
+     * has an integer counter which highlights how many cells still to offload
+     * to the newly created tree. Decrement this counter.
+     */
     void updateSplittingCounter( int treeId );
   public:
     Spacetree(
