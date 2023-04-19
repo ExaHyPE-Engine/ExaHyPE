@@ -67,8 +67,7 @@ void toolbox::loadbalancing::Blacklist::update() {
     else if ( p.second.lifetime>0 ) {
       const int currentNumberOfCells = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p.first).getNumberOfLocalUnrefinedCells();
       if ( currentNumberOfCells==p.second.numberOfUnrefinedCells ) {
-        // @todo Debug
-        logInfo( "updateBlacklist()", "tree " << p.first << " is on blacklist but seems to have failed to fork off cells successfully. Keep on blacklist" );
+        logInfo( "updateBlacklist()", "tree " << p.first << " is on blacklist but seems to have failed to fork off cells successfully, as number of cells did not decrease since last split. Keep on blacklist" );
       }
       else if (p.second.lifetime==1) {
         logInfo( "updateBlacklist()", "remove tree " << p.first << " from blacklist (keep but set at inactive)" );
