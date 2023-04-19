@@ -25,21 +25,42 @@ the solver in the first place. This happens in get_includes().
   """
   
   
+  # TemplateInitVertex = """
+  # if ( not marker.willBeRefined() ) { 
+  #   logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
+    
+  #   repositories::{{SOLVER_INSTANCE}}.init(
+  #     marker.x(),
+  #     marker.h(),
+  #     {% if CARDINALITY==1 %}
+  #     *(fineGridVertex{{SOLVER_NAME}}.getValue().data()),
+  #     *(fineGridVertex{{SOLVER_NAME}}.getRhs().data())
+  #     {% else %}
+  #     fineGridVertex{{SOLVER_NAME}}.getValue(),
+  #     fineGridVertex{{SOLVER_NAME}}.getRhs()
+  #     {% endif %}
+  #   );
+    
+  #   logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
+  # } 
+#  """
   TemplateInitVertex = """
   if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
+
+    //init two doubles; pass these by reference into init()
+    double value, rhs;
     
     repositories::{{SOLVER_INSTANCE}}.init(
       marker.x(),
       marker.h(),
-      {% if CARDINALITY==1 %}
-      *(fineGridVertex{{SOLVER_NAME}}.getValue().data()),
-      *(fineGridVertex{{SOLVER_NAME}}.getRhs().data())
-      {% else %}
-      fineGridVertex{{SOLVER_NAME}}.getValue(),
-      fineGridVertex{{SOLVER_NAME}}.getRhs()
-      {% endif %}
+      value,
+      rhs
     );
+
+    //place these values into the grid
+    fineGridVertexPoisson.setValue(0, value);
+    fineGridVertexPoisson.setRhs(0, rhs);
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 

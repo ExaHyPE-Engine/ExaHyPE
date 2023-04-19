@@ -21,5 +21,6 @@ void benchmarks::multigrid::petsc::poisson::Poisson::init(
   double&                                       rhs
   
 ) {
-
+  value = 0;
+  rhs = 1;
 }
