@@ -15,7 +15,7 @@ OpenMP ${OpenMP_CXX_VERSION} was provided, reverting to serial otter")
   endif()
 else()
   find_library(Otter_LIBRARY NAMES libotter-task-graph.a otter-task-graph)
-  message(STATUS "Link to otter-task-graph as OpenMP Is not Ffund")
+  message(STATUS "Link to otter-task-graph as OpenMP Is not found")
 endif()
 
 find_package_handle_standard_args(Otter
