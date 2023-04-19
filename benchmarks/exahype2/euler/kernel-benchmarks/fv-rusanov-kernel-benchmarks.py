@@ -100,7 +100,7 @@ project.set_global_simulation_parameters(
   periodic_BC = [False, False, False]
 )
 
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 
 if args.debug:
   build_mode = peano4.output.CompileMode.Debug
