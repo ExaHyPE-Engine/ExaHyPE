@@ -1679,6 +1679,7 @@ void peano4::grid::Spacetree::splitOrJoinCell(
         updateVertexRanksWithinCell( fineGridVertices, targetSpacetreeId );
       }
       _splittedCells.push_back(targetSpacetreeId);
+      updateSplittingCounter( targetSpacetreeId );
     }
     else if (not isSplitCandidate and not isRefined) {
       _splittedCells.push_back(NoSplit);
