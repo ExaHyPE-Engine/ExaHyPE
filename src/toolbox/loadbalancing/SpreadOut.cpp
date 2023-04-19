@@ -103,8 +103,7 @@ void toolbox::loadbalancing::SpreadOut::updateLoadBalancing() {
       " trees with approx " << cellsPerTree << " cells per tree"
     );
 
-
-    int totalSplits = 0;
+    int totalSplits = cellsPerTree;
     for (int targetRank=0; targetRank<ranks;   targetRank++ )
     for (int treeNumber= targetRank==0 ? 1 : 0; treeNumber<numberOfTreesPerRank; treeNumber++ ) {
       int thisTreesCells = cellsPerTree;
