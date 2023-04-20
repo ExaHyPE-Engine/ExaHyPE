@@ -119,7 +119,7 @@ my_project = exahype2.Project(
 )
 
 my_project.add_solver( my_solver )
-my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 my_project.set_Peano4_installation("../../../", build_modes[args.build_mode])
 
 my_project.set_global_simulation_parameters(
