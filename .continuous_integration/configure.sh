@@ -68,7 +68,7 @@ if [ "$toolchain" = "amd" ]; then
         --enable-loadbalancing \
         --enable-blockstructured \
         --enable-particles \
-        --enable-fem \
+        --enable-finiteelements \
         --enable-swift \
         --with-fenv \
         --with-gpu=$gpu \
@@ -86,7 +86,7 @@ if [ "$toolchain" = "amd" ]; then
         --enable-loadbalancing \
         --enable-blockstructured \
         --enable-particles \
-        --enable-fem \
+        --enable-finiteelements \
         --enable-swift \
         --with-fenv \
         --with-multithreading=$shared \
@@ -104,7 +104,7 @@ if [ "$toolchain" = "amd" ]; then
       --enable-loadbalancing \
       --enable-blockstructured \
       --enable-particles \
-      --enable-fem \
+      --enable-finiteelements \
       --enable-swift \
       --with-fenv \
       CC=$cc CXX=$cxx \
@@ -184,7 +184,7 @@ if [ "$toolchain" = "nvidia" ]; then
         --enable-loadbalancing \
         --enable-blockstructured \
         --enable-particles \
-        --enable-fem \
+        --enable-finiteelements \
         --enable-swift \
         --with-fenv \
         --with-gpu=$gpu \
@@ -202,7 +202,7 @@ if [ "$toolchain" = "nvidia" ]; then
         --enable-loadbalancing \
         --enable-blockstructured \
         --enable-particles \
-        --enable-fem \
+        --enable-finiteelements \
         --enable-swift \
         --with-fenv \
         --with-multithreading=$shared \
@@ -220,7 +220,7 @@ if [ "$toolchain" = "nvidia" ]; then
       --enable-loadbalancing \
       --enable-blockstructured \
       --enable-particles \
-      --enable-fem \
+      --enable-finiteelements \
       --enable-swift \
       --with-fenv \
       CC=$cc CXX=$cxx \
@@ -269,7 +269,7 @@ if [ "$toolchain" = "gcc" ]; then
         --enable-exahype \
         --enable-loadbalancing \
         --enable-blockstructured \
-        --enable-fem \
+        --enable-finiteelements \
         --with-fenv \
         --with-gpu=$gpu \
         --with-multithreading=$shared \
@@ -286,7 +286,7 @@ if [ "$toolchain" = "gcc" ]; then
         --enable-loadbalancing \
         --enable-blockstructured \
         --enable-particles \
-        --enable-fem \
+        --enable-finiteelements \
         --enable-swift \
         --with-fenv \
         --with-multithreading=$shared \
@@ -304,7 +304,7 @@ if [ "$toolchain" = "gcc" ]; then
       --enable-loadbalancing \
       --enable-blockstructured \
       --enable-particles \
-      --enable-fem \
+      --enable-finiteelements \
       --enable-swift \
       --with-fenv \
       CC=$cc CXX=$cxx \
@@ -378,7 +378,7 @@ if [ "$toolchain" = "intel" ]; then
         --enable-exahype \
         --enable-loadbalancing \
         --enable-blockstructured \
-        --enable-fem \
+        --enable-finiteelements \
         --with-fenv \
         --with-gpu=$gpu \
         --with-multithreading=$shared \
@@ -395,7 +395,7 @@ if [ "$toolchain" = "intel" ]; then
         --enable-loadbalancing \
         --enable-blockstructured \
         --enable-particles \
-        --enable-fem \
+        --enable-finiteelements \
         --enable-swift \
         --with-fenv \
         --with-multithreading=$shared \
@@ -413,7 +413,7 @@ if [ "$toolchain" = "intel" ]; then
       --enable-loadbalancing \
       --enable-blockstructured \
       --enable-particles \
-      --enable-fem \
+      --enable-finiteelements \
       --enable-swift \
       --with-fenv \
       CC=$cc CXX=$cxx \
@@ -477,7 +477,7 @@ if [ "$toolchain" = "llvm" ]; then
         --enable-exahype \
         --enable-loadbalancing \
         --enable-blockstructured \
-        --enable-fem \
+        --enable-finiteelements \
         --with-fenv \
         --with-gpu=$gpu \
         --with-multithreading=$shared \
@@ -493,7 +493,7 @@ if [ "$toolchain" = "llvm" ]; then
         --enable-exahype \
         --enable-loadbalancing \
         --enable-blockstructured \
-        --enable-fem \
+        --enable-finiteelements \
         --with-fenv \
         --with-multithreading=$shared \
         CC=$cc CXX=$cxx \
@@ -509,7 +509,7 @@ if [ "$toolchain" = "llvm" ]; then
       --enable-exahype \
       --enable-loadbalancing \
       --enable-blockstructured \
-      --enable-fem \
+      --enable-finiteelements \
       --with-fenv \
       CC=$cc CXX=$cxx \
       CXXFLAGS="$CXXFLAGS" \
