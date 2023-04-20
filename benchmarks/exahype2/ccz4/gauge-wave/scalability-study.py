@@ -18,7 +18,7 @@ parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",         defa
 parser.add_argument("-v",   "--verbose",           dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-s",   "--solver",            dest="solver",           choices=["fv-legacy-no-heap", "fv-legacy", "fv-no-heap", "fv", "fv-tasks", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1",  "dg0-rk2",  "dg0-rk3",  "dg0-rk4", "dg1-rk1", "dg2-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",         type=float, default=0.001, help="End of simulation" )
-parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.05,  help="Cell size (default 0.3)" )
+parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.05,  help="Cell size (default 0.05)" )
 
 args = parser.parse_args()
 
@@ -372,7 +372,8 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 
-project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
+#project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
+project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
 
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
