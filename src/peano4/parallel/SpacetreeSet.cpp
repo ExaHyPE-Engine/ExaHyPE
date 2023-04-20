@@ -267,13 +267,13 @@ peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
 
 bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
   // AT: ideally would have a parent task to pass here to record ancestry
-  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
+  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL); // TODO (AT): replace with C++ api. The parent task is the global (root) task from the main app. Not clear whether this is the right place to annotate
   _spacetreeSet.createObserverCloneIfRequired(_observer,_spacetree._id);
   if (_invertTreeTraversalDirectionBeforeWeStart) {
     _spacetree._root.setInverted( not _spacetree._root.getInverted() );
   }
   _spacetree.traverse( *_spacetreeSet._clonedObserver[_spacetree._id], true );
-  otterTaskEnd(task);
+  otterTaskEnd(task); // TODO (AT): replace with C++ api
   return false;
 }
 
@@ -498,6 +498,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
 
   _state = SpacetreeSetState::TraverseTreesAndExchangeData;
 
+  // TODO (AT): might be able to replace tarch::multicore::Task* with TraverseTask* as the latter is a subclass
   std::vector< tarch::multicore::Task* > primaryTasks;
   std::vector< tarch::multicore::Task* > secondaryTasks;
   std::vector< tarch::multicore::Task* > tertiaryTasks;
@@ -508,7 +509,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
       case peano4::grid::SpacetreeState::JoinTriggered:
       case peano4::grid::SpacetreeState::Joining:
         logDebug( "traverse(TraversalObserver&)", "issue task to traverse tree " << p._id << " in the primary tree set " << p.toString() );
-        primaryTasks.push_back( new TraverseTask( p, *this, observer, false ));
+        primaryTasks.push_back( new TraverseTask( p, *this, observer, false )); // TODO (AT): might augment TraverseTask class to hold otter_task_context_t*
         break;
       case peano4::grid::SpacetreeState::Running:
         if ( p._joining.empty() ) {
@@ -536,7 +537,8 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   [[maybe_unused]] const bool runSequentially = false;
 
   logTraceInWith1Argument( "traverse(TraversalObserver&)-primary", primaryTasks.size() );
-  tarch::multicore::spawnAndWait( primaryTasks );
+  tarch::multicore::spawnAndWait( primaryTasks ); // TODO (AT): might want to annotate task creation here. logically this is a fork-join statement (see TW schematic drawing)
+  // TODO (AT): synchronise here on tasks spawned by primaryTasks (children of primaryTasks tasks)
   logTraceOut( "traverse(TraversalObserver&)-primary" );
 
   logDebug( "traverse(TraversalObserver&)", "primary tasks (traversals) complete, trigger split data stream if required" );

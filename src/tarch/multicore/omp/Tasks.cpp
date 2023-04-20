@@ -47,6 +47,8 @@ namespace {
     // important, otherwise taskwait synchronises
     assertion( not tasks.empty() );
 
+    // TODO (AT): TW didn't suggest it, but might we want to annotate tasks here?
+
     #if defined(OpenMPTaskGroup)
     #pragma omp taskloop nogroup shared(tasks) priority(StandardPriority) untied
     #endif
