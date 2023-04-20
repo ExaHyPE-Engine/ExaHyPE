@@ -463,11 +463,9 @@ void runBenchmarksOnDevice(int numberOfPatches) {
   event.setX(CellOffset);
   event.setH(CellSize);
   peano4::datamanagement::CellMarker marker(event);
-
-#if defined(SharedOMP) and defined(GPUOffloadingOMP)
   const int device = 0;
   const auto numberOfPatchesPerThread = numberOfPatches / tarch::multicore::Core::getInstance().getNumberOfThreads();
-
+#if defined(SharedOMP) and defined(GPUOffloadingOMP)
   #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__) or defined(__AMDGPU__) or defined(__clang__)
     tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
     #pragma omp parallel for

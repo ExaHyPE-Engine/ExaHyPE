@@ -29,7 +29,7 @@ args = parser.parse_args()
 
 
 project = petsc.Project(project_name = "Poisson", 
-                        namespace = [ "multigrid", "petsc", "poisson" ]
+                        namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
                         ) 
                         
                         

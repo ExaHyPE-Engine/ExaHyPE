@@ -15,6 +15,28 @@ namespace {
    * cannot vectorise or be inlined/unrolled. So I need this helper routine
    * which is way less elegant, yet knows how often the underlying while
    * loop is to be unrolled.
+   *
+   * ## Inlining
+   *
+   * I originally had labelled this function with the extension
+   *
+   *
+   *           InlineMethod
+   *
+   *
+   * If you use the GNU compiler, you'll get
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~
+   *  In file included from ../../../src/exahype2/fd/fd4/FD4.h(169),
+   *             from observers/CreateGrid2exahype2_solvers_rkfd_actionsets_InitialCondition0.h(31),
+   *             from observers/CreateGrid2exahype2_solvers_rkfd_actionsets_InitialCondition0.cpp(1):
+   *             ../../../src/exahype2/fd/fd4/../FD_Helper.cpph(19): error: attributes are not permitted in a function definition
+   *             tarch::la::Vector<Dimensions,int> gridCellIndex2d( int x, int y ) InlineMethod {
+   * ~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * but the LLVM compiler strand seems to accept them.
+   *
+   *
    */
   tarch::la::Vector<Dimensions,int> gridCellIndex2d( int x, int y ) InlineMethod {
     tarch::la::Vector<Dimensions,int> result;
