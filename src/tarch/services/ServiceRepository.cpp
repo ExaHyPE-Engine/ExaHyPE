@@ -46,11 +46,14 @@ void tarch::services::ServiceRepository::addService( Service* const service, con
   ServiceEntry entry;
   entry._name    = name;
   entry._service = service;
+
+  tarch::multicore::RecursiveLock  lock(_receiveDanglingMessagesSemaphore);
   _services.push_back( entry );
 }
 
 
 void tarch::services::ServiceRepository::removeService( Service* const service ) {
+  tarch::multicore::RecursiveLock  lock(_receiveDanglingMessagesSemaphore);
   for (std::vector<ServiceEntry>::iterator p=_services.begin(); p!=_services.end(); ) {
 	if ( p->_service==service) {
 	  p = _services.erase(p);
