@@ -61,4 +61,4 @@ then
 fi
 
 # plot the solution
-python plotSolution.py 0.1
+# python plotSolution.py 0.1 # not ready yet
