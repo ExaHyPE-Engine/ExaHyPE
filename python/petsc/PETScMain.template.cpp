@@ -1,8 +1,7 @@
 #include "{{MAIN_NAME}}.h"
 
 #include "observers/CreateGrid.h"
-#include "observers/Enumerate.h"
-#include "observers/Init.h"
+#include "observers/EnumerateAndInitSolution.h"
 #include "observers/Assemble.h"
 #include "observers/Solve.h"
 #include "observers/MapSolutionOntoMesh.h"
@@ -14,6 +13,7 @@
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
+#include "tarch/logging/LogFilterFileReader.h"
 #include "tarch/UnitTests.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Core.h"
@@ -30,6 +30,8 @@
 #include "toolbox/loadbalancing/loadbalancing.h"
 
 #include "toolbox/finiteelements/UnitTests.h"
+
+#include "petsc/UnitTests.h"
 
 //#include "petsc/UserInterface.h"
 
@@ -73,18 +75,18 @@ bool selectNextAlgorithmicStep() {
       case repositories::StepRepository::Steps::CreateGrid:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Enumerate )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::EnumerateAndInitSolution )
           );
         }
         break;
-      case repositories::StepRepository::Steps::Enumerate:
+      case repositories::StepRepository::Steps::EnumerateAndInitSolution:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Init )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitPETSc )
           );
         }
         break;
-      case repositories::StepRepository::Steps::Init:
+      case repositories::StepRepository::Steps::InitPETSc:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
             repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Assemble )
@@ -172,23 +174,29 @@ void step() {
         createGridMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::Enumerate:
+    case repositories::StepRepository::Steps::EnumerateAndInitSolution:
       {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "enumerate" );
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "enumerate-and-init-solution" );
 
-        observers::Enumerate  observer;
+        observers::EnumerateAndInitSolution  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         enumerateMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::Init:
+    case repositories::StepRepository::Steps::InitPETSc:
       {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "enumerate" );
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-PETSc" );
 
         watch.start();
-        // todo
+
+        repositories::computeLocalToGlobalMapsForAllSolvers();
+        const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
+        logInfo( "step()", "total no of dofs=" << totalNumberOfDegreesOfFreedom );
+
+        // todo Dmitry
+
         watch.stop();
         initMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -263,6 +271,10 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidBuild;
   }
 
+  if ( not tarch::logging::LogFilterFileReader::parsePlainTextFile( "petsc.log-filter" ) ) {
+    logWarning( "main()", "no petsc.log-filter file found or file has been corrupted. Use default logging configuration" );
+  }
+
   repositories::DataRepository::initDatatypes();
 
 //#ifdef UseFenv
@@ -274,7 +286,7 @@ int main(int argc, char** argv) {
   unitTests->addTestCase( peano4::getUnitTests() );
   unitTests->addTestCase( tarch::getUnitTests() );
   unitTests->addTestCase( toolbox::finiteelements::getUnitTests() );
-  unitTests->addTestCase( exahype2::getUnitTests() );
+  unitTests->addTestCase( petsc::getUnitTests() );
   unitTests->run();
   if (unitTests->getNumberOfErrors() != 0) {
     logError("main()", "unit tests failed. Quit.");

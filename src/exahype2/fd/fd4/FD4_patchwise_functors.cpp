@@ -27,6 +27,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   assertionEquals(haloSize,3);
 
   bool evaluateKODissipation = KOSigma>0.0;
+  bool second_order_formulation = false;
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
   exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1,numberOfGridCellsPerPatchPerAxis,0,       unknowns,0);
@@ -107,6 +108,87 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
         }
       }
     }
+
+    // STEP 1.5: Calculate and update auxiliary variables
+    if (Dimensions==2 and second_order_formulation) {
+
+      for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
+        internal::computeAuxiliaryVariables_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          gridCellIndex2d(x,y),
+          0, // normal
+          QOutEnumerator
+        );
+      }
+
+      for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
+        internal::computeAuxiliaryVariables_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          gridCellIndex2d(x,y),
+          1, // normal
+          QOutEnumerator
+        );
+      }
+
+    } else if (Dimensions==3 and second_order_formulation) {
+
+        for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+        for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
+        for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
+          internal::computeAuxiliaryVariables_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            gridCellIndex3d(x,y,z),
+            0, // normal
+            QOutEnumerator
+          );
+        }
+
+        for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+        for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
+        for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
+          internal::computeAuxiliaryVariables_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            gridCellIndex3d(x,y,z),
+            1, // normal
+            QOutEnumerator
+          );
+        }
+
+        for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+        for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
+        for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
+          internal::computeAuxiliaryVariables_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            gridCellIndex3d(x,y,z),
+            2, // normal
+            QOutEnumerator
+          );
+        }
+
+    }
+
 
 
     // Step 2: Add source terms

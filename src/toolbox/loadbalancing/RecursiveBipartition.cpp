@@ -83,7 +83,10 @@ bool toolbox::loadbalancing::RecursiveBipartition::isInterRankBalancingBad() con
 
 
 void toolbox::loadbalancing::RecursiveBipartition::updateState() {
-  if ( areRanksUnemployed() ) {
+  if ( _state == State::SwitchedOff ) {
+    logDebug( "updateState()", "don't update as we have switched off" );
+  }
+  else if ( areRanksUnemployed() ) {
     _state = State::InterRankDistribution;
     logDebug( "updateState()", "switch to state " << ::toString(_state) );
   }
@@ -97,17 +100,16 @@ void toolbox::loadbalancing::RecursiveBipartition::updateState() {
   }
   else {
     _state = State::WaitForRoundRobinToken;
-  }
 
-  _roundRobinToken++;
-  _roundRobinToken = _roundRobinToken % tarch::mpi::Rank::getInstance().getNumberOfRanks();
+    _roundRobinToken++;
+    _roundRobinToken = _roundRobinToken % tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  }
 }
 
 
 bool toolbox::loadbalancing::RecursiveBipartition::areRanksUnemployed() const {
   return _statistics.getMinimumOfMaximumOfTreesPerRank() == 0
      and _statistics.getGlobalNumberOfTrees() > 0;
-;
 }
 
 

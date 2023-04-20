@@ -16,23 +16,21 @@ toolbox::loadbalancing::Blacklist::BlacklistData::BlacklistData(int treeNumber):
 
 
 toolbox::loadbalancing::Blacklist::Blacklist() {
-//  _initialBlacklistWeight(),
-
 }
 
 
 std::string toolbox::loadbalancing::Blacklist::toString() const {
   std::ostringstream msg;
+  msg << "{";
   if (_blacklist.empty()) {
     msg << ",blacklist is empty";
   }
   else {
-    msg << ",blacklist={";
     for (auto p: _blacklist) {
       msg << "(#" << p.first << ":";
 
       if (p.second.lifetime>0) {
-        msg << "lifetime=" << p.second.lifetime << "/"
+        msg << "lifetime=" << p.second.lifetime
             << ",#cells=" << p.second.numberOfUnrefinedCells;
       }
       else {
@@ -43,8 +41,8 @@ std::string toolbox::loadbalancing::Blacklist::toString() const {
           << ",#deg-children=" << p.second.numberOfDegeneratedChildren
           << ")";
     }
-    msg << "}";
   }
+  msg << "}";
 
   return msg.str();
 }

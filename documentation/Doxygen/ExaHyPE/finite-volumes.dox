@@ -1,8 +1,13 @@
 /** 
-\page finite_volumes_tex 
+@page exahype_finite_volumes Finite Volumes
 
-A block-structured AMR code for Finite Volumes {#section:python-api-examples:finite-volumes}
-==============================================
+@todo figure out how to make this a subpage of a subpage. ie, 
+when i tried to insert this page as a subpage of exhaype2/tutorials, a range of 
+other random pages were drawn into the navtree for tutorials.
+
+@todo fix the references to other chapters and get the images included
+
+## A block-structured AMR code for Finite Volumes 
 
 We create a simple Finite Volumes solver here. The examples starts with
 a simple regular grid, parallelises this grid, and finally adds adaptive
@@ -15,17 +20,16 @@ and time-consuming process despite the fact that I do offer a toolbox
 for block-structured code. For most applications, I therefore recommend
 to realise FV codes through ExaHyPE instead.
 
-Setting up the data structures
-------------------------------
+## Setting up the data structures
 
-We model our grid as an AMR grid consisting of $N \times N$ blocks. We
-call these blocks *patches*. In the example below, we have chosen $N=7$.
-In general, odd choices of $N$ are advantageous once you enable AMR as
+We model our grid as an AMR grid consisting of @f$N \times N@f$ blocks. We
+call these blocks *patches*. In the example below, we have chosen @f$N=7@f$.
+In general, odd choices of @f$N@f$ are advantageous once you enable AMR as
 we will discuss later.
 
-![image](42_finite-volumes/block-structured.pdf){width="50%"}
+@image html logos/42_finite-volumes/block-structured.pdf
 
-In the above example, every volume within the $N \times N$ patches holds
+In the above example, every volume within the @f$N \times N@f$ patches holds
 five unknowns. In general, I prefer the term volume here, as cell again
 is ambigous given that we construct the  host mesh from cells.
 
@@ -35,11 +39,11 @@ what is going on in neighbouring cells.  realises a strict element-wise
 traversal, i.e. there's no way to access the neighbour cell of a cell
 directly. However, we can hijack the faces.
 
-The idea here is that we embed a $2 \times N$ ($d=2$) or
-$2 \times N \times N$ ($d=3$), respectively, patch into each face. Let
+The idea here is that we embed a @f$2 \times N@f$ (@f$d=2@f$) or
+@f$2 \times N \times N@f$ (@f$d=3@f$), respectively, patch into each face. Let
 this auxiliary patch overlap the adjacent cells. Then, we effectively
 have a halo of one cell available within each cell: We know the cell
-data. We also have access to the $2d$ faces where each hosts a
+data. We also have access to the @f$2d@f$ faces where each hosts a
 degenerated patch. One later of this patch is a copy of our own data,
 i.e. does not give us additional information. The other layer of the
 auxiliary patch however holds data from the neighbour. It gives us
@@ -52,8 +56,7 @@ auxiliary face data structures, too:
 Before we generate the code, we export some of the Python constants that
 we use into C/C++, so we have it available there, too:
 
-Administration of the data structures
--------------------------------------
+## Administration of the data structures
 
 Projecting the patches onto the face data structures and back is a
 mechnical task. Therefore,  offers a toolbox to relieve you from the
@@ -61,12 +64,12 @@ pain to recode it over and over again. Using this toolbox, you add the
 projections to your algorithmic steps, and the API then automatically
 injects these features (aspects) into your code:
 
-![image](42_finite-volumes/ProjectPatchOntoFaces.pdf){width="25%"}
+@image html logos/42_finite-volumes/ProjectPatchOntoFaces.pdf
 
 The image above illustrates what `ProjectPatchOntoFaces` does: It knows
 the dimensions of both the patches and the face auxiliary data
 structures and thus can ensure that the right data is copied from the
-cell into the $2^d$ faces when we leave a cell throughout the grid
+cell into the @f$2^d@f$ faces when we leave a cell throughout the grid
 traversal.
 
 The action set `ReconstructPatchAndApplyFunctor` works slighlty
@@ -74,13 +77,12 @@ different yet can be read, from a patch projection point of view, as
 transpose of `ProjectPatchOntoFaces`: It creates a auxiliary variable
 `reconstructedX` with X being the name you gave the Unknowns of the
 patch. This auxiliary variable has the dimensions
-$N+2 \times N+2 \times N+2$[^1]. It then copies over the patch data into
+@f$N+2 \times N+2 \times N+2@f$[^1]. It then copies over the patch data into
 this auxiliary patch and uses the faces to supplement it with halo data
 around it. So that it, you get the original patch data plus the cells
 around it in one big patch.
 
-A manually implemented FV scheme
---------------------------------
+## A manually implemented FV scheme
 
 As the name suggests, the reconstruction step is typically combined with
 the invocation of some computation on the patch. We give a simple
@@ -139,8 +141,8 @@ generic implementations of these guys in its directories.
 
 Let the three functions be one string assigned to a variable `functor`
 in our Python API. We now have to run over the reconstructed patch with
-$N+2 \times N+2$ cells and write it back into the actual user data with
-cardinality $N \times N$.
+@f$N+2 \times N+2@f$ cells and write it back into the actual user data with
+cardinality @f$N \times N@f$.
 
 There are lots of options how to do this. We can use Peano's
 dimension-generic volumes, or we can write it down for our particular
@@ -164,8 +166,7 @@ thing is, it also forwards two double pointer (`reconstructedPatch` and
 The string holding this routine is passed into the instantiation of the
 type `ApplyFunctorOnPatch` and thus is injected into the generated code.
 
-Plot results
-------------
+## Plot results
 
 For the plotting of patch-based AMR,  provides predefined action sets,
 too. They dump the output into Peano's patch format. Chapter
