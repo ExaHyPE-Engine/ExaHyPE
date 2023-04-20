@@ -36,11 +36,11 @@ exahype2::EnclaveTask::EnclaveTask(
 bool exahype2::EnclaveTask::run() {
   logTraceInWith1Argument( "run()", getTaskId() );
 
-  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
+  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL); // TODO (AT): replace with C++ api. These are children of the traversal tasks
   computeTask();
 
   EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
-  otterTaskEnd(task);
+  otterTaskEnd(task); // TODO (AT): replace with C++ api
   logTraceOut( "run()" );
   return false;
 }
