@@ -74,8 +74,12 @@ class peano4::grid::Spacetree {
      * Can a cell be split (deployed to another rank)
      *
      * Not all cells are a fit and can be deployed to another rank even
-     * though the spacetree set wants to split a tree. Cells that disqualify
-     * for splitting are
+     * though the spacetree set wants to split a tree. Please read through
+     * @ref peano_domain_decomposition "Peano's domain decomposition" discussion
+     * and the two splitting constraints therein to understand why this
+     * routine may or may not label a cell as splitable.
+     *
+     * Cells that disqualify for splitting are
      *
      * - Cells which a adjacent to a periodic boundary conditions. Such cells
      *   (including their adjacent vertices) all are kept on tree 0 so all

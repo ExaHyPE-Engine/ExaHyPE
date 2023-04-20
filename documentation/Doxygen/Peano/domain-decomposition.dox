@@ -2,6 +2,7 @@
 
 \page peano_domain_decomposition Domain decomposition
 
+@image html domain-decomposition.png
 
 Peano starts from spacetrees and thinks in whole trees and only supports two
 types of decomposition operations: a split and a join. At the same time,
@@ -249,15 +250,25 @@ are triggered \emph{after} all the global trees have synchronised.
 
 ## Underlying algorithms
 
+Before we discuss any algorithms that Peano employs, it is important to state 
+that Peano always commits to two fundamental constraints:
 
-Also Peano's coarser cells are uniquely assigned to one tree. Between
-the ranks, we have a tree topology again. That is, a splitting of a tree
-is always realised such that there's a unique master-worker topology.
+1. **Topology constraint** Also Peano's coarser cells are uniquely assigned to one tree. Between
+   the ranks, we have a tree topology again. That is, a splitting of a tree
+   is always realised such that there's a unique master-worker topology.
+
+
+2. **Grid regularity constraint** Peano implements one further constraint
+   which refers to the handling of AMR. A cell can be forked onto another 
+   rank if and only if all of its vertices are persistent.
+
+
+#### Examples
 
 @image html domain-decomposition/tree-topology.png
 
 Some examples in the figure above sketch the
-implications: In the left example, the yellow tree has split up into
+implications of the topology constraint: In the left example, the yellow tree has split up into
 yellow and green. The green tree has further split into green and red.
 The code usually tries to keep whole trees, i.e. children and parents,
 within one tree. In the left example, it would be natural to make the
@@ -265,42 +276,86 @@ very right green cell on the first child level a red one, too. This way,
 a whole tree would reside in red. However, if we made this single cell
 red, then red would become a child of yellow, i.e. we would change the
 rank topology. Peano never does so.
-
 In the right example conversely, I've asked the yellow tree to split
 into yellow, green and red in one rush. This time, the right level 1
 cell becomes red already.
 
-Both examples show that a split of one tree into $n$ trees never results
-in the fact that the original tree becomes empty. Otherwise, we woudl
+Both examples show that a split of one tree into further trees never results
+in the fact that the original tree becomes empty. Otherwise, we would
 again change the tree topology upon the ranks.
+ 
+@image html domain-decomposition/regularity-constraint.png
 
-As  preserves the logical topology between trees, it is reasonable to
-strive for as wide tree topologies as possible. Otherwise, your meshes
-(coarsening) are very constrained. That is, it is better to split a tree
-a into five parts a,b,c,d,e with b,c,d,e being children of a
-rather than splitting a into b,c and then b and c again.
+Im the mesh above, a rank can fork off the green cell. In the sketch,
+the green cell is the root of a tree with two more levels. A fork of the 
+green cell consequently would fork off a whole tree (see topology 
+constraint above). However, we are forbidden to fork off the red cell
+and its nine children. We could fork off the blue cell, but the red
+cell is hanging and therefore not a split candidate.
 
 
-### Data flow on stationary domains
+#### Rationale
 
-Peano relies on a multiscale non-overlapping domain decomposition. Within the
+We want to work with a proper master-worker topology such that we have 
+well defined relations where a tree has to send data to if data has to 
+go to coarser levels. The topology also allows us to run reductions 
+along trees, or to clarify who is allowed to split and who is not.
+The topology also allows us to veto erase commands if they would erase
+whole subdomains.
+
+The regularity constraint is important as we have to update a vertex
+state if a mesh refines or erases dynamically. In this case, a rank
+might trigger an erase and a child who holds the neighbouring refined
+cell has to implement this erase as well. If the erase now suddenly
+creates a hanging node on the coarsest level, this hanging node does
+not carry any adjency information anymore. Adjacency now has to be 
+propagated through from even coarser level, which is difficult in a 
+distributed data environment. By defining that all the coarsest octants
+on a rank have to have exclusively persistent vertices, we avoid the 
+complications that adjacency information might be outdated. We also 
+ensure that we handle all data consistency through (multilevel) exchange
+of vertex data with neighbours. No data has to be propagated between 
+levels just to get the vertex data right.
+
+
+#### Data flow patterns
+
+
+With these two constraints in place, we can discuss Peano's data flow:
+The code relies on a multiscale non-overlapping domain decomposition. Within the
 trees, we distinguish three different types of parallel data flow:
 
 -   **Horizontal data exchange** is exchange between two cells of one
     level along their boundary.
 
--   **Vertical data exchange** is exchange between trees where one
-    resolution meets the other. Vertical data exchange is also used to
-    stream data from one rank to the other if we fork. Joins do not
-    stream logically.
+-   **Synchronous vertical data exchange** is exchange between trees where one
+    resolution meets the other. Vertical data exchange is synchronous
+    if a coarse mesh passes information down the grid hierarchy in one 
+    sweep and/or receives information from finer meshes and immediately,
+    i.e. in the same sweep, continues to process these data. Synchronous
+    vertical data exchange is used to stream data from one rank to the other
+    if we fork.
+
+-   **Asynchronous vertical data exchange** is exchange between parent-child 
+    trees where the coarser parent sends data to its child, but the data is 
+    used there on the child's coarsest level in the subsequent grid traversal.
+    Along the same lines, we speak of asynchronous vertical data exchange if 
+    the coarest level on a child sends data one level up, but these data are
+    not used on the next coarser level which is owned by the parent before the
+    next mesh traversal.
     
     
-#### Horizontal data flow
+## Horizontal data flow
 
 Peano uses a non-overlapping domain decomposition. Therefore, ie
-shares/exchanges faces and vertices between different trees. It never
+shares/exchanges faces and vertices between different trees where these
+grid entities have adjacent octants on the same level which are owned
+by different trees. However, it never
 shares cells of one level. I explain the code's data exchange pattern
-with vertices. Yet, the same pattern holds for faces, too. After a code
+with vertices. Yet, the same pattern holds for faces, too. 
+
+
+After a code
 has read/written a vertex for the very last time throughout a traversal,
 it sends a copy of this vertex away. In-between two iterations, all
 trees exchange their data. That is, in the next iteration any sent out
@@ -315,17 +370,17 @@ smoothers: Whatever you do on one tree won't be visible on the other
 trees in this very tree traversal. Prior to the next tree sweep, this
 information however becomes available there.
 
-#### Vertical data flow
+## Asynchronous vertical data flow
 
 This yet has to be written.
 
-#### Synchronous vertical data flow
+## Synchronous vertical data flow
 
 This yet has to be written.
 
 
 
-### Splits
+## Splits
 
 Splits are triggered via peano4::parallel::SpacetreeSet::split().
 Whenever you split a tree, Peano creates the new trees (either as
@@ -457,9 +512,17 @@ split, the logical ownership of all data resides with the master,
 i.e. it is the master automaton who asks the user code what operations
 to invoke on the data.
 
+#### Observation and best practices
+
+As  preserves the logical topology between trees, it is reasonable to
+strive for as wide tree topologies as possible. Otherwise, your meshes
+(coarsening) are very constrained. That is, it is better to split a tree
+a into five parts a,b,c,d,e with b,c,d,e being children of a
+rather than splitting a into b,c and then b and c again.
 
 
-### Joins
+
+## Joins
 
 Joins are completely hidden from the user, i.e. there's no way to
 actively join trees. To understand why Peano issues joins from time to
@@ -546,7 +609,7 @@ split, the logical ownership of all data resides with the master,
 i.e. it is the master automaton who asks the user code what operations
 to invoke on the data.
 
-### Grid data streaming throughout joins
+#### Grid data streaming throughout joins
 
 In principle, one might assume that no streaming is required if we merge
 only deteriorated trees. After all, if a rank deploys some subtree to

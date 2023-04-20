@@ -1636,7 +1636,8 @@ bool peano4::grid::Spacetree::isCellSplitCandidate(
   return isSpacetreeNodeLocal(fineGridVertices,false,false) and
     isSpacetreeNodeLocal(coarseGridVertices,false,false) and
     // @todo
-    areAllVerticesNonHanging(fineGridVertices) and
+//    areAllVerticesNonHanging(fineGridVertices) and
+    areAllVerticesNonHanging(coarseGridVertices) and
     not isOneVertexAdjacentToPeriodicBC;
 }
 
