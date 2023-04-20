@@ -258,6 +258,20 @@ if test "$gpu" == cpp; then
 fi
 
 
+#
+# PETSc
+#
+AC_ARG_WITH(petsc,
+  AS_HELP_STRING([--with-petsc],[switch on PETSc support]),
+  [ AC_MSG_CHECKING(for petsc)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);                              petsc=false ;;
+      *)     AC_MSG_RESULT(yes);                             petsc=${withval}  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for petsc); AC_MSG_RESULT(no); petsc=false ])
+
+AM_CONDITIONAL([UsePETSc],    [test "$petsc" != petsc])
+
 
 #
 # ===============================================================
@@ -378,6 +392,44 @@ fi
 
 
 #
+# Otter
+#
+AC_ARG_WITH(otter,
+  AS_HELP_STRING([--with-otter],[enable Otter [default=false]]),
+  [ AC_MSG_CHECKING(for otter)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_otter=false ;;
+      *)     AC_MSG_RESULT(yes);   use_otter=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for otter); AC_MSG_RESULT(no); use_otter=false ])
+AM_CONDITIONAL([UseOtter],[test "x$use_otter" = xtrue])
+
+# internal toolboxes don't need ifdefs, but here we need them
+if test "$use_otter" == true; then
+  AC_DEFINE([UseOtter], [UseOtter], [UseOtter])
+fi
+
+
+#
+# libxsmm
+#
+AC_ARG_WITH(libxsmm,
+  AS_HELP_STRING([--with-libxsmm],[enable libxsmm [default=false]]),
+  [ AC_MSG_CHECKING(for libxsmm)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_libxsmm=false ;;
+      *)     AC_MSG_RESULT(yes);   use_libxsmm=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for libxsmm); AC_MSG_RESULT(no); use_libxsmm=false ])
+AM_CONDITIONAL([UseLibXSMM],[test "x$use_libxsmm" = xtrue])
+
+if test "$use_libxsmm" == true; then
+  AC_DEFINE([UseLibXSMM], [UseLibXSMM], [UseLibXSMM])
+fi
+
+
+
+#
 # ===============================================================
 #   Floating-point exception handling
 # ===============================================================
@@ -461,9 +513,10 @@ fi
 
 
 
+
 #
 # ===============================================================
-#   Toolbox - enable
+#   Toolboxes (actives with enable)
 #
 # A toolbox is an optional extension of Peano (package). As there
 # are dependencies between the toolboxes, this part only analyses
@@ -476,15 +529,15 @@ fi
 #
 # FEM 
 #
-AC_ARG_ENABLE(fem,
-  AS_HELP_STRING([--enable-fem],[enable FEM  [default=false]]),
-  [ AC_MSG_CHECKING(for fem)
+AC_ARG_ENABLE(finiteelements,
+  AS_HELP_STRING([--enable-finiteelements],[enable finite elements toolbox  [default=false]]),
+  [ AC_MSG_CHECKING(for finiteelements)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);    toolbox_fem=false ;;
-      *)     AC_MSG_RESULT(yes);   toolbox_fem=true  ;;
+      no)    AC_MSG_RESULT(no);    toolbox_finiteelements=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_finiteelements=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for fem); AC_MSG_RESULT(no); toolbox_fem=false ])
-AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$toolbox_fem" = xtrue])
+  [ AC_MSG_CHECKING(for finiteelements); AC_MSG_RESULT(no); toolbox_finiteelements=false ])
+AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$toolbox_finiteelements" = xtrue])
 
 
 #
@@ -590,50 +643,16 @@ AC_ARG_WITH(delta,
 AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
 
 
-#
-# Otter
-#
-AC_ARG_WITH(otter,
-  AS_HELP_STRING([--with-otter],[enable Otter [default=false]]),
-  [ AC_MSG_CHECKING(for otter)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);    use_otter=false ;;
-      *)     AC_MSG_RESULT(yes);   use_otter=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for otter); AC_MSG_RESULT(no); use_otter=false ])
-AM_CONDITIONAL([UseOtter],[test "x$use_otter" = xtrue])
 
-# internal toolboxes don't need ifdefs, but here we need them
-if test "$use_otter" == true; then
-  AC_DEFINE([UseOtter], [UseOtter], [UseOtter])
-fi
-
-
-#
-# libxsmm
-#
-AC_ARG_WITH(libxsmm,
-  AS_HELP_STRING([--with-libxsmm],[enable libxsmm [default=false]]),
-  [ AC_MSG_CHECKING(for libxsmm)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);    use_libxsmm=false ;;
-      *)     AC_MSG_RESULT(yes);   use_libxsmm=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for libxsmm); AC_MSG_RESULT(no); use_libxsmm=false ])
-AM_CONDITIONAL([UseLibXSMM],[test "x$use_libxsmm" = xtrue])
-
-if test "$use_libxsmm" == true; then
-  AC_DEFINE([UseLibXSMM], [UseLibXSMM], [UseLibXSMM])
-fi
 
 #
 # ===============================================================
-#   Toolbox - setup
+#   Setup toolboxes and extensions
 #
-# Run through the set of toolboxes that are enabled, configure
-# them properly, i.e. augment the Peano compile and link flags,
-# and check for consistency, i.e. whether all dependencies are 
-# ok.
+# Run through the set of toolboxes and extensions that are enabled, 
+# configure them properly, i.e. augment the Peano compile and 
+# linker flags, and check for consistency, i.e. whether all 
+# dependencies are ok.
 # ===============================================================
 #
 
@@ -641,7 +660,7 @@ fi
 #
 # FEM 
 #
-if test "$toolbox_fem" != false; then
+if test "$toolbox_finiteelements" != false; then
   LDADD_PEANO_2D_RELEASE=" -lToolboxFiniteElements2d         $LDADD_PEANO_2D_RELEASE"
   LDADD_PEANO_2D_STATS="   -lToolboxFiniteElements2d_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxFiniteElements2d_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -759,6 +778,34 @@ fi
 
 
 #
+# PETSC
+#
+if test "$petsc" != false; then
+  AC_DEFINE([UsePETSc], [1], [UsePETSc])
+  if test "$toolbox_finiteelements" == false; then
+    AC_MSG_ERROR([PETSc requires the finite elements toolbox (run with --help to see the correct enable statement)])
+  fi
+  LDADD_PEANO_2D_RELEASE=" -lPETSc         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lPETSc_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE="   -lPETSc_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lPETSc_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE=" -lPETSc         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lPETSc_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lPETSc_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lPETSc_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/petsc "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/petsc "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/petsc "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/petsc "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/petsc "
+fi
+
+
+#
 # ExaHyPE2
 #
 if test "$toolbox_exahype" != false; then
@@ -787,7 +834,6 @@ if test "$toolbox_exahype" != false; then
   LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/exahype2 "
 fi
-
 
 
 if test "$use_libxsmm" != false; then
@@ -929,6 +975,7 @@ AC_CONFIG_FILES([Makefile
   src/toolbox/particles/Makefile
   src/convert/Makefile
   src/exahype2/Makefile
+  src/petsc/Makefile
   src/swift2/Makefile
   src/unittests/Makefile
 ])
