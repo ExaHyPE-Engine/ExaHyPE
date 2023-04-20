@@ -36,14 +36,14 @@ void exahype2::RefinementControlService::shutdown() {
 void exahype2::RefinementControlService::receiveDanglingMessages() {
   #ifdef Parallel
   int guardFlag;
-  MPI_Iprobe(MPI_ANY_RANK, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &guardFlag, MPI_STATUS_IGNORE);
+  MPI_Iprobe(MPI_ANY_SOURCE, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &guardFlag, MPI_STATUS_IGNORE);
 
   if (guardFlag) {
     tarch::multicore::Lock lock(_semaphore);
 
     MPI_Status status;
     int        flag;
-    MPI_Iprobe(MPI_ANY_RANK, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
+    MPI_Iprobe(MPI_ANY_SOURCE, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
     if (flag) {
       const int rank = status.MPI_SOURCE;
       int numberOfMessages;
