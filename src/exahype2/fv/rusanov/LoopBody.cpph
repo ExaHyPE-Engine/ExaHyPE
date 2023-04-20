@@ -17,9 +17,6 @@ void exahype2::fv::rusanov::internal::copySolution_LoopBody(
   const QOutEnumeratorType&                 QOutEnumerator
 ) {
   QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
-  //QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = 0;
-  //printf("  QIN: %f  ",  QIn[QInEnumerator(patchIndex,volumeIndex,unknown)]);
-  //printf("  QOUT: %f  ", QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ]);
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
@@ -764,7 +761,6 @@ void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
     );
     #endif
     QOut[ QOutEnumerator(patchIndex, volumeIndex, unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight);
-//printf("QOut[%d][%d]=%.16f\n", patchIndex, QOutEnumerator(patchIndex, volumeIndex,unknown), QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]);
     /*QOut[ ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * 0.5 * (tempFlux[fluxEnumerator(patchIndex, leftVolume, unknown)]-tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)]);*/
   };
 
@@ -867,9 +863,7 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
                              : tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)];
     double fluxLeft  = - lambdaLeft * (QIn[QInEnumerator(patchIndex, volumeIndex,unknown)] - QIn[QInEnumerator(patchIndex, leftVolume,unknown)]);
     double fluxRight = - lambdaRight * (QIn[QInEnumerator(patchIndex, rightVolume,unknown)] - QIn[QInEnumerator(patchIndex, volumeIndex,unknown)]);
-//printf("QOut[%d][%d]=%.16f\n", patchIndex, QOutEnumerator(patchIndex, volumeIndex,unknown), QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]);
     QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight)*0.5;
-//printf("QOut[%d][%d]=%.9f\n", patchIndex, QOutEnumerator(patchIndex, volumeIndex,unknown), QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]);
 
     #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
     assertion7(

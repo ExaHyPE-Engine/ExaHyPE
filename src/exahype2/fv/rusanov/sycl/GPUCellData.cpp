@@ -49,7 +49,7 @@ void exahype2::fv::rusanov::sycl::GPUCellData::destroy(
   }
 
   if (copyEigenvaluesBack) {
-    std::memcpy( hostObject.maxEigenvalue, maxEigenvalue, numberOfCells );
+    std::memcpy( hostObject.maxEigenvalue, maxEigenvalue, numberOfCells*sizeof(double) );
   }
 
   ::sycl::free( cellCentre, queue);

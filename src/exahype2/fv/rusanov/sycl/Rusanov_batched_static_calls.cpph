@@ -120,8 +120,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
                 patchData.QOut[patchIndex],
                 QOutEnumerator
               );
-			//printf("Qout[%d][%d]: %.8f\n", patchIndex, QOutEnumerator(patchIndex, volumeIndex2d(x, y), unknown), patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x,y), unknown)]);
-			//printf("patchIndex: %d,  x: %d,  y: %d,  unknown: %d\n", i[0], i[1], i[2], unknown);
             }
           }
         );
@@ -448,11 +446,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
                 volumeIndex2d(x,y),
                 unknown,
                 patchData.dt[patchIndex],
-                //*(patchData.QOut + patchIndex),
-				patchData.QOut[patchIndex],
+                *(patchData.QOut + patchIndex),
                 QOutEnumerator
               );
-			//printf("Qout[%d][%d]: %.16f, unknown: %d\n", patchIndex, QOutEnumerator(patchIndex, volumeIndex2d(x, y), unknown), patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x,y), unknown)], unknown);
             }
           }
         );
@@ -826,10 +822,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
                   patchData.dt[patchIndex]
                 )
               );
-		printf("Qout[%d][%d]: %.16f, unknown: 0\n", patchIndex, QOutEnumerator(patchIndex, volumeIndex2d(x, y), 0), patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x,y), 0)]);
-		printf("Qout[%d][%d]: %.16f, unknown: 1\n", patchIndex, QOutEnumerator(patchIndex, volumeIndex2d(x, y), 1), patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x,y), 1)]);
-		printf("Qout[%d][%d]: %.16f, unknown: 2\n", patchIndex, QOutEnumerator(patchIndex, volumeIndex2d(x, y), 2), patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x,y), 2)]);
-		printf("Qout[%d][%d]: %.16f, unknown: 3\n", patchIndex, QOutEnumerator(patchIndex, volumeIndex2d(x, y), 3), patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x,y), 3)]);
             }
 
             patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
