@@ -10,7 +10,7 @@
 
 #include <map>
 
-#include "LoadBalancing.h"
+#include "AbstractLoadBalancing.h"
 
 
 namespace toolbox {

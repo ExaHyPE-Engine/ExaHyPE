@@ -3,7 +3,7 @@
 #pragma once
 
 
-#include "LoadBalancing.h"
+#include "AbstractLoadBalancing.h"
 #include "tarch/logging/Log.h"
 
 #include <queue>

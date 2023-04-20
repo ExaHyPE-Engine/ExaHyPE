@@ -6,7 +6,7 @@
 
 #include "tarch/logging/Log.h"
 
-#include "LoadBalancing.h"
+#include "AbstractLoadBalancing.h"
 
 
 namespace toolbox {
