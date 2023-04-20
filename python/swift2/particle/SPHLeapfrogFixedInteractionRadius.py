@@ -106,9 +106,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
     # SPH parameters (default values)
     self._hydroDimensions = dimensions_hydro
-    # TODO MLADEN: temporary for debugging
-    #  self._eta_factor = 1.2348
-    self._eta_factor = 2.
+    self._eta_factor = 1.2348
     # TODO MLADEN: Check these values later. Looks like this is only valid for specific setups.
     self._h_hydro_min = 1e-6
     self._h_hydro_max = 1.0 / 3.0 / 2    # Approximated value for coarsest grid level
