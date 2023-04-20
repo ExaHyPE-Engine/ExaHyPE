@@ -89,6 +89,11 @@ class exahype2::RefinementControlService: public tarch::services::Service {
      * - Finally, we receive the messages and add them to _committedEvents
      *   and _remoteNewEvents.
      *
+     * We note that most of these complex multithreading operations are rarely
+     * necessary, as receveDanglingMessages() within the tarch::services::ServiceRepository::receiveDanglingMessages()
+     * is a prior thread-safe. Nevertheless, I decided to try to be on the safe
+     * side in case someone wants to call this receiveDanglingMessages()
+     * version explicitly.
      */
     void receiveDanglingMessages() override;
 
