@@ -89,7 +89,7 @@ void tarch::services::ServiceRepository::receiveDanglingMessages() {
       p != _services.end();
       p++
     ) {
-        p->_service->receiveDanglingMessages();
+      p->_service->receiveDanglingMessages();
     }
   }
 } 
