@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 import os
 import re
+import shutil
 import sys
 import subprocess
 import jinja2
@@ -415,21 +416,27 @@ did search for a file """ + input_file )
         Use this flag for generated files which can be tracked
         by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
     """
-    if not using_cuda_backend():
-      if generated:
-        if self.generated_cppfiles.count(filename)==0:
-          self.generated_cppfiles.append(filename)
-      else:
-        if self.cppfiles.count(filename)==0:
-          self.cppfiles.append(filename)
-    else:
+    if using_cuda_backend():
+      old_filename = filename
       filename = filename.replace(".cpp", ".cu")
+      print(old_filename, filename)
+      if generated == False:
+        shutil.copy(old_filename, filename)
+      
       if generated:
-        if self.generated_cufiles.count(filename)==0:
+        if self.generated_cufiles.count(filename)==0 and self.cufiles.count(filename)==0:
           self.generated_cufiles.append(filename)
       else:
         if self.cufiles.count(filename)==0:
           self.cufiles.append(filename)
+    else:
+      if generated:
+        if self.generated_cppfiles.count(filename)==0 and self.cppfiles.count(filename)==0:
+          self.generated_cppfiles.append(filename)
+      else:
+        if self.cppfiles.count(filename)==0:
+          self.cppfiles.append(filename)
+
 
   def remove_cpp_file(self,filename,generated=True):
     if generated:

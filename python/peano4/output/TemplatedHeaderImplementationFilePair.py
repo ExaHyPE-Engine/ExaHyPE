@@ -44,7 +44,6 @@ class TemplatedHeaderImplementationFilePair(object):
     cuda = using_cuda_backend()
     if cuda:
       full_qualified_filename = full_qualified_filename.replace(".cpp", ".cu")
-      print(full_qualified_filename)
 
     if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
       import inspect, os
@@ -52,7 +51,6 @@ class TemplatedHeaderImplementationFilePair(object):
       with open( os.path.realpath(template_file), "r" ) as input:
         template = input.read()
         with open( full_qualified_filename, "w" ) as output:
-          print(full_qualified_filename)
           output.write( template.format(**self.d) )
 
   def generate(self,overwrite,directory):
