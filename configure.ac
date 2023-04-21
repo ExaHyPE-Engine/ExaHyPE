@@ -399,6 +399,7 @@ AC_ARG_WITH(otter,
   [ AC_MSG_CHECKING(for otter)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    use_otter=false ;;
+      cpp)   AC_MSG_RESULT(yes (using otter cpp header));   use_otter=true; use_otter_cpp=true;;
       *)     AC_MSG_RESULT(yes);   use_otter=true  ;;
     esac ],
   [ AC_MSG_CHECKING(for otter); AC_MSG_RESULT(no); use_otter=false ])
@@ -408,7 +409,26 @@ AM_CONDITIONAL([UseOtter],[test "x$use_otter" = xtrue])
 if test "$use_otter" == true; then
   AC_DEFINE([UseOtter], [UseOtter], [UseOtter])
 fi
+if test "$use_otter_cpp" == true; then
+  AC_DEFINE([UseOtterCPP], [UseOtterCPP], [UseOtterCPP])
+fi
 
+# TODO (AT): temporary!
+# AT - own debug messages
+#
+AC_ARG_WITH(at-debug-messages,
+  AS_HELP_STRING([--with-at-debug-messages],[AT: enable own debug messages [default=false]]),
+  [ AC_MSG_CHECKING(for AT debug messages)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_at_debug=false ;;
+      *)     AC_MSG_RESULT(yes);   use_at_debug=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for AT debug messages); AC_MSG_RESULT(no); use_at_debug=false ])
+AM_CONDITIONAL([AT_DebugMessages],[test "x$use_at_debug" = xtrue])
+
+if test "$use_at_debug" == true; then
+  AC_DEFINE([AT_DebugMessages], [AT_DebugMessages], [AT_DebugMessages])
+fi
 
 #
 # libxsmm
