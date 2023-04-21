@@ -20,15 +20,15 @@ void swift2::kernels::prepareDensityCalculation(
   const ParticleContainer&  localParticles
 ) {
   for (auto* particle: localParticles ) {
-    if ( 
+    if (
       not particle->getIsBoundaryParticle()
     ) {
-      particle->setDensity (0.0);                      
-      particle->setWcount  (0.0);                      
-      particle->setRho_dh  (0.0);   
-      particle->setWcount_dh(0.0);   
-      particle->setDiv_v   (0.0);   
-      particle->setRot_v   (0.0);   
+      particle->setDensity (0.0);
+      particle->setWcount  (0.0);
+      particle->setRho_dh  (0.0);
+      particle->setWcount_dh(0.0);
+      particle->setDiv_v   (0.0);
+      particle->setRot_v   (0.0);
 
       /* Not originally in SWIFT */
       particle->setNcount  (0);
@@ -48,7 +48,7 @@ void swift2::kernels::endDensityCalculation(
   const double hHydroMax
 ) {
   for (auto* particle: localParticles ) {
-    if ( 
+    if (
       not particle->getIsBoundaryParticle()
     ) {
 
@@ -88,11 +88,11 @@ void swift2::kernels::endDensityCalculation(
 
       /* Finish calculation of the velocity divergence */
       particle->setDiv_v( particle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
-      
+
       assertion3( std::isfinite(particle->getDensity()), particle->toString(), W_a, h_inv_dim);
       assertion1( particle->getNcount() > 1, particle->toString() );
-                
-      
+
+
       //
       // =====================
       // prepare forces
@@ -101,10 +101,10 @@ void swift2::kernels::endDensityCalculation(
       {
         /* Retrieve basic properties of local and active particles */
         const double rho_a = particle->getDensity();
-        const double m_a = particle->getMass();  
+        const double m_a = particle->getMass();
         const double h_a = particle->getSmoothingLength();
         const double h_inv = 1.0 / h_a;
- 
+
         /* Compute the norm of the curl */
         double curl_v = 0;
 
@@ -113,23 +113,23 @@ void swift2::kernels::endDensityCalculation(
         } else {
           assertionMsg( false, "3D curl_v term to be implemented (straightforward, but have only run 2D so far...)" );
         }
-      
+
         /* Compute the norm of div v */
         const double abs_div_v = tarch::la::abs( particle->getDiv_v() );
-        
+
         /* Compute the sound speed */
         const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
-      
+
         /* Construct the final expression of the grad-h-term.
-         * Swift use "f" (see also Springel and Hernquist). 
+         * Swift use "f" (see also Springel and Hernquist).
          */
-       
+
         const double dh_drho_a = - h_a / rho_a / hydroDimensions;
         const double common_factor = h_a / hydroDimensions / particle->getWcount();
-        
+
         double grad_h_term;
         const double grad_W_term = common_factor * particle->getWcount_dh();
-        
+
         // Avoid problematic particles
         if(grad_W_term < -0.9999){
              /* if we get here, we either had very small neighbour contributions
@@ -146,27 +146,27 @@ void swift2::kernels::endDensityCalculation(
         } else {
           grad_h_term = common_factor * particle->getRho_dh()/(1.0 + grad_W_term);
         }
-      
+
         /* Compute the Balsara Switch */
         const double balsara = alphaAV * abs_div_v /
                                (abs_div_v + curl_v + 0.0001 * soundspeed * h_inv);
-                                   
-        assertion6( std::isfinite(balsara), particle->toString(), balsara, abs_div_v, 
+
+        assertion6( std::isfinite(balsara), particle->toString(), balsara, abs_div_v,
                                             curl_v, soundspeed, alphaAV );
-      
+
         /* Update variables */
         const double P_a = gas_pressure_from_internal_energy( rho_a, particle->getU() );
-        
-        /* SWIFT */ 
-        particle->setF( grad_h_term );      
-        
+
+        /* SWIFT */
+        particle->setF( grad_h_term );
+
         particle->setPressure( P_a );
         particle->setSoundSpeed( soundspeed );
         particle->setBalsara( balsara );
 
       } /* End hydro_prepare_force */
-      
-      
+
+
       //
       // =============================
       // Newton's Apples
@@ -175,9 +175,9 @@ void swift2::kernels::endDensityCalculation(
       {
 //        const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
         const double hydro_eta_dim = std::pow(etaFactor, hydroDimensions);
-        const double eps = hTolerance; 
+        const double eps = hTolerance;
 
-        /* h value at the start of iteration procedure 
+        /* h value at the start of iteration procedure
          * Here we use the last update on previous time-step */
         const double h_0 = particle->getSmoothingLengthPrevious();
 
@@ -195,12 +195,12 @@ void swift2::kernels::endDensityCalculation(
 
         const double h_old_dim = std::pow( h_old, hydroDimensions );
         const double h_old_dim_minus_one = std::pow( h_old, hydroDimensions - 1 );
-        
+
         double h_new;
 
         /* Check that smoothing length from previous iteration is non-zero */
         assertion3( h_old > tarch::la::NUMERICAL_ZERO_DIFFERENCE, particle->toString(), h_init, h_0 );
-      
+
         if( particle->getWcount() < 1e-5 ) { /* No neighbours case */
 
           /* Flag that there were no neighbours */
@@ -215,7 +215,7 @@ void swift2::kernels::endDensityCalculation(
         } else {
 
           /* Compute one step of the Newton-Raphson scheme */
-          
+
           /* SWIFT's calcualtion based on Wcount */
 
           const double n_sum = particle->getWcount() * h_old_dim;
@@ -224,20 +224,20 @@ void swift2::kernels::endDensityCalculation(
           const double f_prime = particle->getWcount_dh() * h_old_dim +
                                     hydroDimensions * particle->getWcount() * h_old_dim_minus_one;
 
-          
+
           // Debug
-          assertion6( f_prime !=0, particle->toString(), f_prime, h_new, h_old, hHydroMin, hHydroMax );       
+          assertion6( f_prime !=0, particle->toString(), f_prime, h_new, h_old, hHydroMin, hHydroMax );
 
           /* Skip if h is already h_max and we don't have enough neighbours */
           /* Same if we are below h_min */
-          /* Same if we have hit the Peano cutoff radius 
+          /* Same if we have hit the Peano cutoff radius
            */
 
 //          tarch::la::Vector<Dimensions,double> GridSize = marker.h();
-//          const double GridSizeHalf = 0.5 * GridSize(0); 
-          const double GridSizeHalf = 0.5 * 0.3; 
+//          const double GridSizeHalf = 0.5 * GridSize(0);
+          const double GridSizeHalf = 0.5 * 0.3;
           const double CutoffParticleH = kernel_gamma * particle->getSmoothingLength();
-   
+
           if ( ((particle->getSmoothingLength() >= hHydroMax) && (f < 0.0)) ||
                ((particle->getSmoothingLength() <= hHydroMin) && (f > 0.0)) ||
                  tarch::la::greaterEquals(CutoffParticleH, GridSizeHalf) ){
@@ -254,12 +254,12 @@ void swift2::kernels::endDensityCalculation(
             h_new = h_0;
           }
 
-          /* Normal case: 
+          /* Normal case:
            * We are able to use Newton-Raphson to get a better value of h */
 
           /* Avoid floating point exception from f_prime = 0 */
           h_new = h_old - f / ( f_prime + tarch::la::NUMERICAL_ZERO_DIFFERENCE );
-            
+
           /* Safety check: truncate to the range [ h_old/2 , 2h_old ]. */
           h_new = std::min( h_new, 2.0 * h_old );
           h_new = std::max( h_new, 0.5 * h_old );
@@ -273,15 +273,15 @@ void swift2::kernels::endDensityCalculation(
         particle->setResidual ( residual );
 
         if(residual > eps){ /* this particle has not converged */
-    
+
           /* Ok, correct then */
           particle->setSmoothingLength( h_new );
 
           /* Increase the iteration counter */
           particle->setIterCount( particle->getIterCount() + 1 );
-    
+
         } else {
-          
+
           /* No need to update */
 
           /* However, if this is iter 0, we still update */
@@ -309,7 +309,7 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
   const double alphaAV
 ) {
   for (auto* particle: localParticles ) {
-    if ( 
+    if (
       not particle->getIsBoundaryParticle()
     ) {
 
@@ -345,11 +345,11 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
 
       /* Finish calculation of the velocity divergence */
       particle->setDiv_v( particle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
-      
+
       assertion3( std::isfinite(particle->getDensity()), particle->toString(), W_a, h_inv_dim);
       assertion2( std::isfinite(h_inv_dim)             , particle->toString(), rho_inv);
       assertion2( std::isfinite(particle->getDiv_v())  , particle->toString(), rho_inv);
-      
+
       //
       // =====================
       // prepare forces
@@ -358,11 +358,11 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
       {
         /* Retrieve basic properties of local and active particles */
         const double rho_a = particle->getDensity();
-        const double m_a = particle->getMass();  
+        const double m_a = particle->getMass();
         const double h_a = particle->getSmoothingLength();
-   
+
         const double h_inv = 1.0 / h_a;
-      
+
         /* Compute the norm of the curl */
         double curl_v = 0;
 
@@ -371,23 +371,23 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
         } else {
           assertionMsg( false, "3D curl_v term to be implemented (straightforward, but have only run 2D so far...)" );
         }
-      
+
         /* Compute the norm of div v */
         const double abs_div_v = tarch::la::abs( particle->getDiv_v() );
-        
+
         /* Compute the sound speed */
         const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
-      
+
         /* Compute the Balsara Switch */
         const double balsara = alphaAV * abs_div_v /
                                (abs_div_v + curl_v + 0.0001 * soundspeed * h_inv);
-                                   
-        assertion6( std::isfinite(balsara), particle->toString(), balsara, abs_div_v, 
+
+        assertion6( std::isfinite(balsara), particle->toString(), balsara, abs_div_v,
                                             curl_v, soundspeed, alphaAV );
-      
+
         /* Update variables */
         const double P_a = gas_pressure_from_internal_energy( rho_a, particle->getU() );
-        
+
         particle->setPressure( P_a );
         particle->setSoundSpeed( soundspeed );
         particle->setBalsara( balsara );
@@ -395,7 +395,7 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
         assertion3( std::isfinite(P_a), particle->toString(), rho_a, particle->getU() );
 
       } /* End hydro_prepare_force */
-      
+
     }
   }
 }
@@ -405,16 +405,16 @@ void swift2::kernels::prepareHydroForceCalculation(
   const ParticleContainer&  localParticles
 ) {
   for (auto* particle: localParticles ) {
-    if ( 
+    if (
     not particle->getIsBoundaryParticle()
     ) {
 
       /* Reset the acceleration*/
-      particle->setA   (0.0);   
-      
+      particle->setA   (0.0);
+
       /* Reset the time derivatives */
-      particle->setUDot(0.0);   
-      particle->setHDot(0.0);   
+      particle->setUDot(0.0);
+      particle->setHDot(0.0);
       particle->setV_sig_AV( 2.0 * particle->getSoundSpeed() );
     }
   }
@@ -427,13 +427,13 @@ void swift2::kernels::endHydroForceCalculation(
   const int hydroDimensions
 ) {
   for (auto* particle: localParticles ) {
-    if ( 
+    if (
     not particle->getIsBoundaryParticle()
     ) {
-      particle->setHDot( 
+      particle->setHDot(
        particle->getHDot() * particle->getSmoothingLength() / hydroDimensions );
 
-      assertion2( std::isfinite(particle->getHDot()), particle->toString(), 
+      assertion2( std::isfinite(particle->getHDot()), particle->toString(),
                                                       particle->getSmoothingLength() );
     }
   }
@@ -448,40 +448,20 @@ void swift2::kernels::flagBoundaryParticles(
   const tarch::la::Vector<Dimensions,double>& domainOffset
 ) {
   /* TODO MLADEN: Document parameters? */
-  /* TODO MLADEN: Check how to correctly add domain offset. What is convention? */
   for (auto* particle: localParticles) {
-    if( 
+    if(
       particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
       and
       not particle->getIsBoundaryParticle()
     ){
-    
+
       /* Flag if particle is at boundary of the simulation box */
-      particle->setIsBoundaryParticle(false);
-
-      for (int d=0; d<Dimensions; d++) {
-        const double max_dist_boundary = 3 * ( domainSize[d] / nparts);
-
-        if ( particle->getX()(d) < max_dist_boundary || 
-             particle->getX()(d) > (domainSize[d] - max_dist_boundary) ) 
-        {
-          particle->setIsBoundaryParticle(true);
-        }
-      }
-
-/*
-      // Fix right boundary of the Sod shock, which as fewer particles
-      const double max_dist_boundary_right = max_dist_boundary * 8;
-      for (int d=0; d<Dimensions; d++) {
-        if ( particle->getX()(d) > (1.0 - max_dist_boundary_right) ) 
-        {
-          particle->setIsBoundaryParticle(true);
-          particle->setDensity(0.125);
-          const double pressure = gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
-          particle->setPressure(pressure);
-        }
-      }
-*/
+      /* TODO MLADEN: Boundary particle width shouldn't be hardcoded like this. */
+      const tarch::la::Vector<Dimensions, double> max_dist_boundary = 3. * ( domainSize / nparts);
+      const bool isBoundaryParticle =
+        tarch::la::oneSmaller( particle->getX(), domainOffset + max_dist_boundary)
+        or tarch::la::oneGreater( particle->getX(), domainOffset + domainSize - max_dist_boundary);
+      particle->setIsBoundaryParticle(isBoundaryParticle);
 
     }
   }
