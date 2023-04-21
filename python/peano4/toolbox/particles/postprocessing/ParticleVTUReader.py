@@ -54,6 +54,9 @@ class VTUParticleSet(object):
     Methods
     -------
 
+    get_attribute_list(self):
+        return list of all available particle fields
+
     show_attribute_list(self):
         prints out all available particle fields
 
@@ -92,15 +95,21 @@ class VTUParticleSet(object):
 
         return
 
-    def show_attribute_list(self):
+    def get_attribute_list(self):
+        """!
+        Return the list of available attributes.
         """
+        return self._particle_attribute_list
+
+    def show_attribute_list(self):
+        """!
         Print the list of available attributes.
         """
         print("Available particle fields are:", self._particle_attribute_list)
         return
 
     def merge(self, other):
-        """
+        """!
         Merge two VTUParticleSet objects into one (into self).
         """
 
