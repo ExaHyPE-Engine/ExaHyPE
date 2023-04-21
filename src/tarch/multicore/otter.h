@@ -31,8 +31,14 @@ namespace otter {
 
 
 #if defined(UseOtter)
-#include <otter/otter-task-graph.h>
+#if defined(UseOtterCPP)
+#include <otter/otter-task-graph-wrapper.hpp>
 #else
+#include <otter/otter-task-graph.h>
+#endif
+#else
+
+// TODO (AT): need to mock the cpp header here
 
 // use sub header:
 // https://github.com/Otter-Taskification/otter/blob/dev/include/otter/otter-task-graph-stub.h

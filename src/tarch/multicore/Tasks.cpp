@@ -323,7 +323,7 @@ bool tarch::multicore::TaskComparison::operator() (Task* lhs, Task* rhs) const {
   return *lhs < *rhs;
 }
 
-
+// TODO (AT): do we want to try annotating task creation directly in the class constructors & destructors?
 tarch::multicore::Task::Task( int id, int taskType, int priority ):
   _id(id),
   _taskType( taskType ),
@@ -550,11 +550,22 @@ void tarch::multicore::spawnAndWait(
     ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true );
 
     orchestrationStrategy->startBSPSection();
+    // TODO (AT): don't we want to annotate task creation here?
+    
+#if defined(AT_DebugMessages)
+    fprintf(stderr, "FILE=%s:%d FUNC=%s\n", __FILE__, __LINE__, __func__);
+#endif
+
     native::spawnAndWait(tasks,orchestrationStrategy);
     orchestrationStrategy->endBSPSection();
 
+#if defined(UseOtterCPP)
+    auto &otter_root = otter::Otter::get_otter().get_root_task();
+    otter_root.synchronise_tasks(otter_sync_children);
+#else
     // AT: ideally would record the handle of the encountering task here to correctly identify child tasks
     otterSynchroniseTasks(NULL, otter_sync_children);
+#endif
 
     internal::copyInternalTaskQueuesOverIntoGlobalQueue(-1);
 

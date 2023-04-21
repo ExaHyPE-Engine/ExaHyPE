@@ -4,6 +4,7 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/otter.h"
 #include "tarch/services/ServiceRepository.h"
 #include "tarch/mpi/Rank.h"
 
@@ -180,6 +181,10 @@ namespace {
     int       pendingTasks  = NumberOfThreads;
     int       spawnedTasks  = 0;
 
+#if defined(AT_DebugMessages)
+    fprintf(stderr, "FILE=%s:%d FUNC=%s pendingTasks=%d\n", __FILE__, __LINE__, __func__, pendingTasks);
+#endif
+
     #if defined(OpenMPTaskGroup)
     #pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks, tasks, strategy) firstprivate(NumberOfThreads) priority(StandardPriority) untied
     #endif
@@ -192,12 +197,21 @@ namespace {
         #pragma omp atomic
         spawnedTasks++;
 
+#if defined(UseOtterCPP)
+        auto &otter_root = otter::Otter::get_otter().get_root_task();
+        auto otter_task = otter_root.make_child();
+#endif
+
         if (i<tasks.size()) {
           while (tasks[i]->run()) {
             #pragma omp taskyield
           }
           delete tasks[i];
         }
+
+#if defined(UseOtterCPP)
+        otter_task.end_task();
+#endif
 
         #if defined(__NVCOMPILER)
         #pragma omp atomic
@@ -268,9 +282,15 @@ void tarch::multicore::native::spawnAndWait(
   orchestration::Strategy*     strategy
 ) {
   if (strategy->processPendingTasksWhileWaitingInBSPSection()) {
+#if defined(AT_DebugMessages)
+    fprintf(stderr, "FILE=%s:%d FUNC=%s\n", __FILE__, __LINE__, __func__);
+#endif
     spawnAndWaitAsExplicitTasksWithPolling(tasks,strategy);
   }
   else {
+#if defined(AT_DebugMessages)
+    fprintf(stderr, "FILE=%s:%d FUNC=%s\n", __FILE__, __LINE__, __func__);
+#endif
     spawnAndWaitAsTaskLoop(tasks);
   }
 }

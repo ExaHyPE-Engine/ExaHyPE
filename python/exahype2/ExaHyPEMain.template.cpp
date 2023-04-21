@@ -449,7 +449,11 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
+#if defined(UseOtterCPP)
+  auto& trace = otter::Otter::get_otter();
+#else
   otterTraceInitialise();
+#endif
 
   #if defined(SharedOMP)
   #pragma omp parallel
@@ -496,7 +500,11 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().writeToCSV();
 
+#if defined(UseOtterCPP)
+  trace.close();
+#else
   otterTraceFinalise();
+#endif
 
   repositories::finishSimulation();
 
