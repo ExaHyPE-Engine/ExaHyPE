@@ -199,7 +199,7 @@ namespace {
 
 #if defined(UseOtterCPP)
         auto &otter_root = otter::Otter::get_otter().get_root_task();
-        auto otter_task = otter_root.make_child();
+        auto otter_task = otter_root.make_child(3);
 #endif
 
         if (i<tasks.size()) {

@@ -270,9 +270,9 @@ bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
   // TODO (AT): ideally would have a parent task to pass here to record ancestry
 #if defined(UseOtterCPP)
   auto &otter_root = otter::Otter::get_otter().get_root_task();
-  auto task = otter_root.make_child(); // TODO (AT): should enclave tasks be considered children of the traversal task which spawns them, but with no synchronisation constraint?
+  auto task = otter_root.make_child(2); // TODO (AT): should enclave tasks be considered children of the traversal task which spawns them, but with no synchronisation constraint?
 #else
-  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL); // TODO (AT): replace with C++ api. The parent task is the global (root) task from the main app. Not clear whether this is the right place to annotate
+  otter_task_context *task = otterTaskBegin_flavour(OTTER_SRC_ARGS(), NULL, 2); // TODO (AT): replace with C++ api. The parent task is the global (root) task from the main app. Not clear whether this is the right place to annotate
 #endif
 
   _spacetreeSet.createObserverCloneIfRequired(_observer,_spacetree._id);
