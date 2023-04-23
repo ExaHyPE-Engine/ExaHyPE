@@ -106,8 +106,12 @@ target_link_libraries(${TARGET_NAME} PRIVATE project_options)
 # See: https://forums.developer.nvidia.com/t/problem-in-the-linking-step-of-cuda-executable-o-file-format-not-recognized-treating-as-linker-script/250059
 # But the link option "-cuda" must be always given otherwise it will result with another linking error with:
 # "Undefined reference to Mcuda_compiled"
-if (NOT "${WITH_GPU}" STREQUAL "cuda")
-target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
-target_compile_options(${TARGET_NAME} PRIVATE ${ENABLE_NVHPC_CUDA_API})
-endif()
-target_link_options(${TARGET_NAME} PRIVATE ${ENABLE_NVHPC_CUDA_API})
+#if (NOT "${WITH_GPU}" STREQUAL "cuda")
+#target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
+#target_compile_options(${TARGET_NAME} PRIVATE ${ENABLE_NVHPC_CUDA_API})
+#else()
+#target_compile_options(${TARGET_NAME} PRIVATE -cudalib)
+#endif()
+#target_link_options(${TARGET_NAME} PRIVATE ${ENABLE_NVHPC_CUDA_API})
+#target_compile_options(${TARGET_NAME} PRIVATE -Xcompiler=-cuda)
+#target_link_options(${TARGET_NAME} PRIVATE -Xcompiler=-cuda -cuda)

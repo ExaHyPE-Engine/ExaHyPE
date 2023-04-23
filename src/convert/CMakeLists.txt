@@ -11,8 +11,6 @@ foreach(mode IN LISTS BUILD_MODES)
 
     target_sources(convert_${dimension}d_${mode_lower} PRIVATE ${SOURCES})
     target_include_directories(convert_${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    target_compile_options(convert_${dimension}d_${mode_lower} PRIVATE ${ENABLE_NVHPC_CUDA_API})
-    target_link_options(convert_${dimension}d_${mode_lower} PRIVATE ${ENABLE_NVHPC_CUDA_API})
     target_compile_definitions(convert_${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS} Dimensions=${dimension})
     target_link_options(convert_${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
     target_link_libraries(convert_${dimension}d_${mode_lower} PUBLIC project_options )

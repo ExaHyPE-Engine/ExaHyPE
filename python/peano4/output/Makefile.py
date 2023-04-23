@@ -419,30 +419,42 @@ did search for a file """ + input_file )
     if using_cuda_backend():
       old_filename = filename
       filename = filename.replace(".cpp", ".cu")
-      print(old_filename, filename)
-      if generated == False:
+      print(f"The file {old_filename} has prefix .cpp, but using cuda backend. It will be generated as a cuda file with .cu prefix as {filename}" )
+      try:
         shutil.copy(old_filename, filename)
-      
+      except:
+        pass
+
+
       if generated:
         if self.generated_cufiles.count(filename)==0 and self.cufiles.count(filename)==0:
           self.generated_cufiles.append(filename)
+        else:
+          print(f"The file {filename} has been already added, therefore skipping")
       else:
-        if self.cufiles.count(filename)==0:
+        if self.cufiles.count(filename)==0 and self.generated_cufiles.count(filename)==0:
           self.cufiles.append(filename)
     else:
       if generated:
         if self.generated_cppfiles.count(filename)==0 and self.cppfiles.count(filename)==0:
           self.generated_cppfiles.append(filename)
       else:
-        if self.cppfiles.count(filename)==0:
+        if self.cppfiles.count(filename)==0 and self.generated_cppfiles.count(filename)==0:
           self.cppfiles.append(filename)
 
 
   def remove_cpp_file(self,filename,generated=True):
-    if generated:
-      if filename in self.generated_cppfiles: self.generated_cppfiles.remove(filename)
+    if not using_cuda_backend():
+      if generated:
+        if filename in self.generated_cppfiles: self.generated_cppfiles.remove(filename)
+      else:
+        if filename in self.cppfiles: self.cppfiles.remove(filename)
     else:
-      if filename in self.cppfiles: self.cppfiles.remove(filename)
+      filename = filename.replace(".cpp", ".cu")
+      if generated:
+        if filename in self.generated_cufiles: self.generated_cupfiles.remove(filename)
+      else:
+        if filename in self.cufiles: self.cufiles.remove(filename)
 
   def add_Fortran_file(self,filename,generated=True):
     """
