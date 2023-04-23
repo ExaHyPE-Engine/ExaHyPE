@@ -253,7 +253,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int z          = i[1];
             int y          = i[2];
 
-            for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
+            for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize); x++) {
               internal::computeMaxEigenvalue_LoopBody<Solver>(
                   patchData.QIn[patchIndex],
                   QInEnumerator,
@@ -281,7 +281,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int x          = i[1];
             int z          = i[2];
 
-            for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++) {
+            for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize); y++ ){
               internal::computeMaxEigenvalue_LoopBody<Solver>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -309,7 +309,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int x          = i[1];
             int y          = i[2];
 
-            for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++) {
+            for (int z = -solversHaloSize; z < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize); z++){
               internal::computeMaxEigenvalue_LoopBody<Solver>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -376,7 +376,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           [=] (::sycl::item<2> i) {
             int patchIndex = i[0];
             int y          = i[1];
-            for (int x = -solversHaloSize; x < (int) numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
+            for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize); x++) {
               internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -404,7 +404,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int patchIndex = i[0];
             int x          = i[1];
 
-            for (int y = -solversHaloSize; y < (int) numberOfVolumesPerAxisInPatch+solversHaloSize;  y++) {
+            for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize);  y++) {
               internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -465,7 +465,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int z          = i[1];
             int y          = i[2];
 
-            for (int x = -solversHaloSize; x < (int) numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
+            for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize); x++) {
               internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -494,7 +494,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int x          = i[1];
             int z          = i[2];
 
-            for (int y = -solversHaloSize; y < (int) numberOfVolumesPerAxisInPatch+solversHaloSize;  y++) {
+            for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize);  y++) {
               internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -523,7 +523,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int x          = i[1];
             int y          = i[2];
 
-            for (int z = -solversHaloSize; z < (int) numberOfVolumesPerAxisInPatch+solversHaloSize;  z++) {
+            for (int z = -solversHaloSize; z < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize);  z++) {
               internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -589,7 +589,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int patchIndex = i[0];
             int y          = i[1];
 
-            for (int x = -solversHaloSize; x < (int) numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
+            for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize-1); x++) {
               internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -617,7 +617,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int patchIndex = i[0];
             int x          = i[1];
 
-            for (int y = -solversHaloSize; y < (int) numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++) {
+            for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize-1); y++) {
               internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -680,7 +680,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int z          = i[1];
             int y          = i[2];
 
-            for (int x = -solversHaloSize; x < (int) numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
+            for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize-1); x++) {
               internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -709,7 +709,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int x          = i[1];
             int z          = i[2];
 
-            for (int y = -solversHaloSize; y < (int) numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++) {
+            for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize-1); y++) {
               internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -738,7 +738,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int x          = i[1];
             int y          = i[2];
 
-            for (int z = -solversHaloSize; z < (int) numberOfVolumesPerAxisInPatch+solversHaloSize-1; z++) {
+            for (int z = -solversHaloSize; z < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize-1); z++) {
               internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
