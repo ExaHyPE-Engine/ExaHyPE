@@ -27,7 +27,7 @@ thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 
 project.add_solver( thesolver )
 
-build_mode = peano4.output.CompileMode.Release
+build_mode = peano4.output.CompileMode.Debug
 project.set_global_simulation_parameters(
   dimensions = dimensions,
   offset = [0.0,0.0],
@@ -39,7 +39,7 @@ project.set_global_simulation_parameters(
   periodic_BC           = [False, False, False]
 )
 
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation("../../../", build_mode )
 peano4_project = project.generate_Peano4_project(False)
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=12)

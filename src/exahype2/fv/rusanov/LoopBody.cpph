@@ -254,7 +254,6 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
     QMaxEigenvalueEnumeratorType QMaxEigenvalueEnumerator)
 {
   double QInGathered[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
-
 // gather
 #if defined(SharedOMP)
 #pragma omp simd
@@ -290,6 +289,7 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
     double *__restrict__ QMaxEigenvalue,
     QMaxEigenvalueEnumeratorType QMaxEigenvalueEnumerator)
 {
+
   QMaxEigenvalue[QMaxEigenvalueEnumerator(patchIndex, volumeIndex, 0)] =
       maxEigenvalue(
           QIn + QInEnumerator(patchIndex, volumeIndex, 0),
@@ -863,12 +863,6 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
     double fluxRight = - lambdaRight * (QIn[QInEnumerator(patchIndex, rightVolume,unknown)] - QIn[QInEnumerator(patchIndex, volumeIndex,unknown)]);
     QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight)*0.5;
 
-    if (std::abs(QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)]) >= 1e5)
-    {
-      std::cout << QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] << "\n";
-      exit(0);
-    }
-
 #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
     assertion7(
         QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] == QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)],
@@ -1118,14 +1112,13 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
     QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell *
                                                               (-fluxLeft + fluxRight) * (0.5); // for now it correpond to 1/2 in our past discussion.
 
-    if (std::isnan(QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)]) || std::isinf(QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)]) || std::abs(QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)]) > 1e5)
-    {
-      std::cout << "Index in Update Flux:" << toString(rightFace) << "," << toString(leftFace) << "\n";
-      std::cout << fluxLeft << "," << fluxRight << "\n";
-      std::cout << unknown << "\n";
-      std::cout << "QOut:" << QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] << "\n";
-      exit(0);
-    }
+    // if (std::isnan(QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)]) || std::isinf(QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)]) || std::abs(QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)]) > 1e5)
+    // {
+    //   std::cout << "Index in Update Flux:" << toString(rightFace) << "," << toString(leftFace) << "\n";
+    //   std::cout << fluxLeft << "," << fluxRight << "\n";
+    //   std::cout << unknown << "\n";
+    //   std::cout << "QOut:" << QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] << "\n";
+    // }
 
 #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
     assertion8(

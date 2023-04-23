@@ -69,7 +69,7 @@ double ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::maxEi
 
   if (std::isnan(std::max(lambda_c, lambda_v)) || std::max(lambda_c, lambda_v) == 0)
   {
-    std::cout << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "\n";
+    std::cout << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "," << Q[4] << "," << Q[5] << "\n";
     std::cout << std::max(lambda_c, lambda_v) << "," << lambda_c << "," << lambda_v << "," << c << "," << p << "\n";
     exit(0);
   }
@@ -133,6 +133,7 @@ void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::noncons
   }
   BTimesDeltaQ[0] = 0;
   BTimesDeltaQ[3] = (Q[1] * BTimesDeltaQ[1] + Q[2] * BTimesDeltaQ[2]) / Q[0];
+  
   if (std::isnan(BTimesDeltaQ[3]) || std::isinf(BTimesDeltaQ[3]) || std::abs(BTimesDeltaQ[3]) > 1e5)
   {
     std::cout << normal << "\n";
