@@ -283,9 +283,12 @@ module load cuda
 
 Note: Codeplay's website has some useful information on compiler flags.
 
-It also needs at least 2023.0.0 version of oneApi with Codeplay's nvidia
-GPU plugin; the LLVM compiler doesn't support the
-`-Xsycl-target-backend=` flag, so please check your Makefile.
+It also needs at least 2023.0.0 version of oneAPI with Codeplay's nvidia
+GPU plugin which is not installed on NCC; the LLVM compiler doesn't
+support the `-Xsycl-target-backend=` flag, so please check your Makefile.
+
+I had linker errors about undefined referennces when building Peano with
+TBB. Just add the path to any relevant library if you experienced this.
 
 When running the executable on the GPU, include `SYCL_DEVICE_FILTER=gpu`
 before the terminal command to explicitly tell SYCL to run the code on GPU. 
