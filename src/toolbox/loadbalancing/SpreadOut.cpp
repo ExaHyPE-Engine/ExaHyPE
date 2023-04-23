@@ -145,7 +145,7 @@ void toolbox::loadbalancing::SpreadOut::triggerSplit( int numberOfCells, int tar
   assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
 
   const int sourceTree = 0;
-  bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,numberOfCells,targetRank);
+  bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,peano4::SplitInstruction{numberOfCells,peano4::SplitInstruction::Mode::BottomUp},targetRank);
   if (not success) {
     logInfo( "triggerSplit()", "wanted to split local rank " << sourceTree << " but failed" );
   }

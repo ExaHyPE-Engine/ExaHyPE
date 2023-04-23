@@ -86,7 +86,9 @@ class peano4::grid::Spacetree {
      *   periodic boundary data exchange happens on tree 0 only.
      * - Non-local cells (obviously)
      * - Local cells whose master is not local. If we'd move such cells to
-     *   another rank, we'd destroy the logical topology between the trees.
+     *   another rank, we'd destroy the logical tree topology.
+     * - Cells that are adjacent of hanging nodes, while the parent cell is
+     *   not splitable.
      */
     bool isCellSplitCandidate(
       GridVertex                         coarseGridVertices[TwoPowerD],
@@ -187,9 +189,24 @@ class peano4::grid::Spacetree {
     );
 
     /**
+     * setIsAntecessorOfRefinedVertexInCurrentTreeSweep()
+     *
      * If a cell is given away to another rank, we have to mark the vertices
      * of its mother cell such that we do not coarsen above it and thus
-     * effectively remove our whole splitted subpartition.
+     * effectively remove our whole splitted subpartition. We do this by two
+     * means: First, we set the marker
+     * setIsAntecessorOfRefinedVertexInCurrentTreeSweep(). We erase at most
+     * one level at a time in Peano. Therefore, this flag effectively vetoes
+     * any erase call. This flag ensures that updateVertexAfterLoad() in the
+     * next grid sweep will erase the mesh.
+     *
+     * We do so on both the master and the worker. On the master cell, i.e.
+     * the one that forks another cell off, it is clear that we have to mark
+     * the vertices, as the vertex information ("hey, I have forked off a finer
+     * grid cell and you therefore shall not erase the mesh here") has to
+     * propagate immediately. We also set it on the worker, as its vertices
+     * will be subject to boundary data exchange. This way, we inform
+     * neighbours about the topology, too.
      */
     void markVerticesAroundParentOfForkedCell(
       GridVertex            coarseGridVertices[TwoPowerD]
@@ -226,7 +243,7 @@ class peano4::grid::Spacetree {
     /**
      *
      *
-     * <h2> Veto coarsening </h2>
+     * ## Veto erases
      *
      * The routine markVerticesAroundParentOfForkedCell() is used in this routine
      * to ensure that we don't erase the grid over a worker domain. We have to do
@@ -270,6 +287,11 @@ class peano4::grid::Spacetree {
 
     /**
      * Wrapper around GridTraversalEventGenerator::isSpacetreeNodeLocal()
+     *
+     * This is a boolean which solely studies the vertices passed in. The
+     * generator is the more powerful routine. It offers, for example, an
+     * operation GridTraversalEventGenerator::getTreeOwningSpacetreeNode()
+     * to find out who actually owns a cell.
      */
     bool isSpacetreeNodeLocal(
       GridVertex    vertices[TwoPowerD],
@@ -416,12 +438,30 @@ class peano4::grid::Spacetree {
 
 
     /**
-     * @see splitOrJoinCell() For both the usage and a description how we
+     * @see splitOrJoinCellBottomUp() For both the usage and a description how we
      *   hijack the routine.
      */
     std::vector<int>  _splittedCells;
 
     /**
+     * Realise the splits and joins
+     *
+     * This routine alters the vertex adjacency information. That is, it does
+     * not yet really split or join. It identifies where to split and join.
+     * The adjacency information will be exchanged with (potential) neighbours
+     * after this grid traversal and the actual splitting or joining then
+     * happens in the next grid sweep. That is, this routine realises the
+     * SplitTriggered or JoinTriggered phase. See the discussion in
+     * @ref peano_domain_decomposition "Peano's domain decomposition"
+     * documentation for a discussion of these subsequent phases.
+     *
+     * On the split side, we have two types of splits: Splits that are
+     * identified bottom-up. These splits are realised carefully and never
+     * split off too many cells. The other splits are top-down splits and
+     * they are more aggressive, i.e. they might split off too many cells
+     * eventually. What type of split you want to have is controlled by a
+     * flag within the split specification when you call split().
+     *
      *
      * ## Splits
      *
@@ -455,15 +495,56 @@ class peano4::grid::Spacetree {
      * leaves check if they have to fork. The behaviour of refined octants
      * follows the decisions made for their children before.
      *
+     *
+     * ## Rationale
+     *
+     * I originally realised the splits solely bottom-up, i.e. decided to
+     * omit any analysis if the coarse node has already been split. This way, it is
+     * very easy to accommodate Peano's @ref peano_domain_decomposition "two fundamental splitting constraints":
+     * We simply veto the split-off of any cell with a hanging node. However,
+     * such an approach leads to the situation where adaptive mesh refinements
+     * severely constrain the algorithm. In the example in the general
+     * discussion
+     *
+     * @image html ../../../documentation/Doxygen/domain-decomposition/regularity-constraint.png
+     *
+     * we would not split off any of the cells that are adjacent to the
+     * AMR boundary. As we never split off a cell unless all of its
+     * children are of the same rank, we would never ever split off the
+     * green cell. This is bad in a situation where only splitting off the
+     * green cell and all of its children would yield a good domain
+     * decomposition. So a sole bottom-up approach is not an option.
+     *
+     * @see splitCellTopDown()
      */
-    void splitOrJoinCell(
+    void splitOrJoinCellBottomUp(
       GridVertex                                vertex[TwoPowerD],
       GridVertex                                fineGridVertices[TwoPowerD]
     );
 
     /**
+     * Split cell in a top down fashion
      *
-     * <h2> Merge process </h2>
+     * We first find out what the next split-off tree would be.
+     *
+     * - If a cell's parent is deployed to this tree, deploy the current octant
+     *   too. After all, we want to split in a top-down manner.
+     * - If an octant's parent is not yet deployed but the cell would be a
+     *   split candidate, we trigger the split.
+     * - If we deploy an unrefined octant to a new tree, we have to decrease
+     *   the internal counter by calling updateSplittingCounter().
+     *
+     * @see splitOrJoinCellBottomUp()
+     */
+    void splitCellTopDown(
+      GridVertex                                vertex[TwoPowerD],
+      GridVertex                                fineGridVertices[TwoPowerD]
+    );
+
+    /**
+     * Merge data from worker with master data throughout join
+     *
+     * ## Join process
      *
      * If we receive a remote cell, then this cell is not refined. In this case
      * the (former) workers holds all the valid adjacency data: We might on a
@@ -512,7 +593,7 @@ class peano4::grid::Spacetree {
      *
      * @see updateVertexBeforeStore()
      */
-    void mergeCellFromWorkerWithMaster(
+    void mergeCellFromWorkerWithMasterThroughoutJoin(
       GridVertex                                vertex[TwoPowerD],
       GridVertex                                fineGridVertices[TwoPowerD]
     );
@@ -591,7 +672,7 @@ class peano4::grid::Spacetree {
      * @param fineVertexPositionWithinPatch Position of vertex within 3x3 or 3x3x3 patch respectively
      *
      * @see updateVertexAfterLoad()
-     * @see mergeCellFromWorkerWithMaster() for an explanation why we have to
+     * @see mergeCellFromWorkerWithMasterThroughoutJoin() for an explanation why we have to
      *         keep all adjacency information that we actually need later for
      *         merges.
      */
@@ -635,34 +716,20 @@ class peano4::grid::Spacetree {
     ) const;
 
     /**
+     * Add a split instruction
      *
+     * Add a new split instruction. Peano's documentation
+     * @ref peano_domain_decomposition "discusses splits in detail", and also
+     * clarifies why we need two different approaches to split (see
+     * SplitInstruction).
      *
-     * <h2> Admissible splits </h2>
-     *
-     * Splits must preserve a master-worker, i.e. a tree topology. In the
-     * example below, a grey rank is the worker of a blue rank (left). If
-     * the grey rank splits up, there always has to be a layer in-between
-     * the blue and green rank to preserve a unique master-worker topology.
-     * Therefore, the middle layout is not admissible whereas the right one
-     * is.
-     *
-     * @image html Spacetree_split.png
-     *
-     * There are many reasons to enforce this constraints. The two most
-     * important ones are:
-     *
-     * - I want to have a clear tree topology on the MPI ranks.
-     * - These splits make joins easier. Joins are allowed between
-     *   masters and workers (in the very tree topology) and only for
-     *   ranks which hold no refined local cells. However, to be able to
-     *   realise the join, the master has to cover the whole area (on a
-     *   coarser level) joining into its area. If we did not enforce the
-     *   tree topology, i.e. the level in-between two ranks, then the
-     *   greyish rank in the example above would fork away a subdomain and
-     *   consequently coarsen its grid where the green rank now steps in.
-     *   So this grid is "lost" and it can't join these data in anymore.
+     * If we add a split, we should commit to one split type: Either all of
+     * our splits are top-down or all of them are bottom-up. If we had both
+     * types in one grid sweep, we could run into inconsistent grid
+     * configurations. At the moment, this is an assumption, i.e. it might
+     * work, but I'm just not sure if it really holds.
      */
-    void split(int treeId, int fineGridCells);
+    void split(int treeId, const SplitInstruction& instruction);
 
     /**
      * Get the ids of the surrounding cells of a vertex.
@@ -877,6 +944,17 @@ class peano4::grid::Spacetree {
      */
     bool mayJoinWithWorker() const;
 
+    /**
+     * Is the tree in principle allowed to split
+     *
+     * A tree cannot split if it is brand new or currently involved in some
+     * load balancing. Even if a tree is allowed to split, it does not mean
+     * that any split might be successful. A tree might for example be
+     * stationary yet host so few cells that it cannot split anymore without
+     * violating @ref peano_domain_decomposition "Peano's domain decomposition constraints".
+     * This per-cell decision is made by peano4::grid::Spacetree::isCellTopDownSplitCandidate()
+     * and  peano4::grid::Spacetree::isCellBottomUpSplitCandidate().
+     */
     bool maySplit() const;
 
     /**
@@ -890,6 +968,14 @@ class peano4::grid::Spacetree {
      * Every tree in the list of trees for which we have to trigger a split
      * has an integer counter which highlights how many cells still to offload
      * to the newly created tree. Decrement this counter.
+     *
+     * However, do not remove the entry from the split triggered set. We need
+     * all of these indices to know in the next sweep which child trees are now
+     * in the state splitting i.e. transition from split triggered into
+     * splitting.
+     *
+     * If we have top-down splits, we might split off two many cells. In this
+     * case, ensure that the internal counter does not underrun zero.
      */
     void updateSplittingCounter( int treeId );
   public:

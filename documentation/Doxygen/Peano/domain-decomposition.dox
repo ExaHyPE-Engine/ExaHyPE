@@ -262,6 +262,17 @@ that Peano always commits to two fundamental constraints:
    which refers to the handling of AMR. A cell can be forked onto another 
    rank if and only if all of its vertices are persistent.
 
+Both constraints are implemented via peano4::grid::Spacetree::isCellSplitCandidate(). 
+Details on this as well as 
+further rationale (the ones below refer to the constraints only) can also be 
+found in peano4::grid::Spacetree::splitOrJoinCellBottomUp() and
+peano4::grid::Spacetree::splitCellTopDown().
+As we have to accommodate these two constraints,
+splits typically never are "exact", i.e. you might ask for 100 cells cells to
+be split off, but Peano will eventually only split off roughly 100 cells. 
+It will try to stay close to 100, but the constraints have a higher priority
+than your request.
+
 
 #### Examples
 
@@ -292,6 +303,14 @@ green cell consequently would fork off a whole tree (see topology
 constraint above). However, we are forbidden to fork off the red cell
 and its nine children. We could fork off the blue cell, but the red
 cell is hanging and therefore not a split candidate.
+It is, in general, difficult to identify such critical situations: The
+green cell with all of its children can be identified in a top-down 
+sweep, but then we run risk that the green cell plus its children sum
+up to more cells than we actually wanna split. Therefore, we provide
+two split variants (cmp peano4::grid::Spacetree::splitOrJoinCellBottomUp() and
+peano4::grid::Spacetree::splitCellTopDown()) and leave it to the user to decide whether they 
+want to try to meet the number of cells split off or try to maximise the
+probability that whole trees are split off. 
 
 
 #### Rationale
@@ -300,8 +319,10 @@ We want to work with a proper master-worker topology such that we have
 well defined relations where a tree has to send data to if data has to 
 go to coarser levels. The topology also allows us to run reductions 
 along trees, or to clarify who is allowed to split and who is not.
-The topology also allows us to veto erase commands if they would erase
-whole subdomains.
+The topology furthermore allows us to veto erase commands if they would erase
+whole subdomains. Most importantly, a clear master-worker topology
+makes joins more straightforward (they are always nasty), as we don't
+have to deal with 1:n data flows when we join a partition.
 
 The regularity constraint is important as we have to update a vertex
 state if a mesh refines or erases dynamically. In this case, a rank

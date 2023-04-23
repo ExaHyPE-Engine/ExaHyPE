@@ -12,6 +12,7 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 
 #include "peano4/maps/maps.h"
+#include "peano4/grid/grid.h"
 
 #include "TreeManagementMessage.h"
 
@@ -707,7 +708,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      *   count only with one towards this quota.
      * @param targetRank  Rank which should host the new tree.
      */
-    bool split(int treeId, int cells, int targetRank);
+    bool split(int treeId, const peano4::SplitInstruction& instruction, int targetRank);
 
     /**
      * Codes hold one spacetree set per rank. With this routine, you can find
