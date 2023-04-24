@@ -135,8 +135,8 @@ tarch::la::Vector<Dimensions,double>  peano4::datamanagement::CellMarker::getOff
 
 std::string peano4::datamanagement::CellMarker::toString() const {
   std::ostringstream msg;
-  msg << "(x=" << _centre
-      << ",h=" << _h
+  msg << "(cell-centre=" << _centre
+      << ",cell-h=" << _h
       << ",has-been-refined=" << _hasBeenRefined
       << ",will-be-refined=" << _willBeRefined
       << ",is-local=" << _isLocal
