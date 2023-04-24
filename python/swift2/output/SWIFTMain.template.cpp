@@ -54,6 +54,7 @@ tarch::logging::Log _log("::");
 tarch::timing::Measurement   createGridMeasurement;
 tarch::timing::Measurement   initMeasurement;
 tarch::timing::Measurement   sortMeasurement;
+tarch::timing::Measurement   initDensityMeasurement;
 tarch::timing::Measurement   plotMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 
@@ -292,8 +293,7 @@ void {{NAMESPACE | join("::")}}::step() {
         repositories::finishInitDensityStep();
         observers::InitDensity::unprepareTraversal();
         watch.stop();
-        // TODO: sortMeasurement is wrong here
-        sortMeasurement.setValue( watch.getCalendarTime() );
+        initDensityMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
     case repositories::StepRepository::Steps::Plot:
@@ -439,7 +439,8 @@ int main(int argc, char** argv) {
     logInfo("main()", "terminated successfully");
     logInfo("main()", "grid construction:  " << createGridMeasurement.getAccumulatedValue() << "s\t" << createGridMeasurement.toString() );
     logInfo("main()", "init simulation:    " << initMeasurement.getAccumulatedValue() << "s\t" << initMeasurement.toString() );
-    logInfo("main()", "(initial) sort:     " << sortMeasurement.getAccumulatedValue() << "s\t" << initMeasurement.toString() );
+    logInfo("main()", "(initial) sort:     " << sortMeasurement.getAccumulatedValue() << "s\t" << sortMeasurement.toString() );
+    logInfo("main()", "(initial) density:  " << initDensityMeasurement.getAccumulatedValue() << "s\t" << initDensityMeasurement.toString() );
     logInfo("main()", "plotting:           " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString() );
     logInfo("main()", "time stepping:      " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString() );
   }
