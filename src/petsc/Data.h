@@ -66,8 +66,13 @@ class petsc::PetscData{
     int _dofs;
 
     //Ax = b
-    Mat A;
-    Vec x, b;
+    Mat _A;
+    Vec _x, _b;
+
+    /**
+     * create a standard vector which will temporarily hold 
+     * the values we want to send into A
+    */
 
     /**
      * initialise a vector to store x for now, so we can interrogate them 

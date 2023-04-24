@@ -16,24 +16,24 @@ void petsc::PetscData::initMatrixAndVectors( int dofs ){
   //matrix size, set it to number of dofs
   PetscInt n = _dofs;
 
-  MatCreate(PETSC_COMM_WORLD, &A);
-  MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, n, n);
-  MatSetFromOptions(A);
-  MatSetUp(A);
+  MatCreate(PETSC_COMM_WORLD, &_A);
+  MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, n, n);
+  MatSetFromOptions(_A);
+  MatSetUp(_A);
 
   //next, do same with the two vectors...
   //create both vectors
-  VecCreate(PETSC_COMM_WORLD, &x);
-  VecCreate(PETSC_COMM_WORLD, &b);
+  VecCreate(PETSC_COMM_WORLD, &_x);
+  VecCreate(PETSC_COMM_WORLD, &_b);
 
-  VecSetSizes(x, PETSC_DECIDE, n);
-  VecSetSizes(b, PETSC_DECIDE, n);
+  VecSetSizes(_x, PETSC_DECIDE, n);
+  VecSetSizes(_b, PETSC_DECIDE, n);
 
-  VecSetFromOptions(x);
-  VecSetFromOptions(b);
+  VecSetFromOptions(_x);
+  VecSetFromOptions(_b);
 
-  VecSetUp(x);
-  VecSetUp(b);
+  VecSetUp(_x);
+  VecSetUp(_b);
 }
 
 // void petsc::PetscData::assembleMatrix(){
@@ -80,13 +80,13 @@ void petsc::PetscData::setDoFs(int dofs){
 void petsc::PetscData::convertToStdVector(){
   //get size of vec
   PetscInt size;
-  VecGetSize(x, &size);
+  VecGetSize(_x, &size);
 
   //make a temp array to hold the values of the vec
   const PetscScalar* petscArray;
 
   //get a read-only ptr to the petsc array
-  VecGetArrayRead(x, &petscArray);
+  VecGetArrayRead(_x, &petscArray);
 
   //TODO - work out why _xAsStdVector[i] = petscArray[i]; causes segfault
   for (int i = 0; i < size; i++) {
@@ -94,7 +94,7 @@ void petsc::PetscData::convertToStdVector(){
   }
 
   //return the read-only ptr to petsc
-  VecRestoreArrayRead(x, &petscArray);
+  VecRestoreArrayRead(_x, &petscArray);
 
 }
 
