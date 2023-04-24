@@ -61,6 +61,18 @@ class petsc::PetscData{
     std::vector<double> getX() const;
     double getX(int i) const;
 
+    /**
+     * method to store doubles in a vector until we're ready to
+     * put them in _A
+    */
+    void insertDoubleAtIndexij(int i, int j, double val);
+    void incrementDoubleAtIndexij(int i, int j, double val);
+    // double getTempDoubleAtIndexij(int i, int j) const;
+
+    /**
+     * method to put the contents of _AasStdVector into _A
+    */
+    void assembleA();
 
   private:
     int _dofs;
@@ -73,6 +85,7 @@ class petsc::PetscData{
      * create a standard vector which will temporarily hold 
      * the values we want to send into A
     */
+    std::vector<double> _AasStdVector;
 
     /**
      * initialise a vector to store x for now, so we can interrogate them 

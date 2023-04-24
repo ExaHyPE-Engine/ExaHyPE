@@ -16,6 +16,9 @@ void petsc::PetscData::initMatrixAndVectors( int dofs ){
   //matrix size, set it to number of dofs
   PetscInt n = _dofs;
 
+  //reserve enough space in the temporary vector to hold the values of A
+  _AasStdVector.resize( _dofs * _dofs );
+
   MatCreate(PETSC_COMM_WORLD, &_A);
   MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, n, n);
   MatSetFromOptions(_A);
@@ -36,19 +39,37 @@ void petsc::PetscData::initMatrixAndVectors( int dofs ){
   VecSetUp(_b);
 }
 
+//storing doubles to be placed into A
+void petsc::PetscData::insertDoubleAtIndexij( int i, int j, double val ){
+  // _AasStdVector[i*j + i + j] = val;
+  _AasStdVector[i*_dofs + j] = val;
+}
+
+void petsc::PetscData::incrementDoubleAtIndexij( int i, int j, double val ){
+  _AasStdVector[i*_dofs + j] += val;
+}
+
+void petsc::PetscData::assembleA(){
+
+  for (PetscInt i = 0; i < _dofs; i++){
+    for (PetscInt j = 0; j < _dofs; j++){
+      PetscScalar val = _AasStdVector.at(i*_dofs + j);
+      MatSetValue(_A, i, j, val, INSERT_VALUES);
+    }
+  }
+  
+  //assemble
+  MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);
+
+  //print out our contents
+  MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
+
+}
+
 // void petsc::PetscData::assembleMatrix(){
 
 
-//   for (PetscInt i = 0; i < n; i++){
-//     MatSetValue(A, i, i, val, INSERT_VALUES);
-//   }
-  
-//   //assemble
-//   MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
-//   MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
-
-//   //print out our contents
-//   // MatView(A, PETSC_VIEWER_STDOUT_WORLD);
 
 // }
 
