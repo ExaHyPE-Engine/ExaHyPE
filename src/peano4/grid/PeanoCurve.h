@@ -117,8 +117,7 @@ class peano4::grid::PeanoCurve {
     std::bitset<Dimensions> currentLocalVertexIndex( coordinates ^ std::bitset<Dimensions>(i) );
     logDebug( "loadVertices(...)", "handle vertex " << currentLocalVertexIndex );
   }
-     <\pre>
-     *
+     * </pre>
      * We heavily exploit bitsets here. They allow us, for example, to invert
      * the whole direction by a simple flip.
      */

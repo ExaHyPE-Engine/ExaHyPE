@@ -1,6 +1,6 @@
 /**
 
-@page swift_particle_lifecycle
+@page swift_particle_lifecycle Particle Lifecycle
 
 Particles are characterized by their attributes (position, velocity, density,
 ...) as well as by their behaviour in the simulation, i.e. the algorithmic steps.

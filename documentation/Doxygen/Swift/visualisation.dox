@@ -7,7 +7,7 @@ As the files can be rather large, the simulation configuration allows you to
 specify exactly how often you want to see file dumps, and you can also add
 spatial filters.
 The latter help you to visualise only subdomains.
-As we rely on Peano's infrastructure, you can use the ```render.py``` script in
+As we rely on Peano's infrastructure, you can use the ``render.py`` script in
 ``python/peano4/visualisation`` to convert the output files into vtu files.
 Consult also @ref tarch_patch_files "Peano's generic discussion" of various
 visualisation pathways.
@@ -26,7 +26,7 @@ python library is required. The library can be installed using pip, i.e.  invoki
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 pip install VTUinterface
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The reader provides two default options: Either read in a single vtu file, or provide
 it with the .pvd file and specify the time of the snapshot you want to extract.
