@@ -230,8 +230,8 @@ void finishGridConstructionStep() {
             tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
           },
           [&]() {
-            tarch::mpi::Rank::getInstance().writeTimeOutWarning( "", "GridConstructionStep()", rank, statisticsExchangeTag );
-            tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "", "receifinishGridConstructionStepve()", rank, statisticsExchangeTag );
+            tarch::mpi::Rank::getInstance().writeTimeOutWarning( "{{NAMESPACE | join("::")}}", "finishGridConstructionStep()", rank, statisticsExchangeTag );
+            tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "{{NAMESPACE | join("::")}}", "finishGridConstructionStep()", rank, statisticsExchangeTag );
             tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
           },
           tarch::mpi::Rank::getInstance().getCommunicator()

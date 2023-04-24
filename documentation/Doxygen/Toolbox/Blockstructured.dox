@@ -4,6 +4,8 @@
 
 \li \subpage toolbox_blockstructured_interpolation
 
+@todo This docu should move closer to the source code
+
 Peano's block-structured output format {#capter:blockstructured-output-format}
 ======================================
 

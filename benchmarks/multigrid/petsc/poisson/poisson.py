@@ -52,10 +52,11 @@ if args.mode=="asserts":
   build_mode = peano4.output.CompileMode.Asserts
 
 cube_size = 1.0
+print(args.dimensions)
 project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
-  offset                = [0.0, 0.0, 0.0],
-  domain_size           = [ cube_size, cube_size, cube_size],
+  offset                = [ 0.0 for _ in range(args.dimensions) ],
+  domain_size           = [ cube_size for _ in range(args.dimensions) ],
 )
 
 
