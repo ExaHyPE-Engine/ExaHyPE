@@ -49,17 +49,17 @@ sequence of algorithmic steps.
 As an example within this class, we can find the SPH density loop:
 
 ~~~~~~~~~~~~~~~~~~~~~
-      AlgorithmStep( 
-        name                           = "DensityLoopWithConstantSmoothingLength",          
-        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+      AlgorithmStep(
+        name                           = "DensityLoopWithConstantSmoothingLength",
+        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """
                                          ::swift2::kernels::prepareDensityCalculation( localParticles );
                                          """,
 
         cell_kernel                    = """
-                                         ::swift2::kernels::computeDensity( 
-                                           localParticles, 
+                                         ::swift2::kernels::computeDensity(
+                                           localParticles,
                                            activeParticles,
                                            {}
                                          );
@@ -75,7 +75,7 @@ As an example within this class, we can find the SPH density loop:
                                          """.format(self._hydroDimensions,
                                                     self._eta_factor,
                                                     self._alpha_av),
- 
+
         includes                       = """
                                          #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"
