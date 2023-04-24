@@ -728,6 +728,11 @@ class peano4::grid::Spacetree {
      * types in one grid sweep, we could run into inconsistent grid
      * configurations. At the moment, this is an assumption, i.e. it might
      * work, but I'm just not sure if it really holds.
+     *
+     * This constrains (only one type of splitting) is not necessary
+     * algorithmically. The logic would support a sequence of different
+     * split types. However, both splits use the same helper data structures,
+     * and they might be messed up with different split types are combined.
      */
     void split(int treeId, const SplitInstruction& instruction);
 

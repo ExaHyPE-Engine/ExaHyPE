@@ -85,8 +85,8 @@ int toolbox::loadbalancing::getIdOfHeaviestLocalSpacetree(double tolerance) {
     }
   }
 
-  logInfo( "getIdOfHeaviestLocalSpacetree(double)", "try to find one maximum tree which has weight close to " << maxLocalUnrefinedCells << ", i.e. has more than " << (tolerance * static_cast<double>(maxLocalUnrefinedCells)) << " cells"  );
   if (maxLocalUnrefinedCells>0) {
+    logInfo( "getIdOfHeaviestLocalSpacetree(double)", "try to find one maximum tree which has weight close to " << maxLocalUnrefinedCells << ", i.e. has more than " << (tolerance * static_cast<double>(maxLocalUnrefinedCells)) << " cells"  );
     for (auto p: idsOfLocalSpacetrees) {
       if (
         static_cast<double>( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() ) >= tolerance * static_cast<double>(maxLocalUnrefinedCells)

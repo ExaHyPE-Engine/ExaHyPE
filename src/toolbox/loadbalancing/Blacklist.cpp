@@ -23,7 +23,7 @@ std::string toolbox::loadbalancing::Blacklist::toString() const {
   std::ostringstream msg;
   msg << "{";
   if (_blacklist.empty()) {
-    msg << ",blacklist is empty";
+    msg << "blacklist is empty";
   }
   else {
     for (auto p: _blacklist) {
