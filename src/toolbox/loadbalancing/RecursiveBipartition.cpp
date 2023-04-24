@@ -191,7 +191,7 @@ void toolbox::loadbalancing::RecursiveBipartition::updateLoadBalancing() {
         else if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
           logInfo(
             "updateLoadBalancing()",
-            "can't split heaviest tree " << heaviestSpacetree << " even though not all ranks are used currently"
+            "can't split heaviest tree " << heaviestSpacetree << " even though this tree is too heavy"
           );
         }
       }
