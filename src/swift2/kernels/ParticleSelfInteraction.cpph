@@ -235,6 +235,8 @@ void swift2::kernels::endDensityCalculation(
 
 //          tarch::la::Vector<Dimensions,double> GridSize = marker.h();
 //          const double GridSizeHalf = 0.5 * GridSize(0);
+
+          /* TODO MLADEN: What exactly is going on here?? */
           const double GridSizeHalf = 0.5 * 0.3;
           const double CutoffParticleH = kernel_gamma * particle->getSmoothingLength();
 
