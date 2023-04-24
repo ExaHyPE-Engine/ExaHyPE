@@ -1,0 +1,19 @@
+clang-format:
+  stage: format
+  allow_failure: true
+  tags:
+    - ${RUNNER_TAG}
+  image:
+    name: "ubuntu:22.04"
+    entrypoint: ["/bin/bash", "-l", "-c"]
+  script:
+    - pwd
+    - ls
+    - whoami
+    - hostname
+    - lscpu
+    - echo $CI_COMMIT_SHA
+    - echo $CI_COMMIT_BRANCH
+    - echo "Running CI with $(nproc) cores"
+    - apt update && apt -y install python3 clang-format
+    - python3 .continuous_integration/utils/run-clang-format.py -d -r src -s .clang-format
