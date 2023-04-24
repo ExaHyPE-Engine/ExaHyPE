@@ -30,6 +30,8 @@ peano4::grid::Spacetree::Spacetree(
   const tarch::la::Vector<Dimensions,double>&  width,
   const std::bitset<Dimensions>&               periodicBC
 ):
+  logTraceInWith3Arguments( "Spacetree(...)", offset, width, periodicBC );
+  assertion3( tarch::la::allGreater(width,0.0), offset, width, periodicBC );
   _id(0),
   _spacetreeState( SpacetreeState::NewRoot ),
   _root(),
@@ -49,7 +51,7 @@ peano4::grid::Spacetree::Spacetree(
   _statistics.setStationarySweeps(0);
   clear( _statistics, _id==0 );
 
-  logDebug( "Spacetree(...)", "create spacetree with " << offset << "x" << width << " and periodic BCs=" << _periodicBC );
+  logTraceOutWith1Argument( "Spacetree(...)", _root.toString() );
 }
 
 
@@ -143,7 +145,7 @@ bool peano4::grid::Spacetree::isSpacetreeNodeLocal(
 
 
 void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledFromSpacetreeSet ) {
-  logTraceIn( "traverse(TraversalObserver)" );
+  logTraceInWith1Argument( "traverse(TraversalObserver)", _root.toString() );
 
   for (int d=0; d<TwoTimesD; d++) {
     assertion2( _root.getAccessNumber(d)>-2*Dimensions, d, _root.toString() );

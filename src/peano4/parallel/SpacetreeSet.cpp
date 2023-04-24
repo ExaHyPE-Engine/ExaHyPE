@@ -61,8 +61,10 @@ void peano4::parallel::SpacetreeSet::init(
   #endif
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logTraceInWith3Arguments("isGlobalMaster(...)", offset, width, periodicBC);
     peano4::grid::Spacetree spacetree( offset, width, periodicBC );
     _spacetrees.push_back( spacetree );
+    logTraceOutWith3Arguments("isGlobalMaster(...)", offset, width, periodicBC);
   }
 }
 
