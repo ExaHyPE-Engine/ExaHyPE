@@ -954,17 +954,8 @@ def create_start_time_step_implementation_for_adaptive_time_stepping():
   _maxEigenvalue = 0.0;
 }"""
 
-  return statistics + clear_max_eigenvalue
-
-def create_finish_time_step_implementation_for_adaptive_time_stepping():
-  """
-  
-  This routine is inserted after we have reduced all global quantities. These
-  are the quantities with the postfix ThisTimeStep.
-  
-  """ 
-  return """
-  if ( isLastGridSweepOfTimeStep() ) {
+  compute_new_timestep = """
+  if ( isFirstGridSweepOfTimeStep() ) {
     #ifdef Parallel
     double newMaxEigenvalue = _maxEigenvalue;
     tarch::mpi::Rank::getInstance().allReduce(
@@ -1000,6 +991,17 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping():
   }
 
 """
+
+  return statistics + clear_max_eigenvalue + compute_new_timestep
+
+def create_finish_time_step_implementation_for_adaptive_time_stepping():
+  """
+  
+  This routine is inserted after we have reduced all global quantities. These
+  are the quantities with the postfix ThisTimeStep.
+  
+  """ 
+  return ""
 
 def create_constructor_implementation_for_adaptive_time_stepping():
   return "_admissibleTimeStepSize = 0.0;"
