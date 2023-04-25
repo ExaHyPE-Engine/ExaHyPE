@@ -16,23 +16,23 @@ void cudaAssertion(cudaError_t code, const char *file, int line) {
 void tarch::gpuAbort() {
 }
 
-double* tarch::allocateMemory(int size, tarch::MemoryLocation location) {
-  double* result = nullptr;
+void* tarch::internal::allocateRawData(int size, tarch::MemoryLocation location) {
+  void* result = nullptr;
   switch (location) {
     case tarch::MemoryLocation::Heap:
-      result = new (std::align_val_t(AlignmentOnHeap)) double[size];
+      result = aligned_alloc(AlignmentOnHeap, size);
       break;
     case tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-      CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size*sizeof(double)));
+      CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size));
       break;
   }
   return result;
 }
 
-void tarch::freeMemory(double* data, tarch::MemoryLocation location) {
+void tarch::freeMemory(void* data, tarch::MemoryLocation location) {
   switch (location) {
     case tarch::MemoryLocation::Heap:
-      delete[] data;
+      free(data);
       break;
     case tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
       CHECK_CUDA_ERROR(cudaFree(data));

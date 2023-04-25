@@ -100,18 +100,6 @@ target_compile_definitions(${TARGET_NAME} PRIVATE Dimensions=${DIMENSION} ${${MO
 target_link_options(${TARGET_NAME} PRIVATE ${${MODE}_LDFLAGS})
 target_link_libraries(${TARGET_NAME} PRIVATE project_options)
 
-# Linking to project_warnings result with errors if nvc++ is used as host compiler
-# Adding the compile option "-cuda", while building a cuda executable results with a linkage error 
-# Where it says "...o file format not recognized; treating as linker script"
-# See: https://forums.developer.nvidia.com/t/problem-in-the-linking-step-of-cuda-executable-o-file-format-not-recognized-treating-as-linker-script/250059
-# But the link option "-cuda" must be always given otherwise it will result with another linking error with:
-# "Undefined reference to Mcuda_compiled"
-#if (NOT "${WITH_GPU}" STREQUAL "cuda")
-#target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
-#target_compile_options(${TARGET_NAME} PRIVATE ${ENABLE_NVHPC_CUDA_API})
-#else()
-#target_compile_options(${TARGET_NAME} PRIVATE -cudalib)
-#endif()
-#target_link_options(${TARGET_NAME} PRIVATE ${ENABLE_NVHPC_CUDA_API})
-#target_compile_options(${TARGET_NAME} PRIVATE -Xcompiler=-cuda)
-#target_link_options(${TARGET_NAME} PRIVATE -Xcompiler=-cuda -cuda)
+if (NOT "${WITH_GPU}" STREQUAL "cuda")
+target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
+endif()

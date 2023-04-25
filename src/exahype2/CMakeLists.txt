@@ -13,10 +13,10 @@ foreach(mode IN LISTS BUILD_MODES)
     target_include_directories(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
     target_compile_definitions(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS} Dimensions=${dimension})
     target_link_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
-    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC project_options  Peano4Core${dimension}d_${mode_lower})
+    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC project_options Peano4Core${dimension}d_${mode_lower})
     target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ToolboxLoadBalancing${dimension}d_${mode_lower})
     target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ToolboxBlockStructured${dimension}d_${mode_lower})
-    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE project_warnings )
+    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE project_warnings)
 
     install(TARGETS ExaHyPE2Core${dimension}d_${mode_lower}
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
