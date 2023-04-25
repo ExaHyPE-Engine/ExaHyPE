@@ -123,6 +123,13 @@ void startSortingStep() {
   logTraceIn( "SortingStep()" );
 }
 
+void startInitDensityStep() {
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
+  {%- endfor %}
+  logTraceIn( "InitDensityStep()" );
+}
 
 void startTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
@@ -163,7 +170,7 @@ void finishTimeStep() {
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
-  logTraceIn( "TimeStep()" );
+  logTraceOut( "TimeStep()" );
 }
 
 
@@ -173,7 +180,7 @@ void finishGridConstructionStep() {
   {%- endfor %}
 
   loadBalancer.finishStep();
-  logTraceIn( "GridConstructionStep()" );
+  logTraceOut( "GridConstructionStep()" );
 }
 
 
@@ -184,7 +191,7 @@ void finishInitialisationStep() {
   {%- endfor %}
 
   loadBalancer.finishStep();
-  logTraceIn( "InitialisationStep()" );
+  logTraceOut( "InitialisationStep()" );
 }
 
 
@@ -195,15 +202,24 @@ void finishSortingStep() {
   {%- endfor %}
 
   loadBalancer.finishStep();
-  logTraceIn( "SortingStep()" );
+  logTraceOut( "SortingStep()" );
 }
 
+void finishInitDensityStep() {
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
+  {%- endfor %}
+
+  loadBalancer.finishStep();
+  logTraceOut( "InitDensityStep()" );
+}
 
 void finishPlotStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
-  logTraceIn( "PlotStep()" );
+  logTraceOut( "PlotStep()" );
 }
 
 
@@ -211,7 +227,7 @@ void finishIntermediateStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
-  logTraceIn( "IntermediateStep()" );
+  logTraceOut( "IntermediateStep()" );
 }
 
 {% for item in NAMESPACE -%}

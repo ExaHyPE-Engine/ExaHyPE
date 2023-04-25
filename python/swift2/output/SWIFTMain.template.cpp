@@ -37,6 +37,7 @@
 #include "observers/Init.h"
 #include "observers/Plot.h"
 #include "observers/Sort.h"
+#include "observers/InitDensity.h"
 
 {% for STEP in SOLVERSTEP_NAMES %}
 #include "observers/{{STEP}}.h"
@@ -53,6 +54,7 @@ tarch::logging::Log _log("::");
 tarch::timing::Measurement   createGridMeasurement;
 tarch::timing::Measurement   initMeasurement;
 tarch::timing::Measurement   sortMeasurement;
+tarch::timing::Measurement   initDensityMeasurement;
 tarch::timing::Measurement   plotMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 
@@ -60,6 +62,7 @@ tarch::timing::Measurement   timeStepMeasurement;
 bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
   static bool   gridConstructed                             = false;
   static bool   gridInitialised                             = false;
+  static bool   initialDensityComputed                      = false;
   static bool   initialisationSorted                        = false;
   static double nextMaxPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
   static double nextMinPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
@@ -130,6 +133,13 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     );
 
     initialisationSorted = true;
+  }
+  else if (not initialDensityComputed) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitDensity )
+    );
+
+    initialDensityComputed = true;
   }
   else if (
     ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
@@ -271,6 +281,21 @@ void {{NAMESPACE | join("::")}}::step() {
         sortMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
+    case repositories::StepRepository::Steps::InitDensity:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "initDensity" );
+        watch.start();
+        otterPhaseBegin( "initDensity" );
+        observers::InitDensity  observer;
+        observers::InitDensity::prepareTraversal();
+        repositories::startInitDensityStep();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishInitDensityStep();
+        observers::InitDensity::unprepareTraversal();
+        watch.stop();
+        initDensityMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
     case repositories::StepRepository::Steps::Plot:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
@@ -294,6 +319,7 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::{{SOLVERSTEP_NAMES[0]}}  observer;
         observers::{{SOLVERSTEP_NAMES[0]}}::prepareTraversal();
         repositories::startTimeStep();
+        repositories::startIntermediateStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         repositories::finishIntermediateStep();
         observers::{{SOLVERSTEP_NAMES[0]}}::unprepareTraversal();
@@ -319,6 +345,7 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::{{SOLVERSTEP_NAMES[-1]}}::prepareTraversal();
         repositories::startIntermediateStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishIntermediateStep();
         repositories::finishTimeStep();
         observers::{{SOLVERSTEP_NAMES[-1]}}::unprepareTraversal();
         watch.stop();
@@ -401,7 +428,7 @@ int main(int argc, char** argv) {
   #if defined(SharedOMP)
   #pragma omp parallel
   {
-  #pragma omp master 
+  #pragma omp master
   {
   #endif
   if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
@@ -412,7 +439,8 @@ int main(int argc, char** argv) {
     logInfo("main()", "terminated successfully");
     logInfo("main()", "grid construction:  " << createGridMeasurement.getAccumulatedValue() << "s\t" << createGridMeasurement.toString() );
     logInfo("main()", "init simulation:    " << initMeasurement.getAccumulatedValue() << "s\t" << initMeasurement.toString() );
-    logInfo("main()", "(initial) sort:     " << sortMeasurement.getAccumulatedValue() << "s\t" << initMeasurement.toString() );
+    logInfo("main()", "(initial) sort:     " << sortMeasurement.getAccumulatedValue() << "s\t" << sortMeasurement.toString() );
+    logInfo("main()", "(initial) density:  " << initDensityMeasurement.getAccumulatedValue() << "s\t" << initDensityMeasurement.toString() );
     logInfo("main()", "plotting:           " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString() );
     logInfo("main()", "time stepping:      " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString() );
   }
@@ -425,7 +453,7 @@ int main(int argc, char** argv) {
   }
   }
   #endif
-  
+
   otterTraceFinalise();
 
   peano4::shutdownSingletons();
