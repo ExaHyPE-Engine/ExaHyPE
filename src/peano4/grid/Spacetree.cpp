@@ -1264,14 +1264,20 @@ void peano4::grid::Spacetree::descend(
       and
       not isSpacetreeNodeLocal(vertices,false,false)
     ) {
-      markVerticesAroundParentOfForkedCell(vertices);
+      markVerticesAroundForkedCell(
+        vertices,
+        fineGridVertices
+      );
     }
     else if (
       not isSpacetreeNodeLocal(fineGridVertices,false,false)
       and
       isSpacetreeNodeLocal(vertices,false,false)
     ) {
-      markVerticesAroundParentOfForkedCell(vertices);
+      markVerticesAroundForkedCell(
+        vertices,
+        fineGridVertices
+      );
     }
 
     // refinement control
@@ -1663,7 +1669,8 @@ bool peano4::grid::Spacetree::isCellSplitCandidate(
     isSpacetreeNodeLocal(coarseGridVertices,false,false) and
     areAllVerticesNonHanging(fineGridVertices) and
     not isOneVertexAdjacentToPeriodicBC and
-    not (isOneVertexParentOfForkedTree and areAllVerticesParentOfForkedTree);
+    (not isOneVertexParentOfForkedTree);
+//  not (isOneVertexParentOfForkedTree and areAllVerticesParentOfForkedTree);
 }
 
 
@@ -1724,7 +1731,25 @@ void peano4::grid::Spacetree::splitOrJoinCellBottomUp(
     else {
       assertionMsg(false, "should not be entered as all combination are covered already");
     }
-
+  }
+  else if (
+    not _splitTriggered.empty()
+    and
+    _splitTriggered.begin()->second.mode == peano4::SplitInstruction::Mode::AggressiveTopDown
+    and
+    not _splittedCells.empty()
+  ) {
+    int targetSpacetreeId = _splittedCells.back();
+    _splittedCells.pop_back();
+    logDebug(
+      "splitOrJoinCellBottomUp(...)",
+      "fork off cell at " << fineGridVertices[0].toString() << " to tree " << targetSpacetreeId <<
+      ". #splitted-cells=" << _splittedCells.size()
+    );
+    assertion( isSpacetreeNodeLocal(fineGridVertices,false,false) );
+    assertion( isSpacetreeNodeLocal(coarseGridVertices,false,false) );
+    updateVertexRanksWithinCell( fineGridVertices, targetSpacetreeId );
+  }
 
 /*
   static int newlyCreatedCells = 0;
@@ -1776,7 +1801,6 @@ void peano4::grid::Spacetree::splitOrJoinCellBottomUp(
       }
     }
 */
-  }
 
 /*
   if (
@@ -1828,36 +1852,44 @@ void peano4::grid::Spacetree::splitCellTopDown(
     and
     _splitTriggered.begin()->second.mode == peano4::SplitInstruction::Mode::AggressiveTopDown
   ) {
+    const bool isParentSplit     = not _splittedCells.empty();
     const int  targetSpacetreeId = getSplittingTree();
-    if (targetSpacetreeId>=0) {
-      const int  ownerOfParent     = _gridTraversalEventGenerator.getTreeOwningSpacetreeNode(
-          coarseGridVertices,
-          _splitTriggered, _splitting, _joinTriggered, _joining
-      );
-      const bool isSplitCandidate = targetSpacetreeId>=0 and isCellSplitCandidate(coarseGridVertices,fineGridVertices);
-      const bool isRefined        = isSpacetreeNodeRefined(fineGridVertices);
-      const bool isLocal          = isSpacetreeNodeLocal(fineGridVertices,false,false);
-      const bool isParentSplit    = ownerOfParent!=_id;
+    const bool isSplitCandidate  = targetSpacetreeId>=0 and isCellSplitCandidate(coarseGridVertices,fineGridVertices);
+    const bool isRefined         = isSpacetreeNodeRefined(fineGridVertices);
 
-      if (isLocal and isParentSplit and isRefined) {
-        logWarning( "splitCellTopDown(...)", "split octant off at " << fineGridVertices[0].toString() << " into tree " << targetSpacetreeId << " as parent is split");
-        updateVertexRanksWithinCell( fineGridVertices, targetSpacetreeId );
-      }
-      else if (isLocal and isParentSplit and not isRefined) {
-        logWarning( "splitCellTopDown(...)", "split octant off at " << fineGridVertices[0].toString() << " into tree " << targetSpacetreeId << " as parent is split and decrement split counter");
-        updateVertexRanksWithinCell( fineGridVertices, targetSpacetreeId );
-        updateSplittingCounter( targetSpacetreeId );
-      }
-      else if (not isParentSplit and isSplitCandidate and isRefined) {
-        updateVertexRanksWithinCell( fineGridVertices, targetSpacetreeId );
-        logWarning( "splitCellTopDown(...)", "split tree off at " << fineGridVertices[0].toString() << " into tree " << targetSpacetreeId );
-      }
-      else if (not isParentSplit and isSplitCandidate and not isRefined) {
-        updateVertexRanksWithinCell( fineGridVertices, targetSpacetreeId );
-        updateSplittingCounter( targetSpacetreeId );
-        logWarning( "splitCellTopDown(...)", "split unrefined octant off at " << fineGridVertices[0].toString() << " into tree " << targetSpacetreeId );
-      }
+    if (isParentSplit and isRefined) {
+      assertion( isSpacetreeNodeLocal(fineGridVertices,false,false) );
+      assertion( isSpacetreeNodeLocal(coarseGridVertices,false,false) );
+      int parentId = _splittedCells.back();
+      _splittedCells.push_back(parentId);
     }
+    else if (isParentSplit and not isRefined) {
+      assertion( isSpacetreeNodeLocal(fineGridVertices,false,false) );
+      assertion( isSpacetreeNodeLocal(coarseGridVertices,false,false) );
+      updateSplittingCounter( targetSpacetreeId );
+      int parentId = _splittedCells.back();
+      _splittedCells.push_back(parentId);
+    }
+    else if (not isParentSplit and isSplitCandidate and isRefined) {
+      assertion( isSpacetreeNodeLocal(fineGridVertices,false,false) );
+      assertion( isSpacetreeNodeLocal(coarseGridVertices,false,false) );
+      logDebug(
+          "splitCellTopDown(...)",
+          "refined cell at " << fineGridVertices[0].toString() <<
+          " should go with all children to tree " << targetSpacetreeId
+      );
+      _splittedCells.push_back(targetSpacetreeId);
+    }
+    else if (not isParentSplit and isSplitCandidate and not isRefined) {
+      updateSplittingCounter( targetSpacetreeId );
+      assertion( isSpacetreeNodeLocal(fineGridVertices,false,false) );
+      assertion( isSpacetreeNodeLocal(coarseGridVertices,false,false) );
+      _splittedCells.push_back(targetSpacetreeId);
+    }
+    logDebug(
+        "splitOrJoinCellBottomUp(...)",
+        "#splitted-cells=" << _splittedCells.size()
+    );
   }
 }
 
@@ -1932,13 +1964,15 @@ peano4::grid::GridStatistics peano4::grid::Spacetree::getGridStatistics() const 
 }
 
 
-void peano4::grid::Spacetree::markVerticesAroundParentOfForkedCell(
-  GridVertex            coarseGridVertices[TwoPowerD]
+void peano4::grid::Spacetree::markVerticesAroundForkedCell(
+  GridVertex            coarseGridVertices[TwoPowerD],
+  GridVertex            fineGridVertices[TwoPowerD]
 ) const {
   dfor2(k)
     assertion1( coarseGridVertices[kScalar].getState()!=GridVertex::State::HangingVertex, coarseGridVertices[kScalar].toString() );
     coarseGridVertices[kScalar].setIsAntecessorOfRefinedVertexInCurrentTreeSweep(true);
     coarseGridVertices[kScalar].setIsParentOfSubtreeVertexInCurrentTreeSweep( true );
+    fineGridVertices[kScalar].setIsParentOfSubtreeVertexInCurrentTreeSweep( true );
   enddforx
 }
 

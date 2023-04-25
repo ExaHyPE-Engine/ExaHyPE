@@ -208,8 +208,9 @@ class peano4::grid::Spacetree {
      * will be subject to boundary data exchange. This way, we inform
      * neighbours about the topology, too.
      */
-    void markVerticesAroundParentOfForkedCell(
-      GridVertex            coarseGridVertices[TwoPowerD]
+    void markVerticesAroundForkedCell(
+      GridVertex            coarseGridVertices[TwoPowerD],
+      GridVertex            fineGridVertices[TwoPowerD]
     ) const;
 
 
@@ -245,7 +246,7 @@ class peano4::grid::Spacetree {
      *
      * ## Veto erases
      *
-     * The routine markVerticesAroundParentOfForkedCell() is used in this routine
+     * The routine markVerticesAroundForkedCell() is used in this routine
      * to ensure that we don't erase the grid over a worker domain. We have to do
      * this both on the master and the worker. The worker invokes the veto
      * coarsening when it comes from a coarse remote tree and runs into local fine
@@ -463,7 +464,7 @@ class peano4::grid::Spacetree {
      * flag within the split specification when you call split().
      *
      *
-     * ## Splits
+     * ## Bottom-up splits
      *
      * The split logic is protected by one big check if splits are active.
      * If no splits are triggered, there is no need to check things further.
@@ -496,6 +497,13 @@ class peano4::grid::Spacetree {
      * follows the decisions made for their children before.
      *
      *
+     * ## Top-down splits
+     *
+     * The down splits are discussed in splitCellTopDown(). This is where all
+     * the logic sits. The present routine merely impleemnts the decisions
+     * made there.
+     *
+     *
      * ## Rationale
      *
      * I originally realised the splits solely bottom-up, i.e. decided to
@@ -525,7 +533,8 @@ class peano4::grid::Spacetree {
     /**
      * Split cell in a top down fashion
      *
-     * We first find out what the next split-off tree would be.
+     * The algorithm logic behind this splitting strategy is very simple: We
+     * first find out what the next split-off tree would be.
      *
      * - If a cell's parent is deployed to this tree, deploy the current octant
      *   too. After all, we want to split in a top-down manner.
@@ -533,6 +542,15 @@ class peano4::grid::Spacetree {
      *   split candidate, we trigger the split.
      * - If we deploy an unrefined octant to a new tree, we have to decrease
      *   the internal counter by calling updateSplittingCounter().
+     *
+     * Unfortunately, the actual splitting is not that simple: We cannot alter
+     * the adjacency information of a vertex on-the-fly without running risk to
+     * change the vertex ownership. Therefore, we only realise the analysis
+     * here and deploy the actual split realisation to splitOrJoinCellBottomUp().
+     * Analysis means that we push a marker on the helper stack
+     * _splittedCells whenever we want to split. And we update our internal
+     * splitting counters. But we do not realise the split itself, i.e. we do
+     * not alter adjacency information.
      *
      * @see splitOrJoinCellBottomUp()
      */
