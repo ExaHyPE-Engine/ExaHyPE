@@ -64,7 +64,7 @@ namespace exahype2 {
        * and the right face. Indeed, they carry exactly switched signs. We
        * furthermore note that the original PDE formulation speaks of a
        * term @f$ B(Q) \nabla B @f$ whereas the Finite Volume formulation's
-       * Rusanov solver uses a $f@ 0.5 B( 0.5(Q^++Q^-) ) (Q^+-Q^-) @f$ term.
+       * Rusanov solver uses a @f$ 0.5 B( 0.5(Q^++Q^-) ) (Q^+-Q^-) @f$ term.
        * Therefore, we need an additional factor of 0.5. However, we do not
        * need any additional calibration, as we simply pass in the Q
        * differences into the DG ncp term which expects the gradient. Whatever

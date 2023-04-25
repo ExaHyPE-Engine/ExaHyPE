@@ -137,7 +137,7 @@ namespace exahype2 {
      *
      * In the example above, the weights in c1, c2, c3 and c4 span a
      * polynomial (blue). InterpolationMatrix1d points to
-     * @f$ 3 \cdot 4^2 @f4 entries. If we want to know the interpolated
+     * @f$ 3 \cdot 4^2 @f$ entries. If we want to know the interpolated
      * value for f31, we have to pick the third matrix (matrix index 2
      * as we start counting at zero), then take the first row of this
      * matrix, and multiply its four entries with c1, c2, c3, c4.
@@ -390,7 +390,7 @@ namespace exahype2 {
     );
 
 
-    /*
+    /**
      * Given a numerical flux at the various faces, this computes and adds the Riemann
      * integral of this flux to the nodes of the cell.
      *

@@ -50,9 +50,9 @@ descriptions), the corresponding dox files should go into
       documentation/Doxygen/SubDir
 
 Doxygen supports the addition of pages anywhere in the directories that it searches. 
-These can be written in markdown or html. 
-Additionally, files must start with \htmlonly /** \endhtmlonly and end with \htmlonly */ \endhtmlonly,
-so that Doxygen is alerted to process them.
+These can be written in markdown or html.
+Additionally, files must start with \htmlonly[ /** ]\endhtmlonly and end with 
+\htmlonly[ */ ]\endhtmlonly, so that Doxygen is alerted to process them.
 
 
 ### New (top-level) documentation page
