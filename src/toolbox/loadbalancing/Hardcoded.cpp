@@ -83,7 +83,11 @@ void toolbox::loadbalancing::Hardcoded::finishStep() {
           ", as lb is told not to overbook local cores"
         );
       }
-      else if (not peano4::parallel::SpacetreeSet::getInstance().split(split.splittingTree,split.numberOfCells,split.destinationRank)) {
+      else if (not peano4::parallel::SpacetreeSet::getInstance().split(
+        split.splittingTree,
+        peano4::SplitInstruction{split.numberOfCells,peano4::SplitInstruction::Mode::BottomUp},
+        split.destinationRank
+      )) {
         logWarning(
           "finishStep()",
           "had been told to split " << split.numberOfCells << " cell(s) from tree " <<

@@ -68,6 +68,32 @@ class exahype2::RefinementControlService: public tarch::services::Service {
      * events to "our" trees, i.e. those hosted on this rank. As we also add
      * the messages to the new events, they will be delivered in a subsequent
      * sweep in this case.
+     *
+     * ## Realisation
+     *
+     * - We first do a general probe on MPI to see if there are any messages.
+     *   If there are no messages at all, it makes no sense to continue.
+     * - If the guard check says "yes, there is a message", we next have to
+     *   block the threads. From hereon, we work in a strict serial sense.
+     * - Now we check again (!) if there are messages. This is important as
+     *   receiveDanglingMessages() might be called by multiple threads at the
+     *   same time. So we might have entered the routine and see a message.
+     *   Now we want to receive it, but some other thread might have checked
+     *   as well and might have grabbed "our" message.
+     * - If the check is, once again, successful, we know the rank from which
+     *   the message comes from. So far, all checks use MPI_ANY_RANK, but the
+     *   returned status object now is befilled with the correct rank info.
+     *   We use this rank from hereon, as we will receive multiple messages
+     *   in a row from the rank.
+     * - Next, we work out how many messages we have been sent.
+     * - Finally, we receive the messages and add them to _committedEvents
+     *   and _remoteNewEvents.
+     *
+     * We note that most of these complex multithreading operations are rarely
+     * necessary, as receveDanglingMessages() within the tarch::services::ServiceRepository::receiveDanglingMessages()
+     * is a prior thread-safe. Nevertheless, I decided to try to be on the safe
+     * side in case someone wants to call this receiveDanglingMessages()
+     * version explicitly.
      */
     void receiveDanglingMessages() override;
 

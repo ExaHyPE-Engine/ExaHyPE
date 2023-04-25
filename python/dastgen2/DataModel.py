@@ -5,7 +5,7 @@ import os
 
 
 def construct_ifdef_string(symbol_list):
-    """
+    """!
     
     Return empty string if symbol_list is empty. Otherwise construct
     the whole ifdef thing.
@@ -25,8 +25,7 @@ def construct_ifdef_string(symbol_list):
 
 
 class DataModel(object):
-  """ 
-  Represents on DaStGen2 object, i.e. one data model.
+  """! Represents on DaStGen2 object, i.e. one data model.
   
   full_qualified_name  Full qualified name. Please pass in in C++ convention i.e. with 
                        :: separating the namespaces.

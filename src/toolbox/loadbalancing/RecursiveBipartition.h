@@ -29,21 +29,14 @@ namespace toolbox {
  * check set. If the ratio between the two is worse than the balancing
  * threshold, we split the maximum tree into two parts.
  *
- *
- *
- * around and compute an optimal load per
- * rank. If a rank hosts more than the optimal load subject to an inaccuracy factor,
- * we split that one up into two parts and it deploys the new tree to the most
- * underbooked other rank.
- *
- * In a second phase, we apply the same scheme on the rank: If a rank's local trees
- * are too different, the heaviest tree on the rank has to split further.
- *
- * After this second phase, we enter a second phase where we pass around a
- * token. Whichever rank holds the token, checks the balancing. If is is bad,
- * we return to step number one.
- *
- * The scheme never enters stagnation.
+ * This strategy is often used "late" throughout the grid construction. We can
+ * phrase it the other way round: As it is an incremental strategy, we have to
+ * assume that even a dynamically constructed grid is well ahead of this
+ * balancing. So we split aggressively, top-down here. Consult a discussion of
+ * splitting variants and constraints in peano4::grid::Spacetree::isCellTopDownSplitCandidate()
+ * and  peano4::grid::Spacetree::isCellBottomUpSplitCandidate(),
+ * peano4::grid::Spacetree::splitOrJoinCell() and the general
+ * @ref peano_domain_decomposition "domain decomposition overview".
  */
 class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancing::LoadBalancing {
   public:
