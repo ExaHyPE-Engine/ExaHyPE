@@ -78,7 +78,7 @@ if("${WITH_GPU}" STREQUAL "cuda")
     message(FATAL_ERROR "CMake configured to use CUDA but can't find a CUDA compiler")
   endif()
   set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
-  set(CMAKE_CUDA_STANDARD 20)
+  set(CMAKE_CUDA_STANDARD 17)
   enable_language(CUDA)
 endif()
 
