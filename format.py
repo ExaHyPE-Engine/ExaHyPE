@@ -69,11 +69,11 @@ def get_black_command(peano_root, dry_run):
     if not os.path.exists(bfe_path):
         print("Python formatting env not found, installing it")
         os.mkdir(bfe_path)
-        run = subprocess.run("python3 -m venv {bfe_path}", shell=True, check=True)
+        run = subprocess.run("python3 -m venv "+bfe_path, shell=True, check=True)
         # basically Peano/.black_formatting_env/bin/python3
         bfepython = os.path.join(bfe_path, "bin", "python3")
         run = subprocess.run(
-            "{bfe_python} -m pip install click==8.1.3 black==23.3.0",
+            bfepython+" -m pip install click==8.1.3 black==23.3.0",
             shell=True,
             check=True,
         )
@@ -415,7 +415,7 @@ if __name__ == "__main__":
         print(
             "Dry run:",
             nmodified,
-            "can be formatted (run with --verbose to see file list)",
+            "files can be formatted (run with --verbose to see file list)",
         )
         prefix = "Can be formatted:"
     else:
