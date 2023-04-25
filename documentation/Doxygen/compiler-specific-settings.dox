@@ -299,5 +299,13 @@ to check where the error was raised.
 
 We have to write this part next week when we start the workshop.
 
+~~~~~~~~~~~~~~~~~~~~~~~
+module load oneAPI
+module load intel_mpi
+module load gnu_comp/11.1.0
+export I_MPI_CXX=icpx
+./configure --enable-exahype --enable-blockstructured --enable-loadbalancing --enable-particles CC=icc CXX=icpx --with-multithreading=omp --with-mpi=mpiicpc CXXFLAGS="-std=c++20 -fopenmp -g -funroll-loops -O3 -g3"
+~~~~~~~~~~~~~~~~~~~~~~~
+
  */
  
