@@ -372,11 +372,12 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
     ::sycl::event computeFluxX = queue.submit(
       [&](::sycl::handler &handle) {
         handle.parallel_for(
-          ::sycl::range<2>{numberOfPatches,numberOfVolumesPerAxisInPatch},
-          [=] (::sycl::item<2> i) {
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch+2*solversHaloSize},
+          [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
             int y          = i[1];
-            for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize); x++) {
+			int x = i[2]-solversHaloSize;
+           // for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize); x++) {
               internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -390,7 +391,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
                 tempFluxX,
                 fluxEnumerator
               );
-            }
+           // }
           }
         );
       }
@@ -399,12 +400,13 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
     ::sycl::event computeFluxY = queue.submit(
       [&](::sycl::handler &handle) {
         handle.parallel_for(
-          ::sycl::range<2>{numberOfPatches,numberOfVolumesPerAxisInPatch},
-          [=] (::sycl::item<2> i) {
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch+2*solversHaloSize},
+          [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
             int x          = i[1];
+			int y = i[2]-solversHaloSize;
 
-            for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize);  y++) {
+            //for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize);  y++) {
               internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
@@ -418,7 +420,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
                 tempFluxY,
                 fluxEnumerator
               );
-            }
+            //}
           }
         );
       }
