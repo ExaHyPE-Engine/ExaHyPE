@@ -214,8 +214,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
         handle.depends_on(copySolutionEvent);
         handle.depends_on(computeMaxEigenvalueX);
         handle.depends_on(computeMaxEigenvalueY);
-		handle.depends_on(compute_FluxX);
-		handle.depends_on(compute_FluxY);
+		handle.depends_on(computeFluxX);
+		handle.depends_on(computeFluxY);
 
         handle.parallel_for(
           ::sycl::range<3>{numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch,unknowns},
@@ -428,8 +428,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
     updateWithFlux = queue.submit(
       [&](::sycl::handler &handle) {
         handle.depends_on( updateWithEigenvalue );
-        handle.depends_on( computeFluxX );
-        handle.depends_on( computeFluxY );
+        //handle.depends_on( computeFluxX );
+        //handle.depends_on( computeFluxY );
 
         handle.parallel_for(
           ::sycl::range<3>{unknowns,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
@@ -437,7 +437,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
             int unknown = i[0];
             int x          = i[1];
             int y          = i[2];
-            for (int unknown=0; unknown<unknowns; unknown++) {
+            //for (int unknown=0; unknown<unknowns; unknown++) {
               internal::updateSolutionWithFlux_LoopBody(
                 tempFluxX, tempFluxY, tempFluxZ,
                 fluxEnumerator,
@@ -450,7 +450,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                 *(patchData.QOut + patchIndex),
                 QOutEnumerator
               );
-            }
+            //}
           }
         );
       }
