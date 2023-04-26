@@ -278,7 +278,7 @@ I used this to configure Peano with Intel's TBB enabled
 source /opt/intel/oneapi/setvars.sh
 module load cuda
 
-./configure CC=clang++ CXX=clang++ LIBS="-ltbb" -LFLAGS="-fsycl -fsycl-targets-targets=nvptx64-nvidia-cuda" CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
+./configure CC=clang++ CXX=clang++ LIBS="-ltbb" LFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda" CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Note: Codeplay's website has some useful information on compiler flags.
