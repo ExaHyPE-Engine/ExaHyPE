@@ -87,4 +87,8 @@ int tarch::multicore::Core::getCoreNumber() const {
   #endif
 }
 
+
+void tarch::multicore::Core::yield() {
+  #pragma omp taskyield
+}
 #endif

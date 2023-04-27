@@ -31,9 +31,11 @@ namespace {
   sycl::queue  hostSyclQueue;
 }
 
+
 sycl::queue& tarch::multicore::getHostSYCLQueue() {
   return hostSyclQueue;
 }
+
 
 /**
  * The SYCL core object differs from other core objects in that is solely makes
@@ -51,13 +53,16 @@ tarch::multicore::Core::Core():
   assertion(_numberOfThreads>0);
 }
 
+
 tarch::multicore::Core::~Core() {
 }
+
 
 tarch::multicore::Core& tarch::multicore::Core::getInstance() {
   static Core instance;
   return instance;
 }
+
 
 void tarch::multicore::Core::configure( int numberOfThreads ) {
   if ( numberOfThreads!=tarch::multicore::Core::UseDefaultNumberOfThreads ) {
@@ -68,16 +73,20 @@ void tarch::multicore::Core::configure( int numberOfThreads ) {
   }
 }
 
+
 void tarch::multicore::Core::shutdown() {}
+
 
 bool tarch::multicore::Core::isInitialised() const {
   return true;
 }
 
+
 int tarch::multicore::Core::getNumberOfThreads() const {
   assertion(_numberOfThreads>0);
   return _numberOfThreads;
 }
+
 
 int tarch::multicore::Core::getCoreNumber() const {
   #ifdef CompilerHasSysinfo
@@ -88,8 +97,16 @@ int tarch::multicore::Core::getCoreNumber() const {
   #endif
 }
 
+
 int tarch::multicore::Core::getThreadNumber() const {
   return 0;
 }
 
+
+
+void tarch::multicore::Core::yield() {
+  // @todo It would be nice to have the opportunity to tell the queue to do
+  //       only a few tasks and then to return.
+  hostSyclQueue.wait();
+}
 #endif

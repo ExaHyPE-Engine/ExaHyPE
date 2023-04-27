@@ -61,6 +61,8 @@ class tarch::logging::ITACLogger {
 
     std::map< std::string, int >       _itacHandles;
 
+    bool _firstTraceWritten;
+
     /**
      * Declared private since assignment does not make sense for an output
      * class (output information mismatch).
