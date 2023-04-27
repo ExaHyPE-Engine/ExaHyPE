@@ -73,7 +73,7 @@ class toolbox::loadbalancing::SplitOversizedTree: public toolbox::loadbalancing:
      * alread dumps information per time step. This routine however is more
      * elaborate/detailed and not used by default.
      */
-    std::string toString() const;
+    std::string toString() const override;
 
   private:
     static tarch::logging::Log  _log;
@@ -86,40 +86,12 @@ class toolbox::loadbalancing::SplitOversizedTree: public toolbox::loadbalancing:
     int _roundRobinToken;
 
     /**
-     * Is the balancing between the ranks ok
-     *
-     * This operation checks if the inter-rank load decomposition does
-     * violate the overall load balancing constraints. The global balancing
-     * is determined by a cascade of checks:
-     *
-     * - If we have an inconsistent data view, i.e. if the stats are not valid,
-     *   we have to assume that everything is fine.
-     * - If we have fewer trees globally than we have ranks, the balancing is
-     *   by definition poor.
-     * - If we host more trees than allowed, the balancing by definition is
-     *   good, since we could not refine further anyway.
-     * - Otherwise, we look if the max load per rank and the min load per rank
-     *   differ more than the tolerance.
-     */
-    bool isInterRankBalancingBad() const;
-
-    /**
      * Is the balancing on the rank ok
      *
-     * Similar to isInterRankBalancingBad(), this operation runs through a
-     * series of checks:
-     *
-     * - If there are no trees on the rank, then the result is false. By
-     *   definition, everything is well-balanced.
-     * - If there is only one tree, the balancing is by definition bad, as
-     *   we cannot make a balancing statement.
-     * - If we host more trees than allowed, the balancing by definition is
-     *   good, since we could not refine further anyway.
-     * - Otherwise, we compare the minimum and maximum tree.
      */
-    bool isIntraRankBalancingBad() const;
+    bool doesLocalTreeViolateThreshold() const;
 
-    bool areRanksUnemployed() const;
+    int getTargetTreeSize() const;
 
     /**
      * Wrapper around the spacetree set which also updates the blacklist.
@@ -137,7 +109,7 @@ class toolbox::loadbalancing::SplitOversizedTree: public toolbox::loadbalancing:
      *
      *
      */
-    void triggerSplit( int sourceTree, int numberOfCells, int targetRank );
+    void triggerSplit( int sourceTree, int targetRank );
 
     /**
      * <h2> Init has-spread-over-all-ranks flag </h2>

@@ -134,6 +134,7 @@ namespace toolbox {
      */
     int getIdOfHeaviestLocalSpacetree();
 
+
     /**
      * Similar to getIdOfHeaviestLocalSpacetree() but you might get one of
      * the trees back that is close to the heaviest one up to tolerance.
@@ -152,6 +153,7 @@ namespace toolbox {
     int getIdOfHeaviestLocalSpacetree(
       double tolerance
     );
+
 
     /**
      * @return -1 if there is no local tree yet
