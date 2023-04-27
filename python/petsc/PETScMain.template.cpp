@@ -261,9 +261,12 @@ int main(int argc, char** argv) {
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
+  tarch::la::Vector<Dimensions, double> x = {{DomainOffset}};
+  tarch::la::Vector<Dimensions, double> h = {{DomainSize}};
+
   peano4::initSingletons(
-    {{DomainOffset}},
-    {{DomainSize}}
+    x,
+    h
   );
 
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
