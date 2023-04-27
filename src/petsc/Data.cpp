@@ -17,7 +17,7 @@ void petsc::PetscData::initMatrixAndVectors( int dofs ){
   PetscInt n = _dofs;
 
   //reserve enough space in the temporary vector to hold the values of A
-  _AasStdVector.resize( _dofs * _dofs );
+  // _AasStdVector.resize( _dofs * _dofs );
 
   MatCreate(PETSC_COMM_WORLD, &_A);
   MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, n, n);
@@ -42,18 +42,24 @@ void petsc::PetscData::initMatrixAndVectors( int dofs ){
 //storing doubles to be placed into A
 void petsc::PetscData::insertDoubleAtIndexij( int i, int j, double val ){
   // _AasStdVector[i*j + i + j] = val;
-  _AasStdVector[i*_dofs + j] = val;
+
+  //make a pair that denotes (i,j) as indices
+  tIndex index = std::make_pair(i,j);
+  _AasStdMap.insert( std::make_pair( index, val ) );
+  // _AasStdVector[i*_dofs + j] = val;
 }
 
 void petsc::PetscData::incrementDoubleAtIndexij( int i, int j, double val ){
-  _AasStdVector[i*_dofs + j] += val;
+  tIndex index = std::make_pair(i,j);
+  _AasStdMap[index] += val;
 }
 
 void petsc::PetscData::assembleA(){
 
   for (PetscInt i = 0; i < _dofs; i++){
     for (PetscInt j = 0; j < _dofs; j++){
-      PetscScalar val = _AasStdVector.at(i*_dofs + j);
+      tIndex index = std::make_pair(i,j);
+      PetscScalar val = _AasStdMap.at(index);
       MatSetValue(_A, i, j, val, INSERT_VALUES);
     }
   }

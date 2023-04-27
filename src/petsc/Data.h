@@ -4,9 +4,14 @@
 #include <petscmat.h>
 #include <petscvec.h>
 #include <vector>
+#include <map>
 
 #include <iostream>
 
+/**
+ * define a shorthand for a pair of ints
+*/
+typedef std::pair<int, int> tIndex;
 
 namespace petsc{
   /**
@@ -64,6 +69,8 @@ class petsc::PetscData{
     /**
      * method to store doubles in a vector until we're ready to
      * put them in _A
+     * 
+     * @TODO - pass by reference?
     */
     void insertDoubleAtIndexij(int i, int j, double val);
     void incrementDoubleAtIndexij(int i, int j, double val);
@@ -82,10 +89,10 @@ class petsc::PetscData{
     Vec _x, _b;
 
     /**
-     * create a standard vector which will temporarily hold 
-     * the values we want to send into A
+     * create a std::map, since we cannot reserve such a large amount of memory
+     * Clever indexing still necessary.
     */
-    std::vector<double> _AasStdVector;
+    std::map<tIndex, double> _AasStdMap;
 
     /**
      * initialise a vector to store x for now, so we can interrogate them 
