@@ -55,6 +55,8 @@ int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNu
 int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) {
   if (
     state==toolbox::loadbalancing::State::InterRankDistribution
+    or
+    state==toolbox::loadbalancing::State::IntraRankDistribution
   ) {
     return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTreesThroughoutInitialDistribution);
   }

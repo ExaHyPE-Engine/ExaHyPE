@@ -163,7 +163,7 @@ void tarch::logging::ITTLogger::traceIn(long int timestampNanoseconds, int rank,
   tarch::multicore::Lock lock(_semaphore);
 
   if (_ittHandles.count(trace)==0) {
-    __itt_event event = __itt_event_create(trace.c_str(), trace.c_str().size() );
+    __itt_event event = __itt_event_create(trace.c_str(), trace.size() );
     _ittHandles.insert( std::pair<std::string, __itt_event>(trace,event) );
   }
 

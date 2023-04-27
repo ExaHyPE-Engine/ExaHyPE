@@ -502,7 +502,7 @@ fi
 
 
 if test "$toolchain" == itt; then
-  AC_DEFINE([UseITAC], [1], [UseITT])
+  AC_DEFINE([UseITT], [1], [UseITT])
   AC_DEFINE([UseLogService], [ITTLogger], [ITTLogger])
   
   CXXFLAGS_PEANO_2D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
