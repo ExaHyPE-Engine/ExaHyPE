@@ -90,6 +90,8 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Confi
      * should be no such thing as a min tree size.
      */
     int getMinTreeSize(toolbox::loadbalancing::State state) override;
+
+    std::string toString() const;
 };
 
 

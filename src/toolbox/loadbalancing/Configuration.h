@@ -55,6 +55,8 @@ class toolbox::loadbalancing::Configuration {
      * Minimum tree size.
      */
     virtual int getMinTreeSize(State state) = 0;
+
+    virtual std::string toString() const;
 };
 
 
