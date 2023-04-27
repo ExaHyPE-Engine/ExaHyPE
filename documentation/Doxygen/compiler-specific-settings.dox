@@ -102,6 +102,15 @@ VTResume();
 These functions seem to be deprecated and are not shipped with oneAPI anymore.
 
 
+Further to the remarks above, Intel now recommends to add
+
+~~~~~~~~~~~~~~~~~~~~~~~
+CXXFLAGS="... -parallel-source-info=2"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+before we profile to ensure that the system adds all relevant profiling/debugging information
+to the executable.
+
 ## NVIDIA NVC++ toolchain
 
 <img width="20%" src="https://www.nvidia.com/content/dam/en-zz/Solutions/about-nvidia/logo-and-brand/01-nvidia-logo-vert-500x200-2c50-p@2x.png" />
@@ -222,11 +231,12 @@ on this machine.
 ~~~~~~~~~~~~~~~~~~~~~~
 module load itac
 module load vtune
-./configure CC=icpx CXX=icpx CXXFLAGS="-I${VTUNE_HOME}/vtune/latest/include -I${VT_ROOT}/include -Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g -L${VT_LIB_DIR} -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-lVT ${VT_ADD_LIBS} -littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=intel
+./configure CC=icpx CXX=icpx CXXFLAGS="-I${VTUNE_HOME}/vtune/latest/include -I${VT_ROOT}/include -Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes -parallel-source-info=2" LDFLAGS="-fiopenmp -g -L${VT_LIB_DIR} -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-lVT ${VT_ADD_LIBS} -littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=intel
 ~~~~~~~~~~~~~~~~~~~~~~
-  Further to these flags, I @ref faq "pause and resume the data collection" manually in 
-  ExaHyPE and Swift. This is however something I do in the main() routine of 
-  the respective applications. 
+
+Further to these flags, I @ref faq "pause and resume the data collection" manually in 
+ExaHyPE and Swift. This is however something I do in the main() routine of 
+the respective applications. 
 
 
 ### NCC

@@ -27,6 +27,9 @@ tarch::logging::ITACLogger  tarch::logging::ITACLogger::_singleton;
 
 
 tarch::logging::ITACLogger::ITACLogger() {
+  #if !defined(Parallel)
+  VT_initialize();
+  #endif
 }
 
 
@@ -37,6 +40,23 @@ tarch::logging::ITACLogger& tarch::logging::ITACLogger::getInstance() {
 
 tarch::logging::ITACLogger::~ITACLogger() {
   close();
+  #if !defined(Parallel)
+  VT_finalize();
+  #endif
+}
+
+
+void tarch::logging::ITACLogger::suspendTrace() {
+  #ifdef UseITAC
+  VT_traceoff();
+  #endif
+}
+
+
+void tarch::logging::ITACLogger::continueTrace() {
+  #ifdef UseITAC
+  VT_traceon();
+  #endif
 }
 
 

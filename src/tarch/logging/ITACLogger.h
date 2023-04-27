@@ -95,6 +95,10 @@ class tarch::logging::ITACLogger {
 
     /**
      * It's a singleton.
+     *
+     * According to Intel's documentation, ITAC is automatically initialised by
+     * MPI_Init(). However, if we have no MPI, then we have to initialise
+     * manually.
      */
     ITACLogger();
 
@@ -185,5 +189,8 @@ class tarch::logging::ITACLogger {
     void indent( bool indent, const std::string& trace, const std::string& message );
 
     void close();
+
+    void suspendTrace();
+    void continueTrace();
 };
 
