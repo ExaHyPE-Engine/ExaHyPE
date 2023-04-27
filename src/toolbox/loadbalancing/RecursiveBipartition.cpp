@@ -46,42 +46,6 @@ std::string toolbox::loadbalancing::RecursiveBipartition::toString() const {
 }
 
 
-bool toolbox::loadbalancing::RecursiveBipartition::isInterRankBalancingBad() const {
-  if ( not _statistics.hasConsistentViewOfWorld()) {
-    return false;
-  }
-  else if ( _statistics.getGlobalNumberOfTrees() < tarch::mpi::Rank::getInstance().getNumberOfRanks() ) {
-    return true;
-  }
-  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= _configuration->getMaxLocalTreesPerRank(_state) ) {
-    return false;
-  }
-  else {
-    int localCells = 0;
-    std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
-    for (auto p: idsOfLocalSpacetrees) {
-      localCells += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
-    }
-
-    const double optimalCellCount = static_cast<double>(_statistics.getGlobalNumberOfInnerUnrefinedCells())
-                           / tarch::mpi::Rank::getInstance().getNumberOfRanks();
-
-    const double illbalancing   = (static_cast<double>(localCells)-optimalCellCount) / optimalCellCount;
-    const double balancingRatio = _configuration->getWorstCaseBalancingRatio(_state);
-    bool result = (localCells < _statistics.getGlobalNumberOfInnerUnrefinedCells()) and (illbalancing > 1.0 - balancingRatio);
-
-    if (result) {
-      logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _statistics.getGlobalNumberOfInnerUnrefinedCells() << ", local cells=" << localCells << ", optimal cell count=" << optimalCellCount << ")" );
-    }
-    else {
-      logDebug( "doesRankViolateBalancingCondition()", "rank does not violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _statistics.getGlobalNumberOfInnerUnrefinedCells() << ", local cells=" << localCells << ", optimal cell count=" << optimalCellCount << ")" );
-    }
-
-    return result;
-  }
-}
-
-
 void toolbox::loadbalancing::RecursiveBipartition::updateState() {
   if ( _state == State::SwitchedOff ) {
     logDebug( "updateState()", "don't update as we have switched off" );
@@ -103,57 +67,6 @@ void toolbox::loadbalancing::RecursiveBipartition::updateState() {
 
     _roundRobinToken++;
     _roundRobinToken = _roundRobinToken % tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  }
-}
-
-
-bool toolbox::loadbalancing::RecursiveBipartition::areRanksUnemployed() const {
-  return _statistics.getMinimumOfMaximumOfTreesPerRank() == 0
-     and _statistics.getGlobalNumberOfTrees() > 0;
-}
-
-
-bool toolbox::loadbalancing::RecursiveBipartition::isIntraRankBalancingBad() const {
-  if ( not _statistics.hasConsistentViewOfWorld()) {//
-    return false;
-  }
-  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()==0 ) {
-    return false;
-  }
-  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()==1 ) {
-    return true;
-  }
-  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= _configuration->getMaxLocalTreesPerRank(_state) ) {
-    return false;
-  }
-  else {
-    int maxCells = 0;
-    int minCells = std::numeric_limits<int>::max();
-
-    for (auto p: peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees() ) {
-      maxCells = std::max( maxCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
-      minCells = std::min( minCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
-    }
-
-    bool result = false;
-
-    if (maxCells>0 and minCells>0) {
-      double relativeWeightSmalltestTree = static_cast<double>(minCells) / static_cast<double>(maxCells);
-      double balanceThreshold            = _configuration->getWorstCaseBalancingRatio(_state);
-
-      result = relativeWeightSmalltestTree < balanceThreshold;
-
-      logDebug(
-        "isLocalBalancingBad()",
-        "local trees are ill-balanced=" << result <<
-        ", rel-weight=" << relativeWeightSmalltestTree <<
-        ", threshold=" << balanceThreshold <<
-        ", #min-cells=" << minCells <<
-        ", #max-cells=" << maxCells
-      );
-    }
-
-    return result;
   }
 }
 

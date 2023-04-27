@@ -40,45 +40,10 @@ std::string toolbox::loadbalancing::SplitOversizedTree::toString() const {
       << ",#local-trees=" << peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() 
       << ",is-inter-rank-balancing-bad=" << isInterRankBalancingBad()
       << ",is-intra-rank-balancing-bad=" << isIntraRankBalancingBad()
+      << ",target-tree-size=" << getTargetTreeSize()
       << ")";
 
   return msg.str();
-}
-
-
-bool toolbox::loadbalancing::SplitOversizedTree::isInterRankBalancingBad() const {
-  if ( not _statistics.hasConsistentViewOfWorld()) {
-    return false;
-  }
-  else if ( _statistics.getGlobalNumberOfTrees() < tarch::mpi::Rank::getInstance().getNumberOfRanks() ) {
-    return true;
-  }
-  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= _configuration->getMaxLocalTreesPerRank(_state) ) {
-    return false;
-  }
-  else {
-    int localCells = 0;
-    std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
-    for (auto p: idsOfLocalSpacetrees) {
-      localCells += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
-    }
-
-    const double optimalCellCount = static_cast<double>(_statistics.getGlobalNumberOfInnerUnrefinedCells())
-                           / tarch::mpi::Rank::getInstance().getNumberOfRanks();
-
-    const double illbalancing   = (static_cast<double>(localCells)-optimalCellCount) / optimalCellCount;
-    const double balancingRatio = _configuration->getWorstCaseBalancingRatio(_state);
-    bool result = (localCells < _statistics.getGlobalNumberOfInnerUnrefinedCells()) and (illbalancing > 1.0 - balancingRatio);
-
-    if (result) {
-      logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _statistics.getGlobalNumberOfInnerUnrefinedCells() << ", local cells=" << localCells << ", optimal cell count=" << optimalCellCount << ")" );
-    }
-    else {
-      logDebug( "doesRankViolateBalancingCondition()", "rank does not violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _statistics.getGlobalNumberOfInnerUnrefinedCells() << ", local cells=" << localCells << ", optimal cell count=" << optimalCellCount << ")" );
-    }
-
-    return result;
-  }
 }
 
 
@@ -90,11 +55,11 @@ void toolbox::loadbalancing::SplitOversizedTree::updateState() {
     _state = State::InterRankDistribution;
     logDebug( "updateState()", "switch to state " << ::toString(_state) );
   }
-  else if ( isInterRankBalancingBad() and _roundRobinToken==tarch::mpi::Rank::getInstance().getRank()) {
+  else if ( isInterRankBalancingBad() and _roundRobinToken==tarch::mpi::Rank::getInstance().getRank() and doesLocalTreeViolateThreshold() ) {
     _state = State::InterRankBalancing;
     logDebug( "updateState()", "switch to state " << ::toString(_state) );
   }
-  else if ( isIntraRankBalancingBad() ) {
+  else if ( isIntraRankBalancingBad() and doesLocalTreeViolateThreshold() ) {
     _state = State::IntraRankBalancing;
     logDebug( "updateState()", "switch to state " << ::toString(_state) );
   }
@@ -107,13 +72,7 @@ void toolbox::loadbalancing::SplitOversizedTree::updateState() {
 }
 
 
-bool toolbox::loadbalancing::SplitOversizedTree::areRanksUnemployed() const {
-  return _statistics.getMinimumOfMaximumOfTreesPerRank() == 0
-     and _statistics.getGlobalNumberOfTrees() > 0;
-}
-
-
-bool toolbox::loadbalancing::SplitOversizedTree::isIntraRankBalancingBad() const {
+bool toolbox::loadbalancing::SplitOversizedTree::doesLocalTreeViolateThreshold() const {
   if ( not _statistics.hasConsistentViewOfWorld()) {//
     return false;
   }
@@ -127,30 +86,10 @@ bool toolbox::loadbalancing::SplitOversizedTree::isIntraRankBalancingBad() const
     return false;
   }
   else {
-    int maxCells = 0;
-    int minCells = std::numeric_limits<int>::max();
-
-    for (auto p: peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees() ) {
-      maxCells = std::max( maxCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
-      minCells = std::min( minCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
-    }
-
     bool result = false;
 
-    if (maxCells>0 and minCells>0) {
-      double relativeWeightSmalltestTree = static_cast<double>(minCells) / static_cast<double>(maxCells);
-      double balanceThreshold            = _configuration->getWorstCaseBalancingRatio(_state);
-
-      result = relativeWeightSmalltestTree < balanceThreshold;
-
-      logDebug(
-        "isLocalBalancingBad()",
-        "local trees are ill-balanced=" << result <<
-        ", rel-weight=" << relativeWeightSmalltestTree <<
-        ", threshold=" << balanceThreshold <<
-        ", #min-cells=" << minCells <<
-        ", #max-cells=" << maxCells
-      );
+    for (auto p: peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees() ) {
+      result |= peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() > getTargetTreeSize();
     }
 
     return result;
@@ -176,17 +115,15 @@ void toolbox::loadbalancing::SplitOversizedTree::updateLoadBalancing() {
           and
           not _blacklist.isBlacklisted(heaviestSpacetree)
           and
-          numberOfLocalUnrefinedCellsOfHeaviestSpacetree > _configuration->getMinTreeSize(_state)
+          numberOfLocalUnrefinedCellsOfHeaviestSpacetree > getTargetTreeSize()
           and
           _statistics.getLightestRank()!=tarch::mpi::Rank::getInstance().getRank()
         ) {
-          int cellsPerCore      = std::max( {1, numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,_configuration->getMinTreeSize(_state)} );
-
           logInfo(
             "updateLoadBalancing()",
-            "Not all ranks are used. Lightest global rank is rank " << _statistics.getLightestRank() << ", so assign this rank " << cellsPerCore << " cell(s)"
+            "Not all ranks are used. Lightest global rank is rank " << _statistics.getLightestRank()
           );
-          triggerSplit(heaviestSpacetree, cellsPerCore, _statistics.getLightestRank());
+          triggerSplit(heaviestSpacetree, _statistics.getLightestRank());
         }
         else if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
           logInfo(
@@ -207,20 +144,14 @@ void toolbox::loadbalancing::SplitOversizedTree::updateLoadBalancing() {
           and
           not _blacklist.isBlacklisted(heaviestSpacetree)
           and
-          numberOfLocalUnrefinedCellsOfHeaviestSpacetree > _configuration->getMinTreeSize(_state)
+          numberOfLocalUnrefinedCellsOfHeaviestSpacetree > getTargetTreeSize()
         ) {
           logInfo(
             "updateLoadBalancing()",
             "biggest local tree " << heaviestSpacetree << " is too heavy as it hosts " <<
             numberOfLocalUnrefinedCellsOfHeaviestSpacetree << " cells"
           );
-          int cellsPerCore      = std::max( {1, numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,_configuration->getMinTreeSize(_state)} );
- 
-          logInfo(
-            "updateLoadBalancing()",
-            "lightest global rank is rank " << _statistics.getLightestRank() << ", so assign this rank " << cellsPerCore << " cell(s)"
-          );
-          triggerSplit(heaviestSpacetree, cellsPerCore, _statistics.getLightestRank());
+          triggerSplit(heaviestSpacetree, _statistics.getLightestRank());
         }
         else if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
           logInfo(
@@ -232,29 +163,16 @@ void toolbox::loadbalancing::SplitOversizedTree::updateLoadBalancing() {
       break;
     case State::IntraRankBalancing:
       {
-        int heaviestSpacetree                              = getIdOfHeaviestLocalSpacetree();
-        int numberOfLocalUnrefinedCellsOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
-        if (
-          fitsIntoMemory(_state)
-          and
-          heaviestSpacetree!=NoHeaviestTreeAvailable
-          and
-          not _blacklist.isBlacklisted(heaviestSpacetree)
-          and
-          numberOfLocalUnrefinedCellsOfHeaviestSpacetree > _configuration->getMinTreeSize(_state)
-        ) {
-          int cellsPerCore      = std::max( {1, numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2, _configuration->getMinTreeSize(_state)} );
-          logInfo(
-            "updateLoadBalancing()",
-            "split tree on local rank and assign it " << cellsPerCore << " cell(s)"
-          );
-          triggerSplit(heaviestSpacetree, cellsPerCore, tarch::mpi::Rank::getInstance().getRank());
-        }
-        else if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
-          logInfo(
-            "updateLoadBalancing()",
-            "can't split heaviest tree " << heaviestSpacetree << " on local rank as this tree is on the blacklist or split does not fit into local memory anymore"
-          );
+        for (auto p: peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees() ) {
+          if (
+            fitsIntoMemory(_state)
+            and
+            not _blacklist.isBlacklisted(p)
+            and
+	    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() > getTargetTreeSize()
+          ) {
+            triggerSplit(p, tarch::mpi::Rank::getInstance().getRank());
+	  }
         }
       }
       break;
@@ -277,13 +195,35 @@ void toolbox::loadbalancing::SplitOversizedTree::finishStep() {
 }
 
 
-void toolbox::loadbalancing::SplitOversizedTree::triggerSplit( int sourceTree, int numberOfCells, int targetRank ) {
-  bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,peano4::SplitInstruction{numberOfCells,peano4::SplitInstruction::Mode::AggressiveTopDown},targetRank);
-  if (not success) {
-    logInfo( "triggerSplit()", "wanted to split local rank " << sourceTree << " but failed" );
-  }
+void toolbox::loadbalancing::SplitOversizedTree::triggerSplit( int sourceTree, int targetRank ) {
+  int currentCells = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(sourceTree).getNumberOfLocalUnrefinedCells();
+  while (currentCells > getTargetTreeSize()) {
+    int numberOfSplitCells = currentCells < 2 * getTargetTreeSize() ? currentCells / 2 : getTargetTreeSize();
+    bool success = peano4::parallel::SpacetreeSet::getInstance().split(
+      sourceTree,
+      peano4::SplitInstruction{
+        numberOfSplitCells,
+	peano4::SplitInstruction::Mode::AggressiveTopDown
+      },
+      targetRank
+    );
+    if (not success) {
+      logInfo( "triggerSplit()", "wanted to split local rank " << sourceTree << " but failed" );
+    }
 
-  _blacklist.triggeredSplit( sourceTree );
-  _statistics.incLocalNumberOfSplits();
+    _blacklist.triggeredSplit( sourceTree );
+    _statistics.incLocalNumberOfSplits();
+
+    currentCells -= getTargetTreeSize();
+  }
 }
+
+
+int toolbox::loadbalancing::SplitOversizedTree::getTargetTreeSize() const {
+  return _configuration->getMinTreeSize(_state) > 0 ?
+         _configuration->getMinTreeSize(_state) :
+	 std::max( 1, _statistics.getGlobalNumberOfInnerUnrefinedCells() / tarch::mpi::Rank::getInstance().getNumberOfRanks() / tarch::multicore::Core::getInstance().getNumberOfThreads() );
+}
+
+
 

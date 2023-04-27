@@ -1,5 +1,6 @@
 #include "LoadBalancing.h"
 
+#include "peano4/parallel/SpacetreeSet.h"
 
 
 tarch::logging::Log  toolbox::loadbalancing::LoadBalancing::_log( "toolbox::loadbalancing::LoadBalancing" );
@@ -79,3 +80,92 @@ bool toolbox::loadbalancing::LoadBalancing::fitsIntoMemory(State state) const {
 void toolbox::loadbalancing::LoadBalancing::finishSimulation() {
   _statistics.waitForGlobalStatisticsExchange();
 }
+
+
+bool toolbox::loadbalancing::LoadBalancing::isInterRankBalancingBad() const {
+  if ( not _statistics.hasConsistentViewOfWorld()) {
+    return false;
+  }
+  else if ( _statistics.getGlobalNumberOfTrees() < tarch::mpi::Rank::getInstance().getNumberOfRanks() ) {
+    return true;
+  }
+  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= _configuration->getMaxLocalTreesPerRank(_state) ) {
+    return false;
+  }
+  else {
+    int localCells = 0;
+    std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
+    for (auto p: idsOfLocalSpacetrees) {
+      localCells += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
+    }
+
+    const double optimalCellCount = static_cast<double>(_statistics.getGlobalNumberOfInnerUnrefinedCells())
+                           / tarch::mpi::Rank::getInstance().getNumberOfRanks();
+
+    const double illbalancing   = (static_cast<double>(localCells)-optimalCellCount) / optimalCellCount;
+    const double balancingRatio = _configuration->getWorstCaseBalancingRatio(_state);
+    bool result = (localCells < _statistics.getGlobalNumberOfInnerUnrefinedCells()) and (illbalancing > 1.0 - balancingRatio);
+
+    if (result) {
+      logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _statistics.getGlobalNumberOfInnerUnrefinedCells() << ", local cells=" << localCells << ", optimal cell count=" << optimalCellCount << ")" );
+    }
+    else {
+      logDebug( "doesRankViolateBalancingCondition()", "rank does not violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _statistics.getGlobalNumberOfInnerUnrefinedCells() << ", local cells=" << localCells << ", optimal cell count=" << optimalCellCount << ")" );
+    }
+
+    return result;
+  }
+}
+
+
+bool toolbox::loadbalancing::LoadBalancing::isIntraRankBalancingBad() const {
+  if ( not _statistics.hasConsistentViewOfWorld()) {//
+    return false;
+  }
+  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()==0 ) {
+    return false;
+  }
+  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()==1 ) {
+    return true;
+  }
+  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= _configuration->getMaxLocalTreesPerRank(_state) ) {
+    return false;
+  }
+  else {
+    int maxCells = 0;
+    int minCells = std::numeric_limits<int>::max();
+
+    for (auto p: peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees() ) {
+      maxCells = std::max( maxCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
+      minCells = std::min( minCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
+    }
+
+    bool result = false;
+
+    if (maxCells>0 and minCells>0) {
+      double relativeWeightSmalltestTree = static_cast<double>(minCells) / static_cast<double>(maxCells);
+      double balanceThreshold            = _configuration->getWorstCaseBalancingRatio(_state);
+
+      result = relativeWeightSmalltestTree < balanceThreshold;
+
+      logDebug(
+        "isLocalBalancingBad()",
+        "local trees are ill-balanced=" << result <<
+        ", rel-weight=" << relativeWeightSmalltestTree <<
+        ", threshold=" << balanceThreshold <<
+        ", #min-cells=" << minCells <<
+        ", #max-cells=" << maxCells
+      );
+    }
+
+    return result;
+  }
+}
+
+
+bool toolbox::loadbalancing::LoadBalancing::areRanksUnemployed() const {
+  return _statistics.getMinimumOfMaximumOfTreesPerRank() == 0
+     and _statistics.getGlobalNumberOfTrees() > 0;
+}
+
+
