@@ -9,7 +9,6 @@ toolbox::loadbalancing::LoadBalancing::LoadBalancing(Configuration* configuratio
   _state( State::Undefined ),
   _configuration(configuration),
   _deleteInDestructor(deleteInDestructor) {
-  assertion(configuration!=nullptr);
 }
 
 
