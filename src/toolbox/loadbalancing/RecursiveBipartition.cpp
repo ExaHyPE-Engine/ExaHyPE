@@ -246,7 +246,8 @@ void toolbox::loadbalancing::RecursiveBipartition::updateLoadBalancing() {
           int cellsPerCore      = std::max( {1, numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2, _configuration->getMinTreeSize(_state)} );
           logInfo(
             "updateLoadBalancing()",
-            "split tree on local rank and assign it " << cellsPerCore << " cell(s)"
+            "split tree on local rank and assign it " << cellsPerCore << " cell(s)" <<
+            toString()
           );
           triggerSplit(heaviestSpacetree, cellsPerCore, tarch::mpi::Rank::getInstance().getRank());
         }
