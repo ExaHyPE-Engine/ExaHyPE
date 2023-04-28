@@ -12,7 +12,7 @@ ToolboxLoadBalancing_SOURCES = \
   Configuration.cpp \
   Hardcoded.cpp \
   loadbalancing.cpp \
-  LoadBalancing.cpp \
+  AbstractLoadBalancing.cpp \
   NoLoadBalancing.cpp \
   RecursiveBipartition.cpp \
   SplitOversizedTree.cpp \
