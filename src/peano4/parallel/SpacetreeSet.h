@@ -10,6 +10,7 @@
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/otter.h"
 
 #include "peano4/maps/maps.h"
 
@@ -676,7 +677,10 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * a barrier right at the begin of a traversal, then we are fine, as the typical
      * split (asking for further ranks) arises in-between traversals.
      */
-    void traverse(peano4::grid::TraversalObserver& observer);
+    void traverse(
+        peano4::grid::TraversalObserver& observer,
+        otter::Task *otter_task = nullptr
+    );
 
     /**
      * Return statistics object for primary spacetree.

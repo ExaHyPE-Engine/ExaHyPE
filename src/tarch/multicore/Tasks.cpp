@@ -542,7 +542,8 @@ void tarch::multicore::spawnTask(Task*  task) {
 * @see  processPendingTasks(int)
 */
 void tarch::multicore::spawnAndWait(
-  const std::vector< Task* >&  tasks
+  const std::vector< Task* >&  tasks,
+  otter::Task*                 otter_task
 ) {
   static tarch::logging::Log _log( "tarch::multicore" );
 
@@ -550,22 +551,9 @@ void tarch::multicore::spawnAndWait(
     ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true );
 
     orchestrationStrategy->startBSPSection();
-    // TODO (AT): don't we want to annotate task creation here?
     
-#if defined(AT_DebugMessages)
-    fprintf(stderr, "FILE=%s:%d FUNC=%s\n", __FILE__, __LINE__, __func__);
-#endif
-
-    native::spawnAndWait(tasks,orchestrationStrategy);
+    native::spawnAndWait(tasks,orchestrationStrategy, otter_task);
     orchestrationStrategy->endBSPSection();
-
-#if defined(UseOtterCPP)
-    auto &otter_root = otter::Otter::get_otter().get_root_task();
-    otter_root.synchronise_tasks(otter_sync_children);
-#else
-    // AT: ideally would record the handle of the encountering task here to correctly identify child tasks
-    otterSynchroniseTasks(NULL, otter_sync_children);
-#endif
 
     internal::copyInternalTaskQueuesOverIntoGlobalQueue(-1);
 

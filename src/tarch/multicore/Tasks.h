@@ -5,7 +5,7 @@
 
 #include "multicore.h"
 #include "tarch/multicore/orchestration/Strategy.h"
-
+#include "tarch/multicore/otter.h"
 
 #include <functional>
 #include <vector>
@@ -313,14 +313,16 @@ namespace tarch {
      *   number of tasks to hold back, map them onto native tasks.
      */
     void spawnAndWait(
-      const std::vector< Task* >&  tasks
+      const std::vector< Task* >&  tasks,
+      otter::Task*                 otter_task = nullptr
     );
 
     namespace native {
       void spawnTask(Task* task);
       void spawnAndWait(
         const std::vector< Task* >&  tasks,
-        orchestration::Strategy*     strategy
+        orchestration::Strategy*     strategy,
+        otter::Task*                 otter_task = nullptr
       );
       /**
        * Process a fused task

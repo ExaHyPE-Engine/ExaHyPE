@@ -172,7 +172,8 @@ namespace {
    */
   void spawnAndWaitAsExplicitTasksWithPolling(
     const std::vector< tarch::multicore::Task* >&  tasks,
-    tarch::multicore::orchestration::Strategy*     strategy
+    tarch::multicore::orchestration::Strategy*     strategy,
+    otter::Task*                                   otter_task = nullptr
   ) {
     assertion( not tasks.empty() );
 
@@ -180,10 +181,6 @@ namespace {
 
     int       pendingTasks  = NumberOfThreads;
     int       spawnedTasks  = 0;
-
-#if defined(AT_DebugMessages)
-    fprintf(stderr, "FILE=%s:%d FUNC=%s pendingTasks=%d\n", __FILE__, __LINE__, __func__, pendingTasks);
-#endif
 
     #if defined(OpenMPTaskGroup)
     #pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks, tasks, strategy) firstprivate(NumberOfThreads) priority(StandardPriority) untied
@@ -197,9 +194,23 @@ namespace {
         #pragma omp atomic
         spawnedTasks++;
 
-#if defined(UseOtterCPP)
-        auto &otter_root = otter::Otter::get_otter().get_root_task();
-        auto otter_task = otter_root.make_child(3);
+#if defined(UseOtter)
+        if (otter_task != nullptr) {
+            // TODO (AT): scoping problems! can't refer to traversal_task later on as it goes out of scope immediately!
+            // TODO (AT): need mock c++ implementation so that we can just use otter::Task& instead of otter::Task*
+            // TODO (AT): OR need some way to create a null task i.e. one that does nothing and isn't recorded in the trace
+            // TODO (AT): (although, this whole problem feels like a code-smell... - this annotation is FAR too intrusive)
+            /**
+             * otter::Task t(); // t is empty, nothing recorded
+             * if (otter_task != nullptr) {
+             *   t = otter_task->make_child(102); // records otterTaskBegin, invoke move-assignment
+             * }
+             * ...
+             * t.end_task(); // doesn't care whether otter_task == nullptr
+             * 
+             */
+            otter::Task traversal_task = otter_task->make_child(102);
+        }
 #endif
 
         if (i<tasks.size()) {
@@ -209,9 +220,12 @@ namespace {
           delete tasks[i];
         }
 
-#if defined(UseOtterCPP)
-        otter_task.end_task();
-#endif
+// TODO (AT): see comments about scoping issues above
+// #if defined(UseOtter)
+//         if (otter_task != nullptr) {
+//             traversal_task.end_task();
+//         }
+// #endif
 
         #if defined(__NVCOMPILER)
         #pragma omp atomic
@@ -244,6 +258,12 @@ namespace {
                          // do not wait for the children of tasks
                          // but do children if you have time (this does not
                          // happen however)
+
+    // indicate a synchronisation on the traversal tasks created in the taskloop (NOT the enclave tasks)
+    // this mirrors the taskwait above
+    if (otter_task != nullptr) {
+        otter_task->synchronise_tasks(otter_sync_children);
+    }
 
     #ifdef UseSmartMPI
     taskWaitTime.stop();
@@ -279,18 +299,13 @@ void tarch::multicore::native::spawnTask(Task*  job) {
  */
 void tarch::multicore::native::spawnAndWait(
   const std::vector< Task* >&  tasks,
-  orchestration::Strategy*     strategy
+  orchestration::Strategy*     strategy,
+  otter::Task*                 otter_task
 ) {
   if (strategy->processPendingTasksWhileWaitingInBSPSection()) {
-#if defined(AT_DebugMessages)
-    fprintf(stderr, "FILE=%s:%d FUNC=%s\n", __FILE__, __LINE__, __func__);
-#endif
-    spawnAndWaitAsExplicitTasksWithPolling(tasks,strategy);
+    spawnAndWaitAsExplicitTasksWithPolling(tasks,strategy, otter_task);
   }
   else {
-#if defined(AT_DebugMessages)
-    fprintf(stderr, "FILE=%s:%d FUNC=%s\n", __FILE__, __LINE__, __func__);
-#endif
     spawnAndWaitAsTaskLoop(tasks);
   }
 }

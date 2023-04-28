@@ -382,12 +382,26 @@ void step() {
 
         otterPhaseSwitch( "time-step" );
         repositories::startTimeStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
+
+        #if defined(UseOtter)
+            otter::Task &root_task = otter::Otter::get_otter().get_root_task();
+            otter::Task timestep_task = root_task.make_child(101);
+            auto otter_task = &timestep_task;
+        #else
+            auto otter_task = nullptr;
+        #endif
         
         observers::TimeStep  observer;
         watch.start();
-        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer, otter_task);
         watch.stop();
         timeStepMeasurement.setValue( watch.getCalendarTime() );
+
+        #if defined(UseOtter)
+            timestep_task.synchronise_tasks(otter_sync_children);
+            timestep_task.end_task();
+            root_task.synchronise_tasks(otter_sync_descendants);
+        #endif
         
         repositories::finishTimeStep();
       }
@@ -449,10 +463,8 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-#if defined(UseOtterCPP)
+#if defined(UseOtter)
   auto& trace = otter::Otter::get_otter();
-#else
-  otterTraceInitialise();
 #endif
 
   #if defined(SharedOMP)
@@ -500,10 +512,8 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().writeToCSV();
 
-#if defined(UseOtterCPP)
+#if defined(UseOtter)
   trace.close();
-#else
-  otterTraceFinalise();
 #endif
 
   repositories::finishSimulation();

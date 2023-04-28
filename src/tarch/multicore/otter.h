@@ -26,16 +26,14 @@
 namespace otter {
 
   #if !defined(UseOtter)
+  // TODO (AT): this is just a hack at present, this causes scoping issues where I only create a child task when a Task* != nullptr
+  typedef struct Task Task;
   #endif
 }
 
 
 #if defined(UseOtter)
-#if defined(UseOtterCPP)
 #include <otter/otter-task-graph-wrapper.hpp>
-#else
-#include <otter/otter-task-graph.h>
-#endif
 #else
 
 // TODO (AT): need to mock the cpp header here

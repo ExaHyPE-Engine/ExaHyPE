@@ -36,21 +36,17 @@ exahype2::EnclaveTask::EnclaveTask(
 bool exahype2::EnclaveTask::run() {
   logTraceInWith1Argument( "run()", getTaskId() );
 
-#if defined(UseOtterCPP)
+#if defined(UseOtter)
   auto &otter_root = otter::Otter::get_otter().get_root_task();
-  auto task = otter_root.make_child(1); // TODO (AT): should enclave tasks be considered children of the traversal task which spawns them, but with no synchronisation constraint?
-#else
-  otter_task_context *task = otterTaskBegin_flavour(OTTER_SRC_ARGS(), NULL, 1); // TODO (AT): replace with C++ api. These are children of the traversal tasks
+  auto enclave_task = otter_root.make_child(1);
 #endif
 
   computeTask();
 
   EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
 
-#if defined(UseOtterCPP)
-  task.end_task();
-#else
-  otterTaskEnd(task); // TODO (AT): replace with C++ api
+#if defined(UseOtter)
+  enclave_task.end_task();
 #endif
 
   logTraceOut( "run()" );

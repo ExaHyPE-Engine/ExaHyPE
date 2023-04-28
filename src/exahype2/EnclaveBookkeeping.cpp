@@ -79,17 +79,10 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
 
   tarch::multicore::releaseTaskNumber(number);
 
-#if defined(AT_DebugMessages)
-    fprintf(stderr, "FILE=%s:%d FUNC=%s\n", __FILE__, __LINE__, __func__);
-#endif
-
-  // TODO (AT): isn't this function waiting on the completion of a single task? Why would we mark a synchronisation here instead of the enclosing scope?
-#if defined(UseOtterCPP)
+#if defined(UseOtter)
+  // TODO (AT): not sure this synchronisation point makes sense - try removing it
   auto &otter_root = otter::Otter::get_otter().get_root_task();
   otter_root.synchronise_tasks(otter_sync_descendants);
-#else
-  // TODO (AT): ideally would record the handle of the encountering task here to correctly identify child tasks
-  otterSynchroniseTasks(NULL, otter_sync_descendants);
 #endif
 
   return storedData;
