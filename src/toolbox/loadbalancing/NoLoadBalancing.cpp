@@ -8,7 +8,7 @@
 
 
 toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing():
-  LoadBalancing( nullptr, false ) {
+  AbstractLoadBalancing( nullptr, false ) {
 }
 
 
@@ -16,7 +16,7 @@ toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing(
   Configuration* configuration,
   bool deleteInDestructor
 ):
-  LoadBalancing( configuration, deleteInDestructor ) {
+  AbstractLoadBalancing( configuration, deleteInDestructor ) {
 }
 
 

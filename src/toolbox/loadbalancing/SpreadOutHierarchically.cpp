@@ -25,7 +25,7 @@ std::string toolbox::loadbalancing::SpreadOutHierarchically::toString( Action ac
 
 
 toolbox::loadbalancing::SpreadOutHierarchically::SpreadOutHierarchically(Configuration* configuration, bool deleteInDestructor):
-  LoadBalancing( configuration ,deleteInDestructor ),
+  AbstractLoadBalancing( configuration ,deleteInDestructor ),
   _stepsToWaitForNextLoadBalancingDecision(0) {
   assertion( configuration!=nullptr );
   _state = State::InterRankDistribution;
@@ -187,10 +187,10 @@ void toolbox::loadbalancing::SpreadOutHierarchically::updateLoadBalancing() {
   auto action = getAction();
 
   #if PeanoDebug>0
-  logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state " << LoadBalancing::toString() );
+  logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state " << AbstractLoadBalancing::toString() );
   #else
   if ( action!=Action::None ) {
-    logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state" << LoadBalancing::toString() );
+    logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state" << AbstractLoadBalancing::toString() );
   }
   #endif
 

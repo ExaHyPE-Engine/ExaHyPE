@@ -10,7 +10,7 @@ tarch::logging::Log  toolbox::loadbalancing::SpreadOut::_log( "toolbox::loadbala
 
 
 toolbox::loadbalancing::SpreadOut::SpreadOut(Configuration* configuration, bool deleteInDestructor):
-  LoadBalancing( configuration, deleteInDestructor ),
+  AbstractLoadBalancing( configuration, deleteInDestructor ),
   _previousNumberOfCells(-1),
   _numberOfStableGridIterations(0) {
   assertion( configuration!=nullptr );

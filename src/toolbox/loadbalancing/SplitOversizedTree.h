@@ -10,7 +10,7 @@
 
 #include <map>
 
-#include "LoadBalancing.h"
+#include "AbstractLoadBalancing.h"
 
 
 namespace toolbox {
@@ -39,7 +39,7 @@ namespace toolbox {
  * peano4::grid::Spacetree::splitOrJoinCell() and the general
  * @ref peano_domain_decomposition "domain decomposition overview".
  */
-class toolbox::loadbalancing::SplitOversizedTree: public toolbox::loadbalancing::LoadBalancing {
+class toolbox::loadbalancing::SplitOversizedTree: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * Set up recursive subdivision
