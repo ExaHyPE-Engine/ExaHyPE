@@ -127,7 +127,7 @@ class peano4::grid::PeanoCurve {
 
     /**
      *
-     * \section  Implementation details
+     * ## Implementation details
      *
      * As the access numbers already are inverted in the new code where all
      * access flags are created on the fly, we don't need the inversion flag
