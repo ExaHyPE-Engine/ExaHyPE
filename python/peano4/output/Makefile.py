@@ -404,14 +404,6 @@ did search for a file """ + input_file )
       print("You have called the function add_cu_file but the build system could not detect CUDA during configuration,",
             " this might result with the build failing!")
 
-    old_filename = filename
-    filename = filename.replace(".cpp", ".cu")
-    print(f"The file {old_filename} has prefix .cpp, but using cuda backend. It will be generated as a cuda file with .cu prefix as {filename}" )
-    try:
-      shutil.copy(old_filename, filename)
-    except:
-      pass
-
     if generated:
       if self.generated_cufiles.count(filename)==0 and self.cufiles.count(filename)==0:
         self.generated_cufiles.append(filename)
@@ -420,6 +412,7 @@ did search for a file """ + input_file )
     else:
       if self.cufiles.count(filename)==0 and self.generated_cufiles.count(filename)==0:
         self.cufiles.append(filename)
+
   def add_cpp_file(self,filename,generated=True):
     """
      Add a new cpp filename. This is basically a set implementation, i.e., you can
@@ -438,7 +431,15 @@ did search for a file """ + input_file )
         by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
     """
     if using_cuda_backend():
-      self.add_cu_file(filename, generated)
+      old_filename = filename
+      filename = filename.replace(".cpp", ".cu")
+      print(f"The file {old_filename} has prefix .cpp, but using cuda backend. It will be generated as a cuda file with .cu prefix as {filename}" )
+      try:
+        shutil.copy(old_filename, filename)
+      except:
+        pass
+
+      self.add_cu_file(filename=filename, generated=True)
     else:
       if generated:
         if self.generated_cppfiles.count(filename)==0 and self.cppfiles.count(filename)==0:
