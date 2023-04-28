@@ -590,15 +590,37 @@ bool tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksW
     fusion.minTasks!=std::numeric_limits<int>::max()
   ) {
     tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
-    processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
+    tarch::multicore::internal::fusePendingTasks(fusion);
+    processedSomeTasks = true;
   }
   else if (numberOfPendingTasks>0) {
     processedSomeTasks = tarch::multicore::internal::processThreadLocalTask(threadNumber);
   }
-  else { // no local tasks left over
-    tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+  else if (
+    tarch::multicore::getNumberOfPendingTasks(-1)>0
+    and
+    fusion.minTasks!=std::numeric_limits<int>::max()
+  ) {
+    processedSomeTasks |= tarch::multicore::internal::fusePendingTasks(fusion);
+    if (not processedSomeTasks) {
+      const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
+      processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
+    }
+  }
+  else if (
+    tarch::multicore::getNumberOfPendingTasks(-1)>0
+  ) {
     const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
     processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
+  }
+  else {
+    assertion( tarch::multicore::getNumberOfPendingTasks(-1)==0 );
+
+    for (int threadNumber=0; threadNumber<tarch::multicore::Core::getInstance().getThreadNumber(); threadNumber++) {
+      tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+    }
+
+    processedSomeTasks = tarch::multicore::getNumberOfPendingTasks(-1) > 0;
   }
 
   return processedSomeTasks;

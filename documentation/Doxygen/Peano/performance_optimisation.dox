@@ -2,6 +2,13 @@
 
 @page peano_performance_optimisation Performance Optimisation in Peano
 
+
+fewer trees initially
+
+then split up with maximum seize
+
+
+
 This section discusses some Peano-specific performance optimisation steps.
 While Peano provides simplistic performance analysis 
 features to spot some flaws, a proper performance optimisation would likely

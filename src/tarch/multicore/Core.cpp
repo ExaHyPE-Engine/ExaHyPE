@@ -99,4 +99,8 @@ int tarch::multicore::Core::getThreadNumber() const {
   return 0;
 }
 
+
+void tarch::multicore::Core::yield() {
+}
+
 #endif

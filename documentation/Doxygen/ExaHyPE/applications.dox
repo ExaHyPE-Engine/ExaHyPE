@@ -1,0 +1,16 @@
+/**
+
+@page exahype_applications Applications
+
+This directory holds links to some showcase applications of ExaHyPE. Many of these 
+applications are the base for some cooked-down @ref exahype_benchmarks "benchmarks".
+That is, they are rather complex collections of Python scripts, but there are 
+simplified ones with hardcoded setting, setups, ... 
+
+We encountered issues with Doxygen when we made the applications subpages of the 
+present page, so we decied to move them out into a Peano top-level directory of its own.
+
+- \ref applications_exahype2_ccz4 "Black hole simulations with CCZ4".
+ 
+ */
+ 
