@@ -646,27 +646,27 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
         if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
 			group.parallel_for_work_item(
-				[&] (::sycl::h_item<3> i) {
+				[=] (::sycl::h_item<3> i) {
 				  int patchIndex          = i.get_global_id(0);
                   if (i.get_global_id(1) == 0 && i.get_global_id(2) == 0) {
-			double newMaxEigenvalue = 0.0;
-                  for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
-                  for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-                    newMaxEigenvalue = std::max(
-                      newMaxEigenvalue,internal::reduceMaxEigenvalue_LoopBody<Solver>( 
-                        *(patchData.QOut + patchIndex),
-                        QOutEnumerator,
-                        patchData.cellCentre[patchIndex],
-                        patchData.cellSize[patchIndex],
-                        patchIndex,
-                        volumeIndex2d(x,y),
-                        patchData.t[patchIndex],
-                        patchData.dt[patchIndex]
-                      )
-                      );
-                  }
-				  }
-                  patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+			        double newMaxEigenvalue = 0.0;
+                    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
+                      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+                        newMaxEigenvalue = std::max(
+                          newMaxEigenvalue,internal::reduceMaxEigenvalue_LoopBody<Solver>( 
+                          *(patchData.QOut + patchIndex),
+                          QOutEnumerator,
+                          patchData.cellCentre[patchIndex],
+                          patchData.cellSize[patchIndex],
+                          patchIndex,
+                          volumeIndex2d(x,y),
+                          patchData.t[patchIndex],
+                          patchData.dt[patchIndex]
+                          )
+                        );
+                      }  
+				    }
+                    patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
 				  }
 				});
         }/*
