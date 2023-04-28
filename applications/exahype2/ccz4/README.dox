@@ -1,0 +1,38 @@
+/**
+
+@page applications_exahype2_ccz4 First-order CCZ4 experiments
+
+
+This page documents some of our first-order CCZ4 experiments. All the 
+experiments assume @ref exahype_home "a working ExaHyPE 2/Peano 4 installation".
+As our experiments are canonical expensive, it makes sense to enable MPI+X
+parallelisation.
+
+
+## Single puncture node benchmark setup
+
+@image html black-holes.png
+
+The smallest reasonable single puncture (black hole) simulation we typically
+run can be found below. We amend the end time (et) according to your need. 
+With an end time of 0.01 you will not see anything interesting, but you get
+enough time steps for some first performance assessment. 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 ccz4.py -impl fd4-rk1-adaptive-enclave -s single-puncture -maxh 0.4 -minh 0.04 -ps 6 -plt 0 -et 0.01 -exn test --domain_r 9.0 --ReSwi 7 -cfl 0.1 --KOSigma 8.0 -sommerfeld
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+## Two orbiting black holes
+
+@image html two-black-holes.png
+
+
+## Postprocessing
+
+We have to provide some guidance later.
+
+
+ */
+ 
+ 
