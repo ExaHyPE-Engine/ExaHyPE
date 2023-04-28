@@ -785,34 +785,23 @@ if test "$petsc" != false; then
   if test "$toolbox_finiteelements" == false; then
     AC_MSG_ERROR([PETSc requires the finite elements toolbox (run with --help to see the correct enable statement)])
   fi
-  LDADD_PEANO_2D_RELEASE=" -lPETSc         $LDADD_PEANO_2D_RELEASE -lpetsc"
-  LDADD_PEANO_2D_STATS="   -lPETSc_stats   $LDADD_PEANO_2D_STATS -lpetsc"
-  LDADD_PEANO_2D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_2D_ASSERTS -lpetsc" 
-  LDADD_PEANO_2D_TRACE="   -lPETSc_trace   $LDADD_PEANO_2D_TRACE -lpetsc"
-  LDADD_PEANO_2D_DEBUG="   -lPETSc_debug   $LDADD_PEANO_2D_DEBUG -lpetsc"
+  LDADD_PEANO_2D_RELEASE=" -lPETSc         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lPETSc_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE="   -lPETSc_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lPETSc_debug   $LDADD_PEANO_2D_DEBUG "
 
-  LDADD_PEANO_3D_RELEASE=" -lPETSc         $LDADD_PEANO_3D_RELEASE -lpetsc"
-  LDADD_PEANO_3D_STATS="   -lPETSc_stats   $LDADD_PEANO_3D_STATS -lpetsc"
-  LDADD_PEANO_3D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_3D_ASSERTS -lpetsc" 
-  LDADD_PEANO_3D_TRACE="   -lPETSc_trace   $LDADD_PEANO_3D_TRACE -lpetsc"
-  LDADD_PEANO_3D_DEBUG="   -lPETSc_debug   $LDADD_PEANO_3D_DEBUG -lpetsc"
+  LDADD_PEANO_3D_RELEASE=" -lPETSc         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lPETSc_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lPETSc_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lPETSc_debug   $LDADD_PEANO_3D_DEBUG "
 
-  LDFLAGS_PEANO_RELEASE+=" -Wl,-rpath,$PETSC_DIR/$PETSC_ARCH/lib -L$srcdir_full_path/src/petsc -L$PETSC_DIR/$PETSC_ARCH/lib -L/usr/lib/gcc/x86_64-linux-gnu "
-  LDFLAGS_PEANO_STATS+=" -Wl,-rpath,$PETSC_DIR/$PETSC_ARCH/lib -L$srcdir_full_path/src/petsc   -L$PETSC_DIR/$PETSC_ARCH/lib -L/usr/lib/gcc/x86_64-linux-gnu "
-  LDFLAGS_PEANO_ASSERTS+=" -Wl,-rpath,$PETSC_DIR/$PETSC_ARCH/lib -L$srcdir_full_path/src/petsc -L$PETSC_DIR/$PETSC_ARCH/lib -L/usr/lib/gcc/x86_64-linux-gnu  "
-  LDFLAGS_PEANO_TRACE+="  -Wl,-rpath,$PETSC_DIR/$PETSC_ARCH/lib  -L$srcdir_full_path/src/petsc -L$PETSC_DIR/$PETSC_ARCH/lib -L/usr/lib/gcc/x86_64-linux-gnu  "
-  LDFLAGS_PEANO_DEBUG+=" -Wl,-rpath,$PETSC_DIR/$PETSC_ARCH/lib   -L$srcdir_full_path/src/petsc -L$PETSC_DIR/$PETSC_ARCH/lib -L/usr/lib/gcc/x86_64-linux-gnu  "
-
-  CXXFLAGS_PEANO_2D_RELEASE+="   -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include "
-  CXXFLAGS_PEANO_2D_STATS+="    -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include "
-  CXXFLAGS_PEANO_2D_ASSERTS+="  -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include "
-  CXXFLAGS_PEANO_2D_TRACE+="    -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include "
-  CXXFLAGS_PEANO_2D_DEBUG+="    -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include "
-  CXXFLAGS_PEANO_3D_RELEASE+="   -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include "
-  CXXFLAGS_PEANO_3D_STATS+="    -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include "
-  CXXFLAGS_PEANO_3D_ASSERTS+="  -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include "
-  CXXFLAGS_PEANO_3D_TRACE+="    -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include "
-  CXXFLAGS_PEANO_3D_DEBUG+="    -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include "
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/petsc "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/petsc "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/petsc "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/petsc "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/petsc "
 fi
 
 
