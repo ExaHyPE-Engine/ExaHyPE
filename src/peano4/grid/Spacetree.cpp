@@ -30,14 +30,14 @@ peano4::grid::Spacetree::Spacetree(
   const tarch::la::Vector<Dimensions,double>&  width,
   const std::bitset<Dimensions>&               periodicBC
 ):
-  logTraceInWith3Arguments( "Spacetree(...)", offset, width, periodicBC );
-  assertion3( tarch::la::allGreater(width,0.0), offset, width, periodicBC );
   _id(0),
   _spacetreeState( SpacetreeState::NewRoot ),
   _root(),
   _masterId(-1),
   _periodicBC(periodicBC),
   _gridTraversalEventGenerator(0) {
+  logTraceInWith3Arguments( "Spacetree(...)", offset, width, periodicBC );
+  assertion3( tarch::la::allGreater(width,0.0), offset, width, periodicBC );
   _root.setLevel( 0 );
   _root.setX( offset );
   _root.setH( width );
