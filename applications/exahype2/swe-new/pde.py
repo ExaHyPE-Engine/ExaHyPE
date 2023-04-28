@@ -17,18 +17,18 @@ class PDE(exahype2.symhype.FirstOrderConservativePDEFormulation, ABC):
     # gravitational constant
     self.g = sympy.symbols('g')
 
-    #speed in x direction
+    # speed in x direction
     self.u = sympy.symbols('u')
     self.u = self.hu / self.h
 
-    #speed in y direction
+    # speed in y direction
     self.v = sympy.symbols('v')
     self.v = self.hv / self.h
-    
+
     # Flux [unknowns, dimensions]
     self.F[0, 0] = self.hu
     self.F[1, 0] = self.hu * self.u + (self.g * self.h**2)/2
-    self.F[2, 0] = self.h * self.u * self.v
+    self.F[2, 0] = self.hu * self.v
 
     self.F[0, 1] = self.hv
     self.F[1, 1] = self.h * self.u * self.v
@@ -39,7 +39,7 @@ class PDE(exahype2.symhype.FirstOrderConservativePDEFormulation, ABC):
     self.eigenvalues[0, 1] = self.v
 
     self.eigenvalues[1, 0] = self.u + sympy.sqrt(self.g * self.h)
-    self.eigenvalues[1, 1] = self.u - sympy.sqrt(self.g * self.h)
+    self.eigenvalues[1, 1] = self.v + sympy.sqrt(self.g * self.h)
 
-    self.eigenvalues[2, 0] = self.v - sympy.sqrt(self.g * self.h)
-    self.eigenvalues[2, 1] = self.v + sympy.sqrt(self.g * self.h)
+    self.eigenvalues[2, 0] = self.u - sympy.sqrt(self.g * self.h)
+    self.eigenvalues[2, 1] = self.v - sympy.sqrt(self.g * self.h)
