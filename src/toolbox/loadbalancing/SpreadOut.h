@@ -21,6 +21,23 @@ namespace toolbox {
 
 
 
+
+
+/**
+ * Spread out
+ *
+ * Try to give each thread on each rank one tree in one big decomposition rush.
+ * After that, switch into stagnation.
+ *
+ * The routine tries to get as many cores/ranks in as possible. Therefore, we
+ * employ a bottom-up splitting strategy which prioritises fair fine grid
+ * splits over an "efficient" tree decomposition. Consult a discussion of
+ * splitting variants and constraints in peano4::grid::Spacetree::isCellTopDownSplitCandidate()
+ * and  peano4::grid::Spacetree::isCellBottomUpSplitCandidate(),
+ * peano4::grid::Spacetree::splitOrJoinCell() and notably the general
+ * @ref peano_domain_decomposition "domain decomposition overview" for the
+ * rationale.
+ */
 class toolbox::loadbalancing::SpreadOut: public toolbox::loadbalancing::LoadBalancing {
   public:
     SpreadOut(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);

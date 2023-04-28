@@ -64,7 +64,10 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
   while (not isContained) {
     ::tarch::logging::Statistics::getInstance().inc( LookupMissesIdentifier );
 
-    ::tarch::multicore::processPendingTasks(1,false);
+    bool foundTask = ::tarch::multicore::processPendingTasks(1,false);
+    if (not foundTask) {
+      ::tarch::multicore::Core::getInstance().yield();
+    }
 
     finishedTasksLock.lock();
     isContained = _finishedTasks.count( number )>0;

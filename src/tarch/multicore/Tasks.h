@@ -356,13 +356,12 @@ namespace tarch {
        *
        * This function has to be called within spawnAndWaitAsExplicitTasksWithPolling()
        * whenever a thread has finished its local partition and should now
-       * process further tasks. The polling thing consists of three parts:
+       * process further tasks. The polling consists of two ingredients:
        *
-       * - A guard loop ensures that we don't poll too long or too often.
-       * - First, I find out which thread I'm running on and how many tasks
-       *   I may fuse. These two things potentially are expensive to find out
-       *   and they don't change, so I do this only once.
-       * - The actual loop body ensures that we progress tasks.
+       * 1. A guard loop ensures that we don't poll too long or too often.
+       * 2. The actual loop body ensures that we progress tasks while we
+       *    wait for the outer task group to finish, i.e. for sibling tasks
+       *    to terminate.
        *
        *
        * ## Guard loop
@@ -400,6 +399,9 @@ namespace tarch {
        *            );
        *          }
        *
+       * @todo Not sure if we need that additional loop here. It came from
+       *   a misconception
+       *
        * This snippet highlights a fourth consideration: If we have tried to
        * process a pending task but failed, then we terminate as well. This is
        * not necessary for all solvers, but
@@ -414,7 +416,37 @@ namespace tarch {
        *   polling would slow down the simulation even though it should, in
        *   theory, be faster.
        *
-       * @return Has processed some tasks
+       *
+       * ## Guard loop
+       *
+       * We run through a cascade of checks:
+       *
+       * 1. If we have to fuse tasks and hold some tasks locally, copy my own
+       *    tasks over into the global queue and invoke tarch::multicore::internal::fusePendingTasks().
+       *    The latter one operates on the global queue. We move our tasks over
+       *    first to ensure that there are as many tasks as possible in the
+       *    global queue for the fusion (everybody copies over). No matter
+       *    weather we have then successfully fused or not - we return a true
+       *    as we have actually done something meaningful.
+       * 2. If we do not fuse tasks but hold some tasks locally, process one of
+       *    my own tasks and return. The idea here is that a thread might
+       *    create a lot of tasks and then later find out that another
+       *    thread still runs. In this case, it is reasonable that we try to
+       *    process our own tasks first.
+       * 3. If we have no local tasks left, should fuse, and the global queue
+       *    is not empty, try a fuse. If that's not successful, process half of
+       *    the global tasks that hang out there.
+       * 4. If we have no local tasks left, should not fuse, and the global
+       *    queue is not empty, process half of the global tasks there.
+       * 5. If we have no local tasks left, and if the global queue is also
+       *    empty, we ask all other threads to copy their local tasks into the
+       *    global queue. If that's successful, i.e. if we have moved some
+       *    tasks, we return true. We could now immediately process tasks, but
+       *    then we would have to replicate the logic of 3 and 4. So we better
+       *    return immediately and then rely on the fact that this routine will
+       *    be called again.
+       *
+       * @return Something meaningful has been done
        */
       bool progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
         tarch::multicore::orchestration::Strategy*     strategy

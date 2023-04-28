@@ -15,6 +15,7 @@ ToolboxLoadBalancing_SOURCES = \
   LoadBalancing.cpp \
   NoLoadBalancing.cpp \
   RecursiveBipartition.cpp \
+  SplitOversizedTree.cpp \
   SpreadOut.cpp \
   SpreadOutHierarchically.cpp \
   State.cpp \

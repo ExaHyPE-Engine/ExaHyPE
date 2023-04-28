@@ -1,6 +1,7 @@
 #include "Statistics.h"
 
 #include "peano4/parallel/SpacetreeSet.h"
+#include "tarch/Assertions.h"
 
 
 tarch::logging::Log  toolbox::loadbalancing::Statistics::_log( "toolbox::loadbalancing::Statistics" );
@@ -96,7 +97,7 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1) {
     _globalNumberOfInnerUnrefinedCells           = _localNumberOfInnerUnrefinedCells;
-    _lightestRank._rank                          = 1;
+    _lightestRank._rank                          = 0;
     _lightestRank._unrefinedCells                = _localNumberOfInnerUnrefinedCells;
     _globalNumberOfSplits                        = _localNumberOfSplits;
     _globalNumberOfTrees                         = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
@@ -264,6 +265,8 @@ int toolbox::loadbalancing::Statistics::getNumberOfStateUpdatesWithoutAnySplit()
 
 
 int toolbox::loadbalancing::Statistics::getLightestRank() const {
+  assertion1( _lightestRank._rank>=0, toString() );
+  assertion1( _lightestRank._rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(), toString() );
   return _lightestRank._rank;
 }
 

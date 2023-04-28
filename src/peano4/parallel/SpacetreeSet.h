@@ -13,6 +13,7 @@
 #include "tarch/multicore/otter.h"
 
 #include "peano4/maps/maps.h"
+#include "peano4/grid/grid.h"
 
 #include "TreeManagementMessage.h"
 
@@ -693,66 +694,14 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * Split a local tree.
      *
      * If the target tree shall be stored on the local node, then you pass
-     * <pre>
-      peano4::parallel::Node::getInstance().getRank(treeId)
-       </pre>
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * peano4::parallel::Node::getInstance().getRank(treeId)
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
      * as last argument. Splits on the local node allow Peano to exploit more
-     * cores on the node.
-     *
-     * <h2> Split process </h2>
-     *
-     * @image html SpacetreeSet_split.png
-     *
-     * If you split a tree, the original tree, i.e. the source of the data,
-     * makes the new tree run through two states: split triggered and splitting.
-     *
-     * In a usual run, Peano's trees do exchange data in a way similar to the
-     * Jacobi smoothing: Each tree traverses its domain and sends out all
-     * boundary data. I call this horizontal communication as it is data exchange
-     * between non-overlapping domains which can be arranged on one grid level.
-     * In the next iteration, the data from neighbours has arrived and can be
-     * merged in. We obtain a criss-cross communication pattern (blue steps)
-     * where an iteration feeds into the neighbour's iteration n+1.
-     *
-     * While a new id is booked by one tree if a split is triggered, this new tree
-     * does not yet physically exist. The original (source) tree keeps the
-     * complete ownership of all data, i.e. it does all refines and coarses and
-     * also creates all events. However, it already enters the new, yet to be
-     * created, tree's indices into all adjacency lists with are consequently
-     * sent out to the other ranks. This is the yellow step above. After the grid
-     * sweep, we mark the new tree id as splitting. At this point, all neighbours
-     * continue to send to the original tree, as they are not yet aware of any
-     * domain partition updates.
-     *
-     * While an id is associated with splitting (orange), we know that all the other
-     * trees around start to send data to the new tree that is yet to be
-     * created: they receive the information about the updated adjacency and can
-     * send out their stuff to the new tree. Which does not exist yet (grey).
-     *
-     * So the splitting rank (orange) traverses its domain and invokes all
-     * events. It has the semantic ownership. It merges in all boundary data from
-     * neighbours, but is does not send out the boundary data (anymore).
-     * After the splitting tree traversal has terminated, we establish
-     * the new tree by duplicating all the local data. This includes the
-     * user data, too.
-     *
-     * The new tree (light green) subsequently is traversed once as empty
-     * tree. That is, all data travel over the stacks, but no events are invoked
-     * and no communication is happening. The purpose of this empty traversal is
-     * to get all data inot the right order.
-     *
-     * Once the empty traversal has terminated, we run over the new tree
-     * again. This time, we label it as new (dark green). While we still do not
-     * invoke any event, we now do send out data. This is the sole purpose of the
-     * new traversal.
-     *
-     * It is not guaranteed that the splits are all successful. See the routine
-     * peano4::grid::Spacetree::isCellSplitCandidate() which identifies cells
-     * that can be split. Effectively, you might call split and not get any
-     * tree decomposition at all.
-     *
-     * @see peano4::grid::Spacetree::split() This is the routine to tell a
-     *   particular spacetree to trigger a split in the next grid sweep.
+     * cores on the node. The details of the total splitting procedure are
+     * discussed in @ref peano_domain_decomposition "Peano's generic domain decomposition" discussion.
      *
      *
      * @param treeId  Id of tree that should split, i.e. give away cells to a
@@ -763,7 +712,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      *   count only with one towards this quota.
      * @param targetRank  Rank which should host the new tree.
      */
-    bool split(int treeId, int cells, int targetRank);
+    bool split(int treeId, const peano4::SplitInstruction& instruction, int targetRank);
 
     /**
      * Codes hold one spacetree set per rank. With this routine, you can find
