@@ -44,6 +44,9 @@ the solver in the first place. This happens in get_includes().
   #   logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   # } 
 #  """
+
+#TODO - change calls to setValue and setRhs to reflect higher dimensions - we'll have to consider
+# more than the 0th index
   TemplateInitVertex = """
   if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
