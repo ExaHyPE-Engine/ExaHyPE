@@ -157,9 +157,9 @@ namespace exahype2 {
 #include "exahype2/fd/fd4/omp/FD4.h"
 #endif
 
-#if defined(GPUOffloadingCPP) or defined(SharedCPP)
-#include "exahype2/fd/fd4/cpp/FD4.h"
-#endif
+//#if defined(GPUOffloadingCPP) or defined(SharedCPP)
+//#include "exahype2/fd/fd4/cpp/FD4.h"
+//#endif
 
 /*
 #if defined(GPUOffloadingSYCL) or defined(SharedSYCL)

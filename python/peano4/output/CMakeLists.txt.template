@@ -40,7 +40,7 @@ set(GENERATOR {{GENERATOR}})
 # These checks are performed to check whether the generated executable can be built with the configured core project.
 if(NOT ${MODE_LOWER} IN_LIST BUILD_MODES)
   capitalize(${MODE})
-  message(FATAL_ERROR "Build MODE of the generated project ${TARGET_NAME}'s build MODE (${MODE}) is different than\
+  message(FATAL_ERROR "Build mode of the generated project ${TARGET_NAME}'s build mode (${MODE}) is different than\
     the build of the configured CMake project. Please reconfigure the CMake project with -DCMAKE_BUILD_TYPE=${value_capitalized}")
 endif()
 
@@ -100,14 +100,6 @@ target_compile_definitions(${TARGET_NAME} PRIVATE Dimensions=${DIMENSION} ${${MO
 target_link_options(${TARGET_NAME} PRIVATE ${${MODE}_LDFLAGS})
 target_link_libraries(${TARGET_NAME} PRIVATE project_options)
 
-# Linking to project_warnings result with errors if nvc++ is used as host compiler
-# Adding the compile option "-cuda", while building a cuda executable results with a linkage error 
-# Where it says "...o file format not recognized; treating as linker script"
-# See: https://forums.developer.nvidia.com/t/problem-in-the-linking-step-of-cuda-executable-o-file-format-not-recognized-treating-as-linker-script/250059
-# But the link option "-cuda" must be always given otherwise it will result with another linking error with:
-# "Undefined reference to Mcuda_compiled"
 if (NOT "${WITH_GPU}" STREQUAL "cuda")
 target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
-target_compile_options(${TARGET_NAME} PRIVATE ${ENABLE_NVHPC_CUDA_API})
 endif()
-target_link_options(${TARGET_NAME} PRIVATE ${ENABLE_NVHPC_CUDA_API})

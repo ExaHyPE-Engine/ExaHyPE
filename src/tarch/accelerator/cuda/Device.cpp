@@ -2,7 +2,7 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #if defined(GPUOffloadingCUDA)
-#include <cuda.h>
+#include <cuda_runtime.h>
 
 namespace {
   int numberOfDevices;
