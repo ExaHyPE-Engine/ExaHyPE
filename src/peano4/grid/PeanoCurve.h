@@ -111,13 +111,14 @@ class peano4::grid::PeanoCurve {
      * with the integer counter and this result makes the iterate a cell-local
      * traversal. So a typical loop over all vertices of a cell along the Peano
      * SFC reads as
-     * <pre>
-  const std::bitset<Dimensions> coordinates = PeanoCurve::getFirstVertexIndex(state);
-  for (int i=0; i<TwoPowerD; i++) {
-    std::bitset<Dimensions> currentLocalVertexIndex( coordinates ^ std::bitset<Dimensions>(i) );
-    logDebug( "loadVertices(...)", "handle vertex " << currentLocalVertexIndex );
-  }
-     <\pre>
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * const std::bitset<Dimensions> coordinates = PeanoCurve::getFirstVertexIndex(state);
+     * for (int i=0; i<TwoPowerD; i++) {
+     *   std::bitset<Dimensions> currentLocalVertexIndex( coordinates ^ std::bitset<Dimensions>(i) );
+     *   logDebug( "loadVertices(...)", "handle vertex " << currentLocalVertexIndex );
+     * }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * We heavily exploit bitsets here. They allow us, for example, to invert
      * the whole direction by a simple flip.
