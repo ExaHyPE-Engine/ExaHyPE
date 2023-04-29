@@ -24,18 +24,33 @@ namespace toolbox {
  */
 class toolbox::loadbalancing::NoLoadBalancing: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
+    /**
+     * Delegate to other constructor with nullptr arguments, as configuration
+     * does not matter anyway.
+     */
     NoLoadBalancing();
 
     /**
      * Only there to be compatible with other classes.
+     *
+     * The important detail here is that the load balancing is switched off
+     * right from the start.
      */
     NoLoadBalancing(
       Configuration* configuration,
       bool deleteInDestructor
     );
+
+
     virtual ~NoLoadBalancing() = default;
 
     void finishStep() override;
+
+    /**
+     * You cannot enable the no load balancing. This routine therefore sets
+     * value to false and calls the superclass.
+     */
+    void enable( bool value ) override;
 };
 
 

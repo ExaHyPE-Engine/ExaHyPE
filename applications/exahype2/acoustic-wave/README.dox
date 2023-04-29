@@ -1,13 +1,17 @@
-# The Acoustic Wave Equation
+/**
+
+ @page applications_exahype2_acoustic_wave The Acoustic Wave Equation
+
+
 
 The acoustic wave equation describes the propagation of a wave through a material. This
 equation assumes that all movements are only small perturbations over the background flow
 field. They can be obtained by linearizing the more general Euler equations over this background field. This clearly cannot work for complex flows, e.g., for supersonic “booms”.
-We describe our material by the parameters $`K_0`$ , which is the so-called bulk-modulus and by the density $`\rho_0`$. Waves propagate through the material with a velocity of $`c=\sqrt{\rho K_0}`$.
+We describe our material by the parameters @f$`K_0`@f$ , which is the so-called bulk-modulus and by the density @f$`\rho_0`@f$. Waves propagate through the material with a velocity of @f$`c=\sqrt{\rho K_0}`@f$.
 
-We solve here for velocity $`v`$ and pressure $`p`$ in one dimension
+We solve here for velocity @f$`v`@f$ and pressure @f$`p`@f$ in one dimension
 
-```math
+@f$
     \partial_t \begin{pmatrix}
                 p\\v_x\\v_y
                \end{pmatrix}
@@ -15,11 +19,14 @@ We solve here for velocity $`v`$ and pressure $`p`$ in one dimension
                \begin{pmatrix}
                 p\\v_x\\v_y
                \end{pmatrix} = 0,
-```
-where $`v_x, v_y`$ denote the velocity in $`x`$- and $`y`$-direction respectively.
+@f$
+
+where @f$`v_x, v_y`@f$ denote the velocity in @f$`x`@f$- and @f$`y`@f$-direction respectively.
 
 Further, the flux is given by:
-```math
+
+
+@f$
   F = \left[
        \begin{pmatrix}
                 0 & K_0 & 0\\
@@ -31,6 +38,17 @@ Further, the flux is given by:
                 0 & 0 & 0\\
                 \frac{1}{\rho_0} & 0 & 0
                \end{pmatrix} \right],
-```
-The eigenvalues of the flux are $`-c`$, $`0`$ and $`c`$.
+@f$
+
+
+The eigenvalues of the flux are @f$`-c`@f$, @f$`0`@f$ and @f$ c @f$.
 These equations are telling us that the change in time of the velocity is proportional to the gradient of pressure.
+
+
+## Preparation
+
+Besides the "default" Peano settings, you will need Python's sympy package for 
+the Python scripts to pass.
+
+
+*/

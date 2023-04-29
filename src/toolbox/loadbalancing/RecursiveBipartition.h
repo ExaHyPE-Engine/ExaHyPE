@@ -53,7 +53,8 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * Triggers actual load balancing data exchange, triggers rebalancing, and
      * dumps statistics.
      *
-     * <h2> Spread equally </h2>
+     * ## Spread equally
+     *
      * This step is usually called early throughout the grid construction. At
      * this point, we want to bring in ranks as soon as possible. However, it
      * is very unlikely that the grid at that point will allow us to balance
