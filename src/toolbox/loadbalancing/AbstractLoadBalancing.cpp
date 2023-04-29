@@ -1,26 +1,26 @@
-#include "LoadBalancing.h"
+#include "AbstractLoadBalancing.h"
 
 #include "peano4/parallel/SpacetreeSet.h"
 
 
-tarch::logging::Log  toolbox::loadbalancing::LoadBalancing::_log( "toolbox::loadbalancing::LoadBalancing" );
+tarch::logging::Log  toolbox::loadbalancing::AbstractLoadBalancing::_log( "toolbox::loadbalancing::AbstractLoadBalancing" );
 
 
-toolbox::loadbalancing::LoadBalancing::LoadBalancing(Configuration* configuration, bool deleteInDestructor):
+toolbox::loadbalancing::AbstractLoadBalancing::AbstractLoadBalancing(Configuration* configuration, bool deleteInDestructor):
   _state( State::Undefined ),
   _configuration(configuration),
   _deleteInDestructor(deleteInDestructor) {
 }
 
 
-toolbox::loadbalancing::LoadBalancing::~LoadBalancing() {
+toolbox::loadbalancing::AbstractLoadBalancing::~AbstractLoadBalancing() {
   if (_deleteInDestructor) {
     delete _configuration;
   }
 }
 
 
-std::string toolbox::loadbalancing::LoadBalancing::toString() const {
+std::string toolbox::loadbalancing::AbstractLoadBalancing::toString() const {
   std::ostringstream msg;
 
   msg << "(state=" << ::toString( _state )
@@ -32,12 +32,12 @@ std::string toolbox::loadbalancing::LoadBalancing::toString() const {
 }
 
 
-bool toolbox::loadbalancing::LoadBalancing::hasSplitRecently() const {
+bool toolbox::loadbalancing::AbstractLoadBalancing::hasSplitRecently() const {
   return _statistics.getNumberOfStateUpdatesWithoutAnySplit()<3;
 }
 
 
-void toolbox::loadbalancing::LoadBalancing::enable( bool value ) {
+void toolbox::loadbalancing::AbstractLoadBalancing::enable( bool value ) {
   if (value and _state==State::SwitchedOff) {
     _state = State::InterRankBalancing;
     logInfo( "enable()", "switched load balancing on (again) and therefore change to state " << ::toString(_state) );
@@ -49,23 +49,23 @@ void toolbox::loadbalancing::LoadBalancing::enable( bool value ) {
 }
 
 
-bool toolbox::loadbalancing::LoadBalancing::isEnabled(bool globally) const {
+bool toolbox::loadbalancing::AbstractLoadBalancing::isEnabled(bool globally) const {
   logDebug( "isEnabled(bool)", toString() );
   return globally ? (_statistics.getGlobalNumberOfRanksWithEnabledLoadBalancing()>0) : (_state != State::SwitchedOff);
 }
 
 
-bool toolbox::loadbalancing::LoadBalancing::hasStagnated() const {
+bool toolbox::loadbalancing::AbstractLoadBalancing::hasStagnated() const {
   return _state == State::Stagnation or _state == State::SwitchedOff;
 }
 
 
-int toolbox::loadbalancing::LoadBalancing::getGlobalNumberOfTrees() const {
+int toolbox::loadbalancing::AbstractLoadBalancing::getGlobalNumberOfTrees() const {
   return _statistics.getGlobalNumberOfTrees();
 }
 
 
-bool toolbox::loadbalancing::LoadBalancing::fitsIntoMemory(State state) const {
+bool toolbox::loadbalancing::AbstractLoadBalancing::fitsIntoMemory(State state) const {
   // This is a magic paramter with the 2. You might still run out of memory if you refine while you
   // rebalance.
   if ( _configuration->makeSplitDependOnMemory(_state) ) {
@@ -76,12 +76,12 @@ bool toolbox::loadbalancing::LoadBalancing::fitsIntoMemory(State state) const {
 }
 
 
-void toolbox::loadbalancing::LoadBalancing::finishSimulation() {
+void toolbox::loadbalancing::AbstractLoadBalancing::finishSimulation() {
   _statistics.waitForGlobalStatisticsExchange();
 }
 
 
-bool toolbox::loadbalancing::LoadBalancing::isInterRankBalancingBad() const {
+bool toolbox::loadbalancing::AbstractLoadBalancing::isInterRankBalancingBad() const {
   if ( not _statistics.hasConsistentViewOfWorld()) {
     return false;
   }
@@ -117,7 +117,7 @@ bool toolbox::loadbalancing::LoadBalancing::isInterRankBalancingBad() const {
 }
 
 
-bool toolbox::loadbalancing::LoadBalancing::isIntraRankBalancingBad() const {
+bool toolbox::loadbalancing::AbstractLoadBalancing::isIntraRankBalancingBad() const {
   if ( not _statistics.hasConsistentViewOfWorld()) {//
     return false;
   }
@@ -162,7 +162,7 @@ bool toolbox::loadbalancing::LoadBalancing::isIntraRankBalancingBad() const {
 }
 
 
-bool toolbox::loadbalancing::LoadBalancing::areRanksUnemployed() const {
+bool toolbox::loadbalancing::AbstractLoadBalancing::areRanksUnemployed() const {
   return _statistics.getMinimumOfMaximumOfTreesPerRank() == 0
      and _statistics.getGlobalNumberOfTrees() > 0;
 }
