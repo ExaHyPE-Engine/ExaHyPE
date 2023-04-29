@@ -16,7 +16,7 @@ plot_interval         = 0.001
 patch_size            = 17
 maximum_cell_size     = 0.1
 amr_levels            = 3 # TODO implement refinement criterion
-auxiliary_variables   = 1 # bathymetry
+auxiliary_variables   = 0 # bathymetry
 
 solvers = {
   #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
@@ -50,7 +50,7 @@ args = parser.parse_args()
 
 from radial_dam_break import Radial_Dam_Break
 my_pde = Radial_Dam_Break(dimensions=args.dim, auxiliary_variables=auxiliary_variables, width=width)
-my_pde.substitute_expression(my_pde.g, 9.81) # TODO make in sympy
+my_pde.substitute_expression(my_pde.g, 9.81)
 
 solver_type = args.solver
 if args.gpu:
@@ -75,7 +75,7 @@ if args.gpu:
 my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".format("true" if args.dynamic_amr else "false"))
 my_solver.set_implementation(
   initial_conditions    = my_pde.implementation_of_initial_conditions(),
-  boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
+  boundary_conditions   = my_pde.implementation_of_homogeneous_Neumann_BC(),
   flux                  = my_pde.implementation_of_flux(),
   eigenvalues           = my_pde.implementation_of_max_eigenvalue(),
   source_term           = my_pde.implementation_of_sources(),
