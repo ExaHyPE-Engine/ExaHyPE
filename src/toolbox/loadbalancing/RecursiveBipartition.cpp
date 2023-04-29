@@ -20,7 +20,8 @@ toolbox::loadbalancing::RecursiveBipartition::RecursiveBipartition(Configuration
   AbstractLoadBalancing( configuration, deleteInDestructor ),
   _roundRobinToken(0) {
   assertion( configuration!=nullptr );
-  _state = State::InterRankDistribution;
+  _state = State::SwitchedOff;
+  _statistics.notifyOfStateChange(_state);
 }
 
 

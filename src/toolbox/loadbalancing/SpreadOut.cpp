@@ -15,6 +15,7 @@ toolbox::loadbalancing::SpreadOut::SpreadOut(Configuration* configuration, bool 
   _numberOfStableGridIterations(0) {
   assertion( configuration!=nullptr );
   _state = State::InterRankDistribution;
+  _statistics.notifyOfStateChange(_state);
 }
 
 
