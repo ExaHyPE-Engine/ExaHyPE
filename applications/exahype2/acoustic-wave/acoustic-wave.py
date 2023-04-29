@@ -113,7 +113,11 @@ my_solver.set_implementation(
 
 my_project = exahype2.Project( ["applications", "exahype2", "acousticwave"], "AcousticWaveApplication", ".", executable="acoustic-wave-application-" + str(args.dim) + "d-patch-size-" + str(args.patch_size) + "-cell-size-" + str(args.max_cell_size))
 my_project.add_solver( my_solver )
+<<<<<<< HEAD
 my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+=======
+#my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+>>>>>>> origin/p4
 my_project.set_Peano4_installation("../../../", build_modes[args.build_mode])
 
 my_project.set_global_simulation_parameters(

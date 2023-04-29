@@ -5,14 +5,11 @@
 \tableofcontents
 
 \li \subpage peano_main
-\li \subpage peano_architecture
 \li \subpage peano_domain_decomposition
 \li \subpage peano_action_sets
 \li \subpage peano_runtime_analysis
 \li \subpage peano_performance_optimisation
 \li \subpage tarch_accelerator_SYCL
-\li \subpage peano_pidt
-\li \subpage peano_high_level_concepts
 \li \subpage peano_introduction_tex
 \li \subpage peano_amr_tex
 \li \subpage peano_utilities

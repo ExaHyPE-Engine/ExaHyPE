@@ -33,6 +33,6 @@ def find_cmake_build_dir():
   for path in [path.path for path in os.scandir(project_root_dir) if path.is_dir()]:
     files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
     if 'CMakeCache.txt' in files:
-      print( "found CMAKECache.txt in {} and hence assume that user uses CMake".format(path) )
+      #print( "found CMakeCache.txt in {} and hence assume that user uses CMake".format(path) )
       return path
   return ""

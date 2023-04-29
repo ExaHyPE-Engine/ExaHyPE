@@ -44,6 +44,7 @@ int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNu
   }
   else {
     assertion(value>0);
+    result = value;
   }
 
   assertion(result>=0);
@@ -53,6 +54,8 @@ int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNu
 
 int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) {
   if (
+    state==toolbox::loadbalancing::State::InterRankDistribution
+    or
     state==toolbox::loadbalancing::State::IntraRankDistribution
   ) {
     return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTreesThroughoutInitialDistribution);
@@ -80,4 +83,17 @@ int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing:
     return _minSizeOfTree;
   }
 }
+
+
+std::string exahype2::LoadBalancingConfiguration::toString() const {
+  std::ostringstream msg;
+  msg << "("
+      << "lb-quality=" << _loadBalancingQuality
+      << ",min-size-of-tree=" << _minSizeOfTree
+      << ",max-no-of-trees-throughout-distribution=" << _maxNumberOfTreesThroughoutInitialDistribution
+      << ",max-no-of-trees=" << _maxNumberOfTrees
+      << ")";
+  return msg.str();
+}
+
 

@@ -10,11 +10,12 @@ tarch::logging::Log  toolbox::loadbalancing::SpreadOut::_log( "toolbox::loadbala
 
 
 toolbox::loadbalancing::SpreadOut::SpreadOut(Configuration* configuration, bool deleteInDestructor):
-  LoadBalancing( configuration, deleteInDestructor ),
+  AbstractLoadBalancing( configuration, deleteInDestructor ),
   _previousNumberOfCells(-1),
   _numberOfStableGridIterations(0) {
   assertion( configuration!=nullptr );
   _state = State::InterRankDistribution;
+  _statistics.notifyOfStateChange(_state);
 }
 
 
@@ -103,8 +104,7 @@ void toolbox::loadbalancing::SpreadOut::updateLoadBalancing() {
       " trees with approx " << cellsPerTree << " cells per tree"
     );
 
-
-    int totalSplits = 0;
+    int totalSplits = cellsPerTree;
     for (int targetRank=0; targetRank<ranks;   targetRank++ )
     for (int treeNumber= targetRank==0 ? 1 : 0; treeNumber<numberOfTreesPerRank; treeNumber++ ) {
       int thisTreesCells = cellsPerTree;
@@ -146,7 +146,7 @@ void toolbox::loadbalancing::SpreadOut::triggerSplit( int numberOfCells, int tar
   assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
 
   const int sourceTree = 0;
-  bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,numberOfCells,targetRank);
+  bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,peano4::SplitInstruction{numberOfCells,peano4::SplitInstruction::Mode::BottomUp},targetRank);
   if (not success) {
     logInfo( "triggerSplit()", "wanted to split local rank " << sourceTree << " but failed" );
   }
