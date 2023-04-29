@@ -15,18 +15,22 @@
 
 tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
+
 tarch::multicore::Core::Core():
   _numberOfThreads( omp_get_max_threads() ) {
 
   internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
+
 tarch::multicore::Core::~Core() {}
+
 
 tarch::multicore::Core& tarch::multicore::Core::getInstance() {
   static Core instance;
   return instance;
 }
+
 
 void tarch::multicore::Core::configure( int numberOfThreads) {
   if ( omp_get_num_procs() != omp_get_max_threads() ) {
@@ -55,19 +59,24 @@ void tarch::multicore::Core::configure( int numberOfThreads) {
   internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
+
 void tarch::multicore::Core::shutdown() {}
+
 
 bool tarch::multicore::Core::isInitialised() const {
   return true;
 }
 
+
 int tarch::multicore::Core::getNumberOfThreads() const {
   return _numberOfThreads;
 }
 
+
 int tarch::multicore::Core::getThreadNumber() const {
   return omp_get_thread_num();
 }
+
 
 int tarch::multicore::Core::getCoreNumber() const {
   #ifdef CompilerHasSysinfo
@@ -78,4 +87,8 @@ int tarch::multicore::Core::getCoreNumber() const {
   #endif
 }
 
+
+void tarch::multicore::Core::yield() {
+  #pragma omp taskyield
+}
 #endif

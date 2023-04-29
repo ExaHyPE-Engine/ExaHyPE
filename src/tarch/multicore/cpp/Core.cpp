@@ -67,4 +67,8 @@ int tarch::multicore::Core::getThreadNumber() const {
   return getCoreNumber();
 }
 
+
+void tarch::multicore::Core::yield() {
+  std::this_thread::yield();
+}
 #endif

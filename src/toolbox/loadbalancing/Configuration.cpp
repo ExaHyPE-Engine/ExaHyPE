@@ -3,6 +3,11 @@
 #include "peano4/parallel/Node.h"
 
 
+std::string toolbox::loadbalancing::Configuration::toString() const {
+  return "<toString() undef>";
+}
+
+
 bool toolbox::loadbalancing::DefaultConfiguration::makeSplitDependOnMemory(State state) {
   return false;
 }

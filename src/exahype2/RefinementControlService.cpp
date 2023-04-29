@@ -35,28 +35,32 @@ void exahype2::RefinementControlService::shutdown() {
 
 void exahype2::RefinementControlService::receiveDanglingMessages() {
   #ifdef Parallel
-  for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
-    if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
-      MPI_Status status;
-      int        flag;
-      MPI_Iprobe(rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
-      if (flag) {
-        tarch::multicore::Lock lock(_semaphore);
+  int guardFlag;
+  MPI_Iprobe(MPI_ANY_SOURCE, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &guardFlag, MPI_STATUS_IGNORE);
 
-        int numberOfMessages;
-        MPI_Get_count( &status, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), &numberOfMessages );
-// @todo Debug
-  logInfo( "receiveDanglingMessages()", "got " << numberOfMessages << " event(s) from rank " << rank );
-        std::vector< peano4::grid::GridControlEvent > receiveBuffer;
-        receiveBuffer.resize( numberOfMessages );
-        MPI_Recv( receiveBuffer.data(), numberOfMessages, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
+  if (guardFlag) {
+    tarch::multicore::Lock lock(_semaphore);
 
-        for (auto p: receiveBuffer) {
-          _remoteNewEvents.push_back( p );
-          _committedEvents.push_back( p );
-        }
-  logInfo( "receiveDanglingMessages()", "now hold " << _remoteNewEvents.size() << " new remote events and " << _committedEvents.size() << " committed events (valid for this traversal)" );
+    MPI_Status status;
+    int        flag;
+    MPI_Iprobe(MPI_ANY_SOURCE, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
+    if (flag) {
+      const int rank = status.MPI_SOURCE;
+      int numberOfMessages;
+      MPI_Get_count( &status, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), &numberOfMessages );
+
+      logDebug( "receiveDanglingMessages()", "got " << numberOfMessages << " event(s) from rank " << rank );
+
+      std::vector< peano4::grid::GridControlEvent > receiveBuffer;
+      receiveBuffer.resize( numberOfMessages );
+      MPI_Recv( receiveBuffer.data(), numberOfMessages, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
+
+      for (auto p: receiveBuffer) {
+        _remoteNewEvents.push_back( p );
+        _committedEvents.push_back( p );
       }
+
+      logDebug( "receiveDanglingMessages()", "now hold " << _remoteNewEvents.size() << " new remote events and " << _committedEvents.size() << " committed events (valid for this traversal)" );
     }
   }
   #endif

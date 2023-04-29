@@ -393,7 +393,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
       double temp = 0;
       for (int i = 0; i < 3; i++)
       for (int j = 0; j < 3; j++) temp+= dgup[k][i][j]*Aex[i][j];
-      dtA[k] += -CCZ4sk*alpha*fa*temp; // Baojiu-01-08-22: multiplied by alpha //04-08-22: remove one alpha
+      dtA[k] += -CCZ4sk*alpha*fa*temp; // Baojiu-01-08-22: multiplied by alpha //04-08-22: remove one alpha 
     }
 
     double dtB[3][3] ={0,0,0,0,0,0,0,0,0};
@@ -428,7 +428,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
       for (int i = 0; i < 3; i++)
       for (int j = 0; j < 3; j++) temp += dgup[k][i][j]*Aex[i][j];
       dtP[k] += 1./3.*(AA[k]*traceK + alpha*CCZ4sk*temp/phi)*phi; // Baojiu-01-08-22: changed AA to AA/alpha, multiplied by phi
-      //04-08-22 remove one phi
+      //04-08-22 remove one phi 
       dtP[k] += 1./3.*(alpha*traceK-traceB)*PP[k]; // Baojiu-01-08-22: added this new line
     }
 
@@ -864,7 +864,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         double temp=0;
         for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++) temp += g_contr[i][j]*dAex[k][i][j]; // TODO we computed this quantity  few lines earlier alrady
-        dtA[k] -= CCZ4sk*alpha*fa*temp; // Baojiu-01-08-22: alpha*fa -> alpha^2*fa //04-08-22 remove one alpha
+        dtA[k] -= CCZ4sk*alpha*fa*temp; // Baojiu-01-08-22: alpha*fa -> alpha^2*fa //04-08-22 remove one alpha 
     }
 
     //double dtB[3][3] ={0,0,0,0,0,0,0,0,0};
@@ -920,7 +920,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         double temp=0;
         for (int m = 0; m < 3; m++)
         for (int n = 0; n < 3; n++) temp += g_contr[m][n]*dAex[k][m][n];
-        dtP[k] += 1./3.*phi*alpha*(dtraceK[k] + CCZ4sk*temp/phi); // Baojiu-01-08-22: multiplied by phi //04-08-22 remove one phi
+        dtP[k] += 1./3.*phi*alpha*(dtraceK[k] + CCZ4sk*temp/phi); // Baojiu-01-08-22: multiplied by phi //04-08-22 remove one phi 
         for (int i = 0; i < 3; i++) dtP[k] -= 1./6.*phi*(dBB[k][i][i] + dBB[i][k][i]); // Baojiu-01-08-22: multiplied by phi
     }
 

@@ -29,23 +29,16 @@ namespace toolbox {
  * check set. If the ratio between the two is worse than the balancing
  * threshold, we split the maximum tree into two parts.
  *
- *
- *
- * around and compute an optimal load per
- * rank. If a rank hosts more than the optimal load subject to an inaccuracy factor,
- * we split that one up into two parts and it deploys the new tree to the most
- * underbooked other rank.
- *
- * In a second phase, we apply the same scheme on the rank: If a rank's local trees
- * are too different, the heaviest tree on the rank has to split further.
- *
- * After this second phase, we enter a second phase where we pass around a
- * token. Whichever rank holds the token, checks the balancing. If is is bad,
- * we return to step number one.
- *
- * The scheme never enters stagnation.
+ * This strategy is often used "late" throughout the grid construction. We can
+ * phrase it the other way round: As it is an incremental strategy, we have to
+ * assume that even a dynamically constructed grid is well ahead of this
+ * balancing. So we split aggressively, top-down here. Consult a discussion of
+ * splitting variants and constraints in peano4::grid::Spacetree::isCellTopDownSplitCandidate()
+ * and  peano4::grid::Spacetree::isCellBottomUpSplitCandidate(),
+ * peano4::grid::Spacetree::splitOrJoinCell() and the general
+ * @ref peano_domain_decomposition "domain decomposition overview".
  */
-class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancing::LoadBalancing {
+class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * Set up recursive subdivision
@@ -79,7 +72,7 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * alread dumps information per time step. This routine however is more
      * elaborate/detailed and not used by default.
      */
-    std::string toString() const;
+    std::string toString() const override;
 
   private:
     static tarch::logging::Log  _log;
@@ -90,42 +83,6 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * @see updateState()
      */
     int _roundRobinToken;
-
-    /**
-     * Is the balancing between the ranks ok
-     *
-     * This operation checks if the inter-rank load decomposition does
-     * violate the overall load balancing constraints. The global balancing
-     * is determined by a cascade of checks:
-     *
-     * - If we have an inconsistent data view, i.e. if the stats are not valid,
-     *   we have to assume that everything is fine.
-     * - If we have fewer trees globally than we have ranks, the balancing is
-     *   by definition poor.
-     * - If we host more trees than allowed, the balancing by definition is
-     *   good, since we could not refine further anyway.
-     * - Otherwise, we look if the max load per rank and the min load per rank
-     *   differ more than the tolerance.
-     */
-    bool isInterRankBalancingBad() const;
-
-    /**
-     * Is the balancing on the rank ok
-     *
-     * Similar to isInterRankBalancingBad(), this operation runs through a
-     * series of checks:
-     *
-     * - If there are no trees on the rank, then the result is false. By
-     *   definition, everything is well-balanced.
-     * - If there is only one tree, the balancing is by definition bad, as
-     *   we cannot make a balancing statement.
-     * - If we host more trees than allowed, the balancing by definition is
-     *   good, since we could not refine further anyway.
-     * - Otherwise, we compare the minimum and maximum tree.
-     */
-    bool isIntraRankBalancingBad() const;
-
-    bool areRanksUnemployed() const;
 
     /**
      * Wrapper around the spacetree set which also updates the blacklist.

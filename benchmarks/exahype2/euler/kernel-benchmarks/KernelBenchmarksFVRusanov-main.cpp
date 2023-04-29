@@ -448,7 +448,7 @@ void submitSYCLKernels(int patches, int device, int thread) {
       );
       runStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, batched, SoA", thread
       );
     });

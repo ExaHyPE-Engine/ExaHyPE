@@ -1,10 +1,10 @@
-#
-# We import Peano4 as project. If this step fails, ensure that your environment
-# variable PYTHONPATH points to Peano4's python directory.
-#
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath("../../../python"))
+
 import peano4
 import exahype2
-import os #used to create the directory which the solutions are stored in
 
 project = exahype2.Project( ["examples", "exahype2", "tutorial"], "swe", ".", executable="SWE" )
 
@@ -57,7 +57,7 @@ if not os.path.exists("solutions"):
 # prototype we did start off with.
 #
 build_mode = peano4.output.CompileMode.Release
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( "../../", build_mode )
 peano4_project = project.generate_Peano4_project(False)
 

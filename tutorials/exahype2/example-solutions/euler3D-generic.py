@@ -1,10 +1,10 @@
-#
-# We import Peano4 as project. If this step fails, ensure that your environment
-# variable PYTHONPATH points to Peano4's python directory.
-#
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath("../../../python"))
+
 import peano4
 import exahype2
-import os #used to create the directory which the solutions are stored in
 
 dimensions = 3
 

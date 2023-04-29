@@ -25,7 +25,7 @@ std::string toolbox::loadbalancing::SpreadOutHierarchically::toString( Action ac
 
 
 toolbox::loadbalancing::SpreadOutHierarchically::SpreadOutHierarchically(Configuration* configuration, bool deleteInDestructor):
-  LoadBalancing( configuration ,deleteInDestructor ),
+  AbstractLoadBalancing( configuration ,deleteInDestructor ),
   _stepsToWaitForNextLoadBalancingDecision(0) {
   assertion( configuration!=nullptr );
   _state = State::InterRankDistribution;
@@ -187,10 +187,10 @@ void toolbox::loadbalancing::SpreadOutHierarchically::updateLoadBalancing() {
   auto action = getAction();
 
   #if PeanoDebug>0
-  logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state " << LoadBalancing::toString() );
+  logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state " << AbstractLoadBalancing::toString() );
   #else
   if ( action!=Action::None ) {
-    logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state" << LoadBalancing::toString() );
+    logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state" << AbstractLoadBalancing::toString() );
   }
   #endif
 
@@ -270,7 +270,7 @@ void toolbox::loadbalancing::SpreadOutHierarchically::triggerSplit( int numberOf
   assertionEquals( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size(), 1 );
 
   const int sourceTree = *( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().begin() );
-  bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,numberOfCells,targetRank);
+  bool success = peano4::parallel::SpacetreeSet::getInstance().split(sourceTree,peano4::SplitInstruction{numberOfCells,peano4::SplitInstruction::Mode::BottomUp},targetRank);
   if (not success) {
     logInfo( "triggerSplit()", "wanted to split local rank " << sourceTree << " but failed" );
   }

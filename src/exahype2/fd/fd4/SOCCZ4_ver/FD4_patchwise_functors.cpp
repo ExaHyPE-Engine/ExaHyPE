@@ -1,4 +1,3 @@
-//#include "FD4.h"
 #include "../FD4.h"
 
 #include "exahype2/fd/LoopBody.h"

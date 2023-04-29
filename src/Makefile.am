@@ -175,6 +175,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/logging/CommandLineLogger.cpp \
  tarch/logging/ChromeTraceFileLogger.cpp \
  tarch/logging/ITACLogger.cpp \
+ tarch/logging/ITTLogger.cpp \
  tarch/logging/Log.cpp \
  tarch/logging/LogFilterFileReader.cpp \
  tarch/logging/NVTXLogger.cpp \
