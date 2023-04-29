@@ -28,8 +28,10 @@ tarch::logging::ITACLogger  tarch::logging::ITACLogger::_singleton;
 
 tarch::logging::ITACLogger::ITACLogger():
   _firstTraceWritten(false) {
+  #ifdef UseITAC
   #if !defined(Parallel)
   VT_initialize();
+  #endif
   #endif
 }
 
@@ -41,8 +43,10 @@ tarch::logging::ITACLogger& tarch::logging::ITACLogger::getInstance() {
 
 tarch::logging::ITACLogger::~ITACLogger() {
   close();
+  #ifdef UseITAC
   #if !defined(Parallel)
   VT_finalize();
+  #endif
   #endif
 }
 

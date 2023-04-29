@@ -1,23 +1,23 @@
-#
-# We import Peano4 as project. If this step fails, ensure that your environment
-# variable PYTHONPATH points to Peano4's python directory.
-#
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath("../../../python"))
+
 import peano4
 import exahype2
-import os #used to create the directory which the solutions are stored in
 
-dimensions = 2
+dimensions = 3
 
 project = exahype2.Project( ["examples", "exahype2", "tutorial"], "euler", ".", executable="Euler" + str(dimensions) + "D" )
 
 #
-# Add the Ader-DG solver using named arguments. This is the way
+# Add the Finite Volumes solver using named arguments. This is the way
 # you can add further PDE terms.
 #
 #
 theSolver=exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep(
   name="euler"+str(dimensions)+"D",  order=3,
-  unknowns=4, auxiliary_variables=0,
+  unknowns=5, auxiliary_variables=0,
   min_cell_h=0.03, max_cell_h=0.1, time_step_relaxation=0.9
 )
 theSolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
@@ -31,8 +31,8 @@ project.add_solver( theSolver )
 #
 project.set_global_simulation_parameters(
   dimensions = dimensions,
-  offset = [0.0,0.0],
-  size = [1.0,1.0],
+  offset = [0.0, 0.0, 0.0],
+  size = [1.0, 1.0, 1.0],
   min_end_time = 0.05,
   max_end_time = 0.05,
   first_plot_time_stamp = 0.0,

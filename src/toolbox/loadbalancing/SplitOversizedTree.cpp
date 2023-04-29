@@ -17,7 +17,7 @@ tarch::logging::Log  toolbox::loadbalancing::SplitOversizedTree::_log( "toolbox:
 
 
 toolbox::loadbalancing::SplitOversizedTree::SplitOversizedTree(Configuration* configuration, bool deleteInDestructor):
-  LoadBalancing( configuration, deleteInDestructor ),
+  AbstractLoadBalancing( configuration, deleteInDestructor ),
   _roundRobinToken(0) {
   assertion( configuration!=nullptr );
   _state = State::InterRankDistribution;

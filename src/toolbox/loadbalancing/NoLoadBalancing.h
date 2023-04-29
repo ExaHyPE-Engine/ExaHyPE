@@ -6,7 +6,7 @@
 
 #include "tarch/logging/Log.h"
 
-#include "LoadBalancing.h"
+#include "AbstractLoadBalancing.h"
 
 
 namespace toolbox {
@@ -22,7 +22,7 @@ namespace toolbox {
  * A dummy that you can use if you wanna have a class around with a proper
  * load balancing signature.
  */
-class toolbox::loadbalancing::NoLoadBalancing: public toolbox::loadbalancing::LoadBalancing {
+class toolbox::loadbalancing::NoLoadBalancing: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     NoLoadBalancing();
 

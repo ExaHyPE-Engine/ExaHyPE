@@ -10,7 +10,7 @@
 
 #include <map>
 
-#include "LoadBalancing.h"
+#include "AbstractLoadBalancing.h"
 
 
 namespace toolbox {
@@ -35,7 +35,7 @@ namespace toolbox {
  * @ref peano_domain_decomposition "domain decomposition overview" for the
  * rationale.
  */
-class toolbox::loadbalancing::SpreadOutHierarchically: public toolbox::loadbalancing::LoadBalancing {
+class toolbox::loadbalancing::SpreadOutHierarchically: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * @see getAction()

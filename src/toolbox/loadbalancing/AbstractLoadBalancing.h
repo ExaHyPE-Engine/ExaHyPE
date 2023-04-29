@@ -18,21 +18,21 @@
 
 namespace toolbox {
   namespace loadbalancing {
-    class LoadBalancing;
+    class AbstractLoadBalancing;
   }
 }
 
-class toolbox::loadbalancing::LoadBalancing {
+class toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * Data ownership is handed over to the load balancing, i.e. the balancing
      * has to delete the configuration object.
      */
-    LoadBalancing(
+    AbstractLoadBalancing(
       Configuration* configuration,
       bool deleteInDestructor
     );
-    virtual ~LoadBalancing();
+    virtual ~AbstractLoadBalancing();
 
     /**
      * Generic string serialisation. You might want to extend it. Therefore,
