@@ -181,40 +181,7 @@ Peano's release components still write info messages (they suppress
 debug, tracing and logging, but not essential information). If you want
 to filter out these messages, too, you have to apply a log filter.
 
-
-
-
-
-
-
-\begin{itemize}
-\end{itemize}
-
-
-\section*{Code organisation}
-
-\Peano's core is a collection of static libraries. 
-A \Peano\ application consists of C++ glue code which combines all of these
-libraries.
-This glue code is generated through the Python API.
-
-
-\begin{itemize}
-  \item[documentation] Hosts the \LaTeX\ sources of the document that you hold
-  in your hands.
-  \item[python] Holds the Python API scripts. Within the \texttt{python}
-  subdirectory, you find scripts for both the \Peano\ core API, toolboxes and
-  large-scale \Peano\ applications.
-  \item[src] Holds the C++ Peano sources of the Peano core and all the
-  toolboxes.
-  \item[examples] Collection of simple examples. Most of them are hard-coded,
-  stand-alone codes.
-  \item[benchmarks] Collection of benchmark scripts.
-  \item[applications] Proper, real-world applications.
-\end{itemize}
-
-
-
-
 */
+
+
  
