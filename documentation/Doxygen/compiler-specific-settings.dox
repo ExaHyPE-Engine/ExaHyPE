@@ -1,6 +1,6 @@
 /**
 
-@page compiler_specific_settings Vendor software stacks and system- and compiler-specific settings
+@page page_compiler_specific_settings Vendor software stacks and system- and compiler-specific settings
 
 
 Peano has three different approaches how to handle system- and compiler-specific 

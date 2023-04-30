@@ -1,6 +1,8 @@
 /**
 
-@page applications Applications
+@page page_applications Applications
+
+\tableofcontents
 
 \li \subpage applications_exahype2_acoustic_wave 
 \li \subpage applications_exahype2_ccz4 
@@ -9,4 +11,6 @@ Collection of large-scale Peano 4 applications that we ship with the repository.
 
  
  */
+ 
+ 
  

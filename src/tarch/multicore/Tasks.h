@@ -450,6 +450,18 @@ namespace tarch {
         tarch::multicore::orchestration::Strategy*     strategy
       );
 
+      /**
+       * Take up to maxTasks tasks that are internally buffered and throw them
+       * into the native runtime
+       *
+       * This routine should submit the tasks LIFO, as we assume that Peano's
+       * traversals produce tasks and the follow-up traversal
+       * then consumes the outcome. In the Peano world, two subsequent mesh
+       * traversals run through the grid in inverted order, so submitting tasks
+       * LIFO makes sense once we assume that most runtimes will kind of stick
+       * to the task submission order unless there are dependencies between the
+       * tasks.
+       */
       int  mapPendingTasksOntoNativeTasks(int maxTasks);
 
       /**

@@ -155,7 +155,13 @@ int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
   NonblockingTasks extractedTasks;
 
   tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-    
+  maxTasks = std::min( static_cast<int>(globalNonblockingTasks.size()), maxTasks );
+  NonblockingTasks::iterator cutIteration = globalNonblockingTasks.begin();
+  std::advance( cutIteration, globalNonblockingTasks.size() - maxTasks );
+  extractedTasks.splice( extractedTasks.begin(), globalNonblockingTasks, cutIteration, globalNonblockingTasks.end() );
+  lock.free();
+
+/*
   NonblockingTasks::iterator cutIteration = globalNonblockingTasks.begin();
   while (
     cutIteration!=globalNonblockingTasks.end()
@@ -168,9 +174,11 @@ int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
     
   extractedTasks.splice( extractedTasks.begin(), globalNonblockingTasks, globalNonblockingTasks.begin(), cutIteration );
   lock.free();
+*/
 
-  for (auto& task: extractedTasks) {
-    tarch::multicore::native::spawnTask(task);
+//  for (auto& task: extractedTasks) {
+  for (NonblockingTasks::reverse_iterator task = extractedTasks.rbegin(); task != extractedTasks.rend(); task++) {
+    tarch::multicore::native::spawnTask(*task);
   }
 
   return extractedTasks.size();

@@ -23,6 +23,27 @@ However, we now work with the fourth generation of Peano (p4).
 Therefore, the default master is called ```p4```.
 
 
+## Dependencies and prerequisites
+
+Peano's core is plain C++17 code. 
+We however use a whole set of tools around it:
+
+- GNU autotools (automake) or CMake to set up the system (required).
+- C++17-compatible C++ compiler (required).
+- Python3 (optional; not required if you work only with the C++ baseline).
+- MPI2 (optional). MPI's multithreaded support is required.
+- Intel's Threading Building Blocks (TBB), OpenMP 5 or SYCL. We also can work with C++
+  threads, but found their performance suboptimal. 
+- The Visualization Toolkit (VTK) if you want to use the built-in
+  visualisation facilities (optional).
+- Doxygen if you want to create HTML pages of PDFs of the in-code
+  documentation.
+
+I test and maintain Peano  for Linux only.
+If you prefer Windows or MacOS, it should work as long as you provide the
+mandatory tools from above, but I won't be able to help.
+
+
 ## Configure Peano
 
 We currently provide support for the autotools and cmake with Peano.
