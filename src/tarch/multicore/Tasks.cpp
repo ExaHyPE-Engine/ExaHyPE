@@ -643,6 +643,11 @@ void tarch::multicore::internal::configureInternalTaskQueues(int numberOfTasks) 
 void tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(int threadNumber) {
   if (threadNumber<0) {
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
+
+    for (int threadNumber=0; threadNumber<localNonblockingTasks.size(); threadNumber++) {
+      ::tarch::logging::Statistics::getInstance().log( ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber].size() );
+    }
+
     for (auto& p: localNonblockingTasks) {
       std::copy(
         p.begin(),
@@ -654,6 +659,7 @@ void tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(int t
   }
   else if ( not localNonblockingTasks[threadNumber].empty() ) {
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
+    ::tarch::logging::Statistics::getInstance().log( ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber].size() );
     std::copy(
       localNonblockingTasks[threadNumber].begin(),
       localNonblockingTasks[threadNumber].end(),

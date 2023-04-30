@@ -53,6 +53,21 @@ namespace tarch {
    * into this queue.
    *
    *
+   * ## Statistics
+   *
+   * If the Peano statistics are enabled, the tasking backend will sample some quantities:
+   *
+   * - "tarch::multicore::bsp-concurrency-level" Typically corresponds to the
+   *    number of fork-join traversal tasks.
+   * - "tarch::multicore::global-pending-tasks" Global pending tasks.
+   * - "tarch::multicore::thread-local-pending-tasks" Pending tasks per thread
+   *   which are not yet committed to the global queue.
+   * - "tarch::multicore::fuse-tasks" Number of tasks which have been fused.
+   *
+   * Depending on the chosen backend, you might get additional counters on top.
+   *
+   *
+   *
    * @see tarch::multicore::orchestration::StrategyFactory
    */
   namespace multicore {

@@ -1,6 +1,6 @@
 /**
 
-@page exahype_parallelisation Parallelisation
+@page page_exahype_parallelisation Parallelisation
 
 ExaHyPE employs @ref peano_parallelisation "Peano's domain decomposition" and adds
 tasking on top.
