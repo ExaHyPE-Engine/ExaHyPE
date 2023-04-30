@@ -66,9 +66,16 @@ git restore  Makefile.am
 git restore  src/Makefile.am
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-and clean the project in Eclipse.
+and clean the project in Eclipse. Once you've done so, I recommend that you 
+give the .gitignore file some special treatment:
 
+~~~~~~~~~~~~~~~~~~~~~~~
+git rm --cached file
+~~~~~~~~~~~~~~~~~~~~~~~
 
- 
+Eclipse tends to insert the documentation folder to the ignored files once you
+enable the autotools pipeline. Every new commit now will add this ignore entry
+to the global repo, which is something we don't want to have.
+
  */
  

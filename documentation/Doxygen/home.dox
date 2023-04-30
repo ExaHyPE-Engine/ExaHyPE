@@ -1,9 +1,20 @@
 /**
-<!-- use html - style comments here -->
 
 @mainpage Peano 4
 
+<!-- Do not add subsections here. Doxygen cannot handle them correctly -->
+
+@subpage page_installation
+@subpage page_documentation
+@subpage page_architecture
+@subpage page_compiler_specific_settings
+@subpage page_conventions
+@subpage page_dastgen
+@subpage page_faq
+@subpage page_applications
+
 \tableofcontents
+
 
 @image html documentation/logos/Peano-logo.png
 
@@ -49,28 +60,7 @@ This document therefore covers ExaHyPE, too.
 
 
 
-## Dependencies and prerequisites
-
-Peano's core is plain C++17 code. 
-We however use a whole set of tools around it:
-
-- GNU autotools (automake) or CMake to set up the system (required).
-- C++17-compatible C++ compiler (required).
-- Python3 (optional; not required if you work only with the C++ baseline).
-- MPI2 (optional). MPI's multithreaded support is required.
-- Intel's Threading Building Blocks (TBB), OpenMP 5 or SYCL. We also can work with C++
-  threads, but found their performance suboptimal. 
-- The Visualization Toolkit (VTK) if you want to use the built-in
-  visualisation facilities (optional).
-- Doxygen if you want to create HTML pages of PDFs of the in-code
-  documentation.
-
-I test and maintain Peano  for Linux only.
-If you prefer Windows or MacOS, it should work as long as you provide the
-mandatory tools from above, but I won't be able to help.
-
-
-## Getting started
+<b>Getting started</b>
 
 - Read through the @ref page_installation "installation instructions" and build Peano's core libraries.
 - Skim through the high-level @ref page_architecture "architecture"
