@@ -17,14 +17,57 @@ namespace tarch {
   }
 }
 
-/**
- * Global statistics interface
+/** Global statistics interface
  *
- * This interface only logs data if you have translated with -DTrackStatistics.
+ * This interface only logs data if you have translated with
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~
+ * CXXFLAGS="... -DTrackStatistics"
+ * ~~~~~~~~~~~~~~~~~~~~~
  *
  * To get the stats right, you might want to invoke the clear() operation 
  * explicitly when you start up your code. This way, you ensure that the 
  * internal timer (_globalWatch) is properly initialised.
+ *
+ * You can control if you want to track data every time it is submitted
+ * or sample a quantity every now and then.
+ *
+ *
+ * ## CSV format
+ *
+ * The first column in the csv file will hold time stamps. Each further
+ * column presents one type of measurement. The name for these entries is
+ * determined by the source code logging the data. As we sample, not all
+ * columns will hold data for all entries, as the rows are ordered
+ * temporary and we only write entries if there are entries updated.
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * t   exahype2::EnclaveBookkeeping::memory-allocations  mpi wait times  tarch::multicore::bsp-concurrency-level   tarch::multicore::fuse-tasks  tarch::multicore::global-pending-tasks  tarch::multicore::thread-local-pending-tasks  grid-control-events
+ * t, exahype2::EnclaveBookkeeping::memory-allocations, mpi wait times, tarch::multicore::bsp-concurrency-level, tarch::multicore::fuse-tasks, tarch::multicore::global-pending-tasks, tarch::multicore::thread-local-pending-tasks, grid-control-events
+ * 0.00130565, , (0.150548/0/0.157291/#10), (1/0/1/#1), , , , "((refinementControl=Refine,offset=[-9.03,-9.03,-9.03],width=[18.06,18.06,18.06],h=[2.02,2.02,2.02]))" ,
+ * 0.00131057, , , (2/1/2/#1), , , , "((refinementControl=Refine,offset=[-9.03,-9.03,-9.03],width=[18.06,18.06,18.06],h=[2.02,2.02,2.02]))" ,
+ * 0.00134099, , , (3/2/3/#1), , , , "((refinementControl=Refine,offset=[-9.03,-9.03,-9.03],width=[18.06,18.06,18.06],h=[2.02,2.02,2.02]))" ,
+ * 0.00135324, , , (4/3/4/#1), , , , "((refinementControl=Refine,offset=[-9.03,-9.03,-9.03],width=[18.06,18.06,18.06],h=[2.02,2.02,2.02]))" ,
+ * 0.00135806, , , (5/4/5/#1), , , , "((refinementControl=Refine,offset=[-9.03,-9.03,-9.03],width=[18.06,18.06,18.06],h=[2.02,2.02,2.02]))" ,
+ * 0.00137025, , , (6/5/6/#1), , , , "((refinementControl=Refine,offset=[-9.03,-9.03,-9.03],width=[18.06,18.06,18.06],h=[2.02,2.02,2.02]))" ,
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * Each entry follows a format of its own. The time stamps are given in
+ * seconds. Some columns (like the refinement strings) hold strings. Most
+ * comments will hold three-tuples:
+ *
+ * 1. The first entry is the actual value of the numeric value at the time
+ *    when we make the snapshot.
+ * 2. The second entry is the minimum over the whole sample period, i.e. since
+ *    the last data dump.
+ * 3. The third entry is the maximum.
+ * 4. The fourth entry holds the number of samples taken over the sampling
+ *    period. If you sample every 1000 steps, it should be 1000 always. If
+ *    you sample every x seconds, it will be a non-constant value.
+ *
+ * There is a Python script peano4.postprocessing.plot-statistics.py which
+ * helps you to extract the 4-tuple data.
+ *
  */
 class tarch::logging::Statistics {
   public:
@@ -50,7 +93,11 @@ class tarch::logging::Statistics {
     #endif
 
     /**
-     * I do append the extension (csv) and a rank identifier myself.
+     * Write data to csv file
+     *
+     * I do append the extension (csv) and a rank identifier myself, i.e. each
+     * rank will write a csv file of its own. The format of the csv file is
+     * discussed above.
      */
     void writeToCSV( std::string  filename = "statistics" );
 

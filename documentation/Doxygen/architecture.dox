@@ -146,7 +146,7 @@ The Peano 4 Python object represents how the data and behaviour will be implemen
 The C++ view then is the actual implementation.
 
 
-## Components and build variants
+## Build variants
 
 Peano currently is delivered as a set of archives, i.e. static libraries.
 By default, the code builds various versions of each library:
