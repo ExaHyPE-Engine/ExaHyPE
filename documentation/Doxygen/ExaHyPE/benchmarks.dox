@@ -2,6 +2,7 @@
 
 @page page_exahype_benchmarks Benchmarks
 
+\li \subpage benchmarks_exahype2_ccz4_gauge_wave
 \li \subpage benchmarks_exahype2_euler_kernel_benchmarks
 
 ExaHyPE comes along with a set of benchmarks. 

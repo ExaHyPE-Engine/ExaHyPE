@@ -2,6 +2,8 @@
 
 @page page_architecture Architecture
 
+<!-- Add this one for href links to subitems -->
+\tableofcontents
 
 A Peano 4 application is a plain C++ code organised into layers. 
 Users obviously might want to inject Fortran or similar, but Peano 4 itself sticks to C++.

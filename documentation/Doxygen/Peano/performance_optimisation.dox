@@ -2,6 +2,8 @@
 
 @page page_peano_performance_optimisation Performance optimisation
 
+<!-- Add this one for href links to subitems -->
+\tableofcontents
 
 
 This section discusses some Peano-specific performance optimisation steps.
@@ -196,6 +198,11 @@ themselves can use more than one core.
 
 
 ### Introducing tasks makes my code significantly slower
+
+If tasks make your system slower, there can be multiple reasons:
+
+1. The tasks are too tiny.
+2. 
 
 @todo THis has to be worked out. Does usually not happen for OpenMP. But TBB/SYCL are different stories.
 

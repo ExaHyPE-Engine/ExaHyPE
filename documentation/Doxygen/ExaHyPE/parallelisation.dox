@@ -2,6 +2,9 @@
 
 @page page_exahype_parallelisation Parallelisation
 
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
 ExaHyPE employs @ref peano_parallelisation "Peano's domain decomposition" and adds
 tasking on top.
 Peano's domain decomposition is used for both MPI and multithreading, while the tasking
