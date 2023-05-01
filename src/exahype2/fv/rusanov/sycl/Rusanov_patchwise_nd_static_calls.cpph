@@ -102,8 +102,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 				  int unknown       = i.get_local_id(2);
 
 				  if (y < numberOfVolumesPerAxisInPatch) {
-					  //printf("x: %d, y: %d, z: %d, patch: %d\n", x, y, unknown, patchIndex);
-//printf("group0: %d, group1: %d, gorp2: %d\n", i.get_group(0), i.get_group(1), i.get_group(2));
                     internal::copySolution_LoopBody(
                       patchData.QIn[patchIndex],
                       QInEnumerator,
@@ -176,7 +174,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                       eigenvalueEnumerator
                     );
 				  }
-				i.barrier();
+
+				  i.barrier();
                   y          = i.get_local_id(1);
                   x          = i.get_local_id(0);
 
@@ -336,10 +335,11 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                       fluxEnumerator
                     );
                   }
-				i.barrier();
 
+				  i.barrier();
                   x          = i.get_local_id(0);
                   y          = i.get_local_id(1);
+
                   if (y < numberOfVolumesPerAxisInPatch && unknown < unknowns) {
                     internal::updateSolutionWithFlux_LoopBody(
                       tempFluxX, tempFluxY, tempFluxZ,
@@ -613,11 +613,10 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
           );
         }*/
 
-				i.barrier();
+		i.barrier();
         if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
 			      int patchIndex = i.get_group(0);
                   if (i.get_local_id(0) == 0 && i.get_local_id(1) == 0 && i.get_local_id(2) == 0) {
-					 // printf("x: %d, y: %d, z: %d, patch: %d\n", i.get_local_id(0), i.get_local_id(1), i.get_local_id(2), patchIndex);
 				    double newMaxEigenvalue = 0.0;
                     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
                       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
