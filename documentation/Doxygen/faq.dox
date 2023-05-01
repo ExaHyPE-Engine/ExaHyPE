@@ -2,6 +2,9 @@
 
 @page page_faq FAQs and troubleshooting (user perspective)
 
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
 
 Some frequently asked questions and problems are discussed below.
 
