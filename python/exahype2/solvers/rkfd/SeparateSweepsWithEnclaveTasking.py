@@ -17,9 +17,9 @@ from exahype2.solvers.ButcherTableau                import ButcherTableau
 
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
-  """
+  """!
   
-  Update one cell, i.e. compute Runge-Kutta step on it
+  Update one cell that is compute Runge-Kutta step on it
   
   This routine is significantly simpler than its counterpart in SeparateSweeps,
   as we basically check if a cell is an enclave cell or not. If it is one, we
@@ -128,7 +128,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 
   def _add_action_set_entries_to_dictionary(self,d):
-    """
+    """!
     
     This is our plug-in point to alter the underlying dictionary
     
@@ -221,10 +221,9 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
 
 
 class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
-  """
+  """!
   
-    A straightforward extension of the approach where we run through the
-    mesh 
+    Enclave variant of the solver where we still run through mesh once per Runge-Kutta sweep
     
   """
 
