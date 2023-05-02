@@ -48,6 +48,27 @@ the solver in the first place. This happens in get_includes().
 #TODO - change calls to setValue and setRhs to reflect higher dimensions - we'll have to consider
 # more than the 0th index
   TemplateInitVertex = """
+  auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & vertex ) -> bool {
+    //for now, hardcode 2 dimensions
+    double x = vertex[0];
+    double y = vertex[1];
+
+    if ( x < 1E-10 or x > 1 - 1E-10) return true;
+    if ( y < 1E-10 or y > 1 - 1E-10) return true;
+    return false;
+  };
+
+  switch ( isOnBoundary(marker.x()) ){
+    case true:
+      fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::Poisson::Type::Dirichlet );
+      // coarseGridVertices{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setType( vertexdata::Poisson::Type::Dirichlet );
+      break;
+    case false:
+      fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::Poisson::Type::DoF );
+      // coarseGridVertices{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setType( vertexdata::Poisson::Type::DoF );
+      break;
+  }
+
   if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
 
@@ -62,8 +83,12 @@ the solver in the first place. This happens in get_includes().
     );
 
     //place these values into the grid
-    fineGridVertexPoisson.setValue(0, value);
-    fineGridVertexPoisson.setRhs(0, rhs);
+    fineGridVertex{{SOLVER_NAME}}.setValue(0, value);
+    fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);
+
+    //explicitly do the same with coarseGridVertex
+    coarseGridVertex{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setValue(0, value);
+    coarseGridVertex{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setRhs(0, rhs);
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 

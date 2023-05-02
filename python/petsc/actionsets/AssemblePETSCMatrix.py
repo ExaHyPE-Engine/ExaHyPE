@@ -10,13 +10,7 @@ class AssemblePetscMatrix(ActionSet):
   Trigger assembly of PETSc matrix, using values from mesh
   """
   TemplateInitVertex = """
-  if (marker.x()[1] == 0){
-  repositories::instanceOfPetsc.insertDoubleAtIndexij( fineGridVertexPoisson.getNumber(), fineGridVertexPoisson.getNumber(), -1.057);
-}
-
-else{
-  repositories::instanceOfPetsc.insertDoubleAtIndexij( fineGridVertexPoisson.getNumber(), fineGridVertexPoisson.getNumber(), 2.343);
-}
+    //todo
   
   """
   
@@ -112,4 +106,5 @@ Define body of constructor
     
     """
     return """
+    _spacetreeId = treeNumber;
 """

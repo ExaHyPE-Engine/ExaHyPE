@@ -39,6 +39,10 @@ int petsc::LocalToGlobalMap::getIndicesPerSubtree( int treeNumber ) const {
 }
 
 // used in MapSolutionOntoMesh2petsc_actionsets_ProjectPETScSolutionOnVerticesBackOntoMesh0.cpp
+/**
+* TODO - change it so this routine is completed during computeLocalToGlobalMap stage, so
+* we can just read off a value here.
+*/
 int petsc::LocalToGlobalMap::getGlobalIndex( const std::pair<int,int>& index ) {
 
   int localTreeNumber = index.first;

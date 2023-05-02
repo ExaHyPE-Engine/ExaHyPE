@@ -74,7 +74,7 @@ class petsc::PetscData{
     */
     void insertDoubleAtIndexij(int i, int j, double val);
     void incrementDoubleAtIndexij(int i, int j, double val);
-    // double getTempDoubleAtIndexij(int i, int j) const;
+    double getTempDoubleAtIndexij(int i, int j);
 
     /**
      * method to put the contents of _AasStdVector into _A
@@ -91,6 +91,8 @@ class petsc::PetscData{
     /**
      * create a std::map, since we cannot reserve such a large amount of memory
      * Clever indexing still necessary.
+     * TODO -- best thing to do here is store the elements in an array, but 
+     * use a std::map to perform the clever indexing
     */
     std::map<tIndex, double> _AasStdMap;
 

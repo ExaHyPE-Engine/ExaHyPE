@@ -11,7 +11,7 @@ petsc::PetscData::PetscData(){
 void petsc::PetscData::initMatrixAndVectors( int dofs ){
   setDoFs( dofs );
   // init petsc
-  PetscInitialize(PETSC_NULL, PETSC_NULL, PETSC_NULL, PETSC_NULL);
+  PetscInitialize(PETSC_NULLPTR, PETSC_NULLPTR, PETSC_NULLPTR, PETSC_NULLPTR);
 
   //matrix size, set it to number of dofs
   PetscInt n = _dofs;
@@ -20,7 +20,7 @@ void petsc::PetscData::initMatrixAndVectors( int dofs ){
   // _AasStdVector.resize( _dofs * _dofs );
 
   MatCreate(PETSC_COMM_WORLD, &_A);
-  MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, n, n);
+  MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, _dofs, _dofs);
   MatSetFromOptions(_A);
   MatSetUp(_A);
 
@@ -41,12 +41,7 @@ void petsc::PetscData::initMatrixAndVectors( int dofs ){
 
 //storing doubles to be placed into A
 void petsc::PetscData::insertDoubleAtIndexij( int i, int j, double val ){
-  // _AasStdVector[i*j + i + j] = val;
-
-  //make a pair that denotes (i,j) as indices
-  tIndex index = std::make_pair(i,j);
-  _AasStdMap.insert( std::make_pair( index, val ) );
-  // _AasStdVector[i*_dofs + j] = val;
+  MatSetValue(_A, i, j, val, INSERT_VALUES);
 }
 
 void petsc::PetscData::incrementDoubleAtIndexij( int i, int j, double val ){
@@ -54,22 +49,32 @@ void petsc::PetscData::incrementDoubleAtIndexij( int i, int j, double val ){
   _AasStdMap[index] += val;
 }
 
+// double petsc::PetscData::getTempDoubleAtIndexij(int i, int j){
+//   tIndex index = std::make_pair(i,j);
+//   if ( !_AasStdMap.count(index) ) 
+//     return 0;
+//   return _AasStdMap.at(index);
+// }
+
 void petsc::PetscData::assembleA(){
 
-  for (PetscInt i = 0; i < _dofs; i++){
-    for (PetscInt j = 0; j < _dofs; j++){
-      tIndex index = std::make_pair(i,j);
-      PetscScalar val = _AasStdMap.at(index);
-      MatSetValue(_A, i, j, val, INSERT_VALUES);
-    }
-  }
+  // std::cout << "\n\tNumber of elements is " << _AasStdMap.size() << "\n\n";
+
+  // for (PetscInt i = 0; i < 100; i++){
+  //   for (PetscInt j = 0; j < 100; j++){
+  //     PetscScalar val = getTempDoubleAtIndexij(i,j);
+  //     MatSetValue(_A, i, j, val, INSERT_VALUES);
+  //   }
+  // }
   
   //assemble
   MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);
 
+  std::cout << "\nsucessful matrix construction\n\n";
+
   //print out our contents
-  MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
+  // MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
 
 }
 
