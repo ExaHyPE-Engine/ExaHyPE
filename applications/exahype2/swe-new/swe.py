@@ -11,12 +11,12 @@ dimensions            = 2
 width                 = [10, 10]
 offset                = [0, 0]
 end_time              = 0.02
-time_step_relaxation  = 0.99
-plot_interval         = 0.001
-patch_size            = 17
+time_step_relaxation  = 0.5 # taken from tutorial
+plot_interval         = 0.005 # taken from tutorial
+patch_size            = 3
 maximum_cell_size     = 0.1
 amr_levels            = 3 # TODO implement refinement criterion
-auxiliary_variables   = 0 # bathymetry
+auxiliary_variables   = 1 # bathymetry
 
 solvers = {
   #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
@@ -34,6 +34,8 @@ build_modes = {
   "Debug":peano4.output.CompileMode.Debug,
 }
 
+scenarios = ["Radial_Dam_Break", "Radial_Bathymetry_Dam_Break"]
+
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Acoustic Wave Application Script')
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     required=True,              help="|".join(solvers.keys()) )
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default="Release",          help="|".join(build_modes.keys()) )
@@ -46,10 +48,17 @@ parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     ty
 parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR" )
 parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=False,              help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
 parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)" )
+parser.add_argument("-c",       "--scenario",          dest="scenario",       choices=scenarios,          default="Radial_Dam_Break", help="|".join(scenarios))
 args = parser.parse_args()
 
-from radial_dam_break import Radial_Dam_Break
-my_pde = Radial_Dam_Break(dimensions=args.dim, auxiliary_variables=auxiliary_variables, width=width)
+my_pde = None
+if args.scenario == "Radial_Bathymetry_Dam_Break":
+  from radial_bathymetry_dam_break import Radial_Bathymetry_Dam_Break
+  my_pde = Radial_Bathymetry_Dam_Break(dimensions=args.dim, auxiliary_variables=auxiliary_variables, width=width)
+else:
+  from radial_dam_break import Radial_Dam_Break
+  my_pde = Radial_Dam_Break(dimensions=args.dim, auxiliary_variables=auxiliary_variables, width=width)
+
 my_pde.substitute_expression(my_pde.g, 9.81)
 
 solver_type = args.solver
@@ -73,12 +82,26 @@ if args.gpu:
   my_solver.set_pde_terms_without_state(True)
 
 my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".format("true" if args.dynamic_amr else "false"))
+#ncp taken from tutorial
 my_solver.set_implementation(
   initial_conditions    = my_pde.implementation_of_initial_conditions(),
   boundary_conditions   = my_pde.implementation_of_homogeneous_Neumann_BC(),
   flux                  = my_pde.implementation_of_flux(),
   eigenvalues           = my_pde.implementation_of_max_eigenvalue(),
-  source_term           = my_pde.implementation_of_sources(),
+  ncp                   = """double g = 9.81;
+  
+  switch(normal){
+  case 0: //x
+    BTimesDeltaQ[0] = 0.0;
+    BTimesDeltaQ[1] = g * Q[0] * (deltaQ[0] + deltaQ[3]);
+    BTimesDeltaQ[2] = 0.0;
+    break;
+  case 1: //y
+    BTimesDeltaQ[0] = 0.0;
+    BTimesDeltaQ[1] = 0.0;
+    BTimesDeltaQ[2] = g * Q[0] * (deltaQ[0] + deltaQ[3]);
+    break;
+  }""",
   refinement_criterion  = """
   auto command = ::exahype2::RefinementCommand::Keep;
   return command;

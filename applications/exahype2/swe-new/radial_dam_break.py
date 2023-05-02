@@ -11,19 +11,11 @@ class Radial_Dam_Break(pde.PDE):
 
         # (sqrt((x - 500.f) * (x - 500.f) + (y - 500.f) * (y - 500.f)) < 100.f) ? 15.f : 10.0f;
         self.initial_values[0] = sympy.Piecewise(
-            (15.0, dam < width[0] / 10), (10.0, True)
+            (1.1, dam < width[0] / 10), (1.0, True)
         )
         
         self.initial_values[1] = 0.0
         self.initial_values[2] = 0.0
-        #self.initial_values[3] = -10.0  # bathymetry = 0 to rule out source term as mistake
-
-        self.boundary_values[0] = 10.0
-        self.boundary_values[1] = 0.0
-        self.boundary_values[2] = 0.0
-        #self.boundary_values[3] = -10.0  # bathymetry
-
-        self.sources[0] = 0.0
-        self.sources[1] = 0.0 # -self.g * self.h * self.b
-        self.sources[2] = 0.0 # -self.g * self.h * self.b
+        self.initial_values[3] = -1.0 
+        
         pass

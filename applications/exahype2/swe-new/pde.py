@@ -12,7 +12,7 @@ class PDE(exahype2.symhype.FirstOrderConservativePDEFormulation, ABC):
     self.h = self.name_Q_entry(0, "h")
     self.hu = self.name_Q_entry(1, "hu")
     self.hv = self.name_Q_entry(2, "hv")
-    # self.b = self.name_Q_entry(dimensions + auxiliary_variables, "b")
+    self.b = self.name_Q_entry(dimensions + auxiliary_variables, "b")
 
     # gravitational constant
     self.g = sympy.symbols('g')
@@ -25,19 +25,19 @@ class PDE(exahype2.symhype.FirstOrderConservativePDEFormulation, ABC):
 
     # Flux [unknowns, dimensions]
     self.F[0, 0] = self.hu
-    self.F[1, 0] = self.hu * self.u + (self.g * self.h**2)/2
+    self.F[1, 0] = self.hu * self.u #+ (self.g * self.h**2)/2
     self.F[2, 0] = self.hu * self.v
 
     self.F[0, 1] = self.hv
     self.F[1, 1] = self.hu * self.v
-    self.F[2, 1] = self.hv * self.v + (self.g * self.h**2)/2
+    self.F[2, 1] = self.hv * self.v #+ (self.g * self.h**2)/2
 
     # Eigenvalues [unkowns, dimensions]
     self.eigenvalues[0, 0] = self.u
     self.eigenvalues[0, 1] = self.v
 
-    self.eigenvalues[1, 0] = self.u + sympy.sqrt(self.g * self.h) # maybe no sympy.sqrt(self.g * self.h) as done in exahype2/applications/aderdg/SWE/w_bathimetry/SWE.CPP:77
-    self.eigenvalues[1, 1] = self.v + sympy.sqrt(self.g * self.h)
+    self.eigenvalues[1, 0] = self.u + sympy.sqrt(self.g * (self.h + self.b)) # maybe no sympy.sqrt(self.g * self.h) as done in exahype2/applications/aderdg/SWE/w_bathimetry/SWE.CPP:77
+    self.eigenvalues[1, 1] = self.v + sympy.sqrt(self.g * (self.h + self.b))
 
-    self.eigenvalues[2, 0] = self.u - sympy.sqrt(self.g * self.h)
-    self.eigenvalues[2, 1] = self.v - sympy.sqrt(self.g * self.h)
+    self.eigenvalues[2, 0] = self.u - sympy.sqrt(self.g * (self.h + self.b))
+    self.eigenvalues[2, 1] = self.v - sympy.sqrt(self.g * (self.h + self.b))
