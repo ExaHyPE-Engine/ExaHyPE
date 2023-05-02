@@ -3,10 +3,15 @@
 from .SolverCodeSnippets import SolverCodeSnippets
 
 
-class AdaptiveTimeSteppingCodeSnippets( SolverCodeSnippets ):
-  """
+class OptimisticAdaptiveTimeSteppingCodeSnippets( SolverCodeSnippets ):
+  """!
   
   Code snippet generator for all fixed time stepping solvers
+  
+  Consult the @ref page_exahype_solvers_enclave_solvers "generic discussion of optimistic enclave solvers" before
+  you continue to study this class. On this generic overview page, I notably
+  clarify why this solver variant and its code snippets are inappropriate for
+  Finite Difference and Finite Volume methods.
   
   """
 
@@ -15,6 +20,8 @@ class AdaptiveTimeSteppingCodeSnippets( SolverCodeSnippets ):
 private:
   double _maxEigenvalue;
   double _admissibleTimeStepSize;
+  double _predictedAdmissibleTimeStepSize;
+  bool   _cancelOptimisticTasks;
 public:
   void setMaxEigenvalue( double eigenvalue );  
   /**
@@ -25,6 +32,8 @@ public:
    *         mesh resolution. 
    */
   virtual double getAdmissibleTimeStepSize() const;  
+  virtual double getPredictedAdmissibleTimeStepSize() const;  
+  bool cancelOptimisticTasks() const;
     """  
 
 
@@ -41,11 +50,33 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigen
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
   return _admissibleTimeStepSize;
 }
+
+
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getPredictedAdmissibleTimeStepSize() const {
+  return _predictedAdmissibleTimeStepSize;
+}
+
+
+bool {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::cancelOptimisticTasks() const {
+  return _cancelOptimisticTasks;
+}
     """  
 
 
   def create_abstract_solver_constructor_statements(self):
-    return "_admissibleTimeStepSize = 0.0;"
+    """!
+    
+    Set the admissible time step size as well as the predicted time step size to zero.
+    
+    The admissible time step size will be analysed throughout the first 
+    time step, and then we can really kick off with an admissible one.
+    
+    """
+    return """
+_admissibleTimeStepSize          = 0.0;
+_predictedAdmissibleTimeStepSize = 0.0;
+_cancelOptimisticTasks           = false;
+"""
   
   
   def create_compute_time_step_size(self):
@@ -101,7 +132,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
     }
     else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
       logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
-      _admissibleTimeStepSize = 0.0;
+      _admissibleTimeStepSize           = 0.0;
+      _predictedAdmissibleTimeStepSize  = 0.0;
     }
   }
 """  
