@@ -45,13 +45,13 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
   const std::size_t numberOfPatches = hostPatchData.numberOfCells;
   GPUCellData  patchData( hostPatchData, QInEnumerator, QOutEnumerator, queue );
-  ::sycl::range<3> numberOfGroups{numberOfPatches, 1, 1};
-  ::sycl::range<3> groupSize{1, (numberOfVolumesPerAxisInPatch+2*solversHaloSize)*numberOfVolumesPerAxisInPatch, unknowns+auxiliaryVariables};
+  ::sycl::range<3> totalWorkItem{numberOfVolumesPerAxisInPatch*numberOfPatches, numberOfVolumesPerAxisInPatch+2*solversHaloSize, unknowns+auxiliaryVariables};
+  ::sycl::range<3> workgroupSize{numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch+2*solversHaloSize, unknowns+auxiliaryVariables};
   queue.submit(
     [&](::sycl::handler &handle) {
-      handle.parallel_for_work_group( // -> should be parallel_for_work_groups
-      numberOfGroups, groupSize,
-      [=] (::sycl::group<3> group) {/*
+      handle.parallel_for( // -> should be parallel_for_work_groups
+      ::sycl::nd_range<3> {totalWorkItem, workgroupSize},
+      [=] (::sycl::nd_item<3> i) {/*
         if (Dimensions==2 and evaluateSource) {
           handle.parallel_for( // -> should be parallel_for_work_items
                 ::sycl::range<2>{numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
@@ -96,14 +96,12 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
           );
         }*/
         if (Dimensions==2) {
-          group.parallel_for_work_item(
-                [=] (::sycl::h_item<3> i) {
-                  int patchIndex    = i.get_global_id(0);
-                  int x             = i.get_global_id(1)/numberOfVolumesPerAxisInPatch;
-                  int y             = i.get_global_id(1)%numberOfVolumesPerAxisInPatch;
-				  int unknown       = i.get_global_id(2);
+                  int patchIndex    = i.get_group(0);
+                  int x             = i.get_local_id(0);
+                  int y             = i.get_local_id(1);
+				  int unknown       = i.get_local_id(2);
 
-				  if (x < numberOfVolumesPerAxisInPatch) {
+				  if (y < numberOfVolumesPerAxisInPatch) {
                     internal::copySolution_LoopBody(
                       patchData.QIn[patchIndex],
                       QInEnumerator,
@@ -115,8 +113,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                     );
 				  }
                 }
-          );
-        }/*
+		/*
         else {
           handle.parallel_for(
                 ::sycl::range<3>{unknowns,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
@@ -140,12 +137,10 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
         }*/
 
         if (Dimensions==2) {
-          group.parallel_for_work_item(
-                [=] (::sycl::h_item<3> i) {
-				  int patchIndex = i.get_global_id(0);
-                  int y          = i.get_global_id(1)%numberOfVolumesPerAxisInPatch;
-                  int x          = (i.get_global_id(1)/numberOfVolumesPerAxisInPatch)-solversHaloSize;
-				  int unknown    = i.get_global_id(2);
+			      int patchIndex = i.get_group(0);
+                  int y          = i.get_local_id(0);
+                  int x          = i.get_local_id(1)-solversHaloSize;
+				  int unknown       = i.get_local_id(2);
                   
 				  if (unknown == 0) {
                     internal::computeMaxEigenvalue_LoopBody<Solver>(
@@ -161,15 +156,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                       eigenvalueEnumerator
                     );
 			      }
-                }
-          );
 
-          group.parallel_for_work_item(
-                [=] (::sycl::h_item<3> i) {
-				  int patchIndex = i.get_global_id(0);
-                  int y          = (i.get_global_id(1)/numberOfVolumesPerAxisInPatch)-solversHaloSize;
-                  int x          = i.get_global_id(1)%numberOfVolumesPerAxisInPatch;
-				  int unknown    = i.get_global_id(2);
+                  y          = i.get_local_id(1)-solversHaloSize;
+                  x          = i.get_local_id(0);
 
                   if (unknown == 0) {
                     internal::computeMaxEigenvalue_LoopBody<Solver>(
@@ -185,16 +174,12 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                       eigenvalueEnumerator
                     );
 				  }
-                }
-          );
-          group.parallel_for_work_item(
-                [=] (::sycl::h_item<3> i) {
-				  int patchIndex = i.get_global_id(0);
-                  int y          = i.get_global_id(1)%numberOfVolumesPerAxisInPatch;
-                  int x          = i.get_global_id(1)/numberOfVolumesPerAxisInPatch;
-				  int unknown    = i.get_global_id(2);
 
-                  if (unknown < unknowns && x < numberOfVolumesPerAxisInPatch) {
+				  i.barrier();
+                  y          = i.get_local_id(1);
+                  x          = i.get_local_id(0);
+
+                  if (unknown < unknowns && y < numberOfVolumesPerAxisInPatch) {
                     internal::updateSolutionWithEigenvalueDamping_LoopBody(
                       patchData.QIn[patchIndex],
                       QInEnumerator,
@@ -212,8 +197,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                       QOutEnumerator
                     );
 				  }
-                }
-          );
         }/*
         else {  // 3d of eigenvalue damping
           handle.parallel_for(
@@ -313,14 +296,12 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
 
         if (evaluateFlux and Dimensions==2) {
-          group.parallel_for_work_item(
-                [=] (::sycl::h_item<3> i) {
-				  int patchIndex = i.get_global_id(0);
-                  int x          = (i.get_global_id(1)/numberOfVolumesPerAxisInPatch)-solversHaloSize;
-                  int y          = i.get_global_id(1)%numberOfVolumesPerAxisInPatch;
-				  int unknown    = i.get_global_id(2);
+			      int patchIndex = i.get_group(0);
+                  int x          = i.get_local_id(1)-solversHaloSize;
+                  int y          = i.get_local_id(0);
+				  int unknown       = i.get_local_id(2);
 				  
-				  if (unknown ==0) {
+				  if(unknown == 0) {
                     internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
                       patchData.QIn[patchIndex],
                       QInEnumerator,
@@ -335,15 +316,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                       fluxEnumerator
                     );
 				  }
-                }
-          );
 
-          group.parallel_for_work_item(
-                [=] (::sycl::h_item<3> i) {
-				  int patchIndex = i.get_global_id(0);
-                  int x          = i.get_global_id(1)%numberOfVolumesPerAxisInPatch;
-                  int y          = (i.get_global_id(1)/numberOfVolumesPerAxisInPatch)-solversHaloSize;
-                  int unknown    = i.get_global_id(2);
+                  x          = i.get_local_id(0);
+                  y          = i.get_local_id(1)-solversHaloSize;
                   
 				  if (unknown == 0) {
                     internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
@@ -360,16 +335,12 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                       fluxEnumerator
                     );
                   }
-				}
-          );
 
-          group.parallel_for_work_item(
-                [=] (::sycl::h_item<3> i) {
-                  int patchIndex = i.get_global_id(0);
-                  int x          = i.get_global_id(1)/numberOfVolumesPerAxisInPatch;
-                  int y          = i.get_global_id(1)%numberOfVolumesPerAxisInPatch;
-				  int unknown    = i.get_global_id(2);
-                  if (x < numberOfVolumesPerAxisInPatch && unknown < unknowns) {
+				  i.barrier();
+                  x          = i.get_local_id(0);
+                  y          = i.get_local_id(1);
+
+                  if (y < numberOfVolumesPerAxisInPatch && unknown < unknowns) {
                     internal::updateSolutionWithFlux_LoopBody(
                       tempFluxX, tempFluxY, tempFluxZ,
                       fluxEnumerator,
@@ -383,8 +354,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                       QOutEnumerator
                     );
                   }
-                }
-          );
         }/*
         else if (evaluateFlux and Dimensions==3) {
           handle.parallel_for(
@@ -644,12 +613,11 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
           );
         }*/
 
+		i.barrier();
         if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-			group.parallel_for_work_item(
-				[=] (::sycl::h_item<3> i) {
-				  int patchIndex          = i.get_global_id(0);
-                  if (i.get_global_id(1) == 0 && i.get_global_id(2) == 0) {
-			        double newMaxEigenvalue = 0.0;
+			      int patchIndex = i.get_group(0);
+                  if (i.get_local_id(0) == 0 && i.get_local_id(1) == 0 && i.get_local_id(2) == 0) {
+				    double newMaxEigenvalue = 0.0;
                     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
                       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
                         newMaxEigenvalue = std::max(
@@ -668,8 +636,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 				    }
                     patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
 				  }
-				});
-        }/*
+				}
+        /*
         else if (evaluateMaximumEigenvalueAfterTimeStep) {
                   double newMaxEigenvalue = 0.0;
                   for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
@@ -691,8 +659,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                   }
                   patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
         }
-      */}
-    );
+      */
+    });
     }
   ).wait();
 
