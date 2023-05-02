@@ -2,21 +2,22 @@
 
 @mainpage Peano 4
 
+@image html documentation/logos/Peano-logo.png
+
 <!-- Do not add subsections here. Doxygen cannot handle them correctly -->
 
-@subpage page_installation
-@subpage page_documentation
-@subpage page_architecture
-@subpage page_compiler_specific_settings
-@subpage page_conventions
-@subpage page_dastgen
-@subpage page_faq
-@subpage page_applications
+\li @subpage page_installation
+\li @subpage page_documentation
+\li @subpage page_architecture
+\li @subpage page_compiler_specific_settings
+\li @subpage page_conventions
+\li @subpage page_dastgen
+\li @subpage page_faq
+\li @subpage page_applications
 
 \tableofcontents
 
 
-@image html documentation/logos/Peano-logo.png
 
 
 This is the documentation of Peano which is generated automatically through Doxygen.

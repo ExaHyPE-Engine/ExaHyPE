@@ -1,12 +1,18 @@
 /**
 
-@page exahype_benchmarks Benchmarks
+@page page_exahype_benchmarks Benchmarks
 
+\li \subpage benchmarks_exahype2_ccz4_gauge_wave
 \li \subpage benchmarks_exahype2_euler_kernel_benchmarks
 
 ExaHyPE comes along with a set of benchmarks. 
 These benchmarks should all run more or less out-of-the-box.
 Before you start, ensure that you have configured and built Peano as specified for @ref exahype_home "ExaHyPE 2".
+
+Most benchmark descriptions can be found in files next to the
+benchmarks in the respective source directory. The key of these
+documentation files (page identifier) hence matches their 
+namespace.
 
 
  */
