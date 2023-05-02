@@ -1,0 +1,54 @@
+/**
+
+@page page_exahype_solvers_enclave_solvers Enclave and optimistic solvers
+
+For most solver variants, I provide plain solvers which basically map each
+algorithm step onto one mesh sweep. For Runge-Kutta, we do, for example, one
+sweep per Runge-Kutta step plus one for the final linear combination. For Finite
+Volumes, it is one sweep and we are done for one time step. Besides these
+single-sweep schemes, ExaHyPE also provides a lot of solver with enclave
+tasking. The optimistic enclave tasking then is a further variant of those guys.
+These schemes do not alter the numerics, but they reorder the operations.
+Typically they introduce a second mesh sweep per algorithm step. In return, they
+map a lot of the required operations onto tasks and therefore increase the
+concurrency level.
+
+
+## Enclave tasking
+
+The fundamental idea of enclave tasking is that a simple mesh sweep that
+triggers operations per cell is split up into two mesh sweeps:
+
+1. The first sweep issues a lot of tasks for the actual mesh update. It also
+   computes the result for all skeleton cells. Per enclave cell, it sets an
+   integer holding the task number.
+2. The second sweep ignores all the skeleton cells. For the enclave tasks, it
+   takes their outcome and works them into the mesh representation.
+
+
+## Optimistic enclave tasking
+
+Optimistic enclave tasking sticks to the data flow of enclave tasking. However,
+it has this idea that we immediately spawn an enclave task again, once we have 
+merged its outcome into the result. This obviously cannot work in many cases:
+
+- If we work with a Finite Volume scheme, we cannot spawn the enclave task 
+  immediately again, as the halo data are not available. We could do some tricks
+  like updating only the interior of a patch. However, this is nasty, as we then
+  have to postprocess the outer layer of a patch. Not sure if there's any 
+  potential gain overall.
+- If we work with Finite Differences, we have exactly the same issue: These
+  schemes rely on a halo, too, and this makes it impossible to spawn a task 
+  immediately again. Even worse, overlaps of more than one mean that the 
+  potential inner part of a patch which we could immediatly update becomes
+  tiny.
+  
+The situation is different for Discontinuous Galerking-type solvers, where we 
+explicitly distinguish the Riemann solves from the internal solve. After an 
+update of the solution, i.e. the linear combination of the volumetric integral
+and the Riemann contribution, we can immediately issue a rerun of the volumetric
+contribution again.
+
+*/
+
+ 

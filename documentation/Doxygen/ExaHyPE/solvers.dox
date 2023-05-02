@@ -3,7 +3,8 @@
 @page page_exahype_solvers Solvers
 
 
-\li \subpage page_exahype_finite_volumes
+\li \subpage page_exahype_solvers_finite_volumes
+\li \subpage page_exahype_solvers_enclave_solvers
 
 
 
