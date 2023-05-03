@@ -440,8 +440,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
   second order formulation right from the start), but it allows us to reuse
   the compute kernels written for the first order PDE formulation.
 
-  reconstruction_order: Integer
-    Should be a value between 1 and 4. Not all variants are supported.
+  reconstruction_type: "4thOrder", "centralDifferences", "leftDifference", "rightDifference"
       
   """
   def __init__(self,
@@ -450,7 +449,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
                rk_order,
                min_meshcell_h,
                max_meshcell_h,
-               reconstruction_order,
+               reconstruction_type,
                use_heap_storage = True
                ):  
     super( CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking, self ).__init__(name,
@@ -470,7 +469,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
   timeStepSize,
   nullptr // targetPatch 
 );
-::applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_""" + str(reconstruction_order) + """thOrder(
+::applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_""" + reconstruction_type + """(
   reconstructedPatchData,
   {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
   3,                        // haloSize,

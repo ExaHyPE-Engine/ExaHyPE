@@ -2,6 +2,156 @@
 #include "exahype2/fd/FD_Helper.cpph"
 
 
+namespace {
+  /**
+   * Templated recompute function which works with a function.
+   */
+  template <void (*recompute_LoopBody)(
+      double* __restrict__                                       QIn,
+      const ::exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      int                                          patchIndex,
+      const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+      int                                          normal
+  )>
+  void recomputeAuxiliaryVariablesFD4(
+    ::exahype2::CellData&   patchData,
+    int                     numberOfGridCellsPerPatchPerAxis,
+    int                     haloSize,
+    int                     unknowns,
+    int                     auxiliaryVariables
+  ) {
+    assertion( haloSize >= 3 );
+    ::exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
+
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+      if (Dimensions==2) {
+          for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+          for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
+            recompute_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              gridCellIndex2d(x,y),
+              0  // normal
+            );
+          }
+
+          for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+          for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
+            recompute_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              gridCellIndex2d(x,y),
+              1 // normal
+            );
+          }
+      }
+      else {
+          for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+          for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
+          for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
+            recompute_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              gridCellIndex3d(x,y,z),
+              0 // normal
+            );
+          }
+
+          for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+          for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
+          for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
+            recompute_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              gridCellIndex3d(x,y,z),
+              1 // normal
+            );
+          }
+
+          for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+          for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
+          for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
+            recompute_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              gridCellIndex3d(x,y,z),
+              2 // normal
+            );
+          }
+      }
+    }
+  }
+}
+
+
+void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_centralDifferences(
+  ::exahype2::CellData&   patchData,
+  int                     numberOfGridCellsPerPatchPerAxis,
+  int                     haloSize,
+  int                     unknowns,
+  int                     auxiliaryVariables
+) {
+  recomputeAuxiliaryVariablesFD4<internal::recomputeAuxiliaryVariablesFD4_centralDifferences_LoopBody>(
+    patchData,
+    numberOfGridCellsPerPatchPerAxis,
+    haloSize,
+    unknowns,
+    auxiliaryVariables
+  );
+}
+
+
+void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_leftDifferences(
+  ::exahype2::CellData&   patchData,
+  int                     numberOfGridCellsPerPatchPerAxis,
+  int                     haloSize,
+  int                     unknowns,
+  int                     auxiliaryVariables
+) {
+  recomputeAuxiliaryVariablesFD4<internal::recomputeAuxiliaryVariablesFD4_leftDifferences_LoopBody>(
+    patchData,
+    numberOfGridCellsPerPatchPerAxis,
+    haloSize,
+    unknowns,
+    auxiliaryVariables
+  );
+}
+
+
+void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_rightDifferences(
+  ::exahype2::CellData&   patchData,
+  int                     numberOfGridCellsPerPatchPerAxis,
+  int                     haloSize,
+  int                     unknowns,
+  int                     auxiliaryVariables
+) {
+  recomputeAuxiliaryVariablesFD4<internal::recomputeAuxiliaryVariablesFD4_rightDifferences_LoopBody>(
+    patchData,
+    numberOfGridCellsPerPatchPerAxis,
+    haloSize,
+    unknowns,
+    auxiliaryVariables
+  );
+}
+
+
 void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_4thOrder(
   ::exahype2::CellData&   patchData,
   int                     numberOfGridCellsPerPatchPerAxis,
@@ -9,80 +159,129 @@ void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_4thOrder(
   int                     unknowns,
   int                     auxiliaryVariables
 ) {
-  assertion( haloSize >= 3 );
-  ::exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
+  recomputeAuxiliaryVariablesFD4<internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody>(
+    patchData,
+    numberOfGridCellsPerPatchPerAxis,
+    haloSize,
+    unknowns,
+    auxiliaryVariables
+  );
+}
 
-  for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
-    if (Dimensions==2) {
-        for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
-        for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
-          internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            gridCellIndex2d(x,y),
-            0  // normal
-          );
-        }
 
-        for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
-        for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
-          internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            gridCellIndex2d(x,y),
-            1 // normal
-          );
-        }
-    }
-    else {
-        for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
-        for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
-        for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
-          internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            gridCellIndex3d(x,y,z),
-            0 // normal
-          );
-        }
+void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_centralDifferences_LoopBody(
+  double* __restrict__                                       QIn,
+  const ::exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  int                                          normal
+) {
+  tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
+  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume  = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightAdjacentVolume  = volumeIndex;
 
-        for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
-        for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
-        for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
-          internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            gridCellIndex3d(x,y,z),
-            1 // normal
-          );
-        }
+  rightAdjacentVolume(normal)++;
+   leftAdjacentVolume(normal)--;
 
-        for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
-        for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
-        for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
-          internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            gridCellIndex3d(x,y,z),
-            2 // normal
-          );
-        }
-    }
+  double cellSize = patchSize(normal) / QInEnumerator._numberOfDoFsPerAxisInCell;
+
+  auto finiteDifferences = [&](int source, int target) {
+     double dx = QIn[ QInEnumerator(patchIndex, rightAdjacentVolume,source) ]
+               - QIn[ QInEnumerator(patchIndex, leftAdjacentVolume, source) ];
+     QIn[ QInEnumerator(patchIndex,centralVolume,target) ] = dx / 2.0 / cellSize;
+  };
+
+  finiteDifferences(16,23+normal);
+  finiteDifferences(54,55+normal);
+
+  for (int i=0; i<3; i++) {
+    finiteDifferences(17+i,26+3*normal+i);
+  }
+
+  for (int i=0; i<3; i++)
+  for (int j=i; j<3; j++) {
+    int k = (i==0?j:i+j+1);
+    finiteDifferences(k,35+6*normal+k);
+  }
+}
+
+
+
+
+void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_leftDifferences_LoopBody(
+  double* __restrict__                                       QIn,
+  const ::exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  int                                          normal
+) {
+  tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
+  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume  = volumeIndex;
+
+   leftAdjacentVolume(normal)--;
+
+  double cellSize = patchSize(normal) / QInEnumerator._numberOfDoFsPerAxisInCell;
+
+  auto finiteDifferences = [&](int source, int target) {
+     double dx = QIn[ QInEnumerator(patchIndex, centralVolume,source) ]
+               - QIn[ QInEnumerator(patchIndex, leftAdjacentVolume, source) ];
+     QIn[ QInEnumerator(patchIndex,centralVolume,target) ] = dx / cellSize;
+  };
+
+  finiteDifferences(16,23+normal);
+  finiteDifferences(54,55+normal);
+
+  for (int i=0; i<3; i++) {
+    finiteDifferences(17+i,26+3*normal+i);
+  }
+
+  for (int i=0; i<3; i++)
+  for (int j=i; j<3; j++) {
+    int k = (i==0?j:i+j+1);
+    finiteDifferences(k,35+6*normal+k);
+  }
+}
+
+
+
+
+void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_rightDifferences_LoopBody(
+  double* __restrict__                                       QIn,
+  const ::exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  int                                          normal
+) {
+  tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightAdjacentVolume  = volumeIndex;
+
+  rightAdjacentVolume(normal)++;
+
+  double cellSize = patchSize(normal) / QInEnumerator._numberOfDoFsPerAxisInCell;
+
+  auto finiteDifferences = [&](int source, int target) {
+     double dx = QIn[ QInEnumerator(patchIndex, rightAdjacentVolume,source) ]
+               - QIn[ QInEnumerator(patchIndex, centralVolume, source) ];
+     QIn[ QInEnumerator(patchIndex,centralVolume,target) ] = dx / cellSize;
+  };
+
+  finiteDifferences(16,23+normal);
+  finiteDifferences(54,55+normal);
+
+  for (int i=0; i<3; i++) {
+    finiteDifferences(17+i,26+3*normal+i);
+  }
+
+  for (int i=0; i<3; i++)
+  for (int j=i; j<3; j++) {
+    int k = (i==0?j:i+j+1);
+    finiteDifferences(k,35+6*normal+k);
   }
 }
 
@@ -149,4 +348,3 @@ void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_4thO
                                                                    0.5*gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,k) ];
   }
 }
-

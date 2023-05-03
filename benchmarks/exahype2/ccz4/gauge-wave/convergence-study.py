@@ -75,7 +75,7 @@ if "second-order" in args.solver:
                                                                       rk_order             = order,
                                                                       min_meshcell_h       = args.cell_size / 3, 
                                                                       max_meshcell_h       = args.cell_size / 3,
-                                                                      reconstruction_order = 2
+                                                                      reconstruction_type  = "leftDifferences"
                                                                       )
   project.add_solver(my_additional_solver)
   

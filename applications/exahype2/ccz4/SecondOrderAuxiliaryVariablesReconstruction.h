@@ -25,11 +25,35 @@ namespace applications {
        * @param haloSize Has to be at least 3.
        */
       void recomputeAuxiliaryVariablesFD4_4thOrder(
-          ::exahype2::CellData&   patchData,
-          int                     numberOfGridCellsPerPatchPerAxis,
-          int                     haloSize,
-          int                     unknowns,
-          int                     auxiliaryVariables
+        ::exahype2::CellData&   patchData,
+        int                     numberOfGridCellsPerPatchPerAxis,
+        int                     haloSize,
+        int                     unknowns,
+        int                     auxiliaryVariables
+      );
+
+      void recomputeAuxiliaryVariablesFD4_centralDifferences(
+        ::exahype2::CellData&   patchData,
+        int                     numberOfGridCellsPerPatchPerAxis,
+        int                     haloSize,
+        int                     unknowns,
+        int                     auxiliaryVariables
+      );
+
+      void recomputeAuxiliaryVariablesFD4_leftDifferences(
+        ::exahype2::CellData&   patchData,
+        int                     numberOfGridCellsPerPatchPerAxis,
+        int                     haloSize,
+        int                     unknowns,
+        int                     auxiliaryVariables
+      );
+
+      void recomputeAuxiliaryVariablesFD4_rightDifferences(
+        ::exahype2::CellData&   patchData,
+        int                     numberOfGridCellsPerPatchPerAxis,
+        int                     haloSize,
+        int                     unknowns,
+        int                     auxiliaryVariables
       );
 
       namespace internal {
@@ -43,6 +67,48 @@ namespace applications {
          *
          */
         void recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
+          double* __restrict__                                       QIn,
+          const ::exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          int                                          normal
+        );
+
+
+        /**
+         *
+         */
+        void recomputeAuxiliaryVariablesFD4_centralDifferences_LoopBody(
+          double* __restrict__                                       QIn,
+          const ::exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          int                                          normal
+        );
+
+
+        /**
+         *
+         */
+        void recomputeAuxiliaryVariablesFD4_leftDifferences_LoopBody(
+          double* __restrict__                                       QIn,
+          const ::exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          int                                          normal
+        );
+
+
+        /**
+         *
+         */
+        void recomputeAuxiliaryVariablesFD4_rightDifferences_LoopBody(
           double* __restrict__                                       QIn,
           const ::exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
