@@ -15,6 +15,10 @@ class AbstractCCZ4Solver(object):
   defines some generic stuff such as the unknowns and includes that every 
   single solver will use.
   
+  If you use a CCZ4 solver, you will still have to add all the libraries to 
+  your Peano project such that the Makefile picks them up. For this, the 
+  solver offers an add_makefile_parameters().
+    
   """
   
   
@@ -65,10 +69,12 @@ class AbstractCCZ4Solver(object):
     """
     self.add_user_action_set_includes( """
 #include "CCZ4Kernels.h"
+#include "SecondOrderAuxiliaryVariablesReconstruction.h"
 """)
     self.add_user_solver_includes( """
 #include "CCZ4Kernels.h"
 #include "InitialValues.h"
+#include "SecondOrderAuxiliaryVariablesReconstruction.h"
 #include <cstring>
 """)
     
@@ -117,6 +123,28 @@ class AbstractCCZ4Solver(object):
       self.add_solver_constants("static constexpr double {} = {};".format(key, value))
 
   
+  def add_makefile_parameters(self, 
+                              peano4_project,
+                              path_of_ccz4_application
+                              ):
+    """!
+    
+    Add include path and required cpp files to makefile
+    
+    If you have multiple CCZ4 solvers, i.e. different solvers of CCZ4 or multiple 
+    instances of the CCZ4 type, please call this operation only once on one of 
+    your solvers.
+    
+    """  
+    if path_of_ccz4_application[-1]!="/":
+      path_of_ccz4_application += "/"
+
+    peano4_project.output.makefile.add_cpp_file( path_of_ccz4_application + "InitialValues.cpp", generated=False )
+    peano4_project.output.makefile.add_cpp_file( path_of_ccz4_application + "CCZ4Kernels.cpp", generated=False )
+    peano4_project.output.makefile.add_cpp_file( path_of_ccz4_application + "SecondOrderAuxiliaryVariablesReconstruction.cpp", generated=False )
+    peano4_project.output.makefile.add_header_search_path( path_of_ccz4_application )
+
+
   @abstractmethod
   def add_tracer(name,
                  coordinates,
@@ -411,7 +439,10 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
   This might not be super efficient (it would be faster to stick to the 
   second order formulation right from the start), but it allows us to reuse
   the compute kernels written for the first order PDE formulation.
-  
+
+  reconstruction_order: Integer
+    Should be a value between 1 and 4. Not all variants are supported.
+      
   """
   def __init__(self,
                name,
@@ -419,6 +450,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
                rk_order,
                min_meshcell_h,
                max_meshcell_h,
+               reconstruction_order,
                use_heap_storage = True
                ):  
     super( CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking, self ).__init__(name,
@@ -429,8 +461,22 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
                use_heap_storage
                )
 
-    self.preprocess_updated_patch = """
-    This is a stupid test
+    self.preprocess_reconstructed_patch = """
+::exahype2::CellData  reconstructedPatchData( 
+  oldQWithHalo, 
+  marker.x(), 
+  marker.h(), 
+  timeStamp, 
+  timeStepSize,
+  nullptr // targetPatch 
+);
+::applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_""" + str(reconstruction_order) + """thOrder(
+  reconstructedPatchData,
+  {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
+  3,                        // haloSize,
+  {{NUMBER_OF_UNKNOWNS}},
+  {{NUMBER_OF_AUXILIARY_VARIABLES}}
+);
 """
 
   

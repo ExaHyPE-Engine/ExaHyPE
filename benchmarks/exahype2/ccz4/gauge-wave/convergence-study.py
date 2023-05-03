@@ -63,7 +63,7 @@ if "fd4-rk" in args.solver:
                                                                       )
 
 if "second-order" in args.solver:
-  order = 4
+  order = 1
   my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FD4RK" + str(order), 
                                                                       patch_size           = 5,
                                                                       rk_order             = order,
@@ -75,6 +75,7 @@ if "second-order" in args.solver:
                                                                       rk_order             = order,
                                                                       min_meshcell_h       = args.cell_size / 3, 
                                                                       max_meshcell_h       = args.cell_size / 3,
+                                                                      reconstruction_order = 2
                                                                       )
   project.add_solver(my_additional_solver)
   
@@ -141,9 +142,7 @@ project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically","(n
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
-peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/InitialValues.cpp", generated=False )
-peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp", generated=False )
-peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/ccz4" )
+my_solver.add_makefile_parameters(peano4_project, "../../../../applications/exahype2/ccz4" )
 
 peano4_project.generate( throw_away_data_after_generation=False )
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
