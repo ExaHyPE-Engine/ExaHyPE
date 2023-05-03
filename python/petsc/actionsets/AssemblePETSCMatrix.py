@@ -10,7 +10,8 @@ class AssemblePetscMatrix(ActionSet):
   Trigger assembly of PETSc matrix, using values from mesh
   """
   TemplateInitVertex = """
-    //todo
+    //todo - run through each of the neighbouring vertices and insert 
+    // values from the stencil into the matrix
   
   """
   

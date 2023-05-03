@@ -82,13 +82,15 @@ the solver in the first place. This happens in get_includes().
       rhs
     );
 
-    //place these values into the grid
-    fineGridVertex{{SOLVER_NAME}}.setValue(0, value);
-    fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);
+    if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::Poisson::Type::Dirichlet){
+      //place these values into the grid
+      fineGridVertex{{SOLVER_NAME}}.setValue(0, value);
+      fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);
 
-    //explicitly do the same with coarseGridVertex
-    coarseGridVertex{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setValue(0, value);
-    coarseGridVertex{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setRhs(0, rhs);
+      //explicitly do the same with coarseGridVertex
+      //coarseGridVertices{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setValue(0, value);
+      //coarseGridVertices{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setRhs(0, rhs);
+    }
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 

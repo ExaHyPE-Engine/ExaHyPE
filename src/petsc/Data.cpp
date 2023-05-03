@@ -20,7 +20,7 @@ void petsc::PetscData::initMatrixAndVectors( int dofs ){
   // _AasStdVector.resize( _dofs * _dofs );
 
   MatCreate(PETSC_COMM_WORLD, &_A);
-  MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, _dofs, _dofs);
+  MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, n, n);
   MatSetFromOptions(_A);
   MatSetUp(_A);
 
@@ -45,16 +45,9 @@ void petsc::PetscData::insertDoubleAtIndexij( int i, int j, double val ){
 }
 
 void petsc::PetscData::incrementDoubleAtIndexij( int i, int j, double val ){
-  tIndex index = std::make_pair(i,j);
-  _AasStdMap[index] += val;
+  MatSetValue(_A, i, j, val, ADD_VALUES);
 }
 
-// double petsc::PetscData::getTempDoubleAtIndexij(int i, int j){
-//   tIndex index = std::make_pair(i,j);
-//   if ( !_AasStdMap.count(index) ) 
-//     return 0;
-//   return _AasStdMap.at(index);
-// }
 
 void petsc::PetscData::assembleA(){
 
