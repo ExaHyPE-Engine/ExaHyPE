@@ -1,12 +1,14 @@
 import sympy
 
+import pde
+
 import scenarios.scenario
 
 from abc import ABC, abstractmethod
 
 from exahype2.solvers.fv.PDETerms import PDETerms
 
-class Template_Scenario(scenarios.scenario.Scenario, ABC):
+class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     """
     This class provides a template flux implementation that relies on a non-conservative product to work.
     This class also provides an implementation for boundary condition that just call the homogeneous Neumann boundary conditions of PDE.py.
@@ -29,11 +31,6 @@ class Template_Scenario(scenarios.scenario.Scenario, ABC):
     def implementation_of_boundary_conditions(self):
         return self.implementation_of_homogeneous_Neumann_BC()
     
-    def implementation_of_flux(self):
-        return super().implementation_of_flux()
-    
-    def implementation_of_initial_conditions(self):
-        return super().implementation_of_initial_conditions()
 
     def implementation_of_ncp(self):
         return """
