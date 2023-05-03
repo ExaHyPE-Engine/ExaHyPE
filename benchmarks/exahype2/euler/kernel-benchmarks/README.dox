@@ -32,6 +32,7 @@ that I tend to build from time to time.
 
 I typically create a bunch of benchmarks around the Finite Volume solvers:
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
     export PYTHONPATH=../../../../python
 
     python3 fv-rusanov-kernel-benchmarks.py --dim 2 --patch-size 4 
@@ -41,14 +42,19 @@ I typically create a bunch of benchmarks around the Finite Volume solvers:
     python3 fv-rusanov-kernel-benchmarks.py --dim 3 --patch-size 4 
     python3 fv-rusanov-kernel-benchmarks.py --dim 3 --patch-size 6 
     python3 fv-rusanov-kernel-benchmarks.py --dim 3 --patch-size 8 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ## Clean up
+
 You can throw away all of the glue code after a successful build. This is 
 triggered by
 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
      rm Abstract* Readme* Makefile Constants.h
      rm -rf celldata facedata observers repositories tasks
      rm *.o
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ## Run experiments
 
@@ -57,7 +63,9 @@ All of them produce outputs in a similar way, so it is easier to interpret the
 outcomes. For most runs, you don't have to specify anything. However, you might
 want to call
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
       ./my-benchmark --help
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It enlists the standard ExaHyPE command line arguments that every code has. Most
 of them play no role here, but the thread count and the gpu filters do, i.e. you
@@ -75,10 +83,12 @@ by default.
 
 I typically run the Finite Volume solvers with
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
     ./kernel-benchmark-fv-2d-patch-size-4 --threads 1 -gpus all
     ./kernel-benchmark-fv-2d-patch-size-4 --threads 2 -gpus all
     ./kernel-benchmark-fv-2d-patch-size-4 --threads 4 -gpus all
     ./kernel-benchmark-fv-2d-patch-size-4 --threads 8 -gpus all
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 to obtain a first insight into how the throughput changes as more and more 
 threads hit the GPUs with kernel invocations.
@@ -113,7 +123,10 @@ freedom.
 If you want to use the pre-manufactured visualisation scripts, you have to pipe
 the program output into a file. After that, invoke
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
     python3 create-scaling-plot.py outputfile
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 ## Science case
 
@@ -148,7 +161,6 @@ synchronisation with a neighbour.
 
 
 @image html src/exahype2/fv/rusanov/Rusanov00.png
-<img src="../../../../src/exahype2/fv/rusanov/Rusanov00.png" />
 
 
 So we are given the patch (grey) plus the halo cells (red, blue, yellow, green).
@@ -203,9 +215,12 @@ has to exploit the GPU's concurrency. Again, we can simulate what happens
 if multiple threads try to fire kernels to the GPU at the same time.
 
 ### Troubleshooting (with SYCL and the other back-ends)
+
 Before you dive into details, only run with 
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
      --threads 1 -gpus 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~
      
 i.e. with one thread and one GPU. If one thread and one GPU do not work, 
 it makes no sense to continue if you know that this simple setup fails
@@ -219,7 +234,9 @@ understand and definitely run with whatever system you employ.
 If you find your code crashing, I recommend that you comment out the 
 kernel calls. The SYCL calls for example can be found in the routine
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
      void submitSYCLKernels(int patches, int device, int thread) {
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 and I suggest that you comment all the testStatelessVariantOnDevice()
 calls in there out if you encounter issues. Check if the code works
