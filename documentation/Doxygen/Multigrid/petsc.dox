@@ -71,5 +71,56 @@ and so forth are lost. This is a realisation representation, not a logical
 representation of our project.
  
 
+## A brief run through of the work in progress
+
+1. Mesh creation - this is done automatically
+
+2. EnumerateAndInitSolution step - Here we have two action sets, EnumerateVertices.py and 
+   InitVertexDoFs.py.
+   In the first, every fineGridVertex is marked as "Dirichlet"
+   if it lies on the boundary, and as "DoF" otherwise. For now, we just use marker.x() to 
+   determine whether a vertex is on the boundary.
+   We also insert 
+   a value and rhs into the vertex at this stage, which we pass to PETSc during assembly.
+   @todo - is it necessary to do the same for the coarseGridVertex which should lie 
+      in the same position?
+   During the Enumeration Action set, every fineGridVertex is given a globalIndex, which will be used later
+   to construct the PETSc matrix. 
+
+3. InitPETSc step - here we count total number of DoFs and send to our instanceOfPetsc. 
+
+4. Assembly - This is the stage we construct the PETSc matrix and Rhs vector. For this, we add a new action set,
+   seen in AssemblePETSCMatrix.py
+   During TouchVertexFirstTime, we aim to:
+      - Run through the neighbouring vertices within this cell
+      - Retrieve a global Index for each from the LocalToGlobalMap
+      - Insert an appropriate value into the PETSc matrix based on the Poisson stencil
+      - Insert an appropriate value into the RHS vector todo
+   
+   The only issue is that TouchVertexFirstTime has access only to:
+
+   ~~~~~~~~~~~~~~~~~~~~~
+   const peano4::datamanagement::VertexMarker& marker,
+   benchmarks::multigrid::petsc::poisson::vertexdata::Poisson& fineGridVertexPoisson,
+   peano4::datamanagement::VertexEnumerator<benchmarks::multigrid::petsc::poisson::vertexdata::Poisson> coarseGridVerticesPoisson
+   ~~~~~~~~~~~~~~~~~~~~~
+
+   which don't give access to the neighbouring vertices.
+
+   However, in TouchCellFirstTime, one argument passed in is:
+
+   ~~~~~~~~~~~~~~~~~~~~~
+   peano4::datamanagement::VertexEnumerator<benchmarks::multigrid::petsc::poisson::vertexdata::Poisson> fineGridVerticesPoisson
+   ~~~~~~~~~~~~~~~~~~~~~
+
+   which we can query to get all the indices of the vertices in this cell.
+
+   So, perhaps performing assembling matrix values within TouchCellFirstTime is the way to go.
+
+5. Solve - Hand over to PETSc to find solution 
+6. MapSolutionOntoMesh - query instanceOfPetsc for the data from the solution vector. 
+
+
+
  */
  
