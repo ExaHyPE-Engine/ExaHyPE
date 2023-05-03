@@ -49,11 +49,26 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
     static ServiceRepository& getInstance();
 
     /**
+     * Add a new service
+     *
+     * This routine is thread-safe, i.e. it blocks other addService() calls as
+     * well as receiveDanglingMessages().
+     *
      * @param service Pointer to service
      * @param name    Name of service (mandatory, not empty)
      */
     void addService( Service* const service, const std::string& name );
+
+    /**
+     * This routine is thread-safe.
+     */
     bool hasService( Service* service ) const;
+
+    /**
+     * This routine is thread-safe, i.e. it blocks out
+     * receiveDanglingMessages() and all other routine which register or
+     * de-register services.
+     */
     void removeService( Service* const service );
 
     /**
@@ -100,6 +115,9 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
      * but we also solve it in the old-fashioned way if you only issue receives
      * through the repository, as the repository invokes the services, but it
      * first blocks all other threads through a semaphore.
+     *
+     * This routine is thread-safe compared to addService() and
+     * removeService().
      */
     void receiveDanglingMessages() override;
 

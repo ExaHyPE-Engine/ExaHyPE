@@ -10,7 +10,7 @@
 
 #include <map>
 
-#include "LoadBalancing.h"
+#include "AbstractLoadBalancing.h"
 
 
 namespace toolbox {
@@ -20,7 +20,22 @@ namespace toolbox {
 }
 
 
-class toolbox::loadbalancing::SpreadOutHierarchically: public toolbox::loadbalancing::LoadBalancing {
+/**
+ * Spread out hiearchically
+ *
+ * First try to give each rank one tree and then make each rank fork out once
+ * more such that each thread gets one tree. After that, switch into stagnation.
+ *
+ * The routine tries to get as many cores/ranks in as possible. Therefore, we
+ * employ a bottom-up splitting strategy which prioritises fair fine grid
+ * splits over an "efficient" tree decomposition. Consult a discussion of
+ * splitting variants and constraints in peano4::grid::Spacetree::isCellTopDownSplitCandidate()
+ * and  peano4::grid::Spacetree::isCellBottomUpSplitCandidate(),
+ * peano4::grid::Spacetree::splitOrJoinCell() and notably the general
+ * @ref peano_domain_decomposition "domain decomposition overview" for the
+ * rationale.
+ */
+class toolbox::loadbalancing::SpreadOutHierarchically: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * @see getAction()

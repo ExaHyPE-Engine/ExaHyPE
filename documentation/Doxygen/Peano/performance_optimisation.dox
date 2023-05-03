@@ -1,6 +1,10 @@
 /**
 
-@page peano_performance_optimisation Performance Optimisation in Peano
+@page page_peano_performance_optimisation Performance optimisation
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
 
 This section discusses some Peano-specific performance optimisation steps.
 While Peano provides simplistic performance analysis 
@@ -9,21 +13,23 @@ rely on external performance analysis tools.
 
 
 If you plan to run any performance analysis with the Intel or NVIDIA tools, I 
-recommend you to switch to the respective toolchain and logging
-before you continue (cmp. peano_installation).
+recommend you to switch to the @ref page_compiler_specific_settings "respective toolchain and logging"
+before you continue.
 For other performance tools such as Scalasca/Score-P, Peano offers bespoke 
 toolchains, too. 
 These toolchains ensure that all tracing information is piped into appropriate
 data formats.
 
 
-It is the developer's choice whether to pick a release build or a trace build
-for the performance analysis.
-Most people start with the release build and then switch the tracing on for a
+Most developers start with a release build for the performance analysis.
+However, you might want to switch the tracing on for a
 deeper insight.
+Consult Peano's discussion of @ref page_architecture "Build variants". 
 If you use tracing, you will have to use a proper log filter, as Peano's log 
 information otherwise becomes huge, i.e. challenging to handle, and the enormous
 data quickly pollutes the runtime measurements.
+The data also might be skewed slightly due to measurement overhead. 
+
 
 Besides the trace option, Peano also offers a statistics mode where the code
 samples certain key properties. These statistics are meant to complement real
@@ -51,7 +57,7 @@ tarch::MemoryLocation.
 Most of Peano's solvers (such as ExaHyPE) support tasking to facilitate 
 light-weight load balancing. However, even the best load balancing will not
 be able to compensate for a poor initial geometric distribution. To assess
-the quality of your partition, Peano's loadbalancing toolbox \ref peano_runtime_analysis "provides a script"
+the quality of your partition, Peano's loadbalancing toolbox \ref page_peano_runtime_analysis "provides a script"
 that visualises the distribution of cells. 
 
 
@@ -69,9 +75,54 @@ If you don't want to use the visualisation script, you can also check the progra
        rank:1  toolbox::loadbalancing::dumpStatistics()    info    2 tree(s): (#1:13/716)(#3:14/715) total=27/1431 (local/remote)
 
 is a proper load balancing for two cores, as we have 13 vs 14 cells.
+There are some generic ideas that you can try out:
+
+1. Use an incremental load balancing scheme. Schemes like toolbox::loadbalancing::SpreadOut
+   try to make all cores busy as soon as possible and thus often run into 
+   geometric decompositions that are difficult later on to "fix". Other schemes
+   like toolbox::loadbalancing::RecursiveBipartitioning work incrementally and 
+   thus get better approximations of an optimal domain splitting. Basically 
+   what happens is that an initial decision to make a split hardly ever is 
+   undone in Peano. So if an early split is unfortunate, the code will have to
+   compensate for this later on - as it is the case with any greedy algorithm.
+   See third idea in this context.
+2. Build up the mesh before you split. Let the load balancing kick in after you 
+   have set up the mesh. This is often difficult with complex applications, but
+   might be worth a try. Often the next recipe is easier to realise:
+3. Hand out trees carefully. Notably if you use a cascade of load balancing 
+   schemes (e.g. a spreading strategy first), restrict the number of trees that
+   are used in early phases. So you get a rough first guess of a domain decomposition
+   using a limited number of cores, and then you add more cores when you do the
+   fine balancing afterwards with a finer mesh. 
+4. Use a higher mesh quality. Load balancing schemes all are guided by heuristics,
+   i.e. how good has the decomposition have to be. Most schemes accept a 
+   configuration object to specify some thresholds. Increase the load balancing
+   quality.
+5. Allow each node to host more trees than cores. You can have an (almost) arbitrary
+   number of trees per node. The trees are then mapped by Peano onto threads. If
+   you have too many trees however, you create a lot of overhead for this mapping.
+   By default, most load balancing schemes allow the code to use up to twice the
+   number of trees than cores. This value can be increased.
 
 
-There are a few things to check in this case:
+To motivate most of these considerations, it is important to remember that 
+Peano builds up the grid top-down, i.e. from coarse to fine, and immediately 
+tries to split the mesh over the compute units.
+   
+Recursive load balancing schemes yield the best quality partitions, but often 
+fail for rather shallow (3-6 levels of adaptivity) trees with adaptive mesh
+refinement. In this case, it pays off to find a good indicator what a good 
+partition size could be for your setup, and then to switch to a scheme like
+toolbox::loadbalancing::SplitOversizedTree. Peano always has to accommodate
+@ref page_peano_domain_decomposition "some domain split-up constraints" and
+hence cannot fork off arbitrary adaptive mesh parts and also has to ensure 
+that there is always a clear tree topology in the splitting, i.e. if you 
+recursively split, you can only make as many splits as you have tree levels.
+
+
+### The grid splitting needs to much time
+
+See the comment above on the recursive top-down splitting. In this context:
 
 - If you use a generic algorithm to load balance, reduce the load balancing 
   quality that you aim for. No load balancing will be able to ensure 100% perfect
@@ -83,17 +134,16 @@ There are a few things to check in this case:
   try to split up subpartitions, and you might end up with very small aka cheap
   partitions if the load is too cheap. Even worse, the bipartitioning might not 
   be able to resolve the ill-balancing.
-- If you have a very adaptive mesh, ask your load balancing to use only a limited
-  number of partitions initially. Most (generic) load balancing schemes have an
-  upper limit how many trees they allow per rank. If all these ranks are used in 
-  the first decomposition while the grid is still constructed, the load balancer
-  has not "free" trees anymore when it encounters the adaptivity.
-  
-The realisation of the configuration depends on the load balancer. The generic
-load balancer toolbox::loadbalancing::RecursiveSubdivision for example allows
-you to distinguish how many trees the code uses for its first split-up vs how 
-many can be used from thereon. 
+- Use a load balancer, which immediately spreads out over the cores once the
+  grid construction starts. toolbox::loadbalancing::SpreadOut is a good example.  
+- If toolbox::loadbalancing::SpreadOut is still too slow or does not kick in
+  (as you have too few cells), switch to toolbox::loadbalancing::SpreadOutHierarchically.
 
+Using the schemes that spread out immediately often makes the resulting domain
+decomposition quality worse, as they realise a greedy approach which kicks in 
+while the grid is not completely constructed. In such a case, use a combination
+(cascade) of load balancing schemes, i.e. start with spreading and then use 
+something fairer.
 
 
 ### The code shows very high spin time
@@ -115,7 +165,7 @@ __kmpc_taskloop                                                    libiomp5.so  
 [Others]                                                           N/A              3333.068s             19.0%
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Once you dump the output into a file and you visualise it with \ref peano_runtime_analysis "the script enabling a display of remote trees",
+Once you dump the output into a file and you visualise it with \ref page_peano_runtime_analysis "the script enabling a display of remote trees",
 too small trees also usually manifest in very high remote cell counts, i.e.
 large numbers of outer and coarse cells, compared to actual fine grid cells.
 Use the flag --remote-cells.
@@ -146,11 +196,17 @@ geometric decomposition.
 Additional tasking within your code for example is an option, or compute kernels which 
 themselves can use more than one core.
 
-@see toolbox::loadbalancing::RecursiveSubdivision is a generic load balancer.
-@see toolbox::loadbalancing::Hardcoded provides the opportunity to specify and fix your load balancing.
-
 
 ### Introducing tasks makes my code significantly slower
+
+If tasks make your system slower, there can be multiple reasons:
+
+1. The tasks are too tiny.
+2. 
+
+@todo THis has to be worked out. Does usually not happen for OpenMP. But TBB/SYCL are different stories.
+
+
 
 This could be a sign of a scheduler flaw. Peano offers multiple different 
 multithreading schedulers: It can map tasks onto native OpenMP/TBB/... tasks
@@ -163,6 +219,21 @@ codes, this disables them to offload many tasks to GPU or the balance
 between grid traversals. However, a native tasking is a good starting
 point to understand your scaling and the also plays along well with 
 mainstream performance analysis tools.
+
+This could either be a scheduler flaw, or you have too few enclave tasks.
+The scheduler flaw is discussed in @ref peano_performance_optimisation "Peano's generic performance optimisation section", but
+ExaHyPE offers a special command line argument to switch between different
+tasking schemes. Run the code with help and use
+
+     ---threading-model native
+     
+or another option afterwards to play around with various threading schemes.
+
+If this does not work, switch to task-based kernels.
+
+@todo Does the code use enclave tasks and yield many tasks? In this case,
+    you might have encountered a scheduler flaw. Change the multicore scheduler
+    on the command line.
 
 
 
@@ -242,30 +313,9 @@ all ranks:
 
 However, while the load balancing (rightly so) decided to keep all cores busy,
 it seems that not enough cells had been available at the time to bring them into
-the business. 
+the business. Study the single node load balancing discussion above.
 
 
-We summarise:
-
-- The load balancing detects the ill-balancing between rank 0 and rank 1 and
-  actually asks rank 0 to span another child tree on rank 1. However, this 
-  fork is not successful. Apparently, no cells on rank 0 are left over. Which 
-  is clearly wrong.
-- The load balancing detects the local ill-balancing on rank 1 and asks rank 1
-  to fork another subtree on the local rank. This is not successful once again,
-  as there seem to be insufficient cells around. 
-  
-This makes absolutely no sense at all! The clue for this behaviour is however
-burried in the 900 cells per rank: As we work with three-partitioning, each 
-refinement gives us 27 new octants per octant. So two refinement levels brings
-us to the order of 900.
-
-
-@todo Visualisation of subdomains and mesh
-@todo Wer ist der Boesewicht
-@todo AMR Pattern stimmt halt wieder net
-@todo dot File extractor rein udn den zu Peano dazu
-@todo Er reported "there are already so many ... trees", was gar net stimmt. 
 
  */
  

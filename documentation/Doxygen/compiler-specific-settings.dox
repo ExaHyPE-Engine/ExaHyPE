@@ -1,6 +1,9 @@
 /**
 
-@page compiler_specific_settings Vendor software stacks and system- and compiler-specific settings
+@page page_compiler_specific_settings Vendor software stacks and system- and compiler-specific settings
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
 
 
 Peano has three different approaches how to handle system- and compiler-specific 
@@ -40,66 +43,66 @@ Consult the file implementation for details.
 
 
 
-## Intel oneAPI toolchain
+## Intel (oneAPI) toolchain
 
 <img width="10%" src="https://upload.wikimedia.org/wikipedia/en/f/fa/OneAPI-rgb-3000.png" />
 
-Peano provides dedicated support for an Intel/oneAPI toolchain. To activate 
-this toolchain, you have to reconfigure with  
+Peano provides support for Intel's (oneAPI) toolchain through two routes: 
+The ITAC interface and the Instrumentation and Tracing Technology (ITT).
+To activate either of these toolchains, you have to reconfigure with one of
+the two options below:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-./configure ... --with-toolchain=intel
+./configure ... --with-toolchain=itac
+./configure ... --with-toolchain=itt
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Broadly speaking, the toolchain alters the code in two ways:
+Broadly speaking, the toolchains alters the code in two ways:
 
-- It enables ITAC.
-- It switches the line logger to the ITAC logger. That is, trace data are not
-  pipes onto the terminal anymore, but are passed into the ITAC API.
-- It adds -DTBB_USE_THREADING_TOOLS to the compile flags.
+- It enables ITAC or ITT.
+- It switches the line logger to the ITAC or ITT logger. That is, trace data are not
+  pipes onto the terminal anymore, but are passed into the ITAC or ITT API.
+- It adds some Intel-specific compile flags.
 
-For further discussion on logging, please see the \ref tarch_logging "generic logging description for Peano".
-
-The flags show that the name Intel toolchain is misleading.
+The enumeration shows that the name Intel toolchain is misleading.
 We are actually not tailoring the build to the Intel toolchain, but we tailor
 the setup to the Intel analysis tools. 
 Most production runs will not use the Intel toolchain, but rather set all 
 Intel-specific flags for compiler and linker manually.
 
 
-There are further Intel-specific properties and features which are *not* automatically 
-introduced but might be of interest if you work with the Intel tools:
-~~~~~~~~~~~~~~~~~~~~~~~
-CXXFLAGS="-DTBB_USE_ASSERT"
-~~~~~~~~~~~~~~~~~~~~~~~
+#### Intel compiler flags
 
+At the moment, we add the following flags to the compile when the Intel toolchain is
+activated:
+
+- We add
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  CXXFLAGS="... -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  to all compiles.
+- We add
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  CXXFLAGS="... -DTBB_USE_ASSERT"
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  to all debug and assert builds.
+
+
+#### The loggers
+
+Even though you have switched to the Intel loggers, you will not get
+any trace information if you build in release mode. You have to switch
+to the trace mode (or assertions or debug) - compare general remarks on
+@ref page_architecture "Peano's build modi" - to get traces or annotation
+info.
 
 Once you try to trace your code with the Intel tool, the size of the traces 
-quickly becomes unmanageable. 
-It might therefore be reasonable to start the tracing manually. 
-Details on this can be found on <a href="https://www.intel.com/content/www/us/en/docs/vtune-profiler/user-guide/2023-0/collection-control-api.html">Intel's collection control</a> pages.
-Basically, you have to add
-~~~~~~~~~~~~~~~~~~~~~~~
-#include <ittnotify.h>
+quickly becomes unmanageable or the performance might go down. 
+Therefore, we disable the trace by default. 
+The first trace command will then enable it. 
 
-__itt_pause();
+For further discussion on logging, please see the \ref tarch_logging "generic logging description for Peano".
 
-__itt_resume();
-~~~~~~~~~~~~~~~~~~~~~~~
-into your code. This is not done generically, as every Peano application is slightly 
-different, and different performance analysis runs might be interested in different 
-things. A good point to insert these pause and resume commands is the @ref peano_main
-"Peano main routine" where you pick different algorithmic steps. Some extensions such 
-as ExaHyPE also define callbacks for particular phase changes, i.e. when we switch from
-time stepping to plotting, e.g. I still recommend the main, as the main is typically
-not overwritten by Python APIs if you have changed something in there manually.
-
-Please note that older documentation on the web refers to 
-~~~~~~~~~~~~~~~~~~~~~~~
-VTPause();
-VTResume();
-~~~~~~~~~~~~~~~~~~~~~~~
-These functions seem to be deprecated and are not shipped with oneAPI anymore.
 
 
 ## NVIDIA NVC++ toolchain
@@ -136,6 +139,18 @@ Found 0 devices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 devices if you run the code.
+
+
+### Source code annotation
+
+NVIDIA's NVPTX logging is supported by picking the 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--with-toolchain=nvptx
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+toolchain.
+ 
 
 
 ## AMD toolchain
@@ -218,15 +233,21 @@ on this machine.
 ~~~~~~~~~~~~~~~~~~~~~~
 ./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran
 ~~~~~~~~~~~~~~~~~~~~~~
+- Performance analysis runs with single node tracing
+~~~~~~~~~~~~~~~~~~~~~~
+module load vtune
+./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes -I${VTUNE_HOME}/vtune/latest/include" LDFLAGS="-fiopenmp -g -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itt
+~~~~~~~~~~~~~~~~~~~~~~
 - MPI performance analysis runs
 ~~~~~~~~~~~~~~~~~~~~~~
-module load itac
 module load vtune
-./configure CC=icpx CXX=icpx CXXFLAGS="-I${VTUNE_HOME}/vtune/latest/include -I${VT_ROOT}/include -Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g -L${VT_LIB_DIR} -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-lVT ${VT_ADD_LIBS} -littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=intel
+./configure CC=icpx CXX=icpx CXXFLAGS="-I${VTUNE_HOME}/vtune/latest/include -I${VT_ROOT}/include -Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g -L${VT_LIB_DIR} -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-lVT ${VT_ADD_LIBS} -littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itac
 ~~~~~~~~~~~~~~~~~~~~~~
-  Further to these flags, I @ref faq "pause and resume the data collection" manually in 
-  ExaHyPE and Swift. This is however something I do in the main() routine of 
-  the respective applications. 
+
+
+Further to these flags, I @ref faq "pause and resume the data collection" manually in 
+ExaHyPE and Swift. This is however something I do in the main() routine of 
+the respective applications. 
 
 
 ### NCC
@@ -278,14 +299,17 @@ I used this to configure Peano with Intel's TBB enabled
 source /opt/intel/oneapi/setvars.sh
 module load cuda
 
-./configure CC=clang++ CXX=clang++ LIBS="-ltbb" -LFLAGS="-fsycl -fsycl-targets-targets=nvptx64-nvidia-cuda" CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
+./configure CC=clang++ CXX=clang++ LIBS="-ltbb" LFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda" CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Note: Codeplay's website has some useful information on compiler flags.
 
-It also needs at least 2023.0.0 version of oneApi with Codeplay's nvidia
-GPU plugin; the LLVM compiler doesn't support the
-`-Xsycl-target-backend=` flag, so please check your Makefile.
+It also needs at least 2023.0.0 version of oneAPI with Codeplay's nvidia
+GPU plugin which is not installed on NCC; the LLVM compiler doesn't
+support the `-Xsycl-target-backend=` flag, so please check your Makefile.
+
+I had linker errors about undefined referennces when building Peano with
+TBB. Just add the path to any relevant library if you experienced this.
 
 When running the executable on the GPU, include `SYCL_DEVICE_FILTER=gpu`
 before the terminal command to explicitly tell SYCL to run the code on GPU. 
@@ -295,6 +319,14 @@ to check where the error was raised.
 ### DINE
 
 We have to write this part next week when we start the workshop.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module load oneAPI
+module load intel_mpi
+module load gnu_comp/11.1.0
+export I_MPI_CXX=icpx
+./configure --enable-exahype --enable-blockstructured --enable-loadbalancing --enable-particles CC=icc CXX=icpx --with-multithreading=omp --with-mpi=mpiicpc CXXFLAGS="-std=c++20 -fopenmp -g -funroll-loops -O3 -g3"
+~~~~~~~~~~~~~~~~~~~~~~~
 
  */
  

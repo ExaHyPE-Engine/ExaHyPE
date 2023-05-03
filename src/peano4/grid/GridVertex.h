@@ -6,23 +6,22 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#pragma once
+#ifndef _INCLUDE_PEANO4_GRID_GRIDVERTEX_
+#define _INCLUDE_PEANO4_GRID_GRIDVERTEX_
 
 #include <string>
   
-
-#include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/services/ServiceRepository.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
-
 
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
+
+#include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/services/ServiceRepository.h"
+#include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
   
@@ -43,7 +42,7 @@ struct peano4::grid::GridVertex {
     };
 
     GridVertex() {}
-    GridVertex(State  __state, tarch::la::Vector<TwoPowerD,int>  __adjacentRanks, tarch::la::Vector<TwoPowerD,int>  __backupOfAdjacentRanks, bool  __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, bool  __isAntecessorOfRefinedVertexInCurrentTreeSweep, int  __numberOfAdjacentRefinedLocalCells, tarch::la::Vector<Dimensions,double>  __x, int  __level);
+    GridVertex(State  __state, tarch::la::Vector<TwoPowerD,int>  __adjacentRanks, tarch::la::Vector<TwoPowerD,int>  __backupOfAdjacentRanks, bool  __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, bool  __isAntecessorOfRefinedVertexInCurrentTreeSweep, bool  __hasBeenParentOfSubtreeVertexInPreviousTreeSweep, bool  __isParentOfSubtreeVertexInCurrentTreeSweep, int  __numberOfAdjacentRefinedLocalCells, tarch::la::Vector<Dimensions,double>  __x, int  __level);
 
 
     peano4::grid::GridVertex::State   getState() const;
@@ -60,6 +59,10 @@ struct peano4::grid::GridVertex {
     void   setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(bool value);
     bool   getIsAntecessorOfRefinedVertexInCurrentTreeSweep() const;
     void   setIsAntecessorOfRefinedVertexInCurrentTreeSweep(bool value);
+    bool   getHasBeenParentOfSubtreeVertexInPreviousTreeSweep() const;
+    void   setHasBeenParentOfSubtreeVertexInPreviousTreeSweep(bool value);
+    bool   getIsParentOfSubtreeVertexInCurrentTreeSweep() const;
+    void   setIsParentOfSubtreeVertexInCurrentTreeSweep(bool value);
     int   getNumberOfAdjacentRefinedLocalCells() const;
     void   setNumberOfAdjacentRefinedLocalCells(int value);
 #if PeanoDebug>0
@@ -73,15 +76,7 @@ struct peano4::grid::GridVertex {
     GridVertex(const GridVertex& copy);
 
 
-#ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::grid::GridVertex& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(peano4::grid::GridVertex& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
-#endif
-    
-
     #ifdef Parallel
-    PRAGMA_PUSH
-    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -101,7 +96,7 @@ struct peano4::grid::GridVertex {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    PRAGMA_POP
+    
     
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -141,11 +136,15 @@ struct peano4::grid::GridVertex {
     static void receive(   peano4::grid::GridVertex& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
-    std::string toString() const;
+#ifdef Parallel
+    static void sendAndPollDanglingMessages(const peano4::grid::GridVertex& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::grid::GridVertex& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+#endif
+    
 
+    std::string toString() const;
+  
   private:
-    PRAGMA_PUSH
-    SILENCE_UNKNOWN_ATTRIBUTE
     [[clang::pack]]  State   _state;
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
     [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _adjacentRanks[TwoPowerD];
@@ -156,6 +155,8 @@ struct peano4::grid::GridVertex {
     tarch::la::Vector<TwoPowerD,int>   _backupOfAdjacentRanks;
     [[clang::pack]]  bool   _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
     [[clang::pack]]  bool   _isAntecessorOfRefinedVertexInCurrentTreeSweep;
+    [[clang::pack]]  bool   _hasBeenParentOfSubtreeVertexInPreviousTreeSweep;
+    [[clang::pack]]  bool   _isParentOfSubtreeVertexInCurrentTreeSweep;
     [[clang::pack_range(0,TwoPowerD)]]  int   _numberOfAdjacentRefinedLocalCells;
 #if PeanoDebug>0
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
@@ -164,16 +165,16 @@ struct peano4::grid::GridVertex {
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,double>   _x;
 #endif
-#endif
-    PRAGMA_POP
+#endif 
+      int   _level;
 
-    int   _level;
+
 
     #ifdef Parallel
     private:
       int                  _senderDestinationRank;
 
-      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
       /**
        * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
        * initialisation of the datatype. However, Peano calls init explicitly
@@ -183,6 +184,10 @@ struct peano4::grid::GridVertex {
       static MPI_Datatype  Datatype;
       #endif
     #endif
+
+
+
 };
 
+#endif
   

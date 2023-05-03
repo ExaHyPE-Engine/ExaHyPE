@@ -155,7 +155,13 @@ int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
   NonblockingTasks extractedTasks;
 
   tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-    
+  maxTasks = std::min( static_cast<int>(globalNonblockingTasks.size()), maxTasks );
+  NonblockingTasks::iterator cutIteration = globalNonblockingTasks.begin();
+  std::advance( cutIteration, globalNonblockingTasks.size() - maxTasks );
+  extractedTasks.splice( extractedTasks.begin(), globalNonblockingTasks, cutIteration, globalNonblockingTasks.end() );
+  lock.free();
+
+/*
   NonblockingTasks::iterator cutIteration = globalNonblockingTasks.begin();
   while (
     cutIteration!=globalNonblockingTasks.end()
@@ -168,9 +174,11 @@ int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
     
   extractedTasks.splice( extractedTasks.begin(), globalNonblockingTasks, globalNonblockingTasks.begin(), cutIteration );
   lock.free();
+*/
 
-  for (auto& task: extractedTasks) {
-    tarch::multicore::native::spawnTask(task);
+//  for (auto& task: extractedTasks) {
+  for (NonblockingTasks::reverse_iterator task = extractedTasks.rbegin(); task != extractedTasks.rend(); task++) {
+    tarch::multicore::native::spawnTask(*task);
   }
 
   return extractedTasks.size();
@@ -590,15 +598,37 @@ bool tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksW
     fusion.minTasks!=std::numeric_limits<int>::max()
   ) {
     tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
-    processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
+    tarch::multicore::internal::fusePendingTasks(fusion);
+    processedSomeTasks = true;
   }
   else if (numberOfPendingTasks>0) {
     processedSomeTasks = tarch::multicore::internal::processThreadLocalTask(threadNumber);
   }
-  else { // no local tasks left over
-    tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+  else if (
+    tarch::multicore::getNumberOfPendingTasks(-1)>0
+    and
+    fusion.minTasks!=std::numeric_limits<int>::max()
+  ) {
+    processedSomeTasks |= tarch::multicore::internal::fusePendingTasks(fusion);
+    if (not processedSomeTasks) {
+      const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
+      processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
+    }
+  }
+  else if (
+    tarch::multicore::getNumberOfPendingTasks(-1)>0
+  ) {
     const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
     processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
+  }
+  else {
+    assertion( tarch::multicore::getNumberOfPendingTasks(-1)==0 );
+
+    for (int threadNumber=0; threadNumber<tarch::multicore::Core::getInstance().getThreadNumber(); threadNumber++) {
+      tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+    }
+
+    processedSomeTasks = tarch::multicore::getNumberOfPendingTasks(-1) > 0;
   }
 
   return processedSomeTasks;
@@ -613,6 +643,11 @@ void tarch::multicore::internal::configureInternalTaskQueues(int numberOfTasks) 
 void tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(int threadNumber) {
   if (threadNumber<0) {
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
+
+    for (int threadNumber=0; threadNumber<localNonblockingTasks.size(); threadNumber++) {
+      ::tarch::logging::Statistics::getInstance().log( ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber].size() );
+    }
+
     for (auto& p: localNonblockingTasks) {
       std::copy(
         p.begin(),
@@ -624,6 +659,7 @@ void tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(int t
   }
   else if ( not localNonblockingTasks[threadNumber].empty() ) {
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
+    ::tarch::logging::Statistics::getInstance().log( ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber].size() );
     std::copy(
       localNonblockingTasks[threadNumber].begin(),
       localNonblockingTasks[threadNumber].end(),

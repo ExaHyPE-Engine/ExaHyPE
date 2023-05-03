@@ -127,4 +127,13 @@ class tarch::multicore::Core {
      * @return Logical thread number
      */
     int getThreadNumber() const;
+
+    /**
+     * Wrapper around backend-specific yield.
+     *
+     * For most backends, this should not really be a yield(). It should
+     * interrupt the current task, not the current thread, and tell the
+     * runtime to continue with another task.
+     */
+    void yield();
 };
