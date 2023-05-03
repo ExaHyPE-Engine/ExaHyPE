@@ -23,15 +23,6 @@ class PDE(exahype2.symhype.FirstOrderConservativePDEFormulation, ABC):
     # speed in y direction
     self.v = self.hv / self.h
 
-    # Flux [unknowns, dimensions]
-    self.F[0, 0] = self.hu
-    self.F[1, 0] = self.hu * self.u #+ (self.g * self.h**2)/2
-    self.F[2, 0] = self.hu * self.v
-
-    self.F[0, 1] = self.hv
-    self.F[1, 1] = self.hu * self.v
-    self.F[2, 1] = self.hv * self.v #+ (self.g * self.h**2)/2
-
     # Eigenvalues [unkowns, dimensions]
     self.eigenvalues[0, 0] = self.u
     self.eigenvalues[0, 1] = self.v

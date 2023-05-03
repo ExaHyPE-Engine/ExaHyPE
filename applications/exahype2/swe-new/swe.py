@@ -53,10 +53,10 @@ args = parser.parse_args()
 
 my_pde = None
 if args.scenario == "Radial_Bathymetry_Dam_Break":
-  from radial_bathymetry_dam_break import Radial_Bathymetry_Dam_Break
+  from scenarios.radial_bathymetry_dam_break import Radial_Bathymetry_Dam_Break
   my_pde = Radial_Bathymetry_Dam_Break(dimensions=args.dim, auxiliary_variables=auxiliary_variables, width=width)
 else:
-  from radial_dam_break import Radial_Dam_Break
+  from scenarios.radial_dam_break import Radial_Dam_Break
   my_pde = Radial_Dam_Break(dimensions=args.dim, auxiliary_variables=auxiliary_variables, width=width)
 
 my_pde.substitute_expression(my_pde.g, 9.81)
@@ -82,30 +82,14 @@ if args.gpu:
   my_solver.set_pde_terms_without_state(True)
 
 my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".format("true" if args.dynamic_amr else "false"))
-#ncp taken from tutorial
 my_solver.set_implementation(
   initial_conditions    = my_pde.implementation_of_initial_conditions(),
-  boundary_conditions   = my_pde.implementation_of_homogeneous_Neumann_BC(),
+  boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
   flux                  = my_pde.implementation_of_flux(),
   eigenvalues           = my_pde.implementation_of_max_eigenvalue(),
-  ncp                   = """double g = 9.81;
-  
-  switch(normal){
-  case 0: //x
-    BTimesDeltaQ[0] = 0.0;
-    BTimesDeltaQ[1] = g * Q[0] * (deltaQ[0] + deltaQ[3]);
-    BTimesDeltaQ[2] = 0.0;
-    break;
-  case 1: //y
-    BTimesDeltaQ[0] = 0.0;
-    BTimesDeltaQ[1] = 0.0;
-    BTimesDeltaQ[2] = g * Q[0] * (deltaQ[0] + deltaQ[3]);
-    break;
-  }""",
-  refinement_criterion  = """
-  auto command = ::exahype2::RefinementCommand::Keep;
-  return command;
-"""
+  ncp                   = my_pde.implementation_of_ncp(),
+  refinement_criterion  = my_pde.implementation_of_refinement_criterion(),
+  source_term           = my_pde.implementation_of_sources()
 )
 
 my_project = exahype2.Project( ["applications", "exahype2", "swe"], "SWEApplication", ".", executable="swe-application-" + str(args.dim) + "d-patch-size-" + str(args.patch_size) + "-cell-size-" + str(args.max_cell_size))

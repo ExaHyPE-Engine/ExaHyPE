@@ -1,7 +1,7 @@
-import pde, sympy
+import scenarios.template_scenario, sympy
 
 
-class Radial_Bathymetry_Dam_Break(pde.PDE):
+class Radial_Bathymetry_Dam_Break(scenarios.template_scenario.Template_Scenario):
     def __init__(self, dimensions, auxiliary_variables, width):
         super().__init__(dimensions=dimensions, auxiliary_variables=auxiliary_variables)
 
