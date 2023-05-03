@@ -429,6 +429,9 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
                use_heap_storage
                )
 
+    self.preprocess_updated_patch = """
+    This is a stupid test
+"""
 
   
         

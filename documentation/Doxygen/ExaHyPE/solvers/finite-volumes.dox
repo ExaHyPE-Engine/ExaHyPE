@@ -6,6 +6,9 @@
 
 @todo fix the references to other chapters and get the images included
 
+*/
+
+
 ## A block-structured AMR code for Finite Volumes 
 
 We create a simple Finite Volumes solver here. The examples starts with
@@ -180,4 +183,3 @@ looks similar to
 
 [^1]: All tools work with overlaps greater than 2. But to keep the text
     simple, I stick to 2.
-*/

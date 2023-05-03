@@ -17,6 +17,7 @@
 \li \subpage page_exahype_runtime_analysis
 \li \subpage page_exahype_performance_optimisation
 \li \subpage page_exahype_parallelisation
+\li \subpage page_exahype_coupling
 \li \subpage page_exahype_cpp_kernels
 \li \subpage page_exahype_solvers
 
