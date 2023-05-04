@@ -73,8 +73,8 @@ void applications::exahype2::ccz4::enforceCCZ4constraints(double * luh)
     luh[11] =   Aex[2][2];
 
     //new constraints: a minimum for phi(chi) and alpha
-    luh[16]=std::fmax(1e-4,luh[16]);
-    luh[54]=std::fmax(1e-2,luh[54]);
+    luh[16]=std::fmax(1e-16,luh[16]);
+    luh[54]=std::fmax(1e-16,luh[54]);
 
     //
     // As suggested by our PRD referee, we also enforce the algebraic constraint that results from the first spatial derivative of the constraint
