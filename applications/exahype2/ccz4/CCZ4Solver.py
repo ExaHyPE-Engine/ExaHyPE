@@ -218,7 +218,8 @@ class AbstractCCZ4Solver(object):
 
 
   @abstractmethod
-  def add_tracer(name,
+  def add_tracer(self,
+                 name,
                  coordinates,
                  project):
     """!
@@ -232,8 +233,8 @@ class AbstractCCZ4Solver(object):
     project.add_action_set_to_timestepping(my_interpolation)
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
       particle_set=tracer_particles,
-      solver=my_solver,
-       filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+      solver=self,
+      filename="Tracer-" + args.solver + "-" + str(args.cell_size),
       number_of_entries_between_two_db_flushes=5000,
       output_precision=10,
       data_delta_between_two_snapsots=1e16,
@@ -326,7 +327,9 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
   }
 """
 
-  def add_tracer(name,
+
+  def add_tracer(self,
+                 name,
                  coordinates,
                  project):
     tracer_particles = project.add_tracer( name=name,attribute_count=59 )
@@ -347,8 +350,8 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
 
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
       particle_set=tracer_particles,
-      solver=my_solver,
-       filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+      solver=self,
+      filename="Tracer-" + name + "-" + str(self._cell_size),
       number_of_entries_between_two_db_flushes=5000,
       output_precision=10,
       data_delta_between_two_snapsots=1e16,
@@ -446,9 +449,10 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
     exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   self, "TP_average_normal_extrap" ) 
 
 
-    def add_tracer(name,
-                   coordinates,
-                   project):
+  def add_tracer(self,
+                 name,
+                 coordinates,
+                 project):
     tracer_particles = project.add_tracer( name=name,attribute_count=59 )
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
@@ -465,14 +469,14 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
                                                 ))
 
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
-      particle_set=tracer_particles,
-      solver=my_solver,
-       filename="Tracer-" + args.solver + "-" + str(args.cell_size),
-      number_of_entries_between_two_db_flushes=5000,
-      output_precision=10,
-      data_delta_between_two_snapsots=1e16,
-      time_delta_between_two_snapsots=0.01
-      ))
+        particle_set=tracer_particles,
+        solver=self,
+        filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+        number_of_entries_between_two_db_flushes=5000,
+        output_precision=10,
+        data_delta_between_two_snapsots=1e16,
+        time_delta_between_two_snapsots=0.01
+        ))
 
 
 
@@ -602,9 +606,10 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 """
 
 
-def add_tracer(name,
-               coordinates,
-               project):
+  def add_tracer(self,
+                 name,
+                 coordinates,
+                 project):
     tracer_particles = project.add_tracer( name=name,attribute_count=59 )
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
@@ -622,8 +627,8 @@ def add_tracer(name,
 
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
       particle_set=tracer_particles,
-      solver=my_solver,
-       filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+      solver=self,
+      filename="Tracer-" + args.solver + "-" + str(args.cell_size),
       number_of_entries_between_two_db_flushes=5000,
       output_precision=10,
       data_delta_between_two_snapsots=1e16,
@@ -719,7 +724,8 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
 
 
 
-  def add_tracer(name,
+  def add_tracer(self,
+                 name,
                  coordinates,
                  project):
     tracer_particles = project.add_tracer( name=name,attribute_count=59 )
@@ -739,8 +745,8 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
 
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
       particle_set=tracer_particles,
-      solver=my_solver,
-       filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+      solver=self,
+      filename="Tracer-" + args.solver + "-" + str(args.cell_size),
       number_of_entries_between_two_db_flushes=5000,
       output_precision=10,
       data_delta_between_two_snapsots=1e16,
