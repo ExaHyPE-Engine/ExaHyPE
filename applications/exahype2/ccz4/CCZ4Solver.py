@@ -234,7 +234,7 @@ class AbstractCCZ4Solver(object):
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
       particle_set=tracer_particles,
       solver=self,
-      filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+      filename="Tracer-" + name,
       number_of_entries_between_two_db_flushes=5000,
       output_precision=10,
       data_delta_between_two_snapsots=1e16,
@@ -351,7 +351,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
       particle_set=tracer_particles,
       solver=self,
-      filename="Tracer-" + name + "-" + str(self._cell_size),
+      filename="Tracer-" + name,
       number_of_entries_between_two_db_flushes=5000,
       output_precision=10,
       data_delta_between_two_snapsots=1e16,
@@ -471,7 +471,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,
         solver=self,
-        filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+        filename="Tracer-" + name,
         number_of_entries_between_two_db_flushes=5000,
         output_precision=10,
         data_delta_between_two_snapsots=1e16,
@@ -628,7 +628,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
       particle_set=tracer_particles,
       solver=self,
-      filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+      filename="Tracer-" + name,
       number_of_entries_between_two_db_flushes=5000,
       output_precision=10,
       data_delta_between_two_snapsots=1e16,
@@ -746,7 +746,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
       particle_set=tracer_particles,
       solver=self,
-      filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+      filename="Tracer-" + name,
       number_of_entries_between_two_db_flushes=5000,
       output_precision=10,
       data_delta_between_two_snapsots=1e16,
