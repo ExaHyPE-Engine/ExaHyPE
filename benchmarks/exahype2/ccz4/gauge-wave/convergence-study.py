@@ -65,28 +65,20 @@ if "fd4-rk" in args.solver:
                                                                       min_meshcell_h       = args.cell_size / 3, 
                                                                       max_meshcell_h       = args.cell_size / 3,
                                                                       )
-  my_solver.set_implementation(initial_conditions   = """
-    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
-      ::applications::exahype2::ccz4::gaugeWave(Q, meshCellCentre, 0);
-    """)
 
 if "second-order" in args.solver:
   order = 1
-  my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FD4RK" + str(order), 
-                                                                      patch_size           = 5,
-                                                                      rk_order             = order,
-                                                                      min_meshcell_h       = args.cell_size / 3, 
-                                                                      max_meshcell_h       = args.cell_size / 3,
-                                                                      )
-  my_additional_solver = CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FD4RK_SO_" + str(order), 
+  my_solver = CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FD4RK_SO_" + str(order), 
                                                                       patch_size           = 5,
                                                                       rk_order             = order,
                                                                       min_meshcell_h       = args.cell_size / 3, 
                                                                       max_meshcell_h       = args.cell_size / 3,
                                                                       reconstruction_type  = "leftDifferences"
                                                                       )
-  initial_condition                                                                    
-  project.add_solver(my_additional_solver)
+  my_solver.set_implementation(initial_conditions   = """
+    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+      ::applications::exahype2::ccz4::gaugeWave(Q, meshCellCentre, 0);
+    """)
   
 
 if "rk" in args.solver and "dg" in args.solver:

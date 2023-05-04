@@ -59,7 +59,13 @@ class AbstractCCZ4Solver(object):
   invoke the Python script for the first time. These methods will contain
   todo comments for you. Subsequent runs of the Python API should not 
   overwrite the solver implementation.
-  
+ 
+  ## Constants
+
+  Each CCZ4 solver requires a minimal set of constants. These are represented
+  by 
+  self.add_solver_constants("static constexpr int {} = {};".format(key, value))
+
   """
   
   
@@ -92,26 +98,35 @@ class AbstractCCZ4Solver(object):
           "K0":1,
         }
 
-# @todo Han, I need your help  
+  """"
+
+  Primary unknowns of the CCZ4 formulation which are there in the initial
+  formulation. All the other variables are auxiliary variables, i.e. ones
+  introduced to return to a first-order formulation. Unfortunately, the 
+  ordering in _FO_formulation_unknows is motivated by the original papers 
+  and not by the fact which quantities are original ones and which one are
+  helper or auxiliary variables.
+
+  """
   _SO_formulation_unknowns = {
-          "G":6,
-          "K":6,
-          "theta":1,
-          "Z":3,
-          "lapse":1,
-          "shift":3,
-          "b":3,
-          "dLapse":3,
-          "dxShift":3,
-          "dyShift":3,
-          "dzShift":3,
-          "dxG":6,
-          "dyG":6,
-          "dzG":6,
-          "traceK":1,
-          "phi":1,
-          "P":3,
-          "K0":1,
+          "G",
+          "K",
+          "theta",
+          "Z",
+          "lapse",
+          "shift",
+          "b",
+          "dLapse",
+          "dxShift",
+          "dyShift",
+          "dzShift",
+          "dxG",
+          "dyG",
+          "dzG",
+          "traceK",
+          "phi",
+          "P",
+          "K0",
         }
   
   # May not have a constructor. All the other numerical classes have 
