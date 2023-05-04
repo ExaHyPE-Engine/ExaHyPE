@@ -446,8 +446,9 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
     exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   self, "TP_average_normal_extrap" ) 
 
 
-  def add_tracer(name,
-                 coordinates):
+    def add_tracer(name,
+                   coordinates,
+                   project):
     tracer_particles = project.add_tracer( name=name,attribute_count=59 )
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
@@ -601,8 +602,9 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 """
 
 
-  def add_tracer(name,
-                 coordinates):
+def add_tracer(name,
+               coordinates,
+               project):
     tracer_particles = project.add_tracer( name=name,attribute_count=59 )
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
@@ -718,8 +720,8 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
 
 
   def add_tracer(name,
-                 coordinates):
-      
+                 coordinates,
+                 project):
     tracer_particles = project.add_tracer( name=name,attribute_count=59 )
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
