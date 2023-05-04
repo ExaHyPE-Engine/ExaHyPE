@@ -1,0 +1,112 @@
+import os
+import argparse
+
+import peano4
+import exahype2
+import dastgen2
+
+import peano4.toolbox.particles
+import numpy as np
+
+# See comments in README.dox
+from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
+from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
+from CCZ4Solver import CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking
+from CCZ4Solver import CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking
+
+
+parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4-GaugeWave benchmarking script')
+parser.add_argument("-j",   "--parallel-builds",   dest="j",                type=int, default=-1, help="Parallel builds" )
+parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",         default="../../../../", help="Peano4 directory" )
+parser.add_argument("-v",   "--verbose",           dest="verbose",          action="store_true", default=False, help="Verbose")
+parser.add_argument("-et",  "--end-time",          dest="end_time",         type=float, default=1.0, help="End of simulation" )
+parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.3, help="Cell size (default 0.3)" )
+parser.add_argument("-asserts", "--asserts",      dest="asserts",          action="store_true", default=False, help="Switch on assertions" )
+parser.add_argument("-tracer",  "--tracer",       dest="tracer",           action="store_true", default=False, help="Activate tracer" )
+parser.add_argument("-hs",      "--heap-storage",          dest="use_heap_storage", action="store_true", default=False, help="Store user data on heap via smart pointers" )
+
+args = parser.parse_args()
+
+
+project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=args.solver + "-" + str(args.cell_size))
+
+        
+#
+# Create solver class
+#
+# For FV and FD schemes, I pick patches of 9x9x9 here, as I then can match stuff exactly 
+# with the DG solver of DG order 0. This helps me to debug stuff.
+#
+my_solver = None
+
+
+
+order = int(args.solver[-1])
+my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FD4RK" + str(order), 
+                                                                      patch_size           = 5,
+                                                                      rk_order             = order,
+                                                                      min_meshcell_h       = args.cell_size / 3, 
+                                                                      max_meshcell_h       = args.cell_size / 3,
+                                                                      )
+
+
+
+assert my_solver!=None
+
+project.add_solver(my_solver)
+
+
+########################################################################################
+# Build the project
+########################################################################################
+
+if args.asserts:
+  build_mode = peano4.output.CompileMode.Asserts
+else:
+  build_mode = peano4.output.CompileMode.Release
+    
+if args.asserts:
+  delta_plot = 1.0/100
+else:
+  delta_plot = 1.0/20
+
+dimensions  = 3
+offset      = [-0.5, -0.5, -0.5] 
+domain_size = [   1,    1,    1]
+
+periodic_boundary_conditions = [True,True,True]          # Periodic BC
+
+project.set_global_simulation_parameters(
+  dimensions,               # dimensions
+  offset,  domain_size,
+  args.end_time,
+  0.0, 
+  delta_plot,
+  periodic_boundary_conditions,
+  8  # plotter precision
+)
+
+project.set_Peano4_installation(args.peanodir, build_mode)
+
+#project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
+project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+
+
+peano4_project = project.generate_Peano4_project(verbose=args.verbose)
+
+my_solver.add_makefile_parameters(peano4_project, "../../../../applications/exahype2/ccz4" )
+
+peano4_project.output.makefile.add_linker_flag( "-lm -L/cosma/local/gsl/2.4/lib -lgsl -L/cosma/local/gsl/2.4/lib -lgslcblas" )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Utilities.cpp" )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Parameters.cpp" )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Logging.cpp" )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/TwoPunctures.cpp" )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/CoordTransf.cpp" )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/Equations.cpp" )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/FuncAndJacobian.cpp" )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/Newton.cpp" )
+peano4_project.output.makefile.add_CXX_flag( "-DIncludeTwoPunctures" )
+     
+
+peano4_project.generate( throw_away_data_after_generation=False )
+peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
