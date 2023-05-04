@@ -30,23 +30,14 @@ args = parser.parse_args()
 
 project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=args.solver + "-" + str(args.cell_size))
 
-        
-#
-# Create solver class
-#
-# For FV and FD schemes, I pick patches of 9x9x9 here, as I then can match stuff exactly 
-# with the DG solver of DG order 0. This helps me to debug stuff.
-#
+
 my_solver = None
 
-
-
-order = int(args.solver[-1])
-my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FD4RK" + str(order), 
-                                                                      patch_size           = 5,
-                                                                      rk_order             = order,
-                                                                      min_meshcell_h       = args.cell_size / 3, 
-                                                                      max_meshcell_h       = args.cell_size / 3,
+my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4SBH" , 
+                                                                      patch_size           = 6,
+                                                                      rk_order             = 1,
+                                                                      min_meshcell_h       = 0.04, 
+                                                                      max_meshcell_h       = 0.4,
                                                                       )
 
 
@@ -65,32 +56,72 @@ if args.asserts:
 else:
   build_mode = peano4.output.CompileMode.Release
     
-if args.asserts:
-  delta_plot = 1.0/100
-else:
-  delta_plot = 1.0/20
-
 dimensions  = 3
-offset      = [-0.5, -0.5, -0.5] 
-domain_size = [   1,    1,    1]
-
-periodic_boundary_conditions = [True,True,True]          # Periodic BC
+offset      = [-9, -9, -9] 
+domain_size = [   18,    18,    18]
 
 project.set_global_simulation_parameters(
   dimensions,               # dimensions
   offset,  domain_size,
   args.end_time,
   0.0, 
-  delta_plot,
+  1,
   periodic_boundary_conditions,
   8  # plotter precision
 )
+
+my_solver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
+      double Qinf[59]={1.0, 0.0, 0.0, 1.0, 0.0, 1.0,        //q0-5
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                      //q6-11
+         0.0, 0.0, 0.0, 0.0,                                //q12-15
+         1.0, 0.0, 0.0, 0.0,                                //q16-19
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                      //q20-25
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,       //q26-34
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,       //q35-52
+         0.0, 1.0, 0.0, 0.0, 0.0, 0.0                       //q53-58
+      }; //approximate background solution at infinity 
+      ::exahype2::fd::applySommerfeldConditions(
+        [&](
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  gridCellH,
+          double                                       t,
+          double                                       dt,
+          int                                          normal
+        ) -> double {
+          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
+        },
+        [&](
+          double * __restrict__                        Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  gridCellH
+        ) -> void {
+          for (int i=0; i<"""+str(my_solver._unknowns+my_solver._auxiliary_variables)+"""; i++) {
+            Q[i] = 0.0;
+          }
+          Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
+          Q[16] = 0.95; Q[54] = 0.95;
+        },
+        marker.x(),
+        marker.h(),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+        {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
+        {{OVERLAP}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        marker.getSelectedFaceNumber(),
+        {0.0, 0.0, 0.0},
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
+      );
+      """
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 #project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
-
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
