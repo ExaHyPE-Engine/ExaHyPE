@@ -159,13 +159,81 @@ void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_4thOrder(
   int                     unknowns,
   int                     auxiliaryVariables
 ) {
-  recomputeAuxiliaryVariablesFD4<internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody>(
-    patchData,
-    numberOfGridCellsPerPatchPerAxis,
-    haloSize,
-    unknowns,
-    auxiliaryVariables
-  );
+  assertion( haloSize >= 3 );
+  ::exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
+
+  for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+    if (Dimensions==2) {
+        for (int x = -1; x < numberOfGridCellsPerPatchPerAxis+1; x++)
+        for (int y =  0; y < numberOfGridCellsPerPatchPerAxis;   y++) {
+          internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            gridCellIndex2d(x,y),
+            0  // normal
+          );
+        }
+
+        for (int x =  0; x < numberOfGridCellsPerPatchPerAxis;   x++)
+        for (int y = -1; y < numberOfGridCellsPerPatchPerAxis+1; y++) {
+          internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            gridCellIndex2d(x,y),
+            1 // normal
+          );
+        }
+    }
+    else {
+        for (int x = -1; x < numberOfGridCellsPerPatchPerAxis+1; x++)
+        for (int y =  0; y < numberOfGridCellsPerPatchPerAxis;   y++)
+        for (int z =  0; z < numberOfGridCellsPerPatchPerAxis;   z++) {
+          internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            gridCellIndex3d(x,y,z),
+            0 // normal
+          );
+        }
+
+        for (int x =  0; x < numberOfGridCellsPerPatchPerAxis;   x++)
+        for (int y = -1; y < numberOfGridCellsPerPatchPerAxis+1; y++)
+        for (int z =  0; z < numberOfGridCellsPerPatchPerAxis;   z++) {
+          internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            gridCellIndex3d(x,y,z),
+            1 // normal
+          );
+        }
+
+        for (int x =  0; x < numberOfGridCellsPerPatchPerAxis;   x++)
+        for (int y =  0; y < numberOfGridCellsPerPatchPerAxis;   y++)
+        for (int z = -1; z < numberOfGridCellsPerPatchPerAxis+1; z++) {
+          internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            gridCellIndex3d(x,y,z),
+            2 // normal
+          );
+        }
+    }
+  }
 }
 
 

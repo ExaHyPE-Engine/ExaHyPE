@@ -31,6 +31,26 @@ namespace applications {
        * need a halo layer of at least two. For a given haloSize, we can never
        * update the outermost two layers of the code.
        *
+       *
+       * ## Shortcomings
+       *
+       * @image html recomputeAuxiliaryVariablesFD4_4thOrder.png
+       *
+       * As we use a fourth order scheme, we need two neighbours around each
+       * point to construct the outcome. That means, when we are given a patch
+       * with size 3 (left illustation above), we effectively can only calculate
+       * the auxiliary variables within the patch (green) and the first halo
+       * layer around it (brownish). This is illustrated to the right.
+       *
+       * There's one further complexity: we usually do not have the digonal
+       * values in ExaHyPE. What we really get is not the illustration above
+       * to the left but the one in the centre. The diagonal blocks hold
+       * garbage. As a consequence, the auxiliary data in the brown data layer
+       * to the right is not properly computed. In the left brown layer, only
+       * the x-derivatives are properly reconstructed. The y-derivatives
+       * contain garbage.
+       *
+       *
        * @param patchData          Host the actual patch data. For this
        *   function, we only have to ensure that the QIn (data plus halo)
        *   are properly set, and that the patch size in patchData is
