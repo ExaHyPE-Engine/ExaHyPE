@@ -8,21 +8,21 @@
 //
 #pragma once
 
-#include "AbstractCCZ4SBH.h"
+#include "AbstractCCZ4SBH_FD4.h"
 #include "tarch/logging/Log.h"
 
 namespace benchmarks {namespace exahype2 {namespace ccz4 {
-  class CCZ4SBH;
+  class CCZ4SBH_FD4;
 
 }}}
 
 
-class benchmarks::exahype2::ccz4::CCZ4SBH: public benchmarks::exahype2::ccz4::AbstractCCZ4SBH {
+class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4::AbstractCCZ4SBH_FD4 {
   private:
     static tarch::logging::Log   _log;
 
   public:
-    CCZ4SBH();
+    CCZ4SBH_FD4();
     
     /**
      * Refinement criterion

@@ -1,8 +1,9 @@
-#include "CCZ4SBH.h"
+#include "CCZ4SBH_FD4.h"
+
 #include "exahype2/RefinementControl.h"
 
 
-tarch::logging::Log   benchmarks::exahype2::ccz4::CCZ4SBH::_log( "benchmarks::exahype2::ccz4::CCZ4SBH" );
+tarch::logging::Log   benchmarks::exahype2::ccz4::CCZ4SBH_FD4::_log( "benchmarks::exahype2::ccz4::CCZ4SBH_FD4" );
 
 #ifdef IncludeTwoPunctures
 TP::TwoPunctures* _tp = new TP::TwoPunctures();
@@ -10,7 +11,7 @@ TP::TwoPunctures* _tp = new TP::TwoPunctures();
 
 #ifdef IncludeTwoPunctures
 //pre-process, solve the puncture equations
-void benchmarks::exahype2::ccz4::CCZ4SBH::prepare(TP::TwoPunctures* tp){
+void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::prepare(TP::TwoPunctures* tp){
     //first we set the parameter. TODO:find a way to read parameter from python script
     //int swi=0;//0--single black hole, 1--BBH hoc, 2--BBH rotation, 3--GW150914
     
@@ -32,7 +33,7 @@ void benchmarks::exahype2::ccz4::CCZ4SBH::prepare(TP::TwoPunctures* tp){
 }
 #endif
 
-::exahype2::RefinementCommand benchmarks::exahype2::ccz4::CCZ4SBH::refinementCriterion(
+::exahype2::RefinementCommand benchmarks::exahype2::ccz4::CCZ4SBH_FD4::refinementCriterion(
   const double * __restrict__ Q, // Q[59+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  meshCellH,
@@ -47,14 +48,14 @@ void benchmarks::exahype2::ccz4::CCZ4SBH::prepare(TP::TwoPunctures* tp){
   return result;
 }
 
-benchmarks::exahype2::ccz4::CCZ4SBH::CCZ4SBH(){
+benchmarks::exahype2::ccz4::CCZ4SBH_FD4::CCZ4SBH_FD4(){
   #ifdef IncludeTwoPunctures
     prepare(_tp);//we solve the puncture equation here.
     //exit(0);
   #endif
 }
 
-void benchmarks::exahype2::ccz4::CCZ4SBH::initialCondition(
+void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
   const tarch::la::Vector<Dimensions,double>&  meshCellH,

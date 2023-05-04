@@ -15,15 +15,50 @@ from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking
 
 
-def construct_FD_solver():
+def construct_FV_solver(min_cell_size, max_cell_size):
+    """!
+    
+    Construct the Finite Volume (limiter) scheme
+    """
     my_solver = None
     
-    my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4SBH" , 
-                                                                          patch_size           = 6,
-                                                                          rk_order             = 1,
-                                                                          min_meshcell_h       = args.cell_size, 
-                                                                          max_meshcell_h       = args.cell_size,
-                                                                          )
+    patch_size = 6
+    
+    my_solver = CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4SBH_FV" , 
+                                                                       patch_size           = patch_size,
+                                                                       min_volume_h       = min_cell_size/patch_size, 
+                                                                       max_volume_h       = max_cell_size/patch_size,
+                                                                       )
+    
+    my_solver.set_implementation(initial_conditions   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                 refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+                                 boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation
+                                 )
+    my_solver.add_all_solver_constants()
+    
+    return my_solver
+
+
+def construct_FD_solver(min_cell_size, max_cell_size):
+    """!
+    
+    Construct finite differences solver
+    
+    The FD scheme is our primary solver, i.e. the one we wanna use (almost) 
+    everywhere. Hence, we have to be sure that we use the right boundary 
+    conditions. In our case, that should be Sommerfeld ones.
+    
+    """
+    my_solver = None
+    
+    patch_size = 6
+    
+    my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4SBH_FD4" , 
+                                                                        patch_size           = patch_size,
+                                                                        rk_order             = 1,
+                                                                        min_meshcell_h       = min_cell_size/patch_size, 
+                                                                        max_meshcell_h       = max_cell_size/patch_size,
+                                                                        )
     
     my_solver.set_implementation(initial_conditions   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                  refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -98,10 +133,12 @@ if __name__ == "__main__":
     
     project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable="peano_sbh_" + str(args.cell_size))
     
-    
-    my_primary_solver = construct_FD_solver()
+    my_primary_solver   = construct_FD_solver( args.cell_size, args.cell_size )
+    my_secondary_solver = construct_FV_solver( args.cell_size, args.cell_size )
 
     project.add_solver(my_primary_solver)
+    project.add_solver(my_secondary_solver)
+
         
     ########################################################################################
     # Build the project
@@ -123,7 +160,7 @@ if __name__ == "__main__":
       offset,  domain_size,
       args.end_time,
       0.0, 
-      0.1,
+      0.0, # we do not plot
       [False,False,False],
       8  # plotter precision
     )
@@ -135,6 +172,22 @@ if __name__ == "__main__":
     
     
     project.set_Peano4_installation(args.peanodir, build_mode)
+
+
+    ########################################################################################
+    # Add tracer
+    ########################################################################################
+    number_of_tracers = 1000
+    tracer_coordinates = [ [ (i/ domain_size[0] / 2.0),0,0] for i in range(0,number_of_tracers) ]
+    my_primary_solver.add_tracer(name        = "PrimaryTracer", 
+                                 coordinates = tracer_coordinates,
+                                 project     = project
+                                 )
+    my_secondary_solver.add_tracer(name        = "SecondaryTracer", 
+                                   coordinates = tracer_coordinates,
+                                   project     = project
+                                   )
+
     
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
     project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
