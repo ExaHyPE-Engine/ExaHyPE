@@ -39,6 +39,27 @@ class AbstractCCZ4Solver(object):
   boundary conditions, you have to tell the solver how to treat the boundary.
   This is typically done via set_implementation(), too.
   
+  ## More complex scenarios
+  
+  Setting particular implementations via set_implementation() is not always
+  convenient or possible. You might want to add new functions to your classes,
+  do something in the solver constructor, and so forth. If so, feel free to 
+  modify the file MySolverName.cpp which the tool generates. In this context,
+  you might want to pass in
+  
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  my_solver.set_implementation(initial_conditions   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                               refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                               boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+                               )
+                               
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  which ensures that you get the right hook-in methods generated when you 
+  invoke the Python script for the first time. These methods will contain
+  todo comments for you. Subsequent runs of the Python API should not 
+  overwrite the solver implementation.
+  
   """
   
   

@@ -53,6 +53,10 @@ if args.solver=="fv":
                                                                      min_volume_h         = args.cell_size / 5, 
                                                                      max_volume_h         = args.cell_size / 5,
                                                                      )
+  my_solver.set_implementation(initial_conditions   = """
+    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+      ::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
+    """)
 if "fd4-rk" in args.solver:
   order = int(args.solver[-1])
   my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FD4RK" + str(order), 
@@ -61,6 +65,10 @@ if "fd4-rk" in args.solver:
                                                                       min_meshcell_h       = args.cell_size / 3, 
                                                                       max_meshcell_h       = args.cell_size / 3,
                                                                       )
+  my_solver.set_implementation(initial_conditions   = """
+    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+      ::applications::exahype2::ccz4::gaugeWave(Q, meshCellCentre, 0);
+    """)
 
 if "second-order" in args.solver:
   order = 1
@@ -77,6 +85,7 @@ if "second-order" in args.solver:
                                                                       max_meshcell_h       = args.cell_size / 3,
                                                                       reconstruction_type  = "leftDifferences"
                                                                       )
+  initial_condition                                                                    
   project.add_solver(my_additional_solver)
   
 
@@ -89,6 +98,10 @@ if "rk" in args.solver and "dg" in args.solver:
                                                                min_cell_h           = args.cell_size * space_order, 
                                                                max_cell_h           = args.cell_size * space_order,
                                                                )
+  my_solver.set_implementation(initial_conditions   = """
+                                                       for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+                                                       ::applications::exahype2::ccz4::gaugeWave(Q, x, 0);
+                                                     """)
 
 
 assert my_solver!=None
