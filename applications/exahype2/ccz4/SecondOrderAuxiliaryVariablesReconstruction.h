@@ -18,11 +18,33 @@ namespace applications {
        * auxiliaryVariables. By default, we'd expect 59 and 0 here, but we
        * want to routine to work for augmented systems, too.
        *
-       * The reconstruction uses a 4th order Finite Difference scheme.
+       * The reconstruction uses a 4th order Finite Difference scheme. The
+       * implementation in applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody()
+       * realises the normal stencil
        *
-       * @todo Han, can we add some docu here.
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * [1 -8 0 8 -1]
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        *
-       * @param haloSize Has to be at least 3.
+       * scaled with @f$ \frac{1}{12h} @f$. There is a fundamental problem with
+       * this variant which is worth mentioning: To evaluate this stencil, we
+       * need a halo layer of at least two. For a given haloSize, we can never
+       * update the outermost two layers of the code.
+       *
+       * @param patchData          Host the actual patch data. For this
+       *   function, we only have to ensure that the QIn (data plus halo)
+       *   are properly set, and that the patch size in patchData is
+       *   correct. All the other (meta data) properties have no influence
+       *   and can hold any data.
+       * @param numberOfGridCellsPerPatchPerAxis Has to be at least 3, as
+       *   the halo is also at least three. More general, has to be bigger or
+       *   equal to haloSize.
+       * @param haloSize           Has to be at least 3.
+       * @param unknowns           Typically 59, but can be bigger if you hold
+       *   additional quantities within the PDE.
+       * @param auxiliaryVariables Typically 0.
+       *
+       * @see applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody()
        */
       void recomputeAuxiliaryVariablesFD4_4thOrder(
         ::exahype2::CellData&   patchData,

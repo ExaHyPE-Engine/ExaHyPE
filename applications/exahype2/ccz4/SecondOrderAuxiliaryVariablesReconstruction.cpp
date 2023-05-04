@@ -311,25 +311,17 @@ void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_4thO
   double cellsize = patchSize(normal) / QInEnumerator._numberOfDoFsPerAxisInCell;
   double gradcoef = 1.0/(12.0*cellsize);
 
-  //std::cout<<"called here"<<std::endl;
-  // A[normal] = \partial_{normal}\alpha
-  // alpha is Q[16]
-  //std::cout<<"before:"<<QIn[ QInEnumerator(patchIndex,centralVolume,23+normal) ]<<std::endl;
   QIn[ QInEnumerator(patchIndex,centralVolume,23+normal) ] =     gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,16) ] -
                                                              8.0*gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,16) ] +
                                                              8.0*gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,16) ] -
                                                                  gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,16) ];
-  //std::cout<<"after:"<<QIn[ QInEnumerator(patchIndex,centralVolume,23+normal) ]<<std::endl;
 
-  // P[normal] = \partial_{normal}\phi
-  // phi is Q[54]
+  // I'm afraid I misunderstood the enumeration
   QIn[ QInEnumerator(patchIndex,centralVolume,55+normal) ] =     gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,54) ] -
                                                              8.0*gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,54) ] +
                                                              8.0*gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,54) ] -
                                                                  gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,54) ];
 
-  // B[normal][i] = \partial_{normal}\beta^i
-  // beta^i is Q[17] - Q[19]
   for (int i=0; i<3; i++) {
     QIn[ QInEnumerator(patchIndex,centralVolume,26+3*normal+i) ] =     gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,17+i) ] -
                                                                    8.0*gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,17+i) ] +
@@ -337,8 +329,6 @@ void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_4thO
                                                                        gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,17+i) ];
   }
 
-  // D[normal][i][j] = 0.5*\partial_{normal}\tilde{\gamma}_{ij} -- note the 1/2 factor
-  // \tilde{\gamma}_{ij} is Q[0] - Q[5]
   for (int i=0; i<3; i++)
   for (int j=i; j<3; j++) {
     int k = (i==0?j:i+j+1);
