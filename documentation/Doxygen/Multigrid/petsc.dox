@@ -75,9 +75,8 @@ representation of our project.
 
 1. Mesh creation - this is done automatically
 
-2. EnumerateAndInitSolution step - Here we have two action sets, EnumerateVertices.py and 
-   InitVertexDoFs.py.
-   In the first, every fineGridVertex is marked as "Dirichlet"
+2. EnumerateAndInitSolution step - Here we have two action sets, petsc.actionsets.InitVertexDoFs and petsc.actionsets.EnumerateVertices.
+   In InitVertexDoFs.py, every fineGridVertex is marked as "Dirichlet"
    if it lies on the boundary, and as "DoF" otherwise. For now, we just use marker.x() to 
    determine whether a vertex is on the boundary.
    We also insert 
