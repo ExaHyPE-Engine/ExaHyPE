@@ -11,10 +11,18 @@
 #include "AbstractCCZ4SBH_FD4.h"
 #include "tarch/logging/Log.h"
 
-namespace benchmarks {namespace exahype2 {namespace ccz4 {
-  class CCZ4SBH_FD4;
 
-}}}
+namespace benchmarks {
+  namespace exahype2 {
+    namespace ccz4 {
+      class CCZ4SBH_FD4;
+
+      extern TP::TwoPunctures* twoPunctures;
+
+      void prepareTwoPunctures();
+    }
+  }
+}
 
 
 class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4::AbstractCCZ4SBH_FD4 {
@@ -22,6 +30,9 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4
     static tarch::logging::Log   _log;
 
   public:
+    /**
+     * Initialise the two punctures object if required
+     */
     CCZ4SBH_FD4();
     
     /**
@@ -51,12 +62,7 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4
       double                                       t
     ) override;
     
-#ifdef IncludeTwoPunctures
-    void prepare(TP::TwoPunctures* tp); 
-#endif
 
-
-    
     void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
@@ -64,30 +70,7 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4
       bool                                         gridIsConstructred
     ) override;
     
-
-    
     
   public:
-    
-
-    
-
-
-    
-     
-     
-    
-    
-   
-    
-
-
-    
-
-
-    
-     
-   
-        
 };
 

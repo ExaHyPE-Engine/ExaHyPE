@@ -3,6 +3,462 @@
 @page page_exahype_coupling Coupling of various solvers
 
 
+Time step sizes
+
 
  */
+ 
+ 
+ 
+ 
+Case study: A Finite Volumes code coupling two solvers (hyperbolic+elliptic) {#section:exahype:fv:coupling}
+----------------------------------------------------------------------------
+
+If you want to solve systems of PDEs where some PDEs advance on
+different time scales, you have two options on the table in : You can
+model the two solvers as one big system or you can logically code the
+two solvers as two totally separate things and couple them. The first
+approach is simple: If the two solvers feature $N_1$ and $N_2$ unknowns,
+you simply create one new solver with $N_1+N_2$ unknowns and you provide
+flux functionsm, ncps, ...for all of the components. The big
+disadvantage of this approach is that all solvers have to advance in
+time at the same speed, that you might replicate code if you have
+already two existing solvers, and that you also might run a lot of
+unneeded calculations if only some PDE equations evolve actually in
+time.
+
+In this case study, we go down the second route and show how to realise
+a PDE consisting of two systems of PDEs via two separate  solvers. While
+this approach allows us to have a clear separation-of-solvers, the
+coupling of the two systems is not that straightforward. There's an
+additional gimnick/opportunity arising from this separated approach: We
+will eventually have one solver which advances in time with extremely
+small time steps every time the other solver does a (large) time step.
+This approach will allow us to realise a hyperbolic+elliptic system
+along the lines of Schlottke-Lakemper et al.
+
+##### Problem formulation
+
+We solve the problem $$\partial _t Q + \nabla \cdot F(Q) = \left(
+  \begin{array}{c}
+  0 \\
+  \rho \nabla \phi \\
+  - (v, \nabla \phi) \rho
+  \end{array} 
+ \right)
+ \label{equation:exahype:case-study:self-gravitation}$$
+
+which gives the Euler equation with $Q = (\rho, v, E) \in \mathbb{R}^5$
+subject to a modified source term (right-hand side). While $F(Q)$ stems
+from the Euler equations in the previous example, a second PDE
+$$- \Delta \phi = -\pi G/\rho$$ adds self-gravitation to this setup. We
+rephrase the latter elliptic equation into a hyperbolic variant with
+$\phi (\tau)$ and three helper functions $(q_1,q_2,q_3)(\tau)$ where
+$$\partial _{\tau} 
+ \left(
+  \begin{array}{c}
+   \phi \\ q_1 \\ q_2 \\ q_3
+  \end{array} 
+ \right)
+ + \nabla \cdot
+ \left(
+  \begin{array}{ccc}
+   -q_1 & -q_2 & -q_3 \\
+   -\phi/T_\tau & 0 & 0 \\
+   0 & -\phi/T_\tau & 0 \\
+   0 & 0 & -\phi/T_\tau 
+  \end{array} 
+ \right)
+ = 
+  \left(
+  \begin{array}{c}
+   -\pi G/\rho \\ 
+   -q_1/T_\tau \\
+   -q_2/T_\tau \\
+   -q_3/T_\tau 
+  \end{array} 
+ \right).
+ \label{equation:exahype:case-study:elliptic-hyperbolic-constraint}$$
+
+We will model
+([\[equation:exahype:case-study:self-gravitation\]](#equation:exahype:case-study:self-gravitation){reference-type="ref"
+reference="equation:exahype:case-study:self-gravitation"}) and
+([\[equation:exahype:case-study:elliptic-hyperbolic-constraint\]](#equation:exahype:case-study:elliptic-hyperbolic-constraint){reference-type="ref"
+reference="equation:exahype:case-study:elliptic-hyperbolic-constraint"})
+as completely separate PDEs. Equation
+([\[equation:exahype:case-study:elliptic-hyperbolic-constraint\]](#equation:exahype:case-study:elliptic-hyperbolic-constraint){reference-type="ref"
+reference="equation:exahype:case-study:elliptic-hyperbolic-constraint"})
+advances on tiny time scales which we indicate by switching from $Q(t)$
+to a $\phi (\tau)$, i.e. two time arguments $t$ and $\tau$. Our strategy
+is to make
+([\[equation:exahype:case-study:self-gravitation\]](#equation:exahype:case-study:self-gravitation){reference-type="ref"
+reference="equation:exahype:case-study:self-gravitation"}) do a large
+time step, then we advance
+([\[equation:exahype:case-study:elliptic-hyperbolic-constraint\]](#equation:exahype:case-study:elliptic-hyperbolic-constraint){reference-type="ref"
+reference="equation:exahype:case-study:elliptic-hyperbolic-constraint"})
+in time with tiny steps until it has reached a stationary solutions. The
+current $\rho$ from
+([\[equation:exahype:case-study:self-gravitation\]](#equation:exahype:case-study:self-gravitation){reference-type="ref"
+reference="equation:exahype:case-study:self-gravitation"}) feeds into
+these tiny time steps as fixed (time-independent) parameter. Once we
+have reached a stationary state, we take the arising $\phi$ and make it
+feed into the next time step of
+([\[equation:exahype:case-study:self-gravitation\]](#equation:exahype:case-study:self-gravitation){reference-type="ref"
+reference="equation:exahype:case-study:self-gravitation"}). Equation
+([\[equation:exahype:case-study:elliptic-hyperbolic-constraint\]](#equation:exahype:case-study:elliptic-hyperbolic-constraint){reference-type="ref"
+reference="equation:exahype:case-study:elliptic-hyperbolic-constraint"})
+will finally be restarted at the new time stamp reached by the Euler
+system.
+
+For the Euler equations, all ingredients are well-known from the
+introductory example. The Poisson-ish operator is degenerated and yields
+(for the flux in x-direction)
+
+$$F_x = \left( \begin{array}{c} -q_1 \\   -\phi / T_\tau \\ 0 \\ 0 \end{array}
+\right)
+\quad \text{i.e.} \quad
+\nabla F_x = \left( \begin{array}{cccc} 
+  0 & -1 & 0 & 0 \\
+ -1/T_\tau & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0
+\end{array} \right)$$
+
+with a trivial maximum eigenvalue/singular value $\sqrt{ 1/T_\tau }$. We
+note that this value does not depend on $\phi$, i.e. is
+solution-independent.
+
+##### Realisation with two individual solvers
+
+As we go down the route with separate solvers, we simply create two
+solvers over the corresponding number of unknowns, i.e. 5 for Euler and
+4 for the Poisson operator (which we have transformed into a stationary
+first-order hyperbolic system). In the simplest case, this looks similar
+to
+
+The interesting thing here is the auxiliary variables: Our Poisson-type
+equations
+([\[equation:exahype:case-study:elliptic-hyperbolic-constraint\]](#equation:exahype:case-study:elliptic-hyperbolic-constraint){reference-type="ref"
+reference="equation:exahype:case-study:elliptic-hyperbolic-constraint"})
+require the solution's density $\rho$ of the Euler equation
+([\[equation:exahype:case-study:elliptic-hyperbolic-constraint\]](#equation:exahype:case-study:elliptic-hyperbolic-constraint){reference-type="ref"
+reference="equation:exahype:case-study:elliptic-hyperbolic-constraint"})
+as input. As we want to develop the two solvers completely separate, we
+model introduce a material parameter for
+([\[equation:exahype:case-study:elliptic-hyperbolic-constraint\]](#equation:exahype:case-study:elliptic-hyperbolic-constraint){reference-type="ref"
+reference="equation:exahype:case-study:elliptic-hyperbolic-constraint"})
+which "mirrors" the density of the other equation. For the Poisson
+implementations, it seems as if the density indeed were some fixed value
+prescribed by the code. The other way round, our modified Euler terms in
+([\[equation:exahype:case-study:self-gravitation\]](#equation:exahype:case-study:self-gravitation){reference-type="ref"
+reference="equation:exahype:case-study:self-gravitation"}) require the
+gradient from
+([\[equation:exahype:case-study:elliptic-hyperbolic-constraint\]](#equation:exahype:case-study:elliptic-hyperbolic-constraint){reference-type="ref"
+reference="equation:exahype:case-study:elliptic-hyperbolic-constraint"}).
+There are different ways to realise the coupling in this direction. In
+the present example, we go down the simplest route and explicitly store
+the gradient entries as material parameters.
+
+The implementation of the three PDE terms (flux, eigenvalue and source
+term) is straightforward for both PDEs. Each routine accepts a vector
+$Q$ which holds both the solution, i.e. five or four components
+respectively, and then appended to these the one or three "material
+parameters". For the flux and the eigenvalue, we ignore these material
+parameters, i.e. the code looks exactly as the plain Euler equations for
+the first part. The source term however now takes the material parameter
+as input. Here's the kernel for the Poisson-type equation:
+
+##### Coupling the equations
+
+The actual coupling in this example is done by mapping some unknowns
+from one equation onto material parameters in the other equations. As we
+deal with a quasi-stationary second PDE, this coupling is trivial in the
+sense that we do not have to interpolate in time.
+
+There are two places where we can add this coupling: It can either be a
+preprocessing step of the time step or a postprocessing step. While, in
+principle, both approaches do work here, there's a delicate difference
+(see documentation): In the pre-processing step, we have access to the
+patch data plus the halo. In the post-processing step, we have only
+access to the patch content. In our example, these things don't make a
+big difference, so we run for a coupling after each time step.
+
+For the density, which feeds from the
+([\[equation:exahype:case-study:self-gravitation\]](#equation:exahype:case-study:self-gravitation){reference-type="ref"
+reference="equation:exahype:case-study:self-gravitation"}) into the
+material parameters of the Poisson-ish equation, we need a plain copy
+from $$Q[0]|_{\text{Euler}} \mapsto   Q[4]|_{\text{Poisson}}$$ for which
+'s toolbox provides a generic implementation:
+
+In this special case, we use a plain copy. If the two different solvers
+have different patch sizes, i.e. unknowns per dimension, we have to
+interpolate accordingly. The invocation is kind of self-explaining: We
+include a helper function from the toolbox and call the `copyUnknown`.
+The "nasty" part is the `fineGridCellPoissonQ` part, for which we have
+to study the naming conventions within ---a detail usually hidden from
+the user: The unknowns per cell (so the plain double array) are called
+`fineGridCell` followed by the name of the solver `Euler` and then a
+`Q`. The data is actually a struct for our plain double fields which
+hosts a pointer `value`.
+
+If you work in the preprocessing step, i.e. inject the coupling prior to
+the time step, you work with a temporary array `reconstructedPatch`
+which hosts the patch data plus the information from the halos. That is,
+you work with some `fineGridCell...Q` value as pre-image, but you write
+into `reconstructedPatch` which now already has a halo. You can also
+hook into this step to "save" data from `reconstructedPatch` before it
+is handed over to the time stepping.
+
+For the coupling the other way round, we follow exactly the same
+principle. There is room for optimisation here, as we would only have to
+couple after the Poisson equation has run into a stationary solution,
+but I omit such optimisations here. I simple invoke the mapping
+
+$$Q[0] _{\text{Poisson}} = 
+ \phi \mapsto \left(
+  \begin{array}{c}
+\partial _x \phi \\
+\partial _y \phi \\
+\partial _z \phi 
+  \end{array} 
+ \right)
+ = \left(
+  \begin{array}{c}
+Q[5] \\
+Q[6] \\
+Q[7]
+  \end{array} 
+ \right)_{\text{Euler}}$$
+
+after each and every solver update step:
+
+##### Time step synchronisation
+
+So far, we couple the two solvers in each and every time step. This
+makes no sense, if the two solvers don't run in-syn, i.e. with exactly
+the time step size. For the coupling in time, we exploit some simple
+properties of :
+
+1.  Once we switch to `GlobalAdaptiveTimeStep` or literally any solver
+    that does not use fixed time step sizes, we can tweak the time step
+    sizes to meet our needs.
+
+2.  Each  cell has a time stamp. Even if you employ some global time
+    stepping scheme, every single cell still holds its local time stamp
+    (though they are, obviously, then all the same).
+
+3.  Every time step update is protected by a guard. This is one large
+    sequence of boolean expressions connected via ands. Through the
+    guards, 's local time stepping ensures, for example, that cells do
+    not run ahead too much.
+
+Therefore, we first switch to an adaptive time stepping scheme. The
+Poisson solver usually employs a smaller relaxation of the time step
+size. Our strategy for a coupled solver is to add one more boolean
+evaluation to the time step guard of these adaptive solvers. As we have
+two solvers per cell (Poisson and Euler), the cell hosts two time stamps
+and the guard can compare these two time stamps. In our example, we know
+that the Poisson solver always is the slow solver. In a first step, we
+thus have to throttle down the Euler solver. It has to wait for its
+cousin solver:
+
+Throughout the coupling example, I take two existing  solvers and
+modify/augment their attributes. In a larger code, it might be
+reasonable to create two completely new Python classes which inherit
+from the respective solvers, i.e. to model them as real new solvers. A
+lot of the string construction above violates object-oriented
+information hiding paradigms, so it might be better to accommodate it
+within classes of their own.
+
+Next, we have to make a decision how to handle the paper's original idea
+that the Poisson solver should run into a stationary solution before we
+actually progress in time. In a world with a fixed global time step,
+this can be achieved by making the time step of the Poisson solver
+extremely small. We then get hundreds and thousands of Poisson time
+steps per Euler step and "just" have to ensure that these Poisson steps
+are sufficient to obtain an almost stationary solution just before Euler
+hops in time once again. This approach quickly becomes computationally
+infeasible. We need an approach that switches gears once we are
+stationary.
+
+  Name             Description                                                                                                                                                                                                                                                                                                                                                                                                                    Type
+  ---------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ --------------
+  `marker`         Cell marker which represents the hole cell (or patch in a FV context). Use the markers getters to access the cell size or position.                                                                                                                                                                                                                                                                                            `CellMarker`
+  `newQ`           Pointer to solution at new time step, i.e. to the new solution within a cell. The the routines exposed to the user, data is always organised as a lexicographically ordered array (left to right, bottom to top, front to back) similar to a regular grid, and the unknowns are ordered AoS. The field always comprises both the unknowns and auxiliary values. In a Finite Volume context, the field never holds halo data.   `double*`
+  `oldQ`           Pointer to solution at the old (current) time step. In a Finite Volume context, the field never holds halo data.                                                                                                                                                                                                                                                                                                               `double*`
+  `deltaQ`         Pointer to difference between `newQ` and `oldQ`, i.e. $Q^{(new)}-Q^{(old)}$. As  never evolves auxiliary variables, this field does only store the unknowns of the PDE as AoS.                                                                                                                                                                                                                                                 `double*`
+  `dQdt`           Pointer to derivative of the unknown. As  never evolves auxiliary variables, this field does only store the unknowns of the PDE as AoS. I'm aware that the name is inconsistent with the naming below, but `dQdtimeStepSize` would be weird.                                                                                                                                                                                   `double*`
+  `oldQWithHalo`   Exists only in a Finite Volume context. Different to `oldQ`, this field holds halo data.                                                                                                                                                                                                                                                                                                                                       `double*`
+  `Q`              See discussion around `newQ` and `oldQ`. I use a plain `Q` if there is no old or new data, or if it is implicitly clear that we evaluate the solution at a certain (old) point and plan to step into the future.                                                                                                                                                                                                               `double*`
+  `timeStamp`      I decided to stick to this (long) identifier rather than a plain `t` as you find it in math papers.                                                                                                                                                                                                                                                                                                                            `double`
+  `timeStepSize`   I decided to stick to this (long) identifier rather than a plain `dt` ($\Delta t$) as you find it in math papers.                                                                                                                                                                                                                                                                                                              `double`
+
+  :  Some frequently used pre-defined variables or pointers within  code
+  snippets:
+
+To determine if the solver is (close to) stationary, we evaluate the
+difference between the gradient of $\phi$ after each Poisson step. For
+this, we tweak the coupling term:
+
+The new computation preserves the semantics of the old one plus computes
+a value `delta` which it then pipes into the Poisson solver object.
+Here, we once again exploit our knowledge about 's internal working and
+naming conventions. To make the whole thing finally work, we tweak the
+Poisson solver:
+
+-   We let the Poisson solver keep track of the gradient deltas.
+    Actually, we use two deltas. `_currentMaxGradientDelta` is used to
+    analyse the current delta which we change throughout the grid
+    traversal, while `_previousMaxGradientDelta` holds the result from
+    the previous grid traversal.
+
+-   We introduce a new function `reportGradientDelta` that accepts the
+    `delta` as we have computed it above.
+
+-   We hook into `startTimeStep` to roll the deltas over.
+
+-   We overwrite `getAdmissibleTimeStepSize`. If the two delta values do
+    not differ that much anymore, we assume we have converged and we use
+    the standard time step size the solver would use. If the two delta
+    values differ significantly, we assume that we have not yet convered
+    and thus use a tiny time step size.
+
+Case study: Coupling finite volumes with Runge-Kutta DG (limiting) {#section:exahype:fv:limiting}
+------------------------------------------------------------------
+
+Even simple initial conditions can make a Discontinuous Galerking solver
+fail: The higher order solution representation is not capable to resolve
+shocks properly (or steep gradients), and the solution therefore starts
+to oscillation. At the same time, experiments with Finite Volumes yield
+solutions which a subject to very strong numerical diffusion. The
+solution quality is not good.
+
+There are two fundamental approaches to tackle this dilemma: On the one
+hand, we can introduce artificial damping terms, i.e. numerical
+diffusion, or truncation terms for the Riemann solvers such that these
+oscillations are eliminated. On the other hand, we can accept that both
+DG and FV have their pros and cons and try to use each solver where it
+unfolds its full potential. This is the prime strategy in the original
+ project.
+
+To realise this a posteriori limiting (which really will become an a
+priori limiting), we follow the same pattern that we exploited in the
+previous case study: We define two different solvers, and couple them
+with each other. Different to the previous setup, we however make all of
+our operations local:
+
+-   The Finite Volume solver is our fallback strategy and we therefore
+    neither solve with Finite Volumes everywhere in the computational
+    domain nor should do we store the corresponding data.
+
+-   The FV and the DG solver are not coupled everywhere but only in
+    boundary regions, i.e. in regions where the FV solver and the DG
+    solver kind of agree solution-wisely.
+
+We will effectively end up with a domain decomposition where parts of
+the computational domain are handled by the DG solver and the other
+parts are handled with FV. To realise this, we need a marker, i.e. a
+label per cell which tells us, similar to a multi-phase flow, which
+solver rules in this particular cell. Then, we construct two solvers
+that are coupled with each other similar to the previous case study. The
+marker will determine which solver is "valid" in which cell, where they
+are active, and where the two solvers are coupled with each other.
+
+For the coupling of two solvers, it is advantageous not to work with
+ solver instances directly. Instead, I recommend that you specialise the
+solver of your choice such that you can add further features to this
+class. In Python, this is straightforward. The line
+
+is replaced with
+
+All remarks below refer to objects instantiating the specialisation of
+the FV and DG solver, respectively, rather than a direct specialisation.
+
+##### Two solvers {#two-solvers .unnumbered}
+
+In this simple setup, we just create a DG solver and then add an
+additional Finite Volume solver. The latter works with a patch size of
+$2p+1$ where $p$ is the spatial DG order. You might want to use a
+different patch size, but this choice usually yields time step sizes in
+the FV discretisation which is similar to the DG scheme. We add both of
+them to the project and refer to them as `dg_solver` and `fv_solver`
+objects in the Python script. You can use any solver you like, but I
+strongly recommend that you use the same time stepping scheme for both
+solvers. All the explanations below refer to adaptive time stepping. You
+might have to alter some bits and pieces if you use a different time
+stepping scheme.
+
+##### The marker {#the-marker .unnumbered}
+
+The marker is determined by a quantity $\alpha$ which solves the
+equation $$- \Delta \alpha = C < 0 
+ \qquad
+ \text{s.t.} \ 
+ 0 \leq \alpha  \leq 1, \ 
+ \alpha  | _{\partial \Omega} = 0$$ via a cell-centered finite
+differences scheme. In the cells where we definitely need the Finite
+Volume scheme, we set $\alpha
+ = 1$. The higher $\alpha$, the more sure we are that the FV scheme
+yields the correct result.
+
+ is shipped with a pre-manufactured solver for this Poisson setup which
+takes care of all the details---including the mapping of the continuous
+$\alpha$ value onto the states which solver is active where---and also
+has more documentation):
+
+##### Control the marker {#control-the-marker .unnumbered}
+
+The marker by default will be $\alpha =0$ in the present configuration.
+As a first step, we hence have to reset it to $\alpha =1$ where we want
+the FV scheme to dominate, i.e. where we definitely know that it is the
+FV scheme that we need. Technically, we realise this by a postprocessing
+step on the respective solver:
+
+##### Translate marker outcome onto grid {#translate-marker-outcome-onto-grid .unnumbered}
+
+The marker helps us to identify where which solver is active. This is
+information we next want to project onto the grid, i.e. we want to find
+out which mesh cells have to store which data. For this, we have to
+augment the marker object within the cell which is an object that is
+always associated with any  mesh cell and has nothing to do with the
+stuff that we call "a marker" above.
+
+It seems to be (and is) quite complicated that we move the storage
+information from the marker into the grid. However, there are two good
+reasons for this:
+
+-   On the one hand, we might want to tailor the information delivered
+    by the marker towards our needs. It is not even prescribed how many
+    solvers in total are guided by one marker!
+
+-   On the other hand, we need the mesh storage information later within
+    the solver, where we have to access to the newly generated Poisson
+    equation. We have access to the mesh marker however.
+
+Ganz ganz wichtig ist, dass der Poisson solver als erstes kommt vor dem
+DG und dem FV Zeugs!
+
+##### Restrict the solvers {#restrict-the-solvers .unnumbered}
+
+With the marker at hand, we can instruct the solver not to solve their
+equation in certain regions. We can also ensure that they don't store
+data where it actually is not required. The cell marker as introduced by
+`ConstrainedPoissonEquationForMarkerOnCells` provides all the necessary
+information to guide the data flow.
+
+We don't want to alter the core logic of the data flow, but actually
+veto for some cells that data is stored or loaded. There are various
+ways to achieve this. I propose to plug into
+`_load_cell_data_default_guard()` and
+`_store_cell_data_default_guard()`.
+
+Schoen ist das nicht mit dem Ueberschreiben -\> remark Wir sehen, dass
+der Status hier gar keine Rolle spielt, sondern nur die Storage-Rules.
+Evtl ist das fuer andere Loeser anders
+
+##### Couple marker and FV scheme {#couple-marker-and-fv-scheme .unnumbered}
+
+With the three solvers (two PDE solvers plus the marker's Poisson
+equation) at hand, we have to couple them with each other.
+ 
  

@@ -361,12 +361,6 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=coordinates))
-    project.add_action_set_to_timestepping(
-      peano4.toolbox.particles.UpdateParallelState(
-        particle_set=tracer_particles
-      )
-    )
-    
     project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                 self,
                                                 time_stepping_kernel="toolbox::particles::staticPosition",
@@ -482,11 +476,6 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=coordinates))
-    project.add_action_set_to_timestepping(
-      peano4.toolbox.particles.UpdateParallelState(
-        particle_set=tracer_particles
-      )
-    )    
     project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                 self,
                                                 time_stepping_kernel="toolbox::particles::staticPosition",
@@ -639,11 +628,6 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=coordinates))
-    project.add_action_set_to_timestepping(
-      peano4.toolbox.particles.UpdateParallelState(
-        particle_set=tracer_particles
-      )
-    )    
     project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                 self,
                                                 time_stepping_kernel="toolbox::particles::staticPosition",
@@ -757,12 +741,6 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=coordinates))
-    project.add_action_set_to_timestepping(
-      peano4.toolbox.particles.UpdateParallelState(
-        particle_set=tracer_particles
-      )
-    )
-    
     project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
                                                                                         my_solver,
                                                                                         time_stepping_kernel="toolbox::particles::staticPosition",

@@ -124,9 +124,8 @@ if __name__ == "__main__":
     parser.add_argument("-v",   "--verbose",           dest="verbose",          action="store_true", default=False, help="Verbose")
     parser.add_argument("-et",  "--end-time",          dest="end_time",         type=float, default=1.0, help="End of simulation" )
     parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.5, help="Cell size (default 0.5)" )
-    parser.add_argument("-asserts", "--asserts",      dest="asserts",          action="store_true", default=False, help="Switch on assertions" )
-    parser.add_argument("-tracer",  "--tracer",       dest="tracer",           action="store_true", default=False, help="Activate tracer" )
-    parser.add_argument("-hs",      "--heap-storage",          dest="use_heap_storage", action="store_true", default=False, help="Store user data on heap via smart pointers" )
+    parser.add_argument("-asserts", "--asserts",       dest="asserts",          action="store_true", default=False, help="Switch on assertions" )
+    parser.add_argument("-plot",    "--plot",          dest="plot",             action="store_true", default=False, help="Switch on plotting" )
     
     args = parser.parse_args()
     
@@ -155,12 +154,17 @@ if __name__ == "__main__":
     offset      = [-9, -9, -9] 
     domain_size = [   18,    18,    18]
     
+    if args.plot:
+      plot_interval = 0.1
+    else:
+      plot_interval = 0.0
+    
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
       offset,  domain_size,
       args.end_time,
       0.0, 
-      0.0, # we do not plot
+      plot_interval, 
       [False,False,False],
       8  # plotter precision
     )
