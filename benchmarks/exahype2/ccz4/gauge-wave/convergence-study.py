@@ -98,6 +98,7 @@ if "rk" in args.solver and "dg" in args.solver:
 
 assert my_solver!=None
 
+my_solver.add_all_solver_constants()
 project.add_solver(my_solver)
 
 ########################################################################################

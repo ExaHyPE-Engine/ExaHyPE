@@ -67,17 +67,6 @@ class benchmarks::exahype2::ccz4::CCZ4SBH: public benchmarks::exahype2::ccz4::Ab
 
     
     
-    virtual void boundaryConditions(
-      const double * __restrict__ Qinside, // Qinside[59+0]
-      double * __restrict__ Qoutside, // Qoutside[59+0]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  meshCellH,
-      double                                       t,
-      int                                          normal
-    )  override;
-    
-
-    
   public:
     
 
