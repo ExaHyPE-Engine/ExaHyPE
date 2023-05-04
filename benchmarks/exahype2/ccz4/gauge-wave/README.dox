@@ -21,7 +21,7 @@ me to track the simulation behaviour in time elegantly (see postprocessing
 discussion below):
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-export PYTHONPATH=$PYTHONPATH:~/git/Peano/applications/exahype2/ccz4
+export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 
 python3 convergence-study.py -s fv -tracer
 python3 convergence-study.py -s dg1-rk1 -tracer
