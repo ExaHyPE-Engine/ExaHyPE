@@ -50,6 +50,28 @@ class AbstractCCZ4Solver(object):
           "P":3,
           "K0":1,
         }
+
+# @todo Han, I need your help  
+  _SO_formulation_unknowns = {
+          "G":6,
+          "K":6,
+          "theta":1,
+          "Z":3,
+          "lapse":1,
+          "shift":3,
+          "b":3,
+          "dLapse":3,
+          "dxShift":3,
+          "dyShift":3,
+          "dzShift":3,
+          "dxG":6,
+          "dyG":6,
+          "dzG":6,
+          "traceK":1,
+          "phi":1,
+          "P":3,
+          "K0":1,
+        }
   
   # May not have a constructor. All the other numerical classes have 
   # constructors and their arguments always differ. So we cannot have a 
@@ -292,7 +314,7 @@ for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0;
 class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking):
   """!
   
-  CCZ4 solver using fourt-order finite differences and global adaptive time stepping incl enclave tasking
+  CCZ4 solver using fourth-order finite differences and global adaptive time stepping incl enclave tasking
   
   The constructor of this classs is straightforward and realises the standard 
   steps of any numerical implementation of the CCZ4 scheme:
@@ -411,7 +433,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
 
 
 
-class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking):
+class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking(exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking):
   """!
   
   Variation of classic FD4 which relies on second order PDE formulation
@@ -439,6 +461,15 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
   This might not be super efficient (it would be faster to stick to the 
   second order formulation right from the start), but it allows us to reuse
   the compute kernels written for the first order PDE formulation.
+  
+  ## Data layout
+  
+  We have now a smaller number of real unknowns, i.e. only those guys who
+  belong to the "original" second-order formulation. The remaining quantities
+  compared to a first-order formulation are technically material or auxiliary
+  quantities. We model them as such, which allows ExaHyPE's data management
+  to deal more efficiently with them.
+
 
   reconstruction_type: "4thOrder", "centralDifferences", "leftDifference", "rightDifference"
       
@@ -452,13 +483,66 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
                reconstruction_type,
                use_heap_storage = True
                ):  
-    super( CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking, self ).__init__(name,
-               patch_size,
-               rk_order,
-               min_meshcell_h,
-               max_meshcell_h,
-               use_heap_storage
-               )
+    super( CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking, self ).__init__(name                 = name,
+                                                                                    patch_size           = patch_size,
+                                                                                    rk_order             = rk_order,
+                                                                                    unknowns             = sum(self._SO_formulation_unknowns.values()),
+                                                                                    auxiliary_variables  = sum(self._FO_formulation_unknowns.values())-sum(self._SO_formulation_unknowns.values()),
+                                                                                    min_meshcell_h         = min_meshcell_h,
+                                                                                    max_meshcell_h         = max_meshcell_h,
+                                                                                    time_step_relaxation = 0.1
+                                                                                    )
+    
+    self._add_standard_includes()
+
+    if use_heap_storage:
+      self.switch_to_heap_storage(True, True)
+
+    self._add_solver_constants()
+
+    self.set_implementation(
+          boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          ncp                  = """
+  double deltaQSerialised[NumberOfUnknowns*3];
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    deltaQSerialised[i+0*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+1*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+2*NumberOfUnknowns] = 0.0;
+
+    deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
+  }
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+""",
+          flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
+          source_term          = """
+  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+""",
+          refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          eigenvalues          = """
+          // do we only set Q
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+"""          ,
+          initial_conditions   = """
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+  ::applications::exahype2::ccz4::gaugeWave(Q, meshCellCentre, 0);
+"""
+        )
+
+    self.postprocess_updated_patch = """
+{
+    constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
+
+    exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( self, "TP_linear_with_linear_extrap_normal_interp" ) 
+    exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   self, "TP_average_normal_extrap" ) 
 
     self.preprocess_reconstructed_patch = """
 ::exahype2::CellData  reconstructedPatchData( 
@@ -478,6 +562,33 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 );
 """
 
+
+  def add_tracer(name,
+                 coordinates):
+    tracer_particles = project.add_tracer( name=name,attribute_count=59 )
+    project.add_action_set_to_initialisation( 
+      exahype2.tracer.InsertParticlesByCoordinates( 
+        particle_set=tracer_particles, coordinates=coordinates))
+    project.add_action_set_to_timestepping(
+      peano4.toolbox.particles.UpdateParallelState(
+        particle_set=tracer_particles
+      )
+    )    
+    project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                self,
+                                                time_stepping_kernel="toolbox::particles::staticPosition",
+                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
+                                                ))
+
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+      particle_set=tracer_particles,
+      solver=my_solver,
+       filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+      number_of_entries_between_two_db_flushes=5000,
+      output_precision=10,
+      data_delta_between_two_snapsots=1e16,
+      time_delta_between_two_snapsots=0.01
+      ))
   
         
 class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking):
