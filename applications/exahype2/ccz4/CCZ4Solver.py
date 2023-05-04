@@ -23,10 +23,10 @@ class AbstractCCZ4Solver(object):
   have to set the initial conditions via
   
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  my_solver.set_implementation(initial_conditions   = """
-    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+  my_solver.set_implementation(initial_conditions   = " " "
+   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
       ::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
-      """)
+      " " ")
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
   At this point, different CCZ4 solver variants might require different 
