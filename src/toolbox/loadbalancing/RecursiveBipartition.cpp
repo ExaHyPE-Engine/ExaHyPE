@@ -17,10 +17,11 @@ tarch::logging::Log  toolbox::loadbalancing::RecursiveBipartition::_log( "toolbo
 
 
 toolbox::loadbalancing::RecursiveBipartition::RecursiveBipartition(Configuration* configuration, bool deleteInDestructor):
-  LoadBalancing( configuration, deleteInDestructor ),
+  AbstractLoadBalancing( configuration, deleteInDestructor ),
   _roundRobinToken(0) {
   assertion( configuration!=nullptr );
-  _state = State::InterRankDistribution;
+  _state = State::SwitchedOff;
+  _statistics.notifyOfStateChange(_state);
 }
 
 

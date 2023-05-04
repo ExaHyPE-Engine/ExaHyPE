@@ -32,7 +32,7 @@ namespace peano4 {
  * VertexEnumerator, where the axes enumeration induces a vertex enumeration. It also is an
  * easy enumeration to extend to arbitrary dimensions.
  *
- *
+ * @see peano4::datamanagement::VertexEnumerator for the same discussion for vertices.
  */
 template <class Face>
 class peano4::datamanagement::FaceEnumerator {

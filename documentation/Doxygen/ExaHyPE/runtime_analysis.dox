@@ -1,6 +1,6 @@
 /**
 
- @page exahype_runtime_analysis Runtime analysis
+ @page page_exahype_runtime_analysis Runtime analysis
 
  ExaHyPE comes along with a set of Python scripts to analyse the code's runtime 
  behaviour. 
@@ -36,22 +36,22 @@
  @see exahype2.postprocessing.plot-scaling.PerformanceData.py
 
 
- ## Time series
+ ## Time series (time step sizes, time per time step, ...)
  
  After each and every grid sweep, ExaHyPE dumps data to the terminal.
  If you don't filter it out, you get, for example, information about the runtime, the time step sizes, 
  and so forth. 
  These data can be postprocessed via exahype2.postprocessing.plot-runtime-behaviour.py
  
+ @see exahype2.postprocessing.plot-scaling.TimeseriesPlots.py
 
  
  ## Peano data
  
- As ExaHyPE 2 is built on top of Peano 4, all the generic Peano scripts  work for ExaHyPE, too. 
+ As ExaHyPE 2 is built on top of Peano 4, all the generic Peano scripts and
+ @ref page_peano_runtime_analysis "Peano's statistics" work for ExaHyPE, too. 
 
- @see \ref peano_runtime_analysis
- @see exahype2.postprocessing.plot-scaling.TimeseriesPlots.py
-
+ 
 */
 
 

@@ -3,7 +3,7 @@
 #pragma once
 
 
-#include "LoadBalancing.h"
+#include "AbstractLoadBalancing.h"
 #include "tarch/logging/Log.h"
 
 #include <queue>
@@ -26,7 +26,7 @@ namespace toolbox {
  * (deterministic) setup.
  *
  */
-class toolbox::loadbalancing::Hardcoded: public toolbox::loadbalancing::LoadBalancing {
+class toolbox::loadbalancing::Hardcoded: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * @todo I'd like to have support for a file here later on which contains

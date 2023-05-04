@@ -1,11 +1,13 @@
 /** 
-@page exahype_finite_volumes Finite Volumes
 
-@todo figure out how to make this a subpage of a subpage. ie, 
-when i tried to insert this page as a subpage of exhaype2/tutorials, a range of 
-other random pages were drawn into the navtree for tutorials.
+@page page_exahype_solvers_finite_volumes Finite Volumes
+
+
 
 @todo fix the references to other chapters and get the images included
+
+*/
+
 
 ## A block-structured AMR code for Finite Volumes 
 
@@ -181,4 +183,3 @@ looks similar to
 
 [^1]: All tools work with overlaps greater than 2. But to keep the text
     simple, I stick to 2.
-*/

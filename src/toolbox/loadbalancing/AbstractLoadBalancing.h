@@ -18,21 +18,37 @@
 
 namespace toolbox {
   namespace loadbalancing {
-    class LoadBalancing;
+    class AbstractLoadBalancing;
   }
 }
 
-class toolbox::loadbalancing::LoadBalancing {
+
+class toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
+     * Constructor
+     *
      * Data ownership is handed over to the load balancing, i.e. the balancing
-     * has to delete the configuration object.
+     * has to delete the configuration object unless you pass in a false.
+     * Consequently, deleteInConstructor should not hold if you pass in the
+     * nullptr.
+     *
+     * Many implementations of AbstractLoadBalancing change the _state field
+     * immediately in their constructor. Please ensure that you invoke
+     *
+     *       _statistics.notifyOfStateChange(_state);
+     *
+     * afterwards to ensure that the statistics are correct right from the
+     * start.
      */
-    LoadBalancing(
+    AbstractLoadBalancing(
       Configuration* configuration,
       bool deleteInDestructor
     );
-    virtual ~LoadBalancing();
+
+
+    virtual ~AbstractLoadBalancing();
+
 
     /**
      * Generic string serialisation. You might want to extend it. Therefore,
@@ -40,12 +56,15 @@ class toolbox::loadbalancing::LoadBalancing {
      */
     virtual std::string toString() const;
 
+
     /**
      * Switch on/off.
      */
     virtual void enable(bool);
 
+
     virtual bool hasSplitRecently() const;
+
 
     /**
      * Clarifies whether load balancing is, in principle, enabled. Might however
@@ -54,10 +73,12 @@ class toolbox::loadbalancing::LoadBalancing {
      */
     bool isEnabled(bool globally) const;
 
+
     /**
      * Delegate to stats.
      */
     virtual int getGlobalNumberOfTrees() const;
+
 
     /**
      * A load balancing can either be stagnating or be switched off for
@@ -65,8 +86,20 @@ class toolbox::loadbalancing::LoadBalancing {
      */
     virtual bool hasStagnated() const;
 
+
     virtual void finishSimulation();
 
+
+    /**
+     * Finish the step
+     *
+     * No matter what you do here, you have to invoke
+     *
+     *          _statistics.updateGlobalView();
+     *          _blacklist.update();
+     *
+     * in this routine.
+     */
     virtual void finishStep() = 0;
   protected:
     static tarch::logging::Log  _log;
@@ -77,6 +110,14 @@ class toolbox::loadbalancing::LoadBalancing {
 
     Configuration*  _configuration;
 
+    /**
+     * Ensure that you invoke
+     *
+     *        _statistics.notifyOfStateChange(_state)
+     *
+     * whenever you change the state. Otherwise, the MPI will have an invalid
+     * view of the whole world.
+     */
     State  _state;
 
     bool _deleteInDestructor;
@@ -127,4 +168,8 @@ class toolbox::loadbalancing::LoadBalancing {
     bool areRanksUnemployed() const;
 
 };
+
+
+std::ostream& operator<<(std::ostream& out, const toolbox::loadbalancing::AbstractLoadBalancing& balancing);
+
 
