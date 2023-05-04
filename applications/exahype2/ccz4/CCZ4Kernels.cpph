@@ -1432,41 +1432,12 @@ void applications::exahype2::ccz4::sourceSecondOrderFormulation(double* S, const
     S[16] = dtalpha;
     for (int i = 0; i < 3; i++) S[17+i] = dtbeta[i];
     for (int i = 0; i < 3; i++) S[20+i] = dtbb[i];
-    for (int i = 0; i < 3; i++) S[23+i] = dtA[i];
-    S[26] = dtB[0][0];
-    S[27] = dtB[0][1];
-    S[28] = dtB[0][2];
-    S[29] = dtB[1][0];
-    S[30] = dtB[1][1];
-    S[31] = dtB[1][2];
-    S[32] = dtB[2][0];
-    S[33] = dtB[2][1];
-    S[34] = dtB[2][2];
-    S[35] = dtD[0][0][0];
-    S[36] = dtD[0][0][1];
-    S[37] = dtD[0][0][2];
-    S[38] = dtD[0][1][1];
-    S[39] = dtD[0][1][2];
-    S[40] = dtD[0][2][2];
-    S[41] = dtD[1][0][0];
-    S[42] = dtD[1][0][1];
-    S[43] = dtD[1][0][2];
-    S[44] = dtD[1][1][1];
-    S[45] = dtD[1][1][2];
-    S[46] = dtD[1][2][2];
-    S[47] = dtD[2][0][0];
-    S[48] = dtD[2][0][1];
-    S[49] = dtD[2][0][2];
-    S[50] = dtD[2][1][1];
-    S[51] = dtD[2][1][2];
-    S[52] = dtD[2][2][2];
     S[53] = dtTraceK;
     S[54] = dtphi;
-    for (int i = 0; i < 3; i++) S[55+i] = dtP[i];
     S[58] = 0;
     //used only in soccz4
-    //for (int i = 23; i < 53; i++) S[i] = 0.0;
-    //for (int i = 0; i < 3; i++) S[55+i] = 0.0;
+    for (int i = 23; i < 53; i++) S[i] = 0.0;
+    for (int i = 0; i < 3; i++) S[55+i] = 0.0;
 }
 
 
@@ -1933,44 +1904,12 @@ void applications::exahype2::ccz4::ncpSecondOrderFormulation(double* BgradQ, con
     BgradQ[16] = -dtalpha;
     for (int i = 0; i < 3; i++) BgradQ[17+i] = -dtbeta[i];
     for (int i = 0; i < 3; i++) BgradQ[20+i] = -dtbb[i];
-    for (int i = 0; i < 3; i++) BgradQ[23+i] = -dtA[i];
-    BgradQ[26] = -dtB[0][0]; // note: thes are all 0 for default CCZ4sk=0
-    BgradQ[27] = -dtB[0][1];
-    BgradQ[28] = -dtB[0][2];
-    BgradQ[29] = -dtB[1][0];
-    BgradQ[30] = -dtB[1][1];
-    BgradQ[31] = -dtB[1][2];
-    BgradQ[32] = -dtB[2][0];
-    BgradQ[33] = -dtB[2][1];
-    BgradQ[34] = -dtB[2][2];
-
-    BgradQ[35] = -dtD[0][0][0];
-    BgradQ[36] = -dtD[0][0][1];
-    BgradQ[37] = -dtD[0][0][2];
-    BgradQ[38] = -dtD[0][1][1];
-    BgradQ[39] = -dtD[0][1][2];
-    BgradQ[40] = -dtD[0][2][2];
-
-    BgradQ[41] = -dtD[1][0][0];
-    BgradQ[42] = -dtD[1][0][1];
-    BgradQ[43] = -dtD[1][0][2];
-    BgradQ[44] = -dtD[1][1][1];
-    BgradQ[45] = -dtD[1][1][2];
-    BgradQ[46] = -dtD[1][2][2];
-
-    BgradQ[47] = -dtD[2][0][0];
-    BgradQ[48] = -dtD[2][0][1];
-    BgradQ[49] = -dtD[2][0][2];
-    BgradQ[50] = -dtD[2][1][1];
-    BgradQ[51] = -dtD[2][1][2];
-    BgradQ[52] = -dtD[2][2][2];
     BgradQ[53] = -dtTraceK;
     BgradQ[54] = -dtphi;
-    for (int i = 0; i < 3; i++) BgradQ[55+i] = -dtP[i];
     BgradQ[58] = 0;
     //if (dtP[1]!=0) printf("dtP[1] = %g, dtP[2] = %g \n\n",dtP[1],dtP[2]);
     //used only in soccz4
-    //for (int i = 23; i < 53; i++) BgradQ[i] = 0.0;
-    //for (int i = 0; i < 3; i++) BgradQ[55+i] = 0.0;
+    for (int i = 23; i < 53; i++) BgradQ[i] = 0.0;
+    for (int i = 0; i < 3; i++) BgradQ[55+i] = 0.0;
 }
 
