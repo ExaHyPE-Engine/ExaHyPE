@@ -18,7 +18,27 @@ class AbstractCCZ4Solver(object):
   If you use a CCZ4 solver, you will still have to add all the libraries to 
   your Peano project such that the Makefile picks them up. For this, the 
   solver offers an add_makefile_parameters().
-    
+   
+  The solver should, more or less, work out of the box, though you still
+  have to set the initial conditions via
+  
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  my_solver.set_implementation(initial_conditions   = """
+    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+      ::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
+      """)
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  At this point, different CCZ4 solver variants might require different 
+  syntax. The term volumeCentre for example above is only defined in a
+  finite volume ontext.
+  
+  Further to that, you might want to have to set boundary conditions. By 
+  default, we do not set any boundary conditions. This works fine if 
+  periodic boundary conditions are used. But once you switch off periodic
+  boundary conditions, you have to tell the solver how to treat the boundary.
+  This is typically done via set_implementation(), too.
+  
   """
   
   
@@ -151,11 +171,20 @@ class AbstractCCZ4Solver(object):
                               ):
     """!
     
-    Add include path and required cpp files to makefile
+    Add include path and minimal required cpp files to makefile
     
     If you have multiple CCZ4 solvers, i.e. different solvers of CCZ4 or multiple 
     instances of the CCZ4 type, please call this operation only once on one of 
-    your solvers.
+    your solvers. At the moment, I add hte following cpp files to the setup:
+    
+    - InitialValues.cpp
+    - CCZ4Kernels.cpp
+    - SecondOrderAuxiliaryVariablesReconstruction.cpp
+    
+    You can always add further files via
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    peano4_project.output.makefile.add_cpp_file( "mypath/myfile.cpp", generated=False )
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
     """  
     if path_of_ccz4_application[-1]!="/":
@@ -261,11 +290,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
           refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
           eigenvalues          = """
   return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
-"""          ,
-          initial_conditions   = """
-for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
-::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
-"""
+"""          
         )    
 
     self.postprocess_updated_patch = """
@@ -381,10 +406,6 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
           refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
           eigenvalues          = """
   return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
-"""          ,
-          initial_conditions   = """
-  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
-  ::applications::exahype2::ccz4::gaugeWave(Q, meshCellCentre, 0);
 """
         )
 
@@ -522,11 +543,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
           eigenvalues          = """
           // do we only set Q
   return ::applications::exahype2::ccz4::maxEigenvalueSecondOrderFormulation(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
-"""          ,
-          initial_conditions   = """
-  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
-  ::applications::exahype2::ccz4::gaugeWaveSecondOrderFormulation(Q, meshCellCentre, 0);
-"""
+"""         
         )
 
     self.postprocess_updated_patch = """
@@ -662,11 +679,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
           refinement_criterion = exahype2.solvers.rkdg.PDETerms.Empty_Implementation,
           eigenvalues          = """
   return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
-"""          ,
-          initial_conditions   = """
-  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
-  ::applications::exahype2::ccz4::gaugeWave(Q, x, 0);
-"""
+"""          
         )
 
     self.postprocess_updated_cell_after_final_linear_combination = """
