@@ -277,6 +277,13 @@ The data format within the csv file is rather self-explaining.
 As we rely on Peano's infrastructure, you can use the script
 python/peano4/toolbox/particles/postprocessing/convert.py to convert the output
 files or to produce seismograms, e.g.
+Please note that each rank potentially writes sequences of databases, 
+i.e. whenever we dump a csv file, we clear the internal database. So 
+when you visualise the data, you have to concatenate databases first. 
+This is also explained in the underlying C++ class
+toolbox::particles::TrajectoryDatabase. As the convert.py script 
+above does support multiple input files, the merge itself is already 
+supported by premanufactured tools.
 
 
 ### Encourage particles to spread out evenly
