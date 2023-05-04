@@ -9,9 +9,9 @@ import peano4.toolbox.particles
 import numpy as np
 
 # See comments in README.dox
+#export PYTHONPATH=$PYTHONPATH:~/Peano/applications/exahype2/ccz4
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
-from CCZ4Solver import CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking
 
 
@@ -20,7 +20,7 @@ parser.add_argument("-j",   "--parallel-builds",   dest="j",                type
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",         default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-et",  "--end-time",          dest="end_time",         type=float, default=1.0, help="End of simulation" )
-parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.3, help="Cell size (default 0.3)" )
+parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.5, help="Cell size (default 0.5)" )
 parser.add_argument("-asserts", "--asserts",      dest="asserts",          action="store_true", default=False, help="Switch on assertions" )
 parser.add_argument("-tracer",  "--tracer",       dest="tracer",           action="store_true", default=False, help="Activate tracer" )
 parser.add_argument("-hs",      "--heap-storage",          dest="use_heap_storage", action="store_true", default=False, help="Store user data on heap via smart pointers" )
@@ -28,7 +28,7 @@ parser.add_argument("-hs",      "--heap-storage",          dest="use_heap_storag
 args = parser.parse_args()
 
 
-project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=args.solver + "-" + str(args.cell_size))
+project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable="peano_sbh_" + str(args.cell_size))
 
 
 my_solver = None
@@ -36,11 +36,15 @@ my_solver = None
 my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4SBH" , 
                                                                       patch_size           = 6,
                                                                       rk_order             = 1,
-                                                                      min_meshcell_h       = 0.04, 
-                                                                      max_meshcell_h       = 0.4,
+                                                                      min_meshcell_h       = args.cell_size, 
+                                                                      max_meshcell_h       = args.cell_size,
                                                                       )
 
-
+my_solver.set_implementation(initial_conditions   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                               refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                               boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+                               )
+                       
 
 assert my_solver!=None
 
@@ -56,6 +60,8 @@ if args.asserts:
 else:
   build_mode = peano4.output.CompileMode.Release
     
+        
+
 dimensions  = 3
 offset      = [-9, -9, -9] 
 domain_size = [   18,    18,    18]
@@ -65,10 +71,15 @@ project.set_global_simulation_parameters(
   offset,  domain_size,
   args.end_time,
   0.0, 
-  1,
-  periodic_boundary_conditions,
+  0.1,
+  [False,False,False],
   8  # plotter precision
 )
+
+project.set_output_path("./")
+#probe_point = [-12,-12,0.0]
+#project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
+#my_solver.select_dofs_to_print = [0,12,16,17,18,54,59,60]
 
 my_solver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       double Qinf[59]={1.0, 0.0, 0.0, 1.0, 0.0, 1.0,        //q0-5

@@ -129,12 +129,28 @@ class AbstractCCZ4Solver(object):
           "K0",
         }
   
-  # May not have a constructor. All the other numerical classes have 
-  # constructors and their arguments always differ. So we cannot have a 
-  # constructor here, as the arguments would have to match. Python's 
-  # multiple inheritance is stupid here.
-  #def __init__(self):
-  #  pass
+
+  def __init__(self):
+    self.integer_constants = {
+  "CCZ4LapseType":0,
+}
+    self.double_constants = {
+  "CCZ4ds":   1.0,
+  "CCZ4c":    1.0,
+  "CCZ4e":    1.0,
+  "CCZ4f":    0.75,
+  "CCZ4bs":   0.0,
+  "CCZ4sk":   0.0,
+  "CCZ4xi":   1.0,
+  "CCZ4itau": 1.0,
+  "CCZ4eta":  1.0,
+  "CCZ4k1":   0.1,
+  "CCZ4k2":   0.0,
+  "CCZ4k3":   0.5,
+  "CCZ4GLMc": 1.2,
+  "CCZ4GLMd": 2.0,
+  "CCZ4mu":   0.2,
+}
 
 
   def _add_standard_includes(self):
@@ -157,13 +173,11 @@ class AbstractCCZ4Solver(object):
 """)
     
     
-  def _add_solver_constants(self):
+  def add_solver_constants(self):
     """!
 
     Add domain-specific constants
         
-    Usually called by the subclass constructor.
-
     I need a couple of constants. I could either replace them directly
     within the Python snippets below, but I prefer here to go a different
     way and to export them as proper C++ constants.
@@ -174,30 +188,9 @@ class AbstractCCZ4Solver(object):
     as these constants logically belong to the solver and not to the project.
     
     """
-    integer_constants = {
-  "CCZ4LapseType":0, 
-}
-    double_constants = {
-  "CCZ4ds":   1.0, 
-  "CCZ4c":    1.0, 
-  "CCZ4e":    1.0, 
-  "CCZ4f":    0.75,
-  "CCZ4bs":   0.0,
-  "CCZ4sk":   0.0,
-  "CCZ4xi":   1.0,
-  "CCZ4itau": 1.0,
-  "CCZ4eta":  1.0,
-  "CCZ4k1":   0.1,
-  "CCZ4k2":   0.0,
-  "CCZ4k3":   0.5,
-  "CCZ4GLMc": 1.2,
-  "CCZ4GLMd": 2.0,
-  "CCZ4mu":   0.2,
-}
-
-    for key, value in integer_constants.items():   
+    for key, value in self.integer_constants.items():   
       self.add_solver_constants("static constexpr int {} = {};".format(key, value))
-    for key, value in double_constants.items():   
+    for key, value in self.double_constants.items():   
       self.add_solver_constants("static constexpr double {} = {};".format(key, value))
 
   
