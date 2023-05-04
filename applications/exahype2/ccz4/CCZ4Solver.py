@@ -433,7 +433,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
 
 
 
-class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking(exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking):
+class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking):
   """!
   
   Variation of classic FD4 which relies on second order PDE formulation
@@ -483,7 +483,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
                reconstruction_type,
                use_heap_storage = True
                ):  
-    super( CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking, self ).__init__(name                 = name,
+    super( CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking, self ).__init__(name                 = name,
                                                                                     patch_size           = patch_size,
                                                                                     rk_order             = rk_order,
                                                                                     unknowns             = sum(self._SO_formulation_unknowns.values()),
@@ -511,21 +511,21 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 
     deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+  ::applications::exahype2::ccz4::ncpSecondOrderFormulation(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
 """,
           flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
           source_term          = """
   memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
-  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+  ::applications::exahype2::ccz4::sourceSecondOrderFormulation(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
 """,
           refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
           eigenvalues          = """
           // do we only set Q
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  return ::applications::exahype2::ccz4::maxEigenvalueSecondOrderFormulation(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """          ,
           initial_conditions   = """
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
-  ::applications::exahype2::ccz4::gaugeWave(Q, meshCellCentre, 0);
+  ::applications::exahype2::ccz4::gaugeWaveSecondOrderFormulation(Q, meshCellCentre, 0);
 """
         )
 
@@ -535,7 +535,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
     int index = 0;
     for (int i=0;i<itmax;i++)
     {
-      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
+      applications::exahype2::ccz4::enforceCCZ4constraintsSecondOrderFormulation( newQ+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
