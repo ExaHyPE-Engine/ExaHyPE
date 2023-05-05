@@ -1,6 +1,14 @@
 /** 
 
-@page benchmarks_exahype2_ccz4_single_black_hole CCZ4 Gauge wave test
+@page benchmarks_exahype2_ccz4_single_black_hole Single black hole test
+
+
+Benchmark which solves the single black hole described in a CCZ4 simulation. 
+While the output is not particularly exciting (the simulation should yield a 
+stationary solution after a while), it is numerically challenging as we have
+sophisticated boundary condition effects, a singularity in the centre which 
+can lead to oscillations, need a scheme with low numerical dissipation, and 
+so forth.
 
 
 ## Build executable
@@ -10,8 +18,11 @@
 export PYTHONPATH=../../../../python
 export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 
-python3 t.b.d
+python3 convergence-study.py -cs 2 -plot
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+As always, the parameter --help makes the Python script yield further info.
+
 
 ## Clean up old and temporary files
 
@@ -28,8 +39,6 @@ all be reinstantiated.
      rm -rf celldata facedata globaldata observers tasks vertexdata repositories
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-
-
 To get rid of the output files, type in
 
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,5 +46,13 @@ To get rid of the output files, type in
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 
+## Code remarks
+
+### Time step size (Higher order Finite Differences plus Finite Volumes)
+
+As we combine solvers, we have to ensure that their time step sizes match. In 
+the context of FD4, this means that the FD4 time step size has to be calibrated
+with @f$ p^{-2}=1/16 @f$ relative to the Finite Volume scheme. That is, if they 
+have the same mesh size, FD4 takes significantly smaller time step sizes.
 
 */

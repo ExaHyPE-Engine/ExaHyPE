@@ -5,6 +5,7 @@
 \li \subpage benchmarks_exahype2_euler_kernel_benchmarks
 \li \subpage benchmarks_exahype2_ccz4_gauge_wave
 \li \subpage benchmarks_exahype2_ccz4_kernel_benchmarks
+\li \subpage benchmarks_exahype2_ccz4_single_black_hole
 
 ExaHyPE comes along with a set of benchmarks. 
 These benchmarks should all run more or less out-of-the-box.

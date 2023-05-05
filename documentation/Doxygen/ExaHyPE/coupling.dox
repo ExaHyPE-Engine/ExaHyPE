@@ -3,7 +3,15 @@
 @page page_exahype_coupling Coupling of various solvers
 
 
-Time step sizes
+Time step sizes sind beim Single Black Hole noch net gekoppelt. Dann auch die Readme dort mal schreiben
+
+Polynomial order muss ins C mit einfliessen
+
+
+    const     double waveSpeedDamping   = 1.0 / _maxEigenvalue;
+    constexpr double CockburnShuDamping = 1.0 / (2.0*{{RK_ORDER}}-1.0);
+    constexpr double meshDamping        = {{DG_ORDER}}==0 ? 1.0 : 1.0 / ({{DG_ORDER}} * {{DG_ORDER}});
+
 
 
  */

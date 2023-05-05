@@ -135,6 +135,8 @@ class AbstractCCZ4Solver(object):
         }
   
 
+  Default_Time_Step_Size_Relaxation = 0.1
+
   def __init__(self):
     """!
     
@@ -309,7 +311,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
                                                                     auxiliary_variables  = 0,
                                                                     min_volume_h         = min_volume_h,
                                                                     max_volume_h         = max_volume_h,
-                                                                    time_step_relaxation = 0.1
+                                                                    time_step_relaxation = AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation
                                                                     )
     self._add_standard_includes()
 
@@ -411,6 +413,14 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
                max_meshcell_h,
                use_heap_storage = True
                ):  
+    """!
+    
+    Constructor
+    
+    Calibrate the default time step size calibration with 1/16 to take into 
+    account that we have a higher-order numerical scheme.
+        
+    """
     AbstractCCZ4Solver.__init__(self)
     exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
                                                                                 name                 = name,
@@ -420,7 +430,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
                                                                                 auxiliary_variables  = 0,
                                                                                 min_meshcell_h         = min_meshcell_h,
                                                                                 max_meshcell_h         = max_meshcell_h,
-                                                                                time_step_relaxation = 0.1
+                                                                                time_step_relaxation = AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation / 16.0
                                                                                 )
     
     self._add_standard_includes()
@@ -544,6 +554,14 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
                reconstruction_type,
                use_heap_storage = True
                ):  
+    """!
+    
+    Constructor
+    
+    Calibrate the default time step size calibration with 1/16 to take into 
+    account that we have a higher-order numerical scheme.
+        
+    """
     AbstractCCZ4Solver.__init__(self)
     exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
                                                                                     name                 = name,
@@ -551,9 +569,9 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
                                                                                     rk_order             = rk_order,
                                                                                     unknowns             = len(self._SO_formulation_unknowns),
                                                                                     auxiliary_variables  = sum(self._FO_formulation_unknowns.values())-len(self._SO_formulation_unknowns),
-                                                                                    min_meshcell_h         = min_meshcell_h,
-                                                                                    max_meshcell_h         = max_meshcell_h,
-                                                                                    time_step_relaxation = 0.1
+                                                                                    min_meshcell_h       = min_meshcell_h,
+                                                                                    max_meshcell_h       = max_meshcell_h,
+                                                                                    time_step_relaxation = AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation / 16.0
                                                                                     )
     
     self._add_standard_includes()
@@ -687,7 +705,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
                                                                                      auxiliary_variables  = 0,
                                                                                      min_cell_h         = min_cell_h,
                                                                                      max_cell_h         = max_cell_h,
-                                                                                     time_step_relaxation = 0.1
+                                                                                     time_step_relaxation = AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation
                                                                                      )
     
     self._add_standard_includes()
