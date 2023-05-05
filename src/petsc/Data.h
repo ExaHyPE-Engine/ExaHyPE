@@ -1,11 +1,6 @@
 #pragma once
 
-#include <petscsys.h>
-#include <petscmat.h>
-#include <petscvec.h>
-#include <petscdmda.h>
-// #include <petscksp.h>
-// #include <petscdmmoab.h>
+#include <petscksp.h>
 
 #include <vector>
 #include <map>

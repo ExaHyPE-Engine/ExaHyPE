@@ -221,6 +221,9 @@ void step() {
 
         watch.start();
         // solve
+
+        repositories::instanceOfPetsc.petscSolve();
+
         watch.stop();
         solveMeasurement.setValue( watch.getCalendarTime() );
       }

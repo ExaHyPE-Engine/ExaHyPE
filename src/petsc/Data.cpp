@@ -60,8 +60,6 @@ void petsc::PetscData::assemble(){
   MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);
 
-  // std::cout << "\nsucessful matrix construction\n\n";
-
   //assemble vectors
   VecAssemblyBegin(_x);
   VecAssemblyEnd(_x);
@@ -75,6 +73,8 @@ void petsc::PetscData::assemble(){
 
 void petsc::PetscData::petscSolve(){
   std::cout << "\n\tsolving stage not implemented\n\n";
+  MatMult(_A, _x, _b);
+  std::cout << "matrix mult works fine\n\n";
 }
 
 
