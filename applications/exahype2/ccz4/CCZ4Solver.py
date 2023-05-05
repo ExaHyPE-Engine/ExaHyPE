@@ -123,7 +123,6 @@ class AbstractCCZ4Solver(object):
           "b",
           "traceK",
           "phi",
-          "K0",
         }
   
 
