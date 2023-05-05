@@ -121,16 +121,8 @@ class AbstractCCZ4Solver(object):
           "lapse",
           "shift",
           "b",
-          "dLapse",
-          "dxShift",
-          "dyShift",
-          "dzShift",
-          "dxG",
-          "dyG",
-          "dzG",
           "traceK",
           "phi",
-          "P",
           "K0",
         }
   
