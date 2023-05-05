@@ -12,15 +12,12 @@ from .Overwrite import Overwrite
 
 class Jinja2TemplatedHeaderImplementationFilePair(object):
   """!
-  
 Reperesents a pair of C++ header and implementation files 
 
 The content of these files is represented by jinja2 templates. While
 sorting out these templates, the class defines a couple of default
 dictionary entries besides the ones manually handed over by the user.
-
   """
-
 
   def __init__(self,
                headfile_template,
@@ -57,7 +54,7 @@ dictionary entries besides the ones manually handed over by the user.
 
   def __generate_file(self,overwrite,full_qualified_filename,template_file):
     if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
-      import inspect, os
+      import inspect
       print( "{} written by {} (from template {})".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__)),  template_file))
 
       template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(template_file)[0])

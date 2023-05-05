@@ -44,8 +44,10 @@ parser.add_argument("-maxh",    "--max-cell-size",     dest="max_cell_size",  ty
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots")
 parser.add_argument("-et",      "--end-time",          dest="end_time",       type=float,                 default=end_time,           help="End time of simulation")
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. finite volume cell (3 by default)" )
+parser.add_argument("-o",       "--output",            dest="output",         type=str,                   default="solution",         help="Folder to output solution in" )
 parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR" )
 parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=False,              help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
+parser.add_argument("-lb",      "--loadbalancing",     dest="loadbalancing",  action="store_true",        default=True,               help="Use load balancing" )
 parser.add_argument("-tracer",  "--tracer",            dest="tracer",         action="store_true",        default=False,              help="Use particle tracer" )
 parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)" )
 args = parser.parse_args()
@@ -113,7 +115,8 @@ my_solver.set_implementation(
 
 my_project = exahype2.Project( ["applications", "exahype2", "acousticwave"], "AcousticWaveApplication", ".", executable="acoustic-wave-application-" + str(args.dim) + "d-patch-size-" + str(args.patch_size) + "-cell-size-" + str(args.max_cell_size))
 my_project.add_solver( my_solver )
-#my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+if args.loadbalancing:
+  my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 my_project.set_Peano4_installation("../../../", build_modes[args.build_mode])
 
 my_project.set_global_simulation_parameters(
@@ -126,6 +129,10 @@ my_project.set_global_simulation_parameters(
   time_in_between_plots = args.plot_interval,
   periodic_BC           = [False, False, False]
 )
+
+my_project.set_output_path(args.output)
+if not os.path.exists(args.output):
+  os.makedirs(args.output)
 
 if args.tracer:
   tracer_particles = my_project.add_tracer( name="Tracer", attribute_count=args.dim + 1 )

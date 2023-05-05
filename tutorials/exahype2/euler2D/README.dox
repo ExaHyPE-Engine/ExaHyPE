@@ -1,0 +1,19 @@
+/**
+
+ @page tutorials_exahype2_euler2d 2D Euler
+
+Assuming we have built the ExaHyPE2 and the core libraries sucessfully, we can build the 2D Euler project:
+
+    python3 euler2D.py
+
+Assuming this was succesfull, you should see a number of files have appeared in your working directory.
+We will ignore most of these for now, but know that these contain the implementation of the ExaHyPE2 project.
+One file in particular is of interest to us now: the file simply named advection is the executable for our implementation.
+We will therefore run this executable file by using the following command:
+
+    ./euler2D
+
+The solution folder contains the solution of our problem,
+which we will take a look at as soon as we have an understanding of how our problem is defined.
+
+*/

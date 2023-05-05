@@ -1,8 +1,5 @@
 /**
-
  @page applications_exahype2_acoustic_wave The Acoustic Wave Equation
-
-
 
 The acoustic wave equation describes the propagation of a wave through a material. This
 equation assumes that all movements are only small perturbations over the background flow
@@ -25,7 +22,6 @@ where @f$`v_x, v_y`@f$ denote the velocity in @f$`x`@f$- and @f$`y`@f$-direction
 
 Further, the flux is given by:
 
-
 @f$
   F = \left[
        \begin{pmatrix}
@@ -40,15 +36,9 @@ Further, the flux is given by:
                \end{pmatrix} \right],
 @f$
 
-
 The eigenvalues of the flux are @f$`-c`@f$, @f$`0`@f$ and @f$ c @f$.
 These equations are telling us that the change in time of the velocity is proportional to the gradient of pressure.
 
-
-## Preparation
-
-Besides the "default" Peano settings, you will need Python's sympy package for 
-the Python scripts to pass.
-
+Besides the "default" Peano settings, you will need Python's sympy package for the Python scripts to pass.
 
 */

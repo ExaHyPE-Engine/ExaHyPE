@@ -1,0 +1,14 @@
+/**
+
+@page page_tutorials Tutorials
+
+\tableofcontents
+
+\li \subpage tutorials_exahype2_advection2d
+\li \subpage tutorials_exahype2_swe
+\li \subpage tutorials_exahype2_euler2d
+\li \subpage tutorials_exahype2_euler3d
+
+Tutorials to introduce certain aspects of Peano's Python API.
+
+*/
