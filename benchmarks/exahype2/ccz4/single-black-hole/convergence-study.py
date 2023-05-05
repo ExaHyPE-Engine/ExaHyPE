@@ -35,7 +35,7 @@ def construct_FV_solver(min_cell_size, max_cell_size):
                                  boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation
                                  )
     my_solver.add_all_solver_constants()
-    
+    update_solver_parameters_for_single_black_hole (my_solver)
     return my_solver
 
 
@@ -114,9 +114,24 @@ def construct_FD_solver(min_cell_size, max_cell_size):
           );
           """
     
+    update_solver_parameters_for_single_black_hole (my_solver)
     return my_solver
 
+        
+def update_solver_parameters_for_single_black_hole(solver):
+  """!
 
+  Update preconfigured solver parameters
+  
+  The default parameters of CCZ4 are tailored towards gauge waves or similar.
+  For the single black hole, two parameters have to be changed. That's bs and
+  sk which both have to be 1.0.
+
+  """
+  solver.double_constants[ "CCZ4bs" ] = 1.0
+  solver.double_constants[ "CCZ4sk" ] = 1.0
+
+  
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4-GaugeWave benchmarking script')
     parser.add_argument("-j",   "--parallel-builds",   dest="j",                type=int, default=-1, help="Parallel builds" )
