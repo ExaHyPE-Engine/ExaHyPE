@@ -44,6 +44,21 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
     */
 
+    {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
+    repositories::{{SOLVER_INSTANCE}}.riemannSolver(
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value,                        //FL
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+fluxElementsPerFace,    //FR
+      fineGridFace{{SOLVER_NAME}}QEstimates.value,                          //QL
+      fineGridFace{{SOLVER_NAME}}QEstimates.value+basisElementsPerFace,     //QR
+      timeStamp,
+      timeStepSize,
+      marker.x(),
+      marker.h(),
+      marker.getSelectedFaceNumber()%Dimensions, //direction
+      fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary(),
+      marker.getSelectedFaceNumber()
+    );
+    {% else %}
     generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
       fineGridFace{{SOLVER_NAME}}QFluxEstimates.value,                        //FL
@@ -56,6 +71,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       marker.h(),
       marker.getSelectedFaceNumber()%Dimensions //direction
     );
+    {% endif %}
 
   }  
 

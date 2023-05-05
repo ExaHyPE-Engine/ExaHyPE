@@ -177,6 +177,7 @@ class ADERDG( object ):
     self._initial_conditions_implementation   = PDETerms.None_Implementation
     self._material_param_implementation       = PDETerms.None_Implementation
     self._precision_criterion_implementation  = PDETerms.None_Implementation
+    self._riemann_solver_implementation       = PDETerms.None_Implementation
 
     """
     These will be used by children of this class to fill them with the declaration and definition of the
@@ -773,6 +774,7 @@ class ADERDG( object ):
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
     d[ "ADAPTIVE_PRECISION_IMPLEMENTATION" ]  = self._precision_criterion_implementation
+    d[ "RIEMANN_SOLVER_IMPLEMENTATION" ]      = self._riemann_solver_implementation
     d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
     d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
     d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
@@ -856,6 +858,7 @@ class ADERDG( object ):
     corrector_computation_precision="double",
     solution_persistent_storage_precision="double",
     precision_criterion_implementation  = PDETerms.None_Implementation,
+    riemann_solver_implementation = PDETerms.None_Implementation,
     use_vectorized_PDE = False,
     architecture = "noarch",
     use_CERK_guess=False,
@@ -894,6 +897,9 @@ class ADERDG( object ):
       self._precision_criterion_implementation = precision_criterion_implementation
     if len(self._predictor_computation_precisions)>1 and self._precision_criterion_implementation is PDETerms.None_Implementation:
       self._precision_criterion_implementation = PDETerms.User_Defined_Implementation
+
+    if riemann_solver_implementation is not PDETerms.None_Implementation:
+      self._riemann_solver_implementation = riemann_solver_implementation
 
     if(use_CERK_guess or use_split_CK or use_vectorized_PDE or predictor_recompute):
       raise Exception("The option you have chosen has not yet been implemented, it currently only exists in the code as a placeholder for future expansion")
