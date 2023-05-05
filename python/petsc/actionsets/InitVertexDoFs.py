@@ -61,11 +61,9 @@ the solver in the first place. This happens in get_includes().
   switch ( isOnBoundary(marker.x()) ){
     case true:
       fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::Poisson::Type::Dirichlet );
-      // coarseGridVertices{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setType( vertexdata::Poisson::Type::Dirichlet );
       break;
     case false:
       fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::Poisson::Type::DoF );
-      // coarseGridVertices{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setType( vertexdata::Poisson::Type::DoF );
       break;
   }
 
@@ -87,9 +85,6 @@ the solver in the first place. This happens in get_includes().
       fineGridVertex{{SOLVER_NAME}}.setValue(0, value);
       fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);
 
-      //explicitly do the same with coarseGridVertex
-      //coarseGridVertices{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setValue(0, value);
-      //coarseGridVertices{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setRhs(0, rhs);
     }
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );

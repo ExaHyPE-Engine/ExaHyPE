@@ -9,10 +9,66 @@ class AssemblePetscMatrix(ActionSet):
   """!
   Trigger assembly of PETSc matrix, using values from mesh
   """
-  TemplateInitVertex = """
-    //todo - run through each of the neighbouring vertices and insert 
-    // values from the stencil into the matrix
+  TemplateInitCell = """
+  //init a vector to collect global indices, and recall their position in the 
+  //enumeration so we can apply the stencil correctly
+  std::vector<int> enumeratedIndices(TwoPowerD, -1);
+
+  for (int i=0; i<TwoPowerD ; i++){
+    if (fineGridVerticesPoisson(i).getType() != vertexdata::Poisson::Type::Dirichlet
+        and fineGridVerticesPoisson(i).getNumber() < repositories::getTotalNumberOfDegreesOfFreedom()
+    ) {
+      std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVerticesPoisson(i).getNumber());
+      int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
+      enumeratedIndices[i] = globalIndex;
+    }
+
+    //get a global index
+  }
+
+  //next, loop twice over TwoPowerD, so we can correctly fill the petsc matrix.
+  //calling our increment function 16 times is temporary; this can be done with 
+  //one call to PETSc. While in development, we do it the dumb way.
+  for (int i=0; i<TwoPowerD; i++){
+    for (int j=0; j<TwoPowerD; j++){
+    if (enumeratedIndices[i] != -1 and enumeratedIndices[j] != -1){
+      if (i == j){
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], 2.0/3.0); //2/3 /h
+      }
+
+      // if they add up to 3, then they must be opposites - i know this is a bodge
+      else if (i + j == 3){
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], -1.0/3.0);
+      }
+
+      //final two cases
+      else{
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], -1.0/6.0);    
+      }
+    }
+
+    }
+  }
   
+  """
+
+  TemplateInitVertex="""
+  //here we send the value, rhs from the mesh to petsc
+
+  if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::Poisson::Type::Dirichlet
+      and fineGridVertex{{SOLVER_NAME}}.getNumber() < repositories::getTotalNumberOfDegreesOfFreedom()
+  ){
+    //first, get global index
+    std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertex{{SOLVER_NAME}}.getNumber());
+    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
+
+    //get the val, rhs that was present in the mesh
+    double val = fineGridVertex{{SOLVER_NAME}}.getValue(0);
+    double rhs = fineGridVertex{{SOLVER_NAME}}.getRhs(0);
+
+    //send these to petsc
+    repositories::instanceOfPetsc.insertValueAndRHS(val, rhs, globalIndex);
+  }
   """
   
   def __init__(self,
@@ -39,14 +95,21 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     """!
 
 Provide C++ code snippet for peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME  
+Provide C++ code snippet for peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME  
   
 Only touchVertexFirstTime is an event where this action set actually
 does something: It inserts the template TemplateInitVertex and 
 replaces it with entries from the dictionary. The latter is befilled
 in init().
+
+We actually do something during touchVertexFirstTime and touchCellFirstTime. We insert the 
+appropriate template into each.
     
     """
     result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.TemplateInitCell).render(**self.d)
+      pass 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result = jinja2.Template(self.TemplateInitVertex).render(**self.d)
       pass 

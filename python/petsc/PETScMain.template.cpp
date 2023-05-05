@@ -208,6 +208,9 @@ void step() {
         observers::Assemble  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+
+        //assemble the matrix
+        repositories::instanceOfPetsc.assemble();
         watch.stop();
         assembleMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -228,6 +231,10 @@ void step() {
 
         observers::MapSolutionOntoMesh  observer;
         watch.start();
+
+        //move data from petsc to c++
+        repositories::instanceOfPetsc.convertToStdVector();
+        
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         mapSolutionOntoMeshMeasurement.setValue( watch.getCalendarTime() );

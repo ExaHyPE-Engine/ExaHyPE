@@ -76,45 +76,29 @@ representation of our project.
 1. Mesh creation - this is done automatically
 
 2. EnumerateAndInitSolution step - Here we have two action sets, petsc.actionsets.InitVertexDoFs and petsc.actionsets.EnumerateVertices.
-   In InitVertexDoFs.py, every fineGridVertex is marked as "Dirichlet"
+   InitVertexDoFs and EnumerateVertices both operate only on TouchVertexFirstTime.
+   In petsc.actionsets.InitVertexDoFs, every fineGridVertex is marked as "Dirichlet"
    if it lies on the boundary, and as "DoF" otherwise. For now, we just use marker.x() to 
    determine whether a vertex is on the boundary.
    We also insert 
-   a value and rhs into the vertex at this stage, which we pass to PETSc during assembly.
-   @todo - is it necessary to do the same for the coarseGridVertex which should lie 
-      in the same position?
+   a value and rhs into the vertex (on the Peano mesh) at this stage, which we pass to PETSc during assembly, but this comes later.
    During the Enumeration Action set, every fineGridVertex is given a globalIndex, which will be used later
-   to construct the PETSc matrix. 
+   to construct the PETSc matrix. We operate exclusively on the fine grid data.
 
-3. InitPETSc step - here we count total number of DoFs and send to our instanceOfPetsc. 
+3. InitPETSc step. Here we count total number of DoFs and send to our instanceOfPetsc. This is the same as the 
+   number of vertices that were marked as DoF - we simply query LocalToGlobalMap for the total number of global vertices.
 
 4. Assembly - This is the stage we construct the PETSc matrix and Rhs vector. For this, we add a new action set,
-   seen in AssemblePETSCMatrix.py
-   During TouchVertexFirstTime, we aim to:
-      - Run through the neighbouring vertices within this cell
-      - Retrieve a global Index for each from the LocalToGlobalMap
-      - Insert an appropriate value into the PETSc matrix based on the Poisson stencil
-      - Insert an appropriate value into the RHS vector todo
-   
-   The only issue is that TouchVertexFirstTime has access only to:
+   petsc.actionsets.InitVertexDoFsAssemblePetscMatrix.
+   During TouchCellFirstTime:
+      - Run through the vertices within this cell
+      - Retrieve a global Index for each from the LocalToGlobalMap per vertex
+      - Increment values in PETSc matrix based on the Poisson stencil @f$ 2^(2d) @f$ calls
+   During TouchVertexFirstTime:
+      - Get global index of the vertex (only for the fine grid vertex)
+      - Set entry in RHS vector to corresponding value from the Peano mesh.
+      - Set entry in solution vector to corresponding value from the Peano mesh.
 
-   ~~~~~~~~~~~~~~~~~~~~~
-   const peano4::datamanagement::VertexMarker& marker,
-   benchmarks::multigrid::petsc::poisson::vertexdata::Poisson& fineGridVertexPoisson,
-   peano4::datamanagement::VertexEnumerator<benchmarks::multigrid::petsc::poisson::vertexdata::Poisson> coarseGridVerticesPoisson
-   ~~~~~~~~~~~~~~~~~~~~~
-
-   which don't give access to the neighbouring vertices.
-
-   However, in TouchCellFirstTime, one argument passed in is:
-
-   ~~~~~~~~~~~~~~~~~~~~~
-   peano4::datamanagement::VertexEnumerator<benchmarks::multigrid::petsc::poisson::vertexdata::Poisson> fineGridVerticesPoisson
-   ~~~~~~~~~~~~~~~~~~~~~
-
-   which we can query to get all the indices of the vertices in this cell.
-
-   So, perhaps performing assembling matrix values within TouchCellFirstTime is the way to go.
 
 5. Solve - Hand over to PETSc to find solution 
 6. MapSolutionOntoMesh - query instanceOfPetsc for the data from the solution vector. 

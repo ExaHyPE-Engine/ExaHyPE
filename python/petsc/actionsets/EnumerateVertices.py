@@ -22,11 +22,7 @@ Enumerate the vertices
   ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
 
-    int index = _localMap.reserveIndex( {{CARDINALITY}} );
-    fineGridVertex{{SOLVER_NAME}}.setNumber( index );
-    coarseGridVertices{{SOLVER_NAME}}(marker.getSelectedVertexNumber()).setNumber( index );
-    
-    // fineGridVertex{{SOLVER_NAME}}.setNumber( _localMap.reserveIndex( {{CARDINALITY}} ) );
+    fineGridVertex{{SOLVER_NAME}}.setNumber( _localMap.reserveIndex( {{CARDINALITY}} ) );
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 

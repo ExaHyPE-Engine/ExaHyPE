@@ -3,15 +3,15 @@
 #include <petscsys.h>
 #include <petscmat.h>
 #include <petscvec.h>
+#include <petscdmda.h>
+// #include <petscksp.h>
+// #include <petscdmmoab.h>
+
 #include <vector>
 #include <map>
 
 #include <iostream>
 
-/**
- * define a shorthand for a pair of ints
-*/
-typedef std::pair<int, int> tIndex;
 
 namespace petsc{
   /**
@@ -46,15 +46,6 @@ class petsc::PetscData{
      * \param int dofs
     */
     void initMatrixAndVectors( int dofs );
-
-    // void initMatrix();
-
-    /**
-     * For now, we pass in the values given to the Poisson class
-     * during the InitVertexDof stage. Once we get to the step where
-     * we Init Petsc, we send those values over here. See Poisson-main.cpp
-    */
-    // void initVectors( std::vector< std::pair<double, double> > valuesAndRhs );
     
     //method to convert petsc vec to std array
     //for now, just for the solution vector
@@ -67,19 +58,26 @@ class petsc::PetscData{
     double getX(int i) const;
 
     /**
-     * method to store doubles in a vector until we're ready to
-     * put them in _A
-     * 
-     * @TODO - pass by reference?
+     * method to send doubles to petsc as we receive them
     */
     void insertDoubleAtIndexij(int i, int j, double val);
     void incrementDoubleAtIndexij(int i, int j, double val);
-    double getTempDoubleAtIndexij(int i, int j);
 
     /**
-     * method to put the contents of _AasStdVector into _A
+    * method to insert value and rhs into the _x and _b vectors 
+    * respectively. 
     */
-    void assembleA();
+    void insertValueAndRHS(double val, double rhs, int index);
+
+    /**
+     * Assemble vectors and matrices
+    */
+    void assemble();
+
+    /**
+    * method to hand over to petsc and solve.
+    */
+    void petscSolve();
 
   private:
     int _dofs;
@@ -87,14 +85,6 @@ class petsc::PetscData{
     //Ax = b
     Mat _A;
     Vec _x, _b;
-
-    /**
-     * create a std::map, since we cannot reserve such a large amount of memory
-     * Clever indexing still necessary.
-     * TODO -- best thing to do here is store the elements in an array, but 
-     * use a std::map to perform the clever indexing
-    */
-    std::map<tIndex, double> _AasStdMap;
 
     /**
      * initialise a vector to store x for now, so we can interrogate them 

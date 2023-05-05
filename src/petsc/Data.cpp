@@ -5,7 +5,7 @@ petsc::PetscData::PetscData(int argc, char** argv) {
 }
 
 petsc::PetscData::PetscData(){
-  std::cout << "used default (null) petsc initialiser\n\n";
+  std::cout << "used default (null) petsc initialiser\n";
 }
 
 void petsc::PetscData::initMatrixAndVectors( int dofs ){
@@ -15,9 +15,6 @@ void petsc::PetscData::initMatrixAndVectors( int dofs ){
 
   //matrix size, set it to number of dofs
   PetscInt n = _dofs;
-
-  //reserve enough space in the temporary vector to hold the values of A
-  // _AasStdVector.resize( _dofs * _dofs );
 
   MatCreate(PETSC_COMM_WORLD, &_A);
   MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, n, n);
@@ -48,54 +45,37 @@ void petsc::PetscData::incrementDoubleAtIndexij( int i, int j, double val ){
   MatSetValue(_A, i, j, val, ADD_VALUES);
 }
 
+void petsc::PetscData::insertValueAndRHS(double val, double rhs, int index){
+  // insert "val" into _x 
+  VecSetValue(_x, index, val, INSERT_VALUES);
 
-void petsc::PetscData::assembleA(){
+  // insert "rhs" into _b
+  VecSetValue(_b, index, rhs, INSERT_VALUES);
+}
 
-  // std::cout << "\n\tNumber of elements is " << _AasStdMap.size() << "\n\n";
 
-  // for (PetscInt i = 0; i < 100; i++){
-  //   for (PetscInt j = 0; j < 100; j++){
-  //     PetscScalar val = getTempDoubleAtIndexij(i,j);
-  //     MatSetValue(_A, i, j, val, INSERT_VALUES);
-  //   }
-  // }
+void petsc::PetscData::assemble(){
   
-  //assemble
+  //assemble matrices
   MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);
 
-  std::cout << "\nsucessful matrix construction\n\n";
+  // std::cout << "\nsucessful matrix construction\n\n";
+
+  //assemble vectors
+  VecAssemblyBegin(_x);
+  VecAssemblyEnd(_x);
+  VecAssemblyBegin(_b);
+  VecAssemblyEnd(_b);
 
   //print out our contents
   // MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
 
 }
 
-// void petsc::PetscData::assembleMatrix(){
-
-
-
-// }
-
-// void petsc::PetscData::assembleVectors( std::vector< std::pair<double, double> > valuesAndRhs ){
-//   PetscInt n = _dofs;
-
-
-//   for (PetscInt i = 0; i < n; i++ ){
-//     std::pair<double, double> localVal = valuesAndRhs.at(i);
-//     VecSetValue(x, i, localVal.first, ADD_VALUES);
-//     VecSetValue(b, i, localVal.second, ADD_VALUES);
-//   }
-
-//   //assemble both
-//   VecAssemblyBegin(x);
-//   VecAssemblyEnd(x);
-//   VecAssemblyBegin(b);
-//   VecAssemblyEnd(b);
-
-//   //convert our newly initialised vector to a standard vector
-//   convertToStdVector();
-// }
+void petsc::PetscData::petscSolve(){
+  std::cout << "\n\tsolving stage not implemented\n\n";
+}
 
 
 void petsc::PetscData::setDoFs(int dofs){
@@ -107,19 +87,21 @@ void petsc::PetscData::convertToStdVector(){
   PetscInt size;
   VecGetSize(_x, &size);
 
-  //make a temp array to hold the values of the vec
-  const PetscScalar* petscArray;
+  _xAsStdVector.resize(size);
 
-  //get a read-only ptr to the petsc array
-  VecGetArrayRead(_x, &petscArray);
+  //temp array to hold the values 
+  PetscScalar y[size];
 
-  //TODO - work out why _xAsStdVector[i] = petscArray[i]; causes segfault
-  for (int i = 0; i < size; i++) {
-    _xAsStdVector.push_back( petscArray[i] );
-  }
+  //temp array to hold the indices we request
+  PetscInt ix[size];
+  for (int i=0; i<size; i++)
+    ix[i] = i;
 
-  //return the read-only ptr to petsc
-  VecRestoreArrayRead(_x, &petscArray);
+  //ask petsc
+  VecGetValues( _x, size, ix, y );
+
+  //put these into _xAsStdVector
+  _xAsStdVector.insert( _xAsStdVector.begin(), &y[0], &y[size] );
 
 }
 
