@@ -19,10 +19,16 @@ def construct_FV_solver(min_cell_size, max_cell_size):
     """!
     
     Construct the Finite Volume (limiter) scheme
+    
+    We assume that the underlying Finite Differences scheme has a patch 
+    size of 6x6x6. To make the Finite Volume scheme's time stepping (and
+    accuracy) match this patch size, we have to employ a 16 times finer
+    mesh.
+    
     """
     my_solver = None
     
-    patch_size = 6
+    patch_size = 6 * 16
     
     my_solver = CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4SBH_FV" , 
                                                                        patch_size           = patch_size,
