@@ -18,32 +18,35 @@ class AssemblePetscMatrix(ActionSet):
     if (fineGridVerticesPoisson(i).getType() != vertexdata::Poisson::Type::Dirichlet
         and fineGridVerticesPoisson(i).getNumber() < repositories::getTotalNumberOfDegreesOfFreedom()
     ) {
+      //get a global index
       std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVerticesPoisson(i).getNumber());
       int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
       enumeratedIndices[i] = globalIndex;
     }
 
-    //get a global index
   }
 
   //next, loop twice over TwoPowerD, so we can correctly fill the petsc matrix.
   //calling our increment function 16 times is temporary; this can be done with 
   //one call to PETSc. While in development, we do it the dumb way.
+
+  double h = marker.h()[0];
+
   for (int i=0; i<TwoPowerD; i++){
     for (int j=0; j<TwoPowerD; j++){
     if (enumeratedIndices[i] != -1 and enumeratedIndices[j] != -1){
       if (i == j){
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], 2.0/3.0); //2/3 /h
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], 2.0/3.0/h);
       }
 
       // if they add up to 3, then they must be opposites - i know this is a bodge
       else if (i + j == 3){
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], -1.0/3.0);
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], -1.0/3.0/h);
       }
 
       //final two cases
       else{
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], -1.0/6.0);    
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], -1.0/6.0/h);    
       }
     }
 
