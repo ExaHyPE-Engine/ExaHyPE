@@ -71,8 +71,19 @@ elif args.scenario == "Tsunami":
   if not os.path.exists(args.displacement_file): raise FileNotFoundError()
   
   # check for supported file extension
-  if os.path.splitext(args.bathymetry_file)[1] not in supported_file_types_bathymetry: raise Exception("Unsupported file type of bathymetry file! Supported extensions are: %s" % ("|".join(supported_file_types_bathymetry)))
-  if os.path.splitext(args.displacement_file)[1] not in supported_file_types_displacement: raise Exception("Unsupported file type of displacement file! Supported extensions are: %s" % ("|".join(supported_file_types_displacement)))
+  bath_ext = os.path.splitext(args.bathymetry_file)[1]
+  displ_ext = os.path.splitext(args.displacement_file)[1] 
+  if bath_ext not in supported_file_types_bathymetry: raise Exception("Unsupported file type of bathymetry file! Supported extensions are: %s" % ("|".join(supported_file_types_bathymetry)))
+  if displ_ext not in supported_file_types_displacement: raise Exception("Unsupported file type of displacement file! Supported extensions are: %s" % ("|".join(supported_file_types_displacement)))
+
+  # sets flags such as -DNCBATHY or -DTT3DISPL
+  cpp_header_name = "./preprocessor_defintion.h"
+  if os.path.exists(cpp_header_name):
+    os.remove(cpp_header_name)
+  cpp_file = open(cpp_header_name, 'w')
+  cpp_file.write("#define %sBATHY\n" % (bath_ext[1:].upper()))
+  cpp_file.write("#define %sDISPL\n" % (displ_ext[1:].upper()))
+  cpp_file.close()
 
   from scenarios.tsunami import Tsunami
   my_pde = Tsunami(dimensions=args.dim, auxiliary_variables=auxiliary_variables, width=width)
@@ -105,7 +116,7 @@ if args.gpu:
 
 my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".format("true" if args.dynamic_amr else "false"))
 if args.scenario == "Tsunami":
-  my_solver.add_user_solver_includes("#include \"./TopologyParser.h\"")
+  my_solver.add_user_solver_includes("#include \"parser/TopologyParser.h\"")
   my_solver.add_solver_constants("examples::exahype2::swe::TopologyParser parser = examples::exahype2::swe::TopologyParser(\"%s\", \"%s\");" % (args.bathymetry_file, args.displacement_file))
 my_solver.set_implementation(
   initial_conditions    = my_pde.implementation_of_initial_conditions(),
@@ -134,7 +145,8 @@ my_project.set_global_simulation_parameters(
 )
 
 peano4_project = my_project.generate_Peano4_project(verbose=True)
-if args.scenario == "Tsunami": peano4_project.output.makefile.add_cpp_file("TopologyParser.cpp")
+if args.scenario == "Tsunami": 
+  peano4_project.output.makefile.add_cpp_file("parser/TopologyParser.cpp")
 peano4_project.generate()
 if(args.compile):
   peano4_project.build(make_clean_first=True, throw_away_data_after_build=True)

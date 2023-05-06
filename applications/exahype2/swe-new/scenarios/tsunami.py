@@ -8,8 +8,8 @@ class Tsunami(scenarios.template_scenario.Template_Scenario):
 
     def implementation_of_initial_conditions(self):
         return """
-        float bath = parser.sampletopology(volumeCentre(0), volumeCentre(1));
-        float displ = parser.sampledisplacement(volumeCentre(0), volumeCentre(1));
+        float bath = parser.sample_bathymetry(volumeCentre(0), volumeCentre(1));
+        float displ = parser.sample_displacement(volumeCentre(0), volumeCentre(1));
         Q[0] = bath > 0  || bath+displ > 0 ? 0.0 : -bath;
         Q[1] = 0.0;
         Q[2] = 0.0;
