@@ -54,5 +54,9 @@ As we combine solvers, we have to ensure that their time step sizes match. In
 the context of FD4, this means that the FD4 time step size has to be calibrated
 with @f$ p^{-2}=1/16 @f$ relative to the Finite Volume scheme. That is, if they 
 have the same mesh size, FD4 takes significantly smaller time step sizes.
+However, we want to havee the same spatial and temporal accuacy, so we need a
+smaller mesh size for the Finite Volume scheme. The file
+benchmarks/exahype2/ccz4/single-black-hole/convergence-study.py and the solvers
+within applications/exahype2/ccz/CCZ4Solver.py hold further details.
 
 */
