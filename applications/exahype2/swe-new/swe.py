@@ -34,9 +34,12 @@ build_modes = {
   "Debug":peano4.output.CompileMode.Debug,
 }
 
-scenarios = ["Radial_Dam_Break", "Radial_Bathymetry_Dam_Break"]
+supported_file_types_bathymetry = [".asc", ".nc"]
+supported_file_types_displacement = [".tt3", ".nc"]
 
-parser = argparse.ArgumentParser(description='ExaHyPE 2 - Acoustic Wave Application Script')
+scenarios = ["Radial_Dam_Break", "Radial_Bathymetry_Dam_Break", "Tsunami"]
+
+parser = argparse.ArgumentParser(description='ExaHyPE 2 - SWE Application Script')
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     required=True,              help="|".join(solvers.keys()) )
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default="Release",          help="|".join(build_modes.keys()) )
 parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
@@ -49,12 +52,31 @@ parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    ac
 parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=False,              help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
 parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)" )
 parser.add_argument("-c",       "--scenario",          dest="scenario",       choices=scenarios,          default="Radial_Dam_Break", help="|".join(scenarios))
+parser.add_argument("-bf",       "--bathymetry-file",  dest="bathymetry_file", type=str,                   required=False,             help="Path to file containing bathymetry relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_bathymetry)))
+parser.add_argument("-df",       "--displacement-file",dest="displacement_file",type=str,                  required=False,             help="Path to file containing displacement relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_displacement)))
 args = parser.parse_args()
 
 my_pde = None
 if args.scenario == "Radial_Bathymetry_Dam_Break":
   from scenarios.radial_bathymetry_dam_break import Radial_Bathymetry_Dam_Break
   my_pde = Radial_Bathymetry_Dam_Break(dimensions=args.dim, auxiliary_variables=auxiliary_variables, width=width)
+
+elif args.scenario == "Tsunami":
+  # check whether flags are set
+  if args.bathymetry_file is None: raise Exception("No bathymetry file supplied for the tsunami scenario!")
+  if args.displacement_file is None: raise Exception("No displacement file supplied for the tsunami scenario!")
+  
+  # check whether files exist in the first place
+  if not os.path.exists(args.bathymetry_file): raise FileNotFoundError()
+  if not os.path.exists(args.displacement_file): raise FileNotFoundError()
+  
+  # check for supported file extension
+  if os.path.splitext(args.bathymetry_file)[1] not in supported_file_types_bathymetry: raise Exception("Unsupported file type of bathymetry file! Supported extensions are: %s" % ("|".join(supported_file_types_bathymetry)))
+  if os.path.splitext(args.displacement_file)[1] not in supported_file_types_displacement: raise Exception("Unsupported file type of displacement file! Supported extensions are: %s" % ("|".join(supported_file_types_displacement)))
+
+  from scenarios.tsunami import Tsunami
+  my_pde = Tsunami(dimensions=args.dim, auxiliary_variables=auxiliary_variables, width=width)
+
 else:
   from scenarios.radial_dam_break import Radial_Dam_Break
   my_pde = Radial_Dam_Break(dimensions=args.dim, auxiliary_variables=auxiliary_variables, width=width)
@@ -82,6 +104,9 @@ if args.gpu:
   my_solver.set_pde_terms_without_state(True)
 
 my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".format("true" if args.dynamic_amr else "false"))
+if args.scenario == "Tsunami":
+  my_solver.add_user_solver_includes("#include \"./TopologyParser.h\"")
+  my_solver.add_solver_constants("examples::exahype2::swe::TopologyParser parser = examples::exahype2::swe::TopologyParser(\"%s\", \"%s\");" % (args.bathymetry_file, args.displacement_file))
 my_solver.set_implementation(
   initial_conditions    = my_pde.implementation_of_initial_conditions(),
   boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
@@ -109,6 +134,7 @@ my_project.set_global_simulation_parameters(
 )
 
 peano4_project = my_project.generate_Peano4_project(verbose=True)
+if args.scenario == "Tsunami": peano4_project.output.makefile.add_cpp_file("TopologyParser.cpp")
 peano4_project.generate()
 if(args.compile):
   peano4_project.build(make_clean_first=True, throw_away_data_after_build=True)
