@@ -3,8 +3,6 @@
 #ifndef _examples_exahype2_swe_TopologyParser_H_
 #define _examples_exahype2_swe_TopologyParser_H_
 #include "./../preprocessor_defintion.h"
-//#define ASCBATHY
-//#define TT3DISPL
 
 
 #include "tarch/logging/Log.h"
