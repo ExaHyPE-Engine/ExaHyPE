@@ -175,6 +175,8 @@ petsc::PetscData::~PetscData(){
 
   //COMMENTING OUT FOR NOW AS IT CAUSES PETSC ERROR
   // MatDestroy(&_A);
+  // VecDestroy(&_x);
+  // VecDestroy(&_b);
   // PetscFinalize();
 
   // std::cout << "destroyed objects\n\n";
