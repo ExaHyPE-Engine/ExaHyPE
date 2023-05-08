@@ -299,6 +299,7 @@ class SeparateSweeps( CellCenteredFiniteDifferences ):
       and not (""" + last_sweep_of_time_step_or_plotting_initialisation + ")"
     self._patch_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard() + """
       and not (""" + first_sweep_of_time_step_or_plotting_guard + ")"   
+    self._patch_estimates.generator.compute_condition          = self._patch_estimates.generator.load_persistent_condition + " or " + self._patch_estimates.generator.store_persistent_condition
 
             
   def create_action_sets(self):

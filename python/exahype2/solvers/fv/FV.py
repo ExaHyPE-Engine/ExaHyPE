@@ -16,9 +16,9 @@ import exahype2.solvers.fv.actionsets
 from .PDETerms import PDETerms
 
 class FV(object):
-  """ 
-    An abstract finite volume solver step sizes that works on patch-based
-    AMR with a halo layer of one.
+  """ !
+  
+    Abstract finite volume solver step sizes that works on patch-based AMR with a halo layer of one.
 
     FV is the base class of all FV solvers. It defines what kind of action sets do 
     exist, i.e. what in principle can be done while we run through the grid. It also
@@ -155,7 +155,10 @@ class FV(object):
     max_volume_h,
     plot_grid_properties,
     kernel_namespace):
-    """
+    """!
+
+  Create solver    
+    
   name: string
      A unique name for the solver. This one will be used for all generated 
      classes. Also the C++ object instance later on will incorporate this 
@@ -364,7 +367,10 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
   @abstractmethod
   def create_data_structures(self):
-    """
+    """!
+    
+     Create data structures required by all Finite Volume solvers
+    
      Recall in subclasses if you wanna change the number of unknowns
      or auxiliary variables. See class description's subsection on 
      data flow.
@@ -432,6 +438,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._patch.generator.compute_condition          = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
     
     self._patch_overlap_old.generator.send_condition               = "false"
     self._patch_overlap_old.generator.receive_and_merge_condition  = "false"
@@ -444,12 +451,15 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_guard()
     self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_guard()
+    self._patch_overlap_old.generator.compute_condition            = self._load_face_data_default_guard() + " or " + self._store_face_data_default_guard()
 
     self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_guard()
     self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_guard()
+    self._patch_overlap_new.generator.compute_condition            = self._load_face_data_default_guard() + " or " + self._store_face_data_default_guard()
 
     self._patch_overlap_update.generator.store_persistent_condition   = "false"
     self._patch_overlap_update.generator.load_persistent_condition    = "false"
+    self._patch_overlap_old.generator.compute_condition               = "false"
 
     self._patch.generator.includes  += """
 #include "../repositories/SolverRepository.h"
