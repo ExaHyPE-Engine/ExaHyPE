@@ -183,29 +183,6 @@ struct peano4::datamanagement::CellMarker {
      */
     bool willBeSkeletonCell() const;
 
-    /**
-     * Switch manually to skeleton cells
-     *
-     * Most codes are fine with the default definition of skeleton vs enclave
-     * tasks. It is only some codes which want to add further criteria. By
-     * default, each cell is an enclave cell unless it meets one of the
-     * skeleton criteria. Some codes might want to impose additional criteria.
-     * Therefore, there's a switchToSkeleton(), i.e. towards the more specific
-     * type, but no corresponding switchToSkeleton().
-     *
-     * If you have multiple action sets using this criterion, it is the user's
-     * responsibility that manual conversions are applied consistently. This
-     * could mean that invoke switchToSkeleton() all over the place where you
-     * need it. It could also mean that skeleton cells label their cells and
-     * subsequent action sets then do not evaluate the skeleton property but
-     * rather the cell label.
-     *
-     * The marker affects only _willBeEnclave. It does not alter the state
-     * retrospectively. Notably, it is impossible to find out if a user has
-     * called switchToSkeleton() in a previous grid sweep.
-     */
-    void switchToSkeleton();
-
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
 
     #if PeanoDebug>0

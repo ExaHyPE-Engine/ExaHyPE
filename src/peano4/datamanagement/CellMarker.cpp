@@ -73,11 +73,6 @@ void peano4::datamanagement::CellMarker::setRelativePositionWithinFatherCell( in
 #endif
 
 
-void peano4::datamanagement::CellMarker::switchToSkeleton() {
-  _willBeEnclave = true;
-}
-
-
 bool peano4::datamanagement::CellMarker::isContained(
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       tolerance
