@@ -36,7 +36,25 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   cells as skeleton cells. @ref benchmarks_exahype2_ccz4_single_black_hole "Peano's single black hole test" provides
   an example. If so, you 
   
+  
+  ## Modify templates
+  
+  You can alter the template. Typical codes augment _Template_TouchCellFirstTime_Preamble
+  for example. However, there are two things to consider:
+  
+  - _Template_TouchCellFirstTime_Preamble is a member of the class and 
+    initialised in the constructor. 
+  - The constructor is used to create an object in the create_action_sets()
+    of the using class.
+  
+  If you want to alter the preamble, you thus should specialise 
+  create_action_sets() and invoke the supertype's create_action_sets(). After
+  that, alter self._action_set_update_cell._Template_TouchCellFirstTime_Preamble.
+  I recommend to add an entry and not to replace the preamble, as the 
+  preamble already consists meaningful code.
+  
   """
+
   
   TemplateUpdateCell = jinja2.Template( """
   double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
@@ -90,6 +108,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     tarch::multicore::spawnTask( newEnclaveTask );
   }
   """)
+
 
   def __init__(self,solver):
     d = {}
@@ -198,8 +217,10 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
       pass 
     return result
 
+
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+
 
 class EnclaveTasking( FV ):
   def __init__(self,
@@ -312,6 +333,7 @@ class EnclaveTasking( FV ):
 
     self._patch_overlap_old.generator.send_condition               = self._initialisation_sweep_guard
     self._patch_overlap_old.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_guard
+
 
   def _optimise_patch_storage_for_global_time_stepping(self):
     """
