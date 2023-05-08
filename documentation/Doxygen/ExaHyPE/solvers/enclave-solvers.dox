@@ -26,6 +26,57 @@ triggers operations per cell is split up into two mesh sweeps:
    takes their outcome and works them into the mesh representation.
 
 
+### Definition: Enclave cell
+
+An enclave cell is every cell that is ***not*** a skeleton cell, i.e. each cell
+is either enclave or skeleton. All logic behind enclave tasking is implemented
+within peano4::datamanagement::CellMarker which offers 
+peano4::datamanagement::CellMarker::hasBeenEnclaveCell(),
+peano4::datamanagement::CellMarker::willBeEnclaveCell(),
+peano4::datamanagement::CellMarker::hasBeenSkeletonCell(), and
+peano4::datamanagement::CellMarker::willBeSkeletonCell().
+
+
+A skeleton cell is, by default, a cell which 
+
+1. is adjacent to a subdomain boundary or
+2. is adjacent to a mesh resolution change.
+
+The second condition excludes any cell which is adjacent to a hanging vertex. 
+See peano4::datamanagement::CellMarker::hasBeenEnclaveCell() for implementation 
+details.
+
+You can, within your action sets, change the marker manually to a skeleton 
+cell and hence generalise the definition of a skeleton cell. For this, take 
+the action set of choice and invoke
+peano4::datamanagement::CellMarker::switchToSkeleton() on your marker. However,
+this will be temporary state switch which is valid only in the particular 
+function of the action set.
+
+
+This technique helps you to add an additional, third criterion to the 
+enumeration above. You can leave the action set basically as it is, but
+you add an additional check as preamble which toggles (even more) cells
+to skeleton. They are, from hereon, treated like the other skeletons. In 
+the Finite Volume case, such an additional instructions reads as
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+self._action_set_update_cell._Template_TouchCellFirstTime_Preamble += """
+if ( repositories::InstanceOf""" + self._name + """ ) {
+  marker.switchToSkeleton();
+}
+"""        
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is important to note that you only alter the definition of a skeleton
+temporarily within one single action set. If you need the same alteration 
+in various places, you have to alter various action sets. In most cases however
+ExaHyPE sets some flags per cell after an initial enclave vs skeleton check.
+If you alter the definition in the action set which makes the original 
+decision, you should automatically get all follow-up activities per cell
+right.
+
+
 ## Optimistic enclave tasking
 
 Optimistic enclave tasking sticks to the data flow of enclave tasking. However,
