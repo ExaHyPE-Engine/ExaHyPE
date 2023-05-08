@@ -16,6 +16,6 @@ class Radial_Dam_Break(scenarios.template_scenario.Template_Scenario):
         
         self.initial_values[1] = 0.0
         self.initial_values[2] = 0.0
-        self.initial_values[3] = -1.0 
+        self.initial_values[3] = 0.0 
         
         pass

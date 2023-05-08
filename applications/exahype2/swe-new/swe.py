@@ -15,7 +15,7 @@ time_step_relaxation  = 0.5 # taken from tutorial
 plot_interval         = 0.005 # taken from tutorial
 patch_size            = 3
 maximum_cell_size     = 0.1
-amr_levels            = 3 # TODO implement refinement criterion
+amr_levels            = 3 
 auxiliary_variables   = 1 # bathymetry
 
 solvers = {
@@ -34,8 +34,8 @@ build_modes = {
   "Debug":peano4.output.CompileMode.Debug,
 }
 
-supported_file_types_bathymetry = [".asc", ".nc"]
-supported_file_types_displacement = [".tt3", ".nc"]
+supported_file_types_bathymetry = [".nc"]
+supported_file_types_displacement = [".nc"]
 
 scenarios = ["Radial_Dam_Break", "Radial_Bathymetry_Dam_Break", "Tsunami"]
 
@@ -76,17 +76,8 @@ elif args.scenario == "Tsunami":
   if bath_ext not in supported_file_types_bathymetry: raise Exception("Unsupported file type of bathymetry file! Supported extensions are: %s" % ("|".join(supported_file_types_bathymetry)))
   if displ_ext not in supported_file_types_displacement: raise Exception("Unsupported file type of displacement file! Supported extensions are: %s" % ("|".join(supported_file_types_displacement)))
 
-  # sets flags such as -DNCBATHY or -DTT3DISPL
-  cpp_header_name = "./preprocessor_defintion.h"
-  if os.path.exists(cpp_header_name):
-    os.remove(cpp_header_name)
-  cpp_file = open(cpp_header_name, 'w')
-  cpp_file.write("#define %sBATHY\n" % (bath_ext[1:].upper()))
-  cpp_file.write("#define %sDISPL\n" % (displ_ext[1:].upper()))
-  cpp_file.close()
-
   from scenarios.tsunami import Tsunami
-  my_pde = Tsunami(dimensions=args.dim, auxiliary_variables=auxiliary_variables, width=width)
+  my_pde = Tsunami(dimensions=args.dim, auxiliary_variables=auxiliary_variables)
 
 else:
   from scenarios.radial_dam_break import Radial_Dam_Break
@@ -106,7 +97,7 @@ my_solver = solvers[solver_type](
   patch_size                = args.patch_size,
   unknowns                  = args.dim+1,
   auxiliary_variables       = auxiliary_variables,
-  max_volume_h              = args.max_cell_size,
+  max_volume_h              = args.max_cell_size, # TODO must be at least as fine as bathymetry file
   min_volume_h              = args.max_cell_size * 3.0**(-args.amr_levels),
   time_step_relaxation      = time_step_relaxation
 )
@@ -117,7 +108,7 @@ if args.gpu:
 my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".format("true" if args.dynamic_amr else "false"))
 if args.scenario == "Tsunami":
   my_solver.add_user_solver_includes("#include \"parser/TopologyParser.h\"")
-  my_solver.add_solver_constants("examples::exahype2::swe::TopologyParser parser = examples::exahype2::swe::TopologyParser(\"%s\", \"%s\");" % (args.bathymetry_file, args.displacement_file))
+  my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(\"%s\", \"%s\");" % (args.bathymetry_file, args.displacement_file))
 my_solver.set_implementation(
   initial_conditions    = my_pde.implementation_of_initial_conditions(),
   boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
@@ -147,6 +138,7 @@ my_project.set_global_simulation_parameters(
 peano4_project = my_project.generate_Peano4_project(verbose=True)
 if args.scenario == "Tsunami": 
   peano4_project.output.makefile.add_cpp_file("parser/TopologyParser.cpp")
+  peano4_project.output.makefile.add_cpp_file("parser/NetCDFReader.cpp")
 peano4_project.generate()
 if(args.compile):
   peano4_project.build(make_clean_first=True, throw_away_data_after_build=True)

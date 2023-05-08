@@ -1,12 +1,12 @@
-#ifndef READNC_H
-#define READNC_H
+#ifndef NETCDFREADER_H
+#define NETCDFREADER_H
 #include <string>
-#include <netcdf.h>
 #include <sys/stat.h>
+#include <netcdf.h>
 
 typedef std::string String;
 
-namespace readnc
+namespace applications::exahype2::swe::parser::NetCDFReader
 {
 
     /**
@@ -64,40 +64,52 @@ namespace readnc
     char *getGlobalAttText(int ncid, const char *name);
 
     /**
-     * @brief Read contents of a 1D float variable from netCFD file.
+     * @brief Read contents of a 1D double variable from netCDF file.
      * 
      * @param ncid Pointer to location where returned netCDF ID is to be stored.
      * @param key variable name for which data is loaded.
      * @param variable Array where data is stored.
      * @return 0 iff successfull, -1 otherwise.
      */
-    int readVariable1D(int ncid, const char *key, float *variable);
+    int readVariable1D(int ncid, const char *key, double *variable);
 
     /**
-     * @brief Read contents of a 2D float variable from netCFD file.
+     * @brief Read contents of a 2D double variable from netCDF file.
      * 
      * @param ncid Pointer to location where returned netCDF ID is to be stored.
-     * @param key variable name for which data is loaded-
+     * @param key variable name for which data is loaded.
      * @param variable Array where data is stored.
      * @param rows count of rows of the array.
      * @param cols count of columns of the array.
      * @return 0 iff successfull, -1 otherwise.
      */
-    int readVariable2D(int ncid, const char *key, float **variable, size_t rows, size_t cols);
+    int readVariable2D(int ncid, const char *key, double **variable, size_t rows, size_t cols);
 
     /**
-     * @brief Read contents of a 2D float variable from netCFD file starting at a specified first-dimension value.
+     * @brief Read contents of a 2D double variable from netCDF file into 1D array.
+     * 
+     * @param ncid Pointer to location where returned netCDF ID is to be stored.
+     * @param key variable name for which data is loaded.
+     * @param variable Array where data is stored.
+     * @param rows count of rows of the array.
+     * @param cols count of columns of the array.
+     * @return 0 iff successfull, -1 otherwise.
+     */
+    int readVariable2D(int ncid, const char *key, double *variable, size_t rows, size_t cols);
+
+    /**
+     * @brief Read contents of a 2D double variable from netCDF file starting at a specified first-dimension value.
      * 
      * THIS FUNCTION WORKS AS INTENDED!!
      * 
      * @param ncid Pointer to location where returned netCDF ID is to be stored.
-     * @param key variable name for which data is loaded-
+     * @param key variable name for which data is loaded.
      * @param variable Array where data is stored.
      * @param rows count of rows of the array.
      * @param cols count of columns of the array.
      * @param start value of the first dimension from which to start reading.
      * @return 0 iff successfull, -1 otherwise.
      */
-    int readVariable2DHyperslab(int ncid, const char *key, float **variable, size_t rows, size_t cols, size_t start);
+    int readVariable2DHyperslab(int ncid, const char *key, double **variable, size_t rows, size_t cols, size_t start);
 }
 #endif

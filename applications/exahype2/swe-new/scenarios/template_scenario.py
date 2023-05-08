@@ -49,6 +49,7 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
             break;
         }"""
 
+    # TODO RefinementCommand::Erase implementieren
     def implementation_of_refinement_criterion(self):
         return """
         ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
