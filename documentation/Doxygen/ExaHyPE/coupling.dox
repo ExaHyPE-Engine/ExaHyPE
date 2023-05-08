@@ -79,9 +79,175 @@ as discussed below and therefore not subject of further discussion.
 
 ## Coupling the time step sizes
 
-Time step sizes sind beim Single Black Hole noch net gekoppelt. Dann auch die Readme dort mal schreiben
+Unless you use fixed time stepping schemes with hard-coded time step 
+sizes that match, any two solvers with ExaHyPE run at their own speed. 
+Even more, each individual cell runs at its own speed and hosts its own
+time stamp. For local timestepping, different cells may advance at different
+speed in time. For adaptive timestepping, all cells ***of one solver*** 
+will advance with the same time step size.
 
 
+For most solvers, it is therefore sufficient to plug into getAdmissibleTimeStepSize()
+of the superclass. Overwrite it, call the superclass' variant and then alter
+the returned value. 
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+class mynamespace::MySolver: public MyBaseClass {
+  ... 
+  getAdmissibleTimeStepSize() const override;
+};
+
+
+
+#include "repositories/SolverRepository.h"
+
+double mynamespace::MySolvergetAdmissibleTimeStepSize() const {
+  // get vanilla version of time step size, i.e. only the one computed
+  // by our solver
+  double myTimeStepSize = MyBaseClass::getAdmissibleTimeStepSize();
+  double otherTimeStepSize = repositories::MyOtherSolver.getAdmissibleTimeStepSize();
+  
+  // now we combine it with each other and return result
+} 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This is the approach used in 
+@ref applications_exahype2_euler_selfgravitation_with_Poisson "Euler example with self-gravitation via the Poisson equation".
+If you want to use local time stepping or run checks on the timestamp per cell,
+you will have to alter the cell's meta data holding its time stamp.
+Things in this case become more involved, i.e. you will have to study the
+underlying action sets and change the generated source code in there.
+
+
+## Localisation
+
+ExaHyPE couples volumetrically. That does not mean that all solvers have to be 
+solved everywhere. Indeed, the idea to offer support for multiple solvers arose
+originally from the a posteriori limiting of Dumbser et al where a Finite Volume
+solver complements ADER-DG solutions where shocks arise.
+
+Most projects that follow these rationale realise the same pattern:
+We define two different solvers, and we couple them
+with each other. The coupling (and solve) however are local operations:
+
+-   The low-order (typically Finite Volume - we therefore always refer
+    to Finite Volumes or FV from hereon) solver is our fallback strategy and we therefore
+    neither solve with Finite Volumes everywhere in the computational
+    domain nor should do we store the corresponding data.
+    
+-   The higher-order scheme is used everywhere where the FV is not 
+    applied or labelled as valid.
+
+-   The FV and the higher-order solver are not coupled everywhere but only in
+    boundary regions.
+
+We will effectively end up with a domain decomposition where parts of
+the computational domain are handled by the higher-order solver and the other
+parts are handled with FV. 
+To realise this, we need a marker or oracle, i.e. a magic function 
+per cell which tells us, similar to a multi-phase flow, which
+solver rules in this particular cell. 
+The
+marker will guide us which solver is "valid" in which cell, where one solver
+overrules the other one, and where we do not have to store one solver's data
+or the other.
+
+
+The image below illustrates the core idea behind typically coupling approaches
+in ExaHyPE. The sizes of the overlap might differ, but the principle is always
+the same. The illustration shows the minimal overlap that we can typically
+use. Both the upper and the lower mesh illustrate the same mesh. I use colours
+to show which solver exists in which mesh cell.
+
+@image html coupling.png
+
+- Solver A is running within the filled cells visualised on the the top. In 
+  empty cells, A neither solves anything nor does it hold data. 
+- Solver B is running within the filled cells visualised on the bottom. In 
+  empty cells, B neither solves anything nor does it hold data. 
+- Consequently, dark red cells are exclusively solved by A, whereas dark 
+  green cells are exclusively B.
+- In orange cells, A solves its PDE. Afterwards, A's updated solution is 
+  projected onto B's solution. That is, the blue cells hold B's data, but 
+  they are not updated by B but instead hold projections of A's data. They
+  kind of serve as boundary layer for B.
+- In the yellow cells, A does not solve its PDE but holds A's data. After
+  each step, the cell's solution by B (light green) is written into A's data.
+  The yellow cells serve as Dirichlet boundary data for A's solve.
+  
+Starting from this description, sophisticated coupling equations can be 
+realised, where you exploit the fact that we have a volumetric overlap.
+
+### Localisation guided by a marker
+
+Skip this section if you prefer a hard-coded marking of active regions.
+
+### Avoid that solver data is held everywhere
+
+Once you know where a solver is valid, it makes sense also to only store
+the solver's data in the valid region. Otherwise, a lot of memory is "wasted"
+which furthermore will be moved/accessed in each and every grid sweep, as the 
+mesh management of Peano so far does not know that ExaHyPE might not need the 
+data. ExaHyPE has to let Peano know.
+
+Every solver in ExaHyPE has a routine create_data_structures(). Depending on 
+the type of your solver, you might have a pretty deep inheritance hierarchy
+where every subclass specialises and augments the basic numerical scheme. It
+is the base class usually however which defines all the data structures over 
+the mesh which are used by the solver. This happens in its create_data_structures()
+operation. 
+
+Each data structure has a generator object attached to it which defines how
+to translate the logical data model onto C++ data structures. These generators
+further add MPI logic and so forth, and they create a predicate (guard) if to 
+load and store data or not. A typical code snippet in a solver reads as
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
+self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+self._patch.generator.compute_condition          = self._patch.generator.store_persistent_condition + " or " + self._patch.generator.load_persistent_condition
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which means that the generator queries the underlying class whether to store
+data in a cell or not. By default, most solvers only store data for unrefined 
+cells. Subclasses such as enclave tasking variations then augment the guards
+further. Therefore, it makes sense to plug into _store_cell_data_default_guard()
+and _load_cell_data_default_guard() if we want to restrict our solver spatially.
+
+
+
+### The actual solution coupling
+
+The actual solver coupling is typically done via the solver's hook ins
+postprocess_updated_patch, preprocess_reconstructed_patch and 
+postprocess_updated_cell_after_final_linear_combination (only for 
+Runge-Kutta style solvers). These are 
+attributes which host C++ code that is executed at the right points in 
+time. 
+
+Any coupling can be arbitrary complicated, but there are several 
+off-the-shelf routines offered in toolbox::blockstructured. Interesting
+variants include toolbox::blockstructured::copyUnknown() and 
+::toolbox::blockstructured::computeGradientAndReturnMaxDifference().
+Besides those guys, you might also want to use the AMR routines within
+the blockstructured toolbox and the ExaHyPE folders, where you find, 
+for example, linear interpolation and restriction.
+
+If you prefer not to interfere with the actual solver kernels, every
+solver has a dedicated action set for postprocessing. It is called
+_action_set_postprocess_solution. This action set is by default empty, 
+yet has been introduced exactly for the coupling of various solvers
+after you have updated the solution. Many implementations find it 
+more convenient and cleaner if the coupling is completely separated
+from the actual solver's logic.
+
+@see toolbox/blockstructured/Copy.h
+@see toolbox/blockstructured/Derivative.h
+@see toolbox/blockstructured/Interpolation.h
+@see toolbox/blockstructured/Restriction.h
+ 
  */
 
 
@@ -90,43 +256,7 @@ Time step sizes sind beim Single Black Hole noch net gekoppelt. Dann auch die Re
 Case study: Coupling finite volumes with Runge-Kutta DG (limiting) {#section:exahype:fv:limiting}
 ------------------------------------------------------------------
 
-Even simple initial conditions can make a Discontinuous Galerking solver
-fail: The higher order solution representation is not capable to resolve
-shocks properly (or steep gradients), and the solution therefore starts
-to oscillation. At the same time, experiments with Finite Volumes yield
-solutions which a subject to very strong numerical diffusion. The
-solution quality is not good.
 
-There are two fundamental approaches to tackle this dilemma: On the one
-hand, we can introduce artificial damping terms, i.e. numerical
-diffusion, or truncation terms for the Riemann solvers such that these
-oscillations are eliminated. On the other hand, we can accept that both
-DG and FV have their pros and cons and try to use each solver where it
-unfolds its full potential. This is the prime strategy in the original
- project.
-
-To realise this a posteriori limiting (which really will become an a
-priori limiting), we follow the same pattern that we exploited in the
-previous case study: We define two different solvers, and couple them
-with each other. Different to the previous setup, we however make all of
-our operations local:
-
--   The Finite Volume solver is our fallback strategy and we therefore
-    neither solve with Finite Volumes everywhere in the computational
-    domain nor should do we store the corresponding data.
-
--   The FV and the DG solver are not coupled everywhere but only in
-    boundary regions, i.e. in regions where the FV solver and the DG
-    solver kind of agree solution-wisely.
-
-We will effectively end up with a domain decomposition where parts of
-the computational domain are handled by the DG solver and the other
-parts are handled with FV. To realise this, we need a marker, i.e. a
-label per cell which tells us, similar to a multi-phase flow, which
-solver rules in this particular cell. Then, we construct two solvers
-that are coupled with each other similar to the previous case study. The
-marker will determine which solver is "valid" in which cell, where they
-are active, and where the two solvers are coupled with each other.
 
 For the coupling of two solvers, it is advantageous not to work with
  solver instances directly. Instead, I recommend that you specialise the
@@ -202,27 +332,3 @@ reasons for this:
 Ganz ganz wichtig ist, dass der Poisson solver als erstes kommt vor dem
 DG und dem FV Zeugs!
 
-##### Restrict the solvers {#restrict-the-solvers .unnumbered}
-
-With the marker at hand, we can instruct the solver not to solve their
-equation in certain regions. We can also ensure that they don't store
-data where it actually is not required. The cell marker as introduced by
-`ConstrainedPoissonEquationForMarkerOnCells` provides all the necessary
-information to guide the data flow.
-
-We don't want to alter the core logic of the data flow, but actually
-veto for some cells that data is stored or loaded. There are various
-ways to achieve this. I propose to plug into
-`_load_cell_data_default_guard()` and
-`_store_cell_data_default_guard()`.
-
-Schoen ist das nicht mit dem Ueberschreiben -\> remark Wir sehen, dass
-der Status hier gar keine Rolle spielt, sondern nur die Storage-Rules.
-Evtl ist das fuer andere Loeser anders
-
-##### Couple marker and FV scheme {#couple-marker-and-fv-scheme .unnumbered}
-
-With the three solvers (two PDE solvers plus the marker's Poisson
-equation) at hand, we have to couple them with each other.
- 
- 
