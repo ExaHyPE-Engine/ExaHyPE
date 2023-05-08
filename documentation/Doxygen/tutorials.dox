@@ -4,10 +4,11 @@
 
 \tableofcontents
 
-\li \subpage tutorials_exahype2_advection2d
+\li \subpage tutorials_exahype2_advection
 \li \subpage tutorials_exahype2_swe
-\li \subpage tutorials_exahype2_euler2d
-\li \subpage tutorials_exahype2_euler3d
+\li \subpage tutorials_exahype2_euler
+\li \subpage tutorials_exahype2_acoustic_wave
+\li \subpage tutorials_exahype2_elastic_wave
 
 Tutorials to introduce certain aspects of Peano's Python API.
 

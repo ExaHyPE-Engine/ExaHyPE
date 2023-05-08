@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath("../../../python"))
 #
 # We import the required modules for this project.
 # We always need the 'peano4' module as this is our core project.
-# Since we creating an 'ExaHyPE' application, we additionally
+# Since we are creating an 'ExaHyPE' application, we additionally
 # need to import the 'exahype2' module.
 #
 import peano4
@@ -92,7 +92,7 @@ my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "
 # This helps us to resolve any dependencies.
 # Additionally, we specify the build mode which you can also change to a different mode.
 #
-my_project.set_Peano4_installation( "../../../", mode=peano4.output.CompileMode.Debug )
+my_project.set_Peano4_installation( "../../../", mode=peano4.output.CompileMode.Release )
 
 #
 # We generate and grab the underlying core project of 'Peano4'.
@@ -104,8 +104,10 @@ my_project = my_project.generate_Peano4_project(verbose=True)
 # We add our custom C++ solver file here and say that this is not generated.
 # This allows us to call 'make distclean' without deleting this file as it is not generated.
 # This step is optional and only required if 'make distclean' is used.
+# Furthermore, this ensures that the C++ is not ignored by the generated .gitignore (which ignores all generated files).
+# As you want to have your own custom C++ file tracked by Git.
 #
-#my_project.output.makefile.add_cpp_file( "SWESolver.cpp", generated=False )
+my_project.output.makefile.add_cpp_file( "SWESolver.cpp", generated=False )
 
 #
 # Finally, we want to build our project.

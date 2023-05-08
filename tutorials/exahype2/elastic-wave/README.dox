@@ -1,10 +1,15 @@
-# Elastodynamics in First Order Form
-The elastic wave equation describes propagation of waves in elastic solids. They are commonly derived from the conservation of momentum and the constitutive relation, defined by Hookes's law. With the assumption that the relation between stress and strain can be linearised for relatively small deformations this results in the linear elastic wave equation.
-A material is described by it's density $`\rho`$, shear modulus $`\mu`$ and the Lame constant $`\lambda`$.
+/**
+@page tutorials_exahype2_elastic_wave Elastodynamics in First Order Form
+
+The elastic wave equation describes propagation of waves in elastic solids.
+They are commonly derived from the conservation of momentum and the constitutive relation,
+defined by Hookes's law. With the assumption that the relation between stress and strain can
+be linearised for relatively small deformations this results in the linear elastic wave equation.
+A material is described by it's density @f$`\rho`@f$, shear modulus @f$`\mu`@f$ and the Lame constant @f$`\lambda`@f$.
 
 This application implements the elastic wave equation in it's first order formulation:
 
-```math
+@f$
     \partial_t \begin{pmatrix}
                 u\\v\\ \sigma_{xx} \\ \sigma_{yy} \\ \sigma_{xy}
                \end{pmatrix}
@@ -12,7 +17,7 @@ This application implements the elastic wave equation in it's first order formul
                \begin{pmatrix}
                 u\\v\\ \sigma_{xx} \\ \sigma_{yy} \\ \sigma_{xy}
                \end{pmatrix} = 0,
-```
+@f$
 
 With $`F=\left(F_1,F_2\right)`$ being a tensor describing the linear flux:
 
@@ -53,3 +58,5 @@ These speeds also define the eigenvalues of the flux:
 ```math
 \left( -c_p, -c_s , 0 , c_s , c_p \right)
 ```
+
+*/

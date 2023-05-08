@@ -44,11 +44,11 @@ double tutorials::exahype2::swe::SWESolver::maxEigenvalue(
   const double ih = 1.0 / Q[0]; // Inverse water height
   constexpr double g = 9.81; // Gravity [m/s^2]
   const double c = std::sqrt( g * (Q[0] + Q[3]) );
-  const double u = 0.0;
+  double u = 0.0;
 
   switch (normal) {
     case 0: // x
-     // Q[1] is the momentum is x-direction but we need the velocity here.
+     // Q[1] is the momentum in x-direction but we need the velocity here.
      // Therefore, multiply by the inverse water height (i.e., we divide by the height).
       u = ih * Q[1];
       result = std::max(std::abs(u-c), std::abs(u+c));
@@ -113,13 +113,13 @@ void tutorials::exahype2::swe::SWESolver::nonconservativeProduct(
   }
 }
 
-::exahype2::RefinementCommand tutorials::exahype2::swe::SWESolver::swe::refinementCriterion(
+::exahype2::RefinementCommand tutorials::exahype2::swe::SWESolver::refinementCriterion(
   const double * __restrict__                   Q, // Q[3+1]
   const tarch::la::Vector<Dimensions,double>&   volumeX,
   const tarch::la::Vector<Dimensions,double>&   volumeH,
   double                                        t
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-  result = volumeX[0] < 0.0 ? ::exahype2::RefinementCommand::Refine : result; // Comment this line out to disable any refinement
+  result = volumeX[0] < 0.0 ? ::exahype2::RefinementCommand::Refine : result;
   return result;
 }

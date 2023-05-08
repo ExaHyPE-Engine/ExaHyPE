@@ -11,17 +11,24 @@ sys.path.insert(0, os.path.abspath("../../../python"))
 #
 # We import the required modules for this project.
 # We always need the 'peano4' module as this is our core project.
-# Since we creating an 'ExaHyPE' application, we additionally
+# Since we are creating an 'ExaHyPE' application, we additionally
 # need to import the 'exahype2' module.
 #
 import peano4
 import exahype2
 
 #
+# We specifiy the space dimensions here.
+# We support either 2- or 3-dimensional problems.
+#
+dimensions = 2
+
+#
 # We first create a new ExaHyPE2 project.
 # For this, we specify the (nested) namespaces, the name of our main file and our executable name.
+# We amend the executable name by the space dimensions.
 #
-my_project = exahype2.Project( ["tutorials", "exahype2", "advection"], "AdvectionTutorial", ".", executable="advection-2d" )
+my_project = exahype2.Project( ["tutorials", "exahype2", "euler"], "EulerTutorial", ".", executable="euler-" + str(dimensions) + "d" )
 
 #
 # Add the Finite Volumes solver using named arguments.
@@ -29,13 +36,13 @@ my_project = exahype2.Project( ["tutorials", "exahype2", "advection"], "Advectio
 # This requires the 'BlockStructured' toolbox and 'ExaHyPE' to be built.
 #
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
-  name                  = "AdvectionSolver",
+  name                  = "EulerSolver",
   patch_size            = 3,
-  unknowns              = 3,
+  unknowns              = dimensions + 2,
   auxiliary_variables   = 0,
-  min_volume_h          = 0.01,
-  max_volume_h          = 0.03,
-  time_step_relaxation  = 0.1
+  min_volume_h          = 0.005,
+  max_volume_h          = 0.05,
+  time_step_relaxation  = 0.5
 )
 
 #
@@ -61,19 +68,19 @@ my_project.add_solver( my_solver )
 # Configure some global parameters
 #
 my_project.set_global_simulation_parameters(
-  dimensions            = 2,
+  dimensions            = dimensions,
   size                  = [1.0, 1.0],
   offset                = [0.0, 0.0],
-  min_end_time          = 0.5,
-  max_end_time          = 0.5,
+  min_end_time          = 0.20,
+  max_end_time          = 0.20,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.025, # snapshot interval
+  time_in_between_plots = 0.005, # snapshot interval
   periodic_BC           = [False, False, False]
 )
 
 #
 # This defines where the output files should go.
-# If you omit this, output files are automatically put into the application's folder
+# If you omit this, output files are automatically put into the application's folder.
 #
 my_project.set_output_path("solution")
 if not os.path.exists("solution"):
@@ -103,8 +110,10 @@ my_project = my_project.generate_Peano4_project(verbose=True)
 # We add our custom C++ solver file here and say that this is not generated.
 # This allows us to call 'make distclean' without deleting this file as it is not generated.
 # This step is optional and only required if 'make distclean' is used.
+# Furthermore, this ensures that the C++ is not ignored by the generated .gitignore (which ignores all generated files).
+# As you want to have your own custom C++ file tracked by Git.
 #
-#my_project.output.makefile.add_cpp_file( "AdvectionSolver.cpp", generated=False )
+my_project.output.makefile.add_cpp_file( "EulerSolver.cpp", generated=False )
 
 #
 # Finally, we want to build our project.
@@ -115,10 +124,10 @@ my_project = my_project.generate_Peano4_project(verbose=True)
 #
 my_project.build(make_clean_first=True, throw_away_data_after_build=True)
 
-print("Executable is 'advection-2d'")
+print("Executable is 'euler-<dimensions>d'")
 print("Clean object files via 'make clean'")
 print("Recompile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
-print("Regenerate all code by running 'python3 advection2D.py' again")
-print("Convert any output via python3 ../../../python/peano4/visualisation/render.py solution/solution-AdvectionSolver.peano-patch-file")
+print("Regenerate all code by running 'python3 euler.py' again")
+print("Convert any output via python3 ../../../python/peano4/visualisation/render.py solution/solution-EulerSolver.peano-patch-file")
 print("Then you can open the generated .pvd file in a tool of your choice (e.g., ParaView)")

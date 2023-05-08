@@ -25,9 +25,10 @@ For simplicity the easiest way to think of each of these is as follows:
 - The NCP, as the term \textit{non-conservative} would imply, contains terms that are transmitted but can increase or decrease. One example for this would be friction, which causes the overall velocity of the system to decrease.
 - The Source contains terms that are acted upon the system from outside, such as gravity or someone acting upon it.
 
-- \ref tutorials_exahype2_advection2d "2D Advection Equation Tutorial".
-- \ref tutorials_exahype2_swe "Shallow Water Equations Tutorial".
-- \ref tutorials_exahype2_euler2d "2D Euler Tutorial".
-- \ref tutorials_exahype2_euler3d "3D Euler Tutorial".
+- \ref tutorials_exahype2_advection2d "The Advection Equation Tutorial".
+- \ref tutorials_exahype2_swe "The Shallow Water Equations Tutorial".
+- \ref tutorials_exahype2_euler "The Euler Equations Tutorial".
+- \ref tutorials_exahype2_acoustic_wave "The Acoustic Wave Equation Tutorial".
+- \ref tutorials_exahype2_elastic_wave "The Elastic Wave Equation Tutorial".
 
 */

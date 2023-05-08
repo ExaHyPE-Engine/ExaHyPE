@@ -21,7 +21,7 @@ void tutorials::exahype2::advection::AdvectionSolver::boundaryConditions(
   double                                       t,
   int                                          normal
 ) {
-  for (int i=0; i<3; i++) {
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Qoutside[i] = Qinside[i];
   }
 }

@@ -1,24 +1,24 @@
 /**
 
- @page tutorials_exahype2_advection2d 2D Advection Equation
+ @page tutorials_exahype2_advection The Advection Equation
 
-Assuming we have built the ExaHyPE2 engine and the core libraries sucessfully, we can build the 2D Advection project:
+Assuming we have built the ExaHyPE2 engine and the core libraries sucessfully, we can build the Advection Equation project:
 
-    python3 advection2D.py
+    python3 advection.py
 
 Assuming this was succesfull, you should see a number of files have appeared in your working directory.
 We will ignore most of these for now, but know that these contain the implementation of the ExaHyPE2 project.
 One file in particular is of interest to us now: the file simply named advection is the executable for our implementation.
 We will therefore run this executable file by using the following command:
 
-    ./advection-2d
+    ./advection-<dimensions>d
 
 The solution folder contains the solution of our problem,
 which we will take a look at as soon as we have an understanding of how our problem is defined.
 
 In order to understand what it is that we have executed, let us take a look at the file which defined this project:
 
-    advection2D.py
+    advection.py
 
 As this is a Python script, should surprise noone that we start with the following:
 
@@ -68,7 +68,7 @@ Next we define the parameters for our simulation, this is where we define the vo
 for example, but also where basic information about the plotting behaviour is defined:
 
     my_project.set_global_simulation_parameters(
-        dimensions            = 2,
+        dimensions            = dimensions,
         size                  = [1.0, 1.0],
         offset                = [0.0, 0.0],
         min_end_time          = 0.5,
