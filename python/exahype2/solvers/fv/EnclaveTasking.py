@@ -14,6 +14,30 @@ from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionS
 
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
+  """!
+  
+  Update cell in primary sweep
+  
+  This action set is used in the primary sweeps only. In the secondary sweep, 
+  its counterpart, the action set UpdateCell, is active and works in all data
+  computed by tasks which have been spawned here.
+  
+  We extend the superclass ReconstructPatchAndApplyFunctor and hence have 
+  access to the reconstructed data including a halo layer of one. Furthermore,
+  the superclass provides us with a guard which we should use, as this guard
+  ensures that we reconstruct the patch plus halo if and only if certain 
+  conditions are met. By default, we compuate only on unrefined octants.
+  
+  Our condition whether to spawn a task or to compute the new time step 
+  data immediately depends on peano4::datamanagement::CellMarker::willBeSkeletonCell().
+  If this predicate holds, we compute stuff straightaway. Otherwise, we 
+  span a new enclave task. While this check does the job in almost all
+  cases, there are special situations where you might want to label more
+  cells as skeleton cells. @ref benchmarks_exahype2_ccz4_single_black_hole "Peano's single black hole test" provides
+  an example. If so, you 
+  
+  """
+  
   TemplateUpdateCell = jinja2.Template( """
   double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
@@ -35,7 +59,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // previous time step has to be valid
 
-  if (marker.willBeSkeletonCell()) {
+  if ( marker.willBeSkeletonCell() ) {
     const double maxEigenvalue = tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
       timeStamp,
