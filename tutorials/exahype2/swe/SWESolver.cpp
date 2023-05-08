@@ -43,6 +43,10 @@ double tutorials::exahype2::swe::SWESolver::maxEigenvalue(
   double result = 1.0;
   const double ih = 1.0 / Q[0]; // Inverse water height
   constexpr double g = 9.81; // Gravity [m/s^2]
+  // We need to ensure that h+b is not negative.
+  // This can happen if a negative bathymetry is chosen.
+  // This should be avoided!
+  assertion((Q[0] + Q[3]) >= 0.0);
   const double c = std::sqrt( g * (Q[0] + Q[3]) );
   double u = 0.0;
 
