@@ -154,7 +154,13 @@ void toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
   dfor( destinationVolume, numberOfDoFsPerAxisInDestinationPatch ) {
     const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch) * unknowns;
 
-    tarch::la::Vector<Dimensions,int> sourceVolume = destinationVolume * numberOfDoFsPerAxisInSourcePatch / numberOfDoFsPerAxisInDestinationPatch;
+    tarch::la::Vector<Dimensions,int> sourceVolume;
+    for (int d=0; d<Dimensions; d++) {
+      sourceVolume(d) = std::round(
+        static_cast<double>(destinationVolume(d)) * static_cast<double>(numberOfDoFsPerAxisInSourcePatch) / static_cast<double>(numberOfDoFsPerAxisInDestinationPatch)
+      );
+    }
+
     const int baseIndexSource = peano4::utils::dLinearised(sourceVolume,numberOfDoFsPerAxisInSourcePatch) * unknowns;
     for (int unknown=0; unknown<unknowns; unknown++) {
       destinationValues[baseIndexDestination+unknown] = sourceValues[baseIndexSource+unknown];
