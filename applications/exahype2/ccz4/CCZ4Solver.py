@@ -333,7 +333,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
 """          
         )    
 
-    self.postprocess_updated_patch = """
+    self.postprocess_updated_patch += """
 {
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
     int index = 0;
@@ -453,7 +453,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
 """
         )
 
-    self.postprocess_updated_patch = """
+    self.postprocess_updated_patch += """
 {
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
     int index = 0;
@@ -595,7 +595,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 """         
         )
 
-    self.postprocess_updated_patch = """
+    self.postprocess_updated_patch += """
 {
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
     int index = 0;
@@ -610,7 +610,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
     exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( self, "TP_linear_with_linear_extrap_normal_interp" ) 
     exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   self, "TP_average_normal_extrap" ) 
 
-    self.preprocess_reconstructed_patch = """
+    self.preprocess_reconstructed_patch += """
 ::exahype2::CellData  reconstructedPatchData( 
   oldQWithHalo, 
   marker.x(), 
@@ -728,7 +728,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
 """          
         )
 
-    self.postprocess_updated_cell_after_final_linear_combination = """
+    self.postprocess_updated_cell_after_final_linear_combination += """
 {
     constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
     int index = 0;
