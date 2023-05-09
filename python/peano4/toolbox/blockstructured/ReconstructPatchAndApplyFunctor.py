@@ -42,9 +42,10 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   into this array (gather operation). After that, we can launch the passed functor
   giving it access to the temporary, large array plus the original patch data.
 
-  If you want to swap the functor, please replace
-
-  self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ]
+  If you want to swap the functor, please replace self.functor_implementation, 
+  and ensure that all external references (text replacements) are already
+  resolved. Consult _add_action_set_entries_to_dictionary() for details.
+  
   """
 
   def __init__(self,
@@ -76,7 +77,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 
     Both are plain double pointers.
 
-  <h2> Data validation </h2>
+  ## Data validation
 
   I use quite a lot of validitiy checks for the copied data via comparison to its self. This
   way, I can at least spot nans. I use the dictionary entries ASSERTION_WITH_X_ARGUMENTS to 
@@ -125,6 +126,11 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     (CELL_FUNCTOR_IMPLEMENTATION). If this one contains again free parameters,
     it is your responsibility to first resolve those parameters, and then to 
     reset the functor in this routine.
+    
+    If you want to replace the functor, you can hence either first call this
+    routine and then change d["CELL_FUNCTOR_IMPLEMENTATION"] or you set
+    self.functor_implementation and then you call this routine, i.e. the 
+    superclass.
         
     """
     d[ "GUARD" ]              = self.guard

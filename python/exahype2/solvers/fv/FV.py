@@ -625,7 +625,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
 
   def add_actions_to_init_grid(self, step):
-    """
+    """!
+    
+     Add all the action sets to init grid
     
      The AMR stuff has to be the very first thing. Actually, the AMR routines' 
      interpolation doesn't play any role here. But the restriction indeed is
@@ -634,7 +636,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      add the AMR action set first which means it will be called last when we go
      from fine to coarse levels within the tree.
      
-     :: Ordering ::
+     ## Ordering
      
      The order of the action sets is preserved throughout the steps down within
      the tree hierarchy. It is inverted throughout the backrolling. 
@@ -645,6 +647,11 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      - Copy new face data into old face data, as this is the initial sweep, i.e.
        the old face data otherwise might hold rubbish.
      - Restrict the data to the coarser level if we are on a hanging face. 
+     - The postprocessing is the very last thing. It does not matter if it 
+       plugs into touchCellFirstTime() or touchCellLastTime(). As we invert the
+       order when we backtrace, the postprocessing will have completed before
+       we invoke _action_set_project_patch_onto_faces, i.e. any update will 
+       be projected onto the faces.
      
     
     """
@@ -674,9 +681,11 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     else:
       step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
 
+
   @property
   def plot_description(self,):
     return self._plot_description
+
 
   @plot_description.setter
   def plot_description(self,description):
@@ -687,8 +696,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     """
     self._plot_description = description
 
+
   def add_actions_to_plot_solution(self, step, output_path):
-    """
+    """!
+    
+    Add action sets to plot solution step
+    
     
      Consult the discussion in add_actions_to_init_grid() around the order
      of the individual action sets.
@@ -748,9 +761,14 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
    
  
   def add_actions_to_perform_time_step(self, step):
-    """
+    """!
     
-    AMR
+    Add action sets to time step 
+    
+    See exahype2.solvers.fv.FV.add_actions_to_init_grid() for details on the 
+    ordering of the action sets.
+      
+    ## AMR
     
     It is important that we do the inter-grid transfer operators before we 
     apply the boundary conditions.

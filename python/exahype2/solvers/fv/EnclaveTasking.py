@@ -77,7 +77,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // previous time step has to be valid
 
-  if ( marker.willBeSkeletonCell() ) {
+  if ( marker.willBeSkeletonCell() or {{ADDITIONAL_SKELETON_CRITERION}} ) {
     const double maxEigenvalue = tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
       timeStamp,
@@ -111,15 +111,11 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 
   def __init__(self,solver):
-    d = {}
-    solver._init_dictionary_with_default_parameters(d)
-    solver.add_entries_to_text_replacement_dictionary(d)
-
     ReconstructPatchAndApplyFunctor.__init__(self,
       patch = solver._patch,
       # todo hier muessen beide rein, denn ich muss ja interpolieren -> machen die anderen Codes dann
       patch_overlap = solver._patch_overlap_new,
-      functor_implementation = self.TemplateUpdateCell.render(**d),
+      functor_implementation = "<not yet set - will do this later>",
       reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete,
       # todo Dokumentieren, dass net willBeRefined(), weil wir ja das brauchen wenn wir runtergehen
       guard  = "not marker.hasBeenRefined() and (" + \
@@ -139,6 +135,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 """ + self._Template_TouchCellFirstTime_Preamble
 
     self._solver    = solver
+    self.additional_skeleton_guard = "false"
 
 
   def get_includes(self):
@@ -147,6 +144,30 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 #include "repositories/SolverRepository.h"
 #include "tasks/""" + self._solver._name + """EnclaveTask.h"
 """ + self._solver._get_default_includes() + self._solver.user_action_set_includes
+
+
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")
+
+
+  def _add_action_set_entries_to_dictionary(self,d):
+    """
+    
+    First ask the solver to add its symbols, and then re-construct the 
+    functor which should not contain any symbols after that anymore.
+    Next, we call the superclass routine which supplements all those
+    instructions that any reconstruction wants to have.
+    
+    """
+
+    self._solver._init_dictionary_with_default_parameters(d)
+    self._solver.add_entries_to_text_replacement_dictionary(d)
+ 
+    d[ "ADDITIONAL_SKELETON_CRITERION" ] = self.additional_skeleton_guard
+
+    self.functor_implementation = self.TemplateUpdateCell.render(**d)
+
+    super( UpdateCell, self )._add_action_set_entries_to_dictionary(d)
 
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
@@ -336,7 +357,10 @@ class EnclaveTasking( FV ):
 
 
   def _optimise_patch_storage_for_global_time_stepping(self):
-    """
+    """!
+    
+    Make storage and loading more restrictive such that enclave data are not held in-between primary and secondary sweep
+    
     If you work with global time stepping, you know that each enclave cell will
     be updated per grid traversal duo. Consequently, every enclave cell's data
     doesn't have to be stored in-between two grid traversals - we know that it
@@ -349,6 +373,14 @@ class EnclaveTasking( FV ):
     If you want to have this optimisation, you have to call this routine 
     explicitly in create_data_structures(). By default, we always store the 
     patches all the time.
+    
+    The additional marker.willBeSkeletonCell() here means that we might still
+    store too much data if the user provides  {{ADDITIONAL_SKELETON_CRITERION}}.
+    We assume that these filter out only few additional cells and hence do not
+    make a major different in terms of runtime.
+    
+    @todo There's no equivalent routine for FD4 and RKDG yet
+    
     """
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard() + " and (" + \
       self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.willBeSkeletonCell())"

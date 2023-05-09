@@ -53,7 +53,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
     
     {% if SPAWN_VOLUME_KERNEL_AS_TASK %}
-    if (marker.willBeSkeletonCell()) {
+    if ( marker.willBeSkeletonCell() or {{ADDITIONAL_SKELETON_CRITERION}} ) {
       #if Dimensions==2
       double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
       #elif Dimensions==3
@@ -147,6 +147,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       d[ "PREDICATES" ]                               = self.guards
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
       d[ "SPAWN_VOLUME_KERNEL_AS_TASK"]               = self.spawn_volume_kernel_as_task
+      d[ "ADDITIONAL_SKELETON_CRITERION" ]            = self.additional_skeleton_guard
       d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._solver._name)
       result = jinja2.Template(self.TemplateCellKernel).render(**d)
       pass 
