@@ -144,6 +144,7 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
 }
 
 double applications::exahype2::swe::parser::TopologyParser::transformIndexSimulationToCDFRange(double i_z, double i_nZ, double i_min_z_cdf, double i_max_z_cdf){
+  // This works flawless
   double min_z = 0.0;
   double max_z = i_nZ;
   double m = ((i_max_z_cdf - i_min_z_cdf) / (max_z - min_z));
@@ -164,7 +165,8 @@ int applications::exahype2::swe::parser::TopologyParser::transformIndexCDFRangeT
     // f(0) = b
     double b = i_min_x / dx;
     double m = maxIndex / (i_max_x - i_min_x);
-    int x_index = floor(m * i_x + b);
+    x_index = floor(m * i_x + b);
+    std::cerr << "x_index in Array: " << x_index << std::endl;
   }
   {
     size_t maxIndex = (i_yDim - 1);
@@ -173,7 +175,8 @@ int applications::exahype2::swe::parser::TopologyParser::transformIndexCDFRangeT
     // f(0) = b
     double b = i_min_y / dy;
     double m = maxIndex / (i_max_y - i_min_y);
-    int y_index = floor(m * i_y + b);
+    y_index = floor(m * i_y + b);
+    std::cerr << "y_index in Array: " << y_index << std::endl;
   }
   return y_index * i_xDim + x_index;
 }
@@ -184,14 +187,14 @@ double applications::exahype2::swe::parser::TopologyParser::sample_bathymetry(do
   // No defined bathymetry
   if (x_cdf > max_x_bathymetry_ || x_cdf < min_x_bathymetry_ || y_cdf > max_y_bathymetry_ || y_cdf < min_y_bathymetry_)
       return 20.f;
-  return bathymetry[transformIndexCDFRangeToArray(x, y, min_x_bathymetry_, min_y_bathymetry_, max_x_bathymetry_, max_y_bathymetry_, xBathy, yBathy)];
+  return bathymetry[transformIndexCDFRangeToArray(x_cdf, y_cdf, min_x_bathymetry_, min_y_bathymetry_, max_x_bathymetry_, max_y_bathymetry_, xBathy, yBathy)];
 }
 
 double applications::exahype2::swe::parser::TopologyParser::sample_displacement(double x, double y){
   auto x_cdf = transformIndexSimulationToCDFRange(x, l_nX, min_x_bathymetry_, max_x_bathymetry_);
   auto y_cdf = transformIndexSimulationToCDFRange(y, l_nY, min_y_bathymetry_, max_y_bathymetry_);
   if (x_cdf <= max_x_displacement_ && x_cdf >= min_x_displacement_ && y_cdf <= max_y_displacement_ && y_cdf >= min_y_displacement_)
-    return displacement[transformIndexCDFRangeToArray(x, y, min_x_displacement_, min_y_displacement_, max_x_displacement_, max_y_displacement_, xDis, yDis)];
+    return displacement[transformIndexCDFRangeToArray(x_cdf, y_cdf, min_x_displacement_, min_y_displacement_, max_x_displacement_, max_y_displacement_, xDis, yDis)];
   return 0.0;
 }
 
