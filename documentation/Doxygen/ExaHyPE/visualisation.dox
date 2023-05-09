@@ -1,6 +1,6 @@
 /**
 
-@page exahype_visualisation Visualisation and output
+@page page_exahype_visualisation Visualisation and output
 
 ExaHyPE 2  relies on Peano's standard output routines to write file dumps,
 and it employs Peano's standard terminal routines to dump runtime information.

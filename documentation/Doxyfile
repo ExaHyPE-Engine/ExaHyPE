@@ -185,7 +185,12 @@ SHORT_NAMES            = NO
 # description.)
 # The default value is: NO.
 
-JAVADOC_AUTOBRIEF      = NO
+#
+# This is important, as Peano documentation usually all have a single header
+# line 
+#
+
+JAVADOC_AUTOBRIEF      = YeS
 
 # If the JAVADOC_BANNER tag is set to YES then doxygen will interpret a line
 # such as

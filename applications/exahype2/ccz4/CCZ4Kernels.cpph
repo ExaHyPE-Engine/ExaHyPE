@@ -366,7 +366,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     // matrix vector multiplication in a loop and add result to existing vector
     // 09-08-22: remove this constraint
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j];
+    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j];//21-04-22 remove this for test
 
     const double myb[3] = {Q[20], Q[21], Q[22]};
 
@@ -393,7 +393,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
       double temp = 0;
       for (int i = 0; i < 3; i++)
       for (int j = 0; j < 3; j++) temp+= dgup[k][i][j]*Aex[i][j];
-      dtA[k] += -CCZ4sk*alpha*fa*temp; // Baojiu-01-08-22: multiplied by alpha //04-08-22: remove one alpha 
+      dtA[k] += -CCZ4sk*alpha*fa*temp; // Baojiu-01-08-22: multiplied by alpha //04-08-22: remove one alpha //21-04-22 remove this for test
     }
 
     double dtB[3][3] ={0,0,0,0,0,0,0,0,0};
@@ -407,7 +407,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
     for (int n = 0; n < 3; n++) dtD[k][i][j] += 1./3*alpha*g_cov[i][j]*dgup[k][n][m]*Aex[n][m]; // explicitly remove the trace of tilde A again
-
+//21-04-22 remove above for test
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
@@ -429,6 +429,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
       for (int j = 0; j < 3; j++) temp += dgup[k][i][j]*Aex[i][j];
       dtP[k] += 1./3.*(AA[k]*traceK + alpha*CCZ4sk*temp/phi)*phi; // Baojiu-01-08-22: changed AA to AA/alpha, multiplied by phi
       //04-08-22 remove one phi 
+      //dtP[k] += 1./3.*(AA[k]*traceK)*phi;//21-04-22 remove this for test
       dtP[k] += 1./3.*(alpha*traceK-traceB)*PP[k]; // Baojiu-01-08-22: added this new line
     }
 
@@ -840,7 +841,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         ov[k] = 2*alpha*temp;
     }
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j];
+    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j]; //21-04-22 remove this for test
 
     double dtbb[3];
     for (int i = 0; i < 3; i++)
@@ -865,7 +866,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++) temp += g_contr[i][j]*dAex[k][i][j]; // TODO we computed this quantity  few lines earlier alrady
         dtA[k] -= CCZ4sk*alpha*fa*temp; // Baojiu-01-08-22: alpha*fa -> alpha^2*fa //04-08-22 remove one alpha 
-    }
+    }//21-04-22 remove this for test
 
     //double dtB[3][3] ={0,0,0,0,0,0,0,0,0};
     double dtB[3][3] = {
@@ -882,7 +883,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         dtB[k][i] += CCZ4mu*alpha2 * g_contr[i][j]*( dPP[k][j] - dPP[j][k])/phi; // Baojiu-01-08-22: divided dPP by phi
         for (int n = 0; n < 3; n++)
         for (int l = 0; l < 3; l++) dtB[k][i] -= CCZ4mu*alpha2 * g_contr[i][j]*g_contr[n][l]*( dDD[k][l][j][n] - dDD[l][k][j][n]);
-    }
+    } //21-04-22 remove this for test
 
     // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
     for (int i = 0; i < 3; i++)
@@ -903,8 +904,9 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     for (int m = 0; m < 3; m++)
     {
         dtD[k][i][j] += ( 0.25*(g_cov[m][i]*(dBB[k][j][m] + dBB[j][k][m]) + g_cov[m][j]*(dBB[k][i][m]+dBB[i][k][m])) - 1./6.*g_cov[i][j]*(dBB[k][m][m]+dBB[m][k][m]) );
-        for (int n = 0; n < 3; n++)
-            dtD[k][i][j] += 1./3*alpha*g_cov[i][j]*g_contr[n][m]*dAex[k][n][m]; // explicitly remove the trace of tilde A again
+        for (int n = 0; n < 3; n++){
+            dtD[k][i][j] += 1./3*alpha*g_cov[i][j]*g_contr[n][m]*dAex[k][n][m]; // explicitly remove the trace of tilde A again //21-04-22 remove this for test
+        }
     }
 
     // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
@@ -921,6 +923,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         for (int m = 0; m < 3; m++)
         for (int n = 0; n < 3; n++) temp += g_contr[m][n]*dAex[k][m][n];
         dtP[k] += 1./3.*phi*alpha*(dtraceK[k] + CCZ4sk*temp/phi); // Baojiu-01-08-22: multiplied by phi //04-08-22 remove one phi 
+        //dtP[k] += 1./3.*phi*alpha*(dtraceK[k]);//21-04-22 remove this for test
         for (int i = 0; i < 3; i++) dtP[k] -= 1./6.*phi*(dBB[k][i][i] + dBB[i][k][i]); // Baojiu-01-08-22: multiplied by phi
     }
 
