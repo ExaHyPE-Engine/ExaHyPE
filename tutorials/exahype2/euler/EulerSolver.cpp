@@ -17,11 +17,11 @@ void tutorials::exahype2::euler::EulerSolver::initialCondition(
 
 #if Dimensions == 2
   tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.5};
-  double distanceFromCenter=tarch::la::norm2(volumeCentre-circleCentre);
+  const double distanceFromCenter = tarch::la::norm2(volumeCentre-circleCentre);
   Q[3] = (distanceFromCenter < 0.2 ? 1.0 : 1.01);
 #else
   tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.5, 0.5};
-  double distanceFromCenter=tarch::la::norm2(volumeCentre-circleCentre);
+  const double distanceFromCenter = tarch::la::norm2(volumeCentre-circleCentre);
   Q[4] = (distanceFromCenter < 0.2 ? 1.0 : 1.01);
 #endif
 }
@@ -71,7 +71,7 @@ void tutorials::exahype2::euler::EulerSolver::flux(
   int                                           normal,
   double* __restrict__                          F // F[Dimensions+2]
 ) {
-  double irho = 1.0 / Q[0];
+  const double irho = 1.0 / Q[0];
   constexpr double gamma = 1.4;
 
 #if Dimensions == 2

@@ -283,6 +283,9 @@ cython_debug/
 .DS_Store
 /Debug/
 
+# Generated documentation
+doxygen-html/
+
 compile_commands.json
 
 UnitTests2d

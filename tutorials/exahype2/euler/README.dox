@@ -1,7 +1,7 @@
 /**
 @page tutorials_exahype2_euler The Euler Equations
 
-Assuming we have built the ExaHyPE2 engine and the core libraries sucessfully, we can build the SWE project:
+Assuming we have built the ExaHyPE2 engine and the core libraries sucessfully, we can build the Euler project:
 
     python3 euler.py
 
@@ -66,10 +66,17 @@ We will need to define these in a subsequent step.
 Next we define the parameters for our simulation, this is where we define the volume of our domain and the number of dimensions
 for example, but also where basic information about the plotting behaviour is defined:
 
+    if dimensions == 2:
+        size    = [1.0, 1.0]
+        offset  = [0.0, 0.0]
+    else:
+        size    = [1.0, 1.0, 1.0]
+        offset  = [0.0, 0.0, 0.0]
+
     my_project.set_global_simulation_parameters(
         dimensions            = dimensions,
-        size                  = [1.0, 1.0],
-        offset                = [0.0, 0.0],
+        size                  = size,
+        offset                = offset,
         min_end_time          = 0.20,
         max_end_time          = 0.20,
         first_plot_time_stamp = 0.0,
@@ -116,11 +123,55 @@ of the Euler equations appears as follows:
 
 where @f$`\rho`@f$ is the density, @f$`u`@f$ is the velocity, @f$`E_t`@f$ is the energy and @f$`p`@f$ is the pressure.
 
+In order to implement this equation, following things are needed: the initial condition,
+the boundary conditions, the maximal eigenvalue, the flux, and the refinement criterion.
+
 We start with the initial conditions: here we define a starting configuration with a uniform
 density of 1.0, a uniform starting momentum of 0.0 in both x- and y-directions and a starting energy
 that is 1.0 inside of a circle of radius 0.2 around the center of the domain and 1.01 outside of it.
 Note that we use momentums and not velocities as our variables of choice,
 this will affect the formulation of some of the equations later.
+
+    void tutorials::exahype2::euler::EulerSolver::initialCondition(
+    double * __restrict__                         Q, // Q[Dimensions+2+0]
+    const tarch::la::Vector<Dimensions,double>&   volumeCentre,
+    const tarch::la::Vector<Dimensions,double>&   volumeH,
+    bool                                          gridIsConstructed
+    ) {
+        Q[0] = 1.0;
+        Q[1] = 0.0;
+        Q[2] = 0.0;
+        #if Dimensions == 3
+        Q[3] = 0.0;
+        #endif
+
+        #if Dimensions == 2
+        tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.5};
+        const double distanceFromCenter = tarch::la::norm2(volumeCentre-circleCentre);
+        Q[3] = (distanceFromCenter < 0.2 ? 1.0 : 1.01);
+        #else
+        tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.5, 0.5};
+        const double distanceFromCenter = tarch::la::norm2(volumeCentre-circleCentre);
+        Q[4] = (distanceFromCenter < 0.2 ? 1.0 : 1.01);
+        #endif
+    }
+
+Then we can define our boundary conditions.
+You can choose any boundary conditions you prefer but we have chosen to use reflecting boundary conditions,
+this means the values outside of the boundary are the same as the values inside of the boundary.
+
+    void tutorials::exahype2::euler::EulerSolver::boundaryConditions(
+    const double * __restrict__                  Qinside, // Qinside[Dimensions+2+0]
+    double * __restrict__                        Qoutside, // Qoutside[Dimensions+2+0]
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    int                                          normal
+    ) {
+        for(int i = 0; i < NumberOfUnknowns+NumberOfAuxiliaryVariables; i++){
+            Qoutside[i] = Qinside[i];
+        }
+    }
 
 Next we can define the eigenvalues of our system. The eigenvalues of the 2-dimensional Euler equations are:
 
@@ -137,7 +188,7 @@ Next we can define the eigenvalues of our system. The eigenvalues of the 2-dimen
                       \end{array} \right)
 @f$
 
-where $c$ is the wave propagation speed. For dry air, which can be approximated as an ideal gas,
+where @f$`c`@f$ is the wave propagation speed. For dry air, which can be approximated as an ideal gas,
 c depends on the pressure as follows:
 
 @f$
@@ -153,22 +204,82 @@ c depends on the pressure as follows:
                         \end{array} \right)
 @f$
 
-Finally, we can define our boundary conditions.
-You can choose any boundary conditions you prefer but we have chosen to use reflecting boundary conditions,
-this means the values outside of the boundary are the same as the values inside of the boundary.
+    double tutorials::exahype2::euler::EulerSolver::maxEigenvalue(
+    const double* __restrict__                    Q, // Q[Dimensions+2+0]
+    const tarch::la::Vector<Dimensions,double>&   faceCentre,
+    const tarch::la::Vector<Dimensions,double>&   volumeSize,
+    double                                        t,
+    double                                        dt,
+    int                                           normal
+    ) {
+        const double irho = 1.0 / Q[0];
+        constexpr double gamma = 1.4;
 
-Now that we know what our equations look like, we can take a look at the configuration and implementation.
-As we've already mentioned, we are using a different solver for this example,
-this time we have replaced our finite volume solver with an ADER-DG solver.
+        #if Dimensions == 2
+        const double p = (gamma-1) * (Q[3] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
+        #else
+        const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
+        #endif
 
-All we have had to modify is the solver itself, the definition of project and domain has remained the same,
-and even our solver looks very similar to before. This was always a key goal of ExaHyPE,
-we want users to be able to play around with solvers themselves and try out for themselves different ways to solve
-their equations. The implementation files also have the same structure,
-this means you can use the same implementation file with different solvers.
+        const double c = std::sqrt(gamma * p * irho);
+        const double u = Q[normal+1]*irho;
+        return std::max(std::abs(u-c), std::abs(u+c));
+    }
 
-And finally, just to make sure we understand what we are doing, we can implement the
-Euler equations in three dimensions.
+And the flux:
+
+    void tutorials::exahype2::euler::EulerSolver::flux(
+    const double* __restrict__                    Q, // Q[Dimensions+2+0]
+    const tarch::la::Vector<Dimensions,double>&   faceCentre,
+    const tarch::la::Vector<Dimensions,double>&   volumeH,
+    double                                        t,
+    double                                        dt,
+    int                                           normal,
+    double* __restrict__                          F // F[Dimensions+2]
+    ) {
+        const double irho = 1.0 / Q[0];
+        constexpr double gamma = 1.4;
+
+        #if Dimensions == 2
+        const double p = (gamma-1) * (Q[3] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
+        switch (normal) {
+            case 0:
+                F[0] = Q[1];
+                F[1] = Q[1]*Q[1]*irho+p;
+                F[2] = Q[1]*Q[2]*irho;
+                F[3] = Q[1]*irho*(Q[3]+p);
+            break;
+            case 1:
+                F[0] = Q[2];
+                F[1] = Q[1]*Q[2]*irho;
+                F[2] = Q[2]*Q[2]*irho+p;
+                F[3] = Q[2]*irho*(Q[3]+p);
+            break;
+        }
+        #else
+        const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
+        F[0] = Q[normal+1];
+        F[1] = Q[normal+1]*Q[1]*irho;
+        F[2] = Q[normal+1]*Q[2]*irho;
+        F[3] = Q[normal+1]*Q[3]*irho;
+        F[4] = Q[normal+1]*irho*(Q[4]+p);
+        F[normal+1] += p;
+        #endif
+    }
+
+And the refinement criterion:
+
+    ::exahype2::RefinementCommand tutorials::exahype2::euler::EulerSolver::refinementCriterion(
+    const double * __restrict__                   Q, // Q[Dimensions+2+0]
+    const tarch::la::Vector<Dimensions,double>&   volumeX,
+    const tarch::la::Vector<Dimensions,double>&   volumeH,
+    double                                        t
+    ) {
+        ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+        return result;
+    }
+
+Finally, we can implement the Euler equations in three dimensions.
 
 The three-dimensional Euler equations are very similar to the two-dimensional equations:
 

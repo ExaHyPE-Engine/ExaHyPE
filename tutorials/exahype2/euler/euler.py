@@ -67,10 +67,17 @@ my_project.add_solver( my_solver )
 #
 # Configure some global parameters
 #
+if dimensions == 2:
+  size    = [1.0, 1.0]
+  offset  = [0.0, 0.0]
+else:
+  size    = [1.0, 1.0, 1.0]
+  offset  = [0.0, 0.0, 0.0]
+
 my_project.set_global_simulation_parameters(
   dimensions            = dimensions,
-  size                  = [1.0, 1.0],
-  offset                = [0.0, 0.0],
+  size                  = size,
+  offset                = offset,
   min_end_time          = 0.20,
   max_end_time          = 0.20,
   first_plot_time_stamp = 0.0,

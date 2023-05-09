@@ -2,7 +2,7 @@
 
  @page tutorials_exahype2_advection The Advection Equation
 
-Assuming we have built the ExaHyPE2 engine and the core libraries sucessfully, we can build the Advection Equation project:
+Assuming we have built the ExaHyPE2 engine and the core libraries sucessfully, we can build the Advection project:
 
     python3 advection.py
 
