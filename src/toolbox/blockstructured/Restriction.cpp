@@ -144,6 +144,25 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_inject(
 }
 
 
+void toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
+  int                                       numberOfDoFsPerAxisInSourcePatch,
+  int                                       numberOfDoFsPerAxisInDestinationPatch,
+  int                                       unknowns,
+  double*                                   sourceValues,
+  double*                                   destinationValues
+) {
+  dfor( destinationVolume, numberOfDoFsPerAxisInDestinationPatch ) {
+    const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch) * unknowns;
+
+    tarch::la::Vector<Dimensions,int> sourceVolume = destinationVolume * numberOfDoFsPerAxisInSourcePatch / numberOfDoFsPerAxisInDestinationPatch;
+    const int baseIndexSource = peano4::utils::dLinearised(sourceVolume,numberOfDoFsPerAxisInSourcePatch) * unknowns;
+    for (int unknown=0; unknown<unknowns; unknown++) {
+      destinationValues[baseIndexDestination+unknown] = sourceValues[baseIndexSource+unknown];
+    }
+  }
+}
+
+
 void toolbox::blockstructured::restrictCell_AoS_inject(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,

@@ -497,6 +497,41 @@ namespace toolbox {
       double* __restrict__                      fineGridCellValues
     );
 
+    /**
+     * This routine should be used if a cell hosts two sets of unknowns
+     *
+     * Frequently used if your code hosts two PDE solvers. In principle, it is
+     * up to the user to decide if they want to interpolate from pure cell data
+     * or use a reconstructed patch, i.e. cell data plus halo. However, if the
+     * finer cell has more degrees of freedom than the source, then any
+     * interpolation without halo data will yield wrong results close to the
+     * boundary of the patch.
+     *
+     * Here's some ASCII art to illustrate this:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * |------|------|------|------|------|------|
+     * |--|--|--|--|--|--|--|--|--|--|--|--|--|--|
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * Inside the domain, all interpolation is straightforward. However, we do
+     * not have valid data for the very left and very right volume on the fine
+     * grid. Such data are only available once we know the halo data, too.
+     *
+     * @param haloSourcePatch
+     * @param haloDestinationPatch Note that we only interpolate into the
+     *   interior of the patch correctly.
+     */
+    void interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
+      int                                       numberOfDoFsPerAxisInSourcePatch,
+      int                                       numberOfDoFsPerAxisInDestinationPatch,
+      int                                       haloSourcePatch,
+      int                                       haloDestinationPatch,
+      int                                       unknowns,
+      double*                                   sourceValues,
+      double*                                   destinationValues
+    );
+
     namespace internal {
       /**
        * The realisation relies on the following observations/follows these
@@ -579,6 +614,12 @@ namespace toolbox {
        * This is a volumetric version of the interpolation.
        */
       tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, bool extrapolateLinearly);
+
+      tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(
+        int numberOfDoFsPerAxisInInputPatch,
+        int numberOfDoFsPerAxisInOutputPatch,
+        bool extrapolateLinearly
+      );
 
     /**
      * Create piecewise constant interpolation matrix
