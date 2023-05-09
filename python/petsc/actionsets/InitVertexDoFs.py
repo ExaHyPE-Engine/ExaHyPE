@@ -25,21 +25,67 @@ the solver in the first place. This happens in get_includes().
   """
   
   
+  # TemplateInitVertex = """
+  # if ( not marker.willBeRefined() ) { 
+  #   logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
+    
+  #   repositories::{{SOLVER_INSTANCE}}.init(
+  #     marker.x(),
+  #     marker.h(),
+  #     {% if CARDINALITY==1 %}
+  #     *(fineGridVertex{{SOLVER_NAME}}.getValue().data()),
+  #     *(fineGridVertex{{SOLVER_NAME}}.getRhs().data())
+  #     {% else %}
+  #     fineGridVertex{{SOLVER_NAME}}.getValue(),
+  #     fineGridVertex{{SOLVER_NAME}}.getRhs()
+  #     {% endif %}
+  #   );
+    
+  #   logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
+  # } 
+#  """
+
+#TODO - change calls to setValue and setRhs to reflect higher dimensions - we'll have to consider
+# more than the 0th index
   TemplateInitVertex = """
+  auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & vertex ) -> bool {
+    //for now, hardcode 2 dimensions
+    double x = vertex[0];
+    double y = vertex[1];
+
+    if ( x < 1E-10 or x > 1 - 1E-10) return true;
+    if ( y < 1E-10 or y > 1 - 1E-10) return true;
+    return false;
+  };
+
+  switch ( isOnBoundary(marker.x()) ){
+    case true:
+      fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::Poisson::Type::Dirichlet );
+      break;
+    case false:
+      fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::Poisson::Type::DoF );
+      break;
+  }
+
   if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
+
+    //init two doubles; pass these by reference into init()
+    double value, rhs;
     
     repositories::{{SOLVER_INSTANCE}}.init(
       marker.x(),
       marker.h(),
-      {% if CARDINALITY==1 %}
-      *(fineGridVertex{{SOLVER_NAME}}.getValue().data()),
-      *(fineGridVertex{{SOLVER_NAME}}.getRhs().data())
-      {% else %}
-      fineGridVertex{{SOLVER_NAME}}.getValue(),
-      fineGridVertex{{SOLVER_NAME}}.getRhs()
-      {% endif %}
+      value,
+      rhs
     );
+
+    if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::Poisson::Type::Dirichlet){
+      //place these values into the grid
+      fineGridVertex{{SOLVER_NAME}}.setValue(0, value);
+      fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);
+
+    }
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 

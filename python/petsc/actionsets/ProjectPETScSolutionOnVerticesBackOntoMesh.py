@@ -23,13 +23,16 @@ corresponding entry in the solution vector reads like.
   TemplateInitVertex = """
   if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
-    
+
     for (int i=0; i<{{CARDINALITY}}; i++) {
       std::pair<int,int> localIndex( _spacetreeId, fineGridVertex{{SOLVER_NAME}}.getNumber()+i );
       int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
-      // @todo ask PETSc what the value is and set it into 
-      double newValue = 23;
-      fineGridVertex{{SOLVER_NAME}}.getValue().data()[i] = newValue;
+
+      // ask our instance of Petsc the value stored in the solution vector here.
+      double val = repositories::instanceOfPetsc.getX(globalIndex);
+      //fineGridVertex{{SOLVER_NAME}}.getValue().data()[i] = val;
+      fineGridVertex{{SOLVER_NAME}}.setValue(0, val);
+
     }
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );

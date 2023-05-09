@@ -21,7 +21,7 @@ Enumerate the vertices
     fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
   ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
-    
+
     fineGridVertex{{SOLVER_NAME}}.setNumber( _localMap.reserveIndex( {{CARDINALITY}} ) );
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
