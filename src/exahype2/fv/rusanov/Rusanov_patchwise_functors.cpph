@@ -55,6 +55,21 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
       patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch), unknown)] = 0.5 * (patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(numberOfVolumesPerAxisInPatch - 1, numberOfVolumesPerAxisInPatch), unknown)] + patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch - 1), unknown)]);
     }
 
+    for (int i = -1; i < numberOfVolumesPerAxisInPatch + 1; i++)
+    {
+      // Setting Q[4]
+      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(-1, i), 4)] = 0.1;
+      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(numberOfVolumesPerAxisInPatch, i), 4)] = 0.1;
+      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(i, -1), 4)] = 0.1;
+      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(i, numberOfVolumesPerAxisInPatch), 4)] = 0.1;
+
+      // Setting Q[5]
+      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(-1, i), 5)] = 0.7;
+      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(numberOfVolumesPerAxisInPatch, i), 5)] = 0.7;
+      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(i, -1), 5)] = 0.7;
+      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(i, numberOfVolumesPerAxisInPatch), 5)] = 0.7;
+    }
+    
     if (Dimensions == 2 and evaluateSource)
     {
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -167,27 +182,27 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
               eigenvalueEnumerator);
         }
 
-      // std::cout << "Updating solution with EigenValue\n";
-      // for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      //   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      //     for (int unknown = 0; unknown < unknowns; unknown++)
-      //     {
-      //       internal::updateSolutionWithEigenvalueDamping_LoopBody(
-      //           patchData.QIn[patchIndex],
-      //           QInEnumerator,
-      //           tempEigenvalueX,
-      //           tempEigenvalueY,
-      //           tempEigenvalueZ,
-      //           eigenvalueEnumerator,
-      //           patchData.cellCentre[patchIndex],
-      //           patchData.cellSize[patchIndex],
-      //           patchIndex,
-      //           volumeIndex2d(x, y),
-      //           unknown,
-      //           patchData.dt[patchIndex],
-      //           patchData.QOut[patchIndex],
-      //           QOutEnumerator);
-      //     }
+      std::cout << "Updating solution with EigenValue\n";
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+          for (int unknown = 0; unknown < unknowns; unknown++)
+          {
+            internal::updateSolutionWithEigenvalueDamping_LoopBody(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                tempEigenvalueX,
+                tempEigenvalueY,
+                tempEigenvalueZ,
+                eigenvalueEnumerator,
+                patchData.cellCentre[patchIndex],
+                patchData.cellSize[patchIndex],
+                patchIndex,
+                volumeIndex2d(x, y),
+                unknown,
+                patchData.dt[patchIndex],
+                patchData.QOut[patchIndex],
+                QOutEnumerator);
+          }
     }
     else
     {
@@ -309,23 +324,23 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
               fluxEnumerator);
         }
 
-    //   std::cout << "Updating solution with Flux\n";
-    //   for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    //     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    //       for (int unknown = 0; unknown < unknowns; unknown++)
-    //       {
-    //         internal::updateSolutionWithFlux_LoopBody(
-    //             tempFluxX, tempFluxY, tempFluxZ,
-    //             fluxEnumerator,
-    //             patchData.cellCentre[patchIndex],
-    //             patchData.cellSize[patchIndex],
-    //             patchIndex,
-    //             volumeIndex2d(x, y),
-    //             unknown,
-    //             patchData.dt[patchIndex],
-    //             *(patchData.QOut + patchIndex),
-    //             QOutEnumerator);
-    //       }
+      std::cout << "Updating solution with Flux\n";
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+          for (int unknown = 0; unknown < unknowns; unknown++)
+          {
+            internal::updateSolutionWithFlux_LoopBody(
+                tempFluxX, tempFluxY, tempFluxZ,
+                fluxEnumerator,
+                patchData.cellCentre[patchIndex],
+                patchData.cellSize[patchIndex],
+                patchIndex,
+                volumeIndex2d(x, y),
+                unknown,
+                patchData.dt[patchIndex],
+                *(patchData.QOut + patchIndex),
+                QOutEnumerator);
+          }
     }
     else if (evaluateFlux and Dimensions == 3)
     {
@@ -409,61 +424,61 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
 
     if (evaluateNonconservativeProduct and Dimensions == 2)
     {
-      // std::cout << "Evaluating ncpxFlux\n";
-      // for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch + solversHaloSize - 1; x++)
-      //   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      //   {
-      //     internal::computeNonconservativeFlux_LoopBody(
-      //         patchData.QIn[patchIndex],
-      //         QInEnumerator,
-      //         nonconservativeProduct,
-      //         patchData.cellCentre[patchIndex],
-      //         patchData.cellSize[patchIndex],
-      //         patchIndex,
-      //         volumeIndex2d(x, y),
-      //         patchData.t[patchIndex],
-      //         patchData.dt[patchIndex],
-      //         0, // normal
-      //         tempNonconservativeProductX,
-      //         ncpEnumerator);
-      //   }
+      std::cout << "Evaluating ncpxFlux\n";
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch + solversHaloSize - 1; x++)
+        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+        {
+          internal::computeNonconservativeFlux_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              nonconservativeProduct,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex2d(x, y),
+              patchData.t[patchIndex],
+              patchData.dt[patchIndex],
+              0, // normal
+              tempNonconservativeProductX,
+              ncpEnumerator);
+        }
 
-      // std::cout << "Evaluating ncpyFlux\n";
-      // for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      //   for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch + solversHaloSize - 1; y++)
-      //   {
-      //     internal::computeNonconservativeFlux_LoopBody(
-      //         patchData.QIn[patchIndex],
-      //         QInEnumerator,
-      //         nonconservativeProduct,
-      //         patchData.cellCentre[patchIndex],
-      //         patchData.cellSize[patchIndex],
-      //         patchIndex,
-      //         volumeIndex2d(x, y),
-      //         patchData.t[patchIndex],
-      //         patchData.dt[patchIndex],
-      //         1, // normal
-      //         tempNonconservativeProductY,
-      //         ncpEnumerator);
-      //   }
+      std::cout << "Evaluating ncpyFlux\n";
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+        for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch + solversHaloSize - 1; y++)
+        {
+          internal::computeNonconservativeFlux_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              nonconservativeProduct,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex2d(x, y),
+              patchData.t[patchIndex],
+              patchData.dt[patchIndex],
+              1, // normal
+              tempNonconservativeProductY,
+              ncpEnumerator);
+        }
 
       // std::cout << "Updating solution with ncpFlux\n";
       // for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       //   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       //     for (int unknown = 0; unknown < unknowns; unknown++)
-          // {
-          //   internal::updateSolutionWithNonconservativeFlux_LoopBody(
-          //       tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
-          //       ncpEnumerator,
-          //       patchData.cellCentre[patchIndex],
-          //       patchData.cellSize[patchIndex],
-          //       patchIndex,
-          //       volumeIndex2d(x, y),
-          //       unknown,
-          //       patchData.dt[patchIndex],
-          //       *(patchData.QOut + patchIndex),
-          //       QOutEnumerator);
-          // }
+      //     {
+      //       internal::updateSolutionWithNonconservativeFlux_LoopBody(
+      //           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
+      //           ncpEnumerator,
+      //           patchData.cellCentre[patchIndex],
+      //           patchData.cellSize[patchIndex],
+      //           patchIndex,
+      //           volumeIndex2d(x, y),
+      //           unknown,
+      //           patchData.dt[patchIndex],
+      //           *(patchData.QOut + patchIndex),
+      //           QOutEnumerator);
+      //     }
     }
     else if (evaluateNonconservativeProduct and Dimensions == 3)
     {
@@ -550,24 +565,24 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
 
       std::cout << "Reducing max eigenvalue\n";
 
-      // for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      //   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      //   {
-      //     newMaxEigenvalue = std::max(
-      //         newMaxEigenvalue,
-      //         internal::reduceMaxEigenvalue_LoopBody(
-      //             *(patchData.QOut + patchIndex),
-      //             QOutEnumerator,
-      //             maxEigenvalue,
-      //             patchData.cellCentre[patchIndex],
-      //             patchData.cellSize[patchIndex],
-      //             patchIndex,
-      //             volumeIndex2d(x, y),
-      //             patchData.t[patchIndex],
-      //             patchData.dt[patchIndex]));
-      //   }
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+        {
+          newMaxEigenvalue = std::max(
+              newMaxEigenvalue,
+              internal::reduceMaxEigenvalue_LoopBody(
+                  *(patchData.QOut + patchIndex),
+                  QOutEnumerator,
+                  maxEigenvalue,
+                  patchData.cellCentre[patchIndex],
+                  patchData.cellSize[patchIndex],
+                  patchIndex,
+                  volumeIndex2d(x, y),
+                  patchData.t[patchIndex],
+                  patchData.dt[patchIndex]));
+        }
 
-      // patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
       patchData.maxEigenvalue[patchIndex] = 15;
     }
     else if (evaluateMaximumEigenvalueAfterTimeStep)
@@ -594,28 +609,29 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
 
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    {
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      {
-        std::cout << "x=" << x << ", y=" << y << ", Qout[0]=" << patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x, y), 0)]
-                  << ", Qout[1]=" << patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x, y), 1)]
-                  << ", Qout[2]=" << patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x, y), 2)]
-                  << ", Qout[3]=" << patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x, y), 3)] << "\n";
-      }
-    }
+    // for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+    // {
+    //   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    //   {
+    //     std::cout << "x=" << x << ", y=" << y << ", Qout[0]=" << patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x, y), 0)]
+    //               << ", Qout[1]=" << patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x, y), 1)]
+    //               << ", Qout[2]=" << patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x, y), 2)]
+    //               << ", Qout[3]=" << patchData.QOut[patchIndex][QOutEnumerator(patchIndex, volumeIndex2d(x, y), 3)] << "\n";
+    //   }
+    // }
 
-    for (int x = -1; x < numberOfVolumesPerAxisInPatch + 1; x++)
-    {
-      for (int y = -1; y < numberOfVolumesPerAxisInPatch + 1; y++)
-      {
-        std::cout << "x=" << x << ", y=" << y << ", Qin[0]=" << patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(x, y), 0)]
-                  << ", Qin[1]=" << patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(x, y), 1)]
-                  << ", Qin[2]=" << patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(x, y), 2)]
-                  << ", Qin[3]=" << patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(x, y), 3)] << "\n";
-      }
-    }
-    std::cout << "\n MaxEigenVal: " << patchData.maxEigenvalue[patchIndex] << "\n\n";
+    // for (int x = -1; x < numberOfVolumesPerAxisInPatch + 1; x++)
+    // {
+    //   for (int y = -1; y < numberOfVolumesPerAxisInPatch + 1; y++)
+    //   {
+    //     std::cout << "x=" << x << ", y=" << y << ", Qin[0]=" << patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(x, y), 0)]
+    //               << ", Qin[1]=" << patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(x, y), 1)]
+    //               << ", Qin[2]=" << patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(x, y), 2)]
+    //               << ", Qin[3]=" << patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(x, y), 3)]
+    //               << ", Qin[4]=" << patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(x, y), 4)]
+    //               << ", Qin[5]=" << patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(x, y), 5)] << "\n";
+    //   }
+    // }
   }
 
   if (tempFluxX != nullptr)

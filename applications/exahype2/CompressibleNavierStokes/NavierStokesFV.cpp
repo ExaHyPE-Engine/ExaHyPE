@@ -21,8 +21,17 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::initialCo
   Q[1] = 0.0;                                                        // x-momentum
   Q[2] = 0.0;                                                        // y-momentum
   Q[3] = p / (gamma - 1) + 0.5 * (Q[1] * Q[1] + Q[2] * Q[2]) / Q[0]; // energy
-  Q[4] = 0.1;                                                        // viscosity of fluid
+  Q[4] = 0.01;                                                       // viscosity of fluid
   Q[5] = 0.7;                                                        // prandtl number
+
+  // tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.3};
+  // bool isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < 0.05);
+  // Q[0] = 0.1; // rho
+  // Q[1] = 0;   // velocities
+  // Q[2] = 0;
+  // Q[3] = isInTheCentre ? 1.0 : 0.5; // inner energy
+  // Q[4] = 0.01;
+  // Q[5] = 0.7;
   logTraceOut("initialCondition(...)");
 }
 
@@ -36,6 +45,14 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::boundaryC
 {
   logTraceInWith4Arguments("boundaryConditions(...)", faceCentre, volumeH, t, normal);
   // @todo implement
+  const double gamma = 1.4;
+  const double p = (gamma - 1) * (Qinside[3] - 0.5 * (Qinside[1] * Qinside[1] + Qinside[2] * Qinside[2]) / Qinside[0]);
+
+  if (p < 0)
+  {
+    std::cout << "Pressure is negative\n";
+    exit(0);
+  }
   const double wall_velocity = 1.0;
   Qoutside[0] = Qinside[0];
   if (faceCentre[1] >= 0.99)
@@ -49,6 +66,11 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::boundaryC
   // std::cout<<"Face Centre:"<<faceCentre[0]<<"\n";
   Qoutside[2] = 0;
   Qoutside[3] = Qinside[3];
+
+  // for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++)
+  // {
+  //   Qoutside[i] = Qinside[i];
+  // }
   logTraceOut("boundaryConditions(...)");
 }
 
@@ -62,14 +84,20 @@ double ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::maxEi
 {
   logTraceInWith4Arguments("maxEigenvalue(...)", faceCentre, volumeH, t, normal);
   const double gamma = 1.4;
-  const double p = (gamma - 1) * (Q[3] - 0.5 * (Q[1] * Q[1] + Q[2] * Q[2]) / Q[0]);    // pressure
+  const double p = (gamma - 1) * (Q[3] - 0.5 * (Q[1] * Q[1] + Q[2] * Q[2]) / Q[0]); // pressure
+  if (p < 0)
+  {
+    std::cout << "Pressure is negative\n";
+    exit(0);
+  }
   const double c = std::sqrt(gamma * p / Q[0]);                                        // speed of sound
   const double lambda_c = std::abs(Q[1 + normal] / Q[0]) + c;                          // max convective eigenvalue
   const double lambda_v = std::max(4 / 3 * Q[4] / Q[0], gamma * Q[4] / (Q[5] * Q[0])); // max viscous eigenvalue
 
   if (std::isnan(std::max(lambda_c, lambda_v)) || std::max(lambda_c, lambda_v) == 0)
   {
-    std::cout << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "," << Q[4] << "," << Q[5] << "\n";
+    std::cout << "MaxEigenvalue User Function:\n"
+              << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "," << Q[4] << "," << Q[5] << "\n";
     std::cout << std::max(lambda_c, lambda_v) << "," << lambda_c << "," << lambda_v << "," << c << "," << p << "\n";
     exit(0);
   }
@@ -89,7 +117,13 @@ void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::flux(
 {
   logTraceInWith4Arguments("flux(...)", faceCentre, volumeH, t, normal);
   const double gamma = 1.4;
-  double p = (gamma - 1) * (Q[3] - 0.5 * (Q[1] * Q[1] + Q[2] * Q[2]) / Q[0]);
+  const double p = (gamma - 1) * (Q[3] - 0.5 * (Q[1] * Q[1] + Q[2] * Q[2]) / Q[0]);
+
+  if (p < 0)
+  {
+    std::cout << "Pressure is negative\n";
+    exit(0);
+  }
 
   F[0] = Q[1 + normal];
   F[3] = Q[1 + normal] * (Q[3] + p) / Q[0];
@@ -104,7 +138,6 @@ void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::flux(
     F[1] = Q[1] * Q[2] / Q[0];
     F[2] = Q[2] * Q[2] / Q[0] + p;
   }
-
   logTraceOut("flux(...)");
 }
 
@@ -121,6 +154,14 @@ void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::noncons
 {
   logTraceInWith4Arguments("nonconservativeProduct(...)", faceCentre, volumeH, t, normal);
 
+  const double gamma = 1.4;
+  const double p = (gamma - 1) * (Q[3] - 0.5 * (Q[1] * Q[1] + Q[2] * Q[2]) / Q[0]);
+  if (p < 0)
+  {
+    std::cout << "Pressure is negative\n";
+    exit(0);
+  }
+
   if (normal == 0)
   {
     BTimesDeltaQ[1] = Q[4] * (2.0 / 3.0 * (deltaQ[2] / volumeH[0] + deltaQ[5] / volumeH[1]) - 2 * deltaQ[2] / volumeH[0]) / Q[0]; // mu{2/3(du/dx+dv/dy)-2(du/dx)}
@@ -133,7 +174,7 @@ void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::noncons
   }
   BTimesDeltaQ[0] = 0;
   BTimesDeltaQ[3] = (Q[1] * BTimesDeltaQ[1] + Q[2] * BTimesDeltaQ[2]) / Q[0];
-  
+
   if (std::isnan(BTimesDeltaQ[3]) || std::isinf(BTimesDeltaQ[3]) || std::abs(BTimesDeltaQ[3]) > 1e5)
   {
     std::cout << normal << "\n";
