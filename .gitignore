@@ -286,6 +286,8 @@ cython_debug/
 # Generated documentation
 doxygen-html/
 
+submodules/
+
 compile_commands.json
 
 UnitTests2d
