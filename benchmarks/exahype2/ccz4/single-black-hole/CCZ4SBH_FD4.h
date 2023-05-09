@@ -8,21 +8,32 @@
 //
 #pragma once
 
-#include "AbstractCCZ4SBH.h"
+#include "AbstractCCZ4SBH_FD4.h"
 #include "tarch/logging/Log.h"
 
-namespace benchmarks {namespace exahype2 {namespace ccz4 {
-  class CCZ4SBH;
 
-}}}
+namespace benchmarks {
+  namespace exahype2 {
+    namespace ccz4 {
+      class CCZ4SBH_FD4;
+
+      extern TP::TwoPunctures* twoPunctures;
+
+      void prepareTwoPunctures();
+    }
+  }
+}
 
 
-class benchmarks::exahype2::ccz4::CCZ4SBH: public benchmarks::exahype2::ccz4::AbstractCCZ4SBH {
+class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4::AbstractCCZ4SBH_FD4 {
   private:
     static tarch::logging::Log   _log;
 
   public:
-    CCZ4SBH();
+    /**
+     * Initialise the two punctures object if required
+     */
+    CCZ4SBH_FD4();
     
     /**
      * Refinement criterion
@@ -51,12 +62,7 @@ class benchmarks::exahype2::ccz4::CCZ4SBH: public benchmarks::exahype2::ccz4::Ab
       double                                       t
     ) override;
     
-#ifdef IncludeTwoPunctures
-    void prepare(TP::TwoPunctures* tp); 
-#endif
 
-
-    
     void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
@@ -64,41 +70,7 @@ class benchmarks::exahype2::ccz4::CCZ4SBH: public benchmarks::exahype2::ccz4::Ab
       bool                                         gridIsConstructred
     ) override;
     
-
-    
-    
-    virtual void boundaryConditions(
-      const double * __restrict__ Qinside, // Qinside[59+0]
-      double * __restrict__ Qoutside, // Qoutside[59+0]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  meshCellH,
-      double                                       t,
-      int                                          normal
-    )  override;
-    
-
     
   public:
-    
-
-    
-
-
-    
-     
-     
-    
-    
-   
-    
-
-
-    
-
-
-    
-     
-   
-        
 };
 

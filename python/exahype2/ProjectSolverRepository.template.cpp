@@ -13,6 +13,7 @@
 
 {% for item in TRACERS -%}
 #include "vertexdata/{{ item }}.h"
+{# Comment to ensure that jinja2 adds a new line#}
 {%- endfor %}
 
 #include <algorithm>

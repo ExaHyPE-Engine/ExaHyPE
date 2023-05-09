@@ -33,7 +33,9 @@ class GlobalFixedTimeStep( SeparateSweeps ):
     initial_conditions=PDETerms.User_Defined_Implementation,
     plot_grid_properties=False, KOSigma=8.0
   ):
-    """
+    """!
+    
+    Construct the solver
     
     eigenvalues: C++ source code or from PDETerms or None
       By default is None_Implementation, as we don't need eigenvalues as long as we
@@ -48,7 +50,8 @@ class GlobalFixedTimeStep( SeparateSweeps ):
       the code employs AMR on top of it and refines further, it will automatically 
       downscale the time step size accordingly. So hand in a valid time step size w.r.t.
       to max_meshcell_h. The actual polynomial order enters the chosen time step size
-      as an additional @f$ p^{-2} @f$ scaling.
+      as an additional @f$ p^{-2} @f$ scaling, and we expect the user to incorporate
+      such a factor into the passed normalised value.
   
     """
     super(GlobalFixedTimeStep,self).__init__(name, 

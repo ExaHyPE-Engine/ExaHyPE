@@ -14,6 +14,48 @@ from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionS
 
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
+  """!
+  
+  Update cell in primary sweep
+  
+  This action set is used in the primary sweeps only. In the secondary sweep, 
+  its counterpart, the action set UpdateCell, is active and works in all data
+  computed by tasks which have been spawned here.
+  
+  We extend the superclass ReconstructPatchAndApplyFunctor and hence have 
+  access to the reconstructed data including a halo layer of one. Furthermore,
+  the superclass provides us with a guard which we should use, as this guard
+  ensures that we reconstruct the patch plus halo if and only if certain 
+  conditions are met. By default, we compuate only on unrefined octants.
+  
+  Our condition whether to spawn a task or to compute the new time step 
+  data immediately depends on peano4::datamanagement::CellMarker::willBeSkeletonCell().
+  If this predicate holds, we compute stuff straightaway. Otherwise, we 
+  span a new enclave task. While this check does the job in almost all
+  cases, there are special situations where you might want to label more
+  cells as skeleton cells. @ref benchmarks_exahype2_ccz4_single_black_hole "Peano's single black hole test" provides
+  an example. If so, you 
+  
+  
+  ## Modify templates
+  
+  You can alter the template. Typical codes augment _Template_TouchCellFirstTime_Preamble
+  for example. However, there are two things to consider:
+  
+  - _Template_TouchCellFirstTime_Preamble is a member of the class and 
+    initialised in the constructor. 
+  - The constructor is used to create an object in the create_action_sets()
+    of the using class.
+  
+  If you want to alter the preamble, you thus should specialise 
+  create_action_sets() and invoke the supertype's create_action_sets(). After
+  that, alter self._action_set_update_cell._Template_TouchCellFirstTime_Preamble.
+  I recommend to add an entry and not to replace the preamble, as the 
+  preamble already consists meaningful code.
+  
+  """
+
+  
   TemplateUpdateCell = jinja2.Template( """
   double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
@@ -35,7 +77,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // previous time step has to be valid
 
-  if (marker.willBeSkeletonCell()) {
+  if ( marker.willBeSkeletonCell() ) {
     const double maxEigenvalue = tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
       timeStamp,
@@ -66,6 +108,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     tarch::multicore::spawnTask( newEnclaveTask );
   }
   """)
+
 
   def __init__(self,solver):
     d = {}
@@ -174,8 +217,10 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
       pass 
     return result
 
+
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+
 
 class EnclaveTasking( FV ):
   def __init__(self,
@@ -289,6 +334,7 @@ class EnclaveTasking( FV ):
     self._patch_overlap_old.generator.send_condition               = self._initialisation_sweep_guard
     self._patch_overlap_old.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_guard
 
+
   def _optimise_patch_storage_for_global_time_stepping(self):
     """
     If you work with global time stepping, you know that each enclave cell will
@@ -308,6 +354,8 @@ class EnclaveTasking( FV ):
       self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.willBeSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard() + " and (" + \
       self._primary_sweep_or_plot_guard + " or marker.hasBeenSkeletonCell())"
+    self._patch.generator.compute_condition  = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
+
 
   def create_action_sets(self):
     """
@@ -382,8 +430,6 @@ class EnclaveTasking( FV ):
     if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
     if use_split_loop                  :  self._use_split_loop                            = use_split_loop
     
-    if boundary_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
-      assert False, "boundary conditions cannot be none"
     if refinement_criterion==exahype2.solvers.fv.PDETerms.None_Implementation:
       assert False, "refinement criterion cannot be none"
     if initial_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:

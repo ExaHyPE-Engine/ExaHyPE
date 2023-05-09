@@ -107,6 +107,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
 
+    {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
     /**
      * Apply boundary conditions. You can overwrite both the inside and
      * outside values though most BCs only modify the outside ones. Please
@@ -121,7 +122,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       double                                       t,
       int                                          normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
-
+    {% endif %}
 
 
 

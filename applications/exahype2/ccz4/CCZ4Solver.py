@@ -15,12 +15,14 @@ class AbstractCCZ4Solver(object):
   defines some generic stuff such as the unknowns and includes that every 
   single solver will use.
   
-  If you use a CCZ4 solver, you will still have to add all the libraries to 
-  your Peano project such that the Makefile picks them up. For this, the 
-  solver offers an add_makefile_parameters().
+  The solver should, more or less, work out of the box, but you have to do
+  three things if you use a subclass:
+  
+  1. If you use a CCZ4 solver, you will still have to add all the libraries to 
+     your Peano project such that the Makefile picks them up. For this, the 
+     solver offers an add_makefile_parameters(). 
    
-  The solver should, more or less, work out of the box, though you still
-  have to set the initial conditions via
+  2. You have to set the initial conditions via
   
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   my_solver.set_implementation(initial_conditions   = " " "
@@ -29,10 +31,13 @@ class AbstractCCZ4Solver(object):
       " " ")
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
-  At this point, different CCZ4 solver variants might require different 
-  syntax. The term volumeCentre for example above is only defined in a
-  finite volume ontext.
+    At this point, different CCZ4 solver variants might require different 
+    syntax. The term volumeCentre for example above is only defined in a
+    finite volume ontext.
   
+  3. Finally, you have to add domain-specific constants to the project. 
+     For this, call add_all_solver_constants(). See the comment below.
+     
   Further to that, you might want to have to set boundary conditions. By 
   default, we do not set any boundary conditions. This works fine if 
   periodic boundary conditions are used. But once you switch off periodic
@@ -59,7 +64,13 @@ class AbstractCCZ4Solver(object):
   invoke the Python script for the first time. These methods will contain
   todo comments for you. Subsequent runs of the Python API should not 
   overwrite the solver implementation.
-  
+ 
+  ## Constants
+
+  Each CCZ4 solver requires a minimal set of constants. These are represented
+  by integer_constants and double_constants. Please augment these dictionaries.
+  Eventually, you have to submit all the constants via add_all_solver_constants().
+
   """
   
   
@@ -92,34 +103,59 @@ class AbstractCCZ4Solver(object):
           "K0":1,
         }
 
-# @todo Han, I need your help  
+  """!
+
+  Primary unknowns of the CCZ4 formulation which are there in the initial
+  formulation. All the other variables are auxiliary variables, i.e. ones
+  introduced to return to a first-order formulation. Unfortunately, the 
+  ordering in _FO_formulation_unknows is motivated by the original papers 
+  and not by the fact which quantities are original ones and which one are
+  helper or auxiliary variables.
+
+  """
   _SO_formulation_unknowns = {
-          "G":6,
-          "K":6,
-          "theta":1,
-          "Z":3,
-          "lapse":1,
-          "shift":3,
-          "b":3,
-          "dLapse":3,
-          "dxShift":3,
-          "dyShift":3,
-          "dzShift":3,
-          "dxG":6,
-          "dyG":6,
-          "dzG":6,
-          "traceK":1,
-          "phi":1,
-          "P":3,
-          "K0":1,
+          "G",
+          "K",
+          "theta",
+          "Z",
+          "lapse",
+          "shift",
+          "b",
+          "traceK",
+          "phi",
         }
   
-  # May not have a constructor. All the other numerical classes have 
-  # constructors and their arguments always differ. So we cannot have a 
-  # constructor here, as the arguments would have to match. Python's 
-  # multiple inheritance is stupid here.
-  #def __init__(self):
-  #  pass
+
+  Default_Time_Step_Size_Relaxation = 0.1
+
+  def __init__(self):
+    """!
+    
+    Constructor
+    
+    Initialise the two dictionaries with default values (which work).
+    
+    """  
+    self.integer_constants = {
+  "CCZ4LapseType":0,
+}
+    self.double_constants = {
+  "CCZ4ds":   1.0,
+  "CCZ4c":    1.0,
+  "CCZ4e":    1.0,
+  "CCZ4f":    0.75,
+  "CCZ4bs":   0.0,
+  "CCZ4sk":   0.0,
+  "CCZ4xi":   1.0,
+  "CCZ4itau": 1.0,
+  "CCZ4eta":  1.0,
+  "CCZ4k1":   0.1,
+  "CCZ4k2":   0.0,
+  "CCZ4k3":   0.5,
+  "CCZ4GLMc": 1.2,
+  "CCZ4GLMd": 2.0,
+  "CCZ4mu":   0.2,
+}
 
 
   def _add_standard_includes(self):
@@ -142,13 +178,11 @@ class AbstractCCZ4Solver(object):
 """)
     
     
-  def _add_solver_constants(self):
+  def add_all_solver_constants(self):
     """!
 
     Add domain-specific constants
         
-    Usually called by the subclass constructor.
-
     I need a couple of constants. I could either replace them directly
     within the Python snippets below, but I prefer here to go a different
     way and to export them as proper C++ constants.
@@ -158,31 +192,15 @@ class AbstractCCZ4Solver(object):
     them to the ExaHyPE2 solver. The latter is the route we go down here, 
     as these constants logically belong to the solver and not to the project.
     
+    This operation uses the parent class' add_solver_constants(). You still
+    can use this operation to add further parameters. Or you can, as a user, 
+    always add new entries to integer_constants or double_constants and then 
+    call this routine rather than adding individual constants one by one.
+    
     """
-    integer_constants = {
-  "CCZ4LapseType":0, 
-}
-    double_constants = {
-  "CCZ4ds":   1.0, 
-  "CCZ4c":    1.0, 
-  "CCZ4e":    1.0, 
-  "CCZ4f":    0.75,
-  "CCZ4bs":   0.0,
-  "CCZ4sk":   0.0,
-  "CCZ4xi":   1.0,
-  "CCZ4itau": 1.0,
-  "CCZ4eta":  1.0,
-  "CCZ4k1":   0.1,
-  "CCZ4k2":   0.0,
-  "CCZ4k3":   0.5,
-  "CCZ4GLMc": 1.2,
-  "CCZ4GLMd": 2.0,
-  "CCZ4mu":   0.2,
-}
-
-    for key, value in integer_constants.items():   
+    for key, value in self.integer_constants.items():   
       self.add_solver_constants("static constexpr int {} = {};".format(key, value))
-    for key, value in double_constants.items():   
+    for key, value in self.double_constants.items():   
       self.add_solver_constants("static constexpr double {} = {};".format(key, value))
 
   
@@ -276,20 +294,20 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
                max_volume_h,
                use_heap_storage = True
                ):  
-    super( CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking, self ).__init__(name                 = name,
-                                                                                   patch_size           = patch_size,
-                                                                                   unknowns             = sum(self._FO_formulation_unknowns.values()),
-                                                                                   auxiliary_variables  = 0,
-                                                                                   min_volume_h         = min_volume_h,
-                                                                                   max_volume_h         = max_volume_h,
-                                                                                   time_step_relaxation = 0.1
-                                                                                   )
+    AbstractCCZ4Solver.__init__(self)
+    exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
+                                                                    name                 = name,
+                                                                    patch_size           = patch_size,
+                                                                    unknowns             = sum(self._FO_formulation_unknowns.values()),
+                                                                    auxiliary_variables  = 0,
+                                                                    min_volume_h         = min_volume_h,
+                                                                    max_volume_h         = max_volume_h,
+                                                                    time_step_relaxation = AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation
+                                                                    )
     self._add_standard_includes()
 
     if use_heap_storage:
       self.switch_to_heap_storage(True, True)
-
-    self._add_solver_constants()
 
     self.set_implementation(
           boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
@@ -336,12 +354,6 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=coordinates))
-    project.add_action_set_to_timestepping(
-      peano4.toolbox.particles.UpdateParallelState(
-        particle_set=tracer_particles
-      )
-    )
-    
     project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                 self,
                                                 time_stepping_kernel="toolbox::particles::staticPosition",
@@ -392,22 +404,30 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
                max_meshcell_h,
                use_heap_storage = True
                ):  
-    super( CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking, self ).__init__(name                 = name,
-                                                                                    patch_size           = patch_size,
-                                                                                    rk_order             = rk_order,
-                                                                                    unknowns             = sum(self._FO_formulation_unknowns.values()),
-                                                                                    auxiliary_variables  = 0,
-                                                                                    min_meshcell_h         = min_meshcell_h,
-                                                                                    max_meshcell_h         = max_meshcell_h,
-                                                                                    time_step_relaxation = 0.1
-                                                                                    )
+    """!
+    
+    Constructor
+    
+    Calibrate the default time step size calibration with 1/16 to take into 
+    account that we have a higher-order numerical scheme.
+        
+    """
+    AbstractCCZ4Solver.__init__(self)
+    exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
+                                                                                name                 = name,
+                                                                                patch_size           = patch_size,
+                                                                                rk_order             = rk_order,
+                                                                                unknowns             = sum(self._FO_formulation_unknowns.values()),
+                                                                                auxiliary_variables  = 0,
+                                                                                min_meshcell_h         = min_meshcell_h,
+                                                                                max_meshcell_h         = max_meshcell_h,
+                                                                                time_step_relaxation = AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation / 16.0
+                                                                                )
     
     self._add_standard_includes()
 
     if use_heap_storage:
       self.switch_to_heap_storage(True, True)
-
-    self._add_solver_constants()
 
     self.set_implementation(
           boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
@@ -457,11 +477,6 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=coordinates))
-    project.add_action_set_to_timestepping(
-      peano4.toolbox.particles.UpdateParallelState(
-        particle_set=tracer_particles
-      )
-    )    
     project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                 self,
                                                 time_stepping_kernel="toolbox::particles::staticPosition",
@@ -530,22 +545,30 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
                reconstruction_type,
                use_heap_storage = True
                ):  
-    super( CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking, self ).__init__(name                 = name,
+    """!
+    
+    Constructor
+    
+    Calibrate the default time step size calibration with 1/16 to take into 
+    account that we have a higher-order numerical scheme.
+        
+    """
+    AbstractCCZ4Solver.__init__(self)
+    exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
+                                                                                    name                 = name,
                                                                                     patch_size           = patch_size,
                                                                                     rk_order             = rk_order,
-                                                                                    unknowns             = sum(self._SO_formulation_unknowns.values()),
-                                                                                    auxiliary_variables  = sum(self._FO_formulation_unknowns.values())-sum(self._SO_formulation_unknowns.values()),
-                                                                                    min_meshcell_h         = min_meshcell_h,
-                                                                                    max_meshcell_h         = max_meshcell_h,
-                                                                                    time_step_relaxation = 0.1
+                                                                                    unknowns             = len(self._SO_formulation_unknowns),
+                                                                                    auxiliary_variables  = sum(self._FO_formulation_unknowns.values())-len(self._SO_formulation_unknowns),
+                                                                                    min_meshcell_h       = min_meshcell_h,
+                                                                                    max_meshcell_h       = max_meshcell_h,
+                                                                                    time_step_relaxation = AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation / 16.0
                                                                                     )
     
     self._add_standard_includes()
 
     if use_heap_storage:
       self.switch_to_heap_storage(True, True)
-
-    self._add_solver_constants()
 
     self.set_implementation(
           boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
@@ -614,11 +637,6 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=coordinates))
-    project.add_action_set_to_timestepping(
-      peano4.toolbox.particles.UpdateParallelState(
-        particle_set=tracer_particles
-      )
-    )    
     project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                 self,
                                                 time_stepping_kernel="toolbox::particles::staticPosition",
@@ -668,7 +686,9 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
                max_cell_h,
                use_heap_storage = True
                ):  
-    super( CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking, self ).__init__(name                 = name,
+    AbstractCCZ4Solver.__init__(self)
+    exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
+                                                                                  name                 = name,
                                                                                      rk_order             = rk_order,
                                                                                      polynomials          = polynomials,
                                                                                      face_projections     = exahype2.solvers.rkdg.FaceProjections.Solution,
@@ -676,15 +696,13 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
                                                                                      auxiliary_variables  = 0,
                                                                                      min_cell_h         = min_cell_h,
                                                                                      max_cell_h         = max_cell_h,
-                                                                                     time_step_relaxation = 0.1
+                                                                                     time_step_relaxation = AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation
                                                                                      )
     
     self._add_standard_includes()
 
     if use_heap_storage:
       self.switch_to_heap_storage(True, True)
-
-    self._add_solver_constants()
 
     self.set_implementation(
           boundary_conditions  = exahype2.solvers.rkdg.PDETerms.Empty_Implementation,
@@ -732,12 +750,6 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=coordinates))
-    project.add_action_set_to_timestepping(
-      peano4.toolbox.particles.UpdateParallelState(
-        particle_set=tracer_particles
-      )
-    )
-    
     project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
                                                                                         my_solver,
                                                                                         time_stepping_kernel="toolbox::particles::staticPosition",
