@@ -83,13 +83,11 @@ elif args.scenario == "Tsunami":
 
   print("Overwriting max_cell_size to fit finest mesh in data files!")
   max_data_dimension = 1
-  havenetcdf = False
   try:
     import netCDF4
-    havenetcdf=True
     for file_path in [args.bathymetry_file, args.displacement_file]:
       nc_file = netCDF4.Dataset(file_path)
-      nc_file_max_dim = max(nc_file.dimensions.values())
+      nc_file_max_dim = max(map(len, nc_file.dimensions.values()))
       max_data_dimension = max([max_data_dimension, nc_file_max_dim])
       nc_file.close()
   except ImportError:
