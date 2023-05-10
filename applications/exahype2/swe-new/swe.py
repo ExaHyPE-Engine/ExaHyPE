@@ -82,22 +82,20 @@ elif args.scenario == "Tsunami":
   if displ_ext not in supported_file_types_displacement: raise Exception("Unsupported file type of displacement file! Supported extensions are: %s" % ("|".join(supported_file_types_displacement)))
 
   print("Overwriting max_cell_size to fit finest mesh in data files!")
-  max_data_dimension = 1
   try:
     import netCDF4
     for file_path in [args.bathymetry_file, args.displacement_file]:
       nc_file = netCDF4.Dataset(file_path)
-      nc_file_max_dim = max(map(len, nc_file.dimensions.values()))
-      max_data_dimension = max([max_data_dimension, nc_file_max_dim])
+      # optimize cell size to exactly fit finest mesh width in data
+      maximum_cell_size = min([min([w/d for (d,w) in zip([len(d) for d in nc_file.dimensions.values()], width)]), maximum_cell_size])
       nc_file.close()
   except ImportError:
     print("netCDF4 package not found. Checking -maxd flag.")
     if args.max_dimension_netcdf is None or args.max_dimension_netcdf <= 0: 
       raise ValueError("Neither netCDF4 package installed nor valid value passed to -maxd!") 
     else: 
-      max_data_dimension = args.max_dimension_netcdf
-      
-  maximum_cell_size = min(width)/max_data_dimension
+      # generally set maximum cell size to smallest possible data mesh width
+      maximum_cell_size = min(width)/args.max_dimension_netcdf
 
   from scenarios.tsunami import Tsunami
   my_pde = Tsunami()
