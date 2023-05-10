@@ -995,7 +995,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
 }
 
 
-//********************************SOCCZ4 version
+//********************************SOCCZ4 version**********************************//
 
 
 //this version use alpha and phi
