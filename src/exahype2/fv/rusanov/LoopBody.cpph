@@ -749,12 +749,6 @@ void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
 #endif
     QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight);
     /*QOut[ ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * 0.5 * (tempFlux[fluxEnumerator(patchIndex, leftVolume, unknown)]-tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)]);*/
-
-    // if(std::abs(QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ])>=1e5)
-    // {
-    //   std::cout<<QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]<<"\n";
-    //   exit(0);
-    // }
   };
 
   updateAlongOneDirection(tempFluxX, 0);
@@ -853,15 +847,15 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
     double centerVolumeValue = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex, 0)];
     double rightVolumeValue = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, rightVolume, 0)];
 
-    const double lambdaLeft  = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume,0)] > tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)] 
-                             ? tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume,0)] 
-                             : tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)];
-    const double lambdaRight = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, rightVolume,0)] > tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)]
-                             ? tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, rightVolume,0)] 
-                             : tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)];
-    double fluxLeft  = - lambdaLeft * (QIn[QInEnumerator(patchIndex, volumeIndex,unknown)] - QIn[QInEnumerator(patchIndex, leftVolume,unknown)]);
-    double fluxRight = - lambdaRight * (QIn[QInEnumerator(patchIndex, rightVolume,unknown)] - QIn[QInEnumerator(patchIndex, volumeIndex,unknown)]);
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight)*0.5;
+    const double lambdaLeft = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume, 0)] > tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex, 0)]
+                                  ? tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume, 0)]
+                                  : tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex, 0)];
+    const double lambdaRight = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, rightVolume, 0)] > tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex, 0)]
+                                   ? tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, rightVolume, 0)]
+                                   : tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex, 0)];
+    double fluxLeft = -lambdaLeft * (QIn[QInEnumerator(patchIndex, volumeIndex, unknown)] - QIn[QInEnumerator(patchIndex, leftVolume, unknown)]);
+    double fluxRight = -lambdaRight * (QIn[QInEnumerator(patchIndex, rightVolume, unknown)] - QIn[QInEnumerator(patchIndex, volumeIndex, unknown)]);
+    QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight) * 0.5;
 
 #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
     assertion7(
@@ -964,26 +958,8 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
     QAverage[unknown] = 0.5 * QIn[QInEnumerator(patchIndex, leftAdjacentVolume, unknown)] + 0.5 * QIn[QInEnumerator(patchIndex, normalAdjacentVolume, unknown)];
 
     DeltaQ[unknown * Dimensions] = QIn[QInEnumerator(patchIndex, rightAdjacentVolume, unknown)] - QIn[QInEnumerator(patchIndex, leftAdjacentVolume, unknown)];
-    if (std::abs(DeltaQ[unknown * Dimensions]) > 10)
-    {
-      std::cout << "LoopBody1:" << QIn[QInEnumerator(patchIndex, rightAdjacentVolume, unknown)]
-                << "," << QIn[QInEnumerator(patchIndex, leftAdjacentVolume, unknown)]
-                << "," << DeltaQ[unknown * Dimensions]
-                << "," << normal << "," << unknown
-                << "\n";
-      // exit(0);
-    }
     if (Dimensions >= 2)
-
       DeltaQ[unknown * Dimensions + 1] = QIn[QInEnumerator(patchIndex, topAdjacentVolume, unknown)] - QIn[QInEnumerator(patchIndex, leftAdjacentVolume, unknown)];
-    if (std::abs(DeltaQ[unknown * Dimensions + 1]) > 10)
-    {
-      std::cout << "LoopBody2:" << QIn[QInEnumerator(patchIndex, topAdjacentVolume, unknown)]
-                << "," << QIn[QInEnumerator(patchIndex, leftAdjacentVolume, unknown)]
-                << "," << DeltaQ[unknown * Dimensions + 1] << "," << normal << "," << unknown
-                << "\n";
-      // exit(0);
-    }
     if (Dimensions == 3)
       DeltaQ[unknown * Dimensions + 2] = QIn[QInEnumerator(patchIndex, frontAdjacentVolume, unknown)] - QIn[QInEnumerator(patchIndex, leftAdjacentVolume, unknown)];
   }
@@ -1111,14 +1087,6 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
     // left flux have another minus sign as the normal vector direction for the left face goes against the flux
     QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell *
                                                               (-fluxLeft + fluxRight) * (0.5); // for now it correpond to 1/2 in our past discussion.
-
-    // if (std::isnan(QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)]) || std::isinf(QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)]) || std::abs(QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)]) > 1e5)
-    // {
-    //   std::cout << "Index in Update Flux:" << toString(rightFace) << "," << toString(leftFace) << "\n";
-    //   std::cout << fluxLeft << "," << fluxRight << "\n";
-    //   std::cout << unknown << "\n";
-    //   std::cout << "QOut:" << QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] << "\n";
-    // }
 
 #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
     assertion8(

@@ -11,10 +11,6 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::initialCo
 {
   logTraceInWith3Arguments("initialCondition(...)", volumeCentre, volumeH, gridIsConstructred);
 
-  // @todo Implement your stuff here, but ensure all entries are
-  //   initialised incl all auxiliary variables. The snippet below
-  //   sets everything to zero
-
   const double gamma = 1.4;
   const double p = 100 / gamma;                                      // pressure
   Q[0] = 1.0;                                                        // density
@@ -24,14 +20,6 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::initialCo
   Q[4] = 0.01;                                                       // viscosity of fluid
   Q[5] = 0.7;                                                        // prandtl number
 
-  // tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.3};
-  // bool isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < 0.05);
-  // Q[0] = 0.1; // rho
-  // Q[1] = 0;   // velocities
-  // Q[2] = 0;
-  // Q[3] = isInTheCentre ? 1.0 : 0.5; // inner energy
-  // Q[4] = 0.01;
-  // Q[5] = 0.7;
   logTraceOut("initialCondition(...)");
 }
 
@@ -44,7 +32,7 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::boundaryC
     int normal)
 {
   logTraceInWith4Arguments("boundaryConditions(...)", faceCentre, volumeH, t, normal);
-  // @todo implement
+
   const double gamma = 1.4;
   const double p = (gamma - 1) * (Qinside[3] - 0.5 * (Qinside[1] * Qinside[1] + Qinside[2] * Qinside[2]) / Qinside[0]);
 
@@ -63,14 +51,8 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::boundaryC
   {
     Qoutside[1] = 0;
   }
-  // std::cout<<"Face Centre:"<<faceCentre[0]<<"\n";
   Qoutside[2] = 0;
   Qoutside[3] = Qinside[3];
-
-  // for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++)
-  // {
-  //   Qoutside[i] = Qinside[i];
-  // }
   logTraceOut("boundaryConditions(...)");
 }
 
@@ -93,14 +75,6 @@ double ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::maxEi
   const double c = std::sqrt(gamma * p / Q[0]);                                        // speed of sound
   const double lambda_c = std::abs(Q[1 + normal] / Q[0]) + c;                          // max convective eigenvalue
   const double lambda_v = std::max(4 / 3 * Q[4] / Q[0], gamma * Q[4] / (Q[5] * Q[0])); // max viscous eigenvalue
-
-  if (std::isnan(std::max(lambda_c, lambda_v)) || std::max(lambda_c, lambda_v) == 0)
-  {
-    std::cout << "MaxEigenvalue User Function:\n"
-              << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "," << Q[4] << "," << Q[5] << "\n";
-    std::cout << std::max(lambda_c, lambda_v) << "," << lambda_c << "," << lambda_v << "," << c << "," << p << "\n";
-    exit(0);
-  }
   logTraceOut("maxEigenvalue(...)");
   return std::max(lambda_c, lambda_v);
 }
@@ -174,34 +148,5 @@ void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::noncons
   }
   BTimesDeltaQ[0] = 0;
   BTimesDeltaQ[3] = (Q[1] * BTimesDeltaQ[1] + Q[2] * BTimesDeltaQ[2]) / Q[0];
-
-  if (std::isnan(BTimesDeltaQ[3]) || std::isinf(BTimesDeltaQ[3]) || std::abs(BTimesDeltaQ[3]) > 1e5)
-  {
-    std::cout << normal << "\n";
-    std::cout << "ncp: " << BTimesDeltaQ[0] << "," << BTimesDeltaQ[1] << "," << BTimesDeltaQ[2] << "," << BTimesDeltaQ[3] << "\n";
-    std::cout << "deltaQ:" << deltaQ[0] << "," << deltaQ[1] << "," << deltaQ[2] << "," << deltaQ[3] << "," << deltaQ[4] << "," << deltaQ[5] << "\n";
-    std::cout << "Q:" << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "\n";
-    exit(0);
-  }
   logTraceOut("nonconservativeProduct(...)");
 }
-
-// void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::sourceTerm(
-//     const double *__restrict__ Q, // Q[4+1]
-//     const tarch::la::Vector<Dimensions, double> &volumeX,
-//     const tarch::la::Vector<Dimensions, double> &volumeH,
-//     double t,
-//     double dt,
-//     double *__restrict__ S // S[4]
-// )
-// {
-//   logTraceInWith4Arguments("sourceTerm(...)", volumeX, volumeH, t, dt);
-
-//   // @todo implement and ensure that all entries of S are properly set
-//   for (int i = 0; i < NumberOfUnknowns; i++)
-//   {
-//     S[i] = 0.0;
-//   }
-
-//   logTraceOut("sourceTerm(...)");
-//}
