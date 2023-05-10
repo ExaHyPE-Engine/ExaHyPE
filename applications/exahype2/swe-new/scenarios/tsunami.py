@@ -2,8 +2,8 @@ import scenarios.template_scenario, sympy
 
 
 class Tsunami(scenarios.template_scenario.Template_Scenario):
-    def __init__(self, dimensions, auxiliary_variables):
-        super().__init__(dimensions, auxiliary_variables)
+    def __init__(self):
+        super().__init__()
         pass
 
     def implementation_of_initial_conditions(self):

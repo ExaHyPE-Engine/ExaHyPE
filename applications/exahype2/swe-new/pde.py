@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 
 class PDE(exahype2.symhype.FirstOrderConservativePDEFormulation, ABC):
   @abstractmethod
-  def __init__(self, dimensions, auxiliary_variables):
+  def __init__(self, dimensions=2, auxiliary_variables=1):
     super().__init__(unknowns=dimensions+1, auxiliary_variables=auxiliary_variables, dimensions=dimensions)
 
     self.h = self.name_Q_entry(0, "h")

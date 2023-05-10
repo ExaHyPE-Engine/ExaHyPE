@@ -16,8 +16,8 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     In all other cases, please extend scenario.py and implement the required given methods.
     """
     @abstractmethod
-    def __init__(self, dimensions, auxiliary_variables):
-        super().__init__(dimensions=dimensions, auxiliary_variables=auxiliary_variables)
+    def __init__(self):
+        super().__init__()
 
         # Flux [unknowns, dimensions]
         self.F[0, 0] = self.hu

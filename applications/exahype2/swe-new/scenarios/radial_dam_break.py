@@ -2,8 +2,8 @@ import scenarios.template_scenario, sympy
 
 
 class Radial_Dam_Break(scenarios.template_scenario.Template_Scenario):
-    def __init__(self, dimensions, auxiliary_variables, width):
-        super().__init__(dimensions=dimensions, auxiliary_variables=auxiliary_variables)
+    def __init__(self, width):
+        super().__init__()
 
         dam = sympy.sqrt(
             ((width[0] / 2) - self.x[0]) ** 2 + ((width[1] / 2) - self.x[1]) ** 2
