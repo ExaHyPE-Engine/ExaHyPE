@@ -7,16 +7,17 @@ sys.path.insert(0, os.path.abspath('../../../python'))
 import peano4
 import exahype2
 
-dimensions            = 2
+dimensions            = 2 # this is fixed to 2 in pde.py
 width                 = [10, 10]
-offset                = [0, 0]
+offset                = [0, 0] # TODO offset relevant for netCDF reader? min_z might not be 0 in the case of offset_z != 0
 end_time              = 0.02
 time_step_relaxation  = 0.5 # taken from tutorial
 plot_interval         = 0.005 # taken from tutorial
 patch_size            = 3
+optimal_patch_size    = 32 # optimal for GPUs
 maximum_cell_size     = 0.1
 amr_levels            = 3 
-auxiliary_variables   = 1 # bathymetry
+auxiliary_variables   = 1 # bathymetry, this is fixed to 1 in pde.py
 
 solvers = {
   #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
@@ -49,13 +50,16 @@ parser.add_argument("-et",      "--end-time",          dest="end_time",       ty
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. finite volume cell (3 by default)" )
 parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR" )
 parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=False,              help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
-parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)" )
+parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,              help="Compile (on by default)" )
 parser.add_argument("-c",       "--scenario",          dest="scenario",       choices=scenarios,          default="Radial_Dam_Break", help="|".join(scenarios))
-parser.add_argument("-bf",       "--bathymetry-file",  dest="bathymetry_file", type=str,                   required=False,             help="Path to file containing bathymetry relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_bathymetry)))
-parser.add_argument("-df",       "--displacement-file",dest="displacement_file",type=str,                  required=False,             help="Path to file containing displacement relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_displacement)))
+parser.add_argument("-bf",      "--bathymetry-file",   dest="bathymetry_file", type=str,                  required=False,            help="Path to file containing bathymetry relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_bathymetry)))
+parser.add_argument("-df",      "--displacement-file", dest="displacement_file",type=str,                 required=False,            help="Path to file containing displacement relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_displacement)))
+parser.add_argument("-ops",     "--optimal-patch-size",dest="optimal_patch_size",action="store_true",     default=False,             help="Set to use optimal patch size for GPUs of 32.")
+parser.add_argument("-maxd",    "--max_dimension_netcdf",dest="max_dimension_netcdf",type=int,            required=False,            help="Use when netCDF4 package not installed to pass maximum dimension to the program.")
 args = parser.parse_args()
 
 maximum_cell_size = args.max_cell_size
+patch_size = optimal_patch_size if args.optimal_patch_size else args.patch_size
 
 my_pde = None
 if args.scenario == "Radial_Bathymetry_Dam_Break":
@@ -77,6 +81,26 @@ elif args.scenario == "Tsunami":
   if bath_ext not in supported_file_types_bathymetry: raise Exception("Unsupported file type of bathymetry file! Supported extensions are: %s" % ("|".join(supported_file_types_bathymetry)))
   if displ_ext not in supported_file_types_displacement: raise Exception("Unsupported file type of displacement file! Supported extensions are: %s" % ("|".join(supported_file_types_displacement)))
 
+  print("Overwriting max_cell_size to fit finest mesh in data files!")
+  max_data_dimension = 1
+  havenetcdf = False
+  try:
+    import netCDF4
+    havenetcdf=True
+    for file_path in [args.bathymetry_file, args.displacement_file]:
+      nc_file = netCDF4.Dataset(file_path)
+      nc_file_max_dim = max(nc_file.dimensions.values())
+      max_data_dimension = max([max_data_dimension, nc_file_max_dim])
+      nc_file.close()
+  except ImportError:
+    print("netCDF4 package not found. Checking -maxd flag.")
+    if args.max_dimension_netcdf is None or args.max_dimension_netcdf <= 0: 
+      raise ValueError("Neither netCDF4 package installed nor valid value passed to -maxd!") 
+    else: 
+      max_data_dimension = args.max_dimension_netcdf
+      
+  maximum_cell_size = min(width)/max_data_dimension
+
   from scenarios.tsunami import Tsunami
   my_pde = Tsunami()
 
@@ -95,10 +119,10 @@ if args.gpu:
   solver_name += "GPU"
 my_solver = solvers[solver_type](
   name                      = solver_name,
-  patch_size                = args.patch_size,
+  patch_size                = patch_size,
   unknowns                  = 3,
   auxiliary_variables       = 1,
-  max_volume_h              = maximum_cell_size, # TODO must be at least as fine as bathymetry file
+  max_volume_h              = maximum_cell_size, # TODO must be at least as fine as bathymetry file if netCDF is used
   min_volume_h              = maximum_cell_size * 3.0**(-args.amr_levels),
   time_step_relaxation      = time_step_relaxation
 )
@@ -120,7 +144,7 @@ my_solver.set_implementation(
   source_term           = my_pde.implementation_of_sources()
 )
 
-my_project = exahype2.Project( ["applications", "exahype2", "swe"], "SWEApplication", ".", executable="swe-application-2d-patch-size-" + str(args.patch_size) + "-cell-size-" + str(args.max_cell_size))
+my_project = exahype2.Project( ["applications", "exahype2", "swe"], "SWEApplication", ".", executable="swe-application-2d-patch-size-" + str(patch_size) + "-cell-size-" + str(args.max_cell_size))
 my_project.add_solver( my_solver )
 my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 my_project.set_Peano4_installation("../../../", build_modes[args.build_mode])

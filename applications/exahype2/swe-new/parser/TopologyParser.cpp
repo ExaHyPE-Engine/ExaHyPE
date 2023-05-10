@@ -144,7 +144,7 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
 }
 
 double applications::exahype2::swe::parser::TopologyParser::transformIndexSimulationToCDFRange(double i_z, double i_nZ, double i_min_z_cdf, double i_max_z_cdf){
-  // This works flawless
+  // TODO with an offset defined, min_z should probably be adjusted
   double min_z = 0.0;
   double max_z = i_nZ;
   double m = ((i_max_z_cdf - i_min_z_cdf) / (max_z - min_z));
