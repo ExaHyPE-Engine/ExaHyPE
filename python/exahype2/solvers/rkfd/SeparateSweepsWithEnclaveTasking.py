@@ -70,7 +70,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // previous time step has to be valid
   
-      if (marker.willBeSkeletonCell()) {
+      if ( marker.willBeSkeletonCell() or {{ADDITIONAL_SKELETON_CRITERION}} ) {
         tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
           marker,
           timeStamp,
@@ -125,6 +125,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 """ + self._Template_TouchCellFirstTime_Preamble
 
     self._butcher_tableau     = ButcherTableau(self._solver._rk_order)
+    self.additional_skeleton_guard = "false"
 
 
   def _add_action_set_entries_to_dictionary(self,d):
@@ -142,9 +143,12 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     d[ "BUTCHER_TABLEAU_WEIGHTS" ]                  = self._butcher_tableau.weight_matrix()
     d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
 
+    d[ "ADDITIONAL_SKELETON_CRITERION" ] = self.additional_skeleton_guard
+    
     # Has to come after we've set the predicates, as we use these
     # fields in here already
     d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.SolveRiemannProblemsOverPatch.render(**d)
+
 
   
   def get_includes(self):

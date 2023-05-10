@@ -107,8 +107,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
 
-    {{BOUNDARY_CONDITIONS_IMPLEMENTATION}}
-    here we go
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<none>" %}
     {% else %}
     /**

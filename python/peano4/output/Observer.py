@@ -4,6 +4,11 @@ import os
 import re
 import jinja2
 
+
+#
+# @todo compute() not yet taken into account
+# 
+
 from .Helper import write_file
 
 from .Overwrite import Overwrite
