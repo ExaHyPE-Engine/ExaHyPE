@@ -337,7 +337,7 @@ class EnclaveTasking( FV ):
 """
 
     self.add_user_action_set_includes( additional_includes )
-#    self.add_user_solver_includes(     additional_includes )
+
 
   def create_data_structures(self):
     """
@@ -442,6 +442,7 @@ class EnclaveTasking( FV ):
     self._action_set_roll_over_update_of_faces.guard = self._store_face_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guard = self._store_cell_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
 
+
   def set_implementation(self,
     boundary_conditions, refinement_criterion, initial_conditions,
     memory_location,
@@ -473,6 +474,7 @@ class EnclaveTasking( FV ):
 
     self.create_action_sets()
 
+
   def add_entries_to_text_replacement_dictionary(self,d):
     """
      d: Dictionary of string to string
@@ -490,16 +492,19 @@ class EnclaveTasking( FV ):
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
     d[ "STATELESS_PDE_TERMS" ]  = self._pde_terms_without_state
 
+
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     super(EnclaveTasking, self).add_actions_to_create_grid(step,evaluate_refinement_criterion)
     step.add_action_set( exahype2.grid.UpdateCellLabel( self._name ) )
+
 
   def add_actions_to_init_grid(self, step):
     super(EnclaveTasking, self).add_actions_to_init_grid(step)
     step.add_action_set( exahype2.grid.UpdateCellLabel( self._name ) )
 
+
   def add_actions_to_perform_time_step(self, step):
-    """
+    """!
       Add enclave aspect to time stepping
 
       There's a bunch of different things to do to extend my standard solver
@@ -518,9 +523,12 @@ class EnclaveTasking( FV ):
     super(EnclaveTasking, self).add_actions_to_perform_time_step(step)
     step.add_action_set( self._action_set_merge_enclave_task_outcome, False )
 
+
   def add_implementation_files_to_project(self,namespace,output, dimensions):
-    """
+    """!
+    
       Add the enclave task for the GPU
+      
     """
 
     super(EnclaveTasking, self).add_implementation_files_to_project(namespace, output, dimensions)
@@ -555,7 +563,9 @@ class EnclaveTasking( FV ):
         output.makefile.d["PEANODIR"] = peanodir
         exahype2.gpu.add_exahype_objects(output.makefile)
 
+
   def _enclave_task_name(self): return "{}EnclaveTask".format(self._name)
+
 
   def set_pde_terms_without_state(self, value):
     self._pde_terms_without_state = value
