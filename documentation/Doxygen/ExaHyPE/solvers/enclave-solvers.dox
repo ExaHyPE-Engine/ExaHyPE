@@ -74,6 +74,37 @@ decision, you should automatically get all follow-up activities per cell
 right.
 
 
+If you alter the definition, you have to be very careful with the solver's 
+storage scheme. Enclave task data are usually not stored in-between the 
+primary and secondary grid sweep. So if you manually downcast a cell from
+enclave to skeleton, you also have to manually alter - in most cases - the
+storage predicate.
+
+
+A normal predicate might for example look similar to 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+bool benchmarks::exahype2::ccz4::celldata::CCZ4SBH_FVQ::loadPersistently(
+  const peano4::datamanagement::CellMarker& marker  
+) {
+  return (not marker.hasBeenRefined() 
+          and repositories::InstanceOfCCZ4SBH_FV.getSolverState()!=CCZ4SBH_FV::SolverState::GridConstruction 
+          and repositories::InstanceOfCCZ4SBH_FV.getSolverState()!=CCZ4SBH_FV::SolverState::GridInitialisation 
+          and repositories::InstanceOfCCZ4SBH_FV.isCellOverlappingWithBHImpactArea(marker) 
+         ) 
+     and (
+          (   repositories::InstanceOfCCZ4SBH_FV.getSolverState()==CCZ4SBH_FV::SolverState::Primary 
+           or repositories::InstanceOfCCZ4SBH_FV.getSolverState()==CCZ4SBH_FV::SolverState::PrimaryAfterGridInitialisation 
+           or repositories::InstanceOfCCZ4SBH_FV.getSolverState()==CCZ4SBH_FV::SolverState::PlottingInitialCondition 
+           or repositories::InstanceOfCCZ4SBH_FV.getSolverState()==CCZ4SBH_FV::SolverState::Plotting 
+         ) or marker.hasBeenSkeletonCell());
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you manually downcast the enclave predicate, you have to ensure that 
+it is downcast here, too.
+
+
 ## Optimistic enclave tasking
 
 Optimistic enclave tasking sticks to the data flow of enclave tasking. However,
