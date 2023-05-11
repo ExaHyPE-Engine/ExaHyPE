@@ -959,8 +959,10 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
  
   @preprocess_reconstructed_patch.setter
   def preprocess_reconstructed_patch(self, kernel):
-    """
-  
+    """!
+        
+    Please consult exahype2.solvers.fv.FV.preprocess_reconstructed_patch() for 
+    a documentation on this routine.
 
     """
     self._preprocess_reconstructed_patch  = kernel

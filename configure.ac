@@ -76,7 +76,7 @@ AC_LANG(C++)
 # Compiler options. Allow icpc and gnu. Plus minimum version check.
 #
 
-AX_COMPILER_VENDOR
+#AX_COMPILER_VENDOR
 
 #AX_CXX_COMPILE_STDCXX_11
 

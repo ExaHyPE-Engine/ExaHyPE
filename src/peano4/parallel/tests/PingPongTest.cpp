@@ -48,11 +48,9 @@ namespace {
   class PingPongSendTask: public tarch::multicore::Task {
     private:
       const bool _blockingMPI;
-
-      static constexpr int _taskId = 22;
     public:
       PingPongSendTask(int id, bool blockingMPI):
-        Task(id,_taskId,0),
+        Task(Task::DontFuse,Task::DefaultPriority),
         _blockingMPI(blockingMPI) {}
    
       bool run() {
@@ -78,11 +76,9 @@ namespace {
   class PingPongReceiveTask: public tarch::multicore::Task {
     private:
       const bool _blockingMPI;
-
-      static constexpr int _taskId = 23;
     public:
-      PingPongReceiveTask(int id, bool blockingMPI):
-        Task(id,_taskId,0),
+      PingPongReceiveTask(bool blockingMPI):
+        Task(Task::DontFuse,Task::DefaultPriority),
         _blockingMPI(blockingMPI) {}
 
       bool run() {

@@ -332,20 +332,14 @@ bool tarch::multicore::TaskComparison::operator() (Task* lhs, Task* rhs) const {
 }
 
 
-tarch::multicore::Task::Task( int id, int taskType, int priority ):
-  _id(id),
+tarch::multicore::Task::Task( int taskType, int priority ):
   _taskType( taskType ),
   _priority( priority ) {
 }
 
 
 bool tarch::multicore::Task::canFuse() const {
-  return false;
-}
-
-
-bool tarch::multicore::Task::isSmartMPITask() const {
-  return false;
+  return _taskType!=DontFuse;
 }
 
 
@@ -365,6 +359,7 @@ int tarch::multicore::Task::getTaskType() const {
 
 
 bool tarch::multicore::Task::fuse( const std::list<Task*>& otherTasks, int device ) {
+  assertion( canFuse() );
   for (auto pp: otherTasks) {
     tarch::multicore::Task* currentTask = pp;
     while (currentTask->run()) {}
@@ -374,23 +369,8 @@ bool tarch::multicore::Task::fuse( const std::list<Task*>& otherTasks, int devic
 }
 
 
-int tarch::multicore::Task::getTaskId() const {
-  return _id;
-}
-
-
-bool tarch::multicore::Task::split(std::list<tarch::multicore::Task*>&) {
-  return true;
-}
-
-
-bool tarch::multicore::Task::canSplit() const {
-  return false;
-}
-
-
-tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor( int id, int taskType, int priority, const std::function<bool()>& taskFunctor ):
-  Task(id, taskType, priority),
+tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor( int taskType, int priority, const std::function<bool()>& taskFunctor ):
+  Task(taskType, priority),
   _taskFunctor(taskFunctor)  {
 }
 
@@ -400,8 +380,8 @@ bool tarch::multicore::TaskWithCopyOfFunctor::run() {
 }
 
 
-tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor( int id, int taskType, int priority, std::function<bool()>& taskFunctor ):
-  Task(id, taskType, priority),
+tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor( int taskType, int priority, std::function<bool()>& taskFunctor ):
+  Task(taskType, priority),
   _taskFunctor(taskFunctor)  {
 }
 

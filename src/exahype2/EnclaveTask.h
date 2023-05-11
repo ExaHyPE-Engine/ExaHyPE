@@ -67,7 +67,12 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
 
     static tarch::logging::Log                   _log;
 
+    /**
+     * Each task needs a unique number, so we can look up its output.
+     */
+    const int                                    _taskNumber;
     const ::peano4::datamanagement::CellMarker   _marker;
+
     /**
      * These are the reconstructed values in the Finite Volume sense and the
      * linear combination in the DG solver. In both cases, the enclave task
@@ -123,6 +128,11 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
      * alongside and is used by run()
      */
     void computeTask();
+
+    /**
+     * Return _taskNumber.
+     */
+    int getTaskId() const;
 };
 
 

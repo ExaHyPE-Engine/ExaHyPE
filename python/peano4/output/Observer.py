@@ -344,7 +344,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
 
   TemplateLoadCell_VertexLoad = """
+  static int taskTypeId( peano4::parallel::getTaskType("peano4::parallel::SpacetreeSet::TraverseTask-Load Cell") );
   // Load vertex {{name}}
+  tasks.push_back( tarch::multicore::TaskWithoutCopyOfFunctor() 
   {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
