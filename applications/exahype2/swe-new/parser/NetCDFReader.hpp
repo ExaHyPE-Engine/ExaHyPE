@@ -74,7 +74,7 @@ namespace applications::exahype2::swe::parser::NetCDFReader
     int readVariable1D(int ncid, const char *key, double *variable);
 
     /**
-     * @brief Read contents of a 2D double variable from netCDF file.
+     * @brief Read contents of a 2D double variable from netCDF file into 2D array.
      * 
      * @param ncid Pointer to location where returned netCDF ID is to be stored.
      * @param key variable name for which data is loaded.
@@ -98,7 +98,7 @@ namespace applications::exahype2::swe::parser::NetCDFReader
     int readVariable2D(int ncid, const char *key, double *variable, size_t rows, size_t cols);
 
     /**
-     * @brief Read contents of a 2D double variable from netCDF file starting at a specified first-dimension value.
+     * @brief Read contents of a 2D double variable from netCDF file into 2D array starting at a specified first-dimension value.
      * 
      * THIS FUNCTION WORKS AS INTENDED!!
      * 

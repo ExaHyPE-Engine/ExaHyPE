@@ -13,7 +13,7 @@ offset                = [0, 0] # TODO offset relevant for netCDF reader? min_z m
 end_time              = 0.02
 time_step_relaxation  = 0.5 # taken from tutorial
 plot_interval         = 0.005 # taken from tutorial
-patch_size            = 3
+patch_size            = 17
 optimal_patch_size    = 32 # optimal for GPUs
 maximum_cell_size     = 0.1
 amr_levels            = 3 
@@ -94,7 +94,7 @@ elif args.scenario == "Tsunami":
     if args.max_dimension_netcdf is None or args.max_dimension_netcdf <= 0: 
       raise ValueError("Neither netCDF4 package installed nor valid value passed to -maxd!") 
     else: 
-      # generally set maximum cell size to smallest possible data mesh width
+      # generally underestimates finest mesh width
       maximum_cell_size = min(width)/args.max_dimension_netcdf
 
   from scenarios.tsunami import Tsunami
@@ -140,10 +140,16 @@ my_solver.set_implementation(
   source_term           = my_pde.implementation_of_sources()
 )
 
-my_project = exahype2.Project( ["applications", "exahype2", "swe"], "SWEApplication", ".", executable="swe-application-2d-patch-size-" + str(patch_size) + "-cell-size-" + str(args.max_cell_size))
+executable_name = "swe-application-2d-scenario-%s-patch-size-%d-cell-size-%f-end-time-%f" % (args.scenario, patch_size, maximum_cell_size, args.end_time)
+output_path = "output-%s/" % executable_name
+
+my_project = exahype2.Project( ["applications", "exahype2", "swe"], "SWEApplication", ".", executable=executable_name)
 my_project.add_solver( my_solver )
 my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 my_project.set_Peano4_installation("../../../", build_modes[args.build_mode])
+my_project.set_output_path(output_path)
+if not os.path.exists(output_path):
+  os.mkdir(output_path)
 
 my_project.set_global_simulation_parameters(
   dimensions            = 2,
