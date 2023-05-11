@@ -194,6 +194,7 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
 """
   def __init__(self,solver):
     super( MergeEnclaveTaskOutcome, self ).__init__(solver)
+    self.priority   = -1
     self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
 
 
@@ -488,7 +489,9 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
 
 
   def add_actions_to_perform_time_step(self, step):
-    """
+    """!
+    
+      Add enclave aspect
     
       Add enclave aspect to time stepping. If you study the superclass'
       routine add_actions_to_perform_time_step() and consider that this action
@@ -501,7 +504,7 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
        
     """
     super(SeparateSweepsWithEnclaveTasking, self).add_actions_to_perform_time_step(step)
-    step.add_action_set( self._action_set_merge_enclave_task_outcome, False )
+    step.add_action_set( self._action_set_merge_enclave_task_outcome )
 
 
   def add_entries_to_text_replacement_dictionary(self,d):

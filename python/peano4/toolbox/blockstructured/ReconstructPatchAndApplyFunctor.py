@@ -30,7 +30,8 @@ class ReconstructedArrayMemoryLocation(IntEnum):
 
 
 class ReconstructPatchAndApplyFunctor(ActionSet):
-  """
+  """!
+  
   This class assumes that you have NxNxN patch within your block. It also assumes that
   you have an 2MxNxN patch on your faces. M<N. The code interprets these face-associated
   data as overlap with the patch, hooks into touchCellLastTime, and projects the cell's
@@ -56,7 +57,8 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
                guard="true", 
                add_assertions_to_halo_exchange = True
                ):
-    """
+    """!
+    
   patch: peano4.datamodel.Patch
     Patch which is to be used
 
@@ -85,6 +87,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   them.
   
     """
+    super(ReconstructPatchAndApplyFunctor,self).__init__(priority=1,parallel=False)
     if patch_overlap.dim[0] % 2 != 0:
       print( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )
       assert( patch_overlap.dim[0] % 2 == 0 )

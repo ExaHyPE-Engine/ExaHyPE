@@ -74,6 +74,7 @@ that's totally fine, as it also ensures that
        even refines a cell if there's only one particle in it.
        
     """
+    super(ParticleAMR,self).__init__(priority=1,parallel=False)
     if min_particles_per_cell<0:
       raise Exception( "invalid min number of particles pre cell (has to be positive): {}".format(min_particles_per_cell) )
 

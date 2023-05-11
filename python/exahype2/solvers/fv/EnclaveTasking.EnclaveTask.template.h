@@ -124,9 +124,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
       double* __restrict__                        reconstructedPatch
     );
 
-    bool isSmartMPITask() const override;
 
     #ifdef UseSmartMPI
+    bool isSmartMPITask() const;
+
     void runLocally() override;
     void moveTask(int rank, int tag, MPI_Comm communicator) override;
     void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;

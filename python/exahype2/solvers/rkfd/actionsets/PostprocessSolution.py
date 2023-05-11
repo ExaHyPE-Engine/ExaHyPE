@@ -7,7 +7,7 @@ import peano4
 import jinja2
 
 class EmptyPostprocessSolution(AbstractRKFDActionSet):
-  """
+  """!
   
   PostprocessSolution differs from other action sets, as I only create it once. See 
   FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
@@ -18,7 +18,8 @@ class EmptyPostprocessSolution(AbstractRKFDActionSet):
     AbstractRKFDActionSet.__init__(self,solver)
     # Is there for compatibility reasons
     self.guard               = "true"
-    
+    self.priority            = 1 
+
 
   def get_body_of_operation(self,operation_name):
     result = ""
@@ -33,7 +34,9 @@ class EmptyPostprocessSolution(AbstractRKFDActionSet):
 
 
 class CellWisePostprocessSolution(AbstractRKFDActionSet):
-  """
+  """!
+  
+  Postprocess solution mesh cell by mesh cell without mesh cell interactions
   
   PostprocessSolution differs from other action sets, as I only create it once. See 
   FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
@@ -55,6 +58,7 @@ class CellWisePostprocessSolution(AbstractRKFDActionSet):
     AbstractRKFDActionSet.__init__(self,solver)
     self.guard               = "true"
     self._compute_kernel     = ""
+    self.priority            = 2
 
 
   def add_postprocessing_kernel(self, operation_per_point):

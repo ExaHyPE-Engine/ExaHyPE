@@ -59,6 +59,7 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
       you can specify at when does the tracer stop dumping data to files.
      
     """
+    super(DumpTrajectoryIntoDatabase,self).__init__(priority=1,parallel=False)
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name

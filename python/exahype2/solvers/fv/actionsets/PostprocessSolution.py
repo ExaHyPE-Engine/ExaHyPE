@@ -18,6 +18,7 @@ class EmptyPostprocessSolution(AbstractFVActionSet):
     AbstractFVActionSet.__init__(self,solver)
     # Is there for compatibility reasons
     self.guard               = "true"
+    self.priority            = 2
     
 
   def get_body_of_operation(self,operation_name):
@@ -33,7 +34,9 @@ class EmptyPostprocessSolution(AbstractFVActionSet):
 
 
 class VolumeWisePostprocessSolution(AbstractFVActionSet):
-  """
+  """!
+  
+  Run over solution volume by volume
   
   PostprocessSolution differs from other action sets, as I only create it once. See 
   FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
@@ -59,6 +62,7 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
     AbstractFVActionSet.__init__(self,solver)
     self.guard               = "true"
     self._compute_kernel     = ""
+    self.priority            = 1 
 
 
   def add_postprocessing_kernel(self, operation_per_point):

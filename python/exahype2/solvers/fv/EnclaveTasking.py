@@ -218,9 +218,10 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   }
 """
   def __init__(self,solver):
-    AbstractFVActionSet.__init__(self,solver)
+    super( MergeEnclaveTaskOutcome, self ).__init__(solver)
     self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
     self.guard      = "true"
+    self.priority   = -1
 
 
   def get_body_of_operation(self,operation_name):
@@ -513,7 +514,7 @@ class EnclaveTasking( FV ):
       and roll_over_enclave_task_results.
     """
     super(EnclaveTasking, self).add_actions_to_perform_time_step(step)
-    step.add_action_set( self._action_set_merge_enclave_task_outcome, False )
+    step.add_action_set( self._action_set_merge_enclave_task_outcome )
 
 
   def add_implementation_files_to_project(self,namespace,output, dimensions):

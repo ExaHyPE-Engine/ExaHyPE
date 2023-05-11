@@ -344,10 +344,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
 
   TemplateLoadCell_VertexLoad = """
-  static int taskTypeId( peano4::parallel::getTaskType("peano4::parallel::SpacetreeSet::TraverseTask-Load Cell") );
   // Load vertex {{name}}
-  tasks.push_back( tarch::multicore::TaskWithoutCopyOfFunctor() 
-  {
+  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
       int inVertexStack          = event.getVertexDataFrom(i);
@@ -391,7 +392,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         view.set(outVertexStackPosition,data);
       }
     }
-  }
+    return false;
+  }));
 """
 
 
@@ -456,7 +458,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
   TemplateLoadCell_FaceLoad = """
   // Load face {{logical_type_name}}
-  {
+  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoTimesD );
     for (int i=0; i<TwoTimesD; i++) {
       int inFaceStack          = event.getFaceDataFrom(i);
@@ -500,7 +505,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         view.set(outFaceStackPosition,data);
       }
     }
-  }
+    return false;
+  }));
 """
 
 
@@ -571,7 +577,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
   TemplateLoadCell_CellLoad = """
   // Load cell {{logical_type_name}}
-  {
+  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( 1 );
 
     peano4::datamanagement::CellMarker  marker(event);
@@ -613,10 +622,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       #endif
       view.set(0,data);
     }
-  }
-  
-  
-  
+    return false;
+  }));
 """
 
 
@@ -787,12 +794,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   TemplateLoadCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::loadCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "loadCell(...)", _spacetreeId, event.toString() );
+  
+  std::vector< tarch::multicore::Task* >  tasks;
 """
 
 
   TemplateStoreCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::storeCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "storeCell(...)", _spacetreeId, event.toString() );
+  std::vector< tarch::multicore::Task* >  tasks;
 """
 
 
@@ -835,9 +845,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 """
 
 
-  TemplateLeaveCell_CellStore_Epilogue = """
+  TemplateStoreCell_CellStore = """
   // Handle cell {{logical_type_name}}
-  {
+  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [&]()->bool {
     const int inCellStack   = peano4::grid::PeanoCurve::CallStack;
     const int outCellStack  = event.getCellData();
     logDebug("storeCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack );
@@ -871,7 +884,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         )
       );
     }
-  }
+    return false;
+  }));
 """
 
 
@@ -932,9 +946,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   }
 """
 
-  TemplateLeaveCell_FaceStore_Epilogue = """
+  TemplateStoreCell_FaceStore = """
   // Store face {{logical_type_name}}
-  {
+  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoTimesD );
     for (int i=0; i<TwoTimesD; i++) {
       int inFaceStackPosition  = event.getFaceDataFrom(i);
@@ -967,7 +984,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         ) );
       }
     }
-  }
+    return false;
+  }));
 """
 
   TemplateLeaveCell_VertexStore_MappingCall = """
@@ -1023,9 +1041,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   }
 """
 
-  TemplateLeaveCell_VertexStore_Epilogue = """
+  TemplateStoreCell_VertexStore = """
   // Store vertex {{logical_type_name}}
-  {
+  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
       int inVertexStackPosition  = event.getVertexDataFrom(i);
@@ -1055,7 +1076,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         logDebug( "storeCell(...)", "do not store vertex {{name}} with " << marker.x(inVertexStackPosition) << " x " << marker.h() );
       }
     }
-  }
+    return false;
+  }));
 """
 
 
@@ -1068,6 +1090,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
 
   TemplateLoadCell_Epilogue = """
+  tarch::multicore::spawnAndWait(tasks);
   logTraceOutWith1Argument( "loadCell(...)", _spacetreeId );
 }
 
@@ -1076,6 +1099,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
 
   TemplateStoreCell_Epilogue = """
+  tarch::multicore::spawnAndWait( tasks );
   logTraceOutWith1Argument( "storeCell(...)", _spacetreeId );
 }
 
@@ -1147,7 +1171,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments
       }
       self.d[ "name" ]                 = cell.name
-      output_file.write( jinja2.Template( self.TemplateLeaveCell_CellStore_Epilogue ).render(**temp) )
+      output_file.write( jinja2.Template( self.TemplateStoreCell_CellStore ).render(**temp) )
 
     for face in faces_inverted:
       temp = { 
@@ -1158,7 +1182,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments
       }
       self.d[ "name" ]                 = face.name
-      output_file.write( jinja2.Template( self.TemplateLeaveCell_FaceStore_Epilogue ).render(**temp) )
+      output_file.write( jinja2.Template( self.TemplateStoreCell_FaceStore ).render(**temp) )
 
     for vertex in vertices_inverted:
       temp = { 
@@ -1169,7 +1193,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments
       }
       self.d[ "name" ]                 = vertex.name
-      output_file.write( jinja2.Template( self.TemplateLeaveCell_VertexStore_Epilogue ).render(**temp) )
+      output_file.write( jinja2.Template( self.TemplateStoreCell_VertexStore ).render(**temp) )
 
     output_file.write( jinja2.Template( self.TemplateStoreCell_Epilogue ).render({}) )
     
