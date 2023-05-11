@@ -54,21 +54,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
       patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch), unknown)] = 0.5 * (patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(numberOfVolumesPerAxisInPatch - 1, numberOfVolumesPerAxisInPatch), unknown)] + patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch - 1), unknown)]);
     }
 
-    for (int i = -1; i < numberOfVolumesPerAxisInPatch + 1; i++)
-    {
-      // Setting Q[4]
-      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(-1, i), 4)] = 0.1;
-      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(numberOfVolumesPerAxisInPatch, i), 4)] = 0.1;
-      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(i, -1), 4)] = 0.1;
-      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(i, numberOfVolumesPerAxisInPatch), 4)] = 0.1;
-
-      // Setting Q[5]
-      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(-1, i), 5)] = 0.7;
-      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(numberOfVolumesPerAxisInPatch, i), 5)] = 0.7;
-      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(i, -1), 5)] = 0.7;
-      patchData.QIn[patchIndex][QInEnumerator(patchIndex, volumeIndex2d(i, numberOfVolumesPerAxisInPatch), 5)] = 0.7;
-    }
-
     if (Dimensions==2 and evaluateSource) {
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
