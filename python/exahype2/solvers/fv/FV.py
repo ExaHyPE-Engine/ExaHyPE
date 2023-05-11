@@ -975,8 +975,51 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
  
   @preprocess_reconstructed_patch.setter
   def preprocess_reconstructed_patch(self, kernel):
-    """
+    """!
   
+    Set a new processing kernel
+    
+    Before the actual update, the numerical solver takes the actual solution 
+    including all auxiliary variables and copies it into another array which
+    is calls reconstructedPatch (in FD4, this field is called oldQWithHalo).
+    This array is bigger than the actual patch data, as it also holds the 
+    halo. One the solution is copied over, the kernel writes in the halo 
+    data using data from the faces. This reconstructed object is now passed
+    into the compute kernel, which derives new values for all evolution 
+    variables. That is, the compute kernels' output does not hold the auxiliary
+    variables anymore, as they are not subject to the PDE. The new variables
+    are eventually written back into the real data, where they replace the
+    old quantities (the auxiliary variables in there remain untouched).
+    After the compute kernel has terminated, the reconstructed data including
+    the halo is thrown away.
+    
+    ## Auxiliary variables
+    
+    If you alter the auxiliary variables (material parameters) in the patch
+    preparation, this is absolutely fine, but the change will not be committed
+    into the real data. It is only there temporarily while the actual patch 
+    will continue to hold the original material parameters.
+    
+    You can alter the actual patch data Q in the preprocessing. If this 
+    actual data are evolution (PDE) parameters, these changes however will
+    be overwritten by the compute kernel. If you alter auxiliary variables
+    within the preprocessing within the patch (Q), then this is fine, but the
+    changes will not be visible to the reconstructed patch immediately. They
+    will be visible there in the next time step. So you might be well-advised
+    to alter the auxiliary variables in both the patch data and the 
+    reconstructed data. 
+    
+    ## Access
+    
+    We recommend that you use the AoS enumerator exahype2::enumerator::AoSLexicographicEnumerator.
+    This one has to be given 1 as number of cells/patches, it requires the size
+    of the patch, its halo size, you have to pass it the unkowns and the correct 
+    number of auxiliary parameters. If you want the preprocessing also to alter
+    the actual input, you need a second enumerator. In this second one, all 
+    parameters are the same besides the halo size, which you have to set to 0:
+    The input patch has no halo. This halo is only added temporarily in the 
+    reconstruction step.
+    
 
     """
     self._preprocess_reconstructed_patch  = kernel
