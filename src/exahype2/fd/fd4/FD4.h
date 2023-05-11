@@ -161,10 +161,11 @@ namespace exahype2 {
 #include "exahype2/fd/fd4/cpp/FD4.h"
 #endif
 
+/*
 #if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
 #include "exahype2/fd/fd4/sycl/FD4.h"
 #endif
-
+*/
 
 #include "../FD_Helper.cpph"
 #include "FD4_batched_static_calls.cpph"

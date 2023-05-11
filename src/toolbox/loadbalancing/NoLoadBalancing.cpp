@@ -7,38 +7,27 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 
-toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing() {
+toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing():
+  NoLoadBalancing( nullptr, false ) {
+}
+
+
+toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing(
+  Configuration* configuration,
+  bool deleteInDestructor
+):
+  AbstractLoadBalancing( configuration, deleteInDestructor ) {
+  _state = State::SwitchedOff;
+  _statistics.notifyOfStateChange(_state);
 }
 
 
 void toolbox::loadbalancing::NoLoadBalancing::finishStep() {
+  _statistics.updateGlobalView();
+  _blacklist.update();
 }
 
 
-void toolbox::loadbalancing::NoLoadBalancing::dumpStatistics() {
+void toolbox::loadbalancing::NoLoadBalancing::enable( bool value ) {
+  AbstractLoadBalancing::enable(false);
 }
-
-
-void toolbox::loadbalancing::NoLoadBalancing::finishSimulation() {
-}
-
-
-bool toolbox::loadbalancing::NoLoadBalancing::hasSplitRecently() const {
-  return false;
-}
-
-
-void toolbox::loadbalancing::NoLoadBalancing::enable(bool value) {
-}
-
-
-bool toolbox::loadbalancing::NoLoadBalancing::isEnabled(bool globally) const {
-  return false;
-}
-
-
-int toolbox::loadbalancing::NoLoadBalancing::getGlobalNumberOfTrees() const {
-  return -1;
-}
-
-

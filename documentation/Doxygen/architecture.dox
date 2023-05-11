@@ -2,6 +2,8 @@
 
 @page page_architecture Architecture
 
+<!-- Add this one for href links to subitems -->
+\tableofcontents
 
 A Peano 4 application is a plain C++ code organised into layers. 
 Users obviously might want to inject Fortran or similar, but Peano 4 itself sticks to C++.
@@ -146,7 +148,7 @@ The Peano 4 Python object represents how the data and behaviour will be implemen
 The C++ view then is the actual implementation.
 
 
-## Components and build variants
+## Build variants
 
 Peano currently is delivered as a set of archives, i.e. static libraries.
 By default, the code builds various versions of each library:
@@ -182,12 +184,6 @@ debug, tracing and logging, but not essential information). If you want
 to filter out these messages, too, you have to apply a log filter.
 
 
-
-
-
-
-
-
 ## Repository organisation
 
 Peano's core is a collection of static libraries. 
@@ -205,7 +201,4 @@ libraries.  This glue code is generated through the Python API.
 - **benchmarks** Collection of benchmark scripts.
 - **applications** Proper, real-world applications.
 
-
-
 */
- 

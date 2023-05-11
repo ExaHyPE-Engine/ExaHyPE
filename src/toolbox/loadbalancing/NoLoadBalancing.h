@@ -6,6 +6,8 @@
 
 #include "tarch/logging/Log.h"
 
+#include "AbstractLoadBalancing.h"
+
 
 namespace toolbox {
   namespace loadbalancing {
@@ -20,32 +22,35 @@ namespace toolbox {
  * A dummy that you can use if you wanna have a class around with a proper
  * load balancing signature.
  */
-class toolbox::loadbalancing::NoLoadBalancing {
+class toolbox::loadbalancing::NoLoadBalancing: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
-	NoLoadBalancing();
-
-    void finishStep();
-
-    void finishSimulation();
+    /**
+     * Delegate to other constructor with nullptr arguments, as configuration
+     * does not matter anyway.
+     */
+    NoLoadBalancing();
 
     /**
-     * I need the stats here mainly for debugging purposes.
+     * Only there to be compatible with other classes.
+     *
+     * The important detail here is that the load balancing is switched off
+     * right from the start.
      */
-    void dumpStatistics();
+    NoLoadBalancing(
+      Configuration* configuration,
+      bool deleteInDestructor
+    );
 
-    bool hasSplitRecently() const;
 
-    void enable(bool);
-    
+    virtual ~NoLoadBalancing() = default;
+
+    void finishStep() override;
+
     /**
-     * Local operation
+     * You cannot enable the no load balancing. This routine therefore sets
+     * value to false and calls the superclass.
      */
-    bool isEnabled(bool globally) const;
-
-    /**
-     * @return -1 if this information is not available
-     */
-    int getGlobalNumberOfTrees() const;
+    void enable( bool value ) override;
 };
 
 

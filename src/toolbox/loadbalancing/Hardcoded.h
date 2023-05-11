@@ -3,7 +3,7 @@
 #pragma once
 
 
-
+#include "AbstractLoadBalancing.h"
 #include "tarch/logging/Log.h"
 
 #include <queue>
@@ -26,7 +26,7 @@ namespace toolbox {
  * (deterministic) setup.
  *
  */
-class toolbox::loadbalancing::Hardcoded {
+class toolbox::loadbalancing::Hardcoded: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * @todo I'd like to have support for a file here later on which contains
@@ -48,20 +48,9 @@ class toolbox::loadbalancing::Hardcoded {
      */
     Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks, bool handOutOnePartitionPerCore);
 
-    void finishStep();
+    void finishStep() override;
 
-    void finishSimulation();
-
-    bool hasSplitRecently() const;
-
-    /**
-     * Switch on/off.
-     */
-    void enable(bool);
-
-    bool isEnabled(bool globally) const;
-
-    int getGlobalNumberOfTrees() const;
+    void finishSimulation() override;
   private:
     static tarch::logging::Log  _log;
 
@@ -81,7 +70,6 @@ class toolbox::loadbalancing::Hardcoded {
      * or finishStep() calls.
      */
     int    _currentTimeStamp;
-    bool   _enabled;
 
     const bool _handOutOnePartitionPerCore;
 };

@@ -6,8 +6,10 @@ import dastgen2
 
 import os
 
-from .Solver                         import Solver
-from petsc.actionsets.InitVertexDoFs import InitVertexDoFs
+from .Solver                             import Solver
+from petsc.actionsets.InitVertexDoFs     import InitVertexDoFs
+from petsc.actionsets.EnumerateVertices  import EnumerateVertices
+from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
 
 from abc import abstractmethod
 
@@ -45,7 +47,8 @@ I wanna see if this one applies to the solver or hte init
     self._dof = peano4.datamodel.DaStGen2( name )
     self._dof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_unknowns) ) )
     self._dof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(number_of_unknowns) ) )
-    self._dof.data.add_attribute( peano4.dastgen2.Peano4IntegerArray( "number", "2" ) )
+    self._dof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
+    self._dof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
 
     pass
 
@@ -89,7 +92,7 @@ I wanna see if this one applies to the solver or hte init
     pass
   
   
-  def add_to_init(self, observer):
+  def add_to_enumerate_and_init_solution(self, observer):
     """!
     
     Solution initialisation
@@ -99,6 +102,7 @@ I wanna see if this one applies to the solver or hte init
     
     """
     observer.add_action_set( InitVertexDoFs(self) ) 
+    observer.add_action_set( EnumerateVertices(self) ) 
     pass
   
   
@@ -107,6 +111,7 @@ I wanna see if this one applies to the solver or hte init
   
 
   def add_to_map_solution_onto_mesh(self, observer):
+    observer.add_action_set( ProjectPETScSolutionOnVerticesBackOntoMesh(self) )
     pass
   
   

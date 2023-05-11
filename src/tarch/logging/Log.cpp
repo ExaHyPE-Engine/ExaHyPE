@@ -20,6 +20,10 @@
 #include "ITACLogger.h"
 #endif
 
+#if UseLogService==ITTLogger
+#include "ITTLogger.h"
+#endif
+
 #if UseLogService==ScorePLogger
 #include "ScorePLogger.h"
 #endif

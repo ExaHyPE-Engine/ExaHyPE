@@ -24,19 +24,24 @@ namespace {
   ::tbb::global_control* globalControl = nullptr;
 }
 
+
 tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
+
 
 tarch::multicore::Core::Core():
   _numberOfThreads( ::tbb::info::default_concurrency() ) {
   internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
+
 tarch::multicore::Core::~Core() {}
+
 
 tarch::multicore::Core& tarch::multicore::Core::getInstance() {
   static Core instance;
   return instance;
 }
+
 
 void tarch::multicore::Core::configure( int numberOfThreads ) {
   if (globalControl!=nullptr) delete globalControl;
@@ -57,18 +62,22 @@ void tarch::multicore::Core::configure( int numberOfThreads ) {
   internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
+
 void tarch::multicore::Core::shutdown() {
   if (globalControl!=nullptr) delete globalControl;
   globalControl = nullptr;
 }
 
+
 bool tarch::multicore::Core::isInitialised() const {
   return true;
 }
 
+
 int tarch::multicore::Core::getNumberOfThreads() const {
   return _numberOfThreads;
 }
+
 
 int tarch::multicore::Core::getCoreNumber() const {
   #ifdef CompilerHasSysinfo
@@ -79,8 +88,16 @@ int tarch::multicore::Core::getCoreNumber() const {
   #endif
 }
 
+
 int tarch::multicore::Core::getThreadNumber() const {
   return tbb::this_task_arena::current_thread_index();
 }
 
+
+void tarch::multicore::Core::yield() {
+  // @todo This is not what I want. I want to interrupt the current task and
+  //       tell TBB to continue with another task. This is technically not a
+  //       yield, as I do not expect another thread to come in
+  std::this_thread::yield();
+}
 #endif

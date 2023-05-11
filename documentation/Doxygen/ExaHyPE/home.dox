@@ -2,53 +2,68 @@
 @page exahype_home ExaHyPE
 
 
-\tableofcontents
+<!-- 
+  
+  The order here determines the order in the overview and hence should be guided by logical considerations.
+  I've encountered issues with Doxygen whenever a page had both subpages and subchapters via ##. So I try
+  to avoid substructuring these top-level pages now.
+  
+-->
 
-\li \subpage exahype_tutorials
-\li \subpage exahype_benchmarks
-\li \subpage exahype_visualisation 
-\li \subpage exahype_performance_optimisation
-\li \subpage exahype_runtime_analysis
-\li \subpage exahype2_NoncriticalAssertions
-\li \subpage exahype2_enumerator
-\li \subpage exahype2_dg
-\li \subpage exahype2_dg_DG_AMD
-\li \subpage exahype2_fv_Rusanov
+\li \subpage page_exahype_tutorials
+\li \subpage page_exahype_benchmarks
+\li \subpage page_exahype_applications
+\li \subpage page_exahype_visualisation 
+\li \subpage page_exahype_runtime_analysis
+\li \subpage page_exahype_performance_optimisation
+\li \subpage page_exahype_parallelisation
+\li \subpage page_exahype_cpp_kernels
+\li \subpage page_exahype_solvers
 
 
 @image html logos/ExaHyPE-logo.png
 
 
-
 ExaHyPE 2 is a rewrite of the ExaHyPE engine developed under the umbrella of the EU FET HPC programme ExaHyPE.
 ExaHyPE has received funding from the European Union’s Horizon 2020 research
 and innovation programme under grant agreement No 671698 (ExaHyPE).
-ExaHyPE 2 has been made possible by EPSRC under the grant EP/V00154X/1
-(ExaClaw), and successively received funding from
-
-@todo Add all three ExCALIBUR projects
-
-@image html logos/excalibur.png
-@image html logos/EU.png
+ExaHyPE 2 has been made possible mainly through two funding routes: 
+EPSRC funded three projects under their ExCALIBUR programme, and Intel made 
+ExaHyPE centerpiece of an Intel oneAPI Academic Centre of Excellence. 
 
 
-## Configure Peano
+<!-- It seems that doxygen doesn't like subsections here -->
 
 As ExaHyPE 2 is a Peano4  extension, you first have to 
 @ref page_installation "configure and build" the core
 Peano code base, i.e. its libraries, before you start any work. 
-Hereby, it is important that you add the particles toolbox:
+Hereby, it is important that you add the ExaHyPE-specific toolboxes:
 
 
      ./configure ... --enable-exahype --enable-loadbalancing --enable-blockstructured
 
 
-We recommend that you run a few of the @ref exahype_benchmarks benchmarks 
+We recommend that you run a few of the @ref page_exahype_benchmarks benchmarks 
 to ensure that all is properly set up before you start developing your own 
 codes.
 
 
-## Historical remarks
+ExaHyPE 2 follows the @ref page_architecture "Peano 4 architecture" and hence 
+consists of two major parts: a set of C++ routines, classes, macros, ... which
+are built on top of Peano's @ref page_tarch_home "Technical architecture",
+the @ref page_peano_home "Peano core" and various toolboxes, plus a set of 
+Python scripts which are built on top of Peano's Python API.
+
+
+
+Every run of the Python script produces a file called README-executablename.md
+which enlists which software ingredients are used by the resulting code. 
+
+
+<!-- ## Historical remarks -->
+
+
+<b> Historical remarks </b>
 
 ExaHyPE 2 is the follow-up development of the ExaHyPE project which has
 been funded by the EU from 2015--2019.
@@ -73,5 +88,11 @@ An ExaHyPE 2 application now is championed by a sole Python script.
 This Python script yields a native Peano application (builder mechanism) which
 then assembles the application.
       
+      
+
+
+@image html logos/excalibur.png
+@image html logos/EU.png
+
 
 */

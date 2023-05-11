@@ -507,7 +507,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
       marker.select(pick);
 
-      assertion3( marker.isLocal() or not event.getIsCellLocal(), marker.toString(), event.toString(), i );
+      assertion4( 
+        marker.isLocal() or not event.getIsCellLocal(), 
+        marker.toString(), 
+        event.toString(), 
+        i, 
+        _spacetreeId 
+      );
 
       if (
         inFaceStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity

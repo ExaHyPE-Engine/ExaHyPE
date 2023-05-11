@@ -1,15 +1,18 @@
 /**
 
-@page peano_home Peano
+@page page_peano_home Peano
 
 \tableofcontents
 
 \li \subpage peano_main
-\li \subpage peano_architecture
+\li \subpage page_peano_domain_decomposition
 \li \subpage peano_action_sets
-\li \subpage peano_runtime_analysis
-\li \subpage peano_performance_optimisation
+\li \subpage page_peano_runtime_analysis
+\li \subpage page_peano_performance_optimisation
 \li \subpage tarch_accelerator_SYCL
+\li \subpage peano_introduction_tex
+\li \subpage peano_amr_tex
+\li \subpage peano_utilities
 
 
 Peano is a framework for generating dynamically adaptive grids for a wide range

@@ -210,143 +210,174 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::startReceive(peano4::g
     Base::_currentElement = numberOfElements;
     assertionEquals( Base::_data.size(), numberOfElements );
 
+    _context      = context;
+    _communicator = comm;
+
     _metaDataSizeBuffer  = new int[Base::_currentElement];
+    _metaDataSizeMPIRequest = new MPI_Request;
+
     #if PeanoDebug>=1
-      _metaDataDebugBuffer = new double[Base::_currentElement * 2 * Dimensions];
+    _metaDataDebugBuffer = new double[Base::_currentElement * 2 * Dimensions];
+    _metaDataDebugMPIRequest = new MPI_Request;
     #endif
 
-    MPI_Recv( _metaDataSizeBuffer, numberOfElements, MPI_INT, Base::_ioRank, Base::_ioTag, comm, MPI_STATUS_IGNORE );
+    MPI_Irecv( _metaDataSizeBuffer, numberOfElements, MPI_INT, Base::_ioRank, Base::_ioTag, comm, _metaDataSizeMPIRequest );
     logDebug( "startReceive(int,int,int)", "received all meta data from rank " << rank << " on tag " << tag << " with " << numberOfElements << " entries");
 
     #if PeanoDebug>=1
-      _metaDataDebugMPIRequest = new MPI_Request;
       MPI_Irecv( _metaDataDebugBuffer, numberOfElements*2*Dimensions, MPI_DOUBLE, Base::_ioRank, Base::_ioTag, comm, _metaDataDebugMPIRequest);
       logDebug( "startReceive(int,int,int)", "trigger receive of debug data with cardinality " << numberOfElements*2*Dimensions );
     #endif
 
-    int flattenedDataSize = 0;
-    assertionEquals( Base::_data.size(), numberOfElements );
-    for (int i=0; i<numberOfElements; i++) {
-      flattenedDataSize        += _metaDataSizeBuffer[i];
-    }
-
-    if (flattenedDataSize>0) {
-      Base::_ioMPIRequest = new MPI_Request;
-      _deepCopyDataBuffer = new typename T::DoFType[ flattenedDataSize ];
-      MPI_Irecv(
-        _deepCopyDataBuffer,
-        flattenedDataSize,
-        translateContextIntoDatatype<typename T::DoFType>( context ),
-        Base::_ioRank,
-        Base::_ioTag,
-        comm,
-        Base::_ioMPIRequest
-      );
-      logDebug( "startReceive(int,int,int)", "trigger receive of " << flattenedDataSize << " entries of user data in total" );
-    }
-    else {
-      logDebug( "startReceive(int,int,int)", "there's no actual user data to received" );
+    int metaDataSizeFlag = 1;
+    MPI_Test( _metaDataSizeMPIRequest, &metaDataSizeFlag, MPI_STATUS_IGNORE );
+    if (metaDataSizeFlag) {
+      triggerNonBlockingDataReceive();
     }
   #endif
 }
 
 
+
+template <class T>
+void peano4::stacks::STDVectorOverContainerOfPointers<T>::triggerNonBlockingDataReceive() {
+  assertion( _metaDataSizeBuffer!=nullptr );
+  assertion(_metaDataSizeMPIRequest!=nullptr);
+
+  int flattenedDataSize = 0;
+  assertionEquals( Base::_data.size(), Base::_currentElement );
+  for (int i=0; i<Base::_currentElement; i++) {
+    flattenedDataSize        += _metaDataSizeBuffer[i];
+  }
+
+  if (flattenedDataSize>0) {
+    Base::_ioMPIRequest = new MPI_Request;
+    _deepCopyDataBuffer = new typename T::DoFType[ flattenedDataSize ];
+    MPI_Irecv(
+      _deepCopyDataBuffer,
+      flattenedDataSize,
+      translateContextIntoDatatype<typename T::DoFType>( _context ),
+      Base::_ioRank,
+      Base::_ioTag,
+      _communicator,
+      Base::_ioMPIRequest
+    );
+    logDebug( "startReceive(int,int,int)", "trigger receive of " << flattenedDataSize << " entries of user data in total" );
+  }
+  else {
+    logDebug( "startReceive(int,int,int)", "there's no actual user data to received" );
+  }
+}
+
+
 template <class T>
 bool peano4::stacks::STDVectorOverContainerOfPointers<T>::tryToFinishSendOrReceive() {
-      #ifdef Parallel
-      logTraceInWith4Arguments( "tryToFinishSendOrReceive()", ::toString(Base::_ioMode), Base::size(), Base::_ioRank, Base::_ioTag );
+  #ifdef Parallel
+  logTraceInWith4Arguments( "tryToFinishSendOrReceive()", ::toString(Base::_ioMode), Base::size(), Base::_ioRank, Base::_ioTag );
 
-      bool result = true;
+  bool result = true;
 
-      if ( Base::_ioMode==IOMode::MPIReceive ) {
-        assertion( _metaDataSizeMPIRequest == nullptr );
-        assertion( _metaDataSizeBuffer     != nullptr );
+  if ( Base::_ioMode==IOMode::MPIReceive ) {
+    assertion( _metaDataSizeMPIRequest!=nullptr );
 
-        int metaDataDebugFlag = 1;
-        if (_metaDataDebugMPIRequest != nullptr )
-          MPI_Test( _metaDataDebugMPIRequest, &metaDataDebugFlag, MPI_STATUS_IGNORE );
+    int metaDataFlag = 1;
+    MPI_Test( _metaDataSizeMPIRequest, &metaDataFlag, MPI_STATUS_IGNORE );
 
-        int dataFlag = 1;
-        if (Base::_ioMPIRequest != nullptr )
-          MPI_Test( Base::_ioMPIRequest, &dataFlag, MPI_STATUS_IGNORE );
+    if (metaDataFlag and _deepCopyDataBuffer==nullptr) {
+      triggerNonBlockingDataReceive();
+    }
 
-        if (metaDataDebugFlag and dataFlag) {
-          result = true;
+    int metaDataDebugFlag = 1;
+    if (_metaDataDebugMPIRequest != nullptr )
+       MPI_Test( _metaDataDebugMPIRequest, &metaDataDebugFlag, MPI_STATUS_IGNORE );
 
-          logDebug( "tryToFinishSendOrReceive()", "receive complete" );
+    int dataFlag = 1;
+    if (Base::_ioMPIRequest != nullptr )
+      MPI_Test( Base::_ioMPIRequest, &dataFlag, MPI_STATUS_IGNORE );
 
-          workInReceivedMetaData();
+    if (metaDataFlag and metaDataDebugFlag and dataFlag) {
+      result = true;
 
-          if (_metaDataDebugMPIRequest!=nullptr) {
-            delete    _metaDataDebugMPIRequest;
-            delete[]  _metaDataDebugBuffer;
-            _metaDataDebugMPIRequest = nullptr;
-            _metaDataDebugBuffer     = nullptr;
-          }
-          if (Base::_ioMPIRequest!=nullptr) {
-            workInReceivedData();
+      logDebug( "tryToFinishSendOrReceive()", "receive complete" );
 
-            delete    Base::_ioMPIRequest;
-            delete[]  _deepCopyDataBuffer;
-            Base::_ioMPIRequest = nullptr;
-            _deepCopyDataBuffer = nullptr;
-          }
+      workInReceivedMetaData();
 
-          Base::_ioMode = IOMode::None;
-        }
-        else {
-          result = false;
-        }
+      if (_metaDataSizeMPIRequest!=nullptr) {
+        delete    _metaDataSizeMPIRequest;
+        delete[]  _metaDataSizeBuffer;
+        _metaDataSizeMPIRequest = nullptr;
+        _metaDataSizeBuffer     = nullptr;
       }
-      else if ( Base::_ioMode==IOMode::MPISend ) {
-        assertion( _metaDataSizeMPIRequest!=nullptr );
+      if (_metaDataDebugMPIRequest!=nullptr) {
+        delete    _metaDataDebugMPIRequest;
+        delete[]  _metaDataDebugBuffer;
+        _metaDataDebugMPIRequest = nullptr;
+        _metaDataDebugBuffer     = nullptr;
+      }
+      if (Base::_ioMPIRequest!=nullptr) {
+        workInReceivedData();
 
-        int metaDataSizeFlag = 1;
-        if (_metaDataSizeMPIRequest != nullptr )
-          MPI_Test( _metaDataSizeMPIRequest, &metaDataSizeFlag, MPI_STATUS_IGNORE );
-
-        int metaDataDebugFlag = 1;
-        if (_metaDataDebugMPIRequest != nullptr )
-          MPI_Test( _metaDataDebugMPIRequest, &metaDataDebugFlag, MPI_STATUS_IGNORE );
-
-        int dataFlag = 1;
-        if (Base::_ioMPIRequest != nullptr )
-          MPI_Test( Base::_ioMPIRequest, &dataFlag, MPI_STATUS_IGNORE );
-
-        if (metaDataSizeFlag and metaDataDebugFlag and dataFlag) {
-          result = true;
-
-          logDebug( "tryToFinishSendOrReceive()", "send complete" );
-
-          if (_metaDataSizeMPIRequest!=nullptr) {
-            delete    _metaDataSizeMPIRequest;
-            delete[]  _metaDataSizeBuffer;
-            _metaDataSizeMPIRequest = nullptr;
-            _metaDataSizeBuffer     = nullptr;
-          }
-          if (_metaDataDebugMPIRequest!=nullptr) {
-            delete    _metaDataDebugMPIRequest;
-            delete[]  _metaDataDebugBuffer;
-            _metaDataDebugMPIRequest = nullptr;
-            _metaDataDebugBuffer     = nullptr;
-          }
-          if (Base::_ioMPIRequest!=nullptr) {
-            delete    Base::_ioMPIRequest;
-            delete[]  _deepCopyDataBuffer;
-            Base::_ioMPIRequest = nullptr;
-            _deepCopyDataBuffer = nullptr;
-          }
-
-          Base::clear();
-          Base::_ioMode = IOMode::None;
-        }
-        else {
-          result = false;
-        }
+        delete    Base::_ioMPIRequest;
+        delete[]  _deepCopyDataBuffer;
+        Base::_ioMPIRequest = nullptr;
+        _deepCopyDataBuffer = nullptr;
       }
 
-      logTraceOutWith1Argument( "tryToFinishSendOrReceive()", result );
-      return result;
+      Base::_ioMode = IOMode::None;
+    }
+    else {
+      result = false;
+    }
+  }
+  else if ( Base::_ioMode==IOMode::MPISend ) {
+    assertion( _metaDataSizeMPIRequest!=nullptr );
+
+    int metaDataSizeFlag = 1;
+    if (_metaDataSizeMPIRequest != nullptr )
+      MPI_Test( _metaDataSizeMPIRequest, &metaDataSizeFlag, MPI_STATUS_IGNORE );
+
+    int metaDataDebugFlag = 1;
+    if (_metaDataDebugMPIRequest != nullptr )
+      MPI_Test( _metaDataDebugMPIRequest, &metaDataDebugFlag, MPI_STATUS_IGNORE );
+
+    int dataFlag = 1;
+    if (Base::_ioMPIRequest != nullptr )
+      MPI_Test( Base::_ioMPIRequest, &dataFlag, MPI_STATUS_IGNORE );
+
+    if (metaDataSizeFlag and metaDataDebugFlag and dataFlag) {
+      result = true;
+
+      logDebug( "tryToFinishSendOrReceive()", "send complete" );
+
+      if (_metaDataSizeMPIRequest!=nullptr) {
+        delete    _metaDataSizeMPIRequest;
+        delete[]  _metaDataSizeBuffer;
+        _metaDataSizeMPIRequest = nullptr;
+        _metaDataSizeBuffer     = nullptr;
+      }
+      if (_metaDataDebugMPIRequest!=nullptr) {
+        delete    _metaDataDebugMPIRequest;
+        delete[]  _metaDataDebugBuffer;
+        _metaDataDebugMPIRequest = nullptr;
+        _metaDataDebugBuffer     = nullptr;
+      }
+      if (Base::_ioMPIRequest!=nullptr) {
+        delete    Base::_ioMPIRequest;
+        delete[]  _deepCopyDataBuffer;
+        Base::_ioMPIRequest = nullptr;
+        _deepCopyDataBuffer = nullptr;
+      }
+
+      Base::clear();
+      Base::_ioMode = IOMode::None;
+    }
+    else {
+      result = false;
+    }
+  }
+
+  logTraceOutWith1Argument( "tryToFinishSendOrReceive()", result );
+  return result;
   #else
   return true;
   #endif
