@@ -25,6 +25,10 @@ triggers operations per cell is split up into two mesh sweeps:
 2. The second sweep ignores all the skeleton cells. For the enclave tasks, it
    takes their outcome and works them into the mesh representation.
 
+From hereon, we may assume that enclave solvers always use two mesh sweep
+per time step, and we refer to these sweeps as ***primary*** and ***secondary***
+mesh sweep.
+
 
 ### Definition: Enclave cell
 
@@ -37,7 +41,7 @@ peano4::datamanagement::CellMarker::hasBeenSkeletonCell(), and
 peano4::datamanagement::CellMarker::willBeSkeletonCell().
 
 
-A skeleton cell is, by default, a cell which 
+A skeleton cell is a cell which 
 
 1. is adjacent to a subdomain boundary or
 2. is adjacent to a mesh resolution change.
@@ -46,63 +50,21 @@ The second condition excludes any cell which is adjacent to a hanging vertex.
 See peano4::datamanagement::CellMarker::hasBeenEnclaveCell() for implementation 
 details.
 
-You can, within your action sets, "downcast" the marker manually to a skeleton 
-cell. For this, most action sets spawning enclave tasks have a field 
-additional_skeleton_guard which is set to "False" by default. That means, it 
-never downgrades a classification from enclave to skeleton. You can add another
-boolean expression here.
- 
 
-This technique helps you to add an additional, third criterion to the 
-enumeration above. You can leave the action set basically as it is, but
-you add an additional check which toggles (even more) cells
-to skeleton. They are, from hereon, treated like the other skeletons. In 
-the Finite Volume case, such an additional instructions reads as
+The distinction enclave cell vs skeleton cell determines
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-self._action_set_update_cell.additional_skeleton_guard += """
-( repositories::InstanceOf""" + self._name + """.isFunny(marker)  )
-"""
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1. if the computation on the cell is modelled via a separate task
+2. if the data of the cell are stored in-between primary and secondary
+   mesh sweep.
 
-It is important to note that you only alter the definition of a skeleton
-temporarily within one single action set. If you need the same alteration 
-in various places, you have to alter various action sets. In most cases however
-ExaHyPE sets some flags per cell after an initial enclave vs skeleton check.
-If you alter the definition in the action set which makes the original 
-decision, you should automatically get all follow-up activities per cell
-right.
+This distinction cannot be "recast", altered or extended. It is baked
+into ExaHyPE's DNA. Futhermore, we strongly recommend that the distinction
+enclave vs skeleton has ***no*** impact on ***what*** is computed. If 
+you need different compute kernels depending depending on a type of a 
+cell, the enclave distinction should not be taken into account at all. 
+It is merely the decision how stuff is stored and administered and 
+mapped onto tasks.
 
-
-If you alter the definition, you have to be very careful with the solver's 
-storage scheme. Enclave task data are usually not stored in-between the 
-primary and secondary grid sweep. So if you manually downcast a cell from
-enclave to skeleton, you also have to manually alter - in most cases - the
-storage predicate.
-
-
-A normal predicate might for example look similar to 
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-bool benchmarks::exahype2::ccz4::celldata::CCZ4SBH_FVQ::loadPersistently(
-  const peano4::datamanagement::CellMarker& marker  
-) {
-  return (not marker.hasBeenRefined() 
-          and repositories::InstanceOfCCZ4SBH_FV.getSolverState()!=CCZ4SBH_FV::SolverState::GridConstruction 
-          and repositories::InstanceOfCCZ4SBH_FV.getSolverState()!=CCZ4SBH_FV::SolverState::GridInitialisation 
-          and repositories::InstanceOfCCZ4SBH_FV.isCellOverlappingWithBHImpactArea(marker) 
-         ) 
-     and (
-          (   repositories::InstanceOfCCZ4SBH_FV.getSolverState()==CCZ4SBH_FV::SolverState::Primary 
-           or repositories::InstanceOfCCZ4SBH_FV.getSolverState()==CCZ4SBH_FV::SolverState::PrimaryAfterGridInitialisation 
-           or repositories::InstanceOfCCZ4SBH_FV.getSolverState()==CCZ4SBH_FV::SolverState::PlottingInitialCondition 
-           or repositories::InstanceOfCCZ4SBH_FV.getSolverState()==CCZ4SBH_FV::SolverState::Plotting 
-         ) or marker.hasBeenSkeletonCell());
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you manually downcast the enclave predicate, you have to ensure that 
-it is downcast here, too.
 
 
 ## Optimistic enclave tasking

@@ -521,22 +521,46 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 
 
   def _store_cell_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
   def _load_cell_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
 
   def _store_face_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
   def _load_face_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
