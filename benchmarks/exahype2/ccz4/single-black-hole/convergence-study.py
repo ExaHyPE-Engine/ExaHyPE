@@ -8,6 +8,8 @@ import dastgen2
 import peano4.toolbox.particles
 import numpy as np
 
+import jinja2
+
 # See comments in README.dox
 #export PYTHONPATH=$PYTHONPATH:~/Peano/applications/exahype2/ccz4
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
@@ -15,7 +17,23 @@ from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking
 
 
-def construct_FV_solver(min_cell_size, max_cell_size):
+# for the coupling
+from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
+
+PatchSize = 6
+
+
+def add_constraints_to_primary_solver(solver):
+    """!
+    
+    Augment primary solver
+    
+    There is not too much to do for primary solver besides the fact that we
+    
+    """
+
+
+def construct_FV_solver_as_FD4_limiter(min_cell_size, max_cell_size):
     """!
     
     Construct the Finite Volume (limiter) scheme
@@ -26,22 +44,131 @@ def construct_FV_solver(min_cell_size, max_cell_size):
     mesh.
     
     """
-    my_solver = None
+
+
+    class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
+        # todo muss viel groesser sein
+      UpscalingFactor = 2
+        
+      def __init__(self,
+                   name, 
+                   min_cell_size, 
+                   max_cell_size,
+                   ):
+        super( Limiter, self ).__init__(name               = name +  "_FV",
+                                        patch_size         = PatchSize*self.UpscalingFactor,
+                                        min_volume_h       = min_cell_size/PatchSize/self.UpscalingFactor, 
+                                        max_volume_h       = max_cell_size/PatchSize/self.UpscalingFactor,
+                                        )
+        self.double_constants[ "BlackHoleFVRegion" ] = 1.0
+ 
+        self._user_action_set_includes += """
+#include "toolbox/blockstructured/Restriction.h"        
+#include "toolbox/blockstructured/Interpolation.h"        
+"""        
+
+        self._preprocess_reconstructed_patch += """
+  if (
+    repositories::InstanceOf""" + name + """_FV.isLastGridSweepOfTimeStep()
+    and
+    repositories::InstanceOf""" + name + """_FV.isCellOverlappingWithBHImpactArea(marker) 
+    and
+    not repositories::InstanceOf""" + name + """_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) 
+    and
+    not marker.willBeRefined()
+  ) { 
+    logTraceIn( "touchCellFirstTime(...)-interpolate" );
     
-    patch_size = 6 * 16
+    ::toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
+      repositories::InstanceOf""" + name + """_FD4.NumberOfGridCellsPerPatchPerAxis,
+      
+      repositories::InstanceOf""" + name + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      3, // halo in FD4
+      0, // halo in FV
+      repositories::InstanceOf""" + name + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + name + """_FV.NumberOfAuxiliaryVariables,
+      oldQWithHalo, // fineGridCell""" + name + """_FD4Q.value,
+      fineGridCell""" + name + """_FVQ.value
+    );
+  
+    logTraceOut( "touchCellFirstTime(...)-interpolate" );
+  }
+
+"""
+
+        self._postprocess_updated_patch += """
+  if (
+    repositories::InstanceOf""" + name + """_FV.isLastGridSweepOfTimeStep()
+    and
+    repositories::InstanceOf""" + name + """_FV.isCellOverlappingWithBHImpactArea(marker) 
+    and
+    repositories::InstanceOf""" + name + """_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) 
+    and
+    not marker.willBeRefined()
+  ) { 
+    logTraceIn( "touchCellFirstTime(...)-restrict" );
     
-    my_solver = CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4SBH_FV" , 
-                                                                       patch_size           = patch_size,
-                                                                       min_volume_h       = min_cell_size/patch_size, 
-                                                                       max_volume_h       = max_cell_size/patch_size,
-                                                                       )
+    ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
+      repositories::InstanceOf""" + name + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      repositories::InstanceOf""" + name + """_FD4.NumberOfGridCellsPerPatchPerAxis,
+      repositories::InstanceOf""" + name + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + name + """_FV.NumberOfAuxiliaryVariables,
+      fineGridCell""" + name + """_FVQ.value,
+      fineGridCell""" + name + """_FD4Q.value
+    );
+  
+    logTraceOut( "touchCellFirstTime(...)-restrict" );
+  }  
+"""
+        
+  
+      def _store_cell_data_default_guard(self):
+        """!
+        
+        Mask out exterior cells
+        
+        """
+        return """(""" + super( Limiter, self )._store_cell_data_default_guard() + " and repositories::InstanceOf" + self._name + ".isCellOverlappingWithBHImpactArea(marker) )"
+          
+
+      def _load_cell_data_default_guard(self):      
+        return """(""" + super( Limiter, self )._load_cell_data_default_guard() + " and repositories::InstanceOf" + self._name + ".isCellOverlappingWithBHImpactArea(marker) )"
     
+
+      def _store_face_data_default_guard(self):
+        return """(""" + super( Limiter, self )._store_face_data_default_guard() + """
+                    and repositories::InstanceOf""" + self._name + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
+                  )"""
+          
+
+      def _load_face_data_default_guard(self):      
+        return """(""" + super( Limiter, self )._load_face_data_default_guard() + """
+                    and repositories::InstanceOf""" + self._name + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
+                  )"""
+
+
+      def create_action_sets(self):
+        """!
+        
+        Tailor action set behaviour
+        
+        Basically ensure that we do not solve on the outer cells.
+        
+        """
+        super( Limiter, self ).create_action_sets()
+        #self._action_set_update_cell.guard = "(" + self._action_set_update_cell.guard + " and repositories::InstanceOf" + self._name + ".areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) )"
+        
+    
+    my_solver = Limiter(name           = "CCZ4SBH" , 
+                        min_cell_size  = min_cell_size, 
+                        max_cell_size  = max_cell_size,
+                        ) 
+
     my_solver.set_implementation(initial_conditions   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                  refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
                                  boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation
                                  )
     my_solver.add_all_solver_constants()
     update_solver_parameters_for_single_black_hole (my_solver)
+    
     return my_solver
 
 
@@ -55,24 +182,80 @@ def construct_FD_solver(min_cell_size, max_cell_size):
     conditions. In our case, that should be Sommerfeld ones.
     
     """
-    my_solver = None
-    
-    patch_size = 6
-    
-    my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4SBH_FD4" , 
-                                                                        patch_size           = patch_size,
-                                                                        rk_order             = 1,
-                                                                        min_meshcell_h       = min_cell_size/patch_size, 
-                                                                        max_meshcell_h       = max_cell_size/patch_size,
-                                                                        )
-    
-    my_solver.set_implementation(initial_conditions   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                 refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                 boundary_conditions  = exahype2.solvers.fv.PDETerms.None_Implementation
-                                 )
-    my_solver.add_all_solver_constants()
 
-    my_solver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
+    class PrimarySolver(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking):
+      """!
+      
+      Construct primary solver
+      
+      The primary solver is a plain CCZ4 FD4 solver with enclave tasking. There
+      are only two small modifications in line with the @ref benchmarks_exahype2_ccz4_single_black_hole "overall algorithmic sketch" of 
+      the single black hole solver: 
+      
+      1. We ensure that those cells that will feed their outcome as boundary 
+         layers into the FV scheme are treated as skeleton cells. For this,
+         we plug into create_action_sets() and augment the template with an 
+         additional if that resets the marker in such cells to skeleton.
+         
+      Further to that, we ensure that we use Sommerfeld boundary conditions. 
+      This means that we have to replace the whole generic boundary treatment
+      with a bespoke action set.      
+
+      """
+      def __init__(self,
+                   name,
+                   min_cell_size,
+                   max_cell_size
+                   ):
+          
+    # @todo raus damit
+        self._name_without_FD4_extension = name
+        
+        CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
+                                                                        name            = name + "_FD4", 
+                                                                        patch_size      = PatchSize,
+                                                                        rk_order        = 1,
+                                                                        min_meshcell_h  = min_cell_size/PatchSize, 
+                                                                        max_meshcell_h  = max_cell_size/PatchSize,
+                                                                        )
+
+        self._user_action_set_includes += """
+#include "toolbox/blockstructured/Restriction.h"        
+#include "toolbox/blockstructured/Interpolation.h"        
+"""        
+
+
+      def create_action_sets(self):
+        """!
+        
+        Tailor action set behaviour
+        
+        We first make a few additional cells skeleton cells. The rationale 
+        behind additional skeletons is given in the @ref benchmarks_exahype2_ccz4_single_black_hole "generic overview". 
+        Given the first remark there on FD4-FV coupling, one would be tempted 
+        to use the predicate
+        
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        self._action_set_update_cell.additional_skeleton_guard = " " "(
+  repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker) 
+  and
+  not repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) 
+)
+" " "        
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        
+        Once we study the other items (notably the fourth), we see that it is
+        reasonable to make all the overlap region a skeleton within the FD4
+        solver.
+        
+        """
+        super( PrimarySolver, self ).create_action_sets()
+        
+#        self._action_set_update_cell.additional_skeleton_guard = """
+#  repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
+#"""        
+
+        self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
           double Qinf[59]={1.0, 0.0, 0.0, 1.0, 0.0, 1.0,        //q0-5
              0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                      //q6-11
              0.0, 0.0, 0.0, 0.0,                                //q12-15
@@ -99,7 +282,7 @@ def construct_FD_solver(min_cell_size, max_cell_size):
               const tarch::la::Vector<Dimensions,double>&  faceCentre,
               const tarch::la::Vector<Dimensions,double>&  gridCellH
             ) -> void {
-              for (int i=0; i<"""+str(my_solver._unknowns+my_solver._auxiliary_variables)+"""; i++) {
+              for (int i=0; i<"""+str(self._unknowns+self._auxiliary_variables)+"""; i++) {
                 Q[i] = 0.0;
               }
               Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
@@ -119,7 +302,19 @@ def construct_FD_solver(min_cell_size, max_cell_size):
             fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
           );
           """
+ 
+
+    my_solver = PrimarySolver(name           = "CCZ4SBH" , 
+                              min_cell_size  = min_cell_size, 
+                              max_cell_size  = max_cell_size, 
+                              )
     
+    my_solver.set_implementation(initial_conditions   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                 refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                 boundary_conditions  = exahype2.solvers.fv.PDETerms.None_Implementation
+                                 )
+    my_solver.add_all_solver_constants()
+  
     update_solver_parameters_for_single_black_hole (my_solver)
     return my_solver
 
@@ -154,7 +349,7 @@ if __name__ == "__main__":
     project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable="peano_sbh_" + str(args.cell_size))
     
     my_primary_solver   = construct_FD_solver( args.cell_size, args.cell_size )
-    my_secondary_solver = construct_FV_solver( args.cell_size, args.cell_size )
+    my_secondary_solver = construct_FV_solver_as_FD4_limiter( args.cell_size, args.cell_size )
 
     project.add_solver(my_primary_solver)
     project.add_solver(my_secondary_solver)
@@ -176,7 +371,8 @@ if __name__ == "__main__":
     domain_size = [   18,    18,    18]
     
     if args.plot:
-      plot_interval = 0.1
+        # @todo zu klein
+      plot_interval = 0.001
     else:
       plot_interval = 0.0
     

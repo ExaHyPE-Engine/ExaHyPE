@@ -243,6 +243,17 @@ after you have updated the solution. Many implementations find it
 more convenient and cleaner if the coupling is completely separated
 from the actual solver's logic.
 
+*** IMPORTANT: *** If you couple two solvers, you have to carefully 
+take into account
+
+1. in which order these solvers run;
+2. wheter or not you use @ref page_exahype_solvers_enclave_solvers "enclave solvers". The later ones take the data out of the
+   mesh after their primary sweep and insert it back into the mesh. 
+   This has to be taken into account when you interpolate: data might
+   be extracted and then be put back in;
+3. if you localise a solver, i.e. store it only in some places, you 
+   will have garbage on faces around this localised area.
+
 @see toolbox/blockstructured/Copy.h
 @see toolbox/blockstructured/Derivative.h
 @see toolbox/blockstructured/Interpolation.h
