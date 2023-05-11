@@ -1,10 +1,13 @@
 #include "Poisson.h"
 constexpr double pi = 3.14159265358979323846264338328;
 
-double initRhs(const tarch::la::Vector<Dimensions, double>&  x){
+double initRhs(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h
+){
   double rhs = Dimensions * pi * pi;
   for (int i = 0; i < Dimensions; i++){
-    rhs *= std::sin( pi * x[i] );
+    rhs *= std::sin( pi * x[i] ) * h[i];
   }
   return rhs;  
 }
@@ -28,5 +31,5 @@ void benchmarks::multigrid::petsc::poisson::Poisson::init(
   
 ) {
   value = 0.123;
-  rhs = initRhs(x);
+  rhs = initRhs(x, h);
 }
