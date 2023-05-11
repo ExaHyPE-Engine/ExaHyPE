@@ -13,25 +13,24 @@ exahype2::fv::rusanov::sycl::GPUCellData::GPUCellData(
   ::sycl::queue& queue
 ) {
   numberOfCells = hostObject.numberOfCells;
-  cellCentre    = ::sycl::malloc_shared< tarch::la::Vector<Dimensions,double> >(numberOfCells, queue);
-  cellSize      = ::sycl::malloc_shared< tarch::la::Vector<Dimensions,double> >(numberOfCells, queue);
-  QIn           = ::sycl::malloc_shared< double* >(numberOfCells, queue);
-  QOut          = ::sycl::malloc_shared< double* >(numberOfCells, queue);
-  t             = ::sycl::malloc_shared< double >(numberOfCells, queue);
-  dt            = ::sycl::malloc_shared< double >(numberOfCells, queue);
-  maxEigenvalue = ::sycl::malloc_shared< double >(numberOfCells, queue);
-
-  for (int i=0; i<numberOfCells; i++) {
-    cellCentre[i]  = hostObject.cellCentre[i];
-    cellSize[i]    = hostObject.cellSize[i];
-    t[i]           = hostObject.t[i];
-    dt[i]          = hostObject.dt[i];
-
-    QIn[i]         = ::sycl::malloc_shared< double >(inEnumerator.size(), queue);
-    QOut[i]        = ::sycl::malloc_shared< double >(outEnumerator.size(), queue);
-
-    std::memcpy( QIn[i], hostObject.QIn[i], inEnumerator.size()*sizeof(double) );
+  cellCentre    = ::sycl::malloc_device< tarch::la::Vector<Dimensions,double> >(numberOfCells, queue);
+  cellSize      = ::sycl::malloc_device< tarch::la::Vector<Dimensions,double> >(numberOfCells, queue);
+  QIn          = ::sycl::malloc_device< double >(numberOfCells*inEnumerator.size(), queue);
+  QOut          = ::sycl::malloc_device< double >(numberOfCells*outEnumerator.size(), queue);
+  t             = ::sycl::malloc_device< double >(numberOfCells, queue);
+  dt            = ::sycl::malloc_device< double >(numberOfCells, queue);
+  maxEigenvalue = ::sycl::malloc_device< double >(numberOfCells, queue);
+  double* tmpQIn = new double[numberOfCells * inEnumerator.size()];
+  for (int i = 0; i < numberOfCells; i++) {
+	  ::std::memcpy(&tmpQIn[i * inEnumerator.size()], hostObject.QIn[i], inEnumerator.size()*sizeof(double));
   }
+  queue.memcpy(cellCentre, hostObject.cellCentre, numberOfCells*sizeof(tarch::la::Vector<Dimensions,double>));
+  queue.memcpy(cellSize, hostObject.cellSize, numberOfCells*sizeof(tarch::la::Vector<Dimensions,double>));
+  queue.memcpy(QIn, tmpQIn, numberOfCells*inEnumerator.size()*sizeof(double));
+  queue.memcpy(t, hostObject.t, numberOfCells*sizeof(double));
+  queue.memcpy(dt, hostObject.dt, numberOfCells*sizeof(double));
+  queue.wait();
+  delete[] tmpQIn;
 }
 
 
@@ -41,15 +40,15 @@ void exahype2::fv::rusanov::sycl::GPUCellData::destroy(
   bool copyEigenvaluesBack,
   ::sycl::queue& queue
 ) {
-  for (int i=0; i<numberOfCells; i++) {
-    std::memcpy( hostObject.QOut[i], QOut[i], outEnumerator.size()*sizeof(double) );
-
-    ::sycl::free( QIn[i], queue);
-    ::sycl::free( QOut[i], queue);
+  double* tmpQOut = new double[numberOfCells*outEnumerator.size()];
+  queue.memcpy(tmpQOut, QOut, numberOfCells*outEnumerator.size()*sizeof(double)).wait();
+  for (int i = 0; i < numberOfCells; i++) {
+	  ::std::memcpy(hostObject.QOut[i], &tmpQOut[i*outEnumerator.size()], outEnumerator.size()*sizeof(double));
   }
+  delete[] tmpQOut;
 
   if (copyEigenvaluesBack) {
-    std::memcpy( hostObject.maxEigenvalue, maxEigenvalue, numberOfCells*sizeof(double) );
+    queue.memcpy( hostObject.maxEigenvalue, maxEigenvalue, numberOfCells*sizeof(double) );
   }
 
   ::sycl::free( cellCentre, queue);
