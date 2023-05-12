@@ -935,8 +935,8 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
   int                                       haloSourcePatch,
   int                                       haloDestinationPatch,
   int                                       unknowns,
-  double*                                   sourceValues,
-  double*                                   destinationValues
+  const double* __restrict__                sourceValues,
+  double* __restrict__                      destinationValues
 ) {
   assertion( numberOfDoFsPerAxisInDestinationPatch>numberOfDoFsPerAxisInSourcePatch );
 
@@ -946,27 +946,37 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
       destinationValues[baseIndexDestination+unknown] = 0.0;
     }
     dfor( sourceVolume, numberOfDoFsPerAxisInSourcePatch+2*haloSourcePatch ) {
-      tarch::la::Vector<Dimensions, double> normalisedSourcePosition =
-        tarch::la::multiplyComponents(
-          tarch::la::Vector<Dimensions, double>(1.0/numberOfDoFsPerAxisInSourcePatch),
-          tarch::la::convertScalar<double>(sourceVolume) + tarch::la::Vector<Dimensions, double>(0.5 - haloSourcePatch)
-        );
-      tarch::la::Vector<Dimensions, double> normalisedDestinationPosition =
-        tarch::la::multiplyComponents(
-          tarch::la::Vector<Dimensions, double>(1.0/numberOfDoFsPerAxisInDestinationPatch),
-          tarch::la::convertScalar<double>(destinationVolume) + tarch::la::Vector<Dimensions, double>(0.5 - haloDestinationPatch)
-        );
 
-      double weight = 1.0;
+      int outsidePatchAlongCoordinateAxis = 0;
       for (int d=0; d<Dimensions; d++) {
-        double distanceAlongCoordinateAxis = std::abs( normalisedDestinationPosition(d) - normalisedSourcePosition(d) );
-        distanceAlongCoordinateAxis = 1.0 - distanceAlongCoordinateAxis / static_cast<double>(numberOfDoFsPerAxisInSourcePatch);
-        weight *= std::max(0.0, distanceAlongCoordinateAxis);
+        if ( sourceVolume(d) <  haloSourcePatch )                                   outsidePatchAlongCoordinateAxis++;
+        if ( sourceVolume(d) >= haloSourcePatch+numberOfDoFsPerAxisInSourcePatch )  outsidePatchAlongCoordinateAxis++;
       }
+      bool isDiagonal = outsidePatchAlongCoordinateAxis>1;
 
-      const int baseIndexSource      = peano4::utils::dLinearised(sourceVolume, numberOfDoFsPerAxisInSourcePatch+2*haloSourcePatch) * unknowns;
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        destinationValues[baseIndexDestination+unknown] += weight * sourceValues[baseIndexSource+unknown];
+      if (not isDiagonal) {
+        tarch::la::Vector<Dimensions, double> normalisedSourcePosition =
+          tarch::la::multiplyComponents(
+            tarch::la::Vector<Dimensions, double>(1.0/numberOfDoFsPerAxisInSourcePatch),
+            tarch::la::convertScalar<double>(sourceVolume) + tarch::la::Vector<Dimensions, double>(0.5 - haloSourcePatch)
+          );
+        tarch::la::Vector<Dimensions, double> normalisedDestinationPosition =
+          tarch::la::multiplyComponents(
+            tarch::la::Vector<Dimensions, double>(1.0/numberOfDoFsPerAxisInDestinationPatch),
+            tarch::la::convertScalar<double>(destinationVolume) + tarch::la::Vector<Dimensions, double>(0.5 - haloDestinationPatch)
+          );
+
+        double weight = 1.0;
+        for (int d=0; d<Dimensions; d++) {
+          double distanceAlongCoordinateAxis = std::abs( normalisedDestinationPosition(d) - normalisedSourcePosition(d) );
+          distanceAlongCoordinateAxis = 1.0 - distanceAlongCoordinateAxis / static_cast<double>(numberOfDoFsPerAxisInSourcePatch);
+          weight *= std::max(0.0, distanceAlongCoordinateAxis);
+        }
+
+        const int baseIndexSource      = peano4::utils::dLinearised(sourceVolume, numberOfDoFsPerAxisInSourcePatch+2*haloSourcePatch) * unknowns;
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          destinationValues[baseIndexDestination+unknown] += weight * sourceValues[baseIndexSource+unknown];
+        }
       }
     }
   }
