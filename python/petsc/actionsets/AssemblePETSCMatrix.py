@@ -33,23 +33,23 @@ class AssemblePetscMatrix(ActionSet):
   //calling our increment function 16 times is temporary; this can be done with 
   //one call to PETSc. While in development, we do it the dumb way.
 
-  double h = marker.h()[0];
+  double h2 = marker.h()[0] * marker.h()[0];
 
   for (int i=0; i<TwoPowerD; i++){
     for (int j=0; j<TwoPowerD; j++){
     if (enumeratedIndices[i] != -1 and enumeratedIndices[j] != -1){
       if (i == j){
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], 2.0/3.0/h);
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], 2.0/3.0/h2);
       }
 
       // if they add up to 3, then they must be opposites - i know this is a bodge
       else if (i + j == 3){
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], -1.0/3.0/h);
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], -1.0/3.0/h2);
       }
 
       //final two cases
       else{
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], -1.0/6.0/h);    
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], -1.0/6.0/h2);    
       }
     }
 
