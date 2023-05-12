@@ -227,6 +227,7 @@ class FV(object):
     self._action_set_copy_new_faces_onto_old_faces            = None
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = None
     self._action_set_postprocess_solution                     = None
+    self._action_set_preprocess_solution                      = None
 
     self._compute_time_step_size                    = "#error Not yet defined"
     self._compute_new_time_step_size                = "#error Not yet defined"
@@ -479,7 +480,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
   @abstractmethod
   def create_action_sets(self):
-    """
+    """!
+    
+     Create all the action sets
     
      Overwrite in subclasses if you wanna create different
      action sets.
@@ -530,11 +533,25 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     # only once if it does not exist
     if self._action_set_postprocess_solution == None:
       self._action_set_postprocess_solution                   = exahype2.solvers.fv.actionsets.EmptyPostprocessSolution( self )
+    if self._action_set_preprocess_solution == None:
+      self._action_set_preprocess_solution                    = exahype2.solvers.fv.actionsets.EmptyPreprocessSolution( self )
     
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
         
     self._action_set_update_cell = None
+
+    self._action_set_initial_conditions.priority = 1
+    self._action_set_initial_conditions_for_grid_construction.priority = 1
+    self._action_set_AMR.priority = 2
+    self._action_set_AMR_commit_without_further_analysis.priority = 2
+    self._action_set_handle_boundary.priority = 1
+    self._action_set_project_patch_onto_faces.priority = 1 # leave cell
+    self._action_set_roll_over_update_of_faces.priority = 1
+    self._action_set_copy_new_faces_onto_old_faces.priority = 1
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = 1
+    self._action_set_postprocess_solution.priority = 3
+    self._action_set_preprocess_solution.priority = -1
 
 
 
@@ -679,6 +696,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      
     
     """
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
@@ -802,6 +820,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_update_face_label )

@@ -220,12 +220,26 @@ and _load_cell_data_default_guard() if we want to restrict our solver spatially.
 
 ### The actual solution coupling
 
-The actual solver coupling is typically done via the solver's hook ins
-postprocess_updated_patch, preprocess_reconstructed_patch and 
-postprocess_updated_cell_after_final_linear_combination (only for 
-Runge-Kutta style solvers). These are 
-attributes which host C++ code that is executed at the right points in 
-time. 
+For the actual solver coupling, four hook-in points are available:
+
+1. The dedicated solver preprocessing action set.
+2. The hook-in preprocess_reconstructed_patch, which injects code right
+   before the actual compute kernel (Finite Volume scheme, e.g.) is triggered.
+3. The hook-in postprocess_updated_patch, which injects code right after
+   updated time-step data. This snippet is called after the compute kernel 
+   has terminated. For Runge-Kutta style solvers, aka multi-step solvers, 
+   there are two of these hook-ins: One called after every intermediate
+   step and one called once we compute the final linear combination of
+   these intermediate outcomes.
+4. The dedicated solver postprocessing action set.
+
+These steps all have differen properties. The global preprocessing 
+precedes any solver routine, i.e. it is called before any compute kernel
+on any solver is launched. It also is guaranteed to run sequentially, 
+i.e. there is nothing running in parallel to the preprocess actino set. 
+For the postprocessing, similar arguments hold. These steps come after
+all solvers have updated their solution. The kernel hook-ins (2) and (3)
+in contrast can run in parallel.
 
 Any coupling can be arbitrary complicated, but there are several 
 off-the-shelf routines offered in toolbox::blockstructured. Interesting
@@ -235,22 +249,17 @@ Besides those guys, you might also want to use the AMR routines within
 the blockstructured toolbox and the ExaHyPE folders, where you find, 
 for example, linear interpolation and restriction.
 
-If you prefer not to interfere with the actual solver kernels, every
-solver has a dedicated action set for postprocessing. It is called
-_action_set_postprocess_solution. This action set is by default empty, 
-yet has been introduced exactly for the coupling of various solvers
-after you have updated the solution. Many implementations find it 
-more convenient and cleaner if the coupling is completely separated
-from the actual solver's logic.
+
 
 *** IMPORTANT: *** If you couple two solvers, you have to carefully 
 take into account
 
-1. in which order these solvers run;
-2. wheter or not you use @ref page_exahype_solvers_enclave_solvers "enclave solvers". The later ones take the data out of the
+1. in which order these solvers run; If that makes a difference, you
+   might want to use the dedicated post- and pre-processing action sets.
+2. wheather or not you use @ref page_exahype_solvers_enclave_solvers "enclave solvers". The later ones take the data out of the
    mesh after their primary sweep and insert it back into the mesh. 
    This has to be taken into account when you interpolate: data might
-   be extracted and then be put back in;
+   be extracted from the mesh and then be put back in;
 3. if you localise a solver, i.e. store it only in some places, you 
    will have garbage on faces around this localised area.
 

@@ -8,6 +8,8 @@ from .RollOverUpdatedFace   import RollOverUpdatedFace
 from .DynamicAMR            import DynamicAMR
 from .PostprocessSolution   import EmptyPostprocessSolution
 from .PostprocessSolution   import CellWisePostprocessSolution
+from .PreprocessSolution    import EmptyPreprocessSolution
+from .PreprocessSolution    import CellWisePreprocessSolution
 
 from .ComputeFinalLinearCombination  import ComputeFinalLinearCombination
 

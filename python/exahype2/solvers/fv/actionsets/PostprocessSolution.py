@@ -18,7 +18,6 @@ class EmptyPostprocessSolution(AbstractFVActionSet):
     AbstractFVActionSet.__init__(self,solver)
     # Is there for compatibility reasons
     self.guard               = "true"
-    self.priority            = 2
     
 
   def get_body_of_operation(self,operation_name):
