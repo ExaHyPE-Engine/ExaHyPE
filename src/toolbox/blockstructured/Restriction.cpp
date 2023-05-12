@@ -157,7 +157,7 @@ void toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
     tarch::la::Vector<Dimensions,int> sourceVolume;
     for (int d=0; d<Dimensions; d++) {
       sourceVolume(d) = std::round(
-        static_cast<double>(destinationVolume(d)) * static_cast<double>(numberOfDoFsPerAxisInSourcePatch) / static_cast<double>(numberOfDoFsPerAxisInDestinationPatch)
+        (static_cast<double>(destinationVolume(d))+0.5) * static_cast<double>(numberOfDoFsPerAxisInSourcePatch) / static_cast<double>(numberOfDoFsPerAxisInDestinationPatch)
       );
     }
 
