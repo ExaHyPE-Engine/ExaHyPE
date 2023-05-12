@@ -13,7 +13,7 @@ amr_levels                = 1 # Set to 1 to disable adaptive mesh refinement (AM
 patch_size                = 8
 end_time                  = 0.5
 plot_interval             = 0.05 # Set to 0 to disable I/O
-mode                      = peano4.output.CompileMode.Debug # Switch here between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'
+mode                      = peano4.output.CompileMode.Release # Switch here between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'
 
 if dimensions == 2:
   size                    = [2.0, 2.0]
@@ -42,6 +42,11 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   min_volume_h          = cell_size * 3.0**(-amr_levels),
   time_step_relaxation  = 0.5,
 )
+
+if dimensions == 2:
+  my_solver.plot_description = "rho, u, v, e"
+else:
+  my_solver.plot_description = "rho, u, v, w, e"
 
 my_solver.set_implementation(
   ncp                   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
