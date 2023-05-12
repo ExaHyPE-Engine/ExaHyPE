@@ -85,6 +85,7 @@ class ProjectPatchOntoFaces(ActionSet):
 
 
   __Template_TouchCellLastTime_Core = """
+ // @todo Might want to use routine from Projection.h in toolbox.
     for(int d=0; d<Dimensions; d++) {{
       /**
        * d-loop over all dimensions except d. The vector k's entry d is set

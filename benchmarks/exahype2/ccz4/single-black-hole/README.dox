@@ -186,8 +186,6 @@ the solvers.
    black hole. Consequently, we do not have to load or store data far away.
    We also should not compute anything far away. All data there would be 
    temporary anyway (as we don't load or store) and hence hold garbage.
-   
-   @todo Compute predicate is missing
 
 2. The primary solver takes its reconstructed solution, i.e. the Q values within
    the patch plus its halo (of size 3 for FD) and projects this information 
@@ -198,20 +196,21 @@ the solvers.
    
    I initially thought that the projection could be triggered by the FD4 solver
    after each time step. However, this is not a good idea, as we do not have 
-   consistent face data at this point. Associating it with the FD4 solver also
+   consistent face data at this point. We however need the faces to have proper
+   halo information to be able to interpolate correctly. So it has be done 
+   before the solver kicks off.
+   
+   Associating it with the FD4 solver's preprocess_reconstructed_solution would
+   be convenient, as these data hold the halo information already, i.e. they 
+   provide access to the patch data plus its halo. However, plugging into this
+   routine 
    makes assumptions on the evaluation order: We have to know that the FV code
-   has not started any calculation yet. If the FV solver is an enclave solver,
-   we notably have to ensure that this #
+   has not started any calculation yet.  
+   Therefore, this coupling has to happen within either solver's preprocessing
+   action set as a preamble of its actual time step. 
    
-   
-   Wenn FD4 skeleton ist, koennte er es schon ueberschrieben haben
-   
-   
-   Obacht 
-   
-   Therefore, this step has to happen within the FV solver as a preamble of 
-   its actual time step. There is another catch: The outer faces around the 
-   FV domain will hold garbage. 
+   The problem with the preprocessing and reconstruction is that outer faces 
+   around the FV domain will hold garbage. 
    
    @image html wrong-storage-scheme-with-enclaves.png
    
@@ -221,21 +220,25 @@ the solvers.
    if we are not careful, then pollutes the data on the faces and consequently 
    transitions into the central area where we need an accurate FV solution. 
    
-   We conclude:
-   
-   - The prolongation should happen within the FV solver as a preprocessing
-     step where we "overwrite" the patch data;
-   - This overwrite should also overwrite the FV's halo layer, so we can run
-     the compute kernel.
-   - To run the interpolation, we will need the whole data of the FD4 solver.
-     Therefore, we will have to reconstruct the FD4 halo temporarily before
-     we invoke the interpolation.   
+   Therefore, we reconstruct the FD4 solver's halo (temporarily), and use these
+   data to project the solution down into a temporary FV patch including one 
+   halo layer. We take the data from within this patch and copy it over into 
+   the FV data. Now the FV patch data holds the updated interpolated data from
+   the current time step. Next, we take the halo of one from this temporarily
+   reconstructed patch and write it onto the faces of the cell. This way, we 
+   ensure that they don't hold garbage. 
    
 3. After the FV solver has updated its data, we can restrict it. However, we
    have to be sure that the FD4 solver will not overwrite these data.
    
 
 
+@todo: Niemals volumetrisch koppeln. Braucht kein Mensch. D.h. sogar diese 
+  komische Randidentifikation ist nicht noetig.
+  Das grosse Problem ist der Rand auf dem FV, also die Face-Info. Das machen
+  wir durch:
+  Preprocessing interpoliert auf eigentliche Daten, da diese sonst u.U. schon
+  weg sind. Das sind temporaere Daten, die brauchen wir eignelithc gar net.
 
 
 */

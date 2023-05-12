@@ -6,6 +6,10 @@ from .AbstractRKFDActionSet import AbstractRKFDActionSet
 import peano4
 import jinja2
 
+
+from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+
+
 class EmptyPreprocessSolution(AbstractRKFDActionSet):
   """!
   
@@ -31,6 +35,45 @@ class EmptyPreprocessSolution(AbstractRKFDActionSet):
 
 
 
+class PreprocessReconstructedSolutionWithHalo(ReconstructPatchAndApplyFunctor):
+  """!
+  
+  Preprocess the solution and reconstruct halo for this
+  
+  This action set preprocesses the solution. By default, it only plugs into the 
+  very first grid sweep of a time step. That is, if you have a Runge-Kutta solver
+  and/or enclave solver, these guys usually need multiple sweeps. We only plug 
+  into the very first one.
+  
+  If it becomes active, it first of all creates an array called oldQWithHalo. It
+  is held on the heap and will be destroyed automatically later on. This array
+  is properly befilled. You can postprocess it, but if you alter entries 
+  therein, these alterations will be lost after the preprocessing step.
+  
+  """  
+  def __init__(self,
+               solver,
+               compute_kernel_implementation
+               ):
+    super(PreprocessReconstructedSolutionWithHalo,self).__init__(patch = solver._patch,
+                                             patch_overlap = solver._patch_overlap_new,
+                                             functor_implementation = compute_kernel_implementation,
+                                             reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch,
+                                             guard                               = "repositories::InstanceOf" + solver._name + ".isFirstGridSweepOfTimeStep()",
+                                             add_assertions_to_halo_exchange     = False
+                                             )
+    self._solver = solver
+
+
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")
+
+
+  def get_includes(self):
+    return super(PreprocessReconstructedSolutionWithHalo,self).get_includes() + """
+#include <functional>
+#include "exahype2/fd/PatchUtils.h"
+""" + self._solver._get_default_includes() + self._solver.user_action_set_includes 
 
 
 class CellWisePreprocessSolution(AbstractRKFDActionSet):
@@ -96,7 +139,6 @@ class CellWisePreprocessSolution(AbstractRKFDActionSet):
     logTraceOut( "touchCellFirstTime(...)" );
   } 
 """
-
     
 
   def get_body_of_operation(self,operation_name):
