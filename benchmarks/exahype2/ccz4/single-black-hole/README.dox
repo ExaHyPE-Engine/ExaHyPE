@@ -241,4 +241,7 @@ the solvers.
   weg sind. Das sind temporaere Daten, die brauchen wir eignelithc gar net.
 
 
+    // @todo natuerlich super kompliziert. Wir interpolieren volumetrisch, brauchen dann aber nur die auessere Halo
+
+
 */

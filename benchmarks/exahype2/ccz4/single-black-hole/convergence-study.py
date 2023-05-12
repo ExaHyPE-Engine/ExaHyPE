@@ -20,7 +20,7 @@ from CCZ4Solver import CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeS
 # for the coupling
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
-PatchSize = 6
+PatchSize = 4
 
 
 def add_constraints_to_primary_solver(solver):
@@ -48,7 +48,7 @@ def construct_FV_limiter(min_cell_size, max_cell_size):
 
     class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         # todo muss viel groesser sein
-      UpscalingFactor = 2
+      UpscalingFactor = 5
         
       def __init__(self,
                    name, 
@@ -91,18 +91,6 @@ def construct_FV_limiter(min_cell_size, max_cell_size):
         return """(""" + super( Limiter, self )._load_face_data_default_guard() + """
                     and repositories::InstanceOf""" + self._name + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
                   )"""
-
-
-      def create_action_sets(self):
-        """!
-        
-        Tailor action set behaviour
-        
-        Basically ensure that we do not solve on the outer cells.
-        
-        """
-        super( Limiter, self ).create_action_sets()
-        #self._action_set_update_cell.guard = "(" + self._action_set_update_cell.guard + " and repositories::InstanceOf" + self._name + ".areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) )"
         
     
     my_solver = Limiter(name           = "CCZ4SBH" , 
@@ -247,7 +235,8 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
     double* interpolatedFVDataWithHalo = ::tarch::allocateMemory<double>(
         (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
       * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2),
+      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
+      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables),
       ::tarch::MemoryLocation::Heap
     );
 
@@ -261,7 +250,7 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
       interpolatedFVDataWithHalo
     );
 
-    ::toolbox::blockstructured::projectPatchSolutionOntoFaces(
+    ::toolbox::blockstructured::projectPatchHaloOntoFaces(
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
       1,      // int    haloSize,
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns,
@@ -272,8 +261,7 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
       fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(2).value,
       fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(3).value,
       fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(4).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(5).value,
-      true
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(5).value
     );
     
     ::tarch::freeMemory(interpolatedFVDataWithHalo, tarch::MemoryLocation::Heap );
@@ -282,8 +270,6 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
         self._action_set_preprocess_solution.guard = "(" + self._action_set_preprocess_solution.guard + """
                                                       and 
                                                       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
-                                                      and
-                                                      not repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) 
                                                       and
                                                       not marker.willBeRefined()
                                                       )""" 
