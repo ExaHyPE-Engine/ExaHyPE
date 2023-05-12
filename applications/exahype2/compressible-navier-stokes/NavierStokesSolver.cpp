@@ -184,17 +184,17 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::nonco
   assertion(!std::isnan(deltaQ[dedy]));
 
   if (normal == 0) {
-    // mu{2/3(du/dx+dv/dy)-2(du/dx)}
-    BTimesDeltaQ[u] = Viscosity * (2.0 / 3.0 * (deltaQ[dudx] / volumeH[x] + deltaQ[dvdy] / volumeH[y]) - 2 * deltaQ[dudx] / volumeH[x]) / Q[rho];
+    // -mu{4/3(du/dx)}
+    BTimesDeltaQ[u] = - Viscosity * 4.0 / 3.0 * deltaQ[dudx] / volumeH[x] / Q[rho];
 
-    // mu{dv/dx + du/dy}
-    BTimesDeltaQ[v] = /*-*/ Viscosity * (deltaQ[dvdx] / volumeH[x] + deltaQ[dudy] / volumeH[y]) / Q[rho];
+    // -mu{dv/dx + du/dy}
+    BTimesDeltaQ[v] = - Viscosity * (deltaQ[dvdx] / volumeH[x] + deltaQ[dudy] / volumeH[y]) / Q[rho];
   } else {
-    // mu{dv/dx + du/dy}
-    BTimesDeltaQ[u] = /*-*/ Viscosity * (deltaQ[dvdx] / volumeH[x] + deltaQ[dudy] / volumeH[y]) / Q[rho];
+    // -mu{dv/dx + du/dy}
+    BTimesDeltaQ[u] = - Viscosity * (deltaQ[dvdx] / volumeH[x] + deltaQ[dudy] / volumeH[y]) / Q[rho];
 
-    // mu{2/3(du/dx+dv/dy)-2(dv/dy)}
-    BTimesDeltaQ[v] = Viscosity * (2.0 / 3.0 * (deltaQ[dudx] / volumeH[x] + deltaQ[dvdy] / volumeH[y]) - 2 * deltaQ[dvdy] / volumeH[y]) / Q[rho];
+    // -mu{4/3(dv/dy)}
+    BTimesDeltaQ[v] = - Viscosity * 4.0 / 3.0 * deltaQ[dvdy] / volumeH[y] / Q[rho];
   }
 
   BTimesDeltaQ[rho] = 0;
