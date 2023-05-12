@@ -43,6 +43,10 @@ class ProjectPatchOntoFaces(ActionSet):
       print( "Error: Patch of overlap and patch of cell have to match" )
       assert( patch_overlap.dim[1] == patch.dim[0] )
       
+    assert isinstance(patch.no_of_unknowns,int)
+    assert isinstance(patch.dim[0],int)
+    assert isinstance(patch_overlap.dim[0],int)
+      
     self.d[ "UNKNOWNS" ]           = str(patch.no_of_unknowns)
     self.d[ "DOFS_PER_AXIS" ]      = str(patch.dim[0])
     self.d[ "OVERLAP" ]            = str(int(patch_overlap.dim[0]/2))

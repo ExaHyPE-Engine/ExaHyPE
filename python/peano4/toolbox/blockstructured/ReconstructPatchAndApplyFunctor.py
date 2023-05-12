@@ -137,10 +137,14 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
         
     """
     d[ "GUARD" ]              = self.guard
+    
+    assert isinstance(self.no_of_unknowns,int)
+    assert isinstance(self.dofs_per_axis,int)
+    assert isinstance(self.total_overlap,int)
 
     d[ "UNKNOWNS" ]           = str(self.no_of_unknowns)
     d[ "DOFS_PER_AXIS" ]      = str(self.dofs_per_axis)
-    d[ "OVERLAP" ]            = str(self.total_overlap/2)
+    d[ "OVERLAP" ]            = str(int(self.total_overlap/2))
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ]      = str(self.no_of_unknowns * self.dofs_per_axis * self.dofs_per_axis)
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ]      = str(self.no_of_unknowns * self.dofs_per_axis * self.dofs_per_axis * self.dofs_per_axis)
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = str(self.no_of_unknowns * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis))
