@@ -33,12 +33,14 @@
 
 
 #include "observers/CreateGrid.h"
-#include "observers/Init.h"
+#include "observers/InitialConditions.h"
 #include "observers/Plot.h"
-#include "observers/Sort.h"
-#include "observers/InitDensity.h"
 
 {% for STEP in SOLVERSTEP_NAMES %}
+#include "observers/{{STEP}}.h"
+{% endfor %}
+
+{% for STEP in INITIALISATIONSTEP_NAMES %}
 #include "observers/{{STEP}}.h"
 {% endfor %}
 
@@ -51,18 +53,15 @@ tarch::logging::Log _log("::");
 
 
 tarch::timing::Measurement   createGridMeasurement;
-tarch::timing::Measurement   initMeasurement;
-tarch::timing::Measurement   sortMeasurement;
-tarch::timing::Measurement   initDensityMeasurement;
+tarch::timing::Measurement   initialConditionMeasurement;
+tarch::timing::Measurement   initialisationMeasurement;
 tarch::timing::Measurement   plotMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 
 
 bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
   static bool   gridConstructed                             = false;
-  static bool   gridInitialised                             = false;
-  static bool   initialDensityComputed                      = false;
-  static bool   initialisationSorted                        = false;
+  static bool   initialised                                 = false;
   static double nextMaxPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
   static double nextMinPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
   static bool   haveJustWrittenSnapshot                     = false;
@@ -70,6 +69,29 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
   bool          continueToSolve                             = true;
 
   if (false) {} // just there to make my script's syntax easier
+  {% for STEP_NUMBER in range(0,INITIALISATIONSTEP_NAMES|length-1) %}
+  /**
+   * Part of one complete time step cycle, i.e. one sequence of steps
+   */
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}
+    and
+    repositories::rerunPreviousGridSweep()
+  ) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}} )
+    );
+  }
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}
+    and
+    not repositories::rerunPreviousGridSweep()
+  ) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER+1]}} )
+    );
+  }
+  {% endfor %}
   {% for STEP_NUMBER in range(0,SOLVERSTEP_NAMES|length-1) %}
   /**
    * Part of one complete time step cycle, i.e. one sequence of steps
@@ -119,26 +141,12 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
       gridConstructed = true;
     }
   }
-  else if (not gridInitialised) {
+  else if (gridConstructed and not initialised) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Init )
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[0]}} )
     );
 
-    gridInitialised = true;
-  }
-  else if (not initialisationSorted) {
-    peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Sort )
-    );
-
-    initialisationSorted = true;
-  }
-  else if (not initialDensityComputed) {
-    peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitDensity )
-    );
-
-    initialDensityComputed = true;
+    initialised = true;
   }
   else if (
     ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
@@ -250,49 +258,19 @@ void {{NAMESPACE | join("::")}}::step() {
         createGridMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::Init:
+    case repositories::StepRepository::Steps::InitialConditions:
       {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "init" );
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "initial-conditions" );
         watch.start();
-        otterPhaseBegin( "init" );
-        observers::Init  observer;
-        observers::Init::prepareTraversal();
+        otterPhaseBegin( "initial-conditions" );
+        observers::InitialConditions  observer;
+        observers::InitialConditions::prepareTraversal();
         repositories::startInitialisationStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         repositories::finishInitialisationStep();
-        observers::Init::unprepareTraversal();
+        observers::InitialConditions::unprepareTraversal();
         watch.stop();
-        initMeasurement.setValue( watch.getCalendarTime() );
-      }
-      break;
-    case repositories::StepRepository::Steps::Sort:
-      {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "sort" );
-        watch.start();
-        otterPhaseBegin( "sort" );
-        observers::Sort  observer;
-        observers::Sort::prepareTraversal();
-        repositories::startSortingStep();
-        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::finishSortingStep();
-        observers::Sort::unprepareTraversal();
-        watch.stop();
-        sortMeasurement.setValue( watch.getCalendarTime() );
-      }
-      break;
-    case repositories::StepRepository::Steps::InitDensity:
-      {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "initDensity" );
-        watch.start();
-        otterPhaseBegin( "initDensity" );
-        observers::InitDensity  observer;
-        observers::InitDensity::prepareTraversal();
-        repositories::startInitDensityStep();
-        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::finishInitDensityStep();
-        observers::InitDensity::unprepareTraversal();
-        watch.stop();
-        initDensityMeasurement.setValue( watch.getCalendarTime() );
+        initialConditionMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
     case repositories::StepRepository::Steps::Plot:
@@ -351,6 +329,21 @@ void {{NAMESPACE | join("::")}}::step() {
         timeStepMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
+    {% for STEP_NUMBER in range(0,INITIALISATIONSTEP_NAMES|length) %}
+    case repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}:
+      {
+        otterPhaseSwitch( "{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}" );
+        repositories::startInitialisationStep();
+        observers::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}  observer;
+        observers::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}::prepareTraversal();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishInitialisationStep();
+        observers::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}::unprepareTraversal();
+        watch.stop();
+        initialisationMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    {% endfor %}
     case repositories::StepRepository::Steps::Undef:
       assertion(false);
       break;
@@ -437,9 +430,8 @@ int main(int argc, char** argv) {
 
     logInfo("main()", "terminated successfully");
     logInfo("main()", "grid construction:  " << createGridMeasurement.getAccumulatedValue() << "s\t" << createGridMeasurement.toString() );
-    logInfo("main()", "init simulation:    " << initMeasurement.getAccumulatedValue() << "s\t" << initMeasurement.toString() );
-    logInfo("main()", "(initial) sort:     " << sortMeasurement.getAccumulatedValue() << "s\t" << sortMeasurement.toString() );
-    logInfo("main()", "(initial) density:  " << initDensityMeasurement.getAccumulatedValue() << "s\t" << initDensityMeasurement.toString() );
+    logInfo("main()", "initial conditions: " << initialConditionMeasurement.getAccumulatedValue() << "s\t" << initialConditionMeasurement.toString() );
+    logInfo("main()", "initialisation:     " << initialisationMeasurement.getAccumulatedValue() << "s\t" << initialisationMeasurement.toString() );
     logInfo("main()", "plotting:           " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString() );
     logInfo("main()", "time stepping:      " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString() );
   }

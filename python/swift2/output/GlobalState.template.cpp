@@ -102,6 +102,19 @@ void startIntermediateStep() {
 }
 
 
+void startInitialConditionStep() {
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
+  {%- endfor %}
+
+  if (not ::swift2::commandlinesettings::enableDynamicLoadBalancing() ) {
+    loadBalancer.enable(false);
+  }
+  logTraceIn( "InitialConditionStep()" );
+}
+
+
 void startInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
@@ -114,22 +127,6 @@ void startInitialisationStep() {
   logTraceIn( "InitialisationStep()" );
 }
 
-
-void startSortingStep() {
-  {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
-  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
-  {%- endfor %}
-  logTraceIn( "SortingStep()" );
-}
-
-void startInitDensityStep() {
-  {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
-  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
-  {%- endfor %}
-  logTraceIn( "InitDensityStep()" );
-}
 
 void startTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
@@ -195,25 +192,16 @@ void finishInitialisationStep() {
 }
 
 
-void finishSortingStep() {
+void finishInitialConditionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
-  logTraceOut( "SortingStep()" );
+  logTraceOut( "InitialConditionStep()" );
 }
 
-void finishInitDensityStep() {
-  {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
-  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
-  {%- endfor %}
-
-  loadBalancer.finishStep();
-  logTraceOut( "InitDensityStep()" );
-}
 
 void finishPlotStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}

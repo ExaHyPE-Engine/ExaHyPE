@@ -5,7 +5,7 @@ import os
 
 
 class SWIFTMain(peano4.runner.DefaultSequence):
-  def __init__(self,project,solversteps,overwrite=False):
+  def __init__(self,project,initialisation_steps,solver_steps,overwrite=False):
     """
     
      solversteps: [peano4.solversteps.Steps]
@@ -17,7 +17,8 @@ class SWIFTMain(peano4.runner.DefaultSequence):
     """
     super(SWIFTMain,self).__init__(project)
     self.overwrite               = overwrite
-    self.d[ "SOLVERSTEP_NAMES" ] = [x.name for x in solversteps]
+    self.d[ "SOLVERSTEP_NAMES" ]         = [x.name for x in solver_steps]
+    self.d[ "INITIALISATIONSTEP_NAMES" ] = [x.name for x in initialisation_steps]
 
 
   def _get_header_file_template(self):

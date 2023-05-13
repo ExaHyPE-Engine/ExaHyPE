@@ -10,8 +10,9 @@ import sys
 
 from swift2.particle.Particle         import Particle
 from swift2.actionsets.DynamicMeshRefinementAnalysis import DynamicMeshRefinementAnalysis
-from swift2.graphcompiler.Sequential  import serialise_and_map_onto_separate_mesh_traversals
 from swift2.output.SWIFTMain          import SWIFTMain
+
+import swift2.graphcompiler
 
 
 from abc import abstractmethod
@@ -60,25 +61,12 @@ class Project(object):
     self._particle_species     = []
     self._particle_species_set = []
 
-    self._algorithm_step_create_grid = peano4.solversteps.Step( "CreateGrid",  False )
-    self.algorithm_step_init         = peano4.solversteps.Step( "Init",        False )
-    self.algorithm_step_sort         = peano4.solversteps.Step( "Sort",        False )
+    self.algorithm_step_create_grid         = peano4.solversteps.Step( "CreateGrid",         False )
+    self.algorithm_step_initial_conditions  = peano4.solversteps.Step( "InitialConditions",  False )
+    self.algorithm_step_plot                = peano4.solversteps.Step( "Plot",               False )
 
-    self.algorithm_step_init_density = peano4.solversteps.Step( "InitDensity", False )
-    self.algorithm_step_plot         = peano4.solversteps.Step( "Plot",        False )
-
-    # store density alogithm step here to be able to add it at startup
-    self.algorithm_step_init_density_AlgorithmStep = None
-
-    self.algorithm_step_plot.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat(
-      filename              = "grid",
-      time_stamp_evaluation = "repositories::getMinTimeStamp()",
-      additional_includes   = """
-#include "repositories/GlobalState.h"
-"""
-    ))
-
-    self.task_graph_compiler = serialise_and_map_onto_separate_mesh_traversals
+    self.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals
+    self.initialisation_steps_task_graph_compiler = swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals
 
 
 
@@ -280,8 +268,10 @@ citation of the original SWIFT paper
   def generate_Peano4_project(self, verbose=False):
     """!
 
- Build the Peano4 project, i.e. all the action sets et al that you require
- to run this ExaHyPE2 application.
+ Build the Peano4 project
+ 
+ The main job of this routine is to add all the action sets et al that you
+ require to run this ExaHyPE2 application.
 
  This routine generates a Peano project, i.e. the domain-specific ExaHyPE
  view is translated into a Peano model. Once you have called this routine,
@@ -334,81 +324,84 @@ we realise the initialisation in two steps.
     self.__generate_global_state_files()
     self.__compute_global_max_h()
 
-    ## Make pre-defined mesh traversals resort the particles. For this, they need
-    ## species set into
+    #    
+    # Make pre-defined mesh traversals resort the particles. For this, they need
+    # the species set
+    #
     for current_species_set in self._particle_species_set:
       self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set))
-      self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set))
-      self.algorithm_step_sort.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set))
-      # TODO MLADEN: Do I really need this?
-      # TODO MLADEN: Please chat with me (Tobias). I'm not sure whether this algorithm_step_init_density belongs in here or has to do with teh particle
-      self.algorithm_step_init_density.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set))
+      self.algorithm_step_initial_conditions.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set))
 
       self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set))
-      self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set))
-      self.algorithm_step_sort.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set))
-      # TODO MLADEN: Do I really need this?
-      self.algorithm_step_init_density.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set))
-
-      initDensityAlgorithmStep = self.algorithm_step_init_density_AlgorithmStep
-      if initDensityAlgorithmStep is None:
-        raise ValueError("You need to specify which density algorithm step to use for initialization")
-      self.algorithm_step_init_density.add_action_set(peano4.toolbox.particles.ParticleParticleInteraction_Sets(
-          particle_set                                           = current_species_set,
-          particle_particle_interaction_kernel                   = initDensityAlgorithmStep.cell_kernel,
-          touch_vertex_first_time_compute_particle_update_kernel = initDensityAlgorithmStep.touch_vertex_first_time_kernel,
-          touch_vertex_last_time_compute_particle_update_kernel  = initDensityAlgorithmStep.touch_vertex_last_time_kernel,
-          prepare_traversal_kernel                               = initDensityAlgorithmStep.prepare_traversal_kernel,
-          unprepare_traversal_kernel                             = initDensityAlgorithmStep.unprepare_traversal_kernel,
-          additional_includes                                    = initDensityAlgorithmStep.includes,
-          active_particle_set                                    = initDensityAlgorithmStep.input_particles
-        ))
+      self.algorithm_step_initial_conditions.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set))
 
 
-    ## Create mesh traversals aka solver steps
-    solversteps = self.task_graph_compiler(self._particle_species_set)
 
-    ## Make each solver step (incl predefined ones) use the particles and particle sets
+    #
+    # Create mesh traversals aka solver steps
+    #
+    initialisation_steps = self.initialisation_steps_task_graph_compiler(self._particle_species_set)
+    solver_steps         = self.algorithm_steps_task_graph_compiler(self._particle_species_set)
+
+    #
+    # Make each solver step (incl predefined ones) use the particles and particle sets
+    #
     for current_species_set in self._particle_species_set:
-      cell_marker_for_statistics = DynamicMeshRefinementAnalysis.create_cell_marker(current_species_set.name)
-
       self._project.datamodel.add_global_object(current_species_set.particle_model)
       self._project.datamodel.add_vertex(current_species_set)
 
-      self._algorithm_step_create_grid.use_vertex(current_species_set)
-      self.algorithm_step_init.use_vertex(current_species_set)
-      self.algorithm_step_sort.use_vertex(current_species_set)
-      self.algorithm_step_init_density.use_vertex(current_species_set)
+      self.algorithm_step_create_grid.use_vertex(current_species_set)
+      self.algorithm_step_initial_conditions.use_vertex(current_species_set)
       self.algorithm_step_plot.use_vertex(current_species_set)
 
+    #
+    # Add the cell statistics everywhere
+    #
+    for current_species_set in self._particle_species_set:
+      cell_marker_for_statistics = DynamicMeshRefinementAnalysis.create_cell_marker(current_species_set.name)
       # Enable cell statistics for this species
       self._project.datamodel.add_cell(cell_marker_for_statistics)
 
       # Add cell statistics to these action steps
-      self._algorithm_step_create_grid.use_cell(cell_marker_for_statistics)
-      self.algorithm_step_init.use_cell(cell_marker_for_statistics)
-      self.algorithm_step_sort.use_cell(cell_marker_for_statistics)
-      self.algorithm_step_init_density.use_cell(cell_marker_for_statistics)
+      self.algorithm_step_create_grid.use_cell(cell_marker_for_statistics)
+      self.algorithm_step_initial_conditions.use_cell(cell_marker_for_statistics)
       self.algorithm_step_plot.use_cell(cell_marker_for_statistics)
 
-      for solverstep in solversteps:
+      for solverstep in solver_steps:
         solverstep.use_vertex(current_species_set)
         solverstep.use_cell(cell_marker_for_statistics)
 
-    action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(self._global_max_h)
-    action_set_create_regular_grid.priority = self._algorithm_step_create_grid.lowest_priority()-1
-    action_set_create_regular_grid.parallel = True
-    self._algorithm_step_create_grid.add_action_set(action_set_create_regular_grid)
+      for solverstep in initialisation_steps:
+        solverstep.use_vertex(current_species_set)
+        solverstep.use_cell(cell_marker_for_statistics)
 
-    self._project.solversteps.add_step(self._algorithm_step_create_grid)
-    self._project.solversteps.add_step(self.algorithm_step_init)
-    self._project.solversteps.add_step(self.algorithm_step_sort)
-    self._project.solversteps.add_step(self.algorithm_step_init_density)
+    action_set_plot_grid = peano4.toolbox.PlotGridInPeanoBlockFormat(
+      filename              = "grid",
+      time_stamp_evaluation = "repositories::getMinTimeStamp()",
+      additional_includes   = """
+#include "repositories/GlobalState.h"
+"""
+    )
+    action_set_plot_grid.priority = self.algorithm_step_plot.highest_priority()+1
+    action_set_plot_grid.parallel = True
+    self.algorithm_step_plot.add_action_set( action_set_plot_grid )
+
+    action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(self._global_max_h)
+    action_set_create_regular_grid.priority = self.algorithm_step_create_grid.lowest_priority()-1
+    action_set_create_regular_grid.parallel = True
+    self.algorithm_step_create_grid.add_action_set(action_set_create_regular_grid)
+
+    self._project.solversteps.add_step(self.algorithm_step_create_grid)
+    self._project.solversteps.add_step(self.algorithm_step_initial_conditions)
     self._project.solversteps.add_step(self.algorithm_step_plot)
-    for solverstep in solversteps:
+
+    for solverstep in solver_steps:
       self._project.solversteps.add_step(solverstep)
 
-    self._project.main = SWIFTMain( self._project, solversteps )
+    for initialisation_step in initialisation_steps:
+      self._project.solversteps.add_step(initialisation_step)
+
+    self._project.main = SWIFTMain( self._project, initialisation_steps, solver_steps )
 
     self.__configure_makefile()
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
