@@ -30,6 +30,8 @@ class PlotGridInPeanoBlockFormat(ActionSet):
          or CountTimeSteps.         
           
     """
+    super( PlotGridInPeanoBlockFormat, self ).__init__()
+    
     self.d = {}
     self.d[ "FILENAME" ]     = filename
     self.d[ "CELL_WRAPPER" ] = "Cell"

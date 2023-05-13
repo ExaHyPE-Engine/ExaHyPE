@@ -60,7 +60,7 @@ The new state analysis is very simple:
   DefaultPriority = AbstractUpdateParticleGridAssociation.DefaultPriority+1
   
   def __init__(self,particle_set):
-    super( UpdateParallelState, self ).__init__(priority=DefaultPriority, parallel=False)
+    super( UpdateParallelState, self ).__init__(priority=self.DefaultPriority, parallel=False)
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                      = particle_set.particle_model.name

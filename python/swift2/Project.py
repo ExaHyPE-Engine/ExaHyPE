@@ -18,7 +18,9 @@ from abc import abstractmethod
 
 
 class Project(object):
-  """
+  """!
+  
+  Swift2 project 
 
   Represents an abstract SWIFT 2 project. An SWIFT 2 project is a Peano 4
   project with a particular set of actions (algorithmic phases)
@@ -333,17 +335,18 @@ we realise the initialisation in two steps.
     ## Make pre-defined mesh traversals resort the particles. For this, they need
     ## species set into
     for current_species_set in self._particle_species_set:
-      self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set),False)
-      self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set),False)
-      self.algorithm_step_sort.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set),False)
+      self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set))
+      self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set))
+      self.algorithm_step_sort.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set))
       # TODO MLADEN: Do I really need this?
-      self.algorithm_step_init_density.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set),False)
+      # TODO MLADEN: Please chat with me (Tobias). I'm not sure whether this algorithm_step_init_density belongs in here or has to do with teh particle
+      self.algorithm_step_init_density.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set))
 
-      self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
-      self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
-      self.algorithm_step_sort.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
+      self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set))
+      self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set))
+      self.algorithm_step_sort.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set))
       # TODO MLADEN: Do I really need this?
-      self.algorithm_step_init_density.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
+      self.algorithm_step_init_density.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set))
 
       initDensityAlgorithmStep = self.algorithm_step_init_density_AlgorithmStep
       if initDensityAlgorithmStep is None:

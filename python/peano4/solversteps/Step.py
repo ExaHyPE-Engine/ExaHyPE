@@ -12,24 +12,14 @@ from peano4.solversteps.StepToObserver  import StepToObserver
 # TODO MLADEN: Ist der Kommentar oben noch aktuell?
 
 class Step:
-<<<<<<< HEAD
-  """
-    Most generic version of a solver step. A solverstep describes what Peano4
-=======
   """!
-  
+
     One step
   
     Most generic version of a solver step. A solverstep describes what Peano 4 
->>>>>>> refs/remotes/origin/p4
     should do when it runs over the grid. As users have to specify which pieces
     of data from the data model are used by the solver step, it can handle all
     the user data stack flow.
-<<<<<<< HEAD
-
-    This class also is responsible to generate all function signatures of all
-    the steps, observers and action sets.
-=======
     
     This class also is responsible to generate all function signatures of all 
     the steps, observers and action sets. In the Peano terminology, a step 
@@ -47,8 +37,8 @@ class Step:
     
     name: String
       This name is used to create the underlying action set later on
->>>>>>> refs/remotes/origin/p4
   """
+
   def __init__(self,name,add_user_defined_actions = True):
     """
      By default, the step generates at least one action set for the user.
@@ -78,18 +68,12 @@ class Step:
     """
     self.action_sets = []
 
-<<<<<<< HEAD
 
-  def add_action_set(self,action_set,append_at_end=True):
-    """
-=======
-  
   def add_action_set(self,action_set):
     """!
     
      Add a new action set to this mesh traversal step
     
->>>>>>> refs/remotes/origin/p4
      Each step holds a set of action_sets. They describe what the step actually
      should do whenever it loads a vertex, runs into a cell, and so forth. By
      default, the step holds one user-defined action_set (UserActionSet) which means
