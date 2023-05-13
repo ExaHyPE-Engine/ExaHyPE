@@ -23,8 +23,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingSYCL)
-  //::sycl::queue queue{::sycl::gpu_selector_v};
-  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+  ::sycl::queue queue{::sycl::gpu_selector_v};
+  //::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   constexpr int solversHaloSize        = 1;
 
