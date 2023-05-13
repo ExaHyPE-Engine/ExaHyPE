@@ -1,0 +1,388 @@
+import os
+import argparse
+
+import peano4
+import exahype2
+import dastgen2
+
+import peano4.toolbox.particles
+import numpy as np
+
+
+from exahype2.solvers.fv.rusanov.kernels import create_compute_Riemann_kernel_for_Rusanov
+
+
+parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4-GaugeWave benchmarking script')
+parser.add_argument("-j",   "--parallel-builds",   dest="j",                type=int, default=-1, help="Parallel builds" )
+parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",         default="../../../../", help="Peano4 directory" )
+parser.add_argument("-v",   "--verbose",           dest="verbose",          action="store_true", default=False, help="Verbose")
+parser.add_argument("-s",   "--solver",            dest="solver",           choices=["fv-legacy-no-heap", "fv-legacy", "fv-no-heap", "fv", "fv-tasks", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1",  "dg0-rk2",  "dg0-rk3",  "dg0-rk4", "dg1-rk1", "dg2-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
+parser.add_argument("-et",  "--end-time",          dest="end_time",         type=float, default=0.001, help="End of simulation" )
+parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.05,  help="Cell size (default 0.05)" )
+
+args = parser.parse_args()
+
+#
+# This part si only for convenience. We could use these symbols to augment
+# the output files, but I don't use this feature here.
+#
+unknowns = {
+          "G":6,
+          "K":6,
+          "theta":1,
+          "Z":3,
+          "lapse":1,
+          "shift":3,
+          "b":3,
+          "dLapse":3,
+          "dxShift":3,
+          "dyShift":3,
+          "dzShift":3,
+          "dxG":6,
+          "dyG":6,
+          "dzG":6,
+          "traceK":1,
+          "phi":1,
+          "P":3,
+          "K0":1,
+        }
+        
+def CoordListFromFile(file,scale):
+  f=open(file)
+  data=[]
+  tem=f.readlines()
+  for line in tem:
+    data.append(list(map(float,line.split(' ')[1:])))
+  print(len(data))
+  data=np.array(data)
+  return data*scale
+
+
+#
+# Create solver class
+#
+my_solver = None
+
+
+#
+# I pick patches of 9x9x9 here, as I then can match stuff exactly with the DG solver of
+# DG order 0. This helps me to debug stuff.
+#
+
+if args.solver=="fv" or args.solver=="fv-tasks":
+  my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FV", 
+                                                                                   patch_size           = 9,
+                                                                                   unknowns             = sum(unknowns.values()),
+                                                                                   auxiliary_variables  = 0,
+                                                                                   min_volume_h         = args.cell_size / 5, 
+                                                                                   max_volume_h         = args.cell_size / 5,
+                                                                                   time_step_relaxation = 0.1,
+                                                                                   pde_terms_without_state = True
+                                                                                   )
+  my_solver.switch_to_heap_storage(True, True)
+  # the task-specific stuff comes later in the implementation 
+if args.solver=="fv-no-heap":
+  my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FV", 
+                                                                                   patch_size           = 9,
+                                                                                   unknowns             = sum(unknowns.values()),
+                                                                                   auxiliary_variables  = 0,
+                                                                                   min_volume_h         = args.cell_size / 5, 
+                                                                                   max_volume_h         = args.cell_size / 5,
+                                                                                   time_step_relaxation = 0.1,
+                                                                                   pde_terms_without_state = True
+                                                                                   )
+if args.solver=="fv-legacy":
+  my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(name                 = "CCZ4FV", 
+                                                                                   patch_size           = 9,
+                                                                                   unknowns             = sum(unknowns.values()),
+                                                                                   auxiliary_variables  = 0,
+                                                                                   min_volume_h         = args.cell_size / 5, 
+                                                                                   max_volume_h         = args.cell_size / 5,
+                                                                                   time_step_relaxation = 0.1)
+  my_solver.switch_to_heap_storage(True, True)
+if args.solver=="fv-legacy-no-heap":
+  my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(name                 = "CCZ4FV", 
+                                                                                   patch_size           = 9,
+                                                                                   unknowns             = sum(unknowns.values()),
+                                                                                   auxiliary_variables  = 0,
+                                                                                   min_volume_h         = args.cell_size / 5, 
+                                                                                   max_volume_h         = args.cell_size / 5,
+                                                                                   time_step_relaxation = 0.1)
+if "fd4-rk" in args.solver:
+  order = int(args.solver[-1])
+  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FD4RK" + str(order), 
+  #my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK" + str(order), 
+                                                               patch_size           = 5,
+                                                               rk_order             = order,
+                                                               unknowns             = sum(unknowns.values()),
+                                                               auxiliary_variables  = 0,
+                                                               min_meshcell_h       = args.cell_size / 3, 
+                                                               max_meshcell_h       = args.cell_size / 3,
+                                                               time_step_relaxation = 0.1)
+  my_solver.switch_to_heap_storage(True, True)
+if "rk" in args.solver and "dg" in args.solver:
+  space_order = int(args.solver[2])
+  time_order  = int(args.solver[6])
+  my_solver   = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name             = "CCZ4DG"  + str(space_order) + "RK" + str(time_order),
+                                                               rk_order             = time_order,
+                                                               polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
+                                                               face_projections     = exahype2.solvers.rkdg.FaceProjections.Solution,
+                                                               unknowns             = sum(unknowns.values()),
+                                                               auxiliary_variables  = 0,
+                                                               min_cell_h           = args.cell_size * space_order, 
+                                                               max_cell_h           = args.cell_size * space_order,
+                                                               time_step_relaxation = 0.1)
+  my_solver.switch_to_heap_storage(True, True)
+
+#
+# Add the compute kernels and initial condition implementations from the 
+# real application to this project, so we we can use them.
+#
+my_solver.add_user_action_set_includes( """
+#include "CCZ4Kernels.h"
+""")
+my_solver.add_user_solver_includes( """
+#include "CCZ4Kernels.h"
+#include "InitialValues.h"
+#include <cstring>
+""")
+
+
+
+
+#
+# I need a couple of constants. I could either replace them directly
+# within the Python snippets below, but I prefer here to go a different
+# way and to export them as proper C++ constants.
+#
+# There are two ways to inject solver constants into Peano: We can either
+# add them to the Makefile as global const expressions, or we can add 
+# them to the ExaHyPE2 solver. The latter is the route we go down here, 
+# as these constants logically belong to the solver and not to the project.
+#
+integer_constants = {
+  "CCZ4LapseType":0, 
+}
+double_constants = {
+  "CCZ4ds":   1.0, 
+  "CCZ4c":    1.0, 
+  "CCZ4e":    1.0, 
+  "CCZ4f":    0.75,
+  "CCZ4bs":   0.0,
+  "CCZ4sk":   0.0,
+  "CCZ4xi":   1.0,
+  "CCZ4itau": 1.0,
+  "CCZ4eta":  1.0,
+  "CCZ4k1":   0.1,
+  "CCZ4k2":   0.0,
+  "CCZ4k3":   0.5,
+  "CCZ4GLMc": 1.2,
+  "CCZ4GLMd": 2.0,
+  "CCZ4mu":   0.2,
+}
+
+for key, value in integer_constants.items():   
+  my_solver.add_solver_constants("static constexpr int {} = {};".format(key, value))
+for key, value in double_constants.items():   
+  my_solver.add_solver_constants("static constexpr double {} = {};".format(key, value))
+
+
+#
+# All of our solver routines (events) will basically delegate to some 
+# functions in the CCZ4 kernels. So we refrain from creating any meaningful
+# C++ implementation and tell the solver directly which routines to delegate
+# to.
+#
+# boundary conditions: remain empty, as we employ periodic BCs anyway
+# ncp:                 call kernel routine
+#
+if ("rk" in args.solver and "dg" in args.solver):
+  my_solver.set_implementation(
+          boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          ncp                  = """
+  double dQdxSerialised[NumberOfUnknowns*3];
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    dQdxSerialised[i+0*NumberOfUnknowns] = 0.0;
+    dQdxSerialised[i+1*NumberOfUnknowns] = 0.0;
+    dQdxSerialised[i+2*NumberOfUnknowns] = 0.0;
+
+    dQdxSerialised[i+normal*NumberOfUnknowns] = dQdx[i];
+  }
+  ::applications::exahype2::ccz4::ncp(BgradQ, Q, dQdxSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+""",
+          flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
+          source_term          = """
+  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+""",
+          refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          eigenvalues          = """
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+"""          ,
+          initial_conditions   = """
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+  ::applications::exahype2::ccz4::gaugeWave(Q, x, 0);
+"""
+        )
+elif ("fd" in args.solver and "rk" in args.solver):
+  my_solver.set_implementation(
+          boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          ncp                  = """
+  double deltaQSerialised[NumberOfUnknowns*3];
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    deltaQSerialised[i+0*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+1*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+2*NumberOfUnknowns] = 0.0;
+
+    deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
+  }
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+""",
+          flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
+          source_term          = """
+  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+""",
+          refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          eigenvalues          = """
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+"""          ,
+          initial_conditions   = """
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+  ::applications::exahype2::ccz4::gaugeWave(Q, meshCellCentre, 0);
+"""
+        )
+  exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, "TP_linear_with_linear_extrap_normal_interp" ) 
+  exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   my_solver, "TP_average_normal_extrap" ) 
+else:    
+  my_solver.set_implementation(
+          boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          ncp                  = """
+  double deltaQSerialised[NumberOfUnknowns*3];
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    deltaQSerialised[i+0*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+1*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+2*NumberOfUnknowns] = 0.0;
+
+    deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
+  }
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+""",
+          flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
+          source_term          = """
+  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+""",
+          refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          eigenvalues          = """
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+"""          ,
+          initial_conditions   = """
+for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
+"""
+        )    
+  if args.solver=="fv-tasks":
+    my_solver._fused_compute_kernel_call_cpu = create_compute_Riemann_kernel_for_Rusanov(
+      my_solver._flux_implementation, 
+      my_solver._ncp_implementation, 
+      my_solver._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step=True, 
+      solver_variant = exahype2.solvers.fv.rusanov.SolverVariant.Multicore,
+      kernel_variant = exahype2.solvers.fv.rusanov.KernelVariant.BatchedAoSHeap
+    )
+  
+    
+# ===============
+# Postprocessing
+# ===============
+if args.solver=="fv":
+  my_solver.postprocess_updated_patch = """
+{
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
+if "fd4-rk" in args.solver:
+  my_solver.postprocess_updated_patch = """
+{
+    constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
+if "rk" in args.solver and "dg" in args.solver:
+  my_solver.postprocess_updated_cell_after_final_linear_combination = """
+{
+    constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
+
+
+
+project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=args.solver + "-" + str(args.cell_size))
+
+
+
+solverconstants=""
+
+project.add_solver(my_solver)
+
+
+
+
+########################################################################################
+# Build the project
+########################################################################################
+
+build_mode = peano4.output.CompileMode.Release
+    
+dimensions  = 3
+offset      = [-0.5, -0.5, -0.5] 
+domain_size = [   1,    1,    1]
+delta_plot  = 0
+
+periodic_boundary_conditions = [False,False,False]       # Periodic BC
+
+project.set_global_simulation_parameters(
+  dimensions,               # dimensions
+  offset,  domain_size,
+  args.end_time,
+  0.0, 
+  delta_plot,
+  periodic_boundary_conditions,
+  8  # plotter precision
+)
+
+project.set_Peano4_installation(args.peanodir, build_mode)
+
+
+#project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
+project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+
+
+
+peano4_project = project.generate_Peano4_project(verbose=args.verbose)
+
+
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/InitialValues.cpp", generated=False )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp", generated=False )
+peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/ccz4" )
+
+peano4_project.generate( throw_away_data_after_generation=False )
+peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
