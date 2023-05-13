@@ -7,7 +7,7 @@ from abc import abstractmethod
 
 
 class AlgorithmStep( object ):
-  """
+  """!
   
   Defines the meta data around one algorithmic step per particle
   

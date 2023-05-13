@@ -9,7 +9,9 @@ import peano4.dastgen2
 
 
 class SPHLeapfrogFixedInteractionRadius(Particle):
-  """
+  """!
+  
+  SPH particle with fixed interaction radius
 
   Same as LeapfrogFixedInteractionRadius but augmented for full SPH.
   Implements the Minimal SPH scheme.
@@ -550,7 +552,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
 
   def algorithm_steps(self):
-    """
+    """!
+    
+    Return algorithm steps
 
     Leapfrog consists basically of four steps per particle. We first
     determine the force. Then we update the velocity by half a timestep and move
@@ -562,6 +566,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     Definitions of the algorithm steps stored in the algorithm_steps_dict are
     placed in _setup_algorithm_steps_dict(self). The dict is set up during
     instantiation of this class.
+    
     """
 
     return [

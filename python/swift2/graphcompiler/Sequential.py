@@ -13,7 +13,9 @@ from swift2.actionsets.AMRLogic import add_mesh_management_optimise_mesh
 
 def serialise_and_map_onto_separate_mesh_traversals(species_sets, 
                                                     verbose=True):
-  """
+  """!
+  
+  Simpest graph compiler mapping each step per particle onto one mesh traversal
   
   Very simple compiler which takes each individual algorithmic step 
   per species and maps it onto one mesh traversal. We won't get any

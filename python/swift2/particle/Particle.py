@@ -6,7 +6,7 @@ import dastgen2
 
 
 class Particle(peano4.toolbox.particles.Particle):
-  """
+  """!
   
   Base class for any particle in the project
   
@@ -75,7 +75,7 @@ class Particle(peano4.toolbox.particles.Particle):
                min_h,
                max_h,
                ):
-    """
+    """!
     
     Initialise the particle
     
