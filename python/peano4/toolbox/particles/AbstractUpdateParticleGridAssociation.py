@@ -186,9 +186,13 @@ unphysical.
 
    
   """
+  
+  DefaultPriority = -65536
+  
   def __init__(self,
                particle_set, 
-               guard="true" ):
+               guard="true"):
+    super( AbstractUpdateParticleGridAssociation, self ).__init__(priority=-65536, parallel=False)
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                      = particle_set.particle_model.name

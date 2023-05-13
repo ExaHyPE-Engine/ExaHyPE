@@ -134,7 +134,7 @@ ataTo=[30097328,0,30097744,0],cellData=30098160,relativePositionToFather=[0,2],i
     void testCreateGenericCellTraversalEvent1();
   public:
     GridTraversalEventGeneratorTest();
-    void run() override;
+    virtual void run() override;
 };
 
 

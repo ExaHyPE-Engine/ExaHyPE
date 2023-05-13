@@ -51,7 +51,7 @@ class exahype2::dg::tests::CellIntegralTest : public tarch::tests::TestCase {
 
     virtual ~CellIntegralTest() = default;
 
-    void run() override;
+    virtual void run() override;
 };
 
 

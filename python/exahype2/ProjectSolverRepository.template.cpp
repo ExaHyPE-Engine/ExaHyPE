@@ -13,6 +13,7 @@
 
 {% for item in TRACERS -%}
 #include "vertexdata/{{ item }}.h"
+{# Comment to ensure that jinja2 adds a new line#}
 {%- endfor %}
 
 #include <algorithm>
@@ -39,13 +40,15 @@ toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
 
 {% for item in SOLVERS -%}
 {{ item[0] }} {{ item[1] }};
+{# Comment to ensure that jinja2 adds a new line#}
 {%- endfor %}
 
 
 bool mayPlot() {
   bool result = true;
   {% for item in SOLVERS -%}
-    result &= {{ item[1] }}.mayPlot();
+  result &= {{ item[1] }}.mayPlot();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
@@ -54,7 +57,8 @@ bool mayPlot() {
 bool isFirstGridSweepOfTimeStep() {
   bool result = true;
   {% for item in SOLVERS -%}
-    result &= {{ item[1] }}.isFirstGridSweepOfTimeStep();
+  result &= {{ item[1] }}.isFirstGridSweepOfTimeStep();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
@@ -63,7 +67,8 @@ bool isFirstGridSweepOfTimeStep() {
 bool isLastGridSweepOfTimeStep() {
   bool result = true;
   {% for item in SOLVERS -%}
-    result &= {{ item[1] }}.isLastGridSweepOfTimeStep();
+  result &= {{ item[1] }}.isLastGridSweepOfTimeStep();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
@@ -72,7 +77,8 @@ bool isLastGridSweepOfTimeStep() {
 double getMinTimeStamp(bool ofCurrentlyRunningGridSweep) {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
-    result = std::min( result, {{ item[1] }}.getMinTimeStamp(ofCurrentlyRunningGridSweep) );
+  result = std::min( result, {{ item[1] }}.getMinTimeStamp(ofCurrentlyRunningGridSweep) );
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
@@ -81,7 +87,8 @@ double getMinTimeStamp(bool ofCurrentlyRunningGridSweep) {
 double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) {
   double result = 0.0;
   {% for item in SOLVERS -%}
-    result = std::max( result, {{ item[1] }}.getMaxTimeStamp(ofCurrentlyRunningGridSweep) );
+  result = std::max( result, {{ item[1] }}.getMaxTimeStamp(ofCurrentlyRunningGridSweep) );
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
@@ -90,7 +97,8 @@ double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) {
 double getMinMeshSize() {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
-    result = std::min( result, {{ item[1] }}.getMinMeshSize() );
+  result = std::min( result, {{ item[1] }}.getMinMeshSize() );
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
@@ -99,7 +107,8 @@ double getMinMeshSize() {
 double getMaxMeshSize() {
   double result = 0.0;
   {% for item in SOLVERS -%}
-    result = std::max( result, {{ item[1] }}.getMaxMeshSize() );
+  result = std::max( result, {{ item[1] }}.getMaxMeshSize() );
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
@@ -108,7 +117,8 @@ double getMaxMeshSize() {
 double getMaxAdmissibleMeshSize() {
   double result = 0.0;
   {% for item in SOLVERS -%}
-    result = std::max( result, {{ item[1] }}.MaxAdmissibleCellH );
+  result = std::max( result, {{ item[1] }}.MaxAdmissibleCellH );
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
@@ -117,7 +127,8 @@ double getMaxAdmissibleMeshSize() {
 double getMinAdmissibleMeshSize() {
   double result = 0.0;
   {% for item in SOLVERS -%}
-    result = std::max( result, {{ item[1] }}.MinAdmissibleCellH );
+  result = std::max( result, {{ item[1] }}.MinAdmissibleCellH );
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
@@ -126,7 +137,8 @@ double getMinAdmissibleMeshSize() {
 double getMinTimeStepSize() {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
-    result = std::min( result, {{ item[1] }}.getMinTimeStepSize() );
+  result = std::min( result, {{ item[1] }}.getMinTimeStepSize() );
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
@@ -136,6 +148,7 @@ double getMaxTimeStepSize() {
   double result = 0.0;
   {% for item in SOLVERS -%}
   result = std::max( result, {{ item[1] }}.getMaxTimeStepSize() );
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
 }
@@ -144,6 +157,7 @@ double getMaxTimeStepSize() {
 void startGridConstructionStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.startGridConstructionStep();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   logTraceIn( "GridConstructionStep()" );
 }
@@ -152,6 +166,7 @@ void startGridConstructionStep() {
 void startGridInitialisationStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.startGridInitialisationStep();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   logTraceIn( "GridInitialisationStep()" );
 }
@@ -165,6 +180,7 @@ void startTimeStep(
 ) {
   {% for item in SOLVERS -%}
   {{ item[1] }}.startTimeStep(minTimeStamp,maxTimeStamp,minTimeStepSize,maxTimeStepSize);
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   logTraceIn( "TimeStep()" );
 }
@@ -178,6 +194,7 @@ void startPlottingStep(
 ) {
   {% for item in SOLVERS -%}
   {{ item[1] }}.startPlottingStep(minTimeStamp,maxTimeStamp,minTimeStepSize,maxTimeStepSize);
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   logTraceIn( "PlottingStep()" );
 }
@@ -186,10 +203,12 @@ void startPlottingStep(
 void finishTimeStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishTimeStep();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
   {% for item in TRACERS -%}
   vertexdata::{{ item }}::finishedTraversal();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
   ::exahype2::RefinementControlService::getInstance().finishStep();
@@ -205,10 +224,12 @@ void finishTimeStep() {
 void finishGridConstructionStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishGridConstructionStep();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
   {% for item in TRACERS -%}
   vertexdata::{{ item }}::finishedTraversal();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
   ::exahype2::RefinementControlService::getInstance().finishStep();
@@ -266,10 +287,12 @@ void finishGridConstructionStep() {
 void finishGridInitialisationStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishGridInitialisationStep();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
   {% for item in TRACERS -%}
   vertexdata::{{ item }}::finishedTraversal();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -280,10 +303,12 @@ void finishGridInitialisationStep() {
 void finishPlottingStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishPlottingStep();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
   {% for item in TRACERS -%}
   vertexdata::{{ item }}::finishedTraversal();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
   plotFilter.finishPlottingStep();
@@ -299,6 +324,7 @@ void startSimulation() {
   {% endfor %}
   {% for item in SOLVERS -%}
   {{ item[1] }}.startSimulation();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
 }
@@ -307,6 +333,7 @@ void startSimulation() {
 void finishSimulation() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishSimulation();
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   loadBalancer.finishStep();
   ::exahype2::RefinementControlService::getInstance().finishStep();

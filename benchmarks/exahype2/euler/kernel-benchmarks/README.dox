@@ -32,6 +32,7 @@ that I tend to build from time to time.
 
 I typically create a bunch of benchmarks around the Finite Volume solvers:
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
     export PYTHONPATH=../../../../python
 
     python3 fv-rusanov-kernel-benchmarks.py --dim 2 --patch-size 4 
@@ -41,14 +42,19 @@ I typically create a bunch of benchmarks around the Finite Volume solvers:
     python3 fv-rusanov-kernel-benchmarks.py --dim 3 --patch-size 4 
     python3 fv-rusanov-kernel-benchmarks.py --dim 3 --patch-size 6 
     python3 fv-rusanov-kernel-benchmarks.py --dim 3 --patch-size 8 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ## Clean up
+
 You can throw away all of the glue code after a successful build. This is 
 triggered by
 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
      rm Abstract* Readme* Makefile Constants.h
      rm -rf celldata facedata observers repositories tasks
      rm *.o
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ## Run experiments
 
@@ -57,7 +63,9 @@ All of them produce outputs in a similar way, so it is easier to interpret the
 outcomes. For most runs, you don't have to specify anything. However, you might
 want to call
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
       ./my-benchmark --help
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It enlists the standard ExaHyPE command line arguments that every code has. Most
 of them play no role here, but the thread count and the gpu filters do, i.e. you
@@ -75,10 +83,12 @@ by default.
 
 I typically run the Finite Volume solvers with
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
     ./kernel-benchmark-fv-2d-patch-size-4 --threads 1 -gpus all
     ./kernel-benchmark-fv-2d-patch-size-4 --threads 2 -gpus all
     ./kernel-benchmark-fv-2d-patch-size-4 --threads 4 -gpus all
     ./kernel-benchmark-fv-2d-patch-size-4 --threads 8 -gpus all
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 to obtain a first insight into how the throughput changes as more and more 
 threads hit the GPUs with kernel invocations.
@@ -113,7 +123,10 @@ freedom.
 If you want to use the pre-manufactured visualisation scripts, you have to pipe
 the program output into a file. After that, invoke
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
     python3 create-scaling-plot.py outputfile
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 ## Science case
 
@@ -148,7 +161,6 @@ synchronisation with a neighbour.
 
 
 @image html src/exahype2/fv/rusanov/Rusanov00.png
-<img src="../../../../src/exahype2/fv/rusanov/Rusanov00.png" />
 
 
 So we are given the patch (grey) plus the halo cells (red, blue, yellow, green).
@@ -203,9 +215,12 @@ has to exploit the GPU's concurrency. Again, we can simulate what happens
 if multiple threads try to fire kernels to the GPU at the same time.
 
 ### Troubleshooting (with SYCL and the other back-ends)
+
 Before you dive into details, only run with 
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
      --threads 1 -gpus 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~
      
 i.e. with one thread and one GPU. If one thread and one GPU do not work, 
 it makes no sense to continue if you know that this simple setup fails
@@ -219,11 +234,107 @@ understand and definitely run with whatever system you employ.
 If you find your code crashing, I recommend that you comment out the 
 kernel calls. The SYCL calls for example can be found in the routine
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
      void submitSYCLKernels(int patches, int device, int thread) {
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 and I suggest that you comment all the testStatelessVariantOnDevice()
 calls in there out if you encounter issues. Check if the code works
 without the kernels, and then comment them in again one by one.
+
+
+
+
+'s implementation of the Euler equations is shipped with a benchmark to
+assess the speed of the compute kernels. The benchmark solely computes
+the throughput on one core or one GPU and thus provides key information
+how efficient these core kernels perform on your system. It neglects
+other effects such as multithreading or MPI data exchange, grid
+management, time stepping behaviour, halo data exchange, and so forth.
+To run the benchmark, follow the following steps:
+
+[\[page:exahype:kernel-benchmark\]]{#page:exahype:kernel-benchmark
+label="page:exahype:kernel-benchmark"}
+
+1.  Clone the repository (cmp. page ). Skip this step if you already
+    have a  checkout, i.e. if you have completed this step once.
+
+    git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
+
+2.  Create the build system (cmp. page ). Skip this step if you already
+    have a working configure, i.e. if you have completed this step once.
+
+    libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .;
+    automake --add-missing
+
+3.  Configure  with the flags `–enable-exahype`,
+    `–enable-loadbalancing`, `–enable-blockstructured`:
+
+    ./configure --enable-exahype --enable-loadbalancing
+    --enable-blockstructured
+
+    These are the core extensions (toolboxes) required for the
+    benchmark. If you want to test your system with OpenMP offloading,
+    e.g., you will need an additional `–with-gpu=omp`. Though the
+    benchmarks in principle assess only the core performance of the
+    compute kernels, they can mimick the concurrent offloading from
+    multiple threads. To enable this feature, you have to activate
+    multithreading, too (add `–with-multithreading=omp` for example).
+    Run `./configure –help` for various combinations of GPU and
+    multithreading back-ends. Finally, you will have to add additional
+    flags on particular system. In particular the flags `CXX`, and
+    `LDFLAGS` to pick your compiler, you compiler settings and your
+    linker parameters. Chapter
+    [\[chapter:selected-HPC-platforms\]](#chapter:selected-HPC-platforms){reference-type="ref"
+    reference="chapter:selected-HPC-platforms"} discusses some popular
+    choices. Skip this step if you have already completed it once.
+
+4.  Recompile your  code by typing in
+
+    make
+
+5.  Set the `PYTHONPATH` and run the benchmark script within the Euler
+    example directory:
+
+    cd benchmarks/exahype2/euler/kernel-benchmarks export
+    PYTHONPATH=../../../../python python3
+    fv-rusanov-kernel-benchmarks.py
+
+    This builds a default benchmarks for 2d with $17 \times 17$ patches.
+
+6.  Run the benchmark
+
+    ./kernel-benchmark-fv-2d-patch-size-17 --threads 1 --gpus all
+
+    which should give you an output similar to
+
+7.  The Python script generating and the benchmark supports different
+    options and benchmark settings. Type in `–help` for additional
+    information. The statement above assesses the kernel performance if
+    only one thread is used. Offloading to the GPUs from multiple
+    threads is notoriously tricky, while running a kernel benchmark on
+    multiple cores stresses the interconnect. I therefore always
+    recommend to start with the single core measurements. Finally,
+    there's a `kernel-benchmark.md` markup file which describes further
+    settings and also discusses built-in postprocessing options.
+
+The benchmark gives you the total runtime and cost per degree of freedom
+update (throughput) on one core or GPU, respectively. Data is provided
+for various patch sizes batched (fused) into one large patch assembly,
+for patches which exploit stateless operations, and different kernel
+realisations.
+
+Baseline is what you get with 's most basic configuration and its
+flexible architecture, where users can tailor each PDE term towards
+their needs. The other variants exploit hints how to tune these
+computations and try out various optimisations, algorithmic
+reformulations and internal data formats for temporary data. Please note
+that we assess only the Euler equations here, i.e. we are extremely
+bandwidth-bound and induce almost no load. All GPU data comprise all
+data transfer and memory allocations on the GPU. They provide fair
+measurements and not raw compute figures. We have data for SYCL,
+OpenMP and C++  GPU benchmarks.
+
 
 
 */

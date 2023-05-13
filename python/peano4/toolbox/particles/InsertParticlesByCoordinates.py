@@ -43,6 +43,7 @@ class InsertParticlesByCoordinates(ActionSet):
       relevance for your application.
 
     """
+    super(InsertParticlesByCoordinates,self).__init__(priority=1, parallel=False)
 
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name

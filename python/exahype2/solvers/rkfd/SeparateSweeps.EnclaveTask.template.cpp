@@ -121,6 +121,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 {}
 
 
+#ifdef UseSmartMPI
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
   #ifdef UseSmartMPI
   return true;
@@ -130,7 +131,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
 }
 
 
-#ifdef UseSmartMPI
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
   computeTask();
   if (_remoteTaskId != -1) {
