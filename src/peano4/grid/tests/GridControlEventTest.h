@@ -102,7 +102,7 @@ peano4::grid::merge(...)  merge two adjacent events ((refinementControl=Refine,o
     void testSortWithinMerge();
   public:
     GridControlEventTest();
-    void run() override;
+    virtual void run() override;
 };
 
 

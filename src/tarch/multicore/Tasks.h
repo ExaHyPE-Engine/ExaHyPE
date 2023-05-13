@@ -216,7 +216,7 @@ namespace tarch {
       public:
         TaskWithCopyOfFunctor( int taskType, int priority, const std::function<bool()>& taskFunctor );
 
-        bool run() override;
+        virtual bool run() override;
     };
 
 
@@ -233,7 +233,7 @@ namespace tarch {
       public:
         TaskWithoutCopyOfFunctor( int taskType, int priority, std::function<bool()>& taskFunctor );
 
-        bool run() override;
+        virtual bool run() override;
     };
 
 

@@ -23,21 +23,21 @@ class tarch::la::tests::GramSchmidtTest: public tarch::tests::TestCase {
    */
   void testModifiedGramSchmidt ();
 
-public:
+  public:
 
-  /**
-   * Cosntructor.
-   */
-  GramSchmidtTest ();
+    /**
+     * Cosntructor.
+     */
+    GramSchmidtTest ();
 
-  /**
-   * Destructor, empty.
-   */
-  virtual ~GramSchmidtTest () {}
+    /**
+     * Destructor, empty.
+     */
+    virtual ~GramSchmidtTest () {}
 
-  /**
-   * This routine is triggered by the TestCaseCollection
-   */
-  void run() override;
+    /**
+     * This routine is triggered by the TestCaseCollection
+     */
+    virtual void run() override;
 };
 

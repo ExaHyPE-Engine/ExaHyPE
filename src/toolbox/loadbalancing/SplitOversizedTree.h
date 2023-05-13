@@ -74,14 +74,14 @@ class toolbox::loadbalancing::SplitOversizedTree: public toolbox::loadbalancing:
      * increment within the for loop such that module imbalances are at least
      * spread out.
      */
-    void finishStep() override;
+    virtual void finishStep() override;
 
     /**
      * I need the stats here mainly for debugging purposes. The load balancing
      * alread dumps information per time step. This routine however is more
      * elaborate/detailed and not used by default.
      */
-    std::string toString() const override;
+    virtual std::string toString() const override;
 
   private:
     static tarch::logging::Log  _log;

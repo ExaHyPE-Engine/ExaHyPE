@@ -118,7 +118,7 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     /**
      * Computes a task and bookmarks the outcome
      */
-    bool run() override;
+    virtual bool run() override;
 
     /**
      * Computes a task without bookmarking the outcome.
