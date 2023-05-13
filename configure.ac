@@ -868,13 +868,13 @@ fi
 if test "$use_libxsmm" != false; then
   #Libxsmm
   echo "Checking whether libxsmm needs to be installed or built"
-  if @<:@ ! -d Submodules @:>@; then
-    mkdir Submodules
-    echo "Created libxsmm directory in Submodules"
+  if @<:@ ! -d submodules @:>@; then
+    mkdir submodules
+    echo "Created libxsmm directory in submodules"
   fi
-  if @<:@ ! -e Submodules/libxsmm/.git @:>@; then
-    echo "Initializing libxsmm in Submodules/libxsmm, this may take a while"
-    cd Submodules
+  if @<:@ ! -e submodules/libxsmm/.git @:>@; then
+    echo "Initializing libxsmm in submodules/libxsmm, this may take a while"
+    cd submodules
     git clone https://github.com/libxsmm/libxsmm.git
     cd libxsmm
     git checkout 9b7bbb95c
@@ -885,12 +885,12 @@ if test "$use_libxsmm" != false; then
   fi
   
   # build libxsmm
-  if @<:@ ! -d Submodules/libxsmm/bin @:>@ || @<:@ ! -e Submodules/libxsmm/bin/libxsmm_gemm_generator @:>@; then
+  if @<:@ ! -d submodules/libxsmm/bin @:>@ || @<:@ ! -e submodules/libxsmm/bin/libxsmm_gemm_generator @:>@; then
     REBUILD_LIBXSMM=true
   fi
   if @<:@ "$REBUILD_LIBXSMM" = true @:>@; then
     echo "Building libxsmm gemm generator"
-    cd Submodules/libxsmm
+    cd submodules/libxsmm
     git restore samples
     make realclean --silent
     make generator --silent

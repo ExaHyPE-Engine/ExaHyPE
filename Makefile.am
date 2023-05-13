@@ -5,3 +5,5 @@ doc: docs
 
 docs:
 	doxygen documentation/Doxyfile
+
+ACLOCAL_AMFLAGS = -I m4

@@ -385,9 +385,13 @@ did search for a file """ + input_file )
     if generated:
       if self.generated_hfiles.count(filename)==0:
         self.generated_hfiles.append( filename )
+      if self.hfiles.count(filename) > 0:
+        self.hfiles.remove(filename)
     else:
       if self.hfiles.count(filename)==0:
         self.hfiles.append( filename )
+      if self.generated_hfiles.count(filename) > 0:
+        self.generated_hfiles.remove(filename)
 
   def add_cpp_file(self,filename,generated=True):
     """
@@ -409,9 +413,14 @@ did search for a file """ + input_file )
     if generated:
       if self.generated_cppfiles.count(filename)==0:
         self.generated_cppfiles.append( filename )
+      # We ensure that we only add a .cpp file once -> otherwise we would get duplicated symbols errors.
+      if self.cppfiles.count(filename) > 0:
+        self.cppfiles.remove(filename)
     else:
       if self.cppfiles.count(filename)==0:
         self.cppfiles.append( filename )
+      if self.generated_cppfiles.count(filename) > 0:
+        self.generated_cppfiles.remove(filename)
 
   def add_Fortran_file(self,filename,generated=True):
     """
@@ -438,9 +447,13 @@ did search for a file """ + input_file )
     if generated:
       if self.generated_fortranfiles.count(filename)==0:
         self.generated_fortranfiles.append( filename )
+      if self.fortranfiles.count(filename) > 0:
+        self.fortranfiles.remove(filename)
     else:
       if self.fortranfiles.count(filename)==0:
         self.fortranfiles.append( filename )
+      if self.generated_fortranfiles.count(filename) > 0:
+        self.generated_fortranfiles.remove(filename)
 
   def add_Fortran_module(self,module_file,force=False):
     """
