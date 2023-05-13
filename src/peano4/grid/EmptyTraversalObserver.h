@@ -27,33 +27,33 @@ class peano4::grid::EmptyTraversalObserver: public peano4::grid::TraversalObserv
     static tarch::logging::Log  _log;
 
   public:
-    void beginTraversal(
+    virtual void beginTraversal(
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h
     ) override;
 
-    void endTraversal(
+    virtual void endTraversal(
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h
     ) override;
 
-    void enterCell(
+    virtual void enterCell(
       const GridTraversalEvent&  event
     ) override;
 
-    void leaveCell(
+    virtual void leaveCell(
       const GridTraversalEvent&  event
     ) override;
 
-    void loadCell(
+    virtual void loadCell(
       const GridTraversalEvent&  event
     ) override;
 
-    void storeCell(
+    virtual void storeCell(
       const GridTraversalEvent&  event
     ) override;
 
-    TraversalObserver* clone(int spacetreeId) override;
-    std::vector< GridControlEvent > getGridControlEvents() const override;
+    virtual TraversalObserver* clone(int spacetreeId) override;
+    virtual std::vector< GridControlEvent > getGridControlEvents() const override;
 };
 

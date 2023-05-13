@@ -11,14 +11,31 @@ from peano4.solversteps.StepToObserver  import StepToObserver
 #
 
 class Step:
-  """
-    Most generic version of a solver step. A solverstep describes what Peano4 
+  """!
+  
+    One step
+  
+    Most generic version of a solver step. A solverstep describes what Peano 4 
     should do when it runs over the grid. As users have to specify which pieces
     of data from the data model are used by the solver step, it can handle all
     the user data stack flow.
     
     This class also is responsible to generate all function signatures of all 
-    the steps, observers and action sets. 
+    the steps, observers and action sets. In the Peano terminology, a step 
+    corresponds to an observer. For any given step, we run through the mesh 
+    and pass the traversal automaton an observer which accepts events (aka
+    state transition observations).
+    
+    It is the observer's job to then distribute these observations, broken 
+    down into grid actions such as "touch vertex first time", among the action
+    sets that are tied to this observer. In Python you can have one action set
+    and associate it with several observers. In the C++ code, we will flatten
+    such a relation, i.e. create the corresponding action set multiple times.
+    
+    @see peano4.solversteps.ActionSet
+    
+    name: String
+      This name is used to create the underlying action set later on
   """
   def __init__(self,name,add_user_defined_actions = True):
     """
@@ -50,8 +67,11 @@ class Step:
     self.action_sets = []
 
   
-  def add_action_set(self,action_set,append_at_end=True):
-    """
+  def add_action_set(self,action_set):
+    """!
+    
+     Add a new action set to this mesh traversal step
+    
      Each step holds a set of action_sets. They describe what the step actually
      should do whenever it loads a vertex, runs into a cell, and so forth. By
      default, the step holds one user-defined action_set (UserActionSet) which means
@@ -61,11 +81,18 @@ class Step:
      operations of a action_set are invoked exactly in the order you add them to 
      the step. All the delete, leave, ... operations are invokved in reversed
      order.
+
+     I used to have a flag append_at_end with the default True, but this one is 
+     now replaced, as each action set knows its priority.
     """
-    if append_at_end:
-      self.action_sets.append(action_set)
-    else:
-      self.action_sets.insert(0, action_set)
+    self.action_sets.append(action_set)
+    
+    for i in range(0,len(self.action_sets)):
+      for j in range(i+1,len(self.action_sets)):
+        if self.action_sets[i].priority > self.action_sets[j].priority:
+          tmp = self.action_sets[i]
+          self.action_sets[i] = self.action_sets[j]
+          self.action_sets[j] = tmp
 
     
   def set_project(self,project):

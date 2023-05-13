@@ -51,25 +51,25 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public peano4::grid::TraversalO
      */
     {{CLASSNAME}}(int spacetreeId = SpacetreePrototype);
 
-    void loadCell(
+    virtual void loadCell(
      const peano4::grid::GridTraversalEvent&  event
     ) override;
 
-    void enterCell(
+    virtual void enterCell(
      const peano4::grid::GridTraversalEvent&  event
     ) override;
 
-    void leaveCell(
+    virtual void leaveCell(
       const peano4::grid::GridTraversalEvent&  event
     ) override;
 
-    void storeCell(
+    virtual void storeCell(
       const peano4::grid::GridTraversalEvent&  event
     ) override;
 
-    TraversalObserver* clone(int spacetreeId) override;
+    virtual TraversalObserver* clone(int spacetreeId) override;
 
-    std::vector< peano4::grid::GridControlEvent > getGridControlEvents() const override;
+    virtual std::vector< peano4::grid::GridControlEvent > getGridControlEvents() const override;
 
     /**
      * This routine is not called by the spacetree set or the spacetree. It is
@@ -78,32 +78,32 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public peano4::grid::TraversalO
     static void prepareTraversal();
     static void unprepareTraversal();
 
-    void beginTraversal(
+    virtual void beginTraversal(
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h
     ) override;
 
-    void endTraversal(
+    virtual void endTraversal(
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h
     ) override;
     
-    void exchangeAllVerticalDataExchangeStacks( int masterId ) override;
-    void exchangeAllHorizontalDataExchangeStacks( bool symmetricDataCardinality ) override;
-    void exchangeAllPeriodicBoundaryDataStacks() override;
+    virtual void exchangeAllVerticalDataExchangeStacks( int masterId ) override;
+    virtual void exchangeAllHorizontalDataExchangeStacks( bool symmetricDataCardinality ) override;
+    virtual void exchangeAllPeriodicBoundaryDataStacks() override;
     
-    void streamDataFromSplittingTreeToNewTree( int newWorker ) override;
-    void streamDataFromJoiningTreeToMasterTree( int masterId ) override;
+    virtual void streamDataFromSplittingTreeToNewTree( int newWorker ) override;
+    virtual void streamDataFromJoiningTreeToMasterTree( int masterId ) override;
     
-    void finishAllOutstandingSendsAndReceives() override;
+    virtual void finishAllOutstandingSendsAndReceives() override;
     
-    void sendVertex(int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) override;
-    void sendFace(  int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) override;
-    void sendCell(                int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) override;
+    virtual void sendVertex(int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) override;
+    virtual void sendFace(  int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) override;
+    virtual void sendCell(                int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) override;
 
-    void receiveAndMergeVertex( int position, int fromStack, SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;
-    void receiveAndMergeFace(   int position, int fromStack, SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;
-    void receiveAndMergeCell(                 int fromStack, SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;
+    virtual void receiveAndMergeVertex( int position, int fromStack, SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;
+    virtual void receiveAndMergeFace(   int position, int fromStack, SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;
+    virtual void receiveAndMergeCell(                 int fromStack, SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) override;
 
-    void deleteAllStacks() override;
+    virtual void deleteAllStacks() override;
 };

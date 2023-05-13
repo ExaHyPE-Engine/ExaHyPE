@@ -44,13 +44,13 @@ class toolbox::loadbalancing::NoLoadBalancing: public toolbox::loadbalancing::Ab
 
     virtual ~NoLoadBalancing() = default;
 
-    void finishStep() override;
+    virtual void finishStep() override;
 
     /**
      * You cannot enable the no load balancing. This routine therefore sets
      * value to false and calls the superclass.
      */
-    void enable( bool value ) override;
+    virtual void enable( bool value ) override;
 };
 
 

@@ -269,6 +269,7 @@ class RungeKuttaDG(object):
     self.select_dofs_to_print             = None
     
     self._action_set_postprocess_solution = None   
+    self._action_set_preprocess_solution  = None   
 
     self._compute_eigenvalue        = False
     
@@ -650,6 +651,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     
     if self._action_set_postprocess_solution==None:
       self._action_set_postprocess_solution                                             = exahype2.solvers.rkdg.actionsets.EmptyPostprocessSolution(solver=self)
+    if self._action_set_preprocess_solution==None:
+      self._action_set_preprocess_solution                                              = exahype2.solvers.rkdg.actionsets.EmptyPreprocessSolution(solver=self)
 
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
@@ -792,6 +795,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      
     
     """
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_initial_conditions ) 
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
@@ -933,6 +937,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_linear_combination_of_estimates )

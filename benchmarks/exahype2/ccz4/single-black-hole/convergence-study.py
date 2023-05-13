@@ -20,7 +20,7 @@ from CCZ4Solver import CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeS
 # for the coupling
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
-PatchSize = 6
+PatchSize = 4
 
 
 def add_constraints_to_primary_solver(solver):
@@ -33,7 +33,7 @@ def add_constraints_to_primary_solver(solver):
     """
 
 
-def construct_FV_solver_as_FD4_limiter(min_cell_size, max_cell_size):
+def construct_FV_limiter(min_cell_size, max_cell_size):
     """!
     
     Construct the Finite Volume (limiter) scheme
@@ -48,7 +48,7 @@ def construct_FV_solver_as_FD4_limiter(min_cell_size, max_cell_size):
 
     class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         # todo muss viel groesser sein
-      UpscalingFactor = 2
+      UpscalingFactor = 5
         
       def __init__(self,
                    name, 
@@ -67,58 +67,6 @@ def construct_FV_solver_as_FD4_limiter(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 """        
 
-        self._preprocess_reconstructed_patch += """
-  if (
-    repositories::InstanceOf""" + name + """_FV.isLastGridSweepOfTimeStep()
-    and
-    repositories::InstanceOf""" + name + """_FV.isCellOverlappingWithBHImpactArea(marker) 
-    and
-    not repositories::InstanceOf""" + name + """_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) 
-    and
-    not marker.willBeRefined()
-  ) { 
-    logTraceIn( "touchCellFirstTime(...)-interpolate" );
-    
-    ::toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
-      repositories::InstanceOf""" + name + """_FD4.NumberOfGridCellsPerPatchPerAxis,
-      
-      repositories::InstanceOf""" + name + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-      3, // halo in FD4
-      0, // halo in FV
-      repositories::InstanceOf""" + name + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + name + """_FV.NumberOfAuxiliaryVariables,
-      oldQWithHalo, // fineGridCell""" + name + """_FD4Q.value,
-      fineGridCell""" + name + """_FVQ.value
-    );
-  
-    logTraceOut( "touchCellFirstTime(...)-interpolate" );
-  }
-
-"""
-
-        self._postprocess_updated_patch += """
-  if (
-    repositories::InstanceOf""" + name + """_FV.isLastGridSweepOfTimeStep()
-    and
-    repositories::InstanceOf""" + name + """_FV.isCellOverlappingWithBHImpactArea(marker) 
-    and
-    repositories::InstanceOf""" + name + """_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) 
-    and
-    not marker.willBeRefined()
-  ) { 
-    logTraceIn( "touchCellFirstTime(...)-restrict" );
-    
-    ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
-      repositories::InstanceOf""" + name + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-      repositories::InstanceOf""" + name + """_FD4.NumberOfGridCellsPerPatchPerAxis,
-      repositories::InstanceOf""" + name + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + name + """_FV.NumberOfAuxiliaryVariables,
-      fineGridCell""" + name + """_FVQ.value,
-      fineGridCell""" + name + """_FD4Q.value
-    );
-  
-    logTraceOut( "touchCellFirstTime(...)-restrict" );
-  }  
-"""
-        
   
       def _store_cell_data_default_guard(self):
         """!
@@ -143,18 +91,6 @@ def construct_FV_solver_as_FD4_limiter(min_cell_size, max_cell_size):
         return """(""" + super( Limiter, self )._load_face_data_default_guard() + """
                     and repositories::InstanceOf""" + self._name + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
                   )"""
-
-
-      def create_action_sets(self):
-        """!
-        
-        Tailor action set behaviour
-        
-        Basically ensure that we do not solve on the outer cells.
-        
-        """
-        super( Limiter, self ).create_action_sets()
-        #self._action_set_update_cell.guard = "(" + self._action_set_update_cell.guard + " and repositories::InstanceOf" + self._name + ".areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) )"
         
     
     my_solver = Limiter(name           = "CCZ4SBH" , 
@@ -172,14 +108,16 @@ def construct_FV_solver_as_FD4_limiter(min_cell_size, max_cell_size):
     return my_solver
 
 
-def construct_FD_solver(min_cell_size, max_cell_size):
+def construct_limited_FD4_solver(min_cell_size, max_cell_size):
     """!
     
-    Construct finite differences solver
+    Construct 4th order Finite Differences solver with a limiter
     
     The FD scheme is our primary solver, i.e. the one we wanna use (almost) 
     everywhere. Hence, we have to be sure that we use the right boundary 
-    conditions. In our case, that should be Sommerfeld ones.
+    conditions. In our case, that should be Sommerfeld ones. As we work 
+    with a limited FD4 solver, we have to ensure that we get the 
+    @ref benchmarks_exahype2_ccz4_single_black_hole "solver coupling" right.
     
     """
 
@@ -189,17 +127,11 @@ def construct_FD_solver(min_cell_size, max_cell_size):
       Construct primary solver
       
       The primary solver is a plain CCZ4 FD4 solver with enclave tasking. There
-      are only two small modifications in line with the @ref benchmarks_exahype2_ccz4_single_black_hole "overall algorithmic sketch" of 
-      the single black hole solver: 
-      
-      1. We ensure that those cells that will feed their outcome as boundary 
-         layers into the FV scheme are treated as skeleton cells. For this,
-         we plug into create_action_sets() and augment the template with an 
-         additional if that resets the marker in such cells to skeleton.
+      are some modification though:
          
-      Further to that, we ensure that we use Sommerfeld boundary conditions. 
-      This means that we have to replace the whole generic boundary treatment
-      with a bespoke action set.      
+      1. We ensure that we use Sommerfeld boundary conditions. This means that 
+         we have to replace the whole generic boundary treatment with a bespoke
+         action set.      
 
       """
       def __init__(self,
@@ -207,8 +139,6 @@ def construct_FD_solver(min_cell_size, max_cell_size):
                    min_cell_size,
                    max_cell_size
                    ):
-          
-    # @todo raus damit
         self._name_without_FD4_extension = name
         
         CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
@@ -220,6 +150,7 @@ def construct_FD_solver(min_cell_size, max_cell_size):
                                                                         )
 
         self._user_action_set_includes += """
+#include "toolbox/blockstructured/Projection.h"        
 #include "toolbox/blockstructured/Restriction.h"        
 #include "toolbox/blockstructured/Interpolation.h"        
 """        
@@ -251,10 +182,6 @@ def construct_FD_solver(min_cell_size, max_cell_size):
         """
         super( PrimarySolver, self ).create_action_sets()
         
-#        self._action_set_update_cell.additional_skeleton_guard = """
-#  repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
-#"""        
-
         self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
           double Qinf[59]={1.0, 0.0, 0.0, 1.0, 0.0, 1.0,        //q0-5
              0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                      //q6-11
@@ -303,6 +230,72 @@ def construct_FD_solver(min_cell_size, max_cell_size):
           );
           """
  
+        self._action_set_preprocess_solution = exahype2.solvers.rkfd.actionsets.PreprocessReconstructedSolutionWithHalo(self,
+"""
+    double* interpolatedFVDataWithHalo = ::tarch::allocateMemory<double>(
+        (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
+      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
+      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
+      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables),
+      ::tarch::MemoryLocation::Heap
+    );
+
+    ::toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FD4.NumberOfGridCellsPerPatchPerAxis,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      3, // halo in FD4
+      1, // halo in FV
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
+      oldQWithHalo, 
+      interpolatedFVDataWithHalo
+    );
+
+    ::toolbox::blockstructured::projectPatchHaloOntoFaces(
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      1,      // int    haloSize,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
+      interpolatedFVDataWithHalo,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(0).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(1).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(2).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(3).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(4).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(5).value
+    );
+    
+    ::tarch::freeMemory(interpolatedFVDataWithHalo, tarch::MemoryLocation::Heap );
+""")
+
+        self._action_set_preprocess_solution.guard = "(" + self._action_set_preprocess_solution.guard + """
+                                                      and 
+                                                      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
+                                                      and
+                                                      not marker.willBeRefined()
+                                                      )""" 
+
+#        self._action_set_postprocess_solution = exahype2.solvers.rkfd.actionsets.PatchWisePostprocessSolution(self,
+#                                                                                                              """
+#  if (
+#    repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
+#    and
+#    not marker.willBeRefined()
+#  ) { 
+#    logTraceIn( "touchCellFirstTime(...)-restrict" );
+#    
+#    ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
+#      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+#      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FD4.NumberOfGridCellsPerPatchPerAxis,
+#      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
+#      fineGridCell""" + self._name_without_FD4_extension + """_FVQ.value,
+#      fineGridCell""" + self._name_without_FD4_extension + """_FD4Q.value
+#    );
+#  
+#    logTraceOut( "touchCellFirstTime(...)-restrict" );
+#  }  
+#""")
+
+        
 
     my_solver = PrimarySolver(name           = "CCZ4SBH" , 
                               min_cell_size  = min_cell_size, 
@@ -348,8 +341,8 @@ if __name__ == "__main__":
     
     project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable="peano_sbh_" + str(args.cell_size))
     
-    my_primary_solver   = construct_FD_solver( args.cell_size, args.cell_size )
-    my_secondary_solver = construct_FV_solver_as_FD4_limiter( args.cell_size, args.cell_size )
+    my_primary_solver   = construct_limited_FD4_solver( args.cell_size, args.cell_size )
+    my_secondary_solver = construct_FV_limiter( args.cell_size, args.cell_size )
 
     project.add_solver(my_primary_solver)
     project.add_solver(my_secondary_solver)

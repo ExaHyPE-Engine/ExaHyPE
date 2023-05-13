@@ -421,7 +421,7 @@ def create_solver_declarations(flux_implementation,
   Template = jinja2.Template( """
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    void sourceTerm(
+    virtual void sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
@@ -432,7 +432,7 @@ def create_solver_declarations(flux_implementation,
 
     {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     #error point sources not defined yet
-    void pointSource(
+    virtual void pointSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,

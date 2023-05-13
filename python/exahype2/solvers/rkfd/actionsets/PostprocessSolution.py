@@ -7,7 +7,7 @@ import peano4
 import jinja2
 
 class EmptyPostprocessSolution(AbstractRKFDActionSet):
-  """
+  """!
   
   PostprocessSolution differs from other action sets, as I only create it once. See 
   FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
@@ -18,7 +18,8 @@ class EmptyPostprocessSolution(AbstractRKFDActionSet):
     AbstractRKFDActionSet.__init__(self,solver)
     # Is there for compatibility reasons
     self.guard               = "true"
-    
+    self.priority            = 1 
+
 
   def get_body_of_operation(self,operation_name):
     result = ""
@@ -32,8 +33,32 @@ class EmptyPostprocessSolution(AbstractRKFDActionSet):
 
 
 
+class PatchWisePostprocessSolution(AbstractRKFDActionSet):
+  def __init__(self,solver,compute_kernel):
+    super(PatchWisePostprocessSolution,self).__init__(solver)
+    self.compute_kernel = compute_kernel
+    
+    
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)
+      result = jinja2.Template(self.compute_kernel, undefined=jinja2.DebugUndefined).render(**d)
+      pass 
+    return result
+
+
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")
+
+
+
 class CellWisePostprocessSolution(AbstractRKFDActionSet):
-  """
+  """!
+  
+  Postprocess solution mesh cell by mesh cell without mesh cell interactions
   
   PostprocessSolution differs from other action sets, as I only create it once. See 
   FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
@@ -55,6 +80,7 @@ class CellWisePostprocessSolution(AbstractRKFDActionSet):
     AbstractRKFDActionSet.__init__(self,solver)
     self.guard               = "true"
     self._compute_kernel     = ""
+    self.priority            = 2
 
 
   def add_postprocessing_kernel(self, operation_per_point):
