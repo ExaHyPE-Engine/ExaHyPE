@@ -343,7 +343,7 @@ class EnclaveTasking( FV ):
     super(EnclaveTasking, self).create_action_sets()
 
     self._action_set_update_cell                = UpdateCell(self)
-    self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
+    self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)
 
     self._action_set_initial_conditions.guard                       = self._action_set_initial_conditions.guard
     self._action_set_initial_conditions_for_grid_construction.guard = self._action_set_initial_conditions_for_grid_construction.guard

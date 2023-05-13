@@ -8,7 +8,6 @@
 //
 #pragma once
 
-
 {{SOLVER_INCLUDES}}
 
 #include "exahype2/RefinementControl.h"
@@ -22,7 +21,6 @@
 
 #include "Constants.h"
 
-
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
@@ -32,8 +30,6 @@
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}
-
-
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
@@ -83,26 +79,23 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
-
     /**
      * @param Q Vector of unknowns
      * @param t Time
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
-
     virtual void initialCondition(
-      double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      bool                                         gridIsConstructred
+      [[maybe_unused]] double* __restrict__                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] bool                                         gridIsConstructred
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
 
     /**
      * Apply boundary conditions. You can overwrite both the inside and
@@ -111,16 +104,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * to the Riemann solver, i.e. flux and eigenvalues.
      */
     virtual void boundaryConditions(
-      const double * __restrict__ Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      double * __restrict__ Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal
+      [[maybe_unused]] const double* __restrict__                   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] double* __restrict__                         Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] int                                          normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
-
-
-
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -277,7 +267,5 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
   {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 };
-
-
 
 {# Empty line here #}

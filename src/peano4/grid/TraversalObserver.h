@@ -2,15 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "peano4/parallel/parallel.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
 
-
 #include <vector>
 #include <set>
-
 
 namespace peano4 {
   namespace grid {
@@ -24,7 +21,6 @@ namespace peano4 {
     class VertexMarker;
   }
 }
-
 
 /**
  *
@@ -70,7 +66,6 @@ class peano4::grid::TraversalObserver {
       const GridTraversalEvent&  event
     ) = 0;
 
-
     virtual void leaveCell(
       const GridTraversalEvent&  event
     ) = 0;
@@ -79,23 +74,23 @@ class peano4::grid::TraversalObserver {
       const GridTraversalEvent&  event
     ) = 0;
 
-	  /**
-	   * I use the clone to create one observer object per traversal thread. So
-	   * between different spacetrees of one spacetree set, there can be no race
- 	   * condition. Yet, the clone() itself could be called in parallel.
-	   *
-	   * \section  Global per-sweep actions
-	   *
-	   * If you want to implement an operation once per sweep in a parallel
-	   * environment, then you can exploit the fact that the spacetree set also
-	   * creates an observer for the global master thread, i.e. tree no 0. So if
-	   * you add a statement alike
-	   *
-	   * <pre>
+    /**
+     * I use the clone to create one observer object per traversal thread. So
+     * between different spacetrees of one spacetree set, there can be no race
+     * condition. Yet, the clone() itself could be called in parallel.
+     *
+     * \section  Global per-sweep actions
+     *
+     * If you want to implement an operation once per sweep in a parallel
+     * environment, then you can exploit the fact that the spacetree set also
+     * creates an observer for the global master thread, i.e. tree no 0. So if
+     * you add a statement alike
+     *
+     * <pre>
   if (peano4::parallel::Node::isGlobalMaster(spacetreeId)) {
     ...
   }
-	   </pre>
+    </pre>
      *
      * then you can be sure that the branch body is executed only once globally
      * per grid sweep.
@@ -126,7 +121,7 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
   controlEvents.push_back(newEvent);
   return controlEvents;
 }
-	 </pre>
+    </pre>
      *
      * The entries are logically ordered. The later the entry, the more
      * important it is. So entry 2 overrules entry 1.
@@ -169,7 +164,7 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
      * finished. You can expect the calling routine that it calls
      * finishAllOutstandingSendsAndReceives() later on.
      */
-    virtual void exchangeAllVerticalDataExchangeStacks( int masterId ) {};
+    virtual void exchangeAllVerticalDataExchangeStacks( [[maybe_unused]] int masterId ) {};
 
     /**
      * Exchange all the data along the domain boundaries. If the bool is set,
@@ -183,7 +178,7 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
      * finished. You can expect the calling routine that it calls
      * finishAllOutstandingSendsAndReceives() later on.
      */
-   virtual void exchangeAllHorizontalDataExchangeStacks( bool symmetricDataCardinality ) {};
+   virtual void exchangeAllHorizontalDataExchangeStacks( [[maybe_unused]] bool symmetricDataCardinality ) {};
 
     /**
      * Exchange all periodic boundary data. Periodic boundary values are always
@@ -204,8 +199,8 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
      * finished. You can expect the calling routine that it calls
      * finishAllOutstandingSendsAndReceives() later on.
      */
-    virtual void streamDataFromSplittingTreeToNewTree( int newWorker ) {};
-    virtual void streamDataFromJoiningTreeToMasterTree( int masterId ) {};
+    virtual void streamDataFromSplittingTreeToNewTree( [[maybe_unused]] int newWorker ) {};
+    virtual void streamDataFromJoiningTreeToMasterTree( [[maybe_unused]] int masterId ) {};
 
     /**
      * Wrap up all sends and receives, i.e. invoke wait() on the MPI requests.
@@ -244,13 +239,13 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
       PeriodicBoundaryDataSwap
     };
 
-    virtual void sendVertex(int position, int toStack, SendReceiveContext context, const GridTraversalEvent&  event) {};
-    virtual void sendFace(  int position, int toStack, SendReceiveContext context, const GridTraversalEvent&  event) {};
-    virtual void sendCell(  int toStack, SendReceiveContext context, const GridTraversalEvent&  event) {};
+    virtual void sendVertex([[maybe_unused]] int position, [[maybe_unused]] int toStack, [[maybe_unused]] SendReceiveContext context, [[maybe_unused]] const GridTraversalEvent& event) {};
+    virtual void sendFace(  [[maybe_unused]] int position, [[maybe_unused]] int toStack, [[maybe_unused]] SendReceiveContext context, [[maybe_unused]] const GridTraversalEvent& event) {};
+    virtual void sendCell(  [[maybe_unused]] int toStack, [[maybe_unused]] [[maybe_unused]] SendReceiveContext context, [[maybe_unused]] const GridTraversalEvent& event) {};
 
-    virtual void receiveAndMergeVertex( int position, int fromStack, SendReceiveContext context, const GridTraversalEvent&  event) {};
-    virtual void receiveAndMergeFace(   int position, int fromStack, SendReceiveContext context, const GridTraversalEvent&  event) {};
-    virtual void receiveAndMergeCell(   int fromStack, SendReceiveContext context, const GridTraversalEvent& event) {};
+    virtual void receiveAndMergeVertex( [[maybe_unused]] int position, [[maybe_unused]] int fromStack, [[maybe_unused]] SendReceiveContext context, [[maybe_unused]] const GridTraversalEvent& event) {};
+    virtual void receiveAndMergeFace(   [[maybe_unused]] int position, [[maybe_unused]] int fromStack, [[maybe_unused]] SendReceiveContext context, [[maybe_unused]] const GridTraversalEvent& event) {};
+    virtual void receiveAndMergeCell(   [[maybe_unused]] int fromStack, [[maybe_unused]] SendReceiveContext context, [[maybe_unused]] const GridTraversalEvent& event) {};
 
     virtual void deleteAllStacks() {};
 };
