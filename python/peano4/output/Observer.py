@@ -622,15 +622,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       #endif
       view.set(0,data);
     }
-<<<<<<< HEAD
-  }
-
-
-
-=======
     return false;
   }));
->>>>>>> refs/remotes/origin/p4
 """
 
 

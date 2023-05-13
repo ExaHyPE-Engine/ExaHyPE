@@ -89,7 +89,9 @@ def add_mesh_management_optimise_mesh(steps,
                                       alter_position,
                                       species_sets,
                                       verbose ):
-  """
+  """!
+  
+  Add action sets to step (aka mesh traversal) to adopt mesh to particle configuration
 
   This implementation puts emphasis that the mesh is always as tighly
   adopted to the particles as possible. If necessary, this might mean
@@ -198,12 +200,15 @@ def add_mesh_management_optimise_mesh(steps,
         print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.ParticleTreeAnalysis and swift2.actionsets.DynamicMeshRefinementAnalysis to steps {}".format(steps_to_evaluate_amr) )
       for j in steps_to_evaluate_amr:
         for current_species_set in species_sets:
-          steps[j].add_action_set(DynamicMeshRefinementAnalysis(current_species_set,
+          action_set_AMR_analysis = DynamicMeshRefinementAnalysis(current_species_set,
                                                                 min_particles_per_cell=int(current_species_set.particle_model.particles_per_cell/27),
                                                                 max_particles_per_cell=current_species_set.particle_model.particles_per_cell,
                                                                 min_h = current_species_set.particle_model.min_h,
                                                                 max_h = current_species_set.particle_model.max_h
-                                                                ), append_at_end=False)
+                                                                )
+          action_set_AMR_analysis.priority = steps[j].lowest_priority()-1
+          action_set_AMR_analysis.parallel = True
+          steps[j].add_action_set(action_set_AMR_analysis)
 
       #
       #   Association
@@ -217,7 +222,10 @@ def add_mesh_management_optimise_mesh(steps,
         print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.UpdateParticleGridAssociation_Reassign to steps {}".format(steps_to_update_particle_grid_assocation) )
       for j in steps_to_update_particle_grid_assocation:
         for current_species_set in species_sets:
-          steps[j].add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set), append_at_end=False)
+          action_set_update_particle_grid_association = peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set)
+          action_set_update_particle_grid_association.priority = steps[j].lowest_priority()-1
+          action_set_update_particle_grid_association.parallel = True
+          steps[j].add_action_set(action_set_update_particle_grid_association)
 
       #
       #   State
@@ -229,7 +237,10 @@ def add_mesh_management_optimise_mesh(steps,
         print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.UpdateParallelState to steps {}".format(steps_to_update_parallel_state) )
       for j in steps_to_update_parallel_state:
         for current_species_set in species_sets:
-          steps[j].add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set), append_at_end=False)
+          action_set_update_parallel_state = peano4.toolbox.particles.UpdateParallelState(current_species_set)
+          action_set_update_parallel_state.priority = steps[j].lowest_priority()-1
+          action_set_update_parallel_state.parallel = True
+          steps[j].add_action_set(action_set_update_parallel_state)
 
 
       #
@@ -241,7 +252,10 @@ def add_mesh_management_optimise_mesh(steps,
         print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: swift2.actionsets.DynamicMeshRefinementTrigger to steps {}".format(steps_to_realise_amr) )
       for j in steps_to_realise_amr:
         for current_species_set in species_sets:
-          steps[j].add_action_set(DynamicMeshRefinementTrigger(), append_at_end=True)
+          action_set_dynamic_AMR = DynamicMeshRefinementTrigger() 
+          action_set_update_parallel_state.priority = steps[j].highest_priority()+1
+          action_set_update_parallel_state.parallel = True
+          steps[j].add_action_set(action_set_update_parallel_state)
 
 
 

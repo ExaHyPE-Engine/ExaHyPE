@@ -87,7 +87,9 @@ class Project(object):
 
       load_balancer_name: string
         Should be full-qualified name of the load balancer.
-        By default, I recommend to pass "toolbox::loadbalancing::RecursiveSubdivision"
+        By default, I recommend to pass "toolbox::loadbalancing::SpreadOutHierarchically", 
+        but you might be well-advices to study different classes within the
+        namespace toolbox::loadbalancing
 
       load_balancer_arguments: string
         If your load balancing requires parameters, add them
@@ -360,7 +362,7 @@ we realise the initialisation in two steps.
           unprepare_traversal_kernel                             = initDensityAlgorithmStep.unprepare_traversal_kernel,
           additional_includes                                    = initDensityAlgorithmStep.includes,
           active_particle_set                                    = initDensityAlgorithmStep.input_particles
-        ), append_at_end=True)
+        ))
 
 
     ## Create mesh traversals aka solver steps
@@ -393,7 +395,10 @@ we realise the initialisation in two steps.
         solverstep.use_vertex(current_species_set)
         solverstep.use_cell(cell_marker_for_statistics)
 
-    self._algorithm_step_create_grid.add_action_set(peano4.toolbox.CreateRegularGrid(self._global_max_h),False)
+    action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(self._global_max_h)
+    action_set_create_regular_grid.priority = self._algorithm_step_create_grid.lowest_priority()-1
+    action_set_create_regular_grid.parallel = True
+    self._algorithm_step_create_grid.add_action_set(action_set_create_regular_grid)
 
     self._project.solversteps.add_step(self._algorithm_step_create_grid)
     self._project.solversteps.add_step(self.algorithm_step_init)

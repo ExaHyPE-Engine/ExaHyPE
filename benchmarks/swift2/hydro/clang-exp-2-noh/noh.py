@@ -146,9 +146,11 @@ project.set_global_simulation_parameters(
   plotter_precision     = 8
 )
 
+project.algorithm_step_init_density_AlgorithmStep = particle.algorithm_steps_dict["Density"]
+
 project.set_Peano4_installation(args.peanodir, build_mode)
 
-project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new toolbox::loadbalancing::RecursiveSubdivision::DefaultConfiguration()")
+project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new toolbox::loadbalancing::DefaultConfiguration()")
 
 
 ###############################################################################

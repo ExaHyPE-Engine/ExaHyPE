@@ -69,6 +69,20 @@ class Step:
     self.action_sets = []
 
 
+  def __sort(self):
+    """!
+    
+    Simple bubble sort on the priorities
+    
+    """
+    for i in range(0,len(self.action_sets)):
+      for j in range(i+1,len(self.action_sets)):
+        if self.action_sets[i].priority > self.action_sets[j].priority:
+          tmp = self.action_sets[i]
+          self.action_sets[i] = self.action_sets[j]
+          self.action_sets[j] = tmp
+
+
   def add_action_set(self,action_set):
     """!
     
@@ -88,30 +102,45 @@ class Step:
      now replaced, as each action set knows its priority.
     """
     self.action_sets.append(action_set)
+    self.__sort()
     
-    for i in range(0,len(self.action_sets)):
-      for j in range(i+1,len(self.action_sets)):
-        if self.action_sets[i].priority > self.action_sets[j].priority:
-          tmp = self.action_sets[i]
-          self.action_sets[i] = self.action_sets[j]
-          self.action_sets[j] = tmp
 
 
   def set_project(self,project):
-    """
+    """!
+     
+     Tie step to project
+    
      You don't have to call this. It is automatically called once you add a step
      to the project's steps.
     """
     self.project     = project
 
+
   def use_cell(self,submodel):
     self.cell_data.append(submodel)
+
 
   def use_face(self,submodel):
     self.face_data.append(submodel)
 
+
   def use_vertex(self,submodel):
     self.vertex_data.append(submodel)
+
+
+  def highest_priority(self):
+    self.__sort()
+    if (len(self.action_sets)==0):
+      return 0
+    return self.action_sets[-1].priority
+
+
+  def lowest_priority(self):
+    self.__sort()
+    if (len(self.action_sets)==0):
+      return 0
+    return self.action_sets[0].priority
 
 
   def get_vertex_operations_signature(self):
@@ -125,6 +154,7 @@ class Step:
     for i in self.cell_data:
       result += ["coarseGridCell" + i.name,i.get_full_qualified_type() + "&"]
     return result
+
 
   def get_face_operations_signature(self):
     result = ["marker", "const peano4::datamanagement::FaceMarker&" ]

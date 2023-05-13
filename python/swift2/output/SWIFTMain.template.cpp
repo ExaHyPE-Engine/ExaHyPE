@@ -23,7 +23,6 @@
 
 #include "Constants.h"
 
-#include "toolbox/loadbalancing/RecursiveSubdivision.h"
 #include "tarch/logging/LogFilterFileReader.h"
 
 #ifdef UseFEExcept

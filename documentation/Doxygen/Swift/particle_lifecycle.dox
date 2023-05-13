@@ -2,10 +2,20 @@
 
 @page swift_particle_lifecycle Particle Lifecycle
 
+
+
+
 Particles are characterized by their attributes (position, velocity, density,
-...) as well as by their behaviour in the simulation, i.e. the algorithmic steps.
-The latter are taken as input by the Graph Compiler to generate the final C++
-application, see @ref swift_graph_compiler "Swift Graph Compiler".
+...) as well as by their behaviour in the simulation. The latter is formalised
+by the particle's algorithmic steps. You can think of it as a sequence of 
+operations which have to performed per particle per time step.
+
+This sequence is taken as input by the Graph Compiler to map it onto traversals
+of the data and to generate the C++ application. Details are discussed in 
+@ref swift_graph_compiler "the section on the Swift Graph Compiler".
+
+
+
 A few examples of particle life cycles can be found under
 `/python/swift2/particle`
 
