@@ -128,31 +128,31 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void startGridConstructionStep() override;
+    virtual void startGridConstructionStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void finishGridConstructionStep() override;
+    virtual void finishGridConstructionStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void startGridInitialisationStep() override;
+    virtual void startGridInitialisationStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void finishGridInitialisationStep() override;
+    virtual void finishGridInitialisationStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void startTimeStep(
+    virtual void startTimeStep(
       double globalMinTimeStamp,
       double globalMaxTimeStamp,
       double globalMinTimeStepSize,
@@ -163,14 +163,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void finishTimeStep() override;
+    virtual void finishTimeStep() override;
 
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void startPlottingStep(
+    virtual void startPlottingStep(
       double globalMinTimeStamp,
       double globalMaxTimeStamp,
       double globalMinTimeStepSize,
@@ -181,7 +181,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void finishPlottingStep() override;
+    virtual void finishPlottingStep() override;
 
     /**
      * @param currentTimeStep If you set this to false, you'll get the
@@ -200,8 +200,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     /**
      * Within the FV context, mesh is an alias for patch.
      */
-    double getMaxMeshSize() const override final;
-    double getMinMeshSize() const override final;
+    virtual double getMaxMeshSize() const override final;
+    virtual double getMinMeshSize() const override final;
 
     /**
      * Update the global solver state, i.e. inform the solver about some
@@ -226,7 +226,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     /**
      * Always holds.
      */
-    bool mayPlot() const override;
+    virtual bool mayPlot() const override;
 
     /**
      * This predicate is always true, as we work with a single-sweep
@@ -239,13 +239,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * Feel free to overwrite in user code, but ensure the superclass
      * implementation is still invoked, too.
      */
-    void startSimulation() override;
+    virtual void startSimulation() override;
 
     /**
      * Feel free to overwrite in user code, but ensure the superclass
      * implementation is still invoked, too.
      */
-    void finishSimulation() override;
+    virtual void finishSimulation() override;
 
   protected:
     static tarch::logging::Log  _log;

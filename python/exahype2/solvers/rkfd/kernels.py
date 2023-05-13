@@ -423,7 +423,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   Template = jinja2.Template( """
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    void sourceTerm(
+    virtual void sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
       const tarch::la::Vector<Dimensions,double>&  gridCellH,

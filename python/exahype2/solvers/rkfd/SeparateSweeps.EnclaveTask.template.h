@@ -123,19 +123,19 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 
 
     #ifdef UseSmartMPI
-    bool isSmartMPITask() const override;
-    void runLocally() override;
-    void moveTask(int rank, int tag, MPI_Comm communicator) override;
-    void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
-    void forwardTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+    virtual bool isSmartMPITask() const override;
+    virtual void runLocally() override;
+    virtual void moveTask(int rank, int tag, MPI_Comm communicator) override;
+    virtual void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+    virtual void forwardTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
 
     static smartmpi::Task* receiveTask(int rank, int tag, MPI_Comm communicator);
     static smartmpi::Task* receiveOutcome(int rank, int tag, MPI_Comm communicator, const bool intentionToForward);
     #endif
 
     {% if STATELESS_PDE_TERMS %}
-    bool fuse( const std::list<Task*>& otherTasks, int targetDevice=Host ) override;
-    bool canFuse() const override;
+    virtual bool fuse( const std::list<Task*>& otherTasks, int targetDevice=Host ) override;
+    virtual bool canFuse() const override;
     {% endif %}
 };
 
