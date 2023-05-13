@@ -7,6 +7,8 @@ import peano4
 import dastgen2
 import peano4.dastgen2
 
+from abc import ABC
+
 
 class SPHLeapfrogFixedInteractionRadius(Particle):
   """!
@@ -735,3 +737,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
     print(namespace)
 
+
+  def initialisation_steps(self):
+    return [
+        self.algorithm_steps_dict["Density"],
+    ] 
