@@ -928,6 +928,61 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extra
   logTraceOut( "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)" );
 }
 
+
+void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
+  int                                       numberOfDoFsPerAxisInSourcePatch,
+  int                                       numberOfDoFsPerAxisInDestinationPatch,
+  int                                       haloSourcePatch,
+  int                                       haloDestinationPatch,
+  int                                       unknowns,
+  const double* __restrict__                sourceValues,
+  double* __restrict__                      destinationValues
+) {
+  assertion( numberOfDoFsPerAxisInDestinationPatch>numberOfDoFsPerAxisInSourcePatch );
+
+  dfor( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch ) {
+    const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch) * unknowns;
+    for (int unknown=0; unknown<unknowns; unknown++) {
+      destinationValues[baseIndexDestination+unknown] = 0.0;
+    }
+    dfor( sourceVolume, numberOfDoFsPerAxisInSourcePatch+2*haloSourcePatch ) {
+
+      int outsidePatchAlongCoordinateAxis = 0;
+      for (int d=0; d<Dimensions; d++) {
+        if ( sourceVolume(d) <  haloSourcePatch )                                   outsidePatchAlongCoordinateAxis++;
+        if ( sourceVolume(d) >= haloSourcePatch+numberOfDoFsPerAxisInSourcePatch )  outsidePatchAlongCoordinateAxis++;
+      }
+      bool isDiagonal = outsidePatchAlongCoordinateAxis>1;
+
+      if (not isDiagonal) {
+        tarch::la::Vector<Dimensions, double> normalisedSourcePosition =
+          tarch::la::multiplyComponents(
+            tarch::la::Vector<Dimensions, double>(1.0/numberOfDoFsPerAxisInSourcePatch),
+            tarch::la::convertScalar<double>(sourceVolume) + tarch::la::Vector<Dimensions, double>(0.5 - haloSourcePatch)
+          );
+        tarch::la::Vector<Dimensions, double> normalisedDestinationPosition =
+          tarch::la::multiplyComponents(
+            tarch::la::Vector<Dimensions, double>(1.0/numberOfDoFsPerAxisInDestinationPatch),
+            tarch::la::convertScalar<double>(destinationVolume) + tarch::la::Vector<Dimensions, double>(0.5 - haloDestinationPatch)
+          );
+
+        double weight = 1.0;
+        for (int d=0; d<Dimensions; d++) {
+          double distanceAlongCoordinateAxis = std::abs( normalisedDestinationPosition(d) - normalisedSourcePosition(d) );
+          distanceAlongCoordinateAxis = 1.0 - distanceAlongCoordinateAxis / static_cast<double>(numberOfDoFsPerAxisInSourcePatch);
+          weight *= std::max(0.0, distanceAlongCoordinateAxis);
+        }
+
+        const int baseIndexSource      = peano4::utils::dLinearised(sourceVolume, numberOfDoFsPerAxisInSourcePatch+2*haloSourcePatch) * unknowns;
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          destinationValues[baseIndexDestination+unknown] += weight * sourceValues[baseIndexSource+unknown];
+        }
+      }
+    }
+  }
+}
+
+
 void toolbox::blockstructured::interpolateCell_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,

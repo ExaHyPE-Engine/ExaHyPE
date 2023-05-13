@@ -52,7 +52,7 @@ class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalanc
      * afterwards if the active load balancing has stagnated. If so,
      * switch to the next one in the cascade.
      */
-    void finishStep() override {
+    virtual void finishStep() override {
       switch (_activeLoadBalancing) {
         case 0:
           {
@@ -75,7 +75,7 @@ class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalanc
     }
 
 
-    bool hasSplitRecently() const override {
+    virtual bool hasSplitRecently() const override {
       switch (_activeLoadBalancing) {
         case 0:
           return _hostedLoadBalancing0.hasSplitRecently();
@@ -89,7 +89,7 @@ class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalanc
     }
 
 
-    int getGlobalNumberOfTrees() const override {
+    virtual int getGlobalNumberOfTrees() const override {
       switch (_activeLoadBalancing) {
         case 0:
           return _hostedLoadBalancing0.getGlobalNumberOfTrees();
@@ -128,7 +128,7 @@ class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalanc
     }
 
 
-    void enable(bool value) override {
+    virtual void enable(bool value) override {
       _hostedLoadBalancing0.enable(value);
       _hostedLoadBalancing1.enable(value);
       LoadBalancing::enable(value);

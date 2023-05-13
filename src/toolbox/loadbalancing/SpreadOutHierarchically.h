@@ -55,7 +55,7 @@ class toolbox::loadbalancing::SpreadOutHierarchically: public toolbox::loadbalan
     SpreadOutHierarchically(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
     virtual ~SpreadOutHierarchically();
 
-    void finishStep() override;
+    virtual void finishStep() override;
   private:
     static tarch::logging::Log  _log;
 

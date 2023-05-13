@@ -299,6 +299,7 @@ class SeparateSweeps( CellCenteredFiniteDifferences ):
       and not (""" + last_sweep_of_time_step_or_plotting_initialisation + ")"
     self._patch_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard() + """
       and not (""" + first_sweep_of_time_step_or_plotting_guard + ")"   
+    self._patch_estimates.generator.compute_condition          = self._patch_estimates.generator.load_persistent_condition + " or " + self._patch_estimates.generator.store_persistent_condition
 
             
   def create_action_sets(self):
@@ -347,8 +348,6 @@ class SeparateSweeps( CellCenteredFiniteDifferences ):
     if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
     if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
     
-    if boundary_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
-      assert False, "boundary conditions cannot be none"
     if refinement_criterion==exahype2.solvers.fv.PDETerms.None_Implementation:
       assert False, "refinement criterion cannot be none"
     if initial_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:

@@ -14,6 +14,7 @@ class AbstractFVActionSet( ActionSet ):
       Reference to creating class 
    
     """
+    super(AbstractFVActionSet,self).__init__(priority=1,parallel=False)
     self._solver = solver
     pass
   

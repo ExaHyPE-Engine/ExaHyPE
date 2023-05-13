@@ -67,11 +67,11 @@ class tarch::multicore::orchestration::BackfillAndDeployRoundRobin: public tarch
     );
     virtual ~BackfillAndDeployRoundRobin() = default;
 
-    void startBSPSection() override;
-    void endBSPSection()   override;
-    int getNumberOfTasksToHoldBack() override;
-    FuseInstruction getNumberOfTasksToFuseAndTargetDevice()     override;
-    bool fuseTasksImmediatelyWhenSpawned() override;
-    bool processPendingTasksWhileWaitingInBSPSection() override;
+    virtual void startBSPSection() override;
+    virtual void endBSPSection()   override;
+    virtual int getNumberOfTasksToHoldBack() override;
+    virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice()     override;
+    virtual bool fuseTasksImmediatelyWhenSpawned() override;
+    virtual bool processPendingTasksWhileWaitingInBSPSection() override;
 };
 

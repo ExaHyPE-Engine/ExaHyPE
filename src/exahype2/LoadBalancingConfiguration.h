@@ -79,17 +79,17 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Confi
 
     virtual ~LoadBalancingConfiguration() = default;
 
-    bool makeSplitDependOnMemory(toolbox::loadbalancing::State state) override;
+    virtual bool makeSplitDependOnMemory(toolbox::loadbalancing::State state) override;
 
-    int getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) override;
+    virtual int getMaxLocalTreesPerRank(toolbox::loadbalancing::State state) override;
 
-    double getWorstCaseBalancingRatio(toolbox::loadbalancing::State state) override;
+    virtual double getWorstCaseBalancingRatio(toolbox::loadbalancing::State state) override;
 
     /**
      * If we do the initial distribution in-between ranks, then there
      * should be no such thing as a min tree size.
      */
-    int getMinTreeSize(toolbox::loadbalancing::State state) override;
+    virtual int getMinTreeSize(toolbox::loadbalancing::State state) override;
 
     std::string toString() const;
 };

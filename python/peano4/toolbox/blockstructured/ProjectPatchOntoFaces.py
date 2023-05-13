@@ -5,7 +5,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 class ProjectPatchOntoFaces(ActionSet):
-  """
+  """!
   
   This class assumes that you have NxNxN patch within your block. It also 
   assumes that you have an 2MxNxN patch on your faces. M<N. The code interprets
@@ -31,6 +31,7 @@ class ProjectPatchOntoFaces(ActionSet):
   
   
   def __init__(self,patch,patch_overlap,guard,additional_includes, add_assertions = True):
+    super(ProjectPatchOntoFaces,self).__init__(priority=1,parallel=False)
     self.d = {}
     if patch_overlap.dim[0] % 2 != 0:
       print( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )
@@ -41,6 +42,10 @@ class ProjectPatchOntoFaces(ActionSet):
     if patch_overlap.dim[1] != patch.dim[0]:
       print( "Error: Patch of overlap and patch of cell have to match" )
       assert( patch_overlap.dim[1] == patch.dim[0] )
+      
+    assert isinstance(patch.no_of_unknowns,int)
+    assert isinstance(patch.dim[0],int)
+    assert isinstance(patch_overlap.dim[0],int)
       
     self.d[ "UNKNOWNS" ]           = str(patch.no_of_unknowns)
     self.d[ "DOFS_PER_AXIS" ]      = str(patch.dim[0])
@@ -84,6 +89,7 @@ class ProjectPatchOntoFaces(ActionSet):
 
 
   __Template_TouchCellLastTime_Core = """
+ // @todo Might want to use routine from Projection.h in toolbox.
     for(int d=0; d<Dimensions; d++) {{
       /**
        * d-loop over all dimensions except d. The vector k's entry d is set

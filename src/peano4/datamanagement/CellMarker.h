@@ -141,6 +141,8 @@ struct peano4::datamanagement::CellMarker {
     bool isParentLocal() const;
 
     /**
+     * Define enclave cell
+     *
      * A enclave cell in the definition of Charrier, Hazelwood, Weinzierl is a
      * cell that is not a skeleton cell. A skeleton cell is cell which either
      *
@@ -152,21 +154,33 @@ struct peano4::datamanagement::CellMarker {
      * have to do is to ensure that it is passed all data via firstprivate copy
      * and that you never refine an enclave cell.
      *
-     * <h2> Dynamic load balancing </h2>
+     * ## Dynamic load balancing
      *
      * In line with the above definition, we may label a cell as enclave cell
      * if some dynamic load balancing is triggered or actually running. In
      * this case, any enclave cell might be subject of a domain transfer. If
      * we deployed its computation to the background, we could move around a
      * cell whose computations is done by a thread currently.
+     *
+     * @see page_exahype_solvers_enclave_solvers for a high-level description
      */
     bool hasBeenEnclaveCell() const;
+
+    /**
+     * @see hasBeenEnclaveCell()
+     */
     bool willBeEnclaveCell() const;
 
     /**
      * A skeleton cell is a not-enclave cell
+     *
+     * @see hasBeenEnclaveCell()
      */
     bool hasBeenSkeletonCell() const;
+
+    /**
+     * @see hasBeenEnclaveCell()
+     */
     bool willBeSkeletonCell() const;
 
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;

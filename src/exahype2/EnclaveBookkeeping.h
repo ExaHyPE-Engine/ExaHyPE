@@ -72,7 +72,15 @@ class exahype2::EnclaveBookkeeping {
      */
     void dumpStatistics();
 
+    /**
+     * Wait for a task and copy outcome into destination
+     */
     void waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& maxEigenvalue);
+
+    /**
+     * Wait for a task and copy outcome into destination
+     */
+    void waitForTaskAndDiscardResult(int number);
     
     /**
      * Wait for a task result to become available
