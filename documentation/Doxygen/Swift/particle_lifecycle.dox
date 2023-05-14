@@ -6,29 +6,47 @@
 
 
 Particles are characterized by their attributes (position, velocity, density,
-...) as well as by their behaviour in the simulation. The latter is formalised
-by the particle's algorithmic steps. You can think of it as a sequence of 
-operations which have to performed per particle per time step.
+...), their behaviour in the simulation and their initialisation. The latter
+two are formalised by the particle's algorithmic steps. You can think of them
+as a sequence of operations which have to performed per particle per time step
+or until we have a properly initialised particle. You can visualise a 
+particle's algorithm via a simple graph:
 
-This sequence is taken as input by the Graph Compiler to map it onto traversals
+@image html particle-lifecycle.png
+
+It illustrates that we have some attributes on a particle (left top). Each
+particle runs through a number of steps (right): We start with an initialisation
+(red) in which we throw the particles into the domain. After that, each particle
+runs through two initialisation steps. The latter one migth repeat. Per time
+step, each particle runs through six compute steps, while, once again, one
+of them might have to be repeated. Some computational steps might only act on
+one particle at a time, other steps might require the particles around a
+particle to compute an outcome (darker boxes).
+
+This input sequence is taken as by our graph compiler to map it onto traversals
 of the data and to generate the C++ application. Details are discussed in 
-@ref swift_graph_compiler "the section on the Swift Graph Compiler".
+@ref swift_graph_compiler "the section on the Swift Graph Compiler". The
+basic rationale behind this design is that a particle-based algorithm is
+besed phrased as flow chart over a single particle. It is then the job of
+our software to bring this information together with the mesh in which the
+particles are organised, to map the updates onto data traversals, and to
+decide which particle to update at which point. By abstracting the mesh
+traversal away from the particle lifecycle, we can also easily handle multiple
+particle species. The particle lifecycle however encodes the required
+comptuational steps. Therefore, it comprises both the physics and the
+time stepping scheme. Both are intertwined in classic SPH.
 
 
+A few characteristic particle life cycles are discussed below. Nothing stops
+you however from introducing more cycles aka particle types.
+    
 
-A few examples of particle life cycles can be found under
-`/python/swift2/particle`
+## Declaring particle attributes
 
-## SPH leapfrog with fixed interaction radius
-
-A realistic example for the behaviour of an SPH particle is implemented in
-```SPHLeapfrogFixedInteractionRadius.py```.
-
-
-### Declaring particle attributes
-
-This class includes a method to declare the full list of particle attributes
-that are needed for the SPH algorithms. The basic structure is the following:
+You can instantiate your particle of interest and add further attributes to
+it in your main script. Alternatively, you might want to inherit from the
+particle type of interest and add additional attributes in the inherited type.
+The basic structure however is always the same:
 
 ~~~~~~~~~~~~~~~~~~~~~
   def declare_sph_particle_attributes(self):
@@ -47,16 +65,19 @@ that are needed for the SPH algorithms. The basic structure is the following:
     ...
 ~~~~~~~~~~~~~~~~~~~~~
 
+Such a method then has to be called from the python script where the Swift-Peano project
+is implemented for a particular experiment. As pointed out, you might want
+to work without a dedicated declare_sph_particle_attributes() routine and add
+particles straight-away. This however might be the cleaner design and enables
+you to reuse that particle class.
 
-This method is then called from the python script where the Swift-Peano project
-is implemented for a particular experiment.
 
-
-### The algorithmic steps for the particle life cycle
+## The algorithmic steps for the particle life cycle
 
 The second essential ingredient to build a particle life cycle is to specify the
-sequence of algorithmic steps.
-As an example within this class, we can find the SPH density loop:
+sequence of algorithmic steps. Each particle has to have a routine algorithm_steps()
+which returns the sequence of algorithmic steps to be run per time step.
+As an example, we discuss the SPH density loop:
 
 ~~~~~~~~~~~~~~~~~~~~~
       AlgorithmStep(
@@ -116,6 +137,28 @@ Some remarks:
   - `touch_vertex_last_time_kernel` analogous to the previous one.
 
 
+## The algorithmic steps for the particle initialisation
+
+This is very similar to the algorithmic steps. Each particle offers a routine
+initialisation_steps() which returns a sequence of steps that have to be called
+before we start the actual simulation. The sequence can be empty. The graph
+compiler will always add another two steps to ensure that the initial sorting
+of the particles is correct.
+
+
+## Examples for pre-defined particle types
+
+- A simple explicit Euler with a constant interaction radius can be found in
+  swift2.particle.ExplicitEulerFixedInteractionRadius. This is the simplest
+  particle type that one can think of within the framework of our code. You
+  could think of stationary particles which do nothing as even simpler ones,
+  one one might argue that this would be a degnerated particle.
+- swift2.particle.ExplicitEulerDynamicInteractionRadius is still a very simple
+  time integrator but showcases how one models algorithmic steps which might
+  have to be repeated: the dynamic interaction radius can iteratively change
+  multiple times per time step.
+- A realistic example for the behaviour of an SPH particle is implemented in
+  swift2.particle.SPHLeapfrogFixedInteractionRadius.
 
 
 */

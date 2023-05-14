@@ -1,31 +1,89 @@
 /**
 
-@page swift_initial_conditions Initial conditions and particle insertion
+@page swift_initial_conditions Initial conditions, particle insertion and initial mesh construction
 
-There are two main ways to implement initial conditions for the
+Swift 2 always runs through the same sequence of setup steps prior to the
+actual calculation:
+
+1. Create a regular mesh that is just as fine that it can accommodate the
+   largest predicted cut-off radius of all particles.
+2. Insert the particles (initial condition).
+3. Run a set of initialisation steps, where particles can define some 
+   "warm up" calculation steps and are also sorted once more, should they
+   have been inserted into the wrong cells.
+
+## The initial (regular) mesh
+
+The first step is important, even though we do not restrict the particles:
+Particles are allowed to change their cut-off radius, and we do not restrict
+how big it can become throughout the simulation. Furthermore, the dynamic 
+mesh refinement might decide to introduce an extremely fine mesh in some 
+places.
+
+However, we have to start somewhere, as we do not want to run the initial
+insertion of particles into a single cell, then great this initial grid
+(which is obviously guided by the particle distribution) and finally create
+the adaptive grid. Instead, the code creates some initial grid and load
+balances this one. After that, it inserts the particles (in parallel) and
+might still change both the load balancing and the mesh structure. But we
+have to start somewhere.
+
+By default, the initial grid is a regular mesh controlled by the potential
+maximal particle cut-off radius. As pointed out: this cut-off radius can
+change over time and thus is solely an initial indicator. You can alter the
+initial mesh and hence start with an adaptive one right from the start. For
+this, you can take the step algorithm_step_create_grid which is an attribute
+of your swift2.Project and add further action sets which refine your mesh
+according to your needs. However, the initial grid construction will try
+to establish a stationary grid, so ensure that you define a stationary
+grid, i.e. not a grid where you sometimes erase parts and sometimes add
+parts.
+
+
+## Initial conditions
+
+The initial conditions are added by one mesh sweep modelled by the project's
+attribute algorithm_step_initial_conditions. In this sweep, you have to 
+throw all the particles you want to have into your mesh.
+There are two mainstream ways to implement initial conditions for the
 simulations:
 
   - Insert particle by coordinates (```InsertParticlesByCoordinates.py```).
   - Insert particles from an HDF5 file (```InsertParticlesFromHDF5File.py```).
 
-The former option is typically complemented by an initialisation snippet that
-sets the individual particle attributes (other than positions).
-The latter option automatically sets (at least a subset of) the particle
-attributes.
+Nothing stops you from additing further action sets to
+algorithm_step_initial_conditions. Some scenarios, for example, hard code
+the initial condition of further particles. The @ref benchmarks_swift2_planet_orbit "planet orbit benchmark"
+is such an example, where no input files are required.
 
 
+The particle inserters as discussed above typically only set a subset of
+the particle attributes. They are generic tools and thus cannot know which
+attributes your particle actually hosts and requires to be set. To discuss
+how to initialise the attributes, we have to distinguish two types of
+attributes:
 
+1. There are attributes which are domain-specific and have to be set by
+   the initial conditions to meaningful values.
+2. There are attributes which have to be calculated prior to the kick
+   off of the simulation.
+   
+To set the intial conditions, it is worth looking into the documentation
+of your particle inserter of choice. Most of them allow you to add some
+further initialisation snippets or tailor the reader, such that you can
+set the particle attributes of interest. Alternatively, you might want to
+create a subclass of a generic file reader that is specific to your setup
+and, for example, grabs additional particle attributes from the input
+file.
 
+If you don't want to mess with the particle reader, nothing stops you from
+adding an additional action set to the initial condition sweep. This set can
+run over all particles within a vertex - once they are inserted - and set
+meaningful attribute values.
 
-## Insert particle by coordinates.
-
-
-
-
-A set of snippets for SPH benchmarks can be found at
-
-
-
+If you have to calculate particle attributes after the particles are thrown
+into the domain, these calculations are best modelled as 
+@ref swift_particle_lifecycle "steps within the particle lifecycle".
 
 
 
