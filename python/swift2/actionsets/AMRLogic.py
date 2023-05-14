@@ -253,9 +253,9 @@ def add_mesh_management_optimise_mesh(steps,
       for j in steps_to_realise_amr:
         for current_species_set in species_sets:
           action_set_dynamic_AMR = DynamicMeshRefinementTrigger() 
-          action_set_update_parallel_state.priority = steps[j].highest_priority()+1
-          action_set_update_parallel_state.parallel = True
-          steps[j].add_action_set(action_set_update_parallel_state)
+          action_set_dynamic_AMR.priority = steps[j].highest_priority()+1
+          action_set_dynamic_AMR.parallel = True
+          steps[j].add_action_set(action_set_dynamic_AMR)
 
 
 
@@ -276,12 +276,4 @@ def add_mesh_management_minimise_resorting(steps,
 
   for i in range(0,len(steps)):
     pass
-
-
-#Ist das Refine-Event static, d.h. wirklich nur einmal da?
-#Oder sind das verschiedene Klassen?
-#Sollten es nicht sein.
-#Wird AMR auch wirklich geloescht und ruebergerollt? Wo ist Doku, dass es zwei Iterationen sein muessen?
-
-#Tut das delete wirklich liften?
 

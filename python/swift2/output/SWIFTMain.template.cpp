@@ -143,10 +143,17 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
   }
   else if (gridConstructed and not initialised) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[0]}} )
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitialConditions )
     );
 
     initialised = true;
+  }
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::InitialConditions
+  ) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[0]}} )
+    );
   }
   else if (
     ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
