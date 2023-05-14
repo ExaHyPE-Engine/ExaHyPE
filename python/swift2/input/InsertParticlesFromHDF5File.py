@@ -52,8 +52,7 @@ Read position from HDF5 and insert particles
     std::vector <double> InternalEnergyWithinVoxel  = _fileReaderHDF5.getInternalEnergyWithinVoxel();
     std::vector <int>    PartidWithinVoxel          = _fileReaderHDF5.getParticleIDsWithinVoxel();
 
-    // Skip index of particles already inserted
-    int indexEntry = _particleNumberOnThisTree;
+    int indexEntry = 0;
 
     // Now loop over these particle coordinates
     for (auto& p: coords) {
@@ -172,10 +171,6 @@ Read position from HDF5 and insert particles
         newParticle,
         fineGridVerticeshydroPartSet
       );
-
-      logInfo( "Init2peano4()", "_spacetreeId: " << _spacetreeId << 
-                             ", _particleNumberOnThisTree: " << _particleNumberOnThisTree );
-
     }
     
     logDebug( "touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " 

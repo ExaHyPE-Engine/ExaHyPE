@@ -36,7 +36,7 @@ args = parser.parse_args()
 project_namespace = ["benchmarks", "swift2", "sod"]
 
 project = swift2.Project( namespace=project_namespace,
-                          project_name="Sod1D", 
+                          project_name="Sod1D",
                           executable="sod1D" )
 
 
@@ -49,9 +49,9 @@ dimensions = args.dimensions
 
 hydro_dimensions = 1 # dimensions for the hydro
 
-particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name, 
+particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name,
                                                              dimensions_hydro       = hydro_dimensions,
-                                                             cfl_factor             = args.cfl_factor, 
+                                                             cfl_factor             = args.cfl_factor,
                                                              initial_time_step_size = args.timestep_size,
                                                              constant_time_step_size= True,
                                                              swift_project_namespace= project_namespace,
@@ -76,7 +76,7 @@ HYDRO_DIMENSIONS = hydro_dimensions
 # Particle number along 1 dimension
 HYDRO_PART_NUMBER = args.particle_number
 
-# Time integration parameters 
+# Time integration parameters
 GLOBAL_TIME_STEP_SIZE = args.timestep_size
 CFL_CONSTANT = args.cfl_factor
 
@@ -101,7 +101,7 @@ kernel_list_symbols = ['QUARTIC_SPLINE_KERNEL']
 KERNEL = kernel_list[0]
 KERNEL_SYMBOL = kernel_list_symbols[0]
 
-# Smoothing-length free parameter (resolution "eta_neighbours"). 
+# Smoothing-length free parameter (resolution "eta_neighbours").
 SMOOTH_ETA_FAC = particle.eta_factor
 
 if(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
@@ -111,7 +111,7 @@ if(KERNEL=='M5' and HYDRO_DIMENSIONS ==2):
 else:
   print(f'Unable to determine the kernel support radius. Please check.'  )
 
-# Max/min allowed values for smoothing length h 
+# Max/min allowed values for smoothing length h
 HYDRO_h_MAX = args.cell_size / 2
 HYDRO_h_MIN = particle.h_hydro_min
 
@@ -128,35 +128,44 @@ else:
   build_mode = peano4.output.CompileMode.Release
 
 # Set Peano4 simulation parameters ---------------------------------------------
-offset      = [ 0, 0, 0 ] 
-domain_size = [ 1, 1, 1 ]
+offset      = [ 0, 0, 0 ]
+domain_size = [ 2, 2, 2 ]
 periodic_boundary_conditions = [False,False,False]
 
 project.set_global_simulation_parameters(
   dimensions            = dimensions,
-  offset                = offset,  
+  offset                = offset,
   domain_size           = domain_size,
   min_end_time          = args.end_time,
   max_end_time          = 0.0,
-  first_plot_time_stamp = 0.0, 
-  time_in_between_plots = args.plot_delta, 
+  first_plot_time_stamp = 0.0,
+  time_in_between_plots = args.plot_delta,
   periodic_BC           = periodic_boundary_conditions,
   plotter_precision     = 8
 )
 
 project.set_Peano4_installation(args.peanodir, build_mode)
-
-#project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new toolbox::loadbalancing::RecursiveSubdivision::DefaultConfiguration()")
+project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new toolbox::loadbalancing::RecursiveSubdivision::DefaultConfiguration()")
 
 
 ###############################################################################
 # Initialisation snippet for the particle
 ###############################################################################
 
-project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesFromHDF5File( 
+project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesFromHDF5File(
   particle_set         = particle_set,
-  filename='sodShock.hdf5' 
+  filename='sodShock.hdf5'
   ))
+
+###############################################################################
+# Set up initialization steps
+###############################################################################
+
+# Todo Mladen later: add first kick once we deal with individual time steps
+
+project.algorithm_step_init_density_AlgorithmStep = particle.algorithm_steps_dict["Density"]
+
+
 
 ###############################################################################
 # Set up the plotter
@@ -164,26 +173,25 @@ project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesFromHDF5
 #
 # A plotter has to be told explicitly which data to visualisation. We visualise
 # the velocity here as scalar attribute. To some degree, this is redundant info
-# as we implicitly have the position of the particle and can "see" its 
+# as we implicitly have the position of the particle and can "see" its
 # velocity when we play through a movie. But the explicit visualisation shows
 # how to handle attributes per particle.
 #
-# When we create the plotter, we have to inform it how to enumerate the 
+# When we create the plotter, we have to inform it how to enumerate the
 # individual snapshots. Obviously, we can just count through the snapshots.
 # In this case, you have to pass the constant peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps
 # into the field time_stamp_evaluation. You can also define your own time
-# stamp. For this, it is useful to know that each particle definition in the 
-# Python script will yield a particle class with the same name in the 
+# stamp. For this, it is useful to know that each particle definition in the
+# Python script will yield a particle class with the same name in the
 # subnamespace globaldata. Every particle class in return has a class attribute
-#      
+#
 #            getSpecies()
 #
-# which returns an object that holds global information about this particle 
-# type. 
+# which returns an object that holds global information about this particle
+# type.
 ###############################################################################
-#particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particle_set, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
-particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", 
-                                                                      particle_set, 
+particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles",
+                                                                      particle_set,
                                                                       "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name) )
 particle_plotter.add_attribute_to_plot(particle.part_id , 1)
 particle_plotter.add_attribute_to_plot(particle.velocity     , dimensions)
@@ -207,7 +215,7 @@ project.algorithm_step_plot.add_action_set( particle_plotter )
 # but rather we have a set of pre-defined options. The same happens for some
 # functions, e.g. the SPH smoothing kernel. This allows us to define some
 # symbols and fix the values at compile time.
-# 
+#
 #
 ###############################################################################
 

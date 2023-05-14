@@ -346,5 +346,18 @@ fi
 echo 'Done. Bye!'
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
+## Clean up
+
+The instruction snippets below clean up the majority of the file spilled out
+by this benchmark. All files that are essential to rerun the benchmark and 
+are stored in the repo are kept:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+rm *patch-file *.vtu *.pvd *.o *.bak *.cmake
+rm -rf celldata globaldata observers repositories vertexdata
+rm Constants.h planetorbit-main* Makefile *.md
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
  */
  
