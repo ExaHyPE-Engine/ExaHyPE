@@ -23,16 +23,6 @@ from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionS
 PatchSize = 4
 
 
-def add_constraints_to_primary_solver(solver):
-    """!
-    
-    Augment primary solver
-    
-    There is not too much to do for primary solver besides the fact that we
-    
-    """
-
-
 def construct_FV_limiter(min_cell_size, max_cell_size):
     """!
     
