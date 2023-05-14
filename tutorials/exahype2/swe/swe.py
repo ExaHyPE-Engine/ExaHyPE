@@ -39,6 +39,12 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 )
 
 #
+# To see which variables (unknowns + auxiliary variables) we can visualise,
+# let's add a plot description for the variables to our solver.
+#
+my_solver.plot_description = "h, hu, hv, b"
+
+#
 # Specifiy which implementation our solvers uses.
 # Here we want to use a user-defined C++ implementation.
 # For this, we create a C++ file "SWESolver.cpp" (same as our solver name from above),
@@ -97,6 +103,7 @@ my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "
 # We need to set the location of our core libraries ('Peano4').
 # This helps us to resolve any dependencies.
 # Additionally, we specify the build mode which you can also change to a different mode.
+# Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
 my_project.set_Peano4_installation( "../../../", mode=peano4.output.CompileMode.Release )
 

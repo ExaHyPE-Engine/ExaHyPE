@@ -97,6 +97,7 @@ my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "
 # We need to set the location of our core libraries ('Peano4').
 # This helps us to resolve any dependencies.
 # Additionally, we specify the build mode which you can also change to a different mode.
+# Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
 my_project.set_Peano4_installation( "../../../", mode=peano4.output.CompileMode.Release )
 
