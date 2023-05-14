@@ -60,6 +60,12 @@ my_solver.set_implementation(
 )
 
 #
+# We can add additional variables to our solver instance, such as constexpr values
+# we want to use in our solver implementations multiple times.
+#
+my_solver.add_solver_constants("static constexpr double Gamma = {}; // Assume that the fluid is an ideal gas, Gamma is chosen for dry air.".format(1.4))
+
+#
 # Add the solver to our project
 #
 my_project.add_solver( my_solver )

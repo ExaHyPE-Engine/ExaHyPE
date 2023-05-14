@@ -40,14 +40,14 @@ double tutorials::exahype2::swe::SWESolver::maxEigenvalue(
   double                                        dt,
   int                                           normal
 ) {
+  assertion(Q[0] > 0);
   double result = 1.0;
   const double ih = 1.0 / Q[0]; // Inverse water height
-  constexpr double g = 9.81; // Gravity [m/s^2]
   // We need to ensure that h+b is not negative.
   // This can happen if a negative bathymetry is chosen.
   // This should be avoided!
   assertion((Q[0] + Q[3]) >= 0.0);
-  const double c = std::sqrt( g * (Q[0] + Q[3]) );
+  const double c = std::sqrt( Gravity * (Q[0] + Q[3]) );
   double u = 0.0;
 
   switch (normal) {
@@ -101,18 +101,16 @@ void tutorials::exahype2::swe::SWESolver::nonconservativeProduct(
   int                                          normal,
   double * __restrict__                        BTimesDeltaQ  // BTimesDeltaQ[3]
 ) {
-  constexpr double g = 9.81;
-
   switch (normal) {
   case 0: // x
     BTimesDeltaQ[0] = 0.0;
-    BTimesDeltaQ[1] = g * Q[0] * (deltaQ[0] + deltaQ[3]);
+    BTimesDeltaQ[1] = Gravity * Q[0] * (deltaQ[0] + deltaQ[3]);
     BTimesDeltaQ[2] = 0.0;
     break;
   case 1: // y
     BTimesDeltaQ[0] = 0.0;
     BTimesDeltaQ[1] = 0.0;
-    BTimesDeltaQ[2] = g * Q[0] * (deltaQ[0] + deltaQ[3]);
+    BTimesDeltaQ[2] = Gravity * Q[0] * (deltaQ[0] + deltaQ[3]);
     break;
   }
 }
