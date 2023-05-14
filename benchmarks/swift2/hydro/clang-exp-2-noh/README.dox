@@ -1,0 +1,12 @@
+/**
+
+ @page to-be-done NOH 2 experiment to study upscaling
+ 
+ As with all Swift 2 experiments, you have to ensure that you translate with --enable-particles --enable-swift.
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ export PYTHONPATH=~/git/Peano/python
+ python3 noh.py -cs 0.1 -np 400 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ */

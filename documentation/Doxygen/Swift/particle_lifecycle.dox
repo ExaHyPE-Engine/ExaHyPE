@@ -1,0 +1,164 @@
+/**
+
+@page swift_particle_lifecycle Particle Lifecycle
+
+
+
+
+Particles are characterized by their attributes (position, velocity, density,
+...), their behaviour in the simulation and their initialisation. The latter
+two are formalised by the particle's algorithmic steps. You can think of them
+as a sequence of operations which have to performed per particle per time step
+or until we have a properly initialised particle. You can visualise a 
+particle's algorithm via a simple graph:
+
+@image html particle-lifecycle.png
+
+It illustrates that we have some attributes on a particle (left top). Each
+particle runs through a number of steps (right): We start with an initialisation
+(red) in which we throw the particles into the domain. After that, each particle
+runs through two initialisation steps. The latter one migth repeat. Per time
+step, each particle runs through six compute steps, while, once again, one
+of them might have to be repeated. Some computational steps might only act on
+one particle at a time, other steps might require the particles around a
+particle to compute an outcome (darker boxes).
+
+This input sequence is taken as by our graph compiler to map it onto traversals
+of the data and to generate the C++ application. Details are discussed in 
+@ref swift_graph_compiler "the section on the Swift Graph Compiler". The
+basic rationale behind this design is that a particle-based algorithm is
+besed phrased as flow chart over a single particle. It is then the job of
+our software to bring this information together with the mesh in which the
+particles are organised, to map the updates onto data traversals, and to
+decide which particle to update at which point. By abstracting the mesh
+traversal away from the particle lifecycle, we can also easily handle multiple
+particle species. The particle lifecycle however encodes the required
+comptuational steps. Therefore, it comprises both the physics and the
+time stepping scheme. Both are intertwined in classic SPH.
+
+
+A few characteristic particle life cycles are discussed below. Nothing stops
+you however from introducing more cycles aka particle types.
+    
+
+## Declaring particle attributes
+
+You can instantiate your particle of interest and add further attributes to
+it in your main script. Alternatively, you might want to inherit from the
+particle type of interest and add additional attributes in the inherited type.
+The basic structure however is always the same:
+
+~~~~~~~~~~~~~~~~~~~~~
+  def declare_sph_particle_attributes(self):
+    """
+    SPH Hydro particle attributes
+    """
+
+    # Baseline particle properties --------------------------------------------------------------
+    self.mass         = dastgen2.attributes.Double       ("mass", valid_mantissa_bits=self._mantissa_size)
+    self.velocity     = peano4.dastgen2.Peano4DoubleArray("v", "Dimensions", valid_mantissa_bits=self._mantissa_size)
+    self.acceleration = peano4.dastgen2.Peano4DoubleArray("a", "Dimensions", valid_mantissa_bits=self._mantissa_size)
+    self.data.add_attribute( self.mass )
+    self.data.add_attribute( self.velocity )
+    self.data.add_attribute( self.acceleration )
+
+    ...
+~~~~~~~~~~~~~~~~~~~~~
+
+Such a method then has to be called from the python script where the Swift-Peano project
+is implemented for a particular experiment. As pointed out, you might want
+to work without a dedicated declare_sph_particle_attributes() routine and add
+particles straight-away. This however might be the cleaner design and enables
+you to reuse that particle class.
+
+
+## The algorithmic steps for the particle life cycle
+
+The second essential ingredient to build a particle life cycle is to specify the
+sequence of algorithmic steps. Each particle has to have a routine algorithm_steps()
+which returns the sequence of algorithmic steps to be run per time step.
+As an example, we discuss the SPH density loop:
+
+~~~~~~~~~~~~~~~~~~~~~
+      AlgorithmStep(
+        name                           = "DensityLoopWithConstantSmoothingLength",
+        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+        touch_vertex_first_time_kernel = """
+                                         ::swift2::kernels::prepareDensityCalculation( localParticles );
+                                         """,
+
+        cell_kernel                    = """
+                                         ::swift2::kernels::computeDensity(
+                                           localParticles,
+                                           activeParticles,
+                                           {}
+                                         );
+                                         """.format(self._hydroDimensions),
+
+        touch_vertex_last_time_kernel  = """
+                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
+                                             localParticles,
+                                             {},
+                                             {},
+                                             {}
+                                             );
+                                         """.format(self._hydroDimensions,
+                                                    self._eta_factor,
+                                                    self._alpha_av),
+
+        includes                       = """
+                                         #include "Constants.h"
+                                         #include "swift2/kernels/ParticleParticleInteraction.h"
+                                         #include "swift2/kernels/ParticleSelfInteraction.h"
+                                         #include "swift2/kernels/kernel_hydro.h"
+                                         #include "swift2/kernels/equation_of_state.h"
+                                         """,
+      )
+~~~~~~~~~~~~~~~~~~~~~
+
+The full life cycle is just a list of such an algorithmic steps.
+
+Some remarks:
+
+  - `dependencies` can distinguish between two options: `NEIGHBOURS` and `SELF`. These
+    refer to the two type of operations that are done in the SPH context: either
+    the computation depends on the particle itself or it requires contributions
+    from neighbours.
+  - `effect` has different options depending on the output type of the
+    calculation, e.g. `ALTER_LOCAL_STATE` means that only the current particle is
+    updated. Other options notably include `CHANGE_POSITION_OR_INTERACTION_RADIUS`,
+    which implies that the code needs to resort the particles after this step.
+  - `cell_kernel` invokes a compute kernel which depends on the `localParticles`
+    and `activeParticles` sets of the PIDT scheme.
+  - `touch_vertex_first_time_kernel` invokes a compute kernel which depends
+    exclusively on the `localParticles` set of the PIDT scheme when the particle
+    is first `touched' during the mesh traversal.
+  - `touch_vertex_last_time_kernel` analogous to the previous one.
+
+
+## The algorithmic steps for the particle initialisation
+
+This is very similar to the algorithmic steps. Each particle offers a routine
+initialisation_steps() which returns a sequence of steps that have to be called
+before we start the actual simulation. The sequence can be empty. The graph
+compiler will always add another two steps to ensure that the initial sorting
+of the particles is correct.
+
+
+## Examples for pre-defined particle types
+
+- A simple explicit Euler with a constant interaction radius can be found in
+  swift2.particle.ExplicitEulerFixedInteractionRadius. This is the simplest
+  particle type that one can think of within the framework of our code. You
+  could think of stationary particles which do nothing as even simpler ones,
+  one one might argue that this would be a degnerated particle.
+- swift2.particle.ExplicitEulerDynamicInteractionRadius is still a very simple
+  time integrator but showcases how one models algorithmic steps which might
+  have to be repeated: the dynamic interaction radius can iteratively change
+  multiple times per time step.
+- A realistic example for the behaviour of an SPH particle is implemented in
+  swift2.particle.SPHLeapfrogFixedInteractionRadius.
+
+
+*/
