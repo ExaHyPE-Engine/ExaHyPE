@@ -53,12 +53,11 @@ def get_default_clang_format(peano_root):
     return clang_format_style_file
 
 
-def get_black_command(peano_root, dry_run):
+def get_black_command(peano_root):
     """
     Get the full command used to invoke the python formatter 'black'.
     First get the path to the 'black' executable. It should be in the
-    $PEANO_REPOSITORY_ROOT/.black_formatting_env/MLADEN_ADD_FULL_PATH
-    directory.
+    $PEANO_REPOSITORY_ROOT/.black_formatting_env/bin/ directory.
 
     If that directory doesn't exist, we first need to set up a virtualenv
     there and install a specific version of 'black'.
@@ -88,17 +87,12 @@ def get_black_command(peano_root, dry_run):
     )
 
     black_cmd = black_path
-    # TODO: do we want more specifics? Options I have in mind:
-    # --target-version py38? py39? py310?
-    # --line-length
     black_cmd += " --quiet "
-    if dry_run:
-        black_cmd += " --check "
 
     return black_cmd
 
 
-def get_clang_command(clang_format_file, dry_run):
+def get_clang_command(clang_format_file):
     """
     Get the full command used to invoke the clang-format tool.
     """
@@ -110,11 +104,8 @@ def get_clang_command(clang_format_file, dry_run):
         clang_cmd + " --version", shell=True, stdout=subprocess.DEVNULL, check=True
     )
 
-    if dry_run:
-        clang_cmd += " --dry-run "
-    else:
-        # format files in-place
-        clang_cmd += " -i"
+    # format files in-place
+    clang_cmd += " -i"
     # change warnings to errors so I can work with the error code as
     # return values
     clang_cmd += " --Werror"
@@ -226,24 +217,31 @@ def run_python_formatter(filename, dry_run, peano_root):
     and the dry_run flag was provided, or 0 otherwise.
     """
 
-    black_cmd = get_black_command(peano_root, dry_run)
+    black_cmd = get_black_command(peano_root)
 
+    # First run in dry-run mode to accurately count whether we
+    # need to/do format through the return code.
+    if verbose:
+        print(f"checking {filename}", filename)
+    run = subprocess.run(
+        black_cmd + " --check " + filename, stdout=subprocess.DEVNULL, shell=True
+    )
+
+    returncode = run.returncode
+    if returncode != 0:
+        returncode = 1
+
+    if dry_run:
+        return returncode
+
+    # If not dry run: Now actually format the file
     if verbose:
         print(f"running {black_cmd} {filename}")
     run = subprocess.run(
         black_cmd + " " + filename, stdout=subprocess.DEVNULL, shell=True
     )
 
-    if dry_run:
-        if run.returncode != 0:
-            return 1
-        return 0
-
-    # assume file has been formatted.
-    # TODO: potentially the wrong choice to return 1 here if we're using
-    # CI to actually format files, not just the --dry-run mode to check
-    # for formatting
-    return 1
+    return returncode
 
 
 def run_clang_formatter(filename, dry_run, clang_format_file):
@@ -256,7 +254,27 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
     and the dry_run flag was provided, or 0 otherwise
     """
 
-    clang_cmd = get_clang_command(clang_format_file, dry_run)
+    clang_cmd = get_clang_command(clang_format_file)
+
+    # First run in dry-run mode to accurately count whether we
+    # need to/do format through the return code.
+    if verbose:
+        print(f"checking {filename}")
+    # pipe sterr to /dev/null too here. In dry run mode, every line that needs
+    # to be changed will otherwise be printed to stderr.
+    run = subprocess.run(
+        clang_cmd + " --dry-run " + filename,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        shell=True,
+    )
+
+    returncode = run.returncode
+    if returncode != 0:
+        returncode = 1
+
+    if dry_run:
+        return returncode
 
     if verbose:
         print(f"running {clang_cmd} {filename}")
@@ -269,17 +287,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
         shell=True,
     )
 
-    if dry_run:
-        # returns an error code if a file can be formatted.
-        if run.returncode != 0:
-            return 1
-        return 0
-
-    # assume file has been formatted.
-    # TODO: potentially the wrong choice to return 1 here if we're using
-    # CI to actually format files, not just the --dry-run mode to check
-    # for formatting
-    return 1
+    return returncode
 
 
 if __name__ == "__main__":
@@ -310,8 +318,6 @@ if __name__ == "__main__":
     # update target branch?
     if args.branch is not None:
         target_branch = args.branch
-    if verbose:
-        print("Comparing against", target_branch, "branch")
 
     # make sure we're either comparing a branch or a list of files
     if args.branch is not None and args.files is not None:
@@ -356,6 +362,8 @@ if __name__ == "__main__":
             filelist.append(f)
 
     else:
+        if verbose:
+            print("Comparing against", target_branch, "branch")
         # No file list means we're checking for git diffs
         # So get file list from a git diff now
         gitdiff = subprocess.run(
