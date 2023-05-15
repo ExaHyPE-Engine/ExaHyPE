@@ -104,7 +104,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
     [[maybe_unused]] double                                       t,
     [[maybe_unused]] double                                       dt,
-    [[maybe_unused]] double* __restrict__                         S
+    [[maybe_unused]] double* __restrict__                         S // S[{{NUMBER_OF_UNKNOWNS}}]
   )->void {
     {% if SOURCE_IMPLEMENTATION!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.sourceTerm( Q, volumeX, volumeH, t, dt, S );
@@ -152,7 +152,6 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   """
   else:
     assert False, "not supported combination: {} x {}".format( solver_variant, kernel_variant )
-        
 
   result = jinja2.Template( template, undefined=jinja2.DebugUndefined)
   d= {}
@@ -162,7 +161,6 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   d[ "COMPUTE_MAX_EIGENVALUE" ]      = compute_max_eigenvalue_of_next_time_step
   d[ "TEMP_DATA_ENUMERATOR" ]        = EnumeratorTemplateTypes[kernel_variant]
   return result.render(**d)
-
 
 def create_abstract_solver_declarations(flux_implementation,
                                         ncp_implementation,
@@ -227,13 +225,13 @@ def create_abstract_solver_declarations(flux_implementation,
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
-     * Depending on the implementation, this variant might be slow as it 
+     * Depending on the implementation, this variant might be slow as it
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      *
      * ## SYCL
      *
-     * At the moment, SYCL seems to struggle with ipo, even if a function is 
+     * At the moment, SYCL seems to struggle with ipo, even if a function is
      * never called. So I embed the (empty) implementation directly into the
      * header.
      */
@@ -269,13 +267,13 @@ def create_abstract_solver_declarations(flux_implementation,
 
     {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
-     * Depending on the implementation, this variant might be slow as it 
+     * Depending on the implementation, this variant might be slow as it
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      *
      * ## SYCL
      *
-     * At the moment, SYCL seems to struggle with ipo, even if a function is 
+     * At the moment, SYCL seems to struggle with ipo, even if a function is
      * never called. So I embed the (empty) implementation directly into the
      * header.
      */
@@ -332,7 +330,7 @@ def create_abstract_solver_declarations(flux_implementation,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
       [[maybe_unused]] double                                       t,
       [[maybe_unused]] double                                       dt,
-      [[maybe_unused]] double* __restrict__                         S,
+      [[maybe_unused]] double* __restrict__                         S, // S[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
     #if defined(GPUOffloadingOMP)
@@ -342,12 +340,12 @@ def create_abstract_solver_declarations(flux_implementation,
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void sourceTerm(
-      [[maybe_unused]] const double* __restrict__                   Q,
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
       [[maybe_unused]] double                                       t,
       [[maybe_unused]] double                                       dt,
-      [[maybe_unused]] double* __restrict__                         S
+      [[maybe_unused]] double* __restrict__                         S // S[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
 """, undefined=jinja2.DebugUndefined)
@@ -407,12 +405,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
 #if !defined(GPUOffloadingSYCL)
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
-  const double * __restrict__                  Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  double * __restrict__                        S
+  [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] double* __restrict__                         S // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
   {{SOURCE_TERM_IMPLEMENTATION}}
@@ -451,14 +449,14 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
 #endif
 //#if !defined(GPUOffloadingSYCL)
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
-      Offloadable
+  [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal,
+  [[maybe_unused]] double* __restrict__                         F, // F[{{NUMBER_OF_UNKNOWNS}}]
+  Offloadable
 ) {
   {% if FLUX_IMPLEMENTATION=="<none>" %}
   tarch::gpuAbort();
@@ -477,15 +475,15 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 #pragma omp declare target
 #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-      const double * __restrict__                  Q,        // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const double * __restrict__                  deltaQ,   // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double * __restrict__                        BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
-      Offloadable
+  [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const double* __restrict__                   deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal,
+  [[maybe_unused]] double* __restrict__                         BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] Offloadable
 ) {
   {% if NCP_IMPLEMENTATION=="<none>" %}
   tarch::gpuAbort();
@@ -503,13 +501,13 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
 #pragma omp declare target
 #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
-  const double * __restrict__                  Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  double * __restrict__                        S,
-  Offloadable
+  [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] double* __restrict__                         S, // S[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] Offloadable
 ) {
   {% if SOURCE_TERM_IMPLEMENTATION=="<none>" %}
   tarch::gpuAbort();
@@ -541,7 +539,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
       [[maybe_unused]] double                                       t,
       [[maybe_unused]] double                                       dt,
-      [[maybe_unused]] double* __restrict__                         S
+      [[maybe_unused]] double* __restrict__                         S // S[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
 
@@ -607,13 +605,13 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #pragma omp declare target
     #endif
     static GPUCallableMethod void sourceTerm(
-       const double * __restrict__                  Q,
-       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-       const tarch::la::Vector<Dimensions,double>&  volumeH,
-       double                                       t,
-       double                                       dt,
-       double * __restrict__                        S,
-       Offloadable
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] double* __restrict__                         S, // S[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] Offloadable
     );
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
@@ -639,13 +637,13 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #pragma omp declare target
     #endif
     static GPUCallableMethod double maxEigenvalue(
-      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      Offloadable
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal,
+      [[maybe_unused]] Offloadable
     );
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
@@ -654,9 +652,9 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
 
     {% if STATELESS_PDE_TERMS  and FLUX_IMPLEMENTATION=="<user-defined>" %}
     /**
-     * To obtain the best performance, I recommend to man inline command to 
+     * To obtain the best performance, I recommend to man inline command to
      * this signature and to copy the implementation into the header. So it would
-     * read 
+     * read
      *
      * static inline void flux( ... ) {
      *  code here
@@ -671,25 +669,25 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #pragma omp declare target
     #endif
     static GPUCallableMethod void flux(
-      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
-      Offloadable
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal,
+      [[maybe_unused]] double* __restrict__                         F, // F[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] Offloadable
     );
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
 
-    {% if STATELESS_PDE_TERMS  and NCP_IMPLEMENTATION=="<user-defined>" %}
+    {% if STATELESS_PDE_TERMS and NCP_IMPLEMENTATION=="<user-defined>" %}
     /**
-     * To obtain the best performance, I recommend to man inline command to 
+     * To obtain the best performance, I recommend to man inline command to
      * this signature and to copy the implementation into the header. So it would
-     * read 
+     * read
      *
      * static inline void nonconservativeProduct( ... ) {
      *  code here
@@ -704,15 +702,15 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #pragma omp declare target
     #endif
     static GPUCallableMethod void nonconservativeProduct(
-      const double * __restrict__                  Q,         
-      const double * __restrict__                  deltaQ,    
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double * __restrict__                        BTimesDeltaQ,
-      Offloadable
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const double* __restrict__                   deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal,
+      [[maybe_unused]] double* __restrict__                         BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] Offloadable
     );
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
@@ -724,19 +722,19 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "STATELESS_PDE_TERMS"]                             = pde_terms_without_state  
+  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
   return Template.render(**d)
 
 def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
   Template = jinja2.Template( """
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  int                                          normal
+  [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal
 ) {
   logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
   // @todo implement
@@ -746,13 +744,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  int                                          normal,
-  double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal,
+  [[maybe_unused]] double* __restrict__                         F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
   // @todo implement
@@ -762,15 +760,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * __restrict__                  Q,      // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  int                                          normal,
-  double * __restrict__                        BTimesDeltaQ  // BTimesDeltaQQ[{{NUMBER_OF_UNKNOWNS}}]
-)  {
+  [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const double* __restrict__                   deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal,
+  [[maybe_unused]] double* __restrict__                         BTimesDeltaQ // BTimesDeltaQQ[{{NUMBER_OF_UNKNOWNS}}]
+) {
   logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
   // @todo implement
   logTraceOut( "nonconservativeProduct(...)" );
@@ -817,76 +815,71 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
 #endif
 {% endif %}
 
-
 {% if FLUX_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  int                                          normal,
-  double * __restrict__ F,
+  [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal,
+  [[maybe_unused]] double* __restrict__                         F, // F[{{NUMBER_OF_UNKNOWNS}}]
   Offloadable
-)  {
+) {
   // @todo implement
 }
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 {% endif %}
-
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * __restrict__                  Q,        // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__                  deltaQ,   // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  int                                          normal,
-  double * __restrict__                        BTimesDeltaQ,
-  Offloadable
-)  {
+  [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const double* __restrict__                   deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal,
+  [[maybe_unused]] double* __restrict__                         BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] Offloadable
+) {
   // @todo implement
 }
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 {% endif %}
 
-
-
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
-  const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  double * __restrict__                        S,
-  Offloadable
+  [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] double* __restrict__                         S, // S[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] Offloadable
 ) {
   // @todo implement but ensure that all entries of S are properly set
   for (int i=0; i<NumberOfUnknowns; i++) {
     S[i] = 0.0;
   }
 }
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 {% endif %}
-
 
 """, undefined=jinja2.DebugUndefined)
   d= {}
@@ -894,7 +887,5 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "STATELESS_PDE_TERMS"]                             = pde_terms_without_state  
+  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
   return Template.render(**d)
-
-
