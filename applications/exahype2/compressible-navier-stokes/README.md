@@ -114,7 +114,7 @@ $$
 We assume isothermal conditions for our setup. Thus, $\nabla T = 0$. We can write the non-conservative product as:
 
 $$
-    F^h(Q,\nabla Q) = \begin{pmatrix}
+    F^v(Q,\nabla Q) = \begin{pmatrix}
         0 & 0 \\
         -\mu \frac{4}{3}\frac{\partial u}{\partial x} & -\mu(\frac{\partial u}{\partial y} + \frac{\partial v}{\partial x}) \\
         -\mu(\frac{\partial u}{\partial y} + \frac{\partial v}{\partial x}) & -\mu \frac{4}{3}\frac{\partial v}{\partial y} \\

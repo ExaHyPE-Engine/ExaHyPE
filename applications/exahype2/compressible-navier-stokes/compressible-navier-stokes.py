@@ -83,7 +83,7 @@ if not os.path.exists("solution"):
 my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 my_project.set_Peano4_installation("../../../", mode )
 my_project = my_project.generate_Peano4_project(verbose=True)
-#my_project.output.makefile.add_cpp_file( "NavierStokesSolver.cpp", generated=False )
+my_project.output.makefile.add_cpp_file( "NavierStokesSolver.cpp", generated=False )
 my_project.build(make_clean_first=True, throw_away_data_after_build=True)
 
 print("Executable is 'compressible-navier-stokes-<dimensions>d'")
