@@ -4,9 +4,15 @@ from .StepsToStepRepository import StepsToStepRepository
 
 
 class Steps(object):
-  """
+  """!
+  
+  All operations within Peano 4 model
+  
   Represents the total output generated from the Peano4 data model plus all
-  the operations on it. This is basically a big collection.
+  the operations on it. This is basically a big collection. Each step holds
+  all the action sets aka operations that are executed within one grid
+  traversal.
+  
   """
   
   def __init__(self,project):

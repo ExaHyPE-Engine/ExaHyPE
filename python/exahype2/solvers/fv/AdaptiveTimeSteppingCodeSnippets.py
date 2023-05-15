@@ -18,7 +18,7 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
   if ( 
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
     and
-    _maxVolumeH>0.0
+    (_maxVolumeH>0.0 or _maxVolumeHThisTimeStep>0.0)
     and
     isFirstGridSweepOfTimeStep()
   ) {

@@ -48,9 +48,9 @@ class toolbox::loadbalancing::Hardcoded: public toolbox::loadbalancing::Abstract
      */
     Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks, bool handOutOnePartitionPerCore);
 
-    void finishStep() override;
+    virtual void finishStep() override;
 
-    void finishSimulation() override;
+    virtual void finishSimulation() override;
   private:
     static tarch::logging::Log  _log;
 

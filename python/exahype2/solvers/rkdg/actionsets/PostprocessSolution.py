@@ -20,6 +20,7 @@ class EmptyPostprocessSolution(AbstractRungeKuttaDGActionSet):
     super(EmptyPostprocessSolution,self).__init__(solver)
     # Is there for compatibility reasons
     self.guard               = "true"
+    self.priority            = 2
     
 
   def get_body_of_operation(self,operation_name):
@@ -56,6 +57,7 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
     super(DoFWisePostprocessSolution,self).__init__(solver)
     self.guard               = "true"
     self._compute_kernel     = ""
+    self.priority            = 1 
 
 
   def add_postprocessing_kernel(self, operation_per_point):

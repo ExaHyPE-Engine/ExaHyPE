@@ -20,6 +20,6 @@ class convert::filter::ConvertTreeIdIntoDataField: public convert::filter::Filte
 
   public:
     ConvertTreeIdIntoDataField();
-	  void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) override;
+    virtual void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) override;
 };
 

@@ -3,10 +3,10 @@
 import peano4.toolbox.particles
 
 import dastgen2
-
+from abc import abstractmethod
 
 class Particle(peano4.toolbox.particles.Particle):
-  """
+  """!
   
   Base class for any particle in the project
   
@@ -75,7 +75,7 @@ class Particle(peano4.toolbox.particles.Particle):
                min_h,
                max_h,
                ):
-    """
+    """!
     
     Initialise the particle
     
@@ -118,10 +118,22 @@ class Particle(peano4.toolbox.particles.Particle):
     pass
 
 
+  @abstractmethod
   def algorithm_steps(self):
-    """
+    """!
     
-    Return sequence of algorithm steps
+    Return sequence of algorithm steps that have to be called per time step
+    
+    """
+    assert False, "Should be overwritten by subclass"
+    return []
+
+
+  @abstractmethod
+  def initialisation_steps(self):
+    """!
+    
+    Return sequence of algorithm steps that have to be performed throughout initialisation
     
     """
     assert False, "Should be overwritten by subclass"

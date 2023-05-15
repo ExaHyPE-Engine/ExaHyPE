@@ -95,14 +95,14 @@ class exahype2::RefinementControlService: public tarch::services::Service {
      * side in case someone wants to call this receiveDanglingMessages()
      * version explicitly.
      */
-    void receiveDanglingMessages() override;
+    virtual void receiveDanglingMessages() override;
 
     /**
      * @see RefinementControl::clear()
      */
     std::vector< peano4::grid::GridControlEvent >  getGridControlEvents() const;
 
-    void shutdown() override;
+    virtual void shutdown() override;
 
     /**
      * Should be called after each traversal per rank.

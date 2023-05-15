@@ -47,7 +47,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
      *  Therefore, Q usually is only evaluated by dynamic AMR codes
      *  which make the solution follow
      */
-    ::exahype2::RefinementCommand refinementCriterion(
+    virtual ::exahype2::RefinementCommand refinementCriterion(
       [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
@@ -56,7 +56,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     {% endif %}
 
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
-    void initialCondition(
+    virtual void initialCondition(
       [[maybe_unused]] double* __restrict__                         Q,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
       [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,

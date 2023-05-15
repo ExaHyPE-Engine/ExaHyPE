@@ -85,22 +85,22 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
      *
      * @see PointDataWriter::close()
      */
-    bool writeToFile() override;
+    virtual bool writeToFile() override;
 
     /**
      * @return Whether writer is ready to accept data.
      */
-    bool isOpen() override;
+    virtual bool isOpen() override;
 
     /**
      * Clear the writer, i.e. erase all the data. However, as the writer does
      * not track how many vertex and cell writers you've created, it's up to
      * you to ensure that none of these instances is left.
      */
-    void clear() override;
+    virtual void clear() override;
 
-    int plotPoint(const tarch::la::Vector<2,double>& position) override;
-    int plotPoint(const tarch::la::Vector<3,double>& position) override;
+    virtual int plotPoint(const tarch::la::Vector<2,double>& position) override;
+    virtual int plotPoint(const tarch::la::Vector<3,double>& position) override;
 
     /**
      * A writer to assign points a value.
@@ -124,11 +124,11 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
          *              used for the point.
          * @param value Value for the point.
          */
-        void plot( int index, double value ) override;
-        void plot( int index, const tarch::la::Vector<1,double>& value ) override;
-        void plot( int index, const tarch::la::Vector<2,double>& value ) override;
-        void plot( int index, const tarch::la::Vector<3,double>& value ) override;
-        void plot( int index, double* values, int numberOfValues ) override;
+        virtual void plot( int index, double value ) override;
+        virtual void plot( int index, const tarch::la::Vector<1,double>& value ) override;
+        virtual void plot( int index, const tarch::la::Vector<2,double>& value ) override;
+        virtual void plot( int index, const tarch::la::Vector<3,double>& value ) override;
+        virtual void plot( int index, double* values, int numberOfValues ) override;
 
         /**
          * If you close your writer, each point has to be assigned a
@@ -147,17 +147,17 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
          * class, as there might situations where users dump particles without any
          * data, i.e. this close() is never invoked.
          */
-        void close() override;
+        virtual void close() override;
 
         /**
          * @see close()
          */
-        void assignRemainingPointsDefaultValues() override;
+        virtual void assignRemainingPointsDefaultValues() override;
     };
 
     /**
      * Caller has to destroy this instance manually.
      */
-    PointWriter::PointDataWriter*    createPointDataWriter( const std::string& identifier, int recordsPerPoint ) override;
+    virtual PointWriter::PointDataWriter*    createPointDataWriter( const std::string& identifier, int recordsPerPoint ) override;
 };
 

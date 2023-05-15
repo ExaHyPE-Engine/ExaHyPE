@@ -21,12 +21,17 @@ me to track the simulation behaviour in time elegantly (see postprocessing
 discussion below):
 
 ~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
+
 python3 convergence-study.py -s fv -tracer
 python3 convergence-study.py -s dg1-rk1 -tracer
 python3 convergence-study.py -s dg2-rk2 -tracer
 python3 convergence-study.py -s dg3-rk3 -tracer
 python3 convergence-study.py -s dg4-rk4 -tracer
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+The initial export is important, as we use the bespoke CCZ4 solvers from the
+whole CCZ4 application (even though we only use a few hard-coded experiments).
 
 
 ## Clean up old and temporary files
@@ -37,11 +42,11 @@ all be reinstantiated.
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-     rm *.o
-     rm Readme-*.md
-     rm Makefile
+     rm *.o *.cmake
+     rm README-*.md
+     rm Makefile CMakeLists.txt
      rm Abstract*
-     rm -rf celldata facedata globaldata observers tasks vertexdata
+     rm -rf celldata facedata globaldata observers tasks vertexdata repositories
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -49,7 +54,7 @@ all be reinstantiated.
 To get rid of the output files, type in
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-     rm *patch-file *vtu *.pvd
+     rm *patch-file *vtu *.pvd *.bak
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 

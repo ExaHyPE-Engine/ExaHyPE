@@ -73,7 +73,7 @@ class exahype2::dg::tests::RiemannTest : public tarch::tests::TestCase {
 
     virtual ~RiemannTest() = default;
 
-    void run() override;
+    virtual void run() override;
 };
 
 

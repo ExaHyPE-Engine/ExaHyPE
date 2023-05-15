@@ -213,28 +213,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void startGridConstructionStep() override;
+    virtual void startGridConstructionStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void finishGridConstructionStep() override;
-
-
-
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
-    void startGridInitialisationStep() override;
-
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
-    void finishGridInitialisationStep() override;
-
+    virtual void finishGridConstructionStep() override;
 
 
 
@@ -242,7 +227,22 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void startTimeStep(
+    virtual void startGridInitialisationStep() override;
+
+    /**
+     * If you hook into this routine, ensure the abstract base class
+     * operation is still invoked.
+     */
+    virtual void finishGridInitialisationStep() override;
+
+
+
+
+    /**
+     * If you hook into this routine, ensure the abstract base class
+     * operation is still invoked.
+     */
+    virtual void startTimeStep(
       double globalMinTimeStamp,
       double globalMaxTimeStamp,
       double globalMinTimeStepSize,
@@ -253,14 +253,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void finishTimeStep() override;
+    virtual void finishTimeStep() override;
 
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void startPlottingStep(
+    virtual void startPlottingStep(
       double globalMinTimeStamp,
       double globalMaxTimeStamp,
       double globalMinTimeStepSize,
@@ -271,7 +271,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    void finishPlottingStep() override;
+    virtual void finishPlottingStep() override;
 
 
     /**
@@ -289,19 +289,21 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     /**
      * Within the DG context, mesh is an alias for cell.
      */
-    double getMaxMeshSize() const override final;
-    double getMinMeshSize() const override final;
+    virtual double getMaxMeshSize() const override final;
+    virtual double getMinMeshSize() const override final;
     
     /**
      * Functions inherited from Solver.h in the aderdg context, these provide
      * information to ExaSeis expansions
+     *
+     * @todo Should not be here
      */    
-    tarch::la::Vector<Dimensions,double> getDomainSize()    const override final;
-    tarch::la::Vector<Dimensions,double> getDomainOffset()  const override final;
-    double getCoarsestMeshSize()                            const override final;
-    int getCoarsestMeshLevel()                              const override final;
-    int getMaximumAdaptiveMeshLevel()                       const override final;
-    int getMaximumAdaptiveMeshDepth()                       const override final;
+    virtual tarch::la::Vector<Dimensions,double> getDomainSize()    const override final;
+    virtual tarch::la::Vector<Dimensions,double> getDomainOffset()  const override final;
+    virtual double getCoarsestMeshSize()                            const override final;
+    virtual int getCoarsestMeshLevel()                              const override final;
+    virtual int getMaximumAdaptiveMeshLevel()                       const override final;
+    virtual int getMaximumAdaptiveMeshDepth()                       const override final;
     
 
     /**
@@ -317,7 +319,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     /**
      * Always holds.
      */
-    bool mayPlot() const override;
+    virtual bool mayPlot() const override;
 
     /**
      * This predicate is always true, as we work with a single-sweep
@@ -330,13 +332,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      * Feel free to overwrite in user code, but ensure the superclass
      * implementation is still invoked, too.
      */
-    void startSimulation() override;
+    virtual void startSimulation() override;
 
     /**
      * Feel free to overwrite in user code, but ensure the superclass
      * implementation is still invoked, too.
      */
-    void finishSimulation() override;
+    virtual void finishSimulation() override;
 
 
 
