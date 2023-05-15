@@ -24,6 +24,7 @@ vertexdata/
 observers/
 repositories/
 tasks/
+generated/
 solution-*
 
 Constants.h

@@ -131,7 +131,7 @@ distclean:
 	rm -f $(GENERATED_CXX_SOURCES)
 	rm -f ${GENERATED_FORTRAN_SOURCES}
 	rm -f ${GENERATED_CU_SOURCES}
-	rm -rf globaldata celldata facedata vertexdata observers repositories tasks
+	rm -rf globaldata celldata facedata vertexdata observers repositories tasks generated
 	rm -f Constants.h
 	rm -f README-*
 	rm -f .gitignore

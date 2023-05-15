@@ -10,7 +10,7 @@ import jinja2
 
 class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
   def __init__(self, particle_set, solver, filename, number_of_entries_between_two_db_flushes=65536, data_delta_between_two_snapsots=1e-8, position_delta_between_two_snapsots=1e-8, time_delta_between_two_snapsots=0, output_precision=8, use_relative_deltas=False, initial_record_time=-1, last_record_time=1e8):
-    """
+    """!
      
     data_delta_between_two_snapsots: Float
      A particle is dumped into the database if it has switched the domain 
@@ -59,6 +59,7 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
       you can specify at when does the tracer stop dumping data to files.
      
     """
+    super(DumpTrajectoryIntoDatabase,self).__init__(priority=1,parallel=False)
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name

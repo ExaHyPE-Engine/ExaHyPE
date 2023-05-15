@@ -5,6 +5,8 @@ from swift2.particle.AlgorithmStep import AlgorithmStep
 
 import peano4
 
+from abc import ABC
+
 class ExplicitEulerDynamicInteractionRadius(Particle):
   """
   
@@ -142,4 +144,13 @@ class ExplicitEulerDynamicInteractionRadius(Particle):
                                          """              
       ),
     ]
+
+
+  def initialisation_steps(self):
+    """!
+    
+    No particular initialisation required
+    
+    """
+    return [] 
 

@@ -22,6 +22,14 @@ std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::FaceM
 
 
 /**
+ * Provide information about selected face
+ *
+ * This routine is passed into any observer/action set routine which
+ * refers to a face, so routines like touchFaceFirstTime(). It provides
+ * you with information about the particular face as well as their location
+ * within the mesh.
+ *
+ * @see VertexMarker for an analogous description of the vertex handling.
  * @see FaceEnumerator for a discussion of the ordering of the faces.
  */
 struct peano4::datamanagement::FaceMarker {

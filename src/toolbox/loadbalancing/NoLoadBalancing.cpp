@@ -8,7 +8,7 @@
 
 
 toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing():
-  AbstractLoadBalancing( nullptr, false ) {
+  NoLoadBalancing( nullptr, false ) {
 }
 
 
@@ -17,10 +17,17 @@ toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing(
   bool deleteInDestructor
 ):
   AbstractLoadBalancing( configuration, deleteInDestructor ) {
+  _state = State::SwitchedOff;
+  _statistics.notifyOfStateChange(_state);
 }
 
 
 void toolbox::loadbalancing::NoLoadBalancing::finishStep() {
+  _statistics.updateGlobalView();
+  _blacklist.update();
 }
 
 
+void toolbox::loadbalancing::NoLoadBalancing::enable( bool value ) {
+  AbstractLoadBalancing::enable(false);
+}

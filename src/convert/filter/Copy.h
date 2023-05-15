@@ -16,8 +16,8 @@ namespace convert {
 
 class convert::filter::Copy: public convert::filter::Filter {
   private:
-	static tarch::logging::Log _log;
+    static tarch::logging::Log _log;
   public:
-	void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) override;
+  	virtual void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) override;
 };
 

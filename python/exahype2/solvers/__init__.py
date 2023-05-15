@@ -3,6 +3,7 @@
 
 from .FixedTimeSteppingCodeSnippets              import FixedTimeSteppingCodeSnippets
 from .AdaptiveTimeSteppingCodeSnippets           import AdaptiveTimeSteppingCodeSnippets
+from .OptimisticAdaptiveTimeSteppingCodeSnippets import OptimisticAdaptiveTimeSteppingCodeSnippets
 from .FixedSubcyclingTimeSteppingCodeSnippets    import FixedSubcyclingTimeSteppingCodeSnippets
 from .AdaptiveSubcyclingTimeSteppingCodeSnippets import AdaptiveSubcyclingTimeSteppingCodeSnippets
 from .LocalTimeSteppingCodeSnippets              import LocalTimeSteppingCodeSnippets

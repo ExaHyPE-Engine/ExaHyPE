@@ -99,6 +99,9 @@ bool selectNextAlgorithmicStep() {
       logInfo( "selectNextAlgorithmicStep()", "all ranks have switched off their load balancing" );
       gridBalanced = true;
     }
+    else {
+      logInfo( "selectNextAlgorithmicStep()", "wait for load balancing to become stable: " <<  repositories::loadBalancer );
+    }
 
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing )
@@ -137,7 +140,7 @@ bool selectNextAlgorithmicStep() {
       gridConstructed                       = true;
     }
     else {
-      logInfo( "selectNextAlgorithmicStep()", "mesh rebalancing seems to be kind of stationary, so study whether to refine mesh further in next sweep" );
+      logInfo( "selectNextAlgorithmicStep()", "mesh rebalancing seems to be stationary, so study whether to refine mesh further in next sweep: " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().toString() );
       addGridSweepWithoutGridRefinementNext = false;
       globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     }

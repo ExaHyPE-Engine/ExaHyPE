@@ -390,8 +390,13 @@ did search for a file """ + input_file )
     if self.generated_hfiles.count(filename)==0 and self.hfiles.count(filename)==0:
       if generated:
         self.generated_hfiles.append( filename )
-      else:
+      if self.hfiles.count(filename) > 0:
+        self.hfiles.remove(filename)
+    else:
+      if self.hfiles.count(filename)==0:
         self.hfiles.append( filename )
+      if self.generated_hfiles.count(filename) > 0:
+        self.generated_hfiles.remove(filename)
 
   def remove_h_file(self,filename,generated=True):
     if generated:
@@ -497,8 +502,13 @@ did search for a file """ + input_file )
     if self.generated_fortranfiles.count(filename)==0 and self.fortranfiles.count(filename)==0:
       if generated:
         self.generated_fortranfiles.append( filename )
-      else:
+      if self.fortranfiles.count(filename) > 0:
+        self.fortranfiles.remove(filename)
+    else:
+      if self.fortranfiles.count(filename)==0:
         self.fortranfiles.append( filename )
+      if self.generated_fortranfiles.count(filename) > 0:
+        self.generated_fortranfiles.remove(filename)
 
   def remove_Fortran_file(self,filename,generated=True):
     if generated:

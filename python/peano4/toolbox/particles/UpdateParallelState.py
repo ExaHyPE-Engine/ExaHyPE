@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
+from .AbstractUpdateParticleGridAssociation import AbstractUpdateParticleGridAssociation
 
 import jinja2
 
@@ -10,9 +11,9 @@ import jinja2
 
 
 class UpdateParallelState(ActionSet):
-  """
+  """!
   
-!Update the parallel state of particles and keep stats of local particles
+Update the parallel state of particles and keep stats of local particles
      
 This operation should always been called after you've resorted the particles
 due to position changes or alterations of the cut-off radii. The action set
@@ -55,7 +56,11 @@ The new state analysis is very simple:
   have flown into the domain, and how many have left the domain,
     
   """
+  
+  DefaultPriority = AbstractUpdateParticleGridAssociation.DefaultPriority+1
+  
   def __init__(self,particle_set):
+    super( UpdateParallelState, self ).__init__(priority=self.DefaultPriority, parallel=False)
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                      = particle_set.particle_model.name

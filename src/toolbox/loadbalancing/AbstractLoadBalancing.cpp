@@ -6,6 +6,13 @@
 tarch::logging::Log  toolbox::loadbalancing::AbstractLoadBalancing::_log( "toolbox::loadbalancing::AbstractLoadBalancing" );
 
 
+std::ostream& operator<<(std::ostream& out, const toolbox::loadbalancing::AbstractLoadBalancing& balancing) {
+  out << balancing.toString();
+  return out;
+}
+
+
+
 toolbox::loadbalancing::AbstractLoadBalancing::AbstractLoadBalancing(Configuration* configuration, bool deleteInDestructor):
   _state( State::Undefined ),
   _configuration(configuration),
@@ -46,6 +53,8 @@ void toolbox::loadbalancing::AbstractLoadBalancing::enable( bool value ) {
     logInfo( "enable()", "switched load balancing off" );
     _state = State::SwitchedOff;
   }
+
+  _statistics.notifyOfStateChange(_state);
 }
 
 

@@ -46,8 +46,15 @@ class toolbox::particles::FileReaderHDF5 {
     std::vector<double>                                  _InternalEnergy;
     std::vector<int>                                     _ParticleIDs;
 
+    /* If we are removing read-in particles on-the-fly while sorting
+     * them into voxels, we need to keep track of their index to access
+     * the other particle quantities correctly. This list keeps these indexes.*/
+    std::list<int>                                       _ParticleIndex;
+
     /* Copies that hold the data only for particles within the voxel */
-    int                                                  _index;
+    /* If you are adding additional quantities, don't forget to update them
+     * in FileReaderHDF5.clearVoxel() and FileReaderHDF5.isVoxelEmpty() 
+     * as well */
     std::vector< tarch::la::Vector<Dimensions,double> >  _VelocityWithinVoxel;
     std::vector<double>                                  _MassWithinVoxel;
     std::vector<double>                                  _SmoothingLengthWithinVoxel;
@@ -170,6 +177,17 @@ class toolbox::particles::FileReaderHDF5 {
     bool empty() const;
 
     bool getNumberOfCoordinates() const;
+
+    /**
+     * Clear data of a voxel carried by this instance of FileReaderHDF5.
+     **/
+    void clearVoxel();
+
+    /**
+     * Check whether voxel data carried by this instance of FileReaderHDF5
+     * is empty.
+     **/
+    bool isVoxelEmpty() const;
 
     /* 
      * Get methods for data other than Coordinates.

@@ -7,6 +7,9 @@ import peano4
 import dastgen2
 import peano4.dastgen2
 
+from abc import ABC
+
+
 class LeapfrogFixedInteractionRadius(Particle):
   """
   
@@ -232,3 +235,11 @@ class LeapfrogFixedInteractionRadius(Particle):
       ),
     ]
 
+
+  def initialisation_steps(self):
+    """!
+    
+    No particular initialisation required
+    
+    """
+    return [] 

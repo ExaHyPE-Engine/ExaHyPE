@@ -21,6 +21,7 @@ toolbox::loadbalancing::SplitOversizedTree::SplitOversizedTree(Configuration* co
   _roundRobinToken(0) {
   assertion( configuration!=nullptr );
   _state = State::InterRankDistribution;
+  _statistics.notifyOfStateChange(_state);
 }
 
 

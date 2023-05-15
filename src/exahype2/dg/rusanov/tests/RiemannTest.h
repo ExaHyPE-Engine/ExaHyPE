@@ -28,7 +28,7 @@ class exahype2::dg::rusanov::tests::RiemannTest : public tarch::tests::TestCase 
 
     virtual ~RiemannTest() = default;
 
-    void run() override;
+    virtual void run() override;
 };
 
 

@@ -11,6 +11,7 @@ import sys
 import exahype2.grid
 import exahype2.solvers
 
+
 class Project(object):
   """
   Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4
@@ -368,12 +369,12 @@ thus appreciate any citation of the original release paper
     #
     # Initialisation
     #
-    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
+    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
         
     #
     # Move particles
     #
-    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
+    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
     
     #
     # Plotter: The timestamp here is slightly wrong, as I use the min time stamp. It 
@@ -399,17 +400,20 @@ thus appreciate any citation of the original release paper
       
       self.plot_solution.add_action_set( particle_plotter ) 
       
-    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
+    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
     
     self._tracer_particles.append(particles)
 
     return particles
 
+
   def add_action_set_to_timestepping(self, action_set):
     self.perform_time_step.add_action_set( action_set )
 
+
   def add_action_set_to_initialisation(self, action_set):
     self.init_grid.add_action_set( action_set )
+
 
   def generate_Peano4_project(self, verbose=False):
     """

@@ -33,7 +33,7 @@ class convert::output::PeanoWriter: public convert::output::Writer {
 	PeanoWriter(const std::string&  directory, const std::string& outputFileWithoutExtention);
 	~PeanoWriter();
 
-	void writeFile(const convert::data::Variable& variable, const std::vector<convert::data::PatchData>& data) override;
+	virtual void writeFile(const convert::data::Variable& variable, const std::vector<convert::data::PatchData>& data) override;
 	void writeFile(const convert::data::DataSet& dataSet);
 	void writeFile(const std::vector< convert::data::DataSet > dataSet);
   private:
