@@ -8,7 +8,7 @@
 
 
 /**
- * @namespace peano4
+ * @dir src/peano4
  *
  * Peano's core layer. It sits on top of the technical architecture.
  */

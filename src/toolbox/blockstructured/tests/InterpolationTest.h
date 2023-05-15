@@ -59,6 +59,6 @@ parameter tarch::la::DynamicMatrix::vectorToString(fineGridFaceEulerQUpdate.valu
     /**
      * This routine is triggered by the TestCaseCollection
      */
-    void run() override;
+    virtual void run() override;
 };
 

@@ -47,26 +47,26 @@ namespace {
 
   class PingPongSendTask: public tarch::multicore::Task {
     private:
+      const bool _data;
       const bool _blockingMPI;
-
-      static constexpr int _taskId = 22;
     public:
-      PingPongSendTask(int id, bool blockingMPI):
-        Task(id,_taskId,0),
+      PingPongSendTask(int data, bool blockingMPI):
+        Task(Task::DontFuse,Task::DefaultPriority),
+        _data(data),
         _blockingMPI(blockingMPI) {}
    
       bool run() {
         #if defined(Parallel) and not defined(UseSmartMPI)
-        const int out = 23+_id;
+        const int out = 23+_data;
         static tarch::logging::Log _log( "peano4::parallel::tests::PingPongSendTask" );
         if (_blockingMPI) {
-          MPI_Send(&out,1,MPI_INT,1,_id,MPI_COMM_WORLD);
-          logDebug( "PingPongSendTask()", "sent blocking message " << out << " to rank 1 with tag " << _id );
+          MPI_Send(&out,1,MPI_INT,1,_data,MPI_COMM_WORLD);
+          logDebug( "PingPongSendTask()", "sent blocking message " << out << " to rank 1 with tag " << _data );
         }
         else {
           MPI_Request request;
-          MPI_Isend(&out,1,MPI_INT,1,_id,MPI_COMM_WORLD,&request);
-          logDebug( "PingPongSendTask()", "sent non-blocking message " << out << " to rank 1 with tag " << _id );
+          MPI_Isend(&out,1,MPI_INT,1,_data,MPI_COMM_WORLD,&request);
+          logDebug( "PingPongSendTask()", "sent non-blocking message " << out << " to rank 1 with tag " << _data );
           MPI_Wait(&request,MPI_STATUS_IGNORE);
         }
         #endif
@@ -77,30 +77,30 @@ namespace {
 
   class PingPongReceiveTask: public tarch::multicore::Task {
     private:
+      const int  _data;
       const bool _blockingMPI;
-
-      static constexpr int _taskId = 23;
     public:
-      PingPongReceiveTask(int id, bool blockingMPI):
-        Task(id,_taskId,0),
+      PingPongReceiveTask(int expectedData, bool blockingMPI):
+        Task(Task::DontFuse,Task::DefaultPriority),
+        _data(expectedData),
         _blockingMPI(blockingMPI) {}
 
       bool run() {
         #if defined(Parallel) and not defined(UseSmartMPI)
         int in = -12;
         static tarch::logging::Log _log( "peano4::parallel::tests::PingPongSendTask" );
-        logInfo( "PingPongReceiveTask()", "receive message from rank 1 with tag " << _id );
+        logInfo( "PingPongReceiveTask()", "receive message from rank 1 with tag " << _data );
         if (_blockingMPI) {
-          MPI_Recv(&in,1,MPI_INT,0,_id,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+          MPI_Recv(&in,1,MPI_INT,0,_data,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
         }
         else {
           MPI_Request request;
-          MPI_Irecv(&in,1,MPI_INT,0,_id,MPI_COMM_WORLD,&request);
+          MPI_Irecv(&in,1,MPI_INT,0,_data,MPI_COMM_WORLD,&request);
           MPI_Wait(&request,MPI_STATUS_IGNORE);
         }
         logInfo( "PingPongReceiveTask()", "got content " << in );
-        if ( in != 23+_id) {
-          logError( "testMultithreadedPingPong()", "received " << in << " instead of " << (23+_id) << " (blocking mode=" << _blockingMPI << ", tag=" << _id << ")" );
+        if ( in != 23+_data) {
+          logError( "testMultithreadedPingPong()", "received " << in << " instead of " << (23+_data) << " (blocking mode=" << _blockingMPI << ", tag=" << _data << ")" );
           testErrors++;
         }
         #endif

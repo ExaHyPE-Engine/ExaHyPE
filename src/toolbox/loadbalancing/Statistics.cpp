@@ -102,7 +102,6 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
     _globalNumberOfSplits                        = _localNumberOfSplits;
     _globalNumberOfTrees                         = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
     _globalNumberOfRanksWithEnabledLoadBalancing = _localLoadBalancingEnabled ? 1 : 0;
-    logInfo( "updateGlobalView()", "_localLoadBalancingEnabled=" << _localLoadBalancingEnabled );
     _minimumOfMaximumTreesPerRank                = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
     _maximumTreesPerRank                         = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
   }

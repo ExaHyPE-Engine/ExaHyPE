@@ -96,10 +96,21 @@ a unique name, so it is easier for you to find what C++ file corresponds
 to which action set. 
 
 
-    
-    
+priority: Integer
+  Each action set has a priority. The action sets are invoked later
+  in order following their priority throughout the steps down within
+  the tree. Their call order is inverted when we backtrace within the 
+  tree. The order allows you to add the action sets in a different 
+  order than they are actually used later on. See peano4.solversteps.Step.add_action_set().
+
+parallel: Boolean
+  If two action sets have the same priority and if they all holds the 
+  parallel flag, then the observer may run them in parallel.
+     
   """
-  def __init__(self):
+  def __init__(self, priority = 0, parallel = True):
+    self.priority = priority
+    self.parallel = parallel
     pass
 
 

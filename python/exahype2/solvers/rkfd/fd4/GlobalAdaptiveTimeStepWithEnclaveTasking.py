@@ -33,6 +33,19 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     pde_terms_without_state: bool = False,
     plot_grid_properties=False, KOSigma=8.0
   ):
+    """!
+    
+    Construct solver
+    
+    
+    time_step_relaxation: Float
+      Calibration factor of CFL condition. The Runge-Kutta order is multiplied 
+      with this value following the formula for Cockburn-Shu damping. However, 
+      also the actual polynomial order has to enter the chosen time step size
+      through an additional @f$ p^{-2} @f$ scaling. We expect the user to 
+      incorporate such an additional scaling within time_step_relaxation.
+      
+    """  
     super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, 
                                              patch_size, 
                                              3, #overlap, 
@@ -47,9 +60,9 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
                                              ) 
 
     self._time_step_relaxation = time_step_relaxation
-    self._compute_eigenvalue                  = True
+    self._compute_eigenvalue   = True
 
-    self._KO_Sigma                            = KOSigma
+    self._KO_Sigma             = KOSigma
 
     self.set_implementation(flux=flux, 
       ncp=ncp, 

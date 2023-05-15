@@ -53,7 +53,7 @@ class peano4::parallel::tests::PingPongTest: public tarch::tests::TestCase {
     void testMultithreadedPingPongWithNonblockingSendsAndReceives();
   public:
     PingPongTest();
-    void run() override;
+    virtual void run() override;
 };
 
 

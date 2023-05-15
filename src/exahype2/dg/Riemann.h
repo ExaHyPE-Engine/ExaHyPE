@@ -389,7 +389,7 @@ namespace exahype2 {
     );
 
 
-    /*
+    /**
      * Given a numerical flux at the various faces, this computes and adds the Riemann
      * integral of this flux to the nodes of the cell.
      *

@@ -31,6 +31,18 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     eigenvalues=PDETerms.User_Defined_Implementation, 
     plot_grid_properties=False, KOSigma=8.0
   ):
+    """!
+    
+    Construct solver
+    
+    time_step_relaxation: Float
+      Calibration factor of CFL condition. The Runge-Kutta order is multiplied 
+      with this value following the formula for Cockburn-Shu damping. However, 
+      also the actual polynomial order has to enter the chosen time step size
+      through an additional @f$ p^{-2} @f$ scaling. We expect the user to 
+      incorporate such an additional scaling within time_step_relaxation.
+      
+    """  
     super(GlobalAdaptiveTimeStep,self).__init__(name, 
                                              patch_size, 
                                              3, #overlap, 
