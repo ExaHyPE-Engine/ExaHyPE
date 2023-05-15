@@ -2,15 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <vector>
 #include <map>
 #include <set>
 #include <list>
 
-
 #include "GridVertex.h"
-
 
 namespace peano4 {
   /**
@@ -46,7 +43,6 @@ namespace peano4 {
     static std::string toString(Mode mode);
     std::string toString() const;
   };
-
 
   typedef std::map< int, SplitInstruction >  SplitSpecification;
 
@@ -296,7 +292,6 @@ namespace peano4 {
 
     constexpr int InvalidRank(-1);
 
-
     enum class SpacetreeState {
       /**
        * Not yet a new root. Just got created, so we have to run through the
@@ -416,7 +411,6 @@ namespace peano4 {
     }
   }
 }
-
 
 peano4::grid::GridStatistics operator+( peano4::grid::GridStatistics lhs, peano4::grid::GridStatistics rhs );
 

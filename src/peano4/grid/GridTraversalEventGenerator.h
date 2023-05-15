@@ -5,15 +5,10 @@
 #include "tarch/tests/TestCase.h"
 #include "tarch/logging/Log.h"
 
-
 #include "grid.h"
 #include "GridTraversalEvent.h"
 #include "AutomatonState.h"
 #include "GridVertex.h"
-
-
-
-
 
 namespace peano4 {
   namespace grid {
@@ -24,8 +19,6 @@ namespace peano4 {
     }
   }
 }
-
-
 
 /**
  * Translate grid traversal automaton's transitions into user events
@@ -366,7 +359,6 @@ class peano4::grid::GridTraversalEventGenerator {
       bool                                      spacetreeStateIsRunning
     ) const;
 
-
     /**
      * When we fork or join, the worker's locality analysis identifies local
      * vertices and faces. It also identifies local cells. That's all correct.
@@ -471,7 +463,4 @@ class peano4::grid::GridTraversalEventGenerator {
       int faceNumber,
       bool useBackedUpAdjacencyInformation
     ) const;
-
 };
-
-

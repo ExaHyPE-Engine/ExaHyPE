@@ -171,10 +171,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
-  double globalMinTimeStamp,
-  double globalMaxTimeStamp,
-  double globalMinTimeStepSize,
-  double globalMaxTimeStepSize
+  [[maybe_unused]] double globalMinTimeStamp,
+  [[maybe_unused]] double globalMaxTimeStamp,
+  [[maybe_unused]] double globalMinTimeStepSize,
+  [[maybe_unused]] double globalMaxTimeStepSize
 ) {
   logDebug( "startTimeStep(...)", "old state is " << toString(_solverState) );
 
