@@ -46,6 +46,15 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 )
 
 #
+# To see which variables (unknowns + auxiliary variables) we can visualise,
+# let's add a plot description for the variables to our solver.
+#
+if dimensions == 2:
+  my_solver.plot_description = "rho, u, v, e"
+else:
+  my_solver.plot_description = "rho, u, v, w, e"
+
+#
 # Specifiy which implementation our solvers uses.
 # Here we want to use a user-defined C++ implementation.
 # For this, we create a C++ file "AdvectionSolver.cpp" (same as our solver name from above),
@@ -58,6 +67,12 @@ my_solver.set_implementation(
   flux                  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   refinement_criterion  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
 )
+
+#
+# We can add additional variables to our solver instance, such as constexpr values
+# we want to use in our solver implementations multiple times.
+#
+my_solver.add_solver_constants("static constexpr double Gamma = {}; // Assume that the fluid is an ideal gas, Gamma is chosen for dry air.".format(1.4))
 
 #
 # Add the solver to our project
@@ -104,6 +119,7 @@ my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "
 # We need to set the location of our core libraries ('Peano4').
 # This helps us to resolve any dependencies.
 # Additionally, we specify the build mode which you can also change to a different mode.
+# Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
 my_project.set_Peano4_installation( "../../../", mode=peano4.output.CompileMode.Release )
 
