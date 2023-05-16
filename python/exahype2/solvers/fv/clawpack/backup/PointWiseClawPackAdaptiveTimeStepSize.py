@@ -23,7 +23,7 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 #    """
 #    FV.add_implementation_files_to_project(self,namespace,output)
 #    for f in self.Riemann_solver_implementation_files:
-#      output.makefile.add_Fortran_file(f)
+#      output.makefile.add_Fortran_file(f, generated=True)
 #
 #
 # Discriminate normal fehlt noch
@@ -371,6 +371,6 @@ dfor( volume, """ + str(self._patch_size) + """ ) {
     """
     FV.add_implementation_files_to_project(self,namespace,output)
     for f in self.Riemann_solver_implementation_files:
-      output.makefile.add_Fortran_file(f)
+      output.makefile.add_Fortran_file(f, generated=True)
   
     

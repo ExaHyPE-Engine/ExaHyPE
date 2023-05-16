@@ -130,13 +130,13 @@ my_project.set_Peano4_installation( "../../../", mode=peano4.output.CompileMode.
 my_project = my_project.generate_Peano4_project(verbose=True)
 
 #
-# We add our custom C++ solver file here and say that this is not generated.
+# We add our custom C++ solver file here.
 # This allows us to call 'make distclean' without deleting this file as it is not generated.
 # This step is optional and only required if 'make distclean' is used.
-# Furthermore, this ensures that the C++ is not ignored by the generated .gitignore (which ignores all generated files).
+# Furthermore, this ensures that the C++ file is not ignored by the generated .gitignore (which ignores all generated files).
 # As you want to have your own custom C++ file tracked by Git.
 #
-my_project.output.makefile.add_cpp_file( "EulerSolver.cpp", generated=False )
+my_project.output.makefile.add_cpp_file( "EulerSolver.cpp" )
 
 #
 # Finally, we want to build our project.

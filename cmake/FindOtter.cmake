@@ -7,7 +7,7 @@ find_path(Otter_INCLUDE_DIR NAMES otter/otter-task-graph.h)
 if(OpenMP_FOUND)
   if(OpenMP_CXX_VERSION VERSION_LESS "5.0")
     message(WARNING "Otter with OpenMP Tracing requires OpenMP 5.0 or newer.\
-OpenMP ${OpenMP_CXX_VERSION} was provided, reverting to serial otter")
+OpenMP ${OpenMP_CXX_VERSION} was provided, reverting to serial otter.")
     find_library(Otter_LIBRARY NAMES libotter-task-graph.a otter-task-graph)
   else()
     #find_library(Otter_LIBRARY NAMES libotter-ompt.a otter-ompt)
@@ -15,7 +15,7 @@ OpenMP ${OpenMP_CXX_VERSION} was provided, reverting to serial otter")
   endif()
 else()
   find_library(Otter_LIBRARY NAMES libotter-task-graph.a otter-task-graph)
-  message(STATUS "Link to otter-task-graph as OpenMP Is not found")
+  message(STATUS "Link to otter-task-graph as OpenMP is not found")
 endif()
 
 find_package_handle_standard_args(Otter

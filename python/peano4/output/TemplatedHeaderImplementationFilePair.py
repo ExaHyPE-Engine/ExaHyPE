@@ -58,7 +58,7 @@ class TemplatedHeaderImplementationFilePair(object):
       os.mkdir(directory + "/" + self.subdirectory)
 
     header_filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h"
-    
+
     cuda = using_cuda_backend()
     if not cuda:
       cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + ".cpp"

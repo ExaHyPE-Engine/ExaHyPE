@@ -105,6 +105,6 @@ Packed-Type: short int;
       first before we start any compile or so. So I add them first. 
     """
     self.__generate_dastgen_input_file()
-    output.makefile.add_cpp_file( self.data.namespace[-1] + "/" + self.data.name + ".cpp" )
+    output.makefile.add_cpp_file( self.data.namespace[-1] + "/" + self.data.name + ".cpp", generated=True )
     output.add( peano4.output.InvokeExternalTool( "java -jar " + self.DaStGenJarFile + " " + self.__DaStGenArguments + " " + self.__get_file_name() + " .", self.data.namespace[-1] ), False )
 
