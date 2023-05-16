@@ -24,36 +24,21 @@
  * and macros here are always consistent with the latest Otter version.
  */
 namespace otter {
-
-  #if !defined(UseOtter)
-  // TODO (AT): this is just a hack at present, this causes scoping issues where I only create a child task when a Task* != nullptr
-  typedef struct Task Task;
-  #endif
+    // empty
 }
 
-
 #if defined(UseOtter)
-#include <otter/otter-task-graph-wrapper.hpp>
+#include <otter/otter-task-graph-user.h>
 #else
 
-// TODO (AT): need to mock the cpp header here
-
-// use sub header:
-// https://github.com/Otter-Taskification/otter/blob/dev/include/otter/otter-task-graph-stub.h
-
-#define OTTER_SRC_ARGS()
-#define otter_task_context void
-#define otter_sync_children
-#define otter_sync_descendants
-#define otterTraceInitialise()
-#define otterTraceFinalise()
-#define otterTraceStart()
-#define otterTraceStop()
-#define otterTaskBegin(...) ((void*)0)
-#define otterTaskEnd(...)
-#define otterSynchroniseTasks(...)
-#define otterPhaseBegin(...)
-#define otterPhaseEnd()
-#define otterPhaseSwitch(...)
+#define OTTER_INITIALISE()
+#define OTTER_FINALISE()
+#define OTTER_DECLARE(...)
+#define OTTER_INIT(...)
+#define OTTER_PUSH(...)
+#define OTTER_POP(...)
+#define OTTER_START(...)
+#define OTTER_FINISH(...)
+#define OTTER_SYNCHRONISE(...)
 
 #endif

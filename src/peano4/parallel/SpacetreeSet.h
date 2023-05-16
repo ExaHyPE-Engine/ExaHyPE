@@ -679,8 +679,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * split (asking for further ranks) arises in-between traversals.
      */
     void traverse(
-        peano4::grid::TraversalObserver& observer,
-        otter::Task *otter_task = nullptr
+        peano4::grid::TraversalObserver& observer
     );
 
     /**

@@ -550,8 +550,7 @@ void tarch::multicore::spawnTask(Task*  task) {
 * @see  processPendingTasks(int)
 */
 void tarch::multicore::spawnAndWait(
-  const std::vector< Task* >&  tasks,
-  otter::Task*                 otter_task
+  const std::vector< Task* >&  tasks
 ) {
   static tarch::logging::Log _log( "tarch::multicore" );
 
@@ -560,7 +559,7 @@ void tarch::multicore::spawnAndWait(
 
     orchestrationStrategy->startBSPSection();
     
-    native::spawnAndWait(tasks,orchestrationStrategy, otter_task);
+    native::spawnAndWait(tasks,orchestrationStrategy);
     orchestrationStrategy->endBSPSection();
 
     internal::copyInternalTaskQueuesOverIntoGlobalQueue(-1);

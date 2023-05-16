@@ -1,3 +1,9 @@
+#include "config.h"
+#if defined(UseOtter)
+#define OTTER_TASK_GRAPH_ENABLE_USER
+#define ROOT_TASK_LABEL "[ROOT TASK]"
+#endif
+
 #include "EnclaveBookkeeping.h"
 #include "EnclaveTask.h"
 
@@ -82,10 +88,11 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
 
   tarch::multicore::releaseTaskNumber(number);
 
-#if defined(UseOtter)
   // TODO (AT): not sure this synchronisation point makes sense - try removing it
-  auto &otter_root = otter::Otter::get_otter().get_root_task();
-  otter_root.synchronise_tasks(otter_sync_descendants);
+#if 0
+  OTTER_DECLARE(root_task);
+  OTTER_BORROW(root_task, ROOT_TASK_LABEL);
+  OTTER_SYNCHRONISE(root_task, descendants);
 #endif
 
   return storedData;

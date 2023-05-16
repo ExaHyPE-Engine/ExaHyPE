@@ -1,3 +1,10 @@
+#include "config.h"
+#if defined(UseOtter)
+#define OTTER_TASK_GRAPH_ENABLE_USER
+#define ROOT_TASK_LABEL "[ROOT TASK]"
+#define TRAVERSE_TASK_LABEL_FMT "TraverseTask(_id=%d)"
+#endif
+
 #include "SpacetreeSet.h"
 #include "Node.h"
 
@@ -264,13 +271,14 @@ peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
   _invertTreeTraversalDirectionBeforeWeStart(invertTreeTraversalDirectionBeforeWeStart) {
 }
 
-
+#define LOCAL_TASK "unknown local task"
 bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
 
-#if defined(UseOtter)
-  auto &otter_root = otter::Otter::get_otter().get_root_task();
-  auto traversal_task = otter_root.make_child(2);
-#endif
+  OTTER_DECLARE(root_task);
+  OTTER_DECLARE(local_task);
+  OTTER_BORROW(root_task, ROOT_TASK_LABEL);
+  OTTER_INIT(local_task, root_task, 2, false, LOCAL_TASK);
+  OTTER_TASK_START(local_task);
 
   _spacetreeSet.createObserverCloneIfRequired(_observer,_spacetree._id);
   if (_invertTreeTraversalDirectionBeforeWeStart) {
@@ -278,10 +286,7 @@ bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
   }
   _spacetree.traverse( *_spacetreeSet._clonedObserver[_spacetree._id], true );
 
-#if defined(UseOtter)
-  traversal_task.end_task();
-#endif
-
+  OTTER_TASK_FINISH(local_task);
   return false;
 }
 
@@ -488,7 +493,7 @@ void peano4::parallel::SpacetreeSet::deleteClonedObservers() {
 }
 
 
-void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& observer, otter::Task *otter_task) {
+void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& observer) {
   logTraceIn( "traverse(TraversalObserver&)" );
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -544,7 +549,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   [[maybe_unused]] const bool runSequentially = false;
 
   logTraceInWith1Argument( "traverse(TraversalObserver&)-primary", primaryTasks.size() );
-  tarch::multicore::spawnAndWait( primaryTasks, otter_task );
+  tarch::multicore::spawnAndWait( primaryTasks );
   logTraceOut( "traverse(TraversalObserver&)-primary" );
 
   logDebug( "traverse(TraversalObserver&)", "primary tasks (traversals) complete, trigger split data stream if required" );
