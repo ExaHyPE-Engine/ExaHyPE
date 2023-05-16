@@ -55,7 +55,7 @@ dictionary entries besides the ones manually handed over by the user.
 
   def __generate_file(self,overwrite,full_qualified_filename,template_file):
     if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
-      import inspect, os
+      import inspect
       cuda = using_cuda_backend()
       if cuda:
         full_qualified_filename = full_qualified_filename.replace(".cpp", ".cu")

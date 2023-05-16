@@ -72,15 +72,15 @@ list(APPEND DEPENDS_FULL ${DEPENDS_OTHER})
 # Create executable as a CMake target
 add_executable(${TARGET_NAME})
 
-list(APPEND SOURCES 
-  ${CU_SOURCES}
+list(APPEND SOURCES
   ${CXX_SOURCES}
-  ${FORTRAN_SOURCES}
-  #${H_HEADERS}
-  #${GENERATED_H_HEADERS}
   ${GENERATED_CXX_SOURCES}
+  ${CU_SOURCES}
   ${GENERATED_CU_SOURCES}
+  ${FORTRAN_SOURCES}
   ${GENERATED_FORTRAN_SOURCES}
+  ${H_HEADERS}
+  ${GENERATED_H_HEADERS}
   ${GENERATOR}
 )
 
@@ -101,5 +101,5 @@ target_link_options(${TARGET_NAME} PRIVATE ${${MODE}_LDFLAGS})
 target_link_libraries(${TARGET_NAME} PRIVATE project_options)
 
 if (NOT "${WITH_GPU}" STREQUAL "cuda")
-target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
+  target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
 endif()

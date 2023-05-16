@@ -46,7 +46,7 @@ class TemplatedHeaderImplementationFilePair(object):
       full_qualified_filename = full_qualified_filename.replace(".cpp", ".cu")
 
     if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
-      import inspect, os
+      import inspect
       print( "{} written by {}".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__))))
       with open( os.path.realpath(template_file), "r" ) as input:
         template = input.read()
