@@ -163,25 +163,18 @@ class Project (object):
         else:
           process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # Extract warnings and errors from error message
-        PURPLE = "\033[35m"
-        RED = "\033[31m"
-        RESET = "\033[0m"
         error_message = process.stderr.decode().strip()
         warnings = re.findall(r"(?i)warning:.*", error_message)
         errors = re.findall(r"(?i)error:.*", error_message)
         # Print warnings into the terminal
         if warnings:
-          print("\nWarnings:")
-          print(PURPLE + "\n".join(warnings) + RESET)
-          print(f"Number of warnings: {len(warnings)}")
-        # Raise exception with errors
+          print("\nWarnings ({}):".format(len(warnings)))
+          print("\n".join(warnings))
         if errors:
-          print("\nErrors:")
-          print(RED + "\n".join(errors) + RESET)
-          print(f"Number of Errors: {len(errors)}")
+          print("\nErrors ({}):".format(len(errors)))
           error_message = "\n".join(errors)
-          raise Exception(error_message)
         # Check the return code for linker errors
+        # Raise exception with errors
         if process.returncode != 0:
           linker_error_message = process.stdout.decode().strip() + "\n" + error_message
           raise Exception(linker_error_message)
@@ -191,7 +184,9 @@ class Project (object):
       except Exception as e:
         self.is_built = True
         self.build_was_successful = False
-        raise Exception("compile was not successful: " + str(e))
+        print(str(e))
+        print("compile was not successful")
+        sys.exit(1)
     else:
       print( "cannot build as code generation has not been successful" )
 
