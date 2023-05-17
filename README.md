@@ -36,7 +36,8 @@ The most important ones are:
 * CMake > 3.20 (required).
 * Python3 (optional but recommended; not required if you work only with the C++ baseline).
 * MPI (optional). MPI's multithreaded support is required.
-* Intel's Threading Build Blocks, C++ threads or OpenMP (optional).
+* Intel's Threading Build Blocks, C++ threads or OpenMP for multithreading (optional).
+* CUDA, ROCm, Open SYCL or Intel oneAPI for GPU offloading (optional).
 * The Visualization Toolkit (VTK) if you want to use the built-in visualisation facilities (optional).
 * Doxygen if you want to create HTML pages of the documentation (optional).
 
@@ -69,10 +70,10 @@ In case you want to use GPUs, you need to amend the Docker command as follows (y
 docker run -it -v ${PWD}:/work -p 53155:53155 --rm --gpus=all --privileged peanoframework/<toolchain> /bin/bash
 ```
 
-When you run the Docker container interactively with --gpus using the command above,
+When you run the Docker container interactively with `--gpus` using the command above,
 you can quickly check whether GPU offloading is supported on your system by executing `./check_XXX_offload`.
 
-A [Python helper script](./.continuous_integration/configure.py) is availble which can help to configure the project. It can be called from the root directory as follows:
+A [Python helper script](./.continuous_integration/configure.py) is available which can help to configure the project. It can be called from the root directory as follows:
 
 ```shell
 python3 .continuous_integration/configure.py --help
@@ -91,5 +92,5 @@ you might want to skip the install command and work directly against the librari
 The [documentation](./documentation/) consists mostly of Doxygen which can be built locally with
 
 ```shell
-make docs
+doxygen documentation/Doxyfile
 ```

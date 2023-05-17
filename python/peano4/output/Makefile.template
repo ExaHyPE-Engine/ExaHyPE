@@ -135,7 +135,6 @@ distclean:
 	rm -f Constants.h
 	rm -f README-*
 	rm -f .gitignore
-	rm -f GeneratedSubdirectories.cmake
 	rm -f CMakeLists.txt
 
 maintainer-clean: distclean

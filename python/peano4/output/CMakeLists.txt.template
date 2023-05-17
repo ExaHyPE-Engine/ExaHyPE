@@ -94,7 +94,7 @@ target_include_directories(${TARGET_NAME} PRIVATE
 
 # Link to full target libraries
 target_link_libraries(${TARGET_NAME} PRIVATE ${DEPENDS_FULL})
-# Libraries are generated at $cmake_binary_dir, just in case add it to the link directories
+# Libraries are generated at $cmake_binary_dir, just in case add it to the link directories.
 target_link_directories(${TARGET_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 target_compile_definitions(${TARGET_NAME} PRIVATE Dimensions=${DIMENSION} ${${MODE}_DEFINITIONS})
 target_link_options(${TARGET_NAME} PRIVATE ${${MODE}_LDFLAGS})

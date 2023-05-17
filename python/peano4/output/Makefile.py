@@ -435,8 +435,13 @@ did search for a file """ + input_file )
         by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
     """
     if using_cuda_backend():
+      old_filename = filename
       filename = filename.replace(".cpp", ".cu")
-      self.add_cu_file(filename=filename,generated=generated)
+      try:
+        shutil.copy(old_filename, filename)
+      except:
+        pass
+      self.add_cu_file(filename=filename,generated=True)
     else:
       if generated:
         # Non-generated file takes precedence over generated files.
