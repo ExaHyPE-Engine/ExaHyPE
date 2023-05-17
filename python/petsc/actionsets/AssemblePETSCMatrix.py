@@ -33,7 +33,8 @@ class AssemblePetscMatrix(ActionSet):
   //calling our increment function 16 times is temporary; this can be done with 
   //one call to PETSc. While in development, we do it the dumb way.
 
-  double h2 = marker.h()[0] * marker.h()[0];
+  //double h2 = marker.h()[0] * marker.h()[0];
+  double h2 = 1.0; //ignore this factor for now
 
   for (int i=0; i<TwoPowerD; i++){
     for (int j=0; j<TwoPowerD; j++){
