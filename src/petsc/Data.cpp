@@ -1,4 +1,6 @@
 #include "Data.h"
+static constexpr double pi = 3.14159265358979323846264338328;
+static constexpr double oneOver2p2 = 1.0 / (2 * pi * pi);
 
 petsc::PetscData::PetscData(int argc, char** argv) {
   std::cout << "initialised petsc \n\n";
@@ -90,6 +92,14 @@ void petsc::PetscData::petscSolve(){
   //don't know what this does
   PetscFunctionBeginUser;
 
+  // //do the copy
+  VecDuplicate(_b, &u);
+  VecCopy(_b, u);
+
+  //scale down by the eigenvalue
+  VecScale(u, oneOver2p2);
+  // VecView(u, PETSC_VIEWER_STDOUT_WORLD);
+
   /*
      Create linear solver context
   */
@@ -101,8 +111,8 @@ void petsc::PetscData::petscSolve(){
   */
   KSPSetOperators(ksp, _A, _A);
   
-  KSPGetPC(ksp, &pc);
-  PCSetType(pc, PCBJACOBI);
+  // KSPGetPC(ksp, &pc);
+  // PCSetType(pc, PCBJACOBI);
 
   //set runtime options
   KSPSetFromOptions(ksp);
@@ -112,19 +122,21 @@ void petsc::PetscData::petscSolve(){
   KSPGetPC(ksp, &pc);
 
   //inside second else block
-  PCSetType(pc, PCJACOBI);
-  KSPSetType(ksp, KSPGMRES);
+  PCSetType(pc, PCBJACOBI);
+  KSPSetType(ksp, KSPCG);
   KSPSetTolerances(ksp, 1.e-7, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
 
-  KSPSolve(ksp, _b, _x);
+  //solve against the "exact" solution u
+  KSPSolve(ksp, u, _x);
 
   //check error
-  VecAXPY(_x, -1, _b);
-  VecNorm(_x, NORM_2, &norm);
+  //the line below is why we were getting negatives! _x = _x - _b  
+  // VecAXPY(_x, -1, _b);
+  // VecNorm(_x, NORM_2, &norm);
 
   PetscInt its;
   KSPGetIterationNumber(ksp, &its);
-  PetscPrintf(PETSC_COMM_WORLD, "Norm of error %g iterations %" PetscInt_FMT "\n", (double)norm, its);
+  PetscPrintf(PETSC_COMM_WORLD, "Iterations %" PetscInt_FMT "\n", its);
 
 
   KSPDestroy(&ksp);
