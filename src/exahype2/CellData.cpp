@@ -21,8 +21,7 @@ exahype2::CellData::CellData(
 
 exahype2::CellData::CellData( int numberOfCells_ ):
   numberOfCells(numberOfCells_) {
-  QIn           = new (std::align_val_t(AlignmentOnHeap)) double*[numberOfCells];
-  //QIn           = tarch::allocateMemory<double*>(numberOfCells_, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  QIn           = tarch::allocateMemory<double*>(numberOfCells_, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
   cellCentre    = new (std::align_val_t(AlignmentOnHeap)) tarch::la::Vector<Dimensions,double>[numberOfCells];
   cellSize      = new (std::align_val_t(AlignmentOnHeap)) tarch::la::Vector<Dimensions,double>[numberOfCells];
   t             = new (std::align_val_t(AlignmentOnHeap)) double[numberOfCells];
@@ -33,8 +32,7 @@ exahype2::CellData::CellData( int numberOfCells_ ):
 }
 
 exahype2::CellData::~CellData() {
-  //tarch::freeMemory( QIn, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
-  delete[] QIn;
+  tarch::freeMemory( QIn, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
   delete[] cellCentre;
   delete[] cellSize;
   delete[] t;

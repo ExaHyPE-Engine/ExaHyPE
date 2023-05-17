@@ -13,7 +13,7 @@ from .Overwrite import Overwrite
 
 class Jinja2TemplatedHeaderImplementationFilePair(object):
   """!
-Reperesents a pair of C++ header and implementation files 
+Represents a pair of C++ header and implementation files
 
 The content of these files is represented by jinja2 templates. While
 sorting out these templates, the class defines a couple of default
@@ -55,7 +55,7 @@ dictionary entries besides the ones manually handed over by the user.
 
   def __generate_file(self,overwrite,full_qualified_filename,template_file):
     if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
-      import inspect, os
+      import inspect
       cuda = using_cuda_backend()
       if cuda:
         full_qualified_filename = full_qualified_filename.replace(".cpp", ".cu")
@@ -82,7 +82,7 @@ dictionary entries besides the ones manually handed over by the user.
       os.mkdir(directory + "/" + self.subdirectory)
 
     header_filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h"
-    
+
     cuda = using_cuda_backend()
     if not cuda:
       cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + ".cpp"

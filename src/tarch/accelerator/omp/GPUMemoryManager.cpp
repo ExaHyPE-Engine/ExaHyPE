@@ -1,14 +1,12 @@
 #include "GPUMemoryManager.h"
 
-#if defined(GPUOffloadingOMP) and defined(_OPENMP) and not defined(__HIP_DEVICE_COMPILE__)
+#if defined(GPUOffloadingOMP)
 
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/accelerator/accelerator.h"
 
 #include <omp.h>
-
-#define UseManagedSharedAcceleratorDeviceMemory 0
 
 tarch::logging::Log  tarch::accelerator::omp::GPUMemoryManager::_log( "tarch::accelerator::omp::GPUMemoryManager" );
 
@@ -28,11 +26,7 @@ void* tarch::accelerator::omp::GPUMemoryManager::allocateRawData( int size, int 
   // Is a free page left? If not, insert one
   if ( _deviceMemory.at(device).freePages[size].empty() ) {
     _deviceMemory.at(device).freePages[size].push_back(
-#if UseManagedSharedAcceleratorDeviceMemory
-      internal::allocateRawData(size, MemoryLocation::ManagedSharedAcceleratorDeviceMemory)
-#else
       omp_target_alloc(size, device)
-#endif
     );
   }
 
@@ -78,11 +72,7 @@ void tarch::accelerator::omp::GPUMemoryManager::clear() {
 
     for (auto& p: deviceMemory.second.freePages)
     for (auto& pp: p.second) {
-#if UseManagedSharedAcceleratorDeviceMemory
-      freeMemory(pp, MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-#else
       omp_target_free(pp, device);
-#endif
     }
   }
 

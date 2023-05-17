@@ -249,7 +249,7 @@ citation of the original SWIFT paper
       True)
 
     self._project.output.add( generated_solver_files )
-    self._project.output.makefile.add_cpp_file( "repositories/GlobalState.cpp" )
+    self._project.output.makefile.add_cpp_file( "repositories/GlobalState.cpp", generated=True )
 
 
   def add_particle_species(self, particle: Particle ):

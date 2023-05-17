@@ -380,8 +380,8 @@ project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically","(n
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
 
-peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/InitialValues.cpp", generated=False )
-peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp", generated=False )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/InitialValues.cpp" )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp" )
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/ccz4" )
 
 peano4_project.generate( throw_away_data_after_generation=False )
