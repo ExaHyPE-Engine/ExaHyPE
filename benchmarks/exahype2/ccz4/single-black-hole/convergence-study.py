@@ -81,6 +81,29 @@ def construct_FV_limiter(min_cell_size, max_cell_size):
         return """(""" + super( Limiter, self )._load_face_data_default_guard() + """
                     and repositories::InstanceOf""" + self._name + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
                   )"""
+
+
+      def create_action_sets(self):
+        """!
+        
+        Not really a lot of things to do here. The only exception that is 
+        really important is that we have to ensure that we only solve stuff
+        inside the local domain of the FV. By default, ExaHyPE 2 solves the
+        PDE everywhere. If data is not stored persistently or loaded from 
+        the persistent stacks, it still solves, as it then would assume that
+        such data arises from dynamic AMR. In this particular case, we have
+        to really mask out certain subdomains.
+        
+        It is not just a nice optimisation to do so. It is absolutely key, 
+        as the application of the compute kernel on garbage would mean that
+        we end up with invalid eigenvalues.
+        
+        """
+        super( Limiter, self ).create_action_sets()
+        
+        self._action_set_update_cell.guard                = "({} and repositories::InstanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(self._action_set_update_cell.guard, self._name)
+        self._action_set_merge_enclave_task_outcome.guard = "({} and repositories::InstanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(self._action_set_merge_enclave_task_outcome.guard, self._name)
+        
         
     
     my_solver = Limiter(name           = "CCZ4SBH" , 
@@ -239,6 +262,24 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
       oldQWithHalo, 
       interpolatedFVDataWithHalo
     );
+    
+    ## @todo Docu: If we project only QOld, nothing happens, as this one is abackup only
+    Update will be rolled over after the time step, so it not of use either
+/*
+    ::toolbox::blockstructured::projectPatchHaloOntoFaces(
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      1,      // int    haloSize,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
+      interpolatedFVDataWithHalo,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(0).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(1).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(2).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(3).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(4).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(5).value
+    );
+*/
 
     ::toolbox::blockstructured::projectPatchHaloOntoFaces(
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
@@ -253,13 +294,15 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
       fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(4).value,
       fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(5).value
     );
-    
+
     ::tarch::freeMemory(interpolatedFVDataWithHalo, tarch::MemoryLocation::Heap );
 """)
 
         self._action_set_preprocess_solution.guard = "(" + self._action_set_preprocess_solution.guard + """
                                                       and 
                                                       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
+                                                      and
+                                                      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) 
                                                       and
                                                       not marker.willBeRefined()
                                                       )""" 
@@ -355,7 +398,7 @@ if __name__ == "__main__":
     
     if args.plot:
         # @todo zu klein
-      plot_interval = 0.001
+      plot_interval = 0.0001
     else:
       plot_interval = 0.0
     

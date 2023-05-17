@@ -142,6 +142,8 @@ class FV(object):
          _action_set_postprocess_solution
 
     You can use this attribute to add postprocessing routines to the code.
+    
+    
   """
 
   def __init__(
@@ -481,9 +483,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      Create all the action sets
     
      Overwrite in subclasses if you wanna create different
-     action sets.
+     action sets. Subclasses also might redefine the invocation order.
      
-     :: Call order and ownership
+     ## Call order and ownership
      
      This operation can be called multiple times. However, only the very
      last call matters. All previous calls are wiped out.
@@ -495,7 +497,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      specialised) run through all create_data_structure() variants 
      within the inheritance tree.
      
-     :: Recreation vs backup (state discussion)
+     ## Recreation vs backup (state discussion)
      
      We faced some issues with action sets that should not be 
      overwritten. For example, the postprocessing should not be overwritten

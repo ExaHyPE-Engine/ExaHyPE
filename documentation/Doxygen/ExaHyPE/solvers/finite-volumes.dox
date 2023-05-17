@@ -3,37 +3,19 @@
 @page page_exahype_solvers_finite_volumes Finite Volumes
 
 
+ExaHyPE 2 offers a range of Finite Volume solvers. They are designed to be
+stand-alone solvers, but nothing stops you from using them as a posteriori
+limiters by @ref page_exahype_coupling "coupling them to higher order schemes".
 
-@todo fix the references to other chapters and get the images included
 
-*/
+## Data structures
 
+All Finite Volume solvers work with blockstructured AMR: They embed @f$N \times N@f$ patches 
+into the octants (cells of the spacetree). To avoid confusion, I prefer to 
+use the term volume for the cells within the patch, as cell would be
+ambigous given that we construct the  host mesh from spacetree cells.
 
-## A block-structured AMR code for Finite Volumes 
-
-We create a simple Finite Volumes solver here. The examples starts with
-a simple regular grid, parallelises this grid, and finally adds adaptive
-mesh refinment (AMR). It employs a block-structured formalism and relies
-heavily on premanufactured actions and solver ingredients from the
-ExaHyPE2/ExaClaw project.
-
-Writing all the Finite Volume (FV) core routines manually is a tedious
-and time-consuming process despite the fact that I do offer a toolbox
-for block-structured code. For most applications, I therefore recommend
-to realise FV codes through ExaHyPE instead.
-
-## Setting up the data structures
-
-We model our grid as an AMR grid consisting of @f$N \times N@f$ blocks. We
-call these blocks *patches*. In the example below, we have chosen @f$N=7@f$.
-In general, odd choices of @f$N@f$ are advantageous once you enable AMR as
-we will discuss later.
-
-@image html logos/42_finite-volumes/block-structured.pdf
-
-In the above example, every volume within the @f$N \times N@f$ patches holds
-five unknowns. In general, I prefer the term volume here, as cell again
-is ambigous given that we construct the  host mesh from cells.
+@image html block-structured.pdf
 
 With one patch per cell, we could traverse the mesh and do something per
 cell. This however is of limited value. We have to couple the phenomena
@@ -51,14 +33,8 @@ i.e. does not give us additional information. The other layer of the
 auxiliary patch however holds data from the neighbour. It gives us
 information from the neighbour patch.
 
-In theory, we could only replicate those quantities that we really need.
-But it makes our live easier to just hold all five quantities in the
-auxiliary face data structures, too:
 
-Before we generate the code, we export some of the Python constants that
-we use into C/C++, so we have it available there, too:
-
-## Administration of the data structures
+### Keeping face data and patch data consistent
 
 Projecting the patches onto the face data structures and back is a
 mechnical task. Therefore,  offers a toolbox to relieve you from the
@@ -66,7 +42,7 @@ pain to recode it over and over again. Using this toolbox, you add the
 projections to your algorithmic steps, and the API then automatically
 injects these features (aspects) into your code:
 
-@image html logos/42_finite-volumes/ProjectPatchOntoFaces.pdf
+@image html ProjectPatchOntoFaces.png
 
 The image above illustrates what `ProjectPatchOntoFaces` does: It knows
 the dimensions of both the patches and the face auxiliary data
@@ -74,15 +50,44 @@ structures and thus can ensure that the right data is copied from the
 cell into the @f$2^d@f$ faces when we leave a cell throughout the grid
 traversal.
 
+
+### Augment patch with halo
+
 The action set `ReconstructPatchAndApplyFunctor` works slighlty
 different yet can be read, from a patch projection point of view, as
 transpose of `ProjectPatchOntoFaces`: It creates a auxiliary variable
 `reconstructedX` with X being the name you gave the Unknowns of the
 patch. This auxiliary variable has the dimensions
-@f$N+2 \times N+2 \times N+2@f$[^1]. It then copies over the patch data into
+@f$N+2 \times N+2 \times N+2@f$. It then copies over the patch data into
 this auxiliary patch and uses the faces to supplement it with halo data
 around it. So that it, you get the original patch data plus the cells
 around it in one big patch.
+
+
+## Code organisation
+
+Peano offers a toolbox in toolbox::blockstructured which offers most of the
+basic data structures and action sets. 
+The actual patches can either be embedded as plain arrays into each cell, or
+they can be held as arrays on the heap and the cells hold (smart) pointers
+to these heap objects.
+It depends on your use case which variant is faster.
+
+
+On the Python API side, the class exahype2.solvers.fv.FV is the base class
+of all Finite Volume solvers. 
+Its class documentation holds a lot of background information on the solver
+design and data flows.
+There are two major subclasses: exahype2.solvers.fv.SingleSweep and 
+exahype2.solvers.fv.EnclaveTasking.
+They realise a straightforward realisation with one mesh traversal per 
+time step or the @ref page_exahype_solvers_enclave_solvers "enclave concept", respectively. 
+
+
+*/
+
+
+
 
 ## A manually implemented FV scheme
 
