@@ -7,7 +7,7 @@ double initRhs(
 ){
   double rhs = Dimensions * pi * pi;
   for (int i = 0; i < Dimensions; i++){
-    rhs *= std::sin( pi * x[i] ) * h[i];
+    rhs *= std::sin( pi * x[i] );
   }
   return rhs;  
 }
