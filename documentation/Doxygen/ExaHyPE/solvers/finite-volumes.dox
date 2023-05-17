@@ -15,7 +15,7 @@ into the octants (cells of the spacetree). To avoid confusion, I prefer to
 use the term volume for the cells within the patch, as cell would be
 ambigous given that we construct the  host mesh from spacetree cells.
 
-@image html block-structured.pdf
+@image html block-structured.png
 
 With one patch per cell, we could traverse the mesh and do something per
 cell. This however is of limited value. We have to couple the phenomena
@@ -85,106 +85,3 @@ time step or the @ref page_exahype_solvers_enclave_solvers "enclave concept", re
 
 
 */
-
-
-
-
-## A manually implemented FV scheme
-
-As the name suggests, the reconstruction step is typically combined with
-the invocation of some computation on the patch. We give a simple
-example of a Finite Volume solver for the Euler equations here.
-
-Once a patch is reconstructed, we have a huge double array (AoS) of the
-reconstructed patch, i.e. the patch plus its surrounding halo,
-available. It holds a copy of the actual patch data. This patch data is
-still available as well, so we can use the reconstructed array as a
-preimage and write any outcome into the patch data structure.
-
-We begin with defining a two simple functions that implement the
-PDE---we need the flux function and the eigenvalues---and then write a
-simple 1d Rusanov flux. I use some lambda notation here when I write the
-Rusanov flux, as I want to make it generic, i.e. it accepts a generic
-flux and eigenvalue realisation realised somewhere else in my code.
-
-// All in besides lambda which is out void eigenvalues( double Q\[5\],
-const tarch::la::Vector\<Dimensions,double\>& faceCentre, const
-tarch::la::Vector\<Dimensions,double\>& volumeH, double t, int normal,
-double lambda\[5\] ) \...
-
-// All in besides F which is out void flux( double Q\[5\], const
-tarch::la::Vector\<Dimensions,double\>& faceCentre, const
-tarch::la::Vector\<Dimensions,double\>& volumeH, double t, int normal,
-double F\[5\] ) \... ;
-
-auto splitRiemann1d = \[&flux, &eigenvalues\]( double QL\[5\], double
-QR\[5\], const tarch::la::Vector\<Dimensions,double\>& x, double dx,
-double dt, int normal, double F\[5\] ) -\> void
-
-assertion(normal\>=0); assertion(normal\<Dimensions);
-
-double FL\[unknowns\]; double FR\[unknowns\];
-flux(QL,x,dx,t,dt,normal,FL); flux(QR,x,dx,t,dt,normal,FR);
-
-double lambdas\[unknowns\]; double lambdaMax = 0.0;
-
-eigenvalues(QL,x,dx,t,dt,normal,lambdas); for (int unknown=0;
-unknown\<unknowns; unknown++)
-assertion(lambdas\[unknown\]==lambdas\[unknown\]); lambdaMax =
-std::max(lambdaMax,lambdas\[unknown\]); eigenvalues(QR,x,dx,t,dt,normal
-for (int unknown=0; unknown\<unknowns; unknown++)
-assertion(lambdas\[unknown\]==lambdas\[unknown\]); lambdaMax =
-std::max(lambdaMax,lambdas\[unknown\]);
-
-for (int unknown=0; unknown\<unknowns; unknown++) F\[unknown\] = 0.5 \*
-FL\[unknown\] + 0.5 \* FR\[unknown\] - 0.5 \* lambdaMax \*
-(QR\[unknown\] - QL\[unknown\]);
-
-;
-
-An implementation of these routines can either be done manually
-(download/copy the code snippets), or you can use .  does provide
-generic implementations of these guys in its directories.
-
-Let the three functions be one string assigned to a variable `functor`
-in our Python API. We now have to run over the reconstructed patch with
-@f$N+2 \times N+2@f$ cells and write it back into the actual user data with
-cardinality @f$N \times N@f$.
-
-There are lots of options how to do this. We can use Peano's
-dimension-generic volumes, or we can write it down for our particular
-dimension. We can loop over the faces (similar to ClawPack) or loop over
-the cells and compute the Riemann problems twice per face. Many more
-options do arise. I don't want to show some codes how to do it here, but
-I link to the directory `src/exahype2/fv` where I've realised a couple
-of them.
-
-Whatever implementation variant I use, it is convenient now to rely on
-`ReconstructPatchAndApplyFunctor`. I create, in Python, a string that
-calls my Rusanov solver:
-
-myApplyRusanovToPatch( \..., reconstructedPatch, originalPatch );
-
-This string can hand over all of the cell attributes that I've
-introduced to my `myApplyRusanovToPatch` implementation. The important
-thing is, it also forwards two double pointer (`reconstructedPatch` and
-`originalPatch`) to my routine. These are the plain user records.
-
-The string holding this routine is passed into the instantiation of the
-type `ApplyFunctorOnPatch` and thus is injected into the generated code.
-
-## Plot results
-
-For the plotting of patch-based AMR,  provides predefined action sets,
-too. They dump the output into Peano's patch format. Chapter
-[\[capter:blockstructured-output-format\]](#capter:blockstructured-output-format){reference-type="ref"
-reference="capter:blockstructured-output-format"} describes this format.
-If you build your code with VTK support,  offers a conversion script
-into VTK.
-
-To use the predefined file dump feature, add an instance of
-`PlotPatchesInPeanoBlockFormat` to the step of your choice. It then
-looks similar to
-
-[^1]: All tools work with overlaps greater than 2. But to keep the text
-    simple, I stick to 2.
