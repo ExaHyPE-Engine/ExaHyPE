@@ -14,6 +14,14 @@ class AssemblePetscMatrix(ActionSet):
   //enumeration so we can apply the stencil correctly
   std::vector<int> enumeratedIndices(TwoPowerD, -1);
 
+  // hard-code some factors that we divide by when entering values into our matrix
+  // if two vertices match, then we divide by 4
+  // if they're adjacent, divide by 2
+  // if opposite, divide by 1
+  static constexpr double sameVertex     = 4.0;
+  static constexpr double adjacentVertex = 2.0;
+  static constexpr double oppositeVertex = 1.0;
+
   for (int i=0; i<TwoPowerD ; i++){
     if (fineGridVertices{{SOLVER_NAME}}(i).getType() != vertexdata::Poisson::Type::Dirichlet
       //TODO work out why using marker.willBeRefined() here causes only 1 iteration to be taken
@@ -32,25 +40,77 @@ class AssemblePetscMatrix(ActionSet):
   //next, loop twice over TwoPowerD, so we can correctly fill the petsc matrix.
   //calling our increment function 16 times is temporary; this can be done with 
   //one call to PETSc. While in development, we do it the dumb way.
+  //recall that the vertices are enumerated in the following way:
+  /*
+  2 3
+  0 1
+  */
+  // this geometry is crucial to getting the correct entries from the stencil
 
   double h2 = marker.h()[0] * marker.h()[0];
-  //double h2 = 1.0; //ignore this factor for now
+  double matrixEntry;
+
+
 
   for (int i=0; i<TwoPowerD; i++){
     for (int j=0; j<TwoPowerD; j++){
     if (enumeratedIndices[i] != -1 and enumeratedIndices[j] != -1){
       if (i == j){
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], 2.0/3.0/h2);
+        //hardcode the index, what we want is the middle of the matrix
+        matrixEntry = _stencil(1,1) / sameVertex / h2;
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], matrixEntry);
+        assertion(matrixEntry == 2.0/3/h2);
+
       }
 
-      // if they add up to 3, then they must be opposites - i know this is a bodge
+      // if they add up to 3, then they must be opposites
       else if (i + j == 3){
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], -1.0/3.0/h2);
+        if(i==0){
+          //we want the top right entry
+          matrixEntry = _stencil(0,2) / oppositeVertex / h2;
+        }
+        if(i==1){
+          //top left
+          matrixEntry = _stencil(0,0) / oppositeVertex / h2;
+        }
+        if(i==2){
+          //bottom right
+          matrixEntry = _stencil(2,2) / oppositeVertex / h2;          
+        }
+        if(i==3){
+          //bottom left
+          matrixEntry = _stencil(2,0) / oppositeVertex / h2;
+        }
+
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], matrixEntry);
+        assertion(matrixEntry == -1.0/3/h2);
       }
 
       //final two cases
       else{
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], -1.0/6.0/h2);    
+        if( abs(i-j)==2 ){
+          if (i>j){
+            //look up
+            matrixEntry = _stencil(0,1) / adjacentVertex / h2;
+          }
+          else if(i<j){
+            //look down
+            matrixEntry = _stencil(2,1) / adjacentVertex / h2;
+          }
+        }
+
+        else{
+          if (i<j){
+            //look to the right
+            matrixEntry = _stencil(0,2) / adjacentVertex / h2;
+          }
+          if(i>j){
+            //look to the left
+            matrixEntry = _stencil(0,0) / adjacentVertex / h2;
+          }
+        }
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], matrixEntry);    
+        assertion(matrixEntry==  -1.0/6/h2);
       }
     }
 
@@ -79,7 +139,8 @@ class AssemblePetscMatrix(ActionSet):
   """
   
   def __init__(self,
-               solver):
+               solver,
+               stencil):
     """!
     
 Initialise vertex-associated degrees of freedom
@@ -91,11 +152,22 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
   degrees of freedom are assigned exclusively to the vertices.
     
     """
+    #pass in stencil as a list of lists
+    #convert it to a flat list for passing as std::initializer_list
+    stencil=[item for sublist in stencil for item in sublist]
+
     super( AssemblePetscMatrix, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"] = solver.instance_name()
     self.d["SOLVER_NAME"]     = solver.typename()
     self.d["CARDINALITY"]     = solver.number_of_unknowns
+    self.d["STENCIL"]         = "{" + str(stencil[0])
+    for el in stencil[1:]:
+      self.d["STENCIL"] += ", "
+      self.d["STENCIL"] += str(el)
+    self.d["STENCIL"] += "}"
+
+
 
 
   def get_body_of_operation(self,operation_name):
@@ -157,6 +229,7 @@ Consult petsc.Project for details
 """    
     return """
 #include "repositories/SolverRepository.h"
+#include "tarch/la/Matrix.h"
 """
 
   def get_attributes(self):
@@ -164,8 +237,10 @@ Consult petsc.Project for details
     
     
     """
-    return """
+    return f"""
   int _spacetreeId;    
+  const tarch::la::Matrix<3,3,double> _stencil = {self.d["STENCIL"]};
+  const tarch::la::Vector<ThreePowerD,double> _vecStencil = {self.d["STENCIL"]};
 """
       
   def get_constructor_body(self):
@@ -176,6 +251,7 @@ Define body of constructor
 @see get_attributes()
     
     """
-    return """
+    return f"""
     _spacetreeId = treeNumber;
+    //_stencil{self.d["STENCIL"]};
 """
