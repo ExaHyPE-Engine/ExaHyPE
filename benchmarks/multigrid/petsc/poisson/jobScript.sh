@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Request resources:
-#SBATCH -c 40           # 40 CPU core
+#SBATCH -c 2           # 40 CPU core
 #SBATCH --mem=100G       # memory required, up to 250G on standard nodes.
 #SBATCH --gres=tmp:50G  # temporary disk space required on the compute node ($TMPDIR), up to 400G
-#SBATCH --time=2:0:0   # time limit for job (format:  days-hours:minutes:seconds)
+#SBATCH --time=0:25:0   # time limit for job (format:  days-hours:minutes:seconds)
 #SBATCH -o standard_output_file.%J.out
 #SBATCH -e standard_error_file.%J.err
 

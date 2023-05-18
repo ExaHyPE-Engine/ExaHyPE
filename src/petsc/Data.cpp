@@ -97,7 +97,7 @@ void petsc::PetscData::petscSolve(){
   VecCopy(_b, u);
 
   //scale down by the eigenvalue
-  VecScale(u, oneOver2p2);
+  // VecScale(u, oneOver2p2);
   // VecView(u, PETSC_VIEWER_STDOUT_WORLD);
 
   /*
@@ -127,7 +127,7 @@ void petsc::PetscData::petscSolve(){
   KSPSetTolerances(ksp, 1.e-7, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
 
   //solve against the "exact" solution u
-  KSPSolve(ksp, u, _x);
+  KSPSolve(ksp, _b, _x);
 
   //check error
   //the line below is why we were getting negatives! _x = _x - _b  
