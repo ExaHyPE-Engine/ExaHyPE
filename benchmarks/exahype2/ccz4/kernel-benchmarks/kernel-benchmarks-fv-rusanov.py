@@ -148,7 +148,10 @@ my_solver.set_implementation(
 """,
   flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
   source_term          = """
-  memset(S, 0.0, NumberOfUnknowns*sizeof(double));
+  //memset(S, 0.0, NumberOfUnknowns*sizeof(double));
+  for (int i = 0; i < NumberOfUnknowns; i++) {
+    S[i] = 0.0;
+  }
   ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
 """,
   refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
