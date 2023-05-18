@@ -150,6 +150,10 @@ object this solver will produce.
 
 solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
   degrees of freedom are assigned exclusively to the vertices.
+
+stencil:
+  list of lists which we will flatten into an intializer list,
+  and transform into a tarch::la::Matrix
     
     """
     #pass in stencil as a list of lists
@@ -240,7 +244,6 @@ Consult petsc.Project for details
     return f"""
   int _spacetreeId;    
   const tarch::la::Matrix<3,3,double> _stencil = {self.d["STENCIL"]};
-  const tarch::la::Vector<ThreePowerD,double> _vecStencil = {self.d["STENCIL"]};
 """
       
   def get_constructor_body(self):
@@ -253,5 +256,4 @@ Define body of constructor
     """
     return f"""
     _spacetreeId = treeNumber;
-    //_stencil{self.d["STENCIL"]};
 """

@@ -27,6 +27,8 @@ parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       defau
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
+#add a 9 point stencil which will 
+#be passed to PETSc at matrix initialisation stage
 stencil=[
   [-1/3, -1/3, -1/3],
   [-1/3,  8/3, -1/3],
