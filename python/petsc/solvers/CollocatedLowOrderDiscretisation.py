@@ -31,7 +31,8 @@ class CollocatedLowOrderDiscretisation(Solver):
                name,
                number_of_unknowns,
                min_h,
-               max_h):
+               max_h,
+               stencil):
     """!
    
  Test comment (C)
@@ -41,7 +42,8 @@ I wanna see if this one applies to the solver or hte init
     """
     super( CollocatedLowOrderDiscretisation, self ).__init__( name,
                                                               min_h,
-                                                              max_h )
+                                                              max_h
+                                                              )
     
     self._number_of_unknowns = number_of_unknowns
     
@@ -51,6 +53,7 @@ I wanna see if this one applies to the solver or hte init
     self._dof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._dof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
 
+    self.stencil = stencil
     pass
 
 
@@ -108,7 +111,7 @@ I wanna see if this one applies to the solver or hte init
   
   
   def add_to_assemble(self, observer):
-    observer.add_action_set( AssemblePetscMatrix(self) )
+    observer.add_action_set( AssemblePetscMatrix(self, self.stencil) )
     pass
   
 
