@@ -72,17 +72,36 @@ class exahype2::EnclaveBookkeeping {
      */
     void dumpStatistics();
 
+    /**
+     * Wait for a task and copy outcome into destination
+     */
     void waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& maxEigenvalue);
+
+    /**
+     * Wait for a task and copy outcome into destination
+     */
+    void waitForTaskAndDiscardResult(int number);
     
     /**
+     * Wait for a task result to become available
+     *
+     * We check the internal database for the result. If the result is not
+     * there yet, we process one task. This processing should be done LIFO,
+     * as we assume that traversals produce tasks and the follow-up traversal
+     * then consumes the outcome. In the Peano world, two subsequent mesh
+     * traversals run through the grid in inverted order, so searching for
+     * task outcomes LIFO makes sense. If there are no tasks left in Peano's
+     * queues and we still haven't got the result, we yield to give other
+     * threads of the runtime the opportunity to do their stuff.
+     *
+     *
      * You have the sole ownership of the result which should be deleted 
      * later via 
-     * <pre>
-    
-  tarch::freeMemory( result, tarch::MemoryLocation::Heap );
-    
-       </pre>
      * 
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * tarch::freeMemory( result, tarch::MemoryLocation::Heap );
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
      * @return Entry
      */
     Entry waitForTaskToTerminateAndReturnResult(int number);

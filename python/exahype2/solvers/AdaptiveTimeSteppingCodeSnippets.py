@@ -12,7 +12,7 @@ class AdaptiveTimeSteppingCodeSnippets( SolverCodeSnippets ):
 
   def create_abstract_solver_user_declarations(self):
     return """
-private:
+protected:
   double _maxEigenvalue;
   double _admissibleTimeStepSize;
 public:

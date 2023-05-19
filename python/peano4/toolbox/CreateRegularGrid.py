@@ -9,6 +9,7 @@ class CreateRegularGrid(ActionSet):
     """
       maximum_cell_width
     """
+    super( CreateRegularGrid, self ).__init__()
     self.d = {}
     self.d[ "H_MAX" ]     = str(maximum_cell_width)
 

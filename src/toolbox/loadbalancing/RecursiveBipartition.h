@@ -53,7 +53,8 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * Triggers actual load balancing data exchange, triggers rebalancing, and
      * dumps statistics.
      *
-     * <h2> Spread equally </h2>
+     * ## Spread equally
+     *
      * This step is usually called early throughout the grid construction. At
      * this point, we want to bring in ranks as soon as possible. However, it
      * is very unlikely that the grid at that point will allow us to balance
@@ -65,14 +66,14 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * increment within the for loop such that module imbalances are at least
      * spread out.
      */
-    void finishStep() override;
+    virtual void finishStep() override;
 
     /**
      * I need the stats here mainly for debugging purposes. The load balancing
      * alread dumps information per time step. This routine however is more
      * elaborate/detailed and not used by default.
      */
-    std::string toString() const override;
+    virtual std::string toString() const override;
 
   private:
     static tarch::logging::Log  _log;

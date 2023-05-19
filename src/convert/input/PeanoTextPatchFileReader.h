@@ -70,11 +70,11 @@ class convert::input::PeanoTextPatchFileReader: public convert::input::PatchFile
 PeanoTextPatchFileReader(const std::string &file);
     virtual ~PeanoTextPatchFileReader();
 
-    void parse() override;
+    virtual void parse() override;
 
-	/**
-	 * A file can hold a series of datasets
-	 */
-	std::vector< convert::data::DataSet >  getData() const override;
+  	/**
+	   * A file can hold a series of datasets
+     */
+    virtual std::vector< convert::data::DataSet >  getData() const override;
 };
 

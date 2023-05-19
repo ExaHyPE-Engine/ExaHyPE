@@ -42,6 +42,8 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
         are actually then initialised through this code snippet.
 
     """
+    super(InsertRandomParticlesIntoUnrefinedCells,self).__init__(priority=1, parallel=False)
+    
     self.d = {}
     self.d[ "PARTICLE" ]                           = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]                = particle_set.name

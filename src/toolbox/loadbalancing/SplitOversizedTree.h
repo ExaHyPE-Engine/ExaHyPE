@@ -38,6 +38,14 @@ namespace toolbox {
  * and  peano4::grid::Spacetree::isCellBottomUpSplitCandidate(),
  * peano4::grid::Spacetree::splitOrJoinCell() and the general
  * @ref peano_domain_decomposition "domain decomposition overview".
+ *
+ * While forking off trees once they exceed a certain threshold is not as
+ * elegant as iterative, recursive splits, this strategy avoids very deep
+ * tree topologies. These become an issue in line with
+ * @ref page_peano_domain_decomposition "some domain split-up constraints",
+ * as the logical tree topology's depth obviously is constraint by the
+ * depth of the global spacetree. That is, this load balancing scheme is
+ * advantageous if recursive splitting fail.
  */
 class toolbox::loadbalancing::SplitOversizedTree: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
@@ -66,14 +74,14 @@ class toolbox::loadbalancing::SplitOversizedTree: public toolbox::loadbalancing:
      * increment within the for loop such that module imbalances are at least
      * spread out.
      */
-    void finishStep() override;
+    virtual void finishStep() override;
 
     /**
      * I need the stats here mainly for debugging purposes. The load balancing
      * alread dumps information per time step. This routine however is more
      * elaborate/detailed and not used by default.
      */
-    std::string toString() const override;
+    virtual std::string toString() const override;
 
   private:
     static tarch::logging::Log  _log;

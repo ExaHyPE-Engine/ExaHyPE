@@ -119,7 +119,7 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
      * This routine is thread-safe compared to addService() and
      * removeService().
      */
-    void receiveDanglingMessages() override;
+    virtual void receiveDanglingMessages() override;
 
     /**
      * @return List of registered services separated by whitespaces
@@ -130,7 +130,8 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
      * Maybe the only service that you don't have to init and shutdown.
      */
     void init();
-    void shutdown() override;
+
+    virtual void shutdown() override;
 };
 
 

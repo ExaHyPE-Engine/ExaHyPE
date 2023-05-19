@@ -49,6 +49,6 @@ class TemplatedHeaderFile(object):
     if not os.path.exists( directory + "/" + self.subdirectory ):
       os.mkdir(directory + "/" + self.subdirectory)
 
-    header_filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h";
+    header_filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h"
 
-    self.generate_file(overwrite,header_filename,self.headerfile_template)    
+    self.generate_file(overwrite,header_filename,self.headerfile_template)

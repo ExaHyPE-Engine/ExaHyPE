@@ -93,7 +93,6 @@ class ActionSet(object):
       import inspect, os
       cuda = using_cuda_backend()
       if cuda:
-        print(filename)
         filename = filename.replace(".cpp", ".cu")
       print( "{} written by {}".format(filename, os.path.basename(inspect.getfile(self.__class__))))
 

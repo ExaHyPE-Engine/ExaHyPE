@@ -37,7 +37,7 @@ class convert::output::VTUWriter: public convert::output::Writer {
 	VTUWriter(const std::string&  directory, const std::string& outputFileWithoutExtention);
 	~VTUWriter();
 
-	void writeFile(const convert::data::Variable& variable, const std::vector<convert::data::PatchData>& data) override;
+	virtual void writeFile(const convert::data::Variable& variable, const std::vector<convert::data::PatchData>& data) override;
 
 	/**
 	 * Meta file write

@@ -82,7 +82,7 @@ class peano4::parallel::tests::NodeTest: public tarch::tests::TestCase {
     void testTagCalculation();
   public:
     NodeTest();
-    void run() override;
+    virtual void run() override;
 };
 
 

@@ -73,14 +73,14 @@ LDFLAGS  += {{LDFLAGS_PEANO_DEBUG}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_DEBUG}} {{LIBS}}
 {% endif %}
 
-FCFLAGS  += {{FCFLAGS}}
+FCFLAGS+={{FCFLAGS}}
 
-GPU_OBJS = {{GPUOBJS}}
+GPU_OBJS={{GPUOBJS}}
 
 H_HEADERS={% for item in H_HEADERS -%} {{item+" "}} {%- endfor %}
 CXX_SOURCES={% for item in CXX_SOURCES -%} {{item+" "}} {%- endfor %}
 FORTRAN_SOURCES={% for item in FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}
-CU_SORUCES={% for item in CU_SOURCES -%} {{item+" "}} {%- endfor %}
+CU_SOURCES={% for item in CU_SOURCES -%} {{item+" "}} {%- endfor %}
 
 GENERATED_H_HEADERS={% for item in GENERATED_H_HEADERS -%} {{item+" "}} {%- endfor %}
 GENERATED_CXX_SOURCES={% for item in GENERATED_CXX_SOURCES -%} {{item+" "}} {%- endfor %}
@@ -89,7 +89,7 @@ GENERATED_CU_SOURCES={% for item in GENERATED_CU_SOURCES -%} {{item+" "}} {%- en
 
 CXX_OBJS=$(subst .cpp,.o,$(CXX_SOURCES))
 CXX_OBJS+=$(subst .cpp,.o,$(GENERATED_CXX_SOURCES))
-CU_OBJS+=$(subst .cu,.o,$(CU_SOURCES))
+CU_OBJS=$(subst .cu,.o,$(CU_SOURCES))
 CU_OBJS+=$(subst .cu,.o,$(GENERATED_CU_SOURCES))
 FORTRAN_OBJS=$(subst .f,.o,$(subst .f90,.o,$(FORTRAN_SOURCES)))
 FORTRAN_OBJS+=$(subst .f,.o,$(subst .f90,.o,$(GENERATED_FORTRAN_SOURCES)))
@@ -105,7 +105,7 @@ all: solver
 	$(FC) $(FCFLAGS) -c -o $@ $<
 
 
-{% for module in FORTRAN_MODULES -%} 
+{% for module in FORTRAN_MODULES -%}
 .NOTPARALLEL: {{module | replace(".f90", ".mod") }}
 {{module | replace(".f90", ".mod")}}: {{module | replace(".f90", ".o") + "\n\n" }}
 {%- endfor %}
@@ -119,7 +119,7 @@ solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") 
 	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o {{EXECUTABLENAME}}
 
 clean:
-	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) $(FORTRAN_MODULE_OBJS)
+	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) $(FORTRAN_MODULE_OBJS) $(CU_OBJS)
 	rm -f *.mod
 	rm -f {{EXECUTABLENAME}}
 
@@ -131,11 +131,10 @@ distclean:
 	rm -f $(GENERATED_CXX_SOURCES)
 	rm -f ${GENERATED_FORTRAN_SOURCES}
 	rm -f ${GENERATED_CU_SOURCES}
-	rm -rf globaldata celldata facedata vertexdata observers repositories tasks
+	rm -rf globaldata celldata facedata vertexdata observers repositories tasks generated
 	rm -f Constants.h
 	rm -f README-*
 	rm -f .gitignore
-	rm -f GeneratedSubdirectories.cmake
 	rm -f CMakeLists.txt
 
 maintainer-clean: distclean

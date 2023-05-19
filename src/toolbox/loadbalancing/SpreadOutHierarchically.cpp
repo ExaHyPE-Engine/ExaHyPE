@@ -29,6 +29,7 @@ toolbox::loadbalancing::SpreadOutHierarchically::SpreadOutHierarchically(Configu
   _stepsToWaitForNextLoadBalancingDecision(0) {
   assertion( configuration!=nullptr );
   _state = State::InterRankDistribution;
+  _statistics.notifyOfStateChange(_state);
 }
 
 

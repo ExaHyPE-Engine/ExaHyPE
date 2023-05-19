@@ -24,8 +24,8 @@ class convert::filter::Intersection: public convert::filter::Filter {
 
 	const Strategy _strategy;
   public:
-	Intersection( Strategy strategy );
-	void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) override;
+  	Intersection( Strategy strategy );
+	  virtual void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) override;
 };
 
 

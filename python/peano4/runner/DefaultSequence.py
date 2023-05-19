@@ -33,12 +33,12 @@ class DefaultSequence(object):
     """
       Pass in a version of output
 
-      main_name  Is the name of you main file. By default, this might be 
-         main.cpp, but you might want to have different main files for 
+      main_name Is the name of you main file. By default, this might be
+         main.cpp, but you might want to have different main files for
          different experiments. Please do not give the file an extension.
     """
-    output.makefile.add_h_file( main_name + ".h" )
-    output.makefile.add_cpp_file( main_name + ".cpp" )
+    output.makefile.add_h_file( main_name + ".h", generated=True )
+    output.makefile.add_cpp_file( main_name + ".cpp", generated=True )
 
     self.d[ "MAIN_NAME" ] = main_name
 

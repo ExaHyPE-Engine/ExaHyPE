@@ -409,7 +409,7 @@ const double boundaryValue = 0.0;
       True)
 
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( self._name + ".cpp" )
+    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
 
 
 #  def _init_dictionary_with_default_parameters(self,d):

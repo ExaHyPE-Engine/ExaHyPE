@@ -43,7 +43,7 @@ class toolbox::loadbalancing::SpreadOut: public toolbox::loadbalancing::Abstract
     SpreadOut(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
     virtual ~SpreadOut();
 
-    void finishStep() override;
+    virtual void finishStep() override;
   private:
     static tarch::logging::Log  _log;
 

@@ -47,5 +47,5 @@ class toolbox::particles::tests::MultiscaleTransitionsTest: public tarch::tests:
     void testSievePredicate();
   public:
     MultiscaleTransitionsTest();
-    void run() override;
+    virtual void run() override;
 };

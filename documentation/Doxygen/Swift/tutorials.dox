@@ -8,7 +8,7 @@ has a lot of introductory comments.
 
 ## A first Swift 2 application
 
-Our interface for Swift 2 is almost complete realised in Python.
+Our interface for Swift 2 is almost completely realised in Python.
 We configure the whole simulation in Python, but typically make the key 
 steps of a simulation point to generic C++ routines which are shipped with
 Peano 4.
@@ -20,11 +20,11 @@ makefile which waves Peano's core and the SPH kernels together.
 We start with the creation of a Swift 2 project:
 
 
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
 project = swift2.Project( namespace=['''benchmarks''', '''swift2''', '''planetorbit'''], 
                           project_name='''planetorbit''', 
                           executable=orbit-exec )
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 Next, we have to add a particle species.
@@ -36,7 +36,7 @@ DaStGen eventually dump them into proper C++ code from which it is embedded into
 actual simulator.   
 
 
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
      import dastgen2
 
      particle = peano4.toolbox.particles.Particle('''Particle''')
@@ -46,7 +46,7 @@ actual simulator.
 
      particle.data.add_attribute(v_attr)
      particle.data.add_attribute(mass_attr)
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 Though conceptionally a plain C++ pretty printer, the DaStGen2 Python API

@@ -406,7 +406,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   if (CCZ4ReSwi==6){
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       constexpr int NumberOfRefinementLayers = 2;
-      double Radius[NumberOfRefinementLayers] = {5, 3.5};
+      double Radius[NumberOfRefinementLayers] = {4, 3};
       double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
 
       result = ::exahype2::RefinementCommand::Keep;

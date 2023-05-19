@@ -672,7 +672,7 @@ if __name__ == "__main__":
         double currentPosition[3]; 
         for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
         Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
-        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1, 3, 0, 59, n_a_v);
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1, patchSize, 0, 59, n_a_v);
         fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+0) ] = Psi4[0]; 
         fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+1) ] = Psi4[1];
       }  
@@ -974,11 +974,11 @@ if __name__ == "__main__":
     my_solver.select_dofs_to_print = [0,12,16,17,18,54,59,60]
 
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
-    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.9,1000,16))" )
+    #project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,1000,16))" )
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
     #project.set_load_balancing("toolbox::loadbalancing::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    #project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
-    project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    #project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
 
 
 ########################################################################################

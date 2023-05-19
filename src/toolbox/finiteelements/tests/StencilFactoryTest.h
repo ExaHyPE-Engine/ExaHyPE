@@ -25,7 +25,7 @@ class toolbox::finiteelements::tests::StencilFactoryTest: public tarch::tests::T
     void testIntegrationWithN1();
   public:
     StencilFactoryTest();
-    void run() override;
+    virtual void run() override;
 };
 
 
