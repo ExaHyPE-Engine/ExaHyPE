@@ -38,7 +38,7 @@ build_modes = {
 supported_file_types_bathymetry = [".nc"]
 supported_file_types_displacement = [".nc"]
 
-scenarios = ["Radial_Dam_Break", "Radial_Bathymetry_Dam_Break", "Tsunami"]
+scenarios = ["Radial_Dam_Break", "Radial_Bathymetry_Dam_Break", "Tsunami", "Artificial_Tsunami"]
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - SWE Application Script')
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     required=True,              help="|".join(solvers.keys()) )
@@ -65,6 +65,10 @@ my_pde = None
 if args.scenario == "Radial_Bathymetry_Dam_Break":
   from scenarios.radial_bathymetry_dam_break import Radial_Bathymetry_Dam_Break
   my_pde = Radial_Bathymetry_Dam_Break(width=width)
+
+elif args.scenario == "Artificial_Tsunami":
+  from scenarios.artificial_tsunami import Artificial_Tsunami
+  my_pde = Artificial_Tsunami()
 
 elif args.scenario == "Tsunami":
   # check whether flags are set
@@ -94,7 +98,7 @@ elif args.scenario == "Tsunami":
     if args.max_dimension_netcdf is None or args.max_dimension_netcdf <= 0: 
       raise ValueError("Neither netCDF4 package installed nor valid value passed to -maxd!") 
     else: 
-      # generally underestimates finest mesh width
+      # generally estimates finer mesh width than finest mesh data width
       maximum_cell_size = min(width)/args.max_dimension_netcdf
 
   from scenarios.tsunami import Tsunami
@@ -118,7 +122,7 @@ my_solver = solvers[solver_type](
   patch_size                = patch_size,
   unknowns                  = 3,
   auxiliary_variables       = 1,
-  max_volume_h              = maximum_cell_size, # TODO must be at least as fine as bathymetry file if netCDF is used
+  max_volume_h              = maximum_cell_size, # must be at least as fine as bathymetry file if netCDF is used
   min_volume_h              = maximum_cell_size * 3.0**(-args.amr_levels),
   time_step_relaxation      = time_step_relaxation
 )
@@ -127,9 +131,14 @@ if args.gpu:
   my_solver.set_pde_terms_without_state(True)
 
 my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".format("true" if args.dynamic_amr else "false"))
+if args.scenario == "Artificial_Tsunami":
+  my_solver.add_user_solver_includes("#include <cmath>")
+  my_solver.add_user_solver_includes("#include \"Constants.h\"")
+
 if args.scenario == "Tsunami":
   my_solver.add_user_solver_includes("#include \"parser/TopologyParser.h\"")
   my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(\"%s\", \"%s\");" % (args.bathymetry_file, args.displacement_file))
+
 my_solver.set_implementation(
   initial_conditions    = my_pde.implementation_of_initial_conditions(),
   boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
@@ -166,6 +175,8 @@ peano4_project = my_project.generate_Peano4_project(verbose=True)
 if args.scenario == "Tsunami": 
   peano4_project.output.makefile.add_cpp_file("parser/TopologyParser.cpp")
   peano4_project.output.makefile.add_cpp_file("parser/NetCDFReader.cpp")
+if args.scenario == "Artificial_Tsunami":
+  peano4_project.constants.define("_USE_MATH_DEFINES")
 peano4_project.generate()
 if(args.compile):
   peano4_project.build(make_clean_first=True, throw_away_data_after_build=True)
