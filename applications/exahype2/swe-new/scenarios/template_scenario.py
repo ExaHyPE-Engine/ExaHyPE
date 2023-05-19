@@ -18,18 +18,29 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     @abstractmethod
     def __init__(self):
         super().__init__()
-
-        # Flux [unknowns, dimensions]
-        self.F[0, 0] = self.hu
-        self.F[1, 0] = self.hu * self.u #+ (self.g * self.h**2)/2
-        self.F[2, 0] = self.hu * self.v
-
-        self.F[0, 1] = self.hv
-        self.F[1, 1] = self.hu * self.v
-        self.F[2, 1] = self.hv * self.v #+ (self.g * self.h**2)/2
     
     def implementation_of_boundary_conditions(self):
         return self.implementation_of_homogeneous_Neumann_BC()
+    
+    def implementation_of_flux(self):        
+        return """
+        double g = 9.81;
+        double h = Q[0];
+        double hu = Q[1];
+        double hv = Q[2];
+        switch(normal) {
+            case 0:
+                F[0] = hu;
+                F[1] = (hu * hu);// / h + (g * h * h) / 2;
+                F[2] = (hu * hv) / h;
+                break;
+            case 1:
+                F[0] = hv;
+                F[1] = (hu * hv) / h;
+                F[2] = (hv * hv) / h;// + (g * h * h) / 2;
+                break;
+        }
+        """
     
 
     def implementation_of_ncp(self):
@@ -41,26 +52,30 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
             BTimesDeltaQ[0] = 0.0;
             BTimesDeltaQ[1] = g * Q[0] * (deltaQ[0] + deltaQ[3]);
             BTimesDeltaQ[2] = 0.0;
+            //BTimesDeltaQ[3] = 0.0;
             break;
         case 1: //y
             BTimesDeltaQ[0] = 0.0;
             BTimesDeltaQ[1] = 0.0;
             BTimesDeltaQ[2] = g * Q[0] * (deltaQ[0] + deltaQ[3]);
+            //BTimesDeltaQ[3] = 0.0;
             break;
         }"""
+        return PDETerms.None_Implementation
 
     # TODO RefinementCommand::Erase implementieren
     def implementation_of_refinement_criterion(self):
         return """
-        ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-        if ( tarch::la::greaterEquals(Q[0] > 1e-8 && std::abs(Q[0] + Q[3]), 0.05)) { 
-            result = ::exahype2::RefinementCommand::Refine;
-        }
-
-        logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
-        return result;
+        return ::exahype2::RefinementCommand::Keep;
         """
     
     def implementation_of_sources(self):
         return PDETerms.None_Implementation
+        return """
+        double g = 9.81;
+        double h = Q[0];
+        double b = Q[3];
+        S[0] = 0;
+        S[1] = -g * h * b;
+        S[2] = -g * h * b;
+        """
