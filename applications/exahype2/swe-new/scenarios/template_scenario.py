@@ -31,7 +31,7 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
         switch(normal) {
             case 0:
                 F[0] = hu;
-                F[1] = (hu * hu);// / h + (g * h * h) / 2;
+                F[1] = (hu * hu)/ h;//  + (g * h * h) / 2;
                 F[2] = (hu * hv) / h;
                 break;
             case 1:
