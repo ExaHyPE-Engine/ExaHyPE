@@ -65,6 +65,15 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FV: public benchmarks::exahype2::ccz4:
      * holds for both of them. Delete logic to isCellOverlappingWithBHImpactArea().
      */
     static bool areAdjacentCellsOverlappingWithBHImpactArea( const peano4::datamanagement::FaceMarker& marker );
+
+    /**
+     * Check if the faceNumberth adjacent face is adjacent to inside cells
+     *
+     * So first of all, we check if the current cell is overlapping with the BH
+     * area. If this is not the case, we can return false immediately.
+     * Otherwise, we can move one cell left, right, up, down, front or left and
+     * check for this cell as well.
+     */
     static bool areAdjacentCellsOverlappingWithBHImpactArea( const peano4::datamanagement::CellMarker& marker, int faceNumber );
 
   private:
