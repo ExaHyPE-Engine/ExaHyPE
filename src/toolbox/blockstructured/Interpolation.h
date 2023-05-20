@@ -519,12 +519,16 @@ namespace toolbox {
      * grid. Such data are only available once we know the halo data, too.
      *
      *
+     * ## Data validity
+     *
      * There is one important catch when you interpolate linearly from a
      * coarse patch into a fine one: In ExaHyPE 2, we typically only have
      * face-connected data. Therefore, some coarse grid data is invalid, and
      * we have to ignore it. There are different strategies how to achieve
-     * this. We use a flawed one here. We simply ignore data for which we know
-     * that it is invalid.
+     * this.
+     *
+     * We could use a simple one and ignore data for which we know that it is
+     * invalid. This yields invalid data.
      *
      *
      *

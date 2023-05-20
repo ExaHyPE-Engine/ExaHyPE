@@ -94,8 +94,6 @@ namespace toolbox {
      *
      * project the halo entry (h) onto the face at point x.
      *
-     * This scheme is trivial for 1d. For 2d, we
-     *
      *
      * @param Q Patch data with halo, i.e.
      */
