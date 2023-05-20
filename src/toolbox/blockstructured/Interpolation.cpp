@@ -946,7 +946,6 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
       destinationValues[baseIndexDestination+unknown] = 0.0;
     }
     dfor( sourceVolume, numberOfDoFsPerAxisInSourcePatch+2*haloSourcePatch ) {
-
       int outsidePatchAlongCoordinateAxis = 0;
       for (int d=0; d<Dimensions; d++) {
         if ( sourceVolume(d) <  haloSourcePatch )                                   outsidePatchAlongCoordinateAxis++;
