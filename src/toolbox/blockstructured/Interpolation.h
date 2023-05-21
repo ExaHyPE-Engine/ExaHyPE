@@ -523,12 +523,10 @@ namespace toolbox {
      *
      * There is one important catch when you interpolate linearly from a
      * coarse patch into a fine one: In ExaHyPE 2, we typically only have
-     * face-connected data. Therefore, some coarse grid data is invalid, and
-     * we have to ignore it. There are different strategies how to achieve
-     * this.
-     *
-     * We could use a simple one and ignore data for which we know that it is
-     * invalid. This yields invalid data.
+     * face-connected data. Therefore, those coarse grid entries along the
+     * patch diagonals are invalid, and we have to ignore them. Simply leaving
+     * them away however is not an option, as we then would accumulate partial
+     * contributions which do not sum up to 1.0.
      *
      *
      *

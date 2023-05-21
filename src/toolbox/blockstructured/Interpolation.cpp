@@ -958,21 +958,31 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
             tarch::la::convertScalar<double>(destinationVolume) + tarch::la::Vector<Dimensions, double>(0.5 - haloDestinationPatch)
           );
 
+      int outsidePatchAlongCoordinateAxis = 0;
+      for (int d=0; d<Dimensions; d++) {
+        if ( sourceVolume(d) <  haloSourcePatch )                                   outsidePatchAlongCoordinateAxis++;
+        if ( sourceVolume(d) >= haloSourcePatch+numberOfDoFsPerAxisInSourcePatch )  outsidePatchAlongCoordinateAxis++;
+      }
+      const bool isFromUnitialisedDiagonal = outsidePatchAlongCoordinateAxis>1;
+
       double weight = 1.0;
       for (int d=0; d<Dimensions; d++) {
-        if (
-          (sourceVolume(d) >= haloSourcePatch )
-          and
-          ( sourceVolume(d) < haloSourcePatch+numberOfDoFsPerAxisInSourcePatch )
-        ) {
-            sollte 0.0 sein. Oder ignoriert werden.
-        }
         double distanceAlongCoordinateAxis = std::abs( normalisedDestinationPosition(d) - normalisedSourcePosition(d) );
         distanceAlongCoordinateAxis = 1.0 - distanceAlongCoordinateAxis / static_cast<double>(numberOfDoFsPerAxisInSourcePatch);
         weight *= std::max(0.0, distanceAlongCoordinateAxis);
       }
 
-      const int baseIndexSource      = peano4::utils::dLinearised(sourceVolume, numberOfDoFsPerAxisInSourcePatch+2*haloSourcePatch) * unknowns;
+      tarch::la::Vector<Dimensions, int> amendedSourceVolume = sourceVolume;
+/*
+      if (isFromUnitialisedDiagonal) {
+        for (int d=0; d<Dimensions; d++) {
+          amendedSourceVolume(d) = std::max( amendedSourceVolume(d), haloSourcePatch );
+          amendedSourceVolume(d) = std::min( amendedSourceVolume(d), haloSourcePatch + numberOfDoFsPerAxisInSourcePatch - 1 );
+        }
+      }
+*/
+
+      int baseIndexSource = peano4::utils::dLinearised(amendedSourceVolume, numberOfDoFsPerAxisInSourcePatch+2*haloSourcePatch) * unknowns;
       for (int unknown=0; unknown<unknowns; unknown++) {
         destinationValues[baseIndexDestination+unknown] += weight * sourceValues[baseIndexSource+unknown];
       }

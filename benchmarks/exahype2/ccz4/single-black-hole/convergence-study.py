@@ -166,6 +166,7 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Projection.h"        
 #include "toolbox/blockstructured/Restriction.h"        
 #include "toolbox/blockstructured/Interpolation.h"        
+#include "toolbox/blockstructured/Copy.h"        
 """        
 
 
@@ -313,6 +314,18 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,4) ? dummyFace4 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(4).value,
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,5) ? dummyFace5 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(5).value
     );
+    
+    
+    // @todo wieder raus
+    ::toolbox::blockstructured::copyUnknowns(
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      interpolatedFVDataWithHalo,
+      1,      // source halo,
+      fineGridCell""" + self._name_without_FD4_extension + """_FVQ.value,
+      0,      // dest halo
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables
+    );
+
 
     ::tarch::freeMemory(interpolatedFVDataWithHalo, tarch::MemoryLocation::Heap );
     ::tarch::freeMemory(dummyFace0, tarch::MemoryLocation::Heap );
@@ -339,7 +352,7 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 #    and
 #    not marker.willBeRefined()
 #  ) { 
-#    logTraceIn( "touchCellFirstTime(...)-restrict" );
+#    logTraceIn( "touchCellFirstTime(...)-inject" );
 #    
 #    ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
 #      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
@@ -349,7 +362,7 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 #      fineGridCell""" + self._name_without_FD4_extension + """_FD4Q.value
 #    );
 #  
-#    logTraceOut( "touchCellFirstTime(...)-restrict" );
+#    logTraceOut( "touchCellFirstTime(...)-inject" );
 #  }  
 #""")
 
