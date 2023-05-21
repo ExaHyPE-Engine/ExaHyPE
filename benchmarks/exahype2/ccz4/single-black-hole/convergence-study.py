@@ -316,7 +316,8 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
     );
     
     
-    // @todo wieder raus
+    // @todo Doku rein, dass man sowas machen kann wenn man lustig ist
+/*    
     ::toolbox::blockstructured::copyUnknowns(
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
       interpolatedFVDataWithHalo,
@@ -325,7 +326,7 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
       0,      // dest halo
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables
     );
-
+*/
 
     ::tarch::freeMemory(interpolatedFVDataWithHalo, tarch::MemoryLocation::Heap );
     ::tarch::freeMemory(dummyFace0, tarch::MemoryLocation::Heap );
@@ -345,26 +346,28 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
                                                       not marker.willBeRefined()
                                                       )""" 
 
-#        self._action_set_postprocess_solution = exahype2.solvers.rkfd.actionsets.PatchWisePostprocessSolution(self,
-#                                                                                                              """
-#  if (
-#    repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
-#    and
-#    not marker.willBeRefined()
-#  ) { 
-#    logTraceIn( "touchCellFirstTime(...)-inject" );
-#    
-#    ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
-#      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-#      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FD4.NumberOfGridCellsPerPatchPerAxis,
-#      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
-#      fineGridCell""" + self._name_without_FD4_extension + """_FVQ.value,
-#      fineGridCell""" + self._name_without_FD4_extension + """_FD4Q.value
-#    );
-#  
-#    logTraceOut( "touchCellFirstTime(...)-inject" );
-#  }  
-#""")
+# @todo Hier auch nohc Doku rein, dass wir doch jetzt auf 7 Zellen loesen und net nur auf eriner
+# Das ist anders als im Coupling-Sketch
+        self._action_set_postprocess_solution = exahype2.solvers.rkfd.actionsets.PatchWisePostprocessSolution(self,
+                                                                                                              """
+  if (
+    repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
+    and
+    not marker.willBeRefined()
+  ) { 
+    logTraceIn( "touchCellFirstTime(...)-inject" );
+    
+    ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FD4.NumberOfGridCellsPerPatchPerAxis,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
+      fineGridCell""" + self._name_without_FD4_extension + """_FVQ.value,
+      fineGridCell""" + self._name_without_FD4_extension + """_FD4Q.value
+    );
+  
+    logTraceOut( "touchCellFirstTime(...)-inject" );
+  }  
+""")
 
         
 
