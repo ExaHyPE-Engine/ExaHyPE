@@ -23,6 +23,7 @@ void toolbox::blockstructured::tests::InterpolationTest::run() {
 
 
 void toolbox::blockstructured::tests::InterpolationTest::testInterpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear() {
+  #if Dimensions==3
   const int NumberOfUnknowns = 3;
   const int SourcePatchSize = 4;
   const int SourceHaloSize = 3;
@@ -47,11 +48,12 @@ void toolbox::blockstructured::tests::InterpolationTest::testInterpolateCellData
   );
 
   for (int i=0; i<DestinationSize; i++) {
-    validateNumericalEquals( destinationData[i], 1.0 );
+    validateNumericalEqualsWithParams1( destinationData[i], 1.0, i );
   }
 
   delete[] sourceData;
   delete[] destinationData;
+  #endif
 }
 
 

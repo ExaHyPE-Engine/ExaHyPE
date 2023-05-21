@@ -968,19 +968,20 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
       double weight = 1.0;
       for (int d=0; d<Dimensions; d++) {
         double distanceAlongCoordinateAxis = std::abs( normalisedDestinationPosition(d) - normalisedSourcePosition(d) );
-        distanceAlongCoordinateAxis = 1.0 - distanceAlongCoordinateAxis / static_cast<double>(numberOfDoFsPerAxisInSourcePatch);
+        double h = 1.0 / static_cast<double>(numberOfDoFsPerAxisInSourcePatch);
+        distanceAlongCoordinateAxis = 1.0 - distanceAlongCoordinateAxis / h ;
         weight *= std::max(0.0, distanceAlongCoordinateAxis);
       }
+      assertion( tarch::la::greaterEquals(weight, 0.0) );
+      assertion( tarch::la::smallerEquals(weight, 1.0) );
 
       tarch::la::Vector<Dimensions, int> amendedSourceVolume = sourceVolume;
-/*
       if (isFromUnitialisedDiagonal) {
         for (int d=0; d<Dimensions; d++) {
           amendedSourceVolume(d) = std::max( amendedSourceVolume(d), haloSourcePatch );
           amendedSourceVolume(d) = std::min( amendedSourceVolume(d), haloSourcePatch + numberOfDoFsPerAxisInSourcePatch - 1 );
         }
       }
-*/
 
       int baseIndexSource = peano4::utils::dLinearised(amendedSourceVolume, numberOfDoFsPerAxisInSourcePatch+2*haloSourcePatch) * unknowns;
       for (int unknown=0; unknown<unknowns; unknown++) {
