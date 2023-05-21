@@ -690,6 +690,8 @@ AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
 # FEM 
 #
 if test "$toolbox_finiteelements" != false; then
+  AC_DEFINE([UseToolboxFiniteElements], [1], [UseToolboxFiniteElements])
+  
   LDADD_PEANO_2D_RELEASE=" -lToolboxFiniteElements2d         $LDADD_PEANO_2D_RELEASE"
   LDADD_PEANO_2D_STATS="   -lToolboxFiniteElements2d_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxFiniteElements2d_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -714,6 +716,8 @@ fi
 # Multiprecision 
 #
 if test "$toolbox_multiprecision" != false; then
+  AC_DEFINE([UseToolboxMultiprecision], [1], [UseToolboxMultiprecision])
+  
   LDADD_PEANO_2D_RELEASE=" -lToolboxMultiprecision         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxMultiprecision_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxMultiprecision_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -738,6 +742,8 @@ fi
 # Load balancing 
 #
 if test "$toolbox_loadbalancing" != false; then
+  AC_DEFINE([UseToolboxLoadBalancing], [1], [UseToolboxLoadBalancing])
+  
   LDADD_PEANO_2D_RELEASE=" -lToolboxLoadBalancing2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxLoadBalancing2d_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxLoadBalancing2d_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -762,6 +768,8 @@ fi
 # Blockstructured
 #
 if test "$toolbox_blockstructured" != false; then
+  AC_DEFINE([UseToolboxBlockstructured], [1], [UseToolboxBlockstructured])
+  
   LDADD_PEANO_2D_RELEASE=" -lToolboxBlockstructured2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxBlockstructured2d_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxBlockstructured2d_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -786,6 +794,8 @@ fi
 # Particles 
 #
 if test "$toolbox_particles" != false; then
+  AC_DEFINE([UseToolboxParticles], [1], [UseToolboxParticles])
+  
   LDADD_PEANO_2D_RELEASE+=" -lToolboxParticles2d         $LDADD_PEANO_2D_RELEASE " 
   LDADD_PEANO_2D_STATS+="   -lToolboxParticles2d_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS+=" -lToolboxParticles2d_asserts $LDADD_PEANO_2D_ASSERTS " 
