@@ -71,6 +71,15 @@
    per core). If you do so, you do ***not*** disable the task-based parallelism
    however. The task-based parallelism is eliminated if and only if you 
    configure the underlying Peano without any shared memory parallelism.
-
+ - If your load balancing behaves strangly, you should activate all log messages
+   from toolbox::loadbalancing in your log filter. This should provide you with 
+   information what is going on (filter for the load balancing information in 
+   your output). Often, developers use for example a SpreadOut configuration, 
+   but the actual mesh then is so small that the load balancing never manages
+   to spread out, i.e. the machine is overprovisioned. In this case, for example,
+   a switch to SpreadOutOnceGridStagnates as strategy helps. Load balancing is
+   tricky and might have to be revisited per experimental setup or code development
+   cycle.
+   
  */
  
