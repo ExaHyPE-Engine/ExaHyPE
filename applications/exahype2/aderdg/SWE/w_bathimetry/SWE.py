@@ -22,10 +22,10 @@ auxiliary_variables = {}
 max_h          = 0.1
 min_h          = 0.9 * max_h / 3.0
 
-theSolver=GlobalFixedTimeStep(
+theSolver=GlobalAdaptiveTimeStep(
   name="SWE",  order=3,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
-  min_cell_h=min_h, max_cell_h=max_h, time_step_size=0.00005,
+  min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9,
   flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
   ncp=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
   )
@@ -47,7 +47,7 @@ project.set_global_simulation_parameters(
   min_end_time = 0.1,
   max_end_time = 0.1,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.005,
+  time_in_between_plots = 0.01,
   periodic_BC = [False,False,False]
 )
 
