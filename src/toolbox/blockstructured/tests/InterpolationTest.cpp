@@ -18,6 +18,42 @@ toolbox::blockstructured::tests::InterpolationTest::InterpolationTest():
 void toolbox::blockstructured::tests::InterpolationTest::run() {
   testMethod(testRestrictHaloLayer_AoS_averaging);
   testMethod(testRestrictCellForBreakingDam);
+  testMethod(testInterpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear);
+}
+
+
+void toolbox::blockstructured::tests::InterpolationTest::testInterpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear() {
+  #if Dimensions==3
+  const int NumberOfUnknowns = 3;
+  const int SourcePatchSize = 4;
+  const int SourceHaloSize = 3;
+  const int DestinationPatchSize = 16;
+  const int DestinationHaloSize = 1;
+
+  int SourceSize = (SourcePatchSize+2*SourceHaloSize) * (SourcePatchSize+2*SourceHaloSize) * (SourcePatchSize+2*SourceHaloSize) * NumberOfUnknowns;
+  double* sourceData = new double[ SourceSize ];
+  for (int i=0; i<SourceSize; i++) sourceData[i] = 1.0;
+
+  int DestinationSize = (DestinationPatchSize+2*DestinationHaloSize) * (DestinationPatchSize+2*DestinationHaloSize) * (DestinationPatchSize+2*DestinationHaloSize) * NumberOfUnknowns;
+  double* destinationData = new double[ DestinationSize ];
+
+  interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
+    SourcePatchSize,
+    DestinationPatchSize,
+    SourceHaloSize,
+    DestinationHaloSize,
+    NumberOfUnknowns,
+    sourceData,
+    destinationData
+  );
+
+  for (int i=0; i<DestinationSize; i++) {
+    validateNumericalEqualsWithParams1( destinationData[i], 1.0, i );
+  }
+
+  delete[] sourceData;
+  delete[] destinationData;
+  #endif
 }
 
 

@@ -6,11 +6,14 @@
 namespace toolbox {
   namespace blockstructured {
     /**
+     * Copy one unknown from one patch to the other
+     *
      * This routine assumes that we have two patches of the same numberOfDoFsPerAxisInPatch.
      * We run over the these patches. Each element therein holds a vector of unknowns, i.e.
      * the whole patch is an AoS. We pick the sourceIndex from each of the
      * numberOfDoFsPerAxisInPatch x numberOfDoFsPerAxisInPatch x numberOfDoFsPerAxisInPatch
-     * entries and copy it over to destinationIndex in the image.
+     * entries and copy it over to destinationIndex in the image. That is, the two patches
+     * have to have the same number of unknowns, but they might have different unknowns.
      *
      * @param numberOfDoFsPerAxisInPatch Size per coordinate axis. Has to be added twice the
      *   halo layer size if you have a halo
@@ -32,6 +35,18 @@ namespace toolbox {
       int                                destIndex,
       int                                destUnknowns,
       int                                destHalo
+    );
+
+    /**
+     * Copy all unknowns
+     */
+    void copyUnknowns(
+      int                                numberOfDoFsPerAxisInPatch,
+      const double* __restrict__         source,
+      int                                sourceHalo,
+      double* __restrict__               dest,
+      int                                destHalo,
+      int                                unknowns
     );
 
     double copyUnknownAndComputeMaxDifference(
