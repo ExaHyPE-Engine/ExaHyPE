@@ -46,13 +46,17 @@ I wanna see if this one applies to the solver or hte init
                                                               )
     
     self._number_of_unknowns = number_of_unknowns
-    
-    self._dof = peano4.datamodel.DaStGen2( name )
-    self._dof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_unknowns) ) )
-    self._dof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(number_of_unknowns) ) )
-    self._dof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
-    self._dof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
+    self._vertexDof = peano4.datamodel.DaStGen2( name )
+    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_unknowns) ) )
+    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(number_of_unknowns) ) )
+    self._vertexDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
+    self._vertexDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
 
+    #add in some unknowns for the faces - for now we use the same number_of_unknowns param
+    self._faceDof = peano4.datamodel.DaStGen2( name )
+    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_unknowns) ) )
+    self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
+    self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     self.stencil = stencil
     pass
 
@@ -68,7 +72,7 @@ I wanna see if this one applies to the solver or hte init
     """
     observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
       filename       = "solution-" + self._name,
-      vertex_unknown = self._dof,
+      vertex_unknown = self._vertexDof,
       getter         = "getValue().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
@@ -77,7 +81,7 @@ I wanna see if this one applies to the solver or hte init
       ))
     observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
       filename       = "rhs-" + self._name,
-      vertex_unknown = self._dof,
+      vertex_unknown = self._vertexDof,
       getter         = "getRhs().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
@@ -121,12 +125,13 @@ I wanna see if this one applies to the solver or hte init
   
   
   def add_use_statements(self, observer):
-    observer.use_vertex( self._dof )
+    observer.use_vertex( self._vertexDof )
     pass
 
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
-    datamodel.add_vertex(self._dof)
+    datamodel.add_vertex(self._vertexDof)
+    datamodel.add_face(self._faceDof)
 
 
   def add_implementation_files_to_project(self, namespace, output):
