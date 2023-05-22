@@ -13,7 +13,10 @@ import exahype2.solvers
 
 
 class Project(object):
-  """
+  """!"
+      
+  ExaHyPE 2 project
+  
   Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4
   project with a particular set of actions (algorithmic phases)
   that you can choose from and with particular solver types. It
