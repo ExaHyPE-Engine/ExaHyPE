@@ -46,11 +46,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
   const std::size_t numberOfPatches = hostPatchData.numberOfCells;
   GPUCellData  patchData( hostPatchData, QInEnumerator, QOutEnumerator, queue );
-  ::sycl::range<3> totalWorkItem{numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch+2*solversHaloSize, unknowns+auxiliaryVariables};
+  ::sycl::range<3> totalWorkItem{numberOfVolumesPerAxisInPatch*numberOfPatches, numberOfVolumesPerAxisInPatch+2*solversHaloSize, unknowns+auxiliaryVariables};
   ::sycl::range<3> workgroupSize{numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch+2*solversHaloSize, unknowns+auxiliaryVariables};
-  ::std::vector<::sycl::event> queueSubmission(numberOfPatches);
-  for (int patchIndex=0; patchIndex < numberOfPatches; patchIndex++) {
-  queueSubmission[patchIndex] = queue.submit(
+  ::sycl::event event = queue.submit(
     [&](::sycl::handler &handle) {
       handle.parallel_for(
       ::sycl::nd_range<3> {totalWorkItem, workgroupSize},
@@ -99,6 +97,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
           );
         }*/
         if (Dimensions==2) {
+                  int patchIndex    = i.get_group(0);
                   int x             = i.get_local_id(0);
                   int y             = i.get_local_id(1);
 				  int unknown       = i.get_local_id(2);
@@ -143,6 +142,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
         }*/
 
         if (Dimensions==2) {
+			      int patchIndex = i.get_group(0);
                   int y          = i.get_local_id(0);
                   int x          = i.get_local_id(1)-solversHaloSize;
 				  int unknown       = i.get_local_id(2);
@@ -302,6 +302,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
 
         if (evaluateFlux and Dimensions==2) {
+			      int patchIndex = i.get_group(0);
                   int x          = i.get_local_id(1)-solversHaloSize;
                   int y          = i.get_local_id(0);
 				  int unknown       = i.get_local_id(2);
@@ -620,6 +621,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
 		i.barrier();
         if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
+			      int patchIndex = i.get_group(0);
                   if (i.get_local_id(0) == 0 && i.get_local_id(1) == 0 && i.get_local_id(2) == 0) {
 				    double newMaxEigenvalue = 0.0;
                     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
@@ -667,9 +669,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
     });
     }
   );
-  }
-  ::sycl::event::wait(queueSubmission);
-  //event.wait();
+  event.wait();
   //auto start = event.get_profiling_info<::sycl::info::event_profiling::command_start>();
   //auto stop = event.get_profiling_info<::sycl::info::event_profiling::command_end>();
   //auto duration = static_cast<double>(stop - start) / NSEC_IN_SEC;
