@@ -15,7 +15,7 @@
 
 namespace toolbox {
   namespace loadbalancing {
-    class SpreadOut;
+    class SpreadOutOnceGridStagnates;
   }
 }
 
@@ -38,10 +38,10 @@ namespace toolbox {
  * @ref peano_domain_decomposition "domain decomposition overview" for the
  * rationale.
  */
-class toolbox::loadbalancing::SpreadOut: public toolbox::loadbalancing::AbstractLoadBalancing {
+class toolbox::loadbalancing::SpreadOutOnceGridStagnates: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
-    SpreadOut(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
-    virtual ~SpreadOut();
+    SpreadOutOnceGridStagnates(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
+    virtual ~SpreadOutOnceGridStagnates();
 
     virtual void finishStep() override;
   private:
