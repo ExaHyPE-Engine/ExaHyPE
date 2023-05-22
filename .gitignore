@@ -247,6 +247,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.black_formatting_env/
 
 # Spyder project settings
 .spyderproject

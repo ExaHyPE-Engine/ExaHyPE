@@ -248,8 +248,8 @@ This yet has to be written.
       True)
 
     self._project.output.add( generated_repository_files )
-    self._project.output.makefile.add_h_file(   "repositories/SolverRepository.h" )
-    self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
+    self._project.output.makefile.add_h_file(   "repositories/SolverRepository.h", generated=True )
+    self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp", generated=True )
       
 
   def add_solver( self, solver ):

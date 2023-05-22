@@ -262,8 +262,8 @@ project.set_Peano4_installation( args.peanodir, build_mode )
 peano4_project = project.generate_Peano4_project(args.verbose)
 
 
-peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/spherical-accretion/MassAccumulator.cpp", generated=False )
-peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/spherical-accretion/GravityModel.cpp", generated=False )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/spherical-accretion/MassAccumulator.cpp" )
+peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/spherical-accretion/GravityModel.cpp" )
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/euler" )
 peano4_project.generate()
 
