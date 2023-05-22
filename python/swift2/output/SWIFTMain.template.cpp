@@ -127,9 +127,10 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
         "selectNextAlgorithmicStep()",
         "h_min=" << tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <<
         ", which his smaller than global h_max=" << GlobalMaxH <<
-        ". Stop grid construction"
+        ". Continue with load balancing "
       );
-      gridConstructed = true;
+//      ". Stop grid construction"
+//      gridConstructed = true;
     }
     if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
