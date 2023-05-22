@@ -222,16 +222,16 @@ class AbstractCCZ4Solver(object):
     
     You can always add further files via
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    peano4_project.output.makefile.add_cpp_file( "mypath/myfile.cpp", generated=False )
+    peano4_project.output.makefile.add_cpp_file( "mypath/myfile.cpp" )
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
     """  
     if path_of_ccz4_application[-1]!="/":
       path_of_ccz4_application += "/"
 
-    peano4_project.output.makefile.add_cpp_file( path_of_ccz4_application + "InitialValues.cpp", generated=False )
-    peano4_project.output.makefile.add_cpp_file( path_of_ccz4_application + "CCZ4Kernels.cpp", generated=False )
-    peano4_project.output.makefile.add_cpp_file( path_of_ccz4_application + "SecondOrderAuxiliaryVariablesReconstruction.cpp", generated=False )
+    peano4_project.output.makefile.add_cpp_file( path_of_ccz4_application + "InitialValues.cpp" )
+    peano4_project.output.makefile.add_cpp_file( path_of_ccz4_application + "CCZ4Kernels.cpp" )
+    peano4_project.output.makefile.add_cpp_file( path_of_ccz4_application + "SecondOrderAuxiliaryVariablesReconstruction.cpp" )
     peano4_project.output.makefile.add_header_search_path( path_of_ccz4_application )
 
 
