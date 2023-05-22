@@ -63,7 +63,7 @@ cube_size = 1.0
 print(args.dimensions)
 project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
-  offset                = [ 0.0 for _ in range(args.dimensions) ],
+  offset                = [ 0.0       for _ in range(args.dimensions) ],
   domain_size           = [ cube_size for _ in range(args.dimensions) ],
 )
 

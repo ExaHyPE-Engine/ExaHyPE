@@ -47,6 +47,11 @@ void petsc::PetscData::incrementDoubleAtIndexij( int i, int j, double val ){
   MatSetValue(_A, i, j, val, ADD_VALUES);
 }
 
+void petsc::PetscData::applyStencilToA(int numRows, int rowIndices, int numCols, int colIndices, double values[], double scale){
+  
+}
+
+
 void petsc::PetscData::insertValueAndRHS(double val, double rhs, int index){
   // insert "val" into _x 
   VecSetValue(_x, index, val, INSERT_VALUES);

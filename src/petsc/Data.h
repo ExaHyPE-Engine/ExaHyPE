@@ -57,6 +57,7 @@ class petsc::PetscData{
     */
     void insertDoubleAtIndexij(int i, int j, double val);
     void incrementDoubleAtIndexij(int i, int j, double val);
+    void applyStencilToA(int numRows, int rowIndices, int numCols, int colIndices, double values[], double scale);
 
     /**
     * method to insert value and rhs into the _x and _b vectors 
