@@ -6,11 +6,12 @@ import dastgen2
 
 import os
 
-from .Solver                             import Solver
-from petsc.actionsets.InitVertexDoFs     import InitVertexDoFs
-from petsc.actionsets.EnumerateVertices  import EnumerateVertices
+from .Solver                                    import Solver
+from petsc.actionsets.EnumerateVertices         import EnumerateVertices
+from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
+from petsc.actionsets.InitFaceDoFs              import InitFaceDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
-from petsc.actionsets.AssemblePETSCMatrix import AssemblePetscMatrix
+from petsc.actionsets.AssemblePETSCMatrix       import AssemblePetscMatrix
 
 from abc import abstractmethod
 
@@ -111,6 +112,7 @@ I wanna see if this one applies to the solver or hte init
     """
     observer.add_action_set( InitVertexDoFs(self) ) 
     observer.add_action_set( EnumerateVertices(self) ) 
+    observer.add_action_set( InitFaceDoFs(self) ) 
     pass
   
   
@@ -126,6 +128,7 @@ I wanna see if this one applies to the solver or hte init
   
   def add_use_statements(self, observer):
     observer.use_vertex( self._vertexDof )
+    observer.use_face(self._faceDof)
     pass
 
 
