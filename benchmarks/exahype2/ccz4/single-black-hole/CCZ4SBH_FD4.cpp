@@ -90,7 +90,7 @@ void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::startTimeStep(
     logInfo(
       "startTimeStep(...)",
       "reduce admissible time step size from dt_{dg}=" << _admissibleTimeStepSize <<
-      " vs td_{fv}=" << fvTimeStepSize <<
+      " vs dt_{fv}=" << fvTimeStepSize <<
       " to dt=" << newTimeStepSize <<
       " (previously reported time step sizes for this step are invalid)"
     );
