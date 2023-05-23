@@ -25,8 +25,10 @@ the solver in the first place. This happens in get_includes().
   """
   
   TemplateInitFace="""
-  //increment our count of the number of faces
-  repositories::incrementFaceDofs(1);
+  if (!marker.willBeRefined()){
+    //increment our count of the number of faces
+    repositories::incrementFaceDofs(1);
+  }
   """
   
   def __init__(self,

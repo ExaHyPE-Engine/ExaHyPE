@@ -37,7 +37,6 @@ void {{NAMESPACE | join("::")}}::repositories::incrementFaceDofs(int cardinality
 
 int {{NAMESPACE | join("::")}}::repositories::getTotalFaceDofs() {
   return _faceDofs;
-  // return 1;
 }
 
 
