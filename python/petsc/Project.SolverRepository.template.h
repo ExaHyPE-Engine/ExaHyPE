@@ -34,6 +34,13 @@ namespace {{N}} {
     
     void computeLocalToGlobalMapsForAllSolvers();
     int getTotalNumberOfDegreesOfFreedom();
+    
+    /**
+    * for now, use this to count the total number of faces
+    */
+    int getTotalFaceDofs();
+    void incrementFaceDofs(int cardinality);
+    static int _faceDofs;
 
   }
 {% for N in NAMESPACE %}

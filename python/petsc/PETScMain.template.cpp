@@ -193,7 +193,9 @@ void step() {
 
         repositories::computeLocalToGlobalMapsForAllSolvers();
         const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
-        logInfo( "step()", "total no of dofs=" << totalNumberOfDegreesOfFreedom );
+        const int totalNumberOfFaces            = repositories::getTotalFaceDofs();
+        logInfo( "step()", "total no of dofs="  << totalNumberOfDegreesOfFreedom );
+        logInfo( "step()", "total no of faces=" << totalNumberOfFaces );
 
         repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );
         

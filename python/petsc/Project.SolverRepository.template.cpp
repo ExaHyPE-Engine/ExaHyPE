@@ -31,5 +31,13 @@ int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom()
   return result;
 }
 
+void {{NAMESPACE | join("::")}}::repositories::incrementFaceDofs(int cardinality){
+  _faceDofs += cardinality;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getTotalFaceDofs() {
+  return _faceDofs;
+  // return 1;
+}
 
 
