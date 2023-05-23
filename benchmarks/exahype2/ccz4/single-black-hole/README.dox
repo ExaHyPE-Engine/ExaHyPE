@@ -79,21 +79,32 @@ is only active in a tiny cross-shaped region within.
 @image html grid-setup.png
 
 
+## Production runs
+
+Han's original setup uses the full-blown CCZ4 setup with 
+
+
+~~~~~~~~~~~~~~~~~~~~~~~
+python3 ccz4.py -ext adm -impl fd4-rk1-adaptive -s single-puncture -maxh 0.4 -minh 0.04 -ps 6 -plt 0.5 -et 100 -exn sbh27 --domain_r 9.0 --ReSwi 7 -cfl 0.1 -outdir ./ --KOSigma 8.0 -sommerfeld
+~~~~~~~~~~~~~~~~~~~~~~~
+
+We mirror this setup by 
 
 
 ## Code remarks (FD4-FV scheme)
 
 ### Time step size
 
-As we combine solvers, we have to ensure that their time step sizes match. In 
-the context of FD4, this means that the FD4 time step size has to be calibrated
-with @f$ p^{-2}=1/16 @f$ relative to the Finite Volume scheme. That is, if they 
-have the same mesh size, FD4 takes significantly smaller time step sizes.
+As we combine solvers, we have to ensure that their time step sizes match. This 
+means that the Finite Volume patch size has to be calibrated
+with @f$ p^{2}=16 @f$ relative to the high order's patch size. If they 
+had the same mesh size, the higher order schemes would take significantly smaller time step sizes.
 However, we want to havee the same spatial and temporal accuacy, so we need a
 smaller mesh size for the Finite Volume scheme. The file
 benchmarks/exahype2/ccz4/single-black-hole/convergence-study.py and the solvers
 within applications/exahype2/ccz/CCZ4Solver.py hold further details.
-
+Please note that the FD4 scheme works with stencils which span 7 cells, so 
+its effective discretisation size is 7/3 larger than the Finite Volume's stencils.
 
 While we recalibrate the numerical constant C to take the different spatial
 discretisation orders into account, a simple rescaling does not yet ensure

@@ -20,10 +20,10 @@ from CCZ4Solver import CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeS
 # for the coupling
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
-PatchSize = 4
+FD4PatchSize = 6
 
 
-def construct_FV_limiter(min_cell_size, max_cell_size):
+def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
     """!
     
     Construct the Finite Volume (limiter) scheme
@@ -37,8 +37,7 @@ def construct_FV_limiter(min_cell_size, max_cell_size):
 
 
     class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
-        # todo muss viel groesser sein
-      UpscalingFactor = 5
+      SubPatchSize = int( FD4PatchSize*4*4*3/7 )
         
       def __init__(self,
                    name, 
@@ -46,9 +45,9 @@ def construct_FV_limiter(min_cell_size, max_cell_size):
                    max_cell_size,
                    ):
         super( Limiter, self ).__init__(name               = name +  "_FV",
-                                        patch_size         = PatchSize*self.UpscalingFactor,
-                                        min_volume_h       = min_cell_size/PatchSize/self.UpscalingFactor, 
-                                        max_volume_h       = max_cell_size/PatchSize/self.UpscalingFactor,
+                                        patch_size         = SubPatchSize,
+                                        min_volume_h       = min_cell_size/FD4PatchSize/self.UpscalingFactor, 
+                                        max_volume_h       = max_cell_size/FD4PatchSize/self.UpscalingFactor,
                                         )
         self.double_constants[ "BlackHoleFVRegion" ] = 1.0
  
@@ -156,10 +155,10 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
         
         CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
                                                                         name            = name + "_FD4", 
-                                                                        patch_size      = PatchSize,
+                                                                        patch_size      = FD4PatchSize,
                                                                         rk_order        = 1,
-                                                                        min_meshcell_h  = min_cell_size/PatchSize, 
-                                                                        max_meshcell_h  = max_cell_size/PatchSize,
+                                                                        min_meshcell_h  = min_cell_size/FD4PatchSize, 
+                                                                        max_meshcell_h  = max_cell_size/FD4PatchSize,
                                                                         )
 
         self._user_action_set_includes += """
@@ -416,7 +415,7 @@ if __name__ == "__main__":
     project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable="peano_sbh_" + str(args.cell_size))
     
     my_primary_solver   = construct_limited_FD4_solver( args.cell_size, args.cell_size )
-    my_secondary_solver = construct_FV_limiter( args.cell_size, args.cell_size )
+    my_secondary_solver = construct_FV_limiter_for_FD4( args.cell_size, args.cell_size )
 
     project.add_solver(my_primary_solver)
     project.add_solver(my_secondary_solver)
