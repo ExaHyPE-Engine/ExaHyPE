@@ -260,24 +260,24 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 {% endif %}{# useFlux #}
 
 {% if useNCP %}
-    std::memset(gradQ, 0, {{nDim*(nDof**nDim)*nVarPad}}*sizeof(pCompType));
+    std::memset(gradQ, 0, {{nDim*(nDof**nDim)*nDataPad}}*sizeof(pCompType));
     //NCP
     // Compute the derivatives in x direction (independent from the y and z derivatives)
     for (int yz = 0; yz < {{nDof*nDof3D}}; yz++) {
-      {{ m.matmul('gradQ_x', 'lQi', 'dudxT_by_dx', 'gradQ', '(i*'~nDof3D*nDof~'+yz)*'~nDof*nDataPad, '0', 'yz*'~nDof*nVarPad) | indent(6) }}{##}
+      {{ m.matmul('gradQ_x', 'lQi', 'dudxT_by_dx', 'gradQ', '(i*'~nDof3D*nDof~'+yz)*'~nDof*nDataPad, '0', 'yz*'~nDof*nDataPad) | indent(6) }}{##}
     }
 
     // y direction (independent from the x and z derivatives)
     for (int z = 0; z < {{nDof3D}}; z++) {
       for (int x = 0; x < {{nDof}}; x++) {
-        {{ m.matmul('gradQ_y', 'lQi', 'dudxT_by_dx', 'gradQ', '((i*'~nDof3D~'+z)*'~nDof*nDof~'+x)*'~nDataPad, '0', '(z*'~nDof*nDof~'+x)*'~nVarPad~'+'~(nDof**nDim)*nVarPad) | indent(8) }}{##}
+        {{ m.matmul('gradQ_y', 'lQi', 'dudxT_by_dx', 'gradQ', '((i*'~nDof3D~'+z)*'~nDof*nDof~'+x)*'~nDataPad, '0', '(z*'~nDof*nDof~'+x)*'~nDataPad~'+'~(nDof**nDim)*nDataPad) | indent(8) }}{##}
       }
     }
 {% if nDim ==3 %}
 
     // z direction (independent from the x and y derivatives)
     for (int xy = 0; xy < {{nDof*nDof}}; xy++) {
-      {{ m.matmul('gradQ_z', 'lQi', 'dudxT_by_dx', 'gradQ', '(i*'~nDof**nDim~'+xy)*'~nDataPad, '0', 'xy*'~nVarPad~'+'~2*(nDof**nDim)*nVarPad) | indent(6) }}{##}
+      {{ m.matmul('gradQ_z', 'lQi', 'dudxT_by_dx', 'gradQ', '(i*'~nDof**nDim~'+xy)*'~nDataPad, '0', 'xy*'~nDataPad~'+'~2*(nDof**nDim)*nDataPad) | indent(6) }}{##}
     }
 {% endif %}
 {#
@@ -292,10 +292,10 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
     {
       for (int xyz = 0; xyz < {{nDof**nDim-restSize}}; xyz+={{vectSize}}) {
         AoS2SoA<{{nData}}, {{nDataPad}}>(lQi+(i*{{nDof**nDim}}+xyz)*{{nDataPad}}, Qt_block);
-        AoS2SoA<{{nVar }}, {{nVarPad }}>(gradQ+xyz*{{nVarPad}},Ft_x_block);
-        AoS2SoA<{{nVar }}, {{nVarPad }}>(gradQ+xyz*{{nVarPad}}+{{1*(nDof**nDim)*nVarPad}},Ft_y_block);
+        AoS2SoA<{{nVar }}, {{nVarPad }}>(gradQ+xyz*{{nDataPad}},Ft_x_block);
+        AoS2SoA<{{nVar }}, {{nVarPad }}>(gradQ+xyz*{{nDataPad}}+{{1*(nDof**nDim)*nDataPad}},Ft_y_block);
 {% if nDim == 3 %}
-        AoS2SoA<{{nVar }}, {{nVarPad }}>(gradQ+xyz*{{nVarPad}}+{{2*(nDof**nDim)*nVarPad}}, Ft_z_block);
+        AoS2SoA<{{nVar }}, {{nVarPad }}>(gradQ+xyz*{{nDataPad}}+{{2*(nDof**nDim)*nDataPad}}, Ft_z_block);
 {% endif %}
         std::memset(ncpResult_x_block, 0, {{nVar*vectSize}}*sizeof(pCompType)); // zero out ncpResult
         std::memset(ncpResult_y_block, 0, {{nVar*vectSize}}*sizeof(pCompType)); // zero out ncpResult
@@ -328,10 +328,10 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
       {
         constexpr int xyz = {{nDof**nDim-restSize}};
         AoS2SoA_rest<{{nData}}, {{nDataPad}}, {{restSize}}>(lQi+(i*{{nDof**nDim}}+xyz)*{{nDataPad}}, Qt_block);
-        AoS2SoA_rest<{{nVar }}, {{nVarPad }}, {{restSize}}>(gradQ+xyz*{{nVarPad}}, Ft_x_block);
-        AoS2SoA_rest<{{nVar }}, {{nVarPad }}, {{restSize}}>(gradQ+xyz*{{nVarPad}}+{{1*(nDof**nDim)*nVarPad}}, Ft_y_block);
+        AoS2SoA_rest<{{nVar }}, {{nVarPad }}, {{restSize}}>(gradQ+xyz*{{nDataPad}}, Ft_x_block);
+        AoS2SoA_rest<{{nVar }}, {{nVarPad }}, {{restSize}}>(gradQ+xyz*{{nDataPad}}+{{1*(nDof**nDim)*nDataPad}}, Ft_y_block);
 {% if nDim == 3 %}
-        AoS2SoA_rest<{{nVar }}, {{nVarPad }}, {{restSize}}>(gradQ+xyz*{{nVarPad}}+{{2*(nDof**nDim)*nVarPad}}, Ft_z_block);
+        AoS2SoA_rest<{{nVar }}, {{nVarPad }}, {{restSize}}>(gradQ+xyz*{{nDataPad}}+{{2*(nDof**nDim)*nDataPad}}, Ft_z_block);
 {% endif %}
         std::memset(ncpResult_x_block, 0, {{nVar*vectSize}}*sizeof(pCompType)); // zero out ncpResult
         std::memset(ncpResult_y_block, 0, {{nVar*vectSize}}*sizeof(pCompType)); // zero out ncpResult
@@ -365,10 +365,10 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
     {
       pCompType* G[{{nDim}}];
       for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
-        G[0] = gradQ+xyz*{{nVarPad}}; //x
-        G[1] = gradQ+xyz*{{nVarPad}}+{{1*(nDof**nDim)*nVarPad}}; //y
+        G[0] = gradQ+xyz*{{nDataPad}}; //x
+        G[1] = gradQ+xyz*{{nDataPad}}+{{1*(nDof**nDim)*nDataPad}}; //y
 {% if nDim==3 %}
-        G[2] = gradQ+xyz*{{nVarPad}}+{{2*(nDof**nDim)*nVarPad}}; //z
+        G[2] = gradQ+xyz*{{nDataPad}}+{{2*(nDof**nDim)*nDataPad}}; //z
 {% endif %}
         std::memset(tmpArray, 0, {{nDim*nVarPad}}*sizeof(pCompType)); // zero out ncpResult (stored in tmpArray)
 #ifdef USE_IPO
