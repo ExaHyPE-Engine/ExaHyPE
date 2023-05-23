@@ -23,14 +23,14 @@ class AssemblePetscMatrix(ActionSet):
   static constexpr double oppositeVertex = 1.0;
 
   for (int i=0; i<TwoPowerD ; i++){
-    if (fineGridVertices{{SOLVER_NAME}}(i).getType() != vertexdata::Poisson::Type::Dirichlet
+    if (fineGridVertices{{SOLVER_NAME}}(i).getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
       //TODO work out why using marker.willBeRefined() here causes only 1 iteration to be taken
       // whereas bodging to say fineGridVertices{{SOLVER_NAME}}(i).getNumber() < repositories::getTotalDegreesOfFreedom()
       // causes it to do 84 iters
       and not marker.willBeRefined()
     ) {
       //get a global index
-      std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVerticesPoisson(i).getNumber());
+      std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertices{{SOLVER_NAME}}(i).getNumber());
       int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
       enumeratedIndices[i] = globalIndex;
     }
@@ -122,7 +122,7 @@ class AssemblePetscMatrix(ActionSet):
   TemplateInitVertex="""
   //here we send the value, rhs from the mesh to petsc
 
-  if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::Poisson::Type::Dirichlet
+  if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
       and not marker.willBeRefined()
   ){
     //first, get global index

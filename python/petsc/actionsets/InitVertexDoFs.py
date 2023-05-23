@@ -60,10 +60,10 @@ the solver in the first place. This happens in get_includes().
 
   switch ( isOnBoundary(marker.x()) ){
     case true:
-      fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::Poisson::Type::Dirichlet );
+      fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Dirichlet );
       break;
     case false:
-      fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::Poisson::Type::DoF );
+      fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::DoF );
       break;
   }
 
@@ -80,7 +80,7 @@ the solver in the first place. This happens in get_includes().
       rhs
     );
 
-    if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::Poisson::Type::Dirichlet){
+    if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet){
       //place these values into the grid
       fineGridVertex{{SOLVER_NAME}}.setValue(0, value);
       fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);
