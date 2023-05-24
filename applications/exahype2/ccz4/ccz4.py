@@ -321,7 +321,7 @@ if __name__ == "__main__":
         """
           @add adm constriants (Hamilton and Momentum)
         """
-        self._auxiliary_variables = 6
+        self._auxiliary_variables = 7
 
         self._my_user_includes += """
   #include "../CCZ4Kernels.h"
@@ -331,7 +331,7 @@ if __name__ == "__main__":
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
 
-    const int n_a_v=6;
+    const int n_a_v=7;
     const int overlap=3; //make sure you are using fd4 solver!
 
     //if (not marker.willBeRefined() and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()!=FiniteVolumeCCZ4::SolverState::GridConstruction and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()==FiniteVolumeCCZ4::SolverState::RungeKuttaSubStep0) {
@@ -355,10 +355,10 @@ if __name__ == "__main__":
 
         const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*overlap);
         
-        double constraints[6]={0,0,0,0,0,0};
+        double constraints[7]={0,0,0,0,0,0,0};
         admconstraints(constraints, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ);
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables ( 1, patchSize, 0, 59, n_a_v);
-        for (int i=0;i<6;i++){
+        for (int i=0;i<7;i++){
           fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+i) ] = constraints[i]; 
         }
       }  
