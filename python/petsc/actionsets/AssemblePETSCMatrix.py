@@ -162,9 +162,9 @@ stencil:
 
     super( AssemblePetscMatrix, self ).__init__()
     self.d = {}
-    self.d["SOLVER_INSTANCE"] = solver.instance_name()
-    self.d["SOLVER_NAME"]     = solver.typename()
-    self.d["CARDINALITY"]     = solver.number_of_unknowns
+    self.d["SOLVER_INSTANCE"]        = solver.instance_name()
+    self.d["SOLVER_NAME"]            = solver.typename()
+    self.d["VERTEX_CARDINALITY"]     = solver.number_of_vertex_unknowns
     self.d["STENCIL"]         = "{" + str(stencil[0])
     for el in stencil[1:]:
       self.d["STENCIL"] += ", "

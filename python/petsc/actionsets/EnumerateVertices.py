@@ -22,7 +22,7 @@ Enumerate the vertices
   ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
 
-    fineGridVertex{{SOLVER_NAME}}.setNumber( _localMap.reserveIndex( {{CARDINALITY}} ) );
+    fineGridVertex{{SOLVER_NAME}}.setNumber( _localMap.reserveIndex( {{VERTEX_CARDINALITY}} ) );
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 
@@ -49,9 +49,9 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     """
     super( EnumerateVertices, self ).__init__()
     self.d = {}
-    self.d["SOLVER_INSTANCE"] = solver.instance_name()
-    self.d["SOLVER_NAME"]     = solver.typename()
-    self.d["CARDINALITY"]     = solver.number_of_unknowns
+    self.d["SOLVER_INSTANCE"]        = solver.instance_name()
+    self.d["SOLVER_NAME"]            = solver.typename()
+    self.d["VERTEX_CARDINALITY"]     = solver.number_of_vertex_unknowns
 
 
   def get_body_of_operation(self,operation_name):

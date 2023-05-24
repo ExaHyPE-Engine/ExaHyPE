@@ -24,7 +24,7 @@ corresponding entry in the solution vector reads like.
   if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
 
-    for (int i=0; i<{{CARDINALITY}}; i++) {
+    for (int i=0; i<{{VERTEX_CARDINALITY}}; i++) {
       std::pair<int,int> localIndex( _spacetreeId, fineGridVertex{{SOLVER_NAME}}.getNumber()+i );
       int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
 
@@ -54,9 +54,10 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     """
     super( ProjectPETScSolutionOnVerticesBackOntoMesh, self ).__init__()
     self.d = {}
-    self.d["SOLVER_INSTANCE"] = solver.instance_name()
-    self.d["SOLVER_NAME"]     = solver.typename()
-    self.d["CARDINALITY"]     = solver.number_of_unknowns
+    self.d["SOLVER_INSTANCE"]        = solver.instance_name()
+    self.d["SOLVER_NAME"]            = solver.typename()
+    self.d["VERTEX_CARDINALITY"]     = solver.number_of_vertex_unknowns
+
 
 
   def get_body_of_operation(self,operation_name):

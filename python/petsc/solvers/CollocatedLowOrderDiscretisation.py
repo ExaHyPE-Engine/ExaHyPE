@@ -30,7 +30,7 @@ class CollocatedLowOrderDiscretisation(Solver):
   """
   def __init__(self,
                name,
-               number_of_unknowns,
+               number_of_vertex_unknowns,
                min_h,
                max_h,
                stencil):
@@ -45,16 +45,16 @@ I wanna see if this one applies to the solver or hte init
                                                               min_h,
                                                               max_h
                                                               )
-    self._number_of_unknowns = number_of_unknowns
+    self._number_of_vertex_unknowns = number_of_vertex_unknowns
     self._vertexDof = peano4.datamodel.DaStGen2( name )
-    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_unknowns) ) )
-    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(number_of_unknowns) ) )
+    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_vertex_unknowns) ) )
+    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(number_of_vertex_unknowns) ) )
     self._vertexDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._vertexDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
 
     #add in some unknowns for the faces - for now we use the same number_of_unknowns param
     self._faceDof = peano4.datamodel.DaStGen2( name )
-    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_unknowns) ) )
+    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_vertex_unknowns) ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     self.stencil = stencil
@@ -76,7 +76,7 @@ I wanna see if this one applies to the solver or hte init
       getter         = "getValue().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_vertex = self._number_of_unknowns,
+      number_of_unknows_per_vertex = self._number_of_vertex_unknowns,
       guard_predicate              = "true", 
       ))
     observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
@@ -85,7 +85,7 @@ I wanna see if this one applies to the solver or hte init
       getter         = "getRhs().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_vertex = self._number_of_unknowns,
+      number_of_unknows_per_vertex = self._number_of_vertex_unknowns,
       guard_predicate              = "true", 
       ))
     pass
@@ -161,7 +161,7 @@ I wanna see if this one applies to the solver or hte init
         "SOLVER_INCLUDES": "",
         "MIN_H": self.min_h,
         "MAX_H": self.max_h,
-        "CARDINALITY": self._number_of_unknowns
+        "VERTEX_CARDINALITY": self._number_of_vertex_unknowns
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -192,5 +192,5 @@ I wanna see if this one applies to the solver or hte init
 
 
   @property
-  def number_of_unknowns(self):
-    return self._number_of_unknowns
+  def number_of_vertex_unknowns(self):
+    return self._number_of_vertex_unknowns
