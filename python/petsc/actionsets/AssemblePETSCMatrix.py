@@ -5,7 +5,7 @@ from peano4.solversteps.ActionSet import ActionSet
 import peano4
 import jinja2
 
-class AssemblePetscMatrix(ActionSet):
+class AssemblePetscMatrixOnVertices(ActionSet):
   """!
   Trigger assembly of PETSc matrix, using values from mesh
   """
@@ -160,7 +160,7 @@ stencil:
     #convert it to a flat list for passing as std::initializer_list
     stencil=[item for sublist in stencil for item in sublist]
 
-    super( AssemblePetscMatrix, self ).__init__()
+    super( AssemblePetscMatrixOnVertices, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()

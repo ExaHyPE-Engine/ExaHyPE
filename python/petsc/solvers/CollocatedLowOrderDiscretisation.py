@@ -11,7 +11,7 @@ from petsc.actionsets.EnumerateVertices         import EnumerateVertices
 from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.InitFaceDoFs              import InitFaceDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
-from petsc.actionsets.AssemblePETSCMatrix       import AssemblePetscMatrix
+from petsc.actionsets.AssemblePETSCMatrix       import AssemblePetscMatrixOnVertices
 
 from abc import abstractmethod
 
@@ -116,7 +116,7 @@ I wanna see if this one applies to the solver or hte init
   
   
   def add_to_assemble(self, observer):
-    observer.add_action_set( AssemblePetscMatrix(self, self.stencil) )
+    observer.add_action_set( AssemblePetscMatrixOnVertices(self, self.stencil) )
     pass
   
 

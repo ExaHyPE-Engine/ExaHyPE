@@ -260,13 +260,13 @@ This yet has to be written.
       template_name + ".cpp",
       "PETScData",
       self._project.namespace,
-      "data",
+      "PETScdata",
       {},
       True,
       True)
     self._project.output.add( generated_repository_files )
-    self._project.output.makefile.add_h_file(   "data/PETScData.h" )
-    self._project.output.makefile.add_cpp_file( "data/PETScData.cpp" )
+    self._project.output.makefile.add_h_file(   "PETScdata/PETScData.h" )
+    self._project.output.makefile.add_cpp_file( "PETScdata/PETScData.cpp" )
 
 
   def add_solver( self, solver ):
