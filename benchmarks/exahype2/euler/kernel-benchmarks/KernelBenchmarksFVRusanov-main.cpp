@@ -403,7 +403,7 @@ void runStatelessVariantOnDevice(
 #if defined(GPUOffloadingSYCL)
 void submitSYCLKernels(int patches, int device, int thread) {
   tarch::accelerator::getSYCLQueue(thread).submit([&](auto &h) {
-    h.host_task([=]() {
+    h.host_task([=]() {/*
       runStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
@@ -418,7 +418,7 @@ void submitSYCLKernels(int patches, int device, int thread) {
         patches, device,
         ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, task-graph, SoA", thread
-      );
+      );*/
       runStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
@@ -433,7 +433,7 @@ void submitSYCLKernels(int patches, int device, int thread) {
         patches, device,
         ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, patch-wise, SoA", thread
-      );
+      );/*
       runStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
@@ -448,7 +448,7 @@ void submitSYCLKernels(int patches, int device, int thread) {
         patches, device,
         ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, batched, SoA", thread
-      );
+      );*/
     });
   }).wait();
 }
@@ -744,7 +744,7 @@ int main(int argc, char** argv) {
   otterTraceFinalise();
 
   delete[] validOutcome;
-
+  exit(0);
   repositories::finishSimulation();
   repositories::DataRepository::shutdownDatatypes();
   tarch::multicore::shutdownSmartMPI();
