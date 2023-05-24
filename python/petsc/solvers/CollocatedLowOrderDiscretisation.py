@@ -45,7 +45,6 @@ I wanna see if this one applies to the solver or hte init
                                                               min_h,
                                                               max_h
                                                               )
-    
     self._number_of_unknowns = number_of_unknowns
     self._vertexDof = peano4.datamodel.DaStGen2( name )
     self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_unknowns) ) )
