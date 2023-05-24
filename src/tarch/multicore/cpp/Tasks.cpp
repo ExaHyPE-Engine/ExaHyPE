@@ -144,26 +144,6 @@ void tarch::multicore::native::spawnTask(Task*  job) {
   nonblockingTasksCounter--;
 }
 
-/**
- * Use a taskloop and label it as nogroup, i.e. we only synchronise over the
- * siblings. If the loop bodies to yield further tasks, we do not wait for
- * these guys.
- *
- * If I remove the group label from the taskloop, i.e. if I use nogroup and
- * thus do not ask OpenMP to make the for loop a taskgroup, then I have no
- * synchronisation left over et al. However, I want a sync over all the tasks
- * produced by the loop. Therefore, I have to add a manual taskwait.
- */
-void tarch::multicore::native::spawnAndWait(
-  const std::vector< Task* >&  tasks,
-  orchestration::Strategy*     strategy
-) {
-  if (strategy->processPendingTasksWhileWaitingInBSPSection()) {
-    spawnAndWaitAsExplicitTasksWithPolling(tasks,strategy);
-  } else {
-    spawnAndWaitAsTaskLoop(tasks);
-  }
-}
 
 int tarch::multicore::native::getNumberOfPendingTasks() {
   return nonblockingTasksCounter;

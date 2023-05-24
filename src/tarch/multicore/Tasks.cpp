@@ -551,7 +551,7 @@ void tarch::multicore::spawnAndWait(
     ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true );
 
     orchestrationStrategy->startBSPSection();
-    native::spawnAndWaitAsExplicitTasksWithPolling(tasks,strategy);
+    native::spawnAndWaitAsExplicitTasksWithPolling(tasks,orchestrationStrategy);
     orchestrationStrategy->endBSPSection();
 
     // AT: ideally would record the handle of the encountering task here to correctly identify child tasks

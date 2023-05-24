@@ -314,10 +314,26 @@ namespace tarch {
 
     namespace native {
       void spawnTask(Task* task);
-      void spawnAndWait(
-        const std::vector< Task* >&  tasks,
-        orchestration::Strategy*     strategy
+
+
+      /**
+       * Our modified, wrapped tasking where we use an artifical
+       * queue per thread which holds back tasks.
+       */
+      void spawnAndWaitAsExplicitTasksWithPolling(
+        const std::vector< tarch::multicore::Task* >&  tasks,
+        tarch::multicore::orchestration::Strategy*     strategy
       );
+
+
+      /**
+       * Map onto native tasking.
+       */
+      void spawnAndWaitAsTaskLoop(
+        const std::vector< tarch::multicore::Task* >&  tasks
+      );
+
+
       /**
        * Process a fused task
        *

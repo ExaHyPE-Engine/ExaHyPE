@@ -20,78 +20,81 @@ namespace {
    * Seems that there is no atomic in tbb. So I use the standard one.
    */
   std::atomic<int> nonblockingTasksCounter          = 0;
+}
 
-  /**
-   * Native mapping of a task loop onto a SYCL loop
-   *
-   * @see spawnTask()
-   *
-   */
-  void spawnAndWaitAsTaskLoop(
-    const std::vector< tarch::multicore::Task* >&  tasks
-  ) {
-    assertion( not tasks.empty() );
 
-    for (auto& p: tasks) {
-      tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
+/**
+ * Native mapping of a task loop onto a SYCL loop
+ *
+ * @see spawnTask()
+ *
+ */
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(
+  const std::vector< tarch::multicore::Task* >&  tasks
+) {
+  assertion( not tasks.empty() );
+
+  for (auto& p: tasks) {
+    tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
+      while (p->run()) {}
+      delete p;
+    });
+  }
+
+  tarch::multicore::getHostSYCLQueue().wait();
+}
+
+
+/**
+ * Aggressive BSP-type variant to run through tasks which ensures high
+ * throughput
+ *
+ * This is a straightforward translation of the OpenMP high-throughput
+ * realisation.
+ *
+ * @see spawnAndWaitAsTaskLoop() for realisation details re TBB/SYCL.
+ */
+void tarch::multicore::native::spawnAndWaitAsExplicitTasksWithPolling(
+  const std::vector< tarch::multicore::Task* >&  tasks,
+  tarch::multicore::orchestration::Strategy*     strategy
+) {
+  assertion( not tasks.empty() );
+
+  const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
+
+  std::atomic<int>       pendingTasks  = NumberOfThreads;
+  std::atomic<int>       spawnedTasks  = 0;
+
+  for (auto& p: tasks) {
+    tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
+      h.host_task([&]() {
+        spawnedTasks++;
+
         while (p->run()) {}
         delete p;
-      });
-    }
 
-    tarch::multicore::getHostSYCLQueue().wait();
+        pendingTasks--;
+
+        bool continueToProcessPendingTasks =
+          pendingTasks>0
+          and
+          pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
+          and
+          spawnedTasks==NumberOfThreads;
+        while ( continueToProcessPendingTasks ) {
+          continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+            strategy
+          );
+        }
+     });
+    });
   }
 
-  /**
-   * Aggressive BSP-type variant to run through tasks which ensures high
-   * throughput
-   *
-   * This is a straightforward translation of the OpenMP high-throughput
-   * realisation.
-   *
-   * @see spawnAndWaitAsTaskLoop() for realisation details re TBB/SYCL.
-   */
-  void spawnAndWaitAsExplicitTasksWithPolling(
-    const std::vector< tarch::multicore::Task* >&  tasks,
-    tarch::multicore::orchestration::Strategy*     strategy
-  ) {
-    assertion( not tasks.empty() );
-
-    const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
-
-    std::atomic<int>       pendingTasks  = NumberOfThreads;
-    std::atomic<int>       spawnedTasks  = 0;
-
-    for (auto& p: tasks) {
-      tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
-        h.host_task([&]() {
-          spawnedTasks++;
-
-          while (p->run()) {}
-          delete p;
-  
-          pendingTasks--;
-
-          bool continueToProcessPendingTasks =
-            pendingTasks>0
-            and
-            pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
-            and
-            spawnedTasks==NumberOfThreads;
-          while ( continueToProcessPendingTasks ) {
-            continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
-              strategy
-            );
-          }
-       });
-      });
-    }
-
-    // @todo This is not nice. I don't want to wait for all events. I would like
-    // to wait for BSP events only
-    tarch::multicore::getHostSYCLQueue().wait();
-  }
+  // @todo This is not nice. I don't want to wait for all events. I would like
+  // to wait for BSP events only
+  tarch::multicore::getHostSYCLQueue().wait();
 }
+
 
 /**
  * Read spawnAndWaitAsTaskLoop() first.
@@ -123,27 +126,6 @@ void tarch::multicore::native::spawnTask(Task*  job) {
   e.wait();
 }
 
-/**
- * Use a taskloop and label it as nogroup, i.e. we only synchronise over the
- * siblings. If the loop bodies to yield further tasks, we do not wait for
- * these guys.
- *
- * If I remove the group label from the taskloop, i.e. if I use nogroup and
- * thus do not ask OpenMP to make the for loop a taskgroup, then I have no
- * synchronisation left over et al. However, I want a sync over all the tasks
- * produced by the loop. Therefore, I have to add a manual taskwait.
- */
-void tarch::multicore::native::spawnAndWait(
-  const std::vector< Task* >&  tasks,
-  orchestration::Strategy*     strategy
-) {
-  if (strategy->processPendingTasksWhileWaitingInBSPSection()) {
-    spawnAndWaitAsExplicitTasksWithPolling(tasks,strategy);
-  }
-  else {
-    spawnAndWaitAsTaskLoop(tasks);
-  }
-}
 
 int tarch::multicore::native::getNumberOfPendingTasks() {
   return nonblockingTasksCounter;
