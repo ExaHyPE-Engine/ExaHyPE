@@ -168,7 +168,7 @@ void applications::exahype2::ccz4::admconstraints(double* constraints, const dou
     const double traceK = Q[53];
     const double dtraceK[3] = {gradQin[53][0], gradQin[53][1], gradQin[53][2]};
 
-    const double phi = std::exp(std::fmax(-20., std::fmin(20.,Q[54])));
+    const double phi = std::fmax(1e-2,Q[54]); 
     const double phi2 = phi*phi;
     const double PP[3] = {Q[55], Q[56], Q[57]};
 
@@ -308,8 +308,10 @@ void applications::exahype2::ccz4::admconstraints(double* constraints, const dou
     constraints[1]  =   Mom[0];
     constraints[2]  =   Mom[1];
     constraints[3]  =   Mom[2];
-    constraints[4]  =   1.0/invdet-1.0;
-    constraints[5]  =   traceA;
+    constraints[4]  =   R;
+    constraints[5]  =   Kupdown;
+    //constraints[4]  =   1.0/invdet-1.0;
+    //constraints[5]  =   traceA;
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
