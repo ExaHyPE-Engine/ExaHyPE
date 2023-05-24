@@ -290,3 +290,7 @@ UnitTests2d
 UnitTests3d
 
 /documentation/
+
+*.tmp 
+*.trs 
+*.sh

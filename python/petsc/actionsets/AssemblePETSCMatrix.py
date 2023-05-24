@@ -272,3 +272,65 @@ Define body of constructor
     _stencilBottomRight = {{_stencil(2,1)/2.0, _stencil(2,2)/1.0, _stencil(1,1)/4.0, _stencil(1,2)/2.0 }};
     _stencilBottomLeft  = {{_stencil(2,0)/1.0, _stencil(2,1)/2.0, _stencil(1,1)/4.0, _stencil(1,1)/2.0 }};
 """
+
+class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
+  ## add templates
+
+  def __init__(self, solver, stencil):
+    super( AssemblePETSCMatrixOnCellsAndFaces, self ).__init__()
+    self.d = {}
+    self.d["SOLVER_INSTANCE"]    = solver.instance_name()
+    self.d["SOLVER_NAME"]        = solver.typename()
+    self.d["CELL_CARDINALITY"]   = solver.number_of_cell_unknowns
+    self.d["FACE_CARDINALITY"]   = solver.number_of_face_unknowns
+
+    #flatten the stencil
+    stencil=[item for sublist in stencil for item in sublist]
+    
+    #make a dict entry for it
+    self.d["STENCIL"]         = "{" + str(stencil[0])
+    for el in stencil[1:]:
+      self.d["STENCIL"] += ", "
+      self.d["STENCIL"] += str(el)
+    self.d["STENCIL"] += "}"
+
+  def get_body_of_operation(self, operation_name):
+    ## add touchcellfirsttime
+
+    ## add touch face first time
+
+    return """"""
+
+  def get_action_set_name(self):
+    """!
+    
+    Configure name of generated C++ action set
+    
+    This action set will end up in the directory observers with a name that
+    reflects how the observer (initialisation) is mapped onto this action 
+    set. The name pattern is ObserverName2ActionSetIdentifier where this
+    routine co-determines the ActionSetIdentifier. We make is reflect the
+    Python class name.
+     
+    """
+    return __name__.replace(".py", "").replace(".", "_")
+  
+  def user_should_modify_template(self):
+    """!
+    
+    The action set that Peano will generate that corresponds to this class
+    should not be modified by users and can safely be overwritten every time
+    we run the Python toolkit.
+    
+    """
+    return False
+
+  def get_includes(self):
+    """!
+   
+Consult petsc.Project for details
+    
+"""    
+    return """
+#include "repositories/SolverRepository.h"
+"""
