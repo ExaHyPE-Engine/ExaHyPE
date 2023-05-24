@@ -37,7 +37,7 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
 
 
     class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
-      SubPatchSize = int( FD4PatchSize*4*4*3/7 )
+      SubPatchSize = int( FD4PatchSize*4*4 )
         
       def __init__(self,
                    name, 
@@ -45,9 +45,9 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
                    max_cell_size,
                    ):
         super( Limiter, self ).__init__(name               = name +  "_FV",
-                                        patch_size         = SubPatchSize,
-                                        min_volume_h       = min_cell_size/FD4PatchSize/self.UpscalingFactor, 
-                                        max_volume_h       = max_cell_size/FD4PatchSize/self.UpscalingFactor,
+                                        patch_size         = self.SubPatchSize,
+                                        min_volume_h       = min_cell_size/self.SubPatchSize, 
+                                        max_volume_h       = max_cell_size/self.SubPatchSize,
                                         )
         self.double_constants[ "BlackHoleFVRegion" ] = 1.0
  
@@ -437,8 +437,7 @@ if __name__ == "__main__":
     domain_size = [   18,    18,    18]
     
     if args.plot:
-        # @todo zu klein
-      plot_interval = 0.0001
+      plot_interval = args.end_time/60.0
     else:
       plot_interval = 0.0
     

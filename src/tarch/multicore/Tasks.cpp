@@ -533,12 +533,25 @@ void tarch::multicore::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
   static tarch::logging::Log _log( "tarch::multicore" );
+  static int nestedSpawnAndWaits = 0;
+  static tarch::multicore::BooleanSemaphore nestingSemaphore;
 
-  if (not tasks.empty()) {
+  tarch::multicore::Lock nestingLock( nestingSemaphore, false );
+
+  bool invokeUserDefinedScheme;
+  bool invokeNativeScheme;
+
+  nestingLock.lock();
+  invokeUserDefinedScheme = not tasks.empty() and nestedSpawnAndWaits==0 and orchestrationStrategy->processPendingTasksWhileWaitingInBSPSection();
+  invokeNativeScheme      = not tasks.empty() and not invokeUserDefinedScheme;
+  nestedSpawnAndWaits++;
+  nestingLock.free();
+
+  if (invokeUserDefinedScheme) {
     ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true );
 
     orchestrationStrategy->startBSPSection();
-    native::spawnAndWait(tasks,orchestrationStrategy);
+    native::spawnAndWaitAsExplicitTasksWithPolling(tasks,strategy);
     orchestrationStrategy->endBSPSection();
 
     // AT: ideally would record the handle of the encountering task here to correctly identify child tasks
@@ -559,6 +572,13 @@ void tarch::multicore::spawnAndWait(
 
     ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true );
   }
+  else if (invokeNativeScheme) {
+    native::spawnAndWaitAsTaskLoop(tasks);
+  }
+
+  nestingLock.lock();
+  nestedSpawnAndWaits--;
+  nestingLock.free();
 }
 
 
