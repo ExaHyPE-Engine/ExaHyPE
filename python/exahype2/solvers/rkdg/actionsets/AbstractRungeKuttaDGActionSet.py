@@ -14,6 +14,7 @@ class AbstractRungeKuttaDGActionSet( ActionSet ):
       Reference to creating class 
    
     """
+    super(AbstractRKFDActionSet,self).__init__(priority=1,parallel=False)
     self._solver = solver
     pass
   

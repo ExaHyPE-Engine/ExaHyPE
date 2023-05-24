@@ -1,5 +1,0 @@
-[submodule "Submodules/libxsmm"]
-	path = Submodules/libxsmm
-	url = https://github.com/hfp/libxsmm.git
-	branch = release
-	ignore = dirty #deleted documentation and sample + build

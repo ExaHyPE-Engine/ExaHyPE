@@ -142,6 +142,8 @@ class FV(object):
          _action_set_postprocess_solution
 
     You can use this attribute to add postprocessing routines to the code.
+    
+    
   """
 
   def __init__(
@@ -227,6 +229,7 @@ class FV(object):
     self._action_set_copy_new_faces_onto_old_faces            = None
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = None
     self._action_set_postprocess_solution                     = None
+    self._action_set_preprocess_solution                      = None
 
     self._compute_time_step_size                    = "#error Not yet defined"
     self._compute_new_time_step_size                = "#error Not yet defined"
@@ -438,7 +441,6 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    self._patch.generator.compute_condition          = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
     
     self._patch_overlap_old.generator.send_condition               = "false"
     self._patch_overlap_old.generator.receive_and_merge_condition  = "false"
@@ -451,15 +453,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_guard()
     self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_guard()
-    self._patch_overlap_old.generator.compute_condition            = self._load_face_data_default_guard() + " or " + self._store_face_data_default_guard()
 
     self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_guard()
     self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_guard()
-    self._patch_overlap_new.generator.compute_condition            = self._load_face_data_default_guard() + " or " + self._store_face_data_default_guard()
 
     self._patch_overlap_update.generator.store_persistent_condition   = "false"
     self._patch_overlap_update.generator.load_persistent_condition    = "false"
-    self._patch_overlap_old.generator.compute_condition               = "false"
 
     self._patch.generator.includes  += """
 #include "../repositories/SolverRepository.h"
@@ -479,12 +478,14 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
   @abstractmethod
   def create_action_sets(self):
-    """
+    """!
+    
+     Create all the action sets
     
      Overwrite in subclasses if you wanna create different
-     action sets.
+     action sets. Subclasses also might redefine the invocation order.
      
-     :: Call order and ownership
+     ## Call order and ownership
      
      This operation can be called multiple times. However, only the very
      last call matters. All previous calls are wiped out.
@@ -496,7 +497,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      specialised) run through all create_data_structure() variants 
      within the inheritance tree.
      
-     :: Recreation vs backup (state discussion)
+     ## Recreation vs backup (state discussion)
      
      We faced some issues with action sets that should not be 
      overwritten. For example, the postprocessing should not be overwritten
@@ -530,12 +531,25 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     # only once if it does not exist
     if self._action_set_postprocess_solution == None:
       self._action_set_postprocess_solution                   = exahype2.solvers.fv.actionsets.EmptyPostprocessSolution( self )
+    if self._action_set_preprocess_solution == None:
+      self._action_set_preprocess_solution                    = exahype2.solvers.fv.actionsets.EmptyPreprocessSolution( self )
     
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
         
     self._action_set_update_cell = None
 
+    self._action_set_initial_conditions.priority = 1
+    self._action_set_initial_conditions_for_grid_construction.priority = 1
+    self._action_set_AMR.priority = 2
+    self._action_set_AMR_commit_without_further_analysis.priority = 2
+    self._action_set_handle_boundary.priority = 1
+    self._action_set_project_patch_onto_faces.priority = 1 # leave cell
+    self._action_set_roll_over_update_of_faces.priority = 1
+    self._action_set_copy_new_faces_onto_old_faces.priority = 1
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = 1
+    self._action_set_postprocess_solution.priority = 3
+    self._action_set_preprocess_solution.priority = -1
 
 
   def _store_cell_data_default_guard(self):
@@ -679,6 +693,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      
     
     """
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
@@ -802,6 +817,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_update_face_label )
@@ -864,10 +880,10 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
-    output.makefile.add_h_file( "Abstract" + self._name + ".h" )
-    output.makefile.add_h_file( self._name + ".h" )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
-    output.makefile.add_cpp_file( self._name + ".cpp" )
+    output.makefile.add_h_file( "Abstract" + self._name + ".h", generated=True )
+    output.makefile.add_h_file( self._name + ".h", generated=True )
+    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
 
   def set_solver_constants(self, datastring): self._solver_constants = datastring
 
@@ -975,8 +991,51 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
  
   @preprocess_reconstructed_patch.setter
   def preprocess_reconstructed_patch(self, kernel):
-    """
+    """!
   
+    Set a new processing kernel
+    
+    Before the actual update, the numerical solver takes the actual solution 
+    including all auxiliary variables and copies it into another array which
+    is calls reconstructedPatch (in FD4, this field is called oldQWithHalo).
+    This array is bigger than the actual patch data, as it also holds the 
+    halo. One the solution is copied over, the kernel writes in the halo 
+    data using data from the faces. This reconstructed object is now passed
+    into the compute kernel, which derives new values for all evolution 
+    variables. That is, the compute kernels' output does not hold the auxiliary
+    variables anymore, as they are not subject to the PDE. The new variables
+    are eventually written back into the real data, where they replace the
+    old quantities (the auxiliary variables in there remain untouched).
+    After the compute kernel has terminated, the reconstructed data including
+    the halo is thrown away.
+    
+    ## Auxiliary variables
+    
+    If you alter the auxiliary variables (material parameters) in the patch
+    preparation, this is absolutely fine, but the change will not be committed
+    into the real data. It is only there temporarily while the actual patch 
+    will continue to hold the original material parameters.
+    
+    You can alter the actual patch data Q in the preprocessing. If this 
+    actual data are evolution (PDE) parameters, these changes however will
+    be overwritten by the compute kernel. If you alter auxiliary variables
+    within the preprocessing within the patch (Q), then this is fine, but the
+    changes will not be visible to the reconstructed patch immediately. They
+    will be visible there in the next time step. So you might be well-advised
+    to alter the auxiliary variables in both the patch data and the 
+    reconstructed data. 
+    
+    ## Access
+    
+    We recommend that you use the AoS enumerator exahype2::enumerator::AoSLexicographicEnumerator.
+    This one has to be given 1 as number of cells/patches, it requires the size
+    of the patch, its halo size, you have to pass it the unkowns and the correct 
+    number of auxiliary parameters. If you want the preprocessing also to alter
+    the actual input, you need a second enumerator. In this second one, all 
+    parameters are the same besides the halo size, which you have to set to 0:
+    The input patch has no halo. This halo is only added temporarily in the 
+    reconstruction step.
+    
 
     """
     self._preprocess_reconstructed_patch  = kernel

@@ -151,13 +151,15 @@ void toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
   double*                                   sourceValues,
   double*                                   destinationValues
 ) {
+  // how many fine grid cells are mapped onto one destination cell
+  double sourceToDestinationRatio = static_cast<double>(numberOfDoFsPerAxisInSourcePatch) / static_cast<double>(numberOfDoFsPerAxisInDestinationPatch);
   dfor( destinationVolume, numberOfDoFsPerAxisInDestinationPatch ) {
     const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch) * unknowns;
 
     tarch::la::Vector<Dimensions,int> sourceVolume;
     for (int d=0; d<Dimensions; d++) {
-      sourceVolume(d) = std::round(
-        static_cast<double>(destinationVolume(d)) * static_cast<double>(numberOfDoFsPerAxisInSourcePatch) / static_cast<double>(numberOfDoFsPerAxisInDestinationPatch)
+      sourceVolume(d) = std::floor(
+        static_cast<double>(destinationVolume(d)) * sourceToDestinationRatio + 0.5 * sourceToDestinationRatio
       );
     }
 

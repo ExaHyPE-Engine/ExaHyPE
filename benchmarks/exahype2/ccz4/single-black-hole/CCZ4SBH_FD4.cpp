@@ -1,6 +1,7 @@
 #include "CCZ4SBH_FD4.h"
 
 #include "exahype2/RefinementControl.h"
+#include "repositories/SolverRepository.h"
 
 
 tarch::logging::Log   benchmarks::exahype2::ccz4::CCZ4SBH_FD4::_log( "benchmarks::exahype2::ccz4::CCZ4SBH_FD4" );
@@ -69,3 +70,31 @@ void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::initialCondition(
   logTraceOut( "initialCondition(...)" );
 }
 
+
+void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::startTimeStep(
+  double globalMinTimeStamp,
+  double globalMaxTimeStamp,
+  double globalMinTimeStepSize,
+  double globalMaxTimeStepSize
+) {
+  AbstractCCZ4SBH_FD4::startTimeStep(
+    globalMinTimeStamp,
+    globalMaxTimeStamp,
+    globalMinTimeStepSize,
+    globalMaxTimeStepSize
+  );
+
+  if (isFirstGridSweepOfTimeStep()) {
+    double fvTimeStepSize = repositories::InstanceOfCCZ4SBH_FV.getAdmissibleTimeStepSize();
+    double newTimeStepSize = std::min(fvTimeStepSize,_admissibleTimeStepSize);
+    logInfo(
+      "startTimeStep(...)",
+      "reduce admissible time step size from dt_{dg}=" << _admissibleTimeStepSize <<
+      " vs dt_{fv}=" << fvTimeStepSize <<
+      " to dt=" << newTimeStepSize <<
+      " (previously reported time step sizes for this step are invalid)"
+    );
+    _admissibleTimeStepSize = newTimeStepSize;
+    repositories::InstanceOfCCZ4SBH_FV.reduceAdmissibleTimeStepSize( newTimeStepSize );
+  }
+}

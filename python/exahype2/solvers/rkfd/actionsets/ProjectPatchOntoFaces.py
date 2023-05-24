@@ -71,7 +71,7 @@ class ProjectPatchOntoFaces( AbstractRKFDActionSet ):
     // Set the variable
     // double timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
-    
+        
     for(int d=0; d<Dimensions; d++) {
       /**
        * d-loop over all dimensions except d. The vector k's entry d is set

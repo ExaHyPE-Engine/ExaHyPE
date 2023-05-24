@@ -218,9 +218,10 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   }
 """
   def __init__(self,solver):
-    AbstractFVActionSet.__init__(self,solver)
+    super( MergeEnclaveTaskOutcome, self ).__init__(solver)
     self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
     self.guard      = "true"
+    self.priority   = -1
 
 
   def get_body_of_operation(self,operation_name):
@@ -378,7 +379,6 @@ class EnclaveTasking( FV ):
       self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.willBeSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard() + " and (" + \
       self._primary_sweep_or_plot_guard + " or marker.hasBeenSkeletonCell())"
-    self._patch.generator.compute_condition  = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
 
 
   def create_action_sets(self):
@@ -513,7 +513,7 @@ class EnclaveTasking( FV ):
       and roll_over_enclave_task_results.
     """
     super(EnclaveTasking, self).add_actions_to_perform_time_step(step)
-    step.add_action_set( self._action_set_merge_enclave_task_outcome, False )
+    step.add_action_set( self._action_set_merge_enclave_task_outcome )
 
 
   def add_implementation_files_to_project(self,namespace,output, dimensions):
@@ -546,7 +546,7 @@ class EnclaveTasking( FV ):
       True)
 
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
+    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp", generated=True )
 
     if self._pde_terms_without_state:
         # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,

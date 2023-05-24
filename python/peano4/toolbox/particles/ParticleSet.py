@@ -43,7 +43,7 @@ class ParticleSetGenerator(object):
       d, 
       True)
     output.add(generated_files)
-    output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
+    output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True )
     pass
     
 

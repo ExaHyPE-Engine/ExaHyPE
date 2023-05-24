@@ -257,6 +257,8 @@ can update the particle state.
       
 
     """
+    super(ParticleParticleInteraction_StackOfLists,self).__init__(priority=1,parallel=False)
+    
     self._particle_set = particle_set
     self.d = {}
     self.d[ "LOCAL_PARTICLE" ]                    = particle_set.particle_model.name

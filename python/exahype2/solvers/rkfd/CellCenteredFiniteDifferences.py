@@ -150,6 +150,7 @@ class CellCenteredFiniteDifferences(object):
     self._action_set_copy_new_faces_onto_old_faces            = None
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = None
     self._action_set_postprocess_solution                     = None
+    self._action_set_preprocess_solution                      = None
 
     self._compute_time_step_size                         = "#error Not yet defined"
     self._compute_new_time_step_size                     = "#error Not yet defined"
@@ -400,12 +401,9 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
    
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    self._patch.generator.compute_condition          = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
-
 
     self._patch_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    self._patch_estimates.generator.compute_condition          = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
 
     self._patch_overlap_old.generator.send_condition               = "false"
     self._patch_overlap_old.generator.receive_and_merge_condition  = "false"
@@ -418,15 +416,12 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 
     self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_guard()
     self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_guard()
-    self._patch_overlap_old.generator.compute_condition            = self._load_face_data_default_guard() + " or " + self._store_face_data_default_guard()
 
     self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_guard()
     self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_guard()
-    self._patch_overlap_new.generator.compute_condition            = self._load_face_data_default_guard() + " or " + self._store_face_data_default_guard()
 
     self._patch_overlap_update.generator.store_persistent_condition   = "false"
     self._patch_overlap_update.generator.load_persistent_condition    = "false"
-    self._patch_overlap_update.generator.compute_condition            = "false"
 
     self._patch.generator.includes  += """
 #include "../repositories/SolverRepository.h"
@@ -512,6 +507,8 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     # only once if it does not exist
     if self._action_set_postprocess_solution == None:
       self._action_set_postprocess_solution                   = exahype2.solvers.rkfd.actionsets.EmptyPostprocessSolution( self )
+    if self._action_set_preprocess_solution == None:
+      self._action_set_preprocess_solution                    = exahype2.solvers.rkfd.actionsets.EmptyPreprocessSolution( self )
     
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
@@ -657,6 +654,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
      
     
     """
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
@@ -781,6 +779,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_update_face_label )
@@ -844,8 +843,8 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 
     output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
-    output.makefile.add_cpp_file( self._name + ".cpp" )
+    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
 
   def set_solver_constants(self, datastring): self._solver_constants = datastring
 
@@ -959,8 +958,10 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
  
   @preprocess_reconstructed_patch.setter
   def preprocess_reconstructed_patch(self, kernel):
-    """
-  
+    """!
+        
+    Please consult exahype2.solvers.fv.FV.preprocess_reconstructed_patch() for 
+    a documentation on this routine.
 
     """
     self._preprocess_reconstructed_patch  = kernel

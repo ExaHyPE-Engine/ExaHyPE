@@ -55,7 +55,7 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4
      *  Therefore, Q usually is only evaluated by dynamic AMR codes
      *  which make the solution follow
      */
-    ::exahype2::RefinementCommand refinementCriterion(
+    virtual ::exahype2::RefinementCommand refinementCriterion(
       const double * __restrict__ Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
       const tarch::la::Vector<Dimensions,double>&  meshCellH,
@@ -63,7 +63,7 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4
     ) override;
     
 
-    void initialCondition(
+    virtual void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
       const tarch::la::Vector<Dimensions,double>&  meshCellH,
@@ -71,6 +71,23 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4
     ) override;
     
     
-  public:
+    /**
+     * Start a new time step
+     *
+     * First, we call the superclass' routine. This way, attributes such as
+     * isFirstGridSweepOfTimeStep() are correct. The time step size dumped
+     * is wrong. We might amend it later.
+     *
+     * If we are in the first time step, we know that all of the solvers have
+     * successfully restricted their admissible time step size. Therefore, we
+     * synchronise all these time step sizes.
+     *
+     */
+    virtual void startTimeStep(
+      double globalMinTimeStamp,
+      double globalMaxTimeStamp,
+      double globalMinTimeStepSize,
+      double globalMaxTimeStepSize
+    ) override;
 };
 

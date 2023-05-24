@@ -498,7 +498,7 @@ namespace toolbox {
     );
 
     /**
-     * This routine should be used if a cell hosts two sets of unknowns
+     * This interpolation should be used if a cell hosts two sets of unknowns
      *
      * Frequently used if your code hosts two PDE solvers. In principle, it is
      * up to the user to decide if they want to interpolate from pure cell data
@@ -518,6 +518,18 @@ namespace toolbox {
      * not have valid data for the very left and very right volume on the fine
      * grid. Such data are only available once we know the halo data, too.
      *
+     *
+     * ## Data validity
+     *
+     * There is one important catch when you interpolate linearly from a
+     * coarse patch into a fine one: In ExaHyPE 2, we typically only have
+     * face-connected data. Therefore, those coarse grid entries along the
+     * patch diagonals are invalid, and we have to ignore them. Simply leaving
+     * them away however is not an option, as we then would accumulate partial
+     * contributions which do not sum up to 1.0.
+     *
+     *
+     *
      * @param haloSourcePatch
      * @param haloDestinationPatch Note that we only interpolate into the
      *   interior of the patch correctly.
@@ -528,8 +540,8 @@ namespace toolbox {
       int                                       haloSourcePatch,
       int                                       haloDestinationPatch,
       int                                       unknowns,
-      double*                                   sourceValues,
-      double*                                   destinationValues
+      const double* __restrict__                sourceValues,
+      double* __restrict__                      destinationValues
     );
 
     namespace internal {
