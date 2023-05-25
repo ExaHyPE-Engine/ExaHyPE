@@ -21,6 +21,7 @@ corresponding entry in the solution vector reads like.
   
   
   TemplateInitVertex = """
+{% if SOLVER_NAME=="Poisson" %}
   if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
 
@@ -36,7 +37,8 @@ corresponding entry in the solution vector reads like.
     }
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
-  } 
+  }
+{% endif %}
 """
   
   def __init__(self,

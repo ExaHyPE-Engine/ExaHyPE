@@ -212,7 +212,7 @@ void step() {
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
 
         //assemble the matrix
-        {% if SOLVER_NAME=="Poisson" %}
+        {% if Project_Name=="Poisson" %}
         repositories::instanceOfPetsc.assemble();
         {% endif %}
         watch.stop();
@@ -225,7 +225,7 @@ void step() {
 
         watch.start();
         // solve
-        {% if SOLVER_NAME=="Poisson" %}
+        {% if Project_Name=="Poisson" %}
         repositories::instanceOfPetsc.petscSolve();
         {% endif %}
 
@@ -241,7 +241,7 @@ void step() {
         watch.start();
 
         //move data from petsc to c++
-        {% if SOLVER_NAME=="Poisson" %}
+        {% if Project_Name=="Poisson" %}
         repositories::instanceOfPetsc.convertToStdVector();
         {% endif %}
         

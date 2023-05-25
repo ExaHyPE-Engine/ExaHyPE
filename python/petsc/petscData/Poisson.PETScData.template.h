@@ -16,6 +16,8 @@
 #include <petscksp.h>
 #include <vector>
 
+extern tarch::logging::Log _log;
+
 namespace {{NAMESPACE | join("::")}}{
   class PetscData;
 }

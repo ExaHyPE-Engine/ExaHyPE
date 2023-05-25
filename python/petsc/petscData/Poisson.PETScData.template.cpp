@@ -171,7 +171,8 @@ void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
 
   PetscInt its;
   KSPGetIterationNumber(ksp, &its);
-  PetscPrintf(PETSC_COMM_WORLD, "Iterations %" PetscInt_FMT "\n", its);
+  // PetscPrintf(PETSC_COMM_WORLD, "Iterations %" PetscInt_FMT "\n", its);
+  logInfo("petscSolve()", "number of iterations was " << (int)its);
 
 
   KSPDestroy(&ksp);

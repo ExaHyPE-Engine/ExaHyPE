@@ -135,14 +135,14 @@ class HdgFirstDiscretisation(Solver):
   
   
   def add_use_statements(self, observer):
-    # observer.use_vertex( self._vertexDof )
+    observer.use_vertex( self._vertexDof )
     observer.use_face(self._faceDof)
     observer.use_cell(self._cellDof)
     pass
 
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
-    # datamodel.add_vertex(self._vertexDof)
+    datamodel.add_vertex(self._vertexDof)
     datamodel.add_face(self._faceDof)
     datamodel.add_cell(self._cellDof)
 

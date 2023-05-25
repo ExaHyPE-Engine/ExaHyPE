@@ -67,8 +67,9 @@ the solver in the first place. This happens in get_includes().
       break;
   }
 
+{% if SOLVER_NAME=="Poisson" %}
   if ( not marker.willBeRefined() ) { 
-    logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
+    logTraceIn( "touchVertexFirstTime(...)---InitialCondition" );
 
     //init two doubles; pass these by reference into init()
     double value, rhs;
@@ -86,9 +87,9 @@ the solver in the first place. This happens in get_includes().
       fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);
 
     }
-    
-    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 
+  logTraceOut( "touchVertexFirstTime(...)---InitialCondition" );
+{% endif %}
 """
   
   def __init__(self,
