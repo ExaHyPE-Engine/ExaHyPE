@@ -76,12 +76,12 @@ double {{NAMESPACE | join("::")}}::PetscData::getX(int i) const{
 }
 
 void {{NAMESPACE | join("::")}}::PetscData::insertDoubleAtIndexij(int i, int j, double val){
-  MatSetValue(_A, i, j, val, ADD_VALUES);
+  MatSetValue(_A, i, j, val, INSERT_VALUES);
 }
 
 //storing doubles to be placed into A
 void {{NAMESPACE | join("::")}}::PetscData::incrementDoubleAtIndexij( int i, int j, double val ){
-  MatSetValue(_A, i, j, val, INSERT_VALUES);
+  MatSetValue(_A, i, j, val, ADD_VALUES);
 }
 
 void {{NAMESPACE | join("::")}}::PetscData::insertValueAndRHS(double val, double rhs, int index){
