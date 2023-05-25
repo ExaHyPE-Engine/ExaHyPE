@@ -26,12 +26,18 @@ It also dumps all the resolution levels of the grid simultaneously.
 Therefore, one of the first postprocessing steps usually is to remove all data
 from the output data set besides the fine grid level.
 
+### Plot descriptive variable names
+You can add a plot description to each solver which allows us to render
+more descriptive variable names:
+~~~~~~~~~~~~~~~~~
+my_solver.plot_description = "density, velocity_x, velocity_y, energy"
+~~~~~~~~~~~~~~~~~
 
 
 ### Output filters
 
 By default, ExaHyPE maps each Finite Volume and each DG quadrature point onto
-a vertex in the output file, i.e. it maps the compute mesh onto an unstructured
+a vertex in the output file, i.e., it maps the compute mesh onto an unstructured
 (visualisation) mesh.
 This can result in large data dumps.
 

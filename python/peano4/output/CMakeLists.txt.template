@@ -47,15 +47,17 @@ endif()
 list(APPEND DEPENDS_CORE {% for item in CMAKE_CORE_LIBS -%} {{item+' '}} {%- endfor %})
 list(APPEND DEPENDS_OTHER {% for item in CMAKE_LIBS -%} {{item+' '}} {%- endfor %})
 
-set(H_HEADERS {% for item in H_HEADERS -%} {{item+" "}} {%- endfor %})
-set(CXX_SOURCES {% for item in CXX_SOURCES -%} {{item+" "}} {%- endfor %})
-set(FORTRAN_SOURCES {% for item in FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %})
+list(APPEND H_HEADERS {% for item in H_HEADERS -%} {{item+" "}} {%- endfor %})
+list(APPEND CXX_SOURCES {% for item in CXX_SOURCES -%} {{item+" "}} {%- endfor %})
+list(APPEND CU_SOURCES {% for item in CU_SOURCES -%} {{item+" "}} {%- endfor %})
+list(APPEND FORTRAN_SOURCES {% for item in FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %})
 
-set(GENERATED_H_HEADERS {% for item in GENERATED_H_HEADERS -%} {{item+" "}} {%- endfor %})
-set(GENERATED_CXX_SOURCES {% for item in GENERATED_CXX_SOURCES -%} {{item+" "}} {%- endfor %})
-set(GENERATED_FORTRAN_SOURCES {% for item in GENERATED_FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %})
+list(APPEND GENERATED_H_HEADERS {% for item in GENERATED_H_HEADERS -%} {{item+" "}} {%- endfor %})
+list(APPEND GENERATED_CXX_SOURCES {% for item in GENERATED_CXX_SOURCES -%} {{item+" "}} {%- endfor %})
+list(APPEND GENERATED_CU_SOURCES {% for item in GENERATED_CU_SOURCES -%} {{item+" "}} {%- endfor %})
+list(APPEND GENERATED_FORTRAN_SOURCES {% for item in GENERATED_FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %})
 
-set(GENERATED_INCLUDE_DIRS {% for item in GENERATED_INCLUDE_DIRS -%} ${CMAKE_CURRENT_SOURCE_DIR}/{{item+" "}} {%- endfor %})
+list(APPEND GENERATED_INCLUDE_DIRS {% for item in GENERATED_INCLUDE_DIRS -%} ${CMAKE_CURRENT_SOURCE_DIR}/{{item+" "}} {%- endfor %})
 
 string(TOLOWER ${MODE} MODE_LOWER)
 
@@ -70,16 +72,20 @@ list(APPEND DEPENDS_FULL ${DEPENDS_OTHER})
 # Create executable as a CMake target
 add_executable(${TARGET_NAME})
 
-# Set sources of the executable, we depend in the generated CMake file, the generator script.
-target_sources(${TARGET_NAME} PRIVATE
-  ${H_HEADERS}
+list(APPEND SOURCES
   ${CXX_SOURCES}
-  ${FORTRAN_SOURCES}
-  ${GENERATED_H_HEADERS}
   ${GENERATED_CXX_SOURCES}
+  ${CU_SOURCES}
+  ${GENERATED_CU_SOURCES}
+  ${FORTRAN_SOURCES}
   ${GENERATED_FORTRAN_SOURCES}
+  ${H_HEADERS}
+  ${GENERATED_H_HEADERS}
   ${GENERATOR}
 )
+
+# Set sources of the executable, we depend in the generated CMake file, the generator script.
+target_sources(${TARGET_NAME} PRIVATE ${SOURCES})
 
 # Set default include directories as well as the generated ones
 target_include_directories(${TARGET_NAME} PRIVATE
@@ -88,9 +94,12 @@ target_include_directories(${TARGET_NAME} PRIVATE
 
 # Link to full target libraries
 target_link_libraries(${TARGET_NAME} PRIVATE ${DEPENDS_FULL})
-# Libraries are generated at $cmake_binary_dir, just in case add it to the link directories
+# Libraries are generated at $cmake_binary_dir, just in case add it to the link directories.
 target_link_directories(${TARGET_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 target_compile_definitions(${TARGET_NAME} PRIVATE Dimensions=${DIMENSION} ${${MODE}_DEFINITIONS})
-string(REPLACE " " ";" COMPILE_OPTIONS ${CMAKE_CXX_FLAGS_${MODE}})
-target_compile_options(${TARGET_NAME} PRIVATE ${COMPILE_OPTIONS})
 target_link_options(${TARGET_NAME} PRIVATE ${${MODE}_LDFLAGS})
+target_link_libraries(${TARGET_NAME} PRIVATE project_options)
+
+if (NOT "${WITH_GPU}" STREQUAL "cuda")
+  target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
+endif()

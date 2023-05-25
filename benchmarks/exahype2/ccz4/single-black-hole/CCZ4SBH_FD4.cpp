@@ -92,7 +92,7 @@ void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::startTimeStep(
       "reduce admissible time step size from dt_{dg}=" << _admissibleTimeStepSize <<
       " vs td_{fv}=" << fvTimeStepSize <<
       " to dt=" << newTimeStepSize <<
-      " (previous time step sizes for this step are invalid)"
+      " (previously reported time step sizes for this step are invalid)"
     );
     _admissibleTimeStepSize = newTimeStepSize;
     repositories::InstanceOfCCZ4SBH_FV.reduceAdmissibleTimeStepSize( newTimeStepSize );

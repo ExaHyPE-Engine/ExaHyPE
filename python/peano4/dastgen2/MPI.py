@@ -53,7 +53,6 @@ class MPI( dastgen2.aspects.MPI ):
     self.send_predicate       = "true"
     self.load_predicate       = "true"
     self.store_predicate      = "true"
-    self.compute_predicate    = "true"
     self.includes             = ""
     pass
 
@@ -123,7 +122,6 @@ class MPI( dastgen2.aspects.MPI ):
     bool send(const peano4::datamanagement::VertexMarker& marker) const;
     static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
     bool storePersistently(const peano4::datamanagement::VertexMarker& marker) const;
-    bool compute(const peano4::datamanagement::VertexMarker& marker) const;
 """ 
     elif self.dof_association==DoFAssociation.Face:
       result += """
@@ -133,7 +131,6 @@ class MPI( dastgen2.aspects.MPI ):
     bool send(const peano4::datamanagement::FaceMarker& marker) const;
     static bool loadPersistently(const peano4::datamanagement::FaceMarker& marker);
     bool storePersistently(const peano4::datamanagement::FaceMarker& marker) const;
-    bool compute(const peano4::datamanagement::FaceMarker& marker) const;
 """ 
     elif self.dof_association==DoFAssociation.Cell:
       result += """
@@ -143,7 +140,6 @@ class MPI( dastgen2.aspects.MPI ):
     bool send(const peano4::datamanagement::CellMarker& marker) const;
     static bool loadPersistently(const peano4::datamanagement::CellMarker& marker);
     bool storePersistently(const peano4::datamanagement::CellMarker& marker) const;
-    bool compute(const peano4::datamanagement::CellMarker& marker) const;
 """ 
       pass
     elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:
@@ -162,7 +158,6 @@ class MPI( dastgen2.aspects.MPI ):
       "send_predicate":        self.send_predicate,
       "load_predicate":        self.load_predicate,
       "store_predicate":       self.store_predicate,
-      "compute_predicate":     self.compute_predicate,
     }    
         
       
@@ -241,14 +236,6 @@ bool {{full_qualified_name}}::storePersistently(
 ) const {
   return {{store_predicate}};
 }
-
-
-bool {{full_qualified_name}}::compute( 
-  const peano4::datamanagement::VertexMarker& marker 
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) const {
-  return {{compute_predicate}};
-}
 """ 
     elif self.dof_association==DoFAssociation.Face:
       result += """
@@ -287,14 +274,6 @@ bool {{full_qualified_name}}::storePersistently(
 ) const {
   return {{store_predicate}};
 }
-
-
-bool {{full_qualified_name}}::compute( 
-  const peano4::datamanagement::FaceMarker& marker 
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) const {
-  return {{compute_predicate}};
-}
 """ 
     elif self.dof_association==DoFAssociation.Cell:
       result += """
@@ -332,14 +311,6 @@ bool {{full_qualified_name}}::loadPersistently(
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
 ) {
   return {{load_predicate}};
-}
-
-
-bool {{full_qualified_name}}::compute( 
-  const peano4::datamanagement::CellMarker& marker 
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) const {
-  return {{compute_predicate}};
 }
 """      
     elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:

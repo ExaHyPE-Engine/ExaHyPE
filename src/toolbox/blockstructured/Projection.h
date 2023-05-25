@@ -93,6 +93,8 @@ namespace toolbox {
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * project the halo entry (h) onto the face at point x.
+     *
+     *
      * @param Q Patch data with halo, i.e.
      */
     void projectPatchHaloOntoFaces(
@@ -122,6 +124,41 @@ namespace toolbox {
     );
 
     void projectPatchHaloOntoFaces(
+      int    numberOfVolumesPerAxisInPatch,
+      int    haloSize,
+      int    unknowns,
+      int    auxiliaryVariables,
+      const double* __restrict__ Q,
+      double* faces[2*Dimensions]
+    );
+
+    void extrapolatePatchSolutionAndProjectExtrapolatedHaloOntoFaces(
+      int    numberOfVolumesPerAxisInPatch,
+      int    haloSize,
+      int    unknowns,
+      int    auxiliaryVariables,
+      const double* __restrict__ Q,
+      double* __restrict__ leftFace,
+      double* __restrict__ bottomFace,
+      double* __restrict__ rightFace,
+      double* __restrict__ topFace
+    );
+
+    void extrapolatePatchSolutionAndProjectExtrapolatedHaloOntoFaces(
+      int    numberOfVolumesPerAxisInPatch,
+      int    haloSize,
+      int    unknowns,
+      int    auxiliaryVariables,
+      const double* __restrict__ Q,
+      double* __restrict__ leftFace,
+      double* __restrict__ bottomFace,
+      double* __restrict__ frontFace,
+      double* __restrict__ rightFace,
+      double* __restrict__ topFace,
+      double* __restrict__ backFace
+    );
+
+    void extrapolatePatchSolutionAndProjectExtrapolatedHaloOntoFaces(
       int    numberOfVolumesPerAxisInPatch,
       int    haloSize,
       int    unknowns,

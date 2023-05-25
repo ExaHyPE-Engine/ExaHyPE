@@ -82,6 +82,36 @@ int peano4::stacks::STDVectorOverContainerOfPointers<T>::prepareMetaDataToSendOu
       return flattenedDataSize;
     }
 
+template <class T>
+void peano4::stacks::STDVectorOverContainerOfPointers<T>::triggerNonBlockingDataReceive() {
+  assertion( _metaDataSizeBuffer!=nullptr );
+  assertion(_metaDataSizeMPIRequest!=nullptr);
+
+  int flattenedDataSize = 0;
+  assertionEquals( Base::_data.size(), Base::_currentElement );
+  for (int i=0; i<Base::_currentElement; i++) {
+    flattenedDataSize        += _metaDataSizeBuffer[i];
+  }
+
+  if (flattenedDataSize>0) {
+    Base::_ioMPIRequest = new MPI_Request;
+    _deepCopyDataBuffer = new typename T::DoFType[ flattenedDataSize ];
+    MPI_Irecv(
+      _deepCopyDataBuffer,
+      flattenedDataSize,
+      translateContextIntoDatatype<typename T::DoFType>( _context ),
+      Base::_ioRank,
+      Base::_ioTag,
+      _communicator,
+      Base::_ioMPIRequest
+    );
+    logDebug( "startReceive(int,int,int)", "trigger receive of " << flattenedDataSize << " entries of user data in total" );
+  }
+  else {
+    logDebug( "startReceive(int,int,int)", "there's no actual user data to received" );
+  }
+}
+
     #endif
 
 
@@ -236,39 +266,6 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::startReceive(peano4::g
     }
   #endif
 }
-
-
-
-template <class T>
-void peano4::stacks::STDVectorOverContainerOfPointers<T>::triggerNonBlockingDataReceive() {
-  assertion( _metaDataSizeBuffer!=nullptr );
-  assertion(_metaDataSizeMPIRequest!=nullptr);
-
-  int flattenedDataSize = 0;
-  assertionEquals( Base::_data.size(), Base::_currentElement );
-  for (int i=0; i<Base::_currentElement; i++) {
-    flattenedDataSize        += _metaDataSizeBuffer[i];
-  }
-
-  if (flattenedDataSize>0) {
-    Base::_ioMPIRequest = new MPI_Request;
-    _deepCopyDataBuffer = new typename T::DoFType[ flattenedDataSize ];
-    MPI_Irecv(
-      _deepCopyDataBuffer,
-      flattenedDataSize,
-      translateContextIntoDatatype<typename T::DoFType>( _context ),
-      Base::_ioRank,
-      Base::_ioTag,
-      _communicator,
-      Base::_ioMPIRequest
-    );
-    logDebug( "startReceive(int,int,int)", "trigger receive of " << flattenedDataSize << " entries of user data in total" );
-  }
-  else {
-    logDebug( "startReceive(int,int,int)", "there's no actual user data to received" );
-  }
-}
-
 
 template <class T>
 bool peano4::stacks::STDVectorOverContainerOfPointers<T>::tryToFinishSendOrReceive() {

@@ -401,7 +401,6 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
       and not (""" + last_sweep_of_time_step_or_plotting_or_initialisation + ")"
     self._patch_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard() + """
       and not (""" + first_sweep_of_time_step_or_plotting_guard + ")"   
-    self._patch_estimates.generator.compute_condition          = self._patch_estimates.generator.load_persistent_condition + " or " + self._patch_estimates.generator.store_persistent_condition
       
             
   def create_action_sets(self):
@@ -478,7 +477,7 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
       True)
 
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
+    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp", generated=True )
 
     if self._pde_terms_without_state:
         # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,

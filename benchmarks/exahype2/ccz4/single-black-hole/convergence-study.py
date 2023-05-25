@@ -23,16 +23,6 @@ from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionS
 PatchSize = 4
 
 
-def add_constraints_to_primary_solver(solver):
-    """!
-    
-    Augment primary solver
-    
-    There is not too much to do for primary solver besides the fact that we
-    
-    """
-
-
 def construct_FV_limiter(min_cell_size, max_cell_size):
     """!
     
@@ -91,6 +81,29 @@ def construct_FV_limiter(min_cell_size, max_cell_size):
         return """(""" + super( Limiter, self )._load_face_data_default_guard() + """
                     and repositories::InstanceOf""" + self._name + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
                   )"""
+
+
+      def create_action_sets(self):
+        """!
+        
+        Not really a lot of things to do here. The only exception that is 
+        really important is that we have to ensure that we only solve stuff
+        inside the local domain of the FV. By default, ExaHyPE 2 solves the
+        PDE everywhere. If data is not stored persistently or loaded from 
+        the persistent stacks, it still solves, as it then would assume that
+        such data arises from dynamic AMR. In this particular case, we have
+        to really mask out certain subdomains.
+        
+        It is not just a nice optimisation to do so. It is absolutely key, 
+        as the application of the compute kernel on garbage would mean that
+        we end up with invalid eigenvalues.
+        
+        """
+        super( Limiter, self ).create_action_sets()
+        
+        self._action_set_update_cell.guard                = "({} and repositories::InstanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(self._action_set_update_cell.guard, self._name)
+        self._action_set_merge_enclave_task_outcome.guard = "({} and repositories::InstanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(self._action_set_merge_enclave_task_outcome.guard, self._name)
+        
         
     
     my_solver = Limiter(name           = "CCZ4SBH" , 
@@ -153,6 +166,7 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Projection.h"        
 #include "toolbox/blockstructured/Restriction.h"        
 #include "toolbox/blockstructured/Interpolation.h"        
+#include "toolbox/blockstructured/Copy.h"        
 """        
 
 
@@ -232,13 +246,22 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
  
         self._action_set_preprocess_solution = exahype2.solvers.rkfd.actionsets.PreprocessReconstructedSolutionWithHalo(self,
 """
-    double* interpolatedFVDataWithHalo = ::tarch::allocateMemory<double>(
-        (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
+    const int sizeOfPatch = (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
       * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
       * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables),
-      ::tarch::MemoryLocation::Heap
-    );
+      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables);
+    const int sizeOfFace = 2
+      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
+      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
+      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables);
+      
+    double* interpolatedFVDataWithHalo = ::tarch::allocateMemory<double>(sizeOfPatch, ::tarch::MemoryLocation::Heap);
+    double* dummyFace0 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
+    double* dummyFace1 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
+    double* dummyFace2 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
+    double* dummyFace3 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
+    double* dummyFace4 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
+    double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
 
     ::toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FD4.NumberOfGridCellsPerPatchPerAxis,
@@ -249,6 +272,34 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
       oldQWithHalo, 
       interpolatedFVDataWithHalo
     );
+    
+//    ## @todo Docu: If we project only QOld, nothing happens, as this one is abackup only
+//    Update will be rolled over after the time step, so it not of use either
+/*
+    ::toolbox::blockstructured::projectPatchHaloOntoFaces(
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      1,      // int    haloSize,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
+      interpolatedFVDataWithHalo,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(0).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(1).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(2).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(3).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(4).value,
+      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(5).value
+    );
+*/
+
+   // @todo Darf ich auch ordentlich dokumenteiren
+    const 
+    double* dummyFace = ::tarch::allocateMemory<double>(
+        (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
+      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
+      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
+      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables),
+      ::tarch::MemoryLocation::Heap
+    );
 
     ::toolbox::blockstructured::projectPatchHaloOntoFaces(
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
@@ -256,44 +307,67 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns,
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
       interpolatedFVDataWithHalo,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(0).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(1).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(2).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(3).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(4).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(5).value
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,0) ? dummyFace0 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(0).value,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,1) ? dummyFace1 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(1).value,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,2) ? dummyFace2 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(2).value,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,3) ? dummyFace3 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(3).value,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,4) ? dummyFace4 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(4).value,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,5) ? dummyFace5 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(5).value
     );
     
+    
+    // @todo Doku rein, dass man sowas machen kann wenn man lustig ist
+/*    
+    ::toolbox::blockstructured::copyUnknowns(
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      interpolatedFVDataWithHalo,
+      1,      // source halo,
+      fineGridCell""" + self._name_without_FD4_extension + """_FVQ.value,
+      0,      // dest halo
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables
+    );
+*/
+
     ::tarch::freeMemory(interpolatedFVDataWithHalo, tarch::MemoryLocation::Heap );
+    ::tarch::freeMemory(dummyFace0, tarch::MemoryLocation::Heap );
+    ::tarch::freeMemory(dummyFace1, tarch::MemoryLocation::Heap );
+    ::tarch::freeMemory(dummyFace2, tarch::MemoryLocation::Heap );
+    ::tarch::freeMemory(dummyFace3, tarch::MemoryLocation::Heap );
+    ::tarch::freeMemory(dummyFace4, tarch::MemoryLocation::Heap );
+    ::tarch::freeMemory(dummyFace5, tarch::MemoryLocation::Heap );
 """)
 
         self._action_set_preprocess_solution.guard = "(" + self._action_set_preprocess_solution.guard + """
                                                       and 
                                                       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
                                                       and
+                                                      not repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) 
+                                                      and
                                                       not marker.willBeRefined()
                                                       )""" 
 
-#        self._action_set_postprocess_solution = exahype2.solvers.rkfd.actionsets.PatchWisePostprocessSolution(self,
-#                                                                                                              """
-#  if (
-#    repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
-#    and
-#    not marker.willBeRefined()
-#  ) { 
-#    logTraceIn( "touchCellFirstTime(...)-restrict" );
-#    
-#    ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
-#      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-#      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FD4.NumberOfGridCellsPerPatchPerAxis,
-#      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
-#      fineGridCell""" + self._name_without_FD4_extension + """_FVQ.value,
-#      fineGridCell""" + self._name_without_FD4_extension + """_FD4Q.value
-#    );
-#  
-#    logTraceOut( "touchCellFirstTime(...)-restrict" );
-#  }  
-#""")
+# @todo Hier auch nohc Doku rein, dass wir doch jetzt auf 7 Zellen loesen und net nur auf eriner
+# Das ist anders als im Coupling-Sketch
+        self._action_set_postprocess_solution = exahype2.solvers.rkfd.actionsets.PatchWisePostprocessSolution(self,
+                                                                                                              """
+  if (
+    repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
+    and
+    not marker.willBeRefined()
+  ) { 
+    logTraceIn( "touchCellFirstTime(...)-inject" );
+    
+    ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FD4.NumberOfGridCellsPerPatchPerAxis,
+      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
+      fineGridCell""" + self._name_without_FD4_extension + """_FVQ.value,
+      fineGridCell""" + self._name_without_FD4_extension + """_FD4Q.value
+    );
+  
+    logTraceOut( "touchCellFirstTime(...)-inject" );
+  }  
+""")
 
         
 
@@ -365,7 +439,7 @@ if __name__ == "__main__":
     
     if args.plot:
         # @todo zu klein
-      plot_interval = 0.001
+      plot_interval = 0.0001
     else:
       plot_interval = 0.0
     
