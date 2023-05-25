@@ -19,5 +19,5 @@ class Sea_At_Rest(scenarios.template_scenario.Template_Scenario):
         // Displacement
         if (abs(_x) <= 500 && abs(_y) <= 500)
             Q[3] += 5 * sin(((_x / 500) + 1) * M_PI) * (-((_y * _y) / 250000) + 1);
-        Q[0] = -Q[3]
+        Q[0] = -Q[3];
         """
