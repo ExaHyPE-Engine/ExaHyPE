@@ -2,6 +2,10 @@ import scenarios.template_scenario, sympy
 
 
 class Tsunami(scenarios.template_scenario.Template_Scenario):
+    """
+    This class provides a tsunami scenario. 
+    Bathymetry and displacement are read from files provided by the user.
+    """
     def __init__(self):
         super().__init__()
         pass

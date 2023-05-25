@@ -4,8 +4,7 @@ from abc import ABC, abstractmethod
 class Scenario(ABC):
     """
     This class provides an interface all scenarios should derive and implement.
-    If some methods are to be implemented via sympy in the constructor,
-    a simple super call as shown in this class is enough to fully implement the functionality.
+    Methods, whose functionality is implemented via sympy, e. g. in the constructor, must not be implemented again.
     """
     @abstractmethod
     def __init__(self):

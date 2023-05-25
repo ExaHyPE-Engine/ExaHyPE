@@ -1,7 +1,10 @@
-import scenarios.template_scenario, sympy
-from math import sin, pi
+import scenarios.template_scenario
 
 class Artificial_Tsunami(scenarios.template_scenario.Template_Scenario):
+    """
+    This class provides an artificial tsunami scenario. 
+    The equation detailing the displacement is taken from the materials of the IN0012 Tsunami Simulation lab course at TUM held in WS21/22.
+    """
     def __init__(self):
         super().__init__()
     
