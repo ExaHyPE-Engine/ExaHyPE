@@ -9,7 +9,9 @@ namespace {{N}} {
     {% for SOLVER in SOLVER_INSTANCES %}
     {{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
-    ::petsc::PetscData instanceOfPetsc;
+    // ::petsc::PetscData instanceOfPetsc;
+    PetscData instanceOfPetsc;
+
   }
 {% for N in NAMESPACE %}
 }

@@ -1,34 +1,27 @@
+/**
+ *
+ * for now we use the project name as a prefix for
+ * the template
+ *
+ * */
+
+
 #pragma once
 
+#include "tarch/logging/Log.h"
+#include "tarch/logging/Statistics.h"
+#include "tarch/logging/LogFilter.h"
+#include "tarch/logging/LogFilterFileReader.h"
+
 #include <petscksp.h>
-
 #include <vector>
-#include <map>
 
-#include <iostream>
-
-
-namespace petsc{
-  /**
-   * Class to store a matrix, solution vector and rhs vector.
-   * Eventually we will implement solvers too. Currently we have methods
-   * to initialise the matrix and also the vectors. 
-   * The matrix is initialised to be a n x n matrix, where n is the number
-   * of DoFs (subject to change). 
-   * The vector x is initialised to be the "value", which ultimately comes from *(fineGridVertexPoisson.getValue().data())
-   * The vector b is initialised to be the "rhs", which ultimately comes from *(fineGridVertexPoisson.getRhs().data())
-   * 
-   * These are just first implementation, but crucially we have initialising 
-   * the PETSc world, formation of matrix and two vectors, and methods to 
-   * pass values back to c++.
-  */
+namespace {{NAMESPACE | join("::")}}{
   class PetscData;
 }
 
-class petsc::PetscData{
+class {{NAMESPACE | join("::")}}::PetscData{
   public:
-    // PetscData* getInstance();
-    PetscData(int argc, char** argv);
     PetscData();
     virtual ~PetscData();
 
@@ -41,7 +34,6 @@ class petsc::PetscData{
      * \param int dofs
     */
     void initMatrixAndVectors( int dofs );
-    
     //method to convert petsc vec to std array
     //for now, just for the solution vector
     void convertToStdVector();

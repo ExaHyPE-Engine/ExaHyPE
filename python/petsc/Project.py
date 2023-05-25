@@ -253,8 +253,9 @@ This yet has to be written.
     self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
       
   def __generate_data_repository(self):
-    templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
-    template_name       = templatefile_prefix + ".PETScData.template"
+    # templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
+    templatefile_prefix = os.path.dirname(__file__) + "/petscData/"
+    template_name       = templatefile_prefix + self._project.project_name + ".PETScData.template"
     generated_repository_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       template_name + ".h",
       template_name + ".cpp",

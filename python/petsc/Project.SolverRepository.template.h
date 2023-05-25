@@ -9,10 +9,10 @@
 {% for SOLVER in SOLVER_INSTANCES %}
 
 #include "{{SOLVER[0]}}.h"
-#include "petsc/Data.h"
 
 {% endfor %}
 
+#include "PETScdata/PETScData.h"
 
 
 {% for N in NAMESPACE %}
@@ -30,7 +30,7 @@ namespace {{N}} {
      * Not sure if this is the best place to put it, but then we 
      * can interact with it by referring to repositories::instanceOfPetsc
     */
-    extern ::petsc::PetscData instanceOfPetsc;
+    extern {{NAMESPACE | join("::")}}::PetscData instanceOfPetsc;
     
     void computeLocalToGlobalMapsForAllSolvers();
     int getTotalNumberOfDegreesOfFreedom();

@@ -294,3 +294,8 @@ UnitTests3d
 *.tmp 
 *.trs 
 *.sh
+
+*patch-file*
+*.pvd
+*.err
+*.out
