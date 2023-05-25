@@ -37,8 +37,9 @@ namespace otter {
 #define OTTER_INIT(...)
 #define OTTER_PUSH(...)
 #define OTTER_POP(...)
-#define OTTER_START(...)
-#define OTTER_FINISH(...)
+#define OTTER_BORROW(...)
+#define OTTER_TASK_START(...)
+#define OTTER_TASK_END(...)
 #define OTTER_SYNCHRONISE(...)
 
 #endif

@@ -406,7 +406,7 @@ void step() {
         timeStepMeasurement.setValue( watch.getCalendarTime() );
 
         OTTER_SYNCHRONISE(timestep_task, children);
-        OTTER_TASK_FINISH(timestep_task);
+        OTTER_TASK_END(timestep_task);
         OTTER_POP(timestep_task, "[timestep task]");
         OTTER_SYNCHRONISE(root_task, descendants);
         
@@ -522,7 +522,7 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().writeToCSV();
 
-  OTTER_TASK_FINISH(root);
+  OTTER_TASK_END(root);
   OTTER_FINALISE();
 
   repositories::finishSimulation();

@@ -65,7 +65,7 @@ bool exahype2::EnclaveTask::run() {
   OTTER_TASK_START(enclave_task);
   computeTask();
   EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
-  OTTER_TASK_FINISH(enclave_task);
+  OTTER_TASK_END(enclave_task);
 
   logTraceOut( "run()" );
   return false;

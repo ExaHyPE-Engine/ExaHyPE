@@ -205,7 +205,7 @@ namespace {
         spawnedTasks++;
 
         OTTER_DECLARE(traversal_task);
-        OTTER_INIT(traversal_task, timestep_task, 102, false, "[traversal task %d of %d]", i+1, NumberOfThreads);
+        OTTER_INIT(traversal_task, timestep_task, 102, true, "[traversal task %d of %d]", i+1, NumberOfThreads);
         OTTER_TASK_START(traversal_task);
 
         if (i<tasks.size()) {
@@ -215,7 +215,7 @@ namespace {
           delete tasks[i];
         }
 
-        OTTER_TASK_FINISH(traversal_task);
+        OTTER_TASK_END(traversal_task);
 
         #if defined(__NVCOMPILER)
         #pragma omp atomic
