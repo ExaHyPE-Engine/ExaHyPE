@@ -46,7 +46,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
   const std::size_t numberOfPatches = hostPatchData.numberOfCells;
   GPUCellData  patchData( hostPatchData, QInEnumerator, QOutEnumerator, queue );
-  ::sycl::range<3> totalWorkItem{numberOfVolumesPerAxisInPatch*numberOfPatches, numberOfVolumesPerAxisInPatch+2*solversHaloSize, unknowns+auxiliaryVariables};
+  ::sycl::range<3> totalWorkItem{numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch+2*solversHaloSize, (unknowns+auxiliaryVariables)*numberOfPatches};
   ::sycl::range<3> workgroupSize{numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch+2*solversHaloSize, unknowns+auxiliaryVariables};
   ::sycl::event event = queue.submit(
     [&](::sycl::handler &handle) {
@@ -97,7 +97,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
           );
         }*/
         if (Dimensions==2) {
-                  int patchIndex    = i.get_group(0);
+                  int patchIndex    = i.get_group(2);
                   int x             = i.get_local_id(0);
                   int y             = i.get_local_id(1);
 				  int unknown       = i.get_local_id(2);
@@ -142,7 +142,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
         }*/
 
         if (Dimensions==2) {
-			      int patchIndex = i.get_group(0);
+			      int patchIndex = i.get_group(2);
                   int y          = i.get_local_id(0);
                   int x          = i.get_local_id(1)-solversHaloSize;
 				  int unknown       = i.get_local_id(2);
@@ -302,7 +302,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
 
         if (evaluateFlux and Dimensions==2) {
-			      int patchIndex = i.get_group(0);
+			      int patchIndex = i.get_group(2);
                   int x          = i.get_local_id(1)-solversHaloSize;
                   int y          = i.get_local_id(0);
 				  int unknown       = i.get_local_id(2);
@@ -621,7 +621,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
 		i.barrier();
         if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-			      int patchIndex = i.get_group(0);
+			      int patchIndex = i.get_group(2);
                   if (i.get_local_id(0) == 0 && i.get_local_id(1) == 0 && i.get_local_id(2) == 0) {
 				    double newMaxEigenvalue = 0.0;
                     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
