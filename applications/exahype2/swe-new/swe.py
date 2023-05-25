@@ -38,7 +38,13 @@ build_modes = {
 supported_file_types_bathymetry = [".nc"]
 supported_file_types_displacement = [".nc"]
 
-scenarios = ["Radial_Dam_Break", "Radial_Bathymetry_Dam_Break", "Tsunami", "Artificial_Tsunami"]
+scenarios = [
+  "Radial_Dam_Break", 
+  "Radial_Bathymetry_Dam_Break", 
+  "Tsunami", 
+  "Artificial_Tsunami",
+  "Sea_At_Rest"
+  ]
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - SWE Application Script')
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     required=True,              help="|".join(solvers.keys()) )
@@ -69,6 +75,10 @@ if args.scenario == "Radial_Bathymetry_Dam_Break":
 elif args.scenario == "Artificial_Tsunami":
   from scenarios.artificial_tsunami import Artificial_Tsunami
   my_pde = Artificial_Tsunami()
+
+elif args.scenario == "Sea_At_Rest":
+  from scenarios.sea_at_rest import Sea_At_Rest
+  my_pde = Sea_At_Rest()
 
 elif args.scenario == "Tsunami":
   # check whether flags are set
