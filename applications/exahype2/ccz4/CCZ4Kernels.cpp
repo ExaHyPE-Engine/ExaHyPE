@@ -312,6 +312,10 @@ void applications::exahype2::ccz4::admconstraints(double* constraints, const dou
     for (int j = 0; j < 3; j++)
     for (int l = 0; l < 3; l++) dGtilde[k][i] += dgup[k][j][l]*Christoffel_tilde[j][l][i]+g_contr[j][l]*dChristoffel_tilde[k][j][l][i];
 
+    double Z[3] = {0,0,0}; // Matrix vector multiplications
+    for (int i=0;i<3;i++)
+    for (int j=0;j<3;j++) Z[i] += 0.5* g_cov[i][j]* (Ghat[j] - Gtilde[j]);//needed here
+
     double dZ[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
