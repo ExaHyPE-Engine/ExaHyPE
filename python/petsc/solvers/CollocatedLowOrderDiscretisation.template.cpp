@@ -1,4 +1,15 @@
 #include "{{CLASSNAME}}.h"
+constexpr double pi = 3.14159265358979323846264338328;
+
+double initRhs(
+  const tarch::la::Vector<Dimensions, double>&  x
+){
+  double rhs = Dimensions * pi * pi;
+  for (int i = 0; i < Dimensions; i++){
+    rhs *= std::sin( pi * x[i] );
+  }
+  return rhs;  
+}
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
@@ -22,5 +33,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::init(
   const tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
   {% endif %}
 ) {
-  // @todo add your stuff here
+  value = 0.0;
+  rhs = initRhs(x);
 }
