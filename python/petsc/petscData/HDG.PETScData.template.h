@@ -18,12 +18,12 @@
 
 namespace {{NAMESPACE | join("::")}}{
   class PetscData;
-}
+};
 
 class {{NAMESPACE | join("::")}}::PetscData{
   public:
-    PetscData();
-    virtual ~PetscData();
+    PetscData() {};
+    virtual ~PetscData() {};
 
     int getDoFs() const;
     void setDoFs(int dofs);
@@ -33,8 +33,8 @@ class {{NAMESPACE | join("::")}}::PetscData{
      * each we _dofs entries
      * \param int dofs
     */
-    void initMatrixAndVectors( int dofs );
+    void initMatrixAndVectors( int dofs ) {};
 
     
     
-}
+};

@@ -19,8 +19,6 @@ from abc import abstractmethod
 class HdgFirstDiscretisation(Solver):
   """!
    
-  A low-order discretisation with degrees of freedom on the faces and cells
-
   this is a copy of the CollocatedLowOrderDiscretisation, but we rewrite
   to capture DoFs on faces and cells
   
@@ -36,7 +34,6 @@ class HdgFirstDiscretisation(Solver):
    
  Test comment (C)
     
-I wanna see if this one applies to the solver or hte init
    
     """
     super( HdgFirstDiscretisation, self ).__init__( name,
