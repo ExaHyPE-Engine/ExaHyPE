@@ -587,17 +587,8 @@ if __name__ == "__main__":
       msg = "set Sommerfeld boundary condition"
       userinfo.append((msg,None))
       periodic_boundary_conditions = [False,False,False]
-      my_solver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
-      double Qinf[59]={1.0, 0.0, 0.0, 1.0, 0.0, 1.0,        //q0-5
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                      //q6-11
-         0.0, 0.0, 0.0, 0.0,                                //q12-15
-         1.0, 0.0, 0.0, 0.0,                                //q16-19
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                      //q20-25
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,       //q26-34
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,       //q35-52
-         0.0, 1.0, 0.0, 0.0, 0.0, 0.0                       //q53-58
-      }; //approximate background solution at infinity 
+      if args.scenario=="single-puncture":  #please notice the default black hole mass (1.0) is hard-coded. need to be modified accordingly if necessary.
+        my_solver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       ::exahype2::fd::applySommerfeldConditions(
         [&](
           const double * __restrict__                  Q,
@@ -618,7 +609,10 @@ if __name__ == "__main__":
             Q[i] = 0.0;
           }
           Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
-          Q[16] = 0.95; Q[54] = 0.91;
+          //const double r=tarch::la::norm2(faceCentre);
+          //Q[16] = 0.5*(1+(1-1.0/2/r)/(1+1.0/2/r)); 
+          //Q[54] = 1/(1+1.0/2/r)/(1+1.0/2/r);
+          Q[16] = 0.96; Q[54] = 0.92;
         },
         marker.x(),
         marker.h(),
@@ -633,7 +627,46 @@ if __name__ == "__main__":
         fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
         fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
       );
-      """
+        """
+      else:
+        my_solver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
+      ::exahype2::fd::applySommerfeldConditions(
+        [&](
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  gridCellH,
+          double                                       t,
+          double                                       dt,
+          int                                          normal
+        ) -> double {
+          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
+        },
+        [&](
+          double * __restrict__                        Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  gridCellH
+        ) -> void {
+          for (int i=0; i<"""+str(my_solver._unknowns+my_solver._auxiliary_variables)+"""; i++) {
+            Q[i] = 0.0;
+          }
+          Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
+          Q[16] = 1.0; Q[54] = 1.0;
+        },
+        marker.x(),
+        marker.h(),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+        {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
+        {{OVERLAP}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        marker.getSelectedFaceNumber(),
+        {0.0, 0.0, 0.0},
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
+      );
+        """
+
 
 
     solverconstants=""
