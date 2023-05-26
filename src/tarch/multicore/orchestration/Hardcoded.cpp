@@ -88,6 +88,6 @@ bool tarch::multicore::orchestration::Hardcoded::fuseTasksImmediatelyWhenSpawned
 }
 
 
-bool tarch::multicore::orchestration::Hardcoded::processPendingTasksWhileWaitingInBSPSection() {
-  return _processPendingTasksWhileWaiting;
+tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::Hardcoded::getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
+  return _processPendingTasksWhileWaiting ? tarch::multicore::orchestration::Strategy::ExecutionPolicy::MaximiseThroughput : tarch::multicore::orchestration::Strategy::ExecutionPolicy::MinimiseLatency;
 }

@@ -34,6 +34,6 @@ bool tarch::multicore::orchestration::AllOnGPU::fuseTasksImmediatelyWhenSpawned(
 }
 
 
-bool tarch::multicore::orchestration::AllOnGPU::processPendingTasksWhileWaitingInBSPSection() {
-  return false;
+tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::AllOnGPU::getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
+  return nestedParallelismLevel>1 ? tarch::multicore::orchestration::Strategy::ExecutionPolicy::EmbedWithoutSubTasks : tarch::multicore::orchestration::Strategy::ExecutionPolicy::MaximiseThroughput;
 }

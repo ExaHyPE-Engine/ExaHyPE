@@ -533,52 +533,65 @@ void tarch::multicore::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
   static tarch::logging::Log _log( "tarch::multicore" );
-  static int nestedSpawnAndWaits = 0;
-  static tarch::multicore::BooleanSemaphore nestingSemaphore;
 
-  tarch::multicore::Lock nestingLock( nestingSemaphore, false );
+  if (not tasks.empty()) {
+    static int nestedSpawnAndWaits = 0;
+    static tarch::multicore::BooleanSemaphore nestingSemaphore;
 
-  bool invokeUserDefinedScheme;
-  bool invokeNativeScheme;
+    tarch::multicore::Lock nestingLock( nestingSemaphore, false );
+    nestingLock.lock();
+    nestedSpawnAndWaits++;
+    nestingLock.free();
 
-  nestingLock.lock();
-  invokeUserDefinedScheme = not tasks.empty() and nestedSpawnAndWaits==0 and orchestrationStrategy->processPendingTasksWhileWaitingInBSPSection();
-  invokeNativeScheme      = not tasks.empty() and not invokeUserDefinedScheme;
-  nestedSpawnAndWaits++;
-  nestingLock.free();
+    switch (orchestrationStrategy->getExecutionPolicyForForkJoinSection(nestedSpawnAndWaits, tasks.size(), tasks[0]->getTaskType())) {
+      case tarch::multicore::orchestration::Strategy::ExecutionPolicy::EmbedWithoutSubTasks:
+        {
+          for (auto& p: tasks) {
+            while (p->run()) {
+              native::deferRunningThreadAndContinueWithOtherTasks();
+            }
+            delete p;
+          }
+        }
+        break;
+      case tarch::multicore::orchestration::Strategy::ExecutionPolicy::MinimiseLatency:
+        {
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true );
+          native::spawnAndWaitAsTaskLoop(tasks);
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true );
+        }
+        break;
+      case tarch::multicore::orchestration::Strategy::ExecutionPolicy::MaximiseThroughput:
+        {
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true );
+          orchestrationStrategy->startBSPSection();
+          native::spawnAndWaitAsExplicitTasksWithPolling(tasks,orchestrationStrategy);
+          orchestrationStrategy->endBSPSection();
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true );
 
-  if (invokeUserDefinedScheme) {
-    ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true );
+          // AT: ideally would record the handle of the encountering task here to correctly identify child tasks
+          otterSynchroniseTasks(NULL, otter_sync_children);
 
-    orchestrationStrategy->startBSPSection();
-    native::spawnAndWaitAsExplicitTasksWithPolling(tasks,orchestrationStrategy);
-    orchestrationStrategy->endBSPSection();
+          internal::copyInternalTaskQueuesOverIntoGlobalQueue(-1);
 
-    // AT: ideally would record the handle of the encountering task here to correctly identify child tasks
-    otterSynchroniseTasks(NULL, otter_sync_children);
+          const auto fusionInstruction = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
+          bool successInFusing = true;
+          while ( successInFusing and globalNonblockingTasks.size()>=fusionInstruction.minTasks) {
+            successInFusing = tarch::multicore::internal::fusePendingTasks(fusionInstruction);
+          }
 
-    internal::copyInternalTaskQueuesOverIntoGlobalQueue(-1);
-
-    const auto fusionInstruction = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
-    bool successInFusing = true;
-    while ( successInFusing and globalNonblockingTasks.size()>=fusionInstruction.minTasks) {
-      successInFusing = tarch::multicore::internal::fusePendingTasks(fusionInstruction);
+          if ( not globalNonblockingTasks.empty() ) {
+            int numberOfTasksToProcessNow = std::max(0,static_cast<int>(globalNonblockingTasks.size())-orchestrationStrategy->getNumberOfTasksToHoldBack());
+            internal::mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
+          }
+        }
+        break;
     }
 
-    if ( not globalNonblockingTasks.empty() ) {
-      int numberOfTasksToProcessNow = std::max(0,static_cast<int>(globalNonblockingTasks.size())-orchestrationStrategy->getNumberOfTasksToHoldBack());
-      internal::mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
-    }
-
-    ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true );
+    nestingLock.lock();
+    nestedSpawnAndWaits--;
+    nestingLock.free();
   }
-  else if (invokeNativeScheme) {
-    native::spawnAndWaitAsTaskLoop(tasks);
-  }
-
-  nestingLock.lock();
-  nestedSpawnAndWaits--;
-  nestingLock.free();
 }
 
 

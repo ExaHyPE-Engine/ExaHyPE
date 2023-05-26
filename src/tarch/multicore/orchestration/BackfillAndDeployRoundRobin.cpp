@@ -56,6 +56,6 @@ bool tarch::multicore::orchestration::BackfillAndDeployRoundRobin::fuseTasksImme
 }
 
 
-bool tarch::multicore::orchestration::BackfillAndDeployRoundRobin::processPendingTasksWhileWaitingInBSPSection() {
-  return true;
+tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::BackfillAndDeployRoundRobin::getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
+  return nestedParallelismLevel>1 ? tarch::multicore::orchestration::Strategy::ExecutionPolicy::EmbedWithoutSubTasks : tarch::multicore::orchestration::Strategy::ExecutionPolicy::MaximiseThroughput;
 }

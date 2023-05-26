@@ -40,6 +40,8 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
     static Hardcoded* createBSP();
 
     /**
+     * Fall back to native tasking
+     *
      * Native tasking means simply that we do not hold back any tasks but
      * immediately map them onto native tasks.
      */
@@ -80,6 +82,6 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
     virtual int getNumberOfTasksToHoldBack() override;
     virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice()     override;
     virtual bool fuseTasksImmediatelyWhenSpawned() override;
-    virtual bool processPendingTasksWhileWaitingInBSPSection() override;
+    virtual ExecutionPolicy getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) override;
 };
 
