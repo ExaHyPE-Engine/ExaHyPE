@@ -38,9 +38,14 @@ namespace {{N}} {
     /**
     * for now, use this to count the total number of faces
     */
+    {% if SOLVER_INSTANCES[0][0]=="HDG" %}
     int getTotalFaceDofs();
     void incrementFaceDofs(int cardinality);
+    void incrementBoundaryFaces(int cardinality);
+    int getTotalBoundaryFaces();
     static int _faceDofs;
+    static int _boundaryFaces;
+    {% endif %}
 
   }
 {% for N in NAMESPACE %}

@@ -52,11 +52,6 @@ I wanna see if this one applies to the solver or hte init
     self._vertexDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._vertexDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
 
-    #add in some unknowns for the faces - for now we use the same number_of_unknowns param
-    self._faceDof = peano4.datamodel.DaStGen2( name )
-    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_vertex_unknowns) ) )
-    self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
-    self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     self.stencil = stencil
     pass
 
@@ -111,7 +106,6 @@ I wanna see if this one applies to the solver or hte init
     """
     observer.add_action_set( InitVertexDoFs(self) ) 
     observer.add_action_set( EnumerateVertices(self) ) 
-    observer.add_action_set( InitFaceDoFs(self) ) 
     pass
   
   
@@ -127,13 +121,11 @@ I wanna see if this one applies to the solver or hte init
   
   def add_use_statements(self, observer):
     observer.use_vertex( self._vertexDof )
-    observer.use_face(self._faceDof)
     pass
 
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     datamodel.add_vertex(self._vertexDof)
-    datamodel.add_face(self._faceDof)
 
 
   def add_implementation_files_to_project(self, namespace, output):

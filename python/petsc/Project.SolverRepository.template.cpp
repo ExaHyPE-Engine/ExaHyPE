@@ -33,12 +33,22 @@ int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom()
   return result;
 }
 
+{% if SOLVER_INSTANCES[0][0]=="HDG" %}
+
 void {{NAMESPACE | join("::")}}::repositories::incrementFaceDofs(int cardinality){
   _faceDofs += cardinality;
+}
+
+void {{NAMESPACE | join("::")}}::repositories::incrementBoundaryFaces(int cardinality){
+  _boundaryFaces += cardinality;
 }
 
 int {{NAMESPACE | join("::")}}::repositories::getTotalFaceDofs() {
   return _faceDofs;
 }
 
+int {{NAMESPACE | join("::")}}::repositories::getTotalBoundaryFaces() {
+  return _boundaryFaces;
+}
 
+{% endif %}

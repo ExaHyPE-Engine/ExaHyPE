@@ -193,9 +193,14 @@ void step() {
 
         repositories::computeLocalToGlobalMapsForAllSolvers();
         const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
-        const int totalNumberOfFaces            = repositories::getTotalFaceDofs();
         logInfo( "step()", "total no of dofs="  << totalNumberOfDegreesOfFreedom );
-        logInfo( "step()", "total no of faces=" << totalNumberOfFaces );
+
+        {% if Project_Name=="HDG" %}
+        const int totalNumberOfInteriorFaces    = repositories::getTotalFaceDofs();
+        const int totalNumberOfExteriorFaces    = repositories::getTotalBoundaryFaces();
+        logInfo( "step()", "total no of interior faces=" << totalNumberOfInteriorFaces );
+        logInfo( "step()", "total no of exterior faces=" << totalNumberOfExteriorFaces );
+        {% endif %}
 
         repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );
         

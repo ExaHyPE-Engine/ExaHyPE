@@ -25,9 +25,37 @@ the solver in the first place. This happens in get_includes().
   """
   
   TemplateInitFace="""
+// lambda to determine the pair of vertices that determine 
+// whether face i is on the boundary or not
+// eg if vertices 0 and 1 are both dirichlet, then face 1 must
+// be on the boundary
+  auto getCrucialIndices = [](int i) -> const std::pair<int,int>{
+    static constexpr std::pair<int,int> v0 = std::make_pair(0,2);
+    static constexpr std::pair<int,int> v1 = std::make_pair(0,1);
+    static constexpr std::pair<int,int> v2 = std::make_pair(1,3);
+    static constexpr std::pair<int,int> v3 = std::make_pair(2,3);
+    if (i==0)      return v0;
+    else if (i==1) return v1; 
+    else if (i==2) return v2;
+    else if (i==3) return v3;
+    else throw std::runtime_error("invalid index passed!"); 
+  };
+
   if (!marker.willBeRefined()){
-    //increment our count of the number of faces
-    repositories::incrementFaceDofs(1);
+    int faceNumber = marker.getSelectedFaceNumber();
+    std::pair<int,int> crucialIndices = getCrucialIndices(faceNumber);
+    if(
+      fineGridVertices{{SOLVER_NAME}}(crucialIndices.first).getType()  == vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
+      and
+      fineGridVertices{{SOLVER_NAME}}(crucialIndices.second).getType() == vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
+    ){
+      fineGridFace{{SOLVER_NAME}}.setType(facedata::{{SOLVER_NAME}}::Type::Boundary);
+      repositories::incrementBoundaryFaces(1);
+    }
+    else{
+      fineGridFace{{SOLVER_NAME}}.setType(facedata::{{SOLVER_NAME}}::Type::Interior);
+      repositories::incrementFaceDofs(1);
+    }
   }
   """
   
@@ -48,18 +76,12 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
-    self.d["VERTEX_CARDINALITY"]     = solver.number_of_vertex_unknowns
+    self.d["FACE_CARDINALITY"]       = solver.number_of_face_unknowns
 
 
   def get_body_of_operation(self,operation_name):
     """!
 
-Provide C++ code snippet for peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME  
-  
-Only touchVertexFirstTime is an event where this action set actually
-does something: It inserts the template TemplateInitVertex and 
-replaces it with entries from the dictionary. The latter is befilled
-in init().
     
     """
     result = ""
@@ -103,4 +125,6 @@ Consult petsc.Project for details
 """    
     return """
 #include "repositories/SolverRepository.h"
+
+static void hackyFunction(){};
 """
