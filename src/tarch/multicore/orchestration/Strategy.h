@@ -21,6 +21,30 @@ namespace tarch {
  */
 class tarch::multicore::orchestration::Strategy {
   public:
+    /**
+     * Provide hint of execution policy
+     *
+     * - EmbedWithoutSubTasks: Recommend to the tasking runtime that this
+     *   task should be executed immediately without spawning a new task.
+     * - MinimiseLatency: If you have a set of tasks that are to be
+     *   executed en bloc, you make the recommendation that any thread
+     *   which terminates before the others busy polls for them to
+     *   terminate. That means that the system might suffer from
+     *   underutilisation, but the algorithmic latency is low: As soon as
+     *   the last task of a group has terminated, we continue immediately.
+     * - MaximiseThroughput: Recommend that any thread that terminates its
+     *   task early should immediately grab another task. So you might
+     *   suffer from some increased latency - if a thread "accidentially"
+     *   gets a huge task, it might not be available for a while once
+     *   the loop has terminated. But this way, you maximise throughput as
+     *   every task always tries to do a task all the time.
+     */
+    enum class ExecutionPolicy {
+      EmbedWithoutSubTasks,
+      MinimiseLatency,
+      MaximiseThroughput
+    };
+
     struct FuseInstruction {
       int  device;
       int  minTasks;
@@ -87,12 +111,20 @@ class tarch::multicore::orchestration::Strategy {
     virtual bool fuseTasksImmediatelyWhenSpawned() = 0;
 
     /**
+     * Determine how to handle/realise parallelisation within fork/join region
+     *
      * If you want threads to run through the queues and to process tasks,
      * then return true here. If you return true, the default behaviour is
      * that a traversal (grid sweep) task does not terminate when it has
      * completed its traversal, but instead polls the task queue. By
      * default, a task will always first try to process its local tasks.
+     *
+     * @param nestedParallelismLevel Please compare with tarch::multicore::spawnAndWait()
+     *   which ensures that this flag equals 1 on the top level.
+     *
+     * @param taskType We assume that all numberOfTasks tasks are of the same
+     *   type.
      */
-    virtual bool processPendingTasksWhileWaitingInBSPSection() = 0;
+    virtual ExecutionPolicy getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) = 0;
 };
 

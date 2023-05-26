@@ -91,6 +91,12 @@ python3 ccz4.py -ext adm -impl fd4-rk1-adaptive -s single-puncture -maxh 0.4 -mi
 We mirror this setup by 
 
 
+Code time should be 46
+
+python3 convergence-study.py -cs 2 -plot -et 60
+
+
+
 ## Code remarks (FD4-FV scheme)
 
 ### Time step size
@@ -104,7 +110,9 @@ smaller mesh size for the Finite Volume scheme. The file
 benchmarks/exahype2/ccz4/single-black-hole/convergence-study.py and the solvers
 within applications/exahype2/ccz/CCZ4Solver.py hold further details.
 Please note that the FD4 scheme works with stencils which span 7 cells, so 
-its effective discretisation size is 7/3 larger than the Finite Volume's stencils.
+its effective discretisation size is (7-1)/(3-1) larger than the Finite Volume's 
+stencils, i.e. seven cells vs 3 cells along each coordinate axis with the 
+cell centres holding the unknowns.
 
 While we recalibrate the numerical constant C to take the different spatial
 discretisation orders into account, a simple rescaling does not yet ensure

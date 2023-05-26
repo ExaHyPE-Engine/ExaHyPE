@@ -55,7 +55,7 @@ class tarch::multicore::orchestration::AllOnGPU: public tarch::multicore::orches
     /**
      * No
      */
-    virtual bool processPendingTasksWhileWaitingInBSPSection() override;
+    virtual ExecutionPolicy getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) override;
 
 };
 

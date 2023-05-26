@@ -300,7 +300,10 @@ namespace tarch {
      */
     void spawnTask(Task*  job);
 
+
     /**
+     * Run a bunch of tasks
+     *
      * - Tell the orchestration that a BSP section starts
      * - Invoke the native implementation (and tell it what orchestration
      *   strategy is to be used)
@@ -311,6 +314,7 @@ namespace tarch {
     void spawnAndWait(
       const std::vector< Task* >&  tasks
     );
+
 
     namespace native {
       void spawnTask(Task* task);

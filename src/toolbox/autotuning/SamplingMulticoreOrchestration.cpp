@@ -235,3 +235,8 @@ bool tarch::multicore::orchestration::GeneticOptimisation::fuseTasksImmediatelyW
 bool tarch::multicore::orchestration::GeneticOptimisation::processPendingTasksWhileWaitingInBSPSection() {
   return _activeKey.processPendingTasksWhileWaiting;
 }
+
+
+tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::GeneticOptimisation::getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
+  return _activeKey.processPendingTasksWhileWaiting ? tarch::multicore::orchestration::Strategy::ExecutionPolicy::MaximiseThroughput : tarch::multicore::orchestration::Strategy::ExecutionPolicy::MinimiseLatency;
+}

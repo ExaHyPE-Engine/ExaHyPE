@@ -29,6 +29,7 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
     int  _deviceForFusedTasks;
     bool _fuseTasksImmediatelyWhenSpawned;
     bool _processPendingTasksWhileWaiting;
+    int  _maxNestedConcurrency;
   public:
     /**
      * If you want to use sole BSP, you effectively switch off the tasking.
@@ -40,6 +41,8 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
     static Hardcoded* createBSP();
 
     /**
+     * Fall back to native tasking
+     *
      * Native tasking means simply that we do not hold back any tasks but
      * immediately map them onto native tasks.
      */
@@ -71,7 +74,8 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
       int  maxTasksToFuse,
       int  deviceForFusedTasks,
       bool fuseTasksImmediatelyWhenSpawned,
-      bool processPendingTasksWhileWaiting
+      bool processPendingTasksWhileWaiting,
+      int  maxNestedConcurrency
     );
     virtual ~Hardcoded() = default;
 
@@ -80,6 +84,6 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
     virtual int getNumberOfTasksToHoldBack() override;
     virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice()     override;
     virtual bool fuseTasksImmediatelyWhenSpawned() override;
-    virtual bool processPendingTasksWhileWaitingInBSPSection() override;
+    virtual ExecutionPolicy getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) override;
 };
 
