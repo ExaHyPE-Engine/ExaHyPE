@@ -10,7 +10,8 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     0,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
-    false                            // processPendingTasksWhileWaiting
+    false,                           // processPendingTasksWhileWaiting
+    1
   );
 }
 
@@ -22,7 +23,8 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     0,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
-    false                            // processPendingTasksWhileWaiting
+    false,                           // processPendingTasksWhileWaiting
+    1
   );
 }
 
@@ -34,19 +36,21 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     0,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
-    true                             // processPendingTasksWhileWaiting
+    true,                            // processPendingTasksWhileWaiting
+    1
   );
 }
 
 
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createFuseAll(int numberOfTasksToFuse, bool fuseImmediately, bool processTasksWhileWaitingInBSPArea, int targetDevice) {
   return new Hardcoded(
-    std::numeric_limits<int>::max(),  // numberOfTasksToHoldBack
-    numberOfTasksToFuse,              // tasksToFuse
-    numberOfTasksToFuse,              // tasksToFuse
-    targetDevice,                     // deviceForFusedTasks
-    fuseImmediately,                  // fuseTasksImmediatelyWhenSpawned
-    processTasksWhileWaitingInBSPArea // processPendingTasksWhileWaiting
+    std::numeric_limits<int>::max(),   // numberOfTasksToHoldBack
+    numberOfTasksToFuse,               // tasksToFuse
+    numberOfTasksToFuse,               // tasksToFuse
+    targetDevice,                      // deviceForFusedTasks
+    fuseImmediately,                   // fuseTasksImmediatelyWhenSpawned
+    processTasksWhileWaitingInBSPArea, // processPendingTasksWhileWaiting
+    1
   );
 }
 
@@ -57,14 +61,16 @@ tarch::multicore::orchestration::Hardcoded::Hardcoded(
   int  maxTasksToFuse,
   int  deviceForFusedTasks,
   bool fuseTasksImmediatelyWhenSpawned,
-  bool processPendingTasksWhileWaiting
+  bool processPendingTasksWhileWaiting,
+  int  maxNestedConcurrency
 ):
   _numberOfTasksToHoldBack(numberOfTasksToHoldBack),
   _minTasksToFuse(minTasksToFuse),
   _maxTasksToFuse(maxTasksToFuse),
   _deviceForFusedTasks(deviceForFusedTasks),
   _fuseTasksImmediatelyWhenSpawned(fuseTasksImmediatelyWhenSpawned),
-  _processPendingTasksWhileWaiting(processPendingTasksWhileWaiting) {}
+  _processPendingTasksWhileWaiting(processPendingTasksWhileWaiting),
+  _maxNestedConcurrency(maxNestedConcurrency) {}
 
 
 void tarch::multicore::orchestration::Hardcoded::startBSPSection() {}
@@ -89,5 +95,13 @@ bool tarch::multicore::orchestration::Hardcoded::fuseTasksImmediatelyWhenSpawned
 
 
 tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::Hardcoded::getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
-  return _processPendingTasksWhileWaiting ? tarch::multicore::orchestration::Strategy::ExecutionPolicy::MaximiseThroughput : tarch::multicore::orchestration::Strategy::ExecutionPolicy::MinimiseLatency;
+  if (nestedParallelismLevel>_maxNestedConcurrency) {
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::EmbedWithoutSubTasks;
+  }
+  else if (_processPendingTasksWhileWaiting) {
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::MaximiseThroughput;
+  }
+  else {
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::MinimiseLatency;
+  }
 }

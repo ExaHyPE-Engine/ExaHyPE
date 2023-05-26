@@ -29,6 +29,7 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
     int  _deviceForFusedTasks;
     bool _fuseTasksImmediatelyWhenSpawned;
     bool _processPendingTasksWhileWaiting;
+    int  _maxNestedConcurrency;
   public:
     /**
      * If you want to use sole BSP, you effectively switch off the tasking.
@@ -73,7 +74,8 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
       int  maxTasksToFuse,
       int  deviceForFusedTasks,
       bool fuseTasksImmediatelyWhenSpawned,
-      bool processPendingTasksWhileWaiting
+      bool processPendingTasksWhileWaiting,
+      int  maxNestedConcurrency
     );
     virtual ~Hardcoded() = default;
 
