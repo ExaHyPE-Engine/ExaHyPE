@@ -401,12 +401,9 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
    
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    self._patch.generator.compute_condition          = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
-
 
     self._patch_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    self._patch_estimates.generator.compute_condition          = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
 
     self._patch_overlap_old.generator.send_condition               = "false"
     self._patch_overlap_old.generator.receive_and_merge_condition  = "false"
@@ -419,15 +416,12 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 
     self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_guard()
     self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_guard()
-    self._patch_overlap_old.generator.compute_condition            = self._load_face_data_default_guard() + " or " + self._store_face_data_default_guard()
 
     self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_guard()
     self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_guard()
-    self._patch_overlap_new.generator.compute_condition            = self._load_face_data_default_guard() + " or " + self._store_face_data_default_guard()
 
     self._patch_overlap_update.generator.store_persistent_condition   = "false"
     self._patch_overlap_update.generator.load_persistent_condition    = "false"
-    self._patch_overlap_update.generator.compute_condition            = "false"
 
     self._patch.generator.includes  += """
 #include "../repositories/SolverRepository.h"
@@ -849,8 +843,8 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 
     output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
-    output.makefile.add_cpp_file( self._name + ".cpp" )
+    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
 
   def set_solver_constants(self, datastring): self._solver_constants = datastring
 

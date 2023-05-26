@@ -44,6 +44,11 @@ parameter tarch::la::DynamicMatrix::vectorToString(fineGridFaceEulerQUpdate.valu
 
     void testRestrictCellForBreakingDam();
 
+    /**
+     * Trivial interpolation test for constant data
+     */
+    void testInterpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear();
+
   public:
 
     /**

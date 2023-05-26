@@ -75,6 +75,7 @@ void exahype2::fd::tests::SommerfeldBCTest::flatsolutiontest() {
     Qnew
   );
 
+/*
   std::cout<<std::setprecision(1);
     for (int i=0;i<4;i++){
       for (int j=0;j<12;j++){
@@ -82,6 +83,7 @@ void exahype2::fd::tests::SommerfeldBCTest::flatsolutiontest() {
       }
       std::cout<<"\n";
   }
+*/
 
 
 

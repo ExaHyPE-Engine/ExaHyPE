@@ -379,7 +379,6 @@ class EnclaveTasking( FV ):
       self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.willBeSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard() + " and (" + \
       self._primary_sweep_or_plot_guard + " or marker.hasBeenSkeletonCell())"
-    self._patch.generator.compute_condition  = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
 
 
   def create_action_sets(self):
@@ -547,7 +546,7 @@ class EnclaveTasking( FV ):
       True)
 
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
+    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp", generated=True )
 
     if self._pde_terms_without_state:
         # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,

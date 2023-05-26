@@ -138,7 +138,7 @@ namespace tarch {
         /**
          * @return true if the taskType is not DontFuse.
          */
-        bool canFuse() const;
+        virtual bool canFuse() const;
 
         virtual bool run() = 0;
 
