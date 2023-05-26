@@ -548,7 +548,7 @@ namespace exahype2 {
         #if defined(GPUOffloadingOMP)
         #pragma omp declare target
         #endif
-        template <typename Solver>
+        template <typename Solver, int numberOfUnknowns, int numberOfAuxiliaryVariables>
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
           const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
