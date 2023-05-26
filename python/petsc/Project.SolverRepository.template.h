@@ -33,6 +33,11 @@ namespace {{N}} {
     extern {{NAMESPACE | join("::")}}::PetscData instanceOfPetsc;
     
     void computeLocalToGlobalMapsForAllSolvers();
+
+    /**
+    * this name is a little outdated.
+    * should this be vertexDofs or should its function be altered?
+    */
     int getTotalNumberOfDegreesOfFreedom();
     
     /**
