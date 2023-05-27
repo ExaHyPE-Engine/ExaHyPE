@@ -291,7 +291,7 @@ if args.dim==2:
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 peano4_project = project.generate_Peano4_project(args.verbose)
 #peano4_project.output.makefile.parse_configure_script_outcome( args.configuredir )

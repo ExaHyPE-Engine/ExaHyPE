@@ -23,12 +23,12 @@ enum class Scenario {
 };
 
 
-//Scenario scenario = Scenario::PointExplosion;
+Scenario scenario = Scenario::PointExplosion;
 //Scenario scenario = Scenario::PointExplosionWithDynamicAMR;
 //Scenario scenario = Scenario::BreakingDam;
 //Scenario scenario = Scenario::BreakingDamResolutionStudies;
 //Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
-Scenario scenario = Scenario::GaussianProfile;
+//Scenario scenario = Scenario::GaussianProfile;
 
 
 
