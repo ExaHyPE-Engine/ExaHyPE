@@ -296,8 +296,5 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
   }
 }
 
-void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
-  #pragma omp taskyield
-}
 
 #endif

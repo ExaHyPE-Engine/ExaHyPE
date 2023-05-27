@@ -235,9 +235,4 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
 }
 
 
-void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
-  backgroundTaskGroup.wait();
-}
-
-
 #endif

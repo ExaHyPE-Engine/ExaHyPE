@@ -108,5 +108,7 @@ void tarch::multicore::Core::yield() {
   // @todo It would be nice to have the opportunity to tell the queue to do
   //       only a few tasks and then to return.
   hostSyclQueue.wait();
+  backgroundTaskGroup.wait();
+
 }
 #endif

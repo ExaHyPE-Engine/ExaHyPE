@@ -174,10 +174,5 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
   );
 }
 
-void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
-  #if !defined(GPUOffloadingCPP)
-    std::this_thread::yield();
-  #endif
-}
 
 #endif

@@ -151,8 +151,5 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
   }
 }
 
-void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
-  tarch::multicore::getHostSYCLQueue().wait();
-}
 
 #endif

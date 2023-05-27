@@ -398,17 +398,17 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
 
   bool  result        = false;
   while (maxTasks>0) {
-    if (fifo and processOnePendingTaskFIFO() ) {
+    if (fifo) {
       maxTasks--;
-      result = true;
-    }
-    else if (not fifo and processOnePendingTaskLIFO() ) {
-      maxTasks--;
-      result = true;
+      result |= processOnePendingTaskFIFO();
     }
     else {
-      native::deferRunningThreadAndContinueWithOtherTasks();
-      maxTasks=0;
+      maxTasks--;
+      result |= processOnePendingTaskLIFO();
+    }
+
+    if (not result and maxTasks==0) {
+      Core::getInstance().yield();
     }
   }
 
@@ -548,7 +548,7 @@ void tarch::multicore::spawnAndWait(
         {
           for (auto& p: tasks) {
             while (p->run()) {
-              native::deferRunningThreadAndContinueWithOtherTasks();
+              Core::getInstance().yield();
             }
             delete p;
           }
@@ -718,10 +718,6 @@ void tarch::multicore::native::spawnAndWait(
 
 int tarch::multicore::native::getNumberOfPendingTasks() {
   return 0;
-}
-
-
-void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
 }
 
 

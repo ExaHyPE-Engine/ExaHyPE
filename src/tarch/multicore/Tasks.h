@@ -355,12 +355,6 @@ namespace tarch {
        */
       void processFusedTask(Task*  firstTask, const std::list< tarch::multicore::Task* >& otherTasks, int device);
       int getNumberOfPendingTasks();
-
-      /**
-       * This routine is used by processPendingTasks() whenever there are no other tasks
-       * left anymore.
-       */
-      void deferRunningThreadAndContinueWithOtherTasks();
     }
 
 
