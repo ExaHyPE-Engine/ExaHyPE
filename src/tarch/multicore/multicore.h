@@ -22,10 +22,10 @@ namespace tarch {
 
   /**
  
- \namespace "tarch::multicore"
+ @namespace tarch::multicore
 
- <h1> Peano 4's multithreading layer </h1>
 
+ This page describes Peano 4's multithreading layer.
  To compile with multicore support, you have to invoke the configure script with
  the option --with-multithreading=value where value is
 
@@ -37,41 +37,38 @@ namespace tarch {
  - openmp. This adds OpenMP support. We currently develop against OpenMP 4.x
    though some of our routines use OpenMP target and thus are developed against
    OpenMP 5.
+ - sycl. We have a SYCL support for the multithreading, through, within the Intel
+   toolchain, it might be more appropriate to combine sycl on the GPU with the
+   tbb backend for multithreading.
 
 
- <h2> Using multithreading (user view) </h2>
-
- See the guidebook and the configure script's help please. As a summary, it should
- be sufficient to translate with
- \code
- ./configure ... --with-multithreading=xxx
- \endcode
-
- You might furthermore want to use particular vendor toolchains or enable GPU
- support.
-
-
- <h2> Writing your own code with multithreading features </h2>
+ ## Writing your own code with multithreading features
 
  If you wanna distinguish in your code between multicore and no-multicore variants, 
  please use
-\code
+
+~~~~~~~~~~~~~~~~~~~~~~~~
 #include "tarch/multicore/multicore.h"
-\endcode
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 and  
-\code
+
+~~~~~~~~~~~~~~~~~~~~~~~~
 #if defined(SharedMemoryParallelisation)
-\endcode
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+
  With the symbol SharedMemoryParallelisation, you make your code independent of
  OpenMP, TBB or C++ threading.
+
 
  Our vision is that each code should be totally independent of the multithreading
  implementation chosen. Indeed, Peano 4 itself does not contain any direct
  multithreading library calls. It solely relies on the classes and functions from
- this namespace.
+ tarch::multicore.
 
 
- <h2> Multicore architecture </h2>
+ ## Multicore architecture
 
  The multithreading environment is realised through a small set of classes. User
  codes work with these classes. Each type/function has an implementation within
@@ -83,12 +80,14 @@ and
  code is never supposed to work against functions or classes held within
  subdirectories.
 
+  @image html multicore_architecture.png
+
  The central instance managing the threads on a system is tarch::multicore::Core.
- This is a singleton and the name thus is slighly wrong. It does not really represent
+ This is a singleton and the name thus is slightly wrong. It does not really represent
  one core but rather represents the landscape of cores. You can setup the
  multithreading environment through Core's configure() routine, but this is optional.
  Indeed, multithreading should work without calling configure() at all. Each
- multitheading backend (OpenMP, C++, TBB) offers its own realisation of the
+ multitheading backend offers its own realisation of the
  Core class.
 
  For multithreaded code, it is important that the code can lock (protect) code
@@ -99,116 +98,149 @@ and
  for any backend.
 
 
- <h3> Logical task model </h3>
+ ## Task model
 
  Peano models all of its interna as tasks. Each Peano 4 task is a subclass of
- tarch::multicore::Task. Peano's task are an abstraction from OpenMP or TBB which
- is rather puristic: Besides a run() routine which can ask the task system to rerun
- the task - this is a built-in yield() mechanism - they have priorities and a
- prefetch() operation, i.e. a wake-up routine that should be called before a task
- is actually executed yet is optional. Obviously, most task backends do offer all
- of these features directly, i.e. we can map 1:1, but in Peano 4 this is hidden from
- the user. Our idea is that we can swap backends in and out.
+ tarch::multicore::Task. However, these classes might not be mapped 1:1 onto
+ native tasks: Users or Peano's core,
+ respectively, create Peano 4 tasks and spawn them through tarch::multicore::spawnTask()
+ or tarch::multicore::spawnAndWait().
 
 
- The user or Peano 4 core,
- respectively, create Peano 4 tasks and spawn them through tarch::multicore::spawnTask(),
- e.g. It is up to the backend to map these spawn routines and the task classes
- onto a particular implementation/runtime.
+ The two routines allow us to model the typical Peano 4 task graph:
 
- Peano 4 has two types of spawn mechanisms: spawn-and-wait and spawn (and forget).
- Forget tasks typically aren't real "do them at one point and then forget them"
- tasks, so this nomenclature is not watertight. Typically, they do meaningful
- stuff and then set some semaphore or similar. The spawn-and-forget means that they
- are not immediately due, i.e. do not induce algorithmic latency. Therefore, I
- should better call them background tasks or similar.
+ @image html multicore_task_flow.png
 
- The main code spawns these background tasks, and it then eventually waits for them to complete. While
- it waits, it will/should call tarch::multicore::processPendingTasks() until the
- particular task it waits for has completed. I do not offer a way to process a
- particular task upon demand. So the overall vision is: background task should go
- into some kind of workpool and backfill idle cores. In the ideal case, they are
- done by the time we need their outcome (which is at a later point - more critical
- tasks are scheduled via a classic tree-dependency thing), but if they are not I
- will call processPendingTasks() and thus give the runtime the opportunity to
- catch up.
+ Peano's main core realises a classic fork-join parallelism (left) where the
+ fork-join segments are realised via tasks. The routine tarch::multicore::spawnAndWait()
+ is used to construct this task graph part on-the-fly. Formally, this part of the
+ code is very simple to classic BSP (cmp OpenMP's parallel for), which is recursively
+ nested into each other.
 
- <h3> Peano's task flow </h3>
-
- Peano 4 can be read as one big BSP code which spawns additional tasks. That is, the
- code runs through the mesh with one big parallel for, waits for the for to terminate,
- and then continues.
-
- The caveat is that each parallel for might spawn additional tasks.
- When we wait for the BSP to terminate, these tasks still might linger around (see
- discussion on spawn mechanisms above).
- They should backfill the queues when it is appropriate.
- In one of the subsequent parallel fors, the code will need the outcome of these tasks
- that have been spawned before.
- It waits for them and, while it waits, calls processPendingTasks().
+ Each task within the core fork-join DAG might spawn additional tasks.
+ When we wait for the BSP part of the graph (left) to terminate, these tasks
+ still might linger around. They should backfill any empty task queue when it
+ is appropriate or, in general, be executed with low priority. Late on
+ throughout the execution, some further tasks for the core code section
+ will need the outcome of tasks that have been spawned before. At this
+ point, the tasks should already be completed (and therefore have dumped
+ their outcomes into a database). Otherwise, we have to manually invoke
+ the scheduler manually via tarch::multicore::processPendingTasks().
 
 
- <h3> Native backends </h3>
-
- I provide a couple of native backends where the Peano's task architecture is mapped
- 1:1 onto the backend. At the moment, these are
-
- - TBB
- - OpenMP
-
- You find the implementations in the respective directories. The files are called
- Tasks_plain.cpp. They are very simple and thus should be digestable without further
- comments. For C++ threads, I do not offer a plain implementation at the moment, but
- do offer solely a variant with its own tasking runtime layer (see below).
+ The tasks to the right are typically called enclave tasks, and they are
+ typically added on top of the core fork-join task structure by Peano
+ extensions. The prime example is ExaHyPE 2. Enclave tasking yields real bursts
+ of low priority tasks, and it would be unacceptable complicated to model the
+ dependencies on their outcomes via a task graph. Therefore, I went down the
+ route that these tasks dump their outcomes into a table, and consumer tasks
+ (or receivers in C++ terminology) then take the outcomes from there.
 
 
- <h3> Backends with additional runtime layer </h3>
+ ### GPUs and an additional queue
 
-  @image html multicore_architecture.png
+ On some platforms and code generations, it has proven of value to add an
+ additional runtime (layer) on top of the native tasking backend. These layers
+ do exist for TBB and OpenMP, e.g., and all follow the same general pattern.
+ Basically, they introduce an additional, user-managed task queue on top of the
+ native tasking systems. Enclave tasks are not spawned into the native runtime
+ but instead held back within this additional queue. There are two advantages
+ of this:
 
- On some platforms and code generations, it has proven of value to add an additional
- runtime (layer) on top of the backend. These layers do exist for TBB and OpenMP, e.g.,
- and all follow the same general patterns. The patterns in turn are inspired
- by Intel's TBB, some of them result from papers we've written, for which we had
- to pimp the scheduling. The discussion how to realise the tasking mainly focuses
- on what happens if the user spawns a task and immediately returns. All tasking
- schemes provide features where a user passes in a set of tasks and returns
- immediately. This is classic bulk synchronous processsing (BSP). The other stuff
- is the challenging part.
+ 1. Some runtimes see the task spawning as scheduling point (OpenMP e.g.) and
+    might decide to run the enclave tasks immediately, as there's so many of
+    them. However, we really want to have them low priority. By holding them
+    back in our own queue, they are invisible to the tasking runtime and
+    therefore cannot be scheduled.
 
- \image html multicore_task_flow.png
+ 2. We can search the additional queue of tasks of the same type which can fit
+    to the GPU. If we find multiple of these guys, we pack them together into
+    one large meta task (or task assembly) and throw them onto an accelerator.
 
- Our Peano 4 task are a logical concept. They have nothing to do with threads or
- tasks in an OpenMP or TBB sense. Indeed, the individual tasking backends offer
- different mappings of the logical tasks onto parallelism:
-
- - We can either not use any tasking at all;
- - or map all logical tasks directly onto real tasks;
- - or store logical tasks in a local queue and decide case by case whether we
-   map them onto proper tasks or do something else with them, i.e. process
-   them immediately.
-
- Consult the orchestration documentation for details.
+ Performance analysis shows that using one global queue on top of the actual
+ tasking backend quickly introduces performance issues, as too many tasks
+ might try to spawn their tasks concurrently into this queue. We suffer from
+ congestion. Therefore, the implementation in Tasks.cpp employs one global
+ queue plus a queue per thread.
 
 
-  <h2> OpenMP backend </h2>
+
+ ### Orchestration and (auto-)tuning
+
+ The actual orchestration is controlled via an implementation of
+ tarch::multicore::orchestration::Strategy that you set via
+ tarch::multicore::setOrchestration(). The strategy basically controls:
+
+ - How many enclave tasks should be hold back in the user-defined queue. If
+   you exceed this treshold, the backend maps each enclave task 1:1 onto a
+   native task.
+ - How many tasks should the system try to fuse into one GPU call.
+ - Should the code try to fuse these tasks immediately when they are spawned
+   or search for fusion candidates every time a fork-join section has
+   terminated.
+ - What is an appropriate scheduling strategy for a fork-join section depending
+   on the level of nested parallelisation calls.
+
+ The class tarch::multicore::orchestration::StrategyFactory allows you to pick
+ various common strategies, and it also provides the routine which determines
+ the default variant which is chosen if the user does not manually pick one.
+ As we outsource the orchestration into strategy objects, users can implement
+ online and offline autotuning within through an implementation of
+ tarch::multicore::orchestration::Strategy.
+
+
+ ### Scheduling flavours for fork-join sections
+
+ Whenever we hit a fork-join section, i.e. encounter tarch::multicore::spawnAndWait(),
+ there are different scheduling variants on the table:
+
+ 1. Execute the tasks straightaway. Do not exploit any concurrency.
+ 2. Run a straightforward, native task loop.
+ 3. Run through the forked tasks in parallel and check eventually if we should
+    map some subtasks onto native tasks.
+
+ The orchestration of choice can control this behaviour via
+ tarch::multicore::orchestration::Strategy::paralleliseForkJoinSection().
+
+ The documentation of tarch::multicore::spawnAndWait()
+ provides rationale why I think that variant (2) minimises the algorithmic
+ latency, whereas variant (3) maximises occupation, and
+
+
+ ## Backends
+
+ ### OpenMP
 
  If you want to use the OpenMP backend, you have to embed your whole main loop
  within an
 
- <pre>
+~~~~~~~~~~~~~~~~~~~~~~~~~
 #pragma omp parallel
 #pragma omp single
 {
- </pre>
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
  environment. Furthermore, you will have to use
 
- <pre>
+~~~~~~~~~~~~~~~~~~~~~~~~~
   export OMP_NESTED=true
- </pre>
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
  on some systems, as we rely heavily on nested parallelism.
+
+
+ ## Statistics
+
+ If the Peano statistics are enabled, the tasking backend will sample some quantities:
+
+ - "tarch::multicore::bsp-concurrency-level" Typically corresponds to the
+   number of fork-join traversal tasks.
+ - "tarch::multicore::global-pending-tasks" Global pending tasks.
+ - "tarch::multicore::thread-local-pending-tasks" Pending tasks per thread
+   which are not yet committed to the global queue.
+ - "tarch::multicore::fuse-tasks" Number of tasks which have been fused.
+
+ Depending on the chosen backend, you might get additional counters on top.
 
  */
   namespace multicore {
