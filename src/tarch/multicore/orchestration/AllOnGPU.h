@@ -53,9 +53,9 @@ class tarch::multicore::orchestration::AllOnGPU: public tarch::multicore::orches
     virtual bool fuseTasksImmediatelyWhenSpawned() override;
 
     /**
-     * No
+     * No if we encounter nested parallelism.
      */
-    virtual ExecutionPolicy getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) override;
+    virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) override;
 
 };
 

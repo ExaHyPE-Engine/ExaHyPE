@@ -94,14 +94,14 @@ bool tarch::multicore::orchestration::Hardcoded::fuseTasksImmediatelyWhenSpawned
 }
 
 
-tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::Hardcoded::getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
+tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::Hardcoded::paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
   if (nestedParallelismLevel>_maxNestedConcurrency) {
-    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::EmbedWithoutSubTasks;
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunSerially;
   }
-  else if (_processPendingTasksWhileWaiting) {
-    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::MaximiseThroughput;
+  else if (nestedParallelismLevel<=1) {
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel;
   }
   else {
-    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::MinimiseLatency;
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndIgnoreWithholdSubtasks;
   }
 }

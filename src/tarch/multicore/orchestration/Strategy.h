@@ -17,7 +17,7 @@ namespace tarch {
 
 
 /**
- * Interface for any task orchestration factory
+ * Interface for any task orchestration
  */
 class tarch::multicore::orchestration::Strategy {
   public:
@@ -38,13 +38,18 @@ class tarch::multicore::orchestration::Strategy {
      *   gets a huge task, it might not be available for a while once
      *   the loop has terminated. But this way, you maximise throughput as
      *   every task always tries to do a task all the time.
+     *
+     * @todo I would like to have a flag which tells the actual multicore
+     *   runtime not (!) to continue with further ready tasks. Such a
+     *   feature does not exist in OpenMP, e.g., and therefore we do not
+     *   use such a flag.
      */
     enum class ExecutionPolicy {
-      EmbedWithoutSubTasks,
-      MinimiseLatency,
-      MaximiseThroughput
+      RunSerially,
+      RunParallel,
+      RunParallelAndIgnoreWithholdSubtasks
     };
-
+    
     struct FuseInstruction {
       int  device;
       int  minTasks;
@@ -125,6 +130,6 @@ class tarch::multicore::orchestration::Strategy {
      * @param taskType We assume that all numberOfTasks tasks are of the same
      *   type.
      */
-    virtual ExecutionPolicy getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) = 0;
+    virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) = 0;
 };
 

@@ -72,6 +72,6 @@ class tarch::multicore::orchestration::BackfillAndDeployRoundRobin: public tarch
     virtual int getNumberOfTasksToHoldBack() override;
     virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice()     override;
     virtual bool fuseTasksImmediatelyWhenSpawned() override;
-    virtual ExecutionPolicy getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) override;
+    virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) override;
 };
 
