@@ -79,6 +79,22 @@ is only active in a tiny cross-shaped region within.
 @image html grid-setup.png
 
 
+## Benchmark runs
+
+Benchmarking the single black hole is not easy, as it is a rather complex setup
+already with a rather long initialisation and grid construction phase. However,
+it is possible to benchmark it once you disable plots, the tracers, and you use
+an unreasonable coarse mesh. Here are my default profiling setups that I use.
+The upper one tests "only" FD4, the lower one profiles a limited setup. 
+
+~~~~~~~~~~~~~~~~~~~~~~~
+python3 convergence-study.py -cs 2 -s fd4-rk1-ps-6 -no-tracer -et 0.01
+python3 convergence-study.py -cs 1 -s fd4-rk1-ps-3 -no-tracer -et 0.01
+python3 convergence-study.py -cs 2 -s fd4-rk1-limited-ps-3 -no-tracer -et 0.01
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
 ## Production runs
 
 Han's original setup uses the full-blown CCZ4 setup with 

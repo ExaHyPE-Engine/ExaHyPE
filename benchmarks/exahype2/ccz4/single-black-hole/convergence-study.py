@@ -358,6 +358,8 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
   ) { 
     logTraceIn( "touchCellFirstTime(...)-inject" );
     
+    repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.incNumberOfPatches();
+    
     ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FD4.NumberOfGridCellsPerPatchPerAxis,
