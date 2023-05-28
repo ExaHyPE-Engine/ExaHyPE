@@ -84,6 +84,7 @@ void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::startTimeStep(
     globalMaxTimeStepSize
   );
 
+  #if defined(CoupleWithFV)
   if (isFirstGridSweepOfTimeStep()) {
     double fvTimeStepSize = repositories::InstanceOfCCZ4SBH_FV.getAdmissibleTimeStepSize();
     double newTimeStepSize = std::min(fvTimeStepSize,_admissibleTimeStepSize);
@@ -99,4 +100,5 @@ void benchmarks::exahype2::ccz4::CCZ4SBH_FD4::startTimeStep(
     _admissibleTimeStepSize = newTimeStepSize;
     repositories::InstanceOfCCZ4SBH_FV.reduceAdmissibleTimeStepSize( newTimeStepSize );
   }
+  #endif
 }
