@@ -26,8 +26,6 @@
 namespace {
   std::atomic<int> nonblockingTasksCounter          = 0;
 
-  const std::string BSPConcurrencyLevelStatisticsIdentifier( "tarch::multicore::bsp-concurrency-level" );
-
   /**
    * Native mapping of a task loop onto a task loop
    *
@@ -46,86 +44,17 @@ namespace {
       tasks.begin(),
       tasks.end(),
       [](auto&& item) -> void {
-        #if !defined(GPUOffloadingCPP)
-          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
-        #endif
         while (item->run()) {
           #if !defined(GPUOffloadingCPP)
             std::this_thread::yield();
           #endif
         }
         delete item;
-        #if !defined(GPUOffloadingCPP)
-          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
-        #endif
       }
     );
   }
-
-  /**
-   * Aggressive BSP-type variant to run through tasks which ensures high
-   * throughput
-   *
-   * Please see the OpenMP discussion for details.
-   */
-  void spawnAndWaitAsExplicitTasksWithPolling(
-    const std::vector< tarch::multicore::Task* >&  tasks,
-    tarch::multicore::orchestration::Strategy*     strategy
-  ) {
-    assertion( not tasks.empty() );
-
-    const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
-
-    std::atomic<int>       pendingTasks  = NumberOfThreads;
-    std::atomic<int>       spawnedTasks  = 0;
-
-    //&spawnedTasks, &pendingTasks//
-    auto bspLoopBody = [&](int iterationCounter) -> void {
-      spawnedTasks++;
-
-      #if !defined(GPUOffloadingCPP)
-        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
-      #endif
-      if (iterationCounter<tasks.size()) {
-        while (tasks[iterationCounter]->run()) {
-          #if !defined(GPUOffloadingCPP)
-            std::this_thread::yield();
-          #endif
-        }
-        delete tasks[iterationCounter];
-      }
-
-      #if !defined(GPUOffloadingCPP)
-        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
-      #endif
-
-      pendingTasks--;
-
-      bool continueToProcessPendingTasks =
-        pendingTasks>0
-        and
-        pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
-        and
-        spawnedTasks==NumberOfThreads;
-      while ( continueToProcessPendingTasks ) {
-        continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
-          strategy
-        );
-      }
-    };
-
-    std::vector< std::thread* > threads;
-
-    for (int i=0; i<NumberOfThreads; i++) {
-      std::thread* newThread = new std::thread(bspLoopBody,i);
-      threads.push_back( newThread );
-    }
-
-    for (auto& p: threads) {
-      p->join();
-    }
-  }
 }
+
 
 void tarch::multicore::native::spawnTask(Task*  job) {
   nonblockingTasksCounter++;
@@ -133,14 +62,13 @@ void tarch::multicore::native::spawnTask(Task*  job) {
   std::future<void> dontWait = std::async( std::launch::async,
     [job] () -> void {
       while (job->run()) {
-        #if !defined(GPUOffloadingCPP)
-          std::this_thread::yield();
-        #endif
+        tarch::multicore::Core::getInstance().yield();
       }
       delete job;
     }
   );
 
+  // @todo This one should not be there
   nonblockingTasksCounter--;
 }
 

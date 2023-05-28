@@ -57,12 +57,12 @@ class tarch::multicore::orchestration::Strategy {
     /**
      * Notifies the strategy that we enter a BSP section
      */
-    virtual void startBSPSection() = 0;
+    virtual void startBSPSection(int nestedParallelismLevel) = 0;
 
     /**
      *
      */
-    virtual void endBSPSection()   = 0;
+    virtual void endBSPSection(int nestedParallelismLevel)   = 0;
 
     /**
      * Tell the runtime system how many tasks to hold back: If there

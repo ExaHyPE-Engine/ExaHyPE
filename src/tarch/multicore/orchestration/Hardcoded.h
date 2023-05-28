@@ -79,8 +79,8 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
     );
     virtual ~Hardcoded() = default;
 
-    virtual void startBSPSection() override;
-    virtual void endBSPSection()   override;
+    virtual void startBSPSection(int nestedParallelismLevel) override;
+    virtual void endBSPSection(int nestedParallelismLevel)   override;
     virtual int getNumberOfTasksToHoldBack() override;
     virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice()     override;
     virtual bool fuseTasksImmediatelyWhenSpawned() override;

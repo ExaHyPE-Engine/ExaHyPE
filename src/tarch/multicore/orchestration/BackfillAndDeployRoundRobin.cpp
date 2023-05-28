@@ -25,13 +25,17 @@ void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::toggleDevice(
 }
 
 
-void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::startBSPSection() {
-  _inBSPSection = true;
+void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::startBSPSection(int nestedParallelismLevel) {
+  if (nestedParallelismLevel<=1) {
+    _inBSPSection = true;
+  }
 }
 
 
-void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::endBSPSection() {
-  _inBSPSection = false;
+void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::endBSPSection(int nestedParallelismLevel) {
+  if (nestedParallelismLevel<=1) {
+    _inBSPSection = false;
+  }
 }
 
 

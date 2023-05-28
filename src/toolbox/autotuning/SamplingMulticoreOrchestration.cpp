@@ -94,37 +94,39 @@ void tarch::multicore::orchestration::GeneticOptimisation::normalise() {
 }
 
 
-void tarch::multicore::orchestration::GeneticOptimisation::startBSPSection() {
-  if (_bspRunThroughsWithActiveKey==0) {
+void tarch::multicore::orchestration::GeneticOptimisation::startBSPSection(int nestedParallelismLevel) {
+  if (nestedParallelismLevel<=1 and _bspRunThroughsWithActiveKey==0) {
     _currentWatch.start();
   }
 }
 
 
-void tarch::multicore::orchestration::GeneticOptimisation::endBSPSection() {
-  const int BSPRunThroughsWithActiveKey = 16;
-  _bspRunThroughsWithActiveKey++;
+void tarch::multicore::orchestration::GeneticOptimisation::endBSPSection(int nestedParallelismLevel) {
+  if (nestedParallelismLevel<=1) {
+    const int BSPRunThroughsWithActiveKey = 16;
+    _bspRunThroughsWithActiveKey++;
 
-  if (_bspRunThroughsWithActiveKey>=BSPRunThroughsWithActiveKey) {
-    _bspRunThroughsWithActiveKey = 0;
+    if (_bspRunThroughsWithActiveKey>=BSPRunThroughsWithActiveKey) {
+      _bspRunThroughsWithActiveKey = 0;
 
-    _currentWatch.stop();
-    double newValue = _currentWatch.getCalendarTime();
+      _currentWatch.stop();
+      double newValue = _currentWatch.getCalendarTime();
 
-    constexpr double Min = 1e-8;
-    if (newValue>Min) {
-      // update stats
-      _configurationVariants.at(_activeKey).measurement.setValue(newValue);
+      constexpr double Min = 1e-8;
+      if (newValue>Min) {
+        // update stats
+        _configurationVariants.at(_activeKey).measurement.setValue(newValue);
 
-      // update probabilities. Increase local ones if appropriate and then re-normalise
-      if ( _lastDuration>Min and _lastDuration>_configurationVariants.at(_activeKey).measurement.getValue() ) {
-        increaseProbabilityOfActiveConfiguration();
-        removeUnreasonableProbabilities();
-        normalise();
+        // update probabilities. Increase local ones if appropriate and then re-normalise
+        if ( _lastDuration>Min and _lastDuration>_configurationVariants.at(_activeKey).measurement.getValue() ) {
+          increaseProbabilityOfActiveConfiguration();
+          removeUnreasonableProbabilities();
+          normalise();
+        }
+        _lastDuration = _configurationVariants.at(_activeKey).measurement.getValue();
+
+        pickNewActiveConfigurationRandomly();
       }
-      _lastDuration = _configurationVariants.at(_activeKey).measurement.getValue();
-
-      pickNewActiveConfigurationRandomly();
     }
   }
 }

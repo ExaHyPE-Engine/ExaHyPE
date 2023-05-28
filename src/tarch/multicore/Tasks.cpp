@@ -411,9 +411,12 @@ void tarch::multicore::spawnAndWait(
     tarch::multicore::Lock nestingLock( nestingSemaphore, false );
     nestingLock.lock();
     nestedSpawnAndWaits++;
+    const int localNestedSpawnAndWaits = nestedSpawnAndWaits;
     nestingLock.free();
 
-    switch (orchestrationStrategy->paralleliseForkJoinSection(nestedSpawnAndWaits, tasks.size(), tasks[0]->getTaskType())) {
+    orchestrationStrategy->startBSPSection(localNestedSpawnAndWaits);
+
+    switch (orchestrationStrategy->paralleliseForkJoinSection(localNestedSpawnAndWaits, tasks.size(), tasks[0]->getTaskType())) {
       case tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunSerially:
         {
           for (auto& p: tasks) {
@@ -459,6 +462,8 @@ void tarch::multicore::spawnAndWait(
         }
         break;
     }
+
+    orchestrationStrategy->endBSPSection(localNestedSpawnAndWaits);
 
     nestingLock.lock();
     nestedSpawnAndWaits--;
@@ -510,19 +515,13 @@ void tarch::multicore::native::spawnTask(Task*  job) {
 }
 
 
-void tarch::multicore::native::spawnAndWait(
-  const std::vector< Task* >&  tasks,
-  orchestration::Strategy*     strategy
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(
+  const std::vector< Task* >&  tasks
 ) {
   for (auto& p: tasks) {
     while (p->run()) {}
     delete p;
   }
-}
-
-
-int tarch::multicore::internal::getNumberOfWithholdPendingTasks() {
-  return 0;
 }
 
 

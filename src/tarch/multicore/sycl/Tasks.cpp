@@ -15,11 +15,6 @@
 
 namespace {
   tarch::multicore::BooleanSemaphore  suspensionPointSemaphore;
-
-  /**
-   * Seems that there is no atomic in tbb. So I use the standard one.
-   */
-  std::atomic<int> nonblockingTasksCounter          = 0;
 }
 
 
@@ -46,57 +41,6 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(
 
 
 /**
- * Aggressive BSP-type variant to run through tasks which ensures high
- * throughput
- *
- * This is a straightforward translation of the OpenMP high-throughput
- * realisation.
- *
- * @see spawnAndWaitAsTaskLoop() for realisation details re TBB/SYCL.
- */
-void tarch::multicore::native::spawnAndWaitAsExplicitTasksWithPolling(
-  const std::vector< tarch::multicore::Task* >&  tasks,
-  tarch::multicore::orchestration::Strategy*     strategy
-) {
-  assertion( not tasks.empty() );
-
-  const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
-
-  std::atomic<int>       pendingTasks  = NumberOfThreads;
-  std::atomic<int>       spawnedTasks  = 0;
-
-  for (auto& p: tasks) {
-    tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
-      h.host_task([&]() {
-        spawnedTasks++;
-
-        while (p->run()) {}
-        delete p;
-
-        pendingTasks--;
-
-        bool continueToProcessPendingTasks =
-          pendingTasks>0
-          and
-          pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
-          and
-          spawnedTasks==NumberOfThreads;
-        while ( continueToProcessPendingTasks ) {
-          continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
-            strategy
-          );
-        }
-     });
-    });
-  }
-
-  // @todo This is not nice. I don't want to wait for all events. I would like
-  // to wait for BSP events only
-  tarch::multicore::getHostSYCLQueue().wait();
-}
-
-
-/**
  * Read spawnAndWaitAsTaskLoop() first.
  *
  * ## Implementation details
@@ -113,23 +57,16 @@ void tarch::multicore::native::spawnAndWaitAsExplicitTasksWithPolling(
  * @see spawnAndWaitAsTaskLoop()
  */
 void tarch::multicore::native::spawnTask(Task*  job) {
-  nonblockingTasksCounter++;
-
   sycl::event e = tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
     h.host_task([=]() {
       while (job->run()) {}
       delete job;
-      nonblockingTasksCounter--;
     });
   });
 
   e.wait();
 }
 
-
-int tarch::multicore::native::getNumberOfPendingTasks() {
-  return nonblockingTasksCounter;
-}
 
 /**
  * It is not clear what happens if I use tasksOfSameType directly within the task.

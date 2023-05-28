@@ -38,11 +38,18 @@ namespace {
  * See discussion in the context of the other taskloop: It is important to
  * label tasks as shared even though I think copying should be fine as a copy
  * degenerates to a shallow copy.
+ *
+ * Please study the remarks in tarch::multicore::spawnAndWait() which discusses
+ * flaws of the OpenMP realisation on some systems.
+ *
+ * Please note that you are not allowed to call this routine for an empty task
+ * set. The empty task set means that the taskloop construct becomes nop. The
+ * subsequent taskwait hence synchronises on one logical level above within the
+ * task hierarchy, which is not what we want.
  */
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(
   const std::vector< tarch::multicore::Task* >&  tasks
 ) {
-  // important, otherwise taskwait synchronises
   assertion( not tasks.empty() );
 
   #if defined(OpenMPTaskGroup)

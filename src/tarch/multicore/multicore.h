@@ -136,6 +136,16 @@ and
  route that these tasks dump their outcomes into a table, and consumer tasks
  (or receivers in C++ terminology) then take the outcomes from there.
 
+ There is a further reason to work with the dedicated queues: As we found out
+ and describe in the 2021 IWOMP paper by H. Schulz et al, tasking frameworks
+ such as OpenMP might decide to switch to any ready task throughout the
+ execution. This means that they might postpone the processing of the
+ DAG to the left and instead do the free tasks on the right. This is not
+ what we want: We want them to have lower priority. An important paper to read
+ in the context of the present solution is also
+ https://www.osti.gov/pages/servlets/purl/1465188. Note in particular the
+ example in Figure 3.
+
 
  ### GPUs and an additional queue
 

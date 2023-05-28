@@ -9,13 +9,17 @@ tarch::multicore::orchestration::AllOnGPU::AllOnGPU(int device):
 }
 
 
-void tarch::multicore::orchestration::AllOnGPU::startBSPSection() {
-  _isInBspSection = true;
+void tarch::multicore::orchestration::AllOnGPU::startBSPSection(int nestedParallelismLevel) {
+  if (nestedParallelismLevel<=1) {
+    _isInBspSection = true;
+  }
 }
 
 
-void tarch::multicore::orchestration::AllOnGPU::endBSPSection() {
-  _isInBspSection = false;
+void tarch::multicore::orchestration::AllOnGPU::endBSPSection(int nestedParallelismLevel) {
+  if (nestedParallelismLevel<=1) {
+    _isInBspSection = false;
+  }
 }
 
 

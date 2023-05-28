@@ -17,13 +17,6 @@
 
 namespace {
   tarch::multicore::BooleanSemaphore  suspensionPointSemaphore;
-
-  const std::string BSPConcurrencyLevelStatisticsIdentifier( "tarch::multicore::bsp-concurrency-level" );
-
-  /**
-   * Seems that there is no atomic in tbb. So I use the standard one.
-   */
-  std::atomic<int> nonblockingTasksCounter          = 0;
 }
 
 
@@ -106,64 +99,10 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(
   for (auto& p: tasks) {
     taskGroup.run(
       [&tasks,p]() -> void {
-        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
-        while (p->run()) {}
+        while (p->run()) {
+          tarch::multicore::Core::getInstance().yield();
+        }
         delete p;
-        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
-      }
-    );
-  }
-  taskGroup.wait();
-}
-
-
-/**
- * Aggressive BSP-type variant to run through tasks which ensures high
- * throughput
- *
- * This is a straightforward translation of the OpenMP high-throughput
- * realisation.
- *
- * @see spawnAndWaitAsTaskLoop() for realisation details re TBB/SYCL.
- */
-void tarch::multicore::native::spawnAndWaitAsExplicitTasksWithPolling(
-  const std::vector< tarch::multicore::Task* >&  tasks,
-  tarch::multicore::orchestration::Strategy*     strategy
-) {
-  assertion( not tasks.empty() );
-
-  const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
-
-  std::atomic<int>       pendingTasks  = NumberOfThreads;
-  std::atomic<int>       spawnedTasks  = 0;
-
-  ::tbb::task_group taskGroup;
-  for (int i=0; i<NumberOfThreads; i++) {
-    // is implicitly executed within root arena
-    taskGroup.run(
-      [&spawnedTasks,&pendingTasks,&tasks,i,NumberOfThreads,&strategy] () -> void {
-        spawnedTasks++;
-
-        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
-        if (i<tasks.size()) {
-          while (tasks[i]->run()) {}
-          delete tasks[i];
-        }
-        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
-
-        pendingTasks--;
-
-        bool continueToProcessPendingTasks =
-          pendingTasks>0
-          and
-          pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
-          and
-          spawnedTasks==NumberOfThreads;
-        while ( continueToProcessPendingTasks ) {
-          continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
-            strategy
-          );
-        }
       }
     );
   }
@@ -177,8 +116,6 @@ void tarch::multicore::native::spawnAndWaitAsExplicitTasksWithPolling(
  * @see spawnAndWaitAsTaskLoop()
  */
 void tarch::multicore::native::spawnTask(Task*  job) {
-  nonblockingTasksCounter++;
-
   // Does not work, as we have virtual functions, too.
 /*
   backgroundTaskQueue.submit([&] (sycl::handler& commandGroupHandler) {
@@ -201,13 +138,7 @@ void tarch::multicore::native::spawnTask(Task*  job) {
   backgroundTaskGroup.run([&,job]{
     while (job->run()) {}
     delete job;
-    nonblockingTasksCounter--;
   });
-}
-
-
-int tarch::multicore::native::getNumberOfPendingTasks() {
-  return nonblockingTasksCounter;
 }
 
 

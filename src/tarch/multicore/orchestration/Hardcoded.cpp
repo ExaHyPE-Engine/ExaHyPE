@@ -73,10 +73,10 @@ tarch::multicore::orchestration::Hardcoded::Hardcoded(
   _maxNestedConcurrency(maxNestedConcurrency) {}
 
 
-void tarch::multicore::orchestration::Hardcoded::startBSPSection() {}
+void tarch::multicore::orchestration::Hardcoded::startBSPSection(int nestedParallelismLevel) {}
 
 
-void tarch::multicore::orchestration::Hardcoded::endBSPSection() {}
+void tarch::multicore::orchestration::Hardcoded::endBSPSection(int nestedParallelismLevel) {}
 
 
 int tarch::multicore::orchestration::Hardcoded::getNumberOfTasksToHoldBack() {
