@@ -20,6 +20,7 @@ parser.add_argument('--fem', action='store_true', help='Enable finite elements s
 parser.add_argument('--libxsmm', action='store_true', help='Enable libxsmm support')
 parser.add_argument('--multithreading', choices=['omp', 'tbb', 'sycl', 'cpp'], help='Enable multithreading support')
 parser.add_argument('--gpu', choices=['omp', 'cuda', 'sycl', 'cpp', 'hip'], help='Enable GPU support')
+parser.add_argument('--mpi', help='Enable MPI support')
 parser.add_argument('--arch', choices=[
   'gfx906', 'gfx908', 'gfx90a', # gfx906=MI50, gfx908=MI100, gfx90a=MI200
   'cc70', 'cc72', 'cc75', 'cc80', 'cc86', 'cc90',
@@ -80,6 +81,9 @@ if args.multithreading is not None:
 
 if args.gpu is not None:
   configure_args.append(f'--with-gpu={args.gpu}')
+
+if args.mpi is not None:
+  configure_args.append(f'--with-mpi={args.mpi}')
 
 if args.exahype:
   configure_args.append('--enable-exahype')
