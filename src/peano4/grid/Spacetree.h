@@ -1027,5 +1027,3 @@ class peano4::grid::Spacetree {
 
     bool isInvolvedInJoinOrFork() const;
 };
-
-

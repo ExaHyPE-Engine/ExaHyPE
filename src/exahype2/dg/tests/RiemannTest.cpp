@@ -2,18 +2,16 @@
 #include "TestUtils.h"
 #include "../Riemann.h"
 #include "../DGUtils.h"
-
+#include "enumerator/FaceAoSLexicographicEnumerator.h"
 
 exahype2::dg::tests::RiemannTest::RiemannTest():
   tarch::tests::TestCase( "exahype2::dg::tests::RiemannTest" ) {
 }
 
-
 void exahype2::dg::tests::RiemannTest::run() {
   testMethod( testProjectVolumetricDataOntoFacesForConstantSolutionOrder3 );
   testMethod( testProjectVolumetricDataOntoFacesForConstantSolutionOrder0 );
 }
-
 
 void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder3() {
   const int order        = 3;
@@ -27,7 +25,7 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
     cellQin[i] = i%2==0 ? 1.0 : -1.0;
   }
 
-  //values on the faces: left and right, one unknown, one auxiliary variable
+  // Values on the faces: left and right, one unknown, one auxiliary variable
   double QxL[2*nodesPerFace*2];
   double QxR[2*nodesPerFace*2];
   double QyL[2*nodesPerFace*2];
@@ -143,7 +141,6 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   #endif
 }
 
-
 void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder0() {
   const int order        = 0;
 
@@ -156,7 +153,6 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   double frontQ[]  = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
   double backQ[]   = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
   #endif
-
 
   #if Dimensions==2
   ::exahype2::dg::projectVolumetricDataOntoFaces(
@@ -171,6 +167,7 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
     topQ
   );
   #endif
+
   #if Dimensions==3
   ::exahype2::dg::projectVolumetricDataOntoFaces(
     QIn,
@@ -194,5 +191,3 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   validateNumericalEquals( leftQ[4], 0.0 );
   validateNumericalEquals( leftQ[5], 0.1 );
 }
-
-

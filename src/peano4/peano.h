@@ -5,8 +5,6 @@
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
 
-
-
 /**
  * @dir src/peano4
  *
@@ -110,7 +108,3 @@ namespace peano4 {
    */
   void shutdownSingletons();
 }
-
-
-
-

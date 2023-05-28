@@ -5,8 +5,8 @@
 #include <string>
 
 #ifdef Parallel
-  #include <mpi.h>
-  #include <functional>
+#include <mpi.h>
+#include <functional>
 #endif
 
 #include "tarch/la/Vector.h"
@@ -59,6 +59,7 @@ struct peano4::grid::GridVertex {
     int   getLevel() const;
     void   setLevel(int value);
     GridVertex(const GridVertex& copy);
+    GridVertex& operator = (const GridVertex& assign);
 
     #ifdef Parallel
     PragmaPush

@@ -1,34 +1,28 @@
 #include "GridTraversalEvent.h"
 
-
-
 #include <sstream>
 #include <algorithm>
 
-
-
 peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing){
-setX( __x);
-setH( __h);
-setHasBeenRefined( __hasBeenRefined);
-setWillBeRefined( __willBeRefined);
-setIsVertexLocal( __isVertexLocal);
-setIsFaceLocal( __isFaceLocal);
-setIsCellLocal( __isCellLocal);
-setIsParentCellLocal( __isParentCellLocal);
-setIsVertexAdjacentToParallelDomainBoundary( __isVertexAdjacentToParallelDomainBoundary);
-setIsFaceAdjacentToParallelDomainBoundary( __isFaceAdjacentToParallelDomainBoundary);
-setVertexDataFrom( __vertexDataFrom);
-setVertexDataTo( __vertexDataTo);
-setFaceDataFrom( __faceDataFrom);
-setFaceDataTo( __faceDataTo);
-setCellData( __cellData);
-setRelativePositionToFather( __relativePositionToFather);
-setInvokingSpacetree( __invokingSpacetree);
-setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
+  setX( __x);
+  setH( __h);
+  setHasBeenRefined( __hasBeenRefined);
+  setWillBeRefined( __willBeRefined);
+  setIsVertexLocal( __isVertexLocal);
+  setIsFaceLocal( __isFaceLocal);
+  setIsCellLocal( __isCellLocal);
+  setIsParentCellLocal( __isParentCellLocal);
+  setIsVertexAdjacentToParallelDomainBoundary( __isVertexAdjacentToParallelDomainBoundary);
+  setIsFaceAdjacentToParallelDomainBoundary( __isFaceAdjacentToParallelDomainBoundary);
+  setVertexDataFrom( __vertexDataFrom);
+  setVertexDataTo( __vertexDataTo);
+  setFaceDataFrom( __faceDataFrom);
+  setFaceDataTo( __faceDataTo);
+  setCellData( __cellData);
+  setRelativePositionToFather( __relativePositionToFather);
+  setInvokingSpacetree( __invokingSpacetree);
+  setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
 }
-
-
 
 peano4::grid::GridTraversalEvent::GridTraversalEvent( const GridTraversalEvent& copy ) {
   setX( copy.getX() );
@@ -50,10 +44,6 @@ peano4::grid::GridTraversalEvent::GridTraversalEvent( const GridTraversalEvent& 
   setInvokingSpacetree( copy.getInvokingSpacetree() );
   setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( copy.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() );
 }
-
-
-
-
 
 std::string peano4::grid::GridTraversalEvent::toString() const {
   std::ostringstream out;
@@ -96,10 +86,6 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << ")";
   return out.str();
 }
-
-
-
-
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::GridTraversalEvent::getX() const {
 

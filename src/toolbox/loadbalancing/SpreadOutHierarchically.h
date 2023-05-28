@@ -56,6 +56,7 @@ class toolbox::loadbalancing::SpreadOutHierarchically: public toolbox::loadbalan
     virtual ~SpreadOutHierarchically();
 
     virtual void finishStep() override;
+
   private:
     static tarch::logging::Log  _log;
 

@@ -1,9 +1,7 @@
 #include "parallel.h"
 
-
-int peano4::parallel::getTaskType(const std::string&  className) {
+int peano4::parallel::getTaskType() {
   static int taskTypeCounter = -1;
   taskTypeCounter++;
   return taskTypeCounter;
 }
-

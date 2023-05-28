@@ -37,7 +37,6 @@ namespace peano4 {
 
 
 /**
- * 
  *
  * ## Visibility
  *
@@ -388,7 +387,12 @@ class peano4::stacks::STDVectorStack {
      * code still might insert additional elements, i.e. starting does not
      * mean all the data that is to be sent out is already in the container.
      */
-    void startSend(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm) {
+    void startSend(
+      [[maybe_unused]] peano4::grid::TraversalObserver::SendReceiveContext context,
+      [[maybe_unused]] int rank,
+      [[maybe_unused]] int tag,
+      [[maybe_unused]] MPI_Comm comm
+    ) {
       #ifdef Parallel
       assertion( _ioMode==IOMode::None );
       assertion( _ioMPIRequest==nullptr );
@@ -416,7 +420,13 @@ class peano4::stacks::STDVectorStack {
     /**
      * @see startSend()
      */
-    void startReceive(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm, int numberOfElements) {
+    void startReceive(
+      [[maybe_unused]] peano4::grid::TraversalObserver::SendReceiveContext context,
+      [[maybe_unused]] int rank,
+      [[maybe_unused]] int tag,
+      [[maybe_unused]] MPI_Comm comm,
+      [[maybe_unused]] int numberOfElements
+    ) {
       #ifdef Parallel
       assertion3( _ioMode==IOMode::None, rank, tag, numberOfElements );
       assertion3( numberOfElements>0, rank, tag, numberOfElements );
@@ -558,5 +568,3 @@ MPI_Datatype peano4::stacks::translateContextIntoDatatype( peano4::grid::Travers
    return T::getGlobalCommunciationDatatype();
 }
 #endif
-
-

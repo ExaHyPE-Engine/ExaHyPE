@@ -15,8 +15,6 @@
 #include "tarch/mpi/StringMessage.h"
 #include "tarch/mpi/BooleanSemaphore.h"
 
-
-
 /**
  * For the machine name. If it doesn't work, switch it off in the file
  * CompilerSpecificSettings.h.
@@ -25,15 +23,11 @@
 #include <sys/utsname.h>
 #endif
 
-
 tarch::logging::Log tarch::mpi::Rank::_log("tarch::mpi::Rank");
 int     tarch::mpi::Rank::_maxTags     = -1;
 int     tarch::mpi::Rank::_tagCounter  = 0;
 
-
 tarch::mpi::Rank  tarch::mpi::Rank::_singleton;
-
-
 
 void tarch::mpi::Rank::releaseTag(int tag) {
   if (tag==_tagCounter-1) {
@@ -42,7 +36,7 @@ void tarch::mpi::Rank::releaseTag(int tag) {
 }
 
 
-int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName, int numberOfTags) {
+int tarch::mpi::Rank::reserveFreeTag([[maybe_unused]] const std::string& fullQualifiedMessageName, [[maybe_unused]] int numberOfTags) {
   assertion2(numberOfTags>=1,fullQualifiedMessageName,numberOfTags);
   const int result = _tagCounter;
   _tagCounter += numberOfTags;
@@ -72,7 +66,7 @@ bool tarch::mpi::Rank::isInitialised() const {
 }
 
 
-void tarch::mpi::Rank::ensureThatMessageQueuesAreEmpty( int fromRank, int tag ) {
+void tarch::mpi::Rank::ensureThatMessageQueuesAreEmpty( [[maybe_unused]] int fromRank, [[maybe_unused]] int tag ) {
   #ifdef Parallel
   int          flag;
   MPI_Iprobe(fromRank, tag, _communicator, &flag, MPI_STATUS_IGNORE);
@@ -161,8 +155,7 @@ void tarch::mpi::Rank::writeTimeOutWarning(
         "writeTimeOutWarning(...)",
         "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
       );
-    }
-    else {
+    } else {
       logWarning(
         "writeTimeOutWarning(...)",
         "deadlock detection switched off as deadlock time out is set to " << _deadlockTimeOut.count() << ", i.e. you will continue to get warnings, but code will not shut down"
@@ -263,8 +256,7 @@ tarch::mpi::Rank::Rank():
   _communicator( MPI_COMM_WORLD),
   _timeOutWarning(0),
   _deadlockTimeOut(0),
-  _areTimeoutsEnabled(true) {
-}
+  _areTimeoutsEnabled(true) {}
 #else
 tarch::mpi::Rank::Rank():
   _initIsCalled(false),
@@ -272,14 +264,10 @@ tarch::mpi::Rank::Rank():
   _numberOfProcessors(1),
   _timeOutWarning(0),
   _deadlockTimeOut(0),
-  _areTimeoutsEnabled(true) {
-}
+  _areTimeoutsEnabled(true) {}
 #endif
 
-
-tarch::mpi::Rank::~Rank() {
-}
-
+tarch::mpi::Rank::~Rank() {}
 
 #ifdef Parallel
 void tarch::mpi::Rank::allReduce(
@@ -350,7 +338,7 @@ void tarch::mpi::Rank::reduce(
 #endif
 
 
-void tarch::mpi::Rank::barrier(std::function<void()> waitor) {
+void tarch::mpi::Rank::barrier([[maybe_unused]] std::function<void()> waitor) {
   #ifdef Parallel
   logTraceIn( "barrier()" );
 
@@ -380,7 +368,7 @@ void tarch::mpi::Rank::barrier(std::function<void()> waitor) {
 }
 
 
-bool tarch::mpi::Rank::isMessageInQueue(int tag) const {
+bool tarch::mpi::Rank::isMessageInQueue([[maybe_unused]] int tag) const {
   #if Parallel
   int  flag        = 0;
   MPI_Iprobe(
@@ -392,8 +380,6 @@ bool tarch::mpi::Rank::isMessageInQueue(int tag) const {
   return false;
   #endif
 }
-
-
 
 void tarch::mpi::Rank::shutdown() {
   logTraceIn( "shutdown()" );
@@ -458,7 +444,7 @@ bool tarch::mpi::Rank::validateMaxTagIsSupported() {
   if (
     _maxTags <= 0
     or
-    _tagCounter<_maxTags
+    _tagCounter < _maxTags
     ) {
     return true;
   }
@@ -469,7 +455,7 @@ bool tarch::mpi::Rank::validateMaxTagIsSupported() {
 }
 
 
-bool tarch::mpi::Rank::init(int* argc, char*** argv) {
+bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char*** argv) {
   #ifdef Parallel
   int result = MPI_SUCCESS;
 
@@ -585,7 +571,7 @@ void tarch::mpi::Rank::setCommunicator( MPI_Comm communicator, bool recomputeRan
 #endif
 
 
-void tarch::mpi::Rank::abort(int errorCode) {
+void tarch::mpi::Rank::abort([[maybe_unused]] int errorCode) {
   std::cout.flush();
   std::cerr.flush();
   #if Parallel

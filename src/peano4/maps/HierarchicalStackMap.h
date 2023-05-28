@@ -54,6 +54,7 @@ class peano4::maps::HierarchicalStackMap {
      * you have to wrap it into  a semaphore manually.
      */
     void createStack(int localTreeNumber, int stackNumber);
+
   public:
     HierarchicalStackMap();
     ~HierarchicalStackMap();
@@ -115,7 +116,7 @@ class peano4::maps::HierarchicalStackMap {
 template <typename T>
 void peano4::maps::HierarchicalStackMap<T>::createStack(int localTreeNumber, int stackNumber) {
   assertion(localTreeNumber>=0);
-  assertion(localTreeNumber<_data.size());
+  assertion(localTreeNumber<static_cast<int>(_data.size()));
   if ( _data[localTreeNumber]._stackNumberToData.count(stackNumber)==0 ) {
     _data[localTreeNumber]._stackNumberToData.insert(
       std::pair< int, T* >(
@@ -179,7 +180,7 @@ template <typename T>
 T* peano4::maps::HierarchicalStackMap<T>::getForPop(const StackKey& key) {
   const int localTreeId = peano4::parallel::Node::getInstance().getLocalTreeId(key.first);
   assertion3(localTreeId>=0,localTreeId,key.first,key.second);
-  assertion4(localTreeId<_data.size(),localTreeId,_data.size(),key.first,key.second);
+  assertion4(localTreeId<static_cast<int>(_data.size()),localTreeId,_data.size(),key.first,key.second);
   assertion4(_data[localTreeId]._stackNumberToData.count(key.second)==1,localTreeId,_data.size(),key.first,key.second);
   return _data[localTreeId]._stackNumberToData.at(key.second);
 }
@@ -202,7 +203,7 @@ std::string peano4::maps::HierarchicalStackMap<T>::toString() const {
 template <typename T>
 std::set<peano4::maps::StackKey>  peano4::maps::HierarchicalStackMap<T>::getKeys() {
   std::set<peano4::maps::StackKey> result;
-  for (int i=0; i<_data.size(); i++) {
+  for (int i = 0; i < static_cast<int>(_data.size()); i++) {
     for (auto& pp: _data[i]._stackNumberToData) {
       result.insert( peano4::maps::StackKey( peano4::parallel::Node::getInstance().getGlobalTreeId(i),pp.first) );
     }
@@ -230,7 +231,7 @@ peano4::maps::HierarchicalStackMap<T>::HierarchicalStackMap():
 template <typename T>
 void peano4::maps::HierarchicalStackMap<T>::garbageCollection(int spacetree) {
   const int localTreeId = peano4::parallel::Node::getInstance().getLocalTreeId(spacetree);
-  if (_data.size()>localTreeId) {
+  if (static_cast<int>(_data.size()) > localTreeId) {
     for (auto& p: _data[localTreeId]._stackNumberToData) {
       if (
         p.second->empty()
@@ -261,7 +262,7 @@ void peano4::maps::HierarchicalStackMap<T>::clear() {
 template <typename T>
 void peano4::maps::HierarchicalStackMap<T>::clear(int spacetree) {
   const int localTreeId = peano4::parallel::Node::getInstance().getLocalTreeId(spacetree);
-  if (static_cast<int>(_data.size())>localTreeId) {
+  if (static_cast<int>(_data.size()) > localTreeId) {
     for (auto& p: _data[localTreeId]._stackNumberToData) {
       delete p.second;
       p.second = new T();

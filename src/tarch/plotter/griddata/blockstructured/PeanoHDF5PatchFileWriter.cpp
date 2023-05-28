@@ -4,10 +4,7 @@
 #include "../../../mpi/Rank.h"
 
 
-
-
 tarch::logging::Log tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::_log( "tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter" );
-
 
 const std::string tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::HEADER =
 "# \n" \
@@ -15,13 +12,11 @@ const std::string tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileW
 "# Version 0.1 \n" \
 "# \n";
 
-
-
 tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::PeanoHDF5PatchFileWriter(
-  int                  dimensions,
-  const std::string&   filename,
-  bool                 append,
-  bool                 compress
+  int                   dimensions,
+  const std::string&    filename,
+  [[maybe_unused]] bool append,
+  [[maybe_unused]] bool compress
 ):
   _dimensions(dimensions),
   _compress(compress) {
@@ -37,16 +32,14 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::PeanoHDF5Pa
   #ifdef UseHDF5
   if (append) {
     _file = H5Fopen((filename+".hdf5").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
-  }
-  else {
+  } else {
     _file = H5Fcreate((filename+".hdf5").c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   }
 
-  if (_file<0) {
+  if (_file < 0) {
     logError( "PeanoHDF5PatchFileWriter()", "failed to obtain file handle for HDF5 file " << filename << ". Wanted to append data=" << append );
     _isOpen = false;
-  }
-  else {
+  } else {
     _isOpen = true;
 
     //
@@ -54,16 +47,16 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::PeanoHDF5Pa
     //
     if (!append) {
       {
-	logDebug( "PeanoHDF5PatchFileWriter(...)", "create Number of datasets attribute" );
+        logDebug( "PeanoHDF5PatchFileWriter(...)", "create Number of datasets attribute" );
 
         /*
          * Create scalar attribute.
          */
         hid_t dataSetCounterDataSpace = H5Screate(H5S_SCALAR);
         hid_t dataSetCounterAttribute = H5Acreate(
-	      _file, "Number of datasets", H5T_NATIVE_INT,
-	      dataSetCounterDataSpace, H5P_DEFAULT, H5P_DEFAULT
-	    );
+          _file, "Number of datasets", H5T_NATIVE_INT,
+          dataSetCounterDataSpace, H5P_DEFAULT, H5P_DEFAULT
+        );
 
         /*
          * Write scalar attribute.
@@ -83,9 +76,9 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::PeanoHDF5Pa
          */
         hid_t numberOfCellsPerAxisDataSpace = H5Screate(H5S_SCALAR);
         hid_t numberOfCellsPerAxisAttribute = H5Acreate(
-	      _file, "Number of cells per axis", H5T_NATIVE_INT,
-	      numberOfCellsPerAxisDataSpace, H5P_DEFAULT, H5P_DEFAULT
-	    );
+          _file, "Number of cells per axis", H5T_NATIVE_INT,
+          numberOfCellsPerAxisDataSpace, H5P_DEFAULT, H5P_DEFAULT
+        );
 
         /**
          * Write scalar attribute.
@@ -98,16 +91,16 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::PeanoHDF5Pa
       }
 
       {
-	logDebug( "PeanoHDF5PatchFileWriter(...)", "create Dimensions attribute" );
+        logDebug( "PeanoHDF5PatchFileWriter(...)", "create Dimensions attribute" );
 
         /**
          * Create scalar attribute.
          */
         hid_t dimensionsDataSpace = H5Screate(H5S_SCALAR);
         hid_t dimensionsAttribute = H5Acreate(
-	      _file, "Dimensions", H5T_NATIVE_INT,
-	      dimensionsDataSpace, H5P_DEFAULT, H5P_DEFAULT
-	    );
+          _file, "Dimensions", H5T_NATIVE_INT,
+          dimensionsDataSpace, H5P_DEFAULT, H5P_DEFAULT
+        );
 
         /**
          * Write scalar attribute.
@@ -192,7 +185,7 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::~PeanoHDF5P
   if (_file>=0) {
     herr_t   status = H5Fclose(_file);
 
-    if (status<0) {
+    if (status < 0) {
       logError( "PeanoHDF5PatchFileWriter()", "failed to close HDF5 file" );
     }
   }
@@ -296,8 +289,7 @@ hid_t  tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::crea
     H5Pset_chunk (propertyList, 2, cdims);
     H5Pset_deflate(propertyList, 6);
     return propertyList;
-  }
-  else {
+  } else {
     return H5P_DEFAULT;
   }
 }
@@ -389,9 +381,9 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::clear(
 
 
 void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::addMetaData(const std::string& metaData) {
-/*
-  _out << "begin meta-data" << std::endl
+  /*_out << "begin meta-data" << std::endl
        << metaData << std::endl
        << "end meta-data" << std::endl << std::endl;
-*/
+  */
+  (void)metaData;
 }

@@ -30,8 +30,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWri
 }
 
 
-tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::~CellDataWriter() {
-}
+tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::~CellDataWriter() {}
 
 
 int tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::getCellsPerPatch() const {
@@ -46,17 +45,15 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDa
 }
 
 
-void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::plotCell( int index, double value ) {
+void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::plotCell( [[maybe_unused]] int index, double value ) {
   for (int i=0; i<_numberOfUnknowns; i++) {
     if (std::isnan(value)) {
       _out << " nan";
-    }
-    else {
+    } else {
       if ( std::abs(value) < std::numeric_limits<double>::min() ) value = 0.0;
       if (tarch::la::equals(value,0.0)) {
         _out << " 0";
-      }
-      else {
+      } else {
         _out << " " << value;
       }
     }
@@ -66,17 +63,15 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDa
 }
 
 
-void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::plotCell( int index, double* values ) {
+void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::plotCell( [[maybe_unused]] int index, double* values ) {
   for (int i=0; i<_numberOfUnknowns; i++) {
     if (std::isnan(values[i])) {
       _out << " nan";
-    }
-    else {
+    } else {
       if ( std::abs(values[i]) < std::numeric_limits<double>::min() ) values[i] = 0.0;
       if (tarch::la::equals(values[i],0.0)) {
         _out << " 0";
-      }
-      else {
+      } else {
         _out << " " << values[i];
       }
     }
@@ -86,8 +81,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDa
 }
 
 
-void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::close() {
-}
+void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::close() {}
 
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::flushIfPatchIsComplete() {
@@ -103,12 +97,10 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDa
 
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::assignRemainingCellsDefaultValues() {
-	assertionMsg( false, "not implemented" );
+  assertionMsg( false, "not implemented" );
 }
 
 
 int tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::getFirstCellWithinPatch(int index) const {
   return index * getCellsPerPatch();
 }
-
-

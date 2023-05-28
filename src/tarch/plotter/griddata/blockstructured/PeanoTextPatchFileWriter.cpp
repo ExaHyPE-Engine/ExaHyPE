@@ -1,25 +1,20 @@
 #include "PeanoTextPatchFileWriter.h"
 
-
 #include <fstream>
 #include <filesystem>
 #include <iomanip>
-
 
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/Lock.h"
 
-
 tarch::logging::Log           tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::_log( "tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter" );
-
 
 const std::string tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::HEADER =
 "# \n" \
 "# Peano patch file \n" \
 "# Version 0.2 \n" \
 "# \n";
-
 
 namespace {
   const std::string Token_BeginDataSet = "begin dataset";
@@ -119,8 +114,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::create
 
   if ( !indexFileOut.is_open() ) {
     logError("PeanoTextPatchFileWriter()", "have not been able to open file " << _indexFile );
-  }
-  else {
+  } else {
     indexFileOut.close();
   }
 }
@@ -189,10 +183,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
   _snapshotFileOut << std::scientific;
 }
 
-
-tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::~PeanoTextPatchFileWriter() {
-}
-
+tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::~PeanoTextPatchFileWriter() {}
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeMapping(int totalEntries, double* values) {
   if (values!=nullptr) {
@@ -204,7 +195,6 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeM
   }
 }
 
-
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeMetaData(const std::string& metaData) {
   if (!metaData.empty()) {
     _snapshotFileOut << "  begin meta-data" << std::endl
@@ -213,42 +203,35 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeM
   }
 }
 
-
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter*
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description ) {
   return new CellDataWriter(identifier, unknownsPerAxis, recordsPerCell, description, "", nullptr, *this);
 }
-
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter*
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData ) {
   return new CellDataWriter(identifier, unknownsPerAxis, recordsPerCell, description, metaData, nullptr, *this);
 }
 
-
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter*
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData, double* mapping ) {
   return new CellDataWriter(identifier, unknownsPerAxis, recordsPerCell, description,  metaData, mapping, *this);
 }
-
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter*
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description ) {
   return new VertexDataWriter(identifier, unknownsPerAxis, recordsPerVertex , description, "", nullptr, *this);
 }
 
-
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter*
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description, const std::string& metaData ) {
   return new VertexDataWriter(identifier, unknownsPerAxis, recordsPerVertex , description, metaData, nullptr, *this);
 }
 
-
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter*
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description, const std::string& metaData, double* mapping ) {
   return new VertexDataWriter(identifier, unknownsPerAxis, recordsPerVertex , description, metaData, mapping, *this);
 }
-
 
 int tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::plotPatch(
   const tarch::la::Vector<2,double>& offset,
@@ -285,7 +268,6 @@ int tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::plotPat
   return _patchCounter-1;
 }
 
-
 int tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::plotPatch(
   const tarch::la::Vector<3,double>& offset,
   const tarch::la::Vector<3,double>& size
@@ -317,7 +299,6 @@ int tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::plotPat
   return _patchCounter-1;
 }
 
-
 bool tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeToFile() {
   assertion( !_writtenToFile );
 
@@ -341,11 +322,9 @@ bool tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeT
   }
 }
 
-
 bool tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::isOpen() {
   return !_writtenToFile;
 }
-
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::clear() {
   _writtenToFile       = false;
@@ -362,7 +341,6 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::clear(
 
   _snapshotFileOut << std::endl << std::endl;
 }
-
 
 /*
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::prepareMetaFile( std::string metaFile, double timeStamp ) {

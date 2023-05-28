@@ -56,13 +56,12 @@ void tarch::logging::ChromeTraceFileLogger::configureOutputStreams() {
 }
 
 
-tarch::logging::ChromeTraceFileLogger& tarch::logging::ChromeTraceFileLogger::operator=(const ChromeTraceFileLogger& rhs) {
+tarch::logging::ChromeTraceFileLogger& tarch::logging::ChromeTraceFileLogger::operator=(const ChromeTraceFileLogger&) {
   return *this;
 }
 
 
-tarch::logging::ChromeTraceFileLogger::ChromeTraceFileLogger(const ChromeTraceFileLogger& param) {
-}
+tarch::logging::ChromeTraceFileLogger::ChromeTraceFileLogger(const ChromeTraceFileLogger&) {}
 
 
 tarch::logging::ChromeTraceFileLogger::~ChromeTraceFileLogger() {
@@ -86,8 +85,12 @@ std::string tarch::logging::ChromeTraceFileLogger::addSeparators(std::string mes
 
 
 std::string tarch::logging::ChromeTraceFileLogger::constructMessageString(
-  std::string          messageType,
-  long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message
+  [[maybe_unused]] std::string messageType,
+  [[maybe_unused]] long int timestampMS,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
 ) {
   std::string result;
 
@@ -101,12 +104,13 @@ std::string tarch::logging::ChromeTraceFileLogger::constructMessageString(
   return result;
 }
 
-
-
-
 std::string tarch::logging::ChromeTraceFileLogger::constructEventEntryInTraceFile(
-  std::string          messageType,
-  long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message
+  [[maybe_unused]] std::string messageType,
+  [[maybe_unused]] long int timestampMS,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
 ) {
   std::ostringstream result;
   std::string args = message;
@@ -124,7 +128,13 @@ std::string tarch::logging::ChromeTraceFileLogger::constructEventEntryInTraceFil
 }
 
 
-void tarch::logging::ChromeTraceFileLogger::debug(   long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::ChromeTraceFileLogger::debug(
+  [[maybe_unused]] long int timestampMS,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
+) {
   std::string eventEntry = constructEventEntryInTraceFile(
       "debug",
       timestampMS, rank, threadId, trace, message
@@ -140,7 +150,7 @@ void tarch::logging::ChromeTraceFileLogger::debug(   long int timestampMS, int r
 }
 
 
-void tarch::logging::ChromeTraceFileLogger::info(   long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::ChromeTraceFileLogger::info(long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message) {
     std::string outputMessage = constructMessageString(
       "info",
 	  timestampMS, rank, threadId, trace, message
@@ -161,7 +171,7 @@ void tarch::logging::ChromeTraceFileLogger::info(   long int timestampMS, int ra
 }
 
 
-void tarch::logging::ChromeTraceFileLogger::warning(   long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::ChromeTraceFileLogger::warning(long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message) {
     std::string outputMessage = constructMessageString(
       "warning",
 	  timestampMS, rank, threadId, trace, message
@@ -182,7 +192,7 @@ void tarch::logging::ChromeTraceFileLogger::warning(   long int timestampMS, int
 }
 
 
-void tarch::logging::ChromeTraceFileLogger::traceIn(   long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::ChromeTraceFileLogger::traceIn(long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message) {
 	if (_outputStream!=nullptr) {
       std::string args = message;
 	  std::replace( args.begin(), args.end(), '"', ' '); // replace all 'x' to 'y'
@@ -204,7 +214,7 @@ void tarch::logging::ChromeTraceFileLogger::traceIn(   long int timestampMS, int
 }
 
 
-void tarch::logging::ChromeTraceFileLogger::traceOut(   long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::ChromeTraceFileLogger::traceOut(long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message) {
   if (_outputStream!=nullptr) {
     std::string args = message;
 	std::replace( args.begin(), args.end(), '"', ' '); // replace all 'x' to 'y'
@@ -226,7 +236,7 @@ void tarch::logging::ChromeTraceFileLogger::traceOut(   long int timestampMS, in
 }
 
 
-void tarch::logging::ChromeTraceFileLogger::error(   long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::ChromeTraceFileLogger::error(long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message) {
     std::string outputMessage = constructMessageString(
       "error",
 	  timestampMS, rank, threadId, trace, message
@@ -247,12 +257,7 @@ void tarch::logging::ChromeTraceFileLogger::error(   long int timestampMS, int r
   }
 }
 
-
-
-
-void tarch::logging::ChromeTraceFileLogger::indent( bool indent, const std::string& trace, const std::string& message ) {
-}
-
+void tarch::logging::ChromeTraceFileLogger::indent( bool, const std::string&, const std::string& ) {}
 
 void tarch::logging::ChromeTraceFileLogger::setOutputFile( const std::string&  outputLogFileName ) {
   std::ostringstream myOutputFileName;
@@ -287,11 +292,10 @@ void tarch::logging::ChromeTraceFileLogger::close() {
   std::cout.flush();
   std::cerr.flush();
   if (_outputStream!=nullptr) {
-	*_outputStream << "]";
+    *_outputStream << "]";
     delete _outputStream;
     _outputStream = nullptr;
-  }
-  else {
-	std::cerr << "Warning: ChromeTraceFileLogger used, but no trace file set. Use singleton's setOuputFile(). No trace information dumped" << std::endl;
+  } else {
+    std::cerr << "Warning: ChromeTraceFileLogger used, but no trace file set. Use singleton's setOuputFile(). No trace information dumped" << std::endl;
   }
 }

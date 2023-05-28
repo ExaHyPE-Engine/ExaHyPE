@@ -12,8 +12,8 @@
 #include "peano4/grid/TraversalObserver.h"
 
 #ifdef Parallel
-  #include <mpi.h>
-  #include <functional>
+#include <mpi.h>
+#include <functional>
 #endif
 
 namespace peano4{
@@ -24,7 +24,6 @@ namespace grid{
 
 struct peano4::grid::GridStatistics {
   public:
-
     GridStatistics() {}
     GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, bool  __removedEmptySubtree, tarch::la::Vector<Dimensions,double>  __minH);
 

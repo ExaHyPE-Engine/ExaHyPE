@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/logging/Log.h"
 
 #include "tarch/services/Service.h"
@@ -15,7 +14,6 @@
 #include "peano4/grid/grid.h"
 
 #include "TreeManagementMessage.h"
-
 
 #include <list>
 #include <map>
@@ -34,7 +32,6 @@ namespace peano4 {
     class SpacetreeSet;
   }
 }
-
 
 /**
  * The spacetree set has to be a singleton, as it is reponsible to accept
@@ -720,7 +717,4 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
     std::set<int> getLocalSpacetrees() const;
 };
 
-
 #include "SpacetreeSet.cpph"
-
-

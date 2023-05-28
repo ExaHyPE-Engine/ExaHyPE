@@ -188,4 +188,3 @@ class peano4::grid::PeanoCurve {
     static int getInputStackNumber(const AutomatonState& state);
     static int getOutputStackNumber(const AutomatonState& state);
 };
-

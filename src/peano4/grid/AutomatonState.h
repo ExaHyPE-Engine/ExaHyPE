@@ -11,8 +11,8 @@
 #include "peano4/grid/TraversalObserver.h"
 
 #ifdef Parallel
-  #include <mpi.h>
-  #include <functional>
+#include <mpi.h>
+#include <functional>
 #endif
 
 namespace peano4{
@@ -48,6 +48,7 @@ struct peano4::grid::AutomatonState {
     int   getAccessNumber(int index) const;
     void   setAccessNumber(int index, int value);
     AutomatonState(const AutomatonState& copy);
+    AutomatonState& operator = (const AutomatonState& assign);
 
 #ifdef Parallel
     static void sendAndPollDanglingMessages(const peano4::grid::AutomatonState& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());

@@ -181,7 +181,7 @@ namespace {
     #if defined(OpenMPTaskGroup)
     #pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks, tasks, strategy) firstprivate(NumberOfThreads) priority(StandardPriority) untied
     #endif
-    for (int i=0; i<NumberOfThreads; i++) {
+    for (int i = 0; i < NumberOfThreads; i++) {
       #if !defined(OpenMPTaskGroup)
       #pragma omp task shared(pendingTasks, spawnedTasks, tasks, strategy) firstprivate(NumberOfThreads, i) priority(StandardPriority) untied
       #endif
@@ -190,7 +190,7 @@ namespace {
         #pragma omp atomic
         spawnedTasks++;
 
-        if (i<tasks.size()) {
+        if (i < static_cast<int>(tasks.size())) {
           while (tasks[i]->run()) {
             #pragma omp taskyield
           }
@@ -236,7 +236,7 @@ namespace {
   }
 }
 
-void tarch::multicore::native::spawnTask(Task*  job) {
+void tarch::multicore::native::spawnTask(Task* job) {
   #pragma omp atomic
   nonblockingTasksCounter++;
 
@@ -299,7 +299,7 @@ NVC++/x86-64 Linux 22.3-0: compilation completed with severe errors
  * if I try to map fuse onto a task of its own.
  *
  */
-void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
+void tarch::multicore::native::processFusedTask(Task* myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
   std::list< tarch::multicore::Task* > copyOfTasksOfSameType = tasksOfSameType;
   #if !defined(__NVCOMPILER)
   #pragma omp task firstprivate(myTask,copyOfTasksOfSameType,device)
