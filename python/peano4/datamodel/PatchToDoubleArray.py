@@ -50,7 +50,6 @@ class PatchToDoubleArray():
     self.receive_and_merge_condition = "true"
     self.store_persistent_condition  = "true"
     self.load_persistent_condition   = "true"
-    self.compute_condition           = "true"
     self.includes                    = ""
     self.float_type                  = FloatTypes(float_type)
 
@@ -61,7 +60,6 @@ class PatchToDoubleArray():
   - receive/merge condition: """ + self.receive_and_merge_condition + """
   - load condition:          """ + self.load_persistent_condition + """
   - store condition:         """ + self.store_persistent_condition + """
-  - compute condition:       """ + self.compute_condition + """
   - merge criterion:         """
   
     if self.merge_method_definition!="":
@@ -103,7 +101,6 @@ class PatchToDoubleArray():
         "MERGE_METHOD_DEFINITION":     self.merge_method_definition,
         "LOAD_PERSISTENT_CONDITION":   self.load_persistent_condition,
         "STORE_PERSISTENT_CONDITION":  self.store_persistent_condition,
-        "COMPUTE_CONDITION":           self.compute_condition,
         "FLOAT_TYPE":                  self.float_type.cpp,
         "MPI_FLOAT_TYPE":              self.float_type.mpi,
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": self.data.additional_load_and_store_arguments

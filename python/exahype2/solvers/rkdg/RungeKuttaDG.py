@@ -537,12 +537,10 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
-    self._estimate_projection.generator.compute_condition            = self._load_face_data_default_guard() + " or " + self._store_face_data_default_guard()
     self._estimate_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._estimate_projection)
     
     self._old_solution_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._old_solution_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
-    self._old_solution_projection.generator.compute_condition           = self._load_face_data_default_guard() + " or " + self._store_face_data_default_guard()
     self._old_solution_projection.generator.includes                   += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
@@ -550,7 +548,6 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     self._current_time_step.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._current_time_step.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    self._current_time_step.generator.compute_condition          = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
     self._current_time_step.generator.includes                   += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
@@ -559,7 +556,6 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     self._rhs_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._rhs_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    self._rhs_estimates.generator.compute_condition          = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
     self._rhs_estimates.generator.includes                   += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
@@ -567,7 +563,6 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     self._linear_combination_of_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._linear_combination_of_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    self._linear_combination_of_estimates.generator.compute_condition          = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
     self._linear_combination_of_estimates.generator.includes                   += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
@@ -581,7 +576,6 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     self._Riemann_solution.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._Riemann_solution.generator.load_persistent_condition  = self._load_face_data_default_guard()
-    self._Riemann_solution.generator.compute_condition          = self._load_face_data_default_guard() + " or " + self._store_face_data_default_guard()
     self._Riemann_solution.generator.includes                   += """
 #include "repositories/SolverRepository.h" 
 """

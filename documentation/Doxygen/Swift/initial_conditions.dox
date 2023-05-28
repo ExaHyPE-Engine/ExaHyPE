@@ -14,12 +14,15 @@ actual calculation:
 
 ## The initial (regular) mesh
 
-The first step is important, even though we do not restrict the particles:
-Particles are allowed to change their cut-off radius, and we do not restrict
-how big it can become throughout the simulation. Furthermore, the dynamic 
-mesh refinement might decide to introduce an extremely fine mesh in some 
-places.
+The first step is important, even though particles are allowed to change 
+their cut-off radius. It is important to tell the code base right from 
+the start what the biggest and smallest radius might be, but the radius 
+can change freely in-between those thresholds. Actually the radius might
+even become smaller, but the mesh width you pass in initially is used to
+constrain the AMR throughout the simulation. 
 
+The dynamic  mesh refinement might decide to introduce an extremely fine 
+mesh in some places and to erase the mesh somewhere else.
 However, we have to start somewhere, as we do not want to run the initial
 insertion of particles into a single cell, then great this initial grid
 (which is obviously guided by the particle distribution) and finally create

@@ -379,7 +379,6 @@ class EnclaveTasking( FV ):
       self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.willBeSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard() + " and (" + \
       self._primary_sweep_or_plot_guard + " or marker.hasBeenSkeletonCell())"
-    self._patch.generator.compute_condition  = self._load_cell_data_default_guard() + " or " + self._store_cell_data_default_guard()
 
 
   def create_action_sets(self):
