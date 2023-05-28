@@ -237,6 +237,6 @@ bool tarch::multicore::orchestration::GeneticOptimisation::processPendingTasksWh
 }
 
 
-tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::GeneticOptimisation::getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
-  return _activeKey.processPendingTasksWhileWaiting ? tarch::multicore::orchestration::Strategy::ExecutionPolicy::MaximiseThroughput : tarch::multicore::orchestration::Strategy::ExecutionPolicy::MinimiseLatency;
+tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::GeneticOptimisation::paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
+  return _activeKey.processPendingTasksWhileWaiting ? tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel : tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunSerially;
 }

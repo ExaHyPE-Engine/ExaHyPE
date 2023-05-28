@@ -78,7 +78,7 @@ class tarch::multicore::orchestration::GeneticOptimisation: public tarch::multic
     virtual int getNumberOfTasksToHoldBack() override;
     virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice()     override;
     virtual bool fuseTasksImmediatelyWhenSpawned() override;
-    virtual ExecutionPolicy getExecutionPolicyForForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) override;
+    virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) override;
 };
 
 
