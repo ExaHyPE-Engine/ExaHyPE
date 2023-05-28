@@ -24,20 +24,8 @@ class tarch::multicore::orchestration::Strategy {
     /**
      * Provide hint of execution policy
      *
-     * - EmbedWithoutSubTasks: Recommend to the tasking runtime that this
-     *   task should be executed immediately without spawning a new task.
-     * - MinimiseLatency: If you have a set of tasks that are to be
-     *   executed en bloc, you make the recommendation that any thread
-     *   which terminates before the others busy polls for them to
-     *   terminate. That means that the system might suffer from
-     *   underutilisation, but the algorithmic latency is low: As soon as
-     *   the last task of a group has terminated, we continue immediately.
-     * - MaximiseThroughput: Recommend that any thread that terminates its
-     *   task early should immediately grab another task. So you might
-     *   suffer from some increased latency - if a thread "accidentially"
-     *   gets a huge task, it might not be available for a while once
-     *   the loop has terminated. But this way, you maximise throughput as
-     *   every task always tries to do a task all the time.
+     * @see tarch::multicore::spawnAndWait() for rationale and details.
+     * @see tarch::multicore for general overview and further design rationale.
      *
      * @todo I would like to have a flag which tells the actual multicore
      *   runtime not (!) to continue with further ready tasks. Such a
