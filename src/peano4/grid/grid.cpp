@@ -233,8 +233,8 @@ peano4::grid::GridStatistics operator+( peano4::grid::GridStatistics lhs, peano4
     lhs.getNumberOfLocalRefinedCells()  + rhs.getNumberOfLocalRefinedCells(),
     lhs.getNumberOfRemoteRefinedCells() + rhs.getNumberOfRemoteRefinedCells(),
     std::min(lhs.getStationarySweeps(),rhs.getStationarySweeps()),
-    lhs.getCoarseningHasBeenVetoed() | rhs.getCoarseningHasBeenVetoed(),
-    lhs.getRemovedEmptySubtree() | rhs.getRemovedEmptySubtree(),
+    lhs.getCoarseningHasBeenVetoed() or rhs.getCoarseningHasBeenVetoed(),
+    lhs.getRemovedEmptySubtree() or rhs.getRemovedEmptySubtree(),
     tarch::la::min( lhs.getMinH(), rhs.getMinH() )
   );
 }

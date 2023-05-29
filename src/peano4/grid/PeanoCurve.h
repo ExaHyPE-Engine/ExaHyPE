@@ -9,7 +9,7 @@
 namespace peano4 {
   namespace grid {
     class PeanoCurve;
-    class AutomatonState;
+    struct AutomatonState;
   }
 }
 

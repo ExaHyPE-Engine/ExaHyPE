@@ -20,7 +20,7 @@ namespace exahype2 {
     }
 
     template <int I>
-    static void fillVector(VectorType& vector) {}
+    static void fillVector(VectorType&) {}
   };
 
   // Partial specialization to handle the base case (N=0)

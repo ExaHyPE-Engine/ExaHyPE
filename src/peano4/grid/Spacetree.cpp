@@ -950,7 +950,7 @@ void peano4::grid::Spacetree::mergeGridVertexRefinementStateAtHorizontalDomainBo
   //
   // Merge helper flags
   //
-  vertex.setIsAntecessorOfRefinedVertexInCurrentTreeSweep( vertex.getIsAntecessorOfRefinedVertexInCurrentTreeSweep() | inVertex.getIsAntecessorOfRefinedVertexInCurrentTreeSweep() );
+  vertex.setIsAntecessorOfRefinedVertexInCurrentTreeSweep( vertex.getIsAntecessorOfRefinedVertexInCurrentTreeSweep() or inVertex.getIsAntecessorOfRefinedVertexInCurrentTreeSweep() );
 
   //
   // Update refinement flags

@@ -12,7 +12,9 @@
 
 template <class Container>
 void peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(
-  Container& stackContainer, int master, int worker
+  [[maybe_unused]] Container& stackContainer,
+  [[maybe_unused]] int master,
+  [[maybe_unused]] int worker
 ) {}
 
 template <class Container>

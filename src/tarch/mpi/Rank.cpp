@@ -555,7 +555,7 @@ void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
 
 
 #ifdef Parallel
-void tarch::mpi::Rank::setCommunicator( MPI_Comm communicator, bool recomputeRankAndWorld ) {
+void tarch::mpi::Rank::setCommunicator( MPI_Comm communicator, [[maybe_unused]] bool recomputeRankAndWorld ) {
   _communicator = communicator;
 
   int result = MPI_Comm_size( _communicator, &_numberOfProcessors );
