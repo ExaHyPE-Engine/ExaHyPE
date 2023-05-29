@@ -1,6 +1,6 @@
-import subprocess
-import argparse
 import os
+import argparse
+import subprocess
 
 # python3 .continuous_integration/configure.py --exahype --multithreading=tbb --gpu=sycl -t=intel --arch=cc86
 # python3 .continuous_integration/configure.py --exahype --multithreading=omp --gpu=omp -t=nvidia --arch=cc86
@@ -83,7 +83,7 @@ if args.gpu is not None:
   configure_args.append(f'--with-gpu={args.gpu}')
 
 if args.mpi is not None:
-  configure_args.append(f'--with-mpi={args.mpi}')
+  configure_args.append('--with-mpi="{} {}"'.format(args.mpi, cxxflags))
 
 if args.exahype:
   configure_args.append('--enable-exahype')
