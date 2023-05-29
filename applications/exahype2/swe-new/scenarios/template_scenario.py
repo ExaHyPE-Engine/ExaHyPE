@@ -31,19 +31,20 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
         switch(normal) {
             case 0:
                 F[0] = hu;
-                F[1] = (hu * hu)/ h;//  + (g * h * h) / 2;
+                F[1] = (hu * hu)/ h  + (g * h * h) / 2;
                 F[2] = (hu * hv) / h;
                 break;
             case 1:
                 F[0] = hv;
                 F[1] = (hu * hv) / h;
-                F[2] = (hv * hv) / h;// + (g * h * h) / 2;
+                F[2] = (hv * hv) / h + (g * h * h) / 2;
                 break;
         }
         """
     
 
     def implementation_of_ncp(self):
+        return PDETerms.None_Implementation
         return """
         double g = 9.81;
   
@@ -61,16 +62,25 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
             //BTimesDeltaQ[3] = 0.0;
             break;
         }"""
-        return PDETerms.None_Implementation
-
-    # TODO RefinementCommand::Erase implementieren
+        
     def implementation_of_refinement_criterion(self):
+        # Implementing https://doi.org/10.1007%2Fs00024-016-1412-y could be interesting
         return """
         return ::exahype2::RefinementCommand::Keep;
         """
+        """
+        ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+        if (tarch::la::greaterEquals(Q[0] > 1e-8 && std::abs(Q[0] + Q[3]), 0.05)) { 
+            result = ::exahype2::RefinementCommand::Refine;
+        }
+        else if(tarch::la::greaterEquals(Q[0] > 1e-8 && 0.01), std::abs(Q[0] + Q[3])) {
+            result = ::exahype2::RefinementCommand::Erase;
+        }
+        logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
+        return result;
+        """
     
     def implementation_of_sources(self):
-        return PDETerms.None_Implementation
         return """
         double g = 9.81;
         double h = Q[0];
@@ -79,3 +89,4 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
         S[1] = -g * h * b;
         S[2] = -g * h * b;
         """
+        return PDETerms.None_Implementation
