@@ -21,6 +21,7 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/Device.h"
+#include "tarch/accelerator/DeviceInfo.h"
 #include "tarch/timing/Watch.h"
 #include "tarch/timing/Measurement.h"
 
@@ -692,6 +693,8 @@ int main(int argc, char** argv) {
 //#ifdef UseFenv
 //  tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 //#endif
+
+  tarch::accelerator::info::printDeviceInformation();
 
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
     logError("main()", "MPI runs without multithreading are not supported currently.");

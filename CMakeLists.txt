@@ -240,6 +240,10 @@ if(WITH_CUDA)
   target_link_options(project_options INTERFACE -cuda)
 endif()
 
+if(WITH_CUDA OR "${WITH_GPU}" STREQUAL "cuda")
+  add_compile_definitions("WITH_CUDA_API")
+endif()
+
 if("${WITH_GPU}" STREQUAL "cuda")
   set(ENABLE_CUDA_COMPILATION_OPTIONS ON)
   cmake_dependent_option(CUDA_SEPARABLE_COMPILATION "Cuda Separable Compilation" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
