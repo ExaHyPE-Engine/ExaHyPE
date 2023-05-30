@@ -43,7 +43,8 @@ scenarios = [
   "Radial_Bathymetry_Dam_Break", 
   "Tsunami", 
   "Artificial_Tsunami",
-  "Sea_At_Rest"
+  "Sea_At_Rest",
+  "Oscillating_Lake"
   ]
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - SWE Application Script')
@@ -79,6 +80,10 @@ elif args.scenario == "Artificial_Tsunami":
 elif args.scenario == "Sea_At_Rest":
   from scenarios.sea_at_rest import Sea_At_Rest
   my_pde = Sea_At_Rest()
+
+#elif args.scenario == "Oscillating_Lake":
+  #from scenarios.oscillating_lake import Oscillating_Lake
+  #my_pde = Oscillating_Lake()
 
 elif args.scenario == "Tsunami":
   # check whether flags are set
