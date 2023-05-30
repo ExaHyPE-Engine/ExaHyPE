@@ -44,7 +44,9 @@ scenarios = [
   "Tsunami", 
   "Artificial_Tsunami",
   "Sea_At_Rest",
-  "Oscillating_Lake"
+  "Oscillating_Lake",
+  "Three_Mounds_Channel",
+  "Circular_Island"
   ]
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - SWE Application Script')
@@ -68,6 +70,9 @@ args = parser.parse_args()
 maximum_cell_size = args.max_cell_size
 patch_size = optimal_patch_size if args.optimal_patch_size else args.patch_size
 
+if args.scenario not in scenarios:
+  raise ValueError("Provided scenario \"{}\" not supported!".format(args.scenario))
+
 my_pde = None
 if args.scenario == "Radial_Bathymetry_Dam_Break":
   from scenarios.radial_bathymetry_dam_break import Radial_Bathymetry_Dam_Break
@@ -81,9 +86,20 @@ elif args.scenario == "Sea_At_Rest":
   from scenarios.sea_at_rest import Sea_At_Rest
   my_pde = Sea_At_Rest()
 
-#elif args.scenario == "Oscillating_Lake":
-  #from scenarios.oscillating_lake import Oscillating_Lake
-  #my_pde = Oscillating_Lake()
+elif args.scenario == "Oscillating_Lake":
+  width = [1, 1]
+  from scenarios.oscillating_lake import Oscillating_Lake
+  my_pde = Oscillating_Lake()
+
+elif args.scenario == "Three_Mounds_Channel":
+  width = [75, 30]
+  from scenarios.three_mounds_channel import Three_Mounds_Channel
+  my_pde = Three_Mounds_Channel()
+
+elif args.scenario == "Circular_Island":
+  width = [25, 30]
+  from scenarios.circular_island import Circular_Island
+  my_pde = Circular_Island()
 
 elif args.scenario == "Tsunami":
   # check whether flags are set
@@ -149,6 +165,9 @@ my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".forma
 if args.scenario == "Artificial_Tsunami":
   my_solver.add_user_solver_includes("#include <cmath>")
   my_solver.add_user_solver_includes("#include \"Constants.h\"")
+
+if args.scenario == "Circular_Island":
+  my_solver.add_user_solver_includes("#include <cmath>")
 
 if args.scenario == "Tsunami":
   my_solver.add_user_solver_includes("#include \"parser/TopologyParser.h\"")

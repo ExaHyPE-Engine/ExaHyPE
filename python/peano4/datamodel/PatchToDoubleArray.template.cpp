@@ -118,6 +118,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
 ) const {
   return {{STORE_PERSISTENT_CONDITION}};
 }
+{% endif -%}
+
 
 
 {% if DATA_ASSOCIATION == 2 -%}
@@ -156,6 +158,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
 ) const {
   return {{STORE_PERSISTENT_CONDITION}};
 }
+{% endif -%}
 
 
 {% if DATA_ASSOCIATION == 3 -%}
@@ -194,7 +197,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
 ) const {
   return {{STORE_PERSISTENT_CONDITION}};
 }
-
+{% endif -%}
 
 #ifdef Parallel
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {

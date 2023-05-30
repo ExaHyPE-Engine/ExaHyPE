@@ -27,9 +27,17 @@ class Scenario(ABC):
         pass
     
     @abstractmethod
-    def implementation_of_ncp():
+    def implementation_of_ncp(self):
         pass
     
     @abstractmethod
-    def implementation_of_refinement_criterion():
+    def implementation_of_refinement_criterion(self):
         pass
+
+    def implementation_of_reflective_BC(self):
+        return """
+        Qoutside[0] = Qinside[0];
+        Qoutside[1] = -1.f * Qinside[1];
+        Qoutside[2] = -1.f * Qinside[2];
+        Qoutside[3] = Qinside[3];
+        """
