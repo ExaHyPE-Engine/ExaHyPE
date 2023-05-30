@@ -2,15 +2,18 @@ import scenarios.template_scenario
 import sympy
 
 
-class Oscillating_Lake(scenarios.template_scenario.Template_Scenario):
+class Oscillating_Lake(scenarios.template_scenario.Template_Scenario): 
+    """
+    Taken from https://doi.org/10.48550/arXiv.1607.04547
+    """
     def __init__(self):
         super().__init__()
 
-        _x = sympy.sqrt(self.x[0] * self.x[0] + self.x[1] * self.x[1])
-        _z = 0.5 * (1 - 0.5 * (sympy.cos(sympy.pi * (_x - 0.5) / 0.5) + 1))
         self.initial_values[1] = 0.0
         self.initial_values[2] = 0.0
-        self.initial_values[3] = _z
-        self.initial_values[0] = sympy.Max(0.0, 
-                                           0.4 - _z + 0.04 * sympy.sin((_x - 0.5) / 0.25) - sympy.Max(0,
-                                                                                     -0.4 + _z))
+        self.initial_values[3] = -0.2*(1.0 - sympy.sqrt((self.x[0] - 2.0)**2 + (self.x[1] - 2.0)**2))-0.1
+        self.initial_values[0] = 0.0 # TODO
+
+    
+    def implementation_of_boundary_conditions(self):
+        return self.implementation_of_reflective_BC()

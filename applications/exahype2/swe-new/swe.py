@@ -87,7 +87,7 @@ elif args.scenario == "Sea_At_Rest":
   my_pde = Sea_At_Rest()
 
 elif args.scenario == "Oscillating_Lake":
-  width = [1, 1]
+  width = [4, 4]
   from scenarios.oscillating_lake import Oscillating_Lake
   my_pde = Oscillating_Lake()
 
