@@ -9,7 +9,7 @@ Particles are characterized by their attributes (position, velocity, density,
 ...), their behaviour in the simulation and their initialisation. The latter
 two are formalised by the particle's algorithmic steps. You can think of them
 as a sequence of operations which have to performed per particle per time step
-or until we have a properly initialised particle. You can visualise a 
+or until we have a properly initialised particle. You can visualise a
 particle's algorithm via a simple graph:
 
 @image html particle-lifecycle.png
@@ -24,7 +24,7 @@ one particle at a time, other steps might require the particles around a
 particle to compute an outcome (darker boxes).
 
 This input sequence is taken as by our graph compiler to map it onto traversals
-of the data and to generate the C++ application. Details are discussed in 
+of the data and to generate the C++ application. Details are discussed in
 @ref swift_graph_compiler "the section on the Swift Graph Compiler". The
 basic rationale behind this design is that a particle-based algorithm is
 besed phrased as flow chart over a single particle. It is then the job of
@@ -39,9 +39,9 @@ time stepping scheme. Both are intertwined in classic SPH.
 
 A few characteristic particle life cycles are discussed below. Nothing stops
 you however from introducing more cycles aka particle types.
-    
 
-## Declaring particle attributes
+
+# Declaring particle attributes
 
 You can instantiate your particle of interest and add further attributes to
 it in your main script. Alternatively, you might want to inherit from the
@@ -72,7 +72,7 @@ particles straight-away. This however might be the cleaner design and enables
 you to reuse that particle class.
 
 
-## The algorithmic steps for the particle life cycle
+# The algorithmic steps for the particle life cycle
 
 The second essential ingredient to build a particle life cycle is to specify the
 sequence of algorithmic steps. Each particle has to have a routine algorithm_steps()
@@ -137,7 +137,7 @@ Some remarks:
   - `touch_vertex_last_time_kernel` analogous to the previous one.
 
 
-## The algorithmic steps for the particle initialisation
+# The algorithmic steps for the particle initialisation
 
 This is very similar to the algorithmic steps. Each particle offers a routine
 initialisation_steps() which returns a sequence of steps that have to be called
@@ -146,7 +146,7 @@ compiler will always add another two steps to ensure that the initial sorting
 of the particles is correct.
 
 
-## Examples for pre-defined particle types
+# Examples for pre-defined particle types
 
 - A simple explicit Euler with a constant interaction radius can be found in
   swift2.particle.ExplicitEulerFixedInteractionRadius. This is the simplest
