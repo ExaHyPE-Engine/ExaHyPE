@@ -2,21 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #ifdef Parallel
 #include <mpi.h>
 #endif
+
 #include <iostream>
 #include <fstream>
 #include <set>
 #include <stack>
 
-
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/logging/Log.h"
-
-
 
 namespace tarch {
   namespace logging {
@@ -52,7 +49,7 @@ class tarch::logging::CommandLineLogger {
   private:
     static Log _log;
 
-    static CommandLineLogger  _singleton;
+    static CommandLineLogger _singleton;
 
     tarch::multicore::BooleanSemaphore _semaphore;
 
@@ -72,18 +69,17 @@ class tarch::logging::CommandLineLogger {
     std::string    _outputFileName;
     bool           _quitOnError;
 
-
     /**
      * Declared private since assignment does not make sense for an output
      * class (output information mismatch).
      */
-    CommandLineLogger& operator=(const CommandLineLogger& rhs);
+    CommandLineLogger& operator=(const CommandLineLogger&);
 
     /**
      * Declared private since copying does not make sense for an output
      * class (output information mismatch).
      */
-    CommandLineLogger(const CommandLineLogger& param);
+    CommandLineLogger(const CommandLineLogger&);
 
     /**
      * Indent is supported only in debug mode.
@@ -162,6 +158,7 @@ class tarch::logging::CommandLineLogger {
     void reopenOutputStream();
 
     std::stack< std::string >  _indentTraces;
+
   public:
     ~CommandLineLogger();
 
@@ -299,4 +296,3 @@ class tarch::logging::CommandLineLogger {
 
     void close();
 };
-

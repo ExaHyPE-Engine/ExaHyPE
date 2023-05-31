@@ -38,7 +38,7 @@ exahype2::EnclaveTask::EnclaveTask(
 bool exahype2::EnclaveTask::run() {
   logTraceInWith1Argument( "run()", getTaskId() );
 
-  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
+  [[maybe_unused]] otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
   computeTask();
 
   EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);

@@ -60,6 +60,7 @@ class tarch::multicore::Core {
     Core();
 
     int               _numberOfThreads;
+
   public:
     /**
      * The default is what the system management typically gives you. So if
@@ -88,9 +89,6 @@ class tarch::multicore::Core {
      * are placed on one node. It is also a bad choice if hyperthreading
      * should not/can not be used. Use the helper function
      * getNumberOfUnmaskedThreads().
-     *
-     *
-     *
      *
      * @param numberOfThreads Number of threads that shall be used. This
      *        parameter either is greater than zero (which defines the number

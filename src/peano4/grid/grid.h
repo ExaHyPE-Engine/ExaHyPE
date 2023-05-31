@@ -75,11 +75,11 @@ namespace peano4 {
     /**
      * Forward declaration
      */
-    class GridStatistics;
-    class GridControlEvent;
+    struct GridStatistics;
+    struct GridControlEvent;
 
-    class AutomatonState;
-    class GridControlEvent;
+    struct AutomatonState;
+    struct GridControlEvent;
 
     /**
      * The term clear() is not 100% correct, as the number of stationary traversals

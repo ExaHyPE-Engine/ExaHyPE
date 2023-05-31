@@ -1,7 +1,6 @@
 #include "Rusanov.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
-#include "exahype2/fv/rusanov/Rusanov_Helper.cpph"
 
 template <
   typename Solver,

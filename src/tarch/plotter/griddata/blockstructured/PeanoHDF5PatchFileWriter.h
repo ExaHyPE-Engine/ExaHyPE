@@ -2,21 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "PatchWriter.h"
 #include "config.h"
 
-
 #include "tarch/logging/Log.h"
 
-
 #include <vector>
-
 
 #ifdef UseHDF5
 #include "hdf5.h"
 #endif
-
 
 namespace tarch {
   namespace plotter {
@@ -27,7 +22,6 @@ namespace tarch {
     }
   }
 }
-
 
 /**
  * HDF 5 writer
@@ -76,15 +70,17 @@ class tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter: publi
         const std::string    _identifier;
         const int            _numberOfUnknowns;
         std::vector<double>  _data;
+
       public:
         CellDataWriter(
           const std::string& identifier,
-		  int                unknownsPerAxis,
-		  int                numberOfUnknowns, const std::string& description,
+          int                unknownsPerAxis,
+          int                numberOfUnknowns, const std::string& description,
           const std::string& metaData,
           double*            mapping,
           tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter& writer
         );
+
         virtual ~CellDataWriter();
 
          /**
@@ -112,15 +108,17 @@ class tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter: publi
          const std::string    _identifier;
          const int            _numberOfUnknowns;
          std::vector<double>  _data;
+
        public:
          VertexDataWriter(
            const std::string& identifier,
-		   int                unknownsPerAxis,
-		   int                numberOfUnknowns, const std::string& description,
+           int                unknownsPerAxis,
+           int                numberOfUnknowns, const std::string& description,
            const std::string& metaData,
            double*            mapping,
            tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter& writer
          );
+
          ~VertexDataWriter();
 
          /**
@@ -150,8 +148,8 @@ class tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter: publi
       bool                 append,
       bool                 compress
     );
-    virtual ~PeanoHDF5PatchFileWriter();
 
+    virtual ~PeanoHDF5PatchFileWriter();
 
     /**
      * Caller has to destroy this instance manually.
@@ -202,5 +200,3 @@ class tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter: publi
 
     void addMetaData(const std::string& metaData);
 };
-
-

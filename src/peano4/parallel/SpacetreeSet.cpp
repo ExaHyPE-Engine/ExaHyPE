@@ -6,7 +6,6 @@
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/TraversalObserver.h"
 
-
 #include "tarch/tarch.h"
 
 #include "tarch/multicore/multicore.h"
@@ -27,19 +26,14 @@ tarch::logging::Log peano4::parallel::SpacetreeSet::_log( "peano4::parallel::Spa
 
 peano4::parallel::SpacetreeSet peano4::parallel::SpacetreeSet::_singleton;
 
-
 tarch::multicore::BooleanSemaphore  peano4::parallel::SpacetreeSet::_semaphore;
 
-
 peano4::parallel::SpacetreeSet::SpacetreeSet():
-  _state( SpacetreeSetState::Waiting) {
-}
-
+  _state( SpacetreeSetState::Waiting) {}
 
 peano4::parallel::SpacetreeSet&  peano4::parallel::SpacetreeSet::getInstance() {
   return _singleton;
 }
-
 
 void peano4::parallel::SpacetreeSet::init(
   const tarch::la::Vector<Dimensions,double>&  offset,
@@ -66,21 +60,16 @@ void peano4::parallel::SpacetreeSet::init(
   }
 }
 
-
 void peano4::parallel::SpacetreeSet::shutdown() {
   peano4::grid::Spacetree::_vertexStack.clear();
   tarch::services::ServiceRepository::getInstance().removeService( this );
 }
 
-
-peano4::parallel::SpacetreeSet::~SpacetreeSet() {
-}
-
+peano4::parallel::SpacetreeSet::~SpacetreeSet() {}
 
 int peano4::parallel::SpacetreeSet::getAnswerTag( int targetSpacetreeId ) const {
   return _answerMessageTag + Node::getInstance().getLocalTreeId(targetSpacetreeId);
 }
-
 
 std::string peano4::parallel::SpacetreeSet::toString( SpacetreeSetState state ) {
   switch (state) {
@@ -91,7 +80,6 @@ std::string peano4::parallel::SpacetreeSet::toString( SpacetreeSetState state ) 
   }
   return "undef";
 }
-
 
 void peano4::parallel::SpacetreeSet::answerQuestions() {
   #ifdef Parallel
@@ -121,10 +109,8 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
       case peano4::parallel::TreeManagementMessage::Action::JoinWithWorker:
         assertionMsg( false, "should only be passed synchronously and never run through this tag" );
         break;
-
     }
   }
-
 
   for (auto p: unansweredMessagesThatIanAnswerNow) {
     switch ( p.getAction() ) {
@@ -186,7 +172,6 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
   #endif
 }
 
-
 void peano4::parallel::SpacetreeSet::receiveDanglingMessages() {
   #ifdef Parallel
 
@@ -207,7 +192,6 @@ void peano4::parallel::SpacetreeSet::receiveDanglingMessages() {
   #endif
 }
 
-
 void peano4::parallel::SpacetreeSet::addSpacetree( int masterId, int newTreeId ) {
   logTraceInWith2Arguments( "addSpacetree(int,int)", masterId, newTreeId );
   if ( peano4::parallel::Node::getInstance().getRank(masterId)!=peano4::parallel::Node::getInstance().getRank(newTreeId) ) {
@@ -220,7 +204,7 @@ void peano4::parallel::SpacetreeSet::addSpacetree( int masterId, int newTreeId )
     message.setAction( TreeManagementMessage::Action::CreateNewRemoteTree );
     TreeManagementMessage::sendAndPollDanglingMessages( message,  targetRank, _requestMessageTag );
 
-    TreeManagementMessage::receive( message,  targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator() );
+    TreeManagementMessage::receive( message, targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator() );
     assertion1(message.getAction()==TreeManagementMessage::Action::Acknowledgement, message.toString());
 
     peano4::grid::AutomatonState state = _spacetrees.begin()->_root;
@@ -247,7 +231,6 @@ void peano4::parallel::SpacetreeSet::addSpacetree( int masterId, int newTreeId )
   logTraceOut( "addSpacetree(int,int)" );
 }
 
-
 peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
   peano4::grid::Spacetree&          tree,
   SpacetreeSet&                     set,
@@ -258,13 +241,11 @@ peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
   _spacetree(tree),
   _spacetreeSet(set),
   _observer( observer ),
-  _invertTreeTraversalDirectionBeforeWeStart(invertTreeTraversalDirectionBeforeWeStart) {
-}
-
+  _invertTreeTraversalDirectionBeforeWeStart(invertTreeTraversalDirectionBeforeWeStart) {}
 
 bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
   // AT: ideally would have a parent task to pass here to record ancestry
-  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
+  [[maybe_unused]] otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
   _spacetreeSet.createObserverCloneIfRequired(_observer,_spacetree._id);
   if (_invertTreeTraversalDirectionBeforeWeStart) {
     _spacetree._root.setInverted( not _spacetree._root.getInverted() );
@@ -279,7 +260,7 @@ void peano4::parallel::SpacetreeSet::createObserverCloneIfRequired(peano4::grid:
   tarch::multicore::Lock lock(_semaphore);
 
   if (_clonedObserver.count(treeId)==0) {
-	_clonedObserver.insert( std::pair< int, peano4::grid::TraversalObserver* >(treeId,observer.clone(treeId)) );
+    _clonedObserver.insert( std::pair< int, peano4::grid::TraversalObserver* >(treeId,observer.clone(treeId)) );
   }
   if (_clonedObserver[treeId]==nullptr) {
     _clonedObserver[treeId] = observer.clone(treeId);
@@ -287,15 +268,14 @@ void peano4::parallel::SpacetreeSet::createObserverCloneIfRequired(peano4::grid:
   assertion2( _clonedObserver.count(treeId)==1 and _clonedObserver[treeId]!=nullptr, treeId, _clonedObserver.count(treeId) );
 }
 
-
 void peano4::parallel::SpacetreeSet::streamLocalVertexInformationToMasterThroughVerticalStacks(
-  int spacetreeId, int parentId,
-  const std::set<int>& joiningIds
+  [[maybe_unused]] int spacetreeId,
+  [[maybe_unused]] int parentId,
+  [[maybe_unused]] const std::set<int>& joiningIds
 ) {
   logTraceInWith2Arguments( "streamLocalVertexInformationToMasterThroughVerticalStacks(...)", spacetreeId, parentId );
 
   /*
-
   const int destinationRank  = Node::getInstance().getRank( parentId );
   const int sourceRank       = Node::getInstance().getRank( spacetreeId );
   const int destinationStack = Node::getInstance().getInputStackNumberForVerticalDataExchange( spacetreeId );
@@ -339,7 +319,6 @@ void peano4::parallel::SpacetreeSet::streamLocalVertexInformationToMasterThrough
 
   logTraceOut( "streamLocalVertexInformationToMasterThroughVerticalStacks(...)" );
 }
-
 
 void peano4::parallel::SpacetreeSet::deleteAllStacks( peano4::grid::TraversalObserver&  observer, int spacetreeId ) {
   logTraceInWith1Argument( "deleteAllStacks(int)", spacetreeId );

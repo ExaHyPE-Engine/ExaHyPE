@@ -22,9 +22,9 @@ namespace tarch {
 class tarch::multicore::orchestration::Strategy {
   public:
     struct FuseInstruction {
-      int  device;
-      int  minTasks;
-      int  maxTasks;
+      int device;
+      int minTasks;
+      int maxTasks;
       FuseInstruction(int device_, int minTasks_, int maxTasks_):
         device(device_),
         minTasks(minTasks_),

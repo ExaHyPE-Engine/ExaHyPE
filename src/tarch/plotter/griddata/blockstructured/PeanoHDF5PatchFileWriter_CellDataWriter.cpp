@@ -1,14 +1,13 @@
 #include "tarch/plotter/griddata/blockstructured/PeanoHDF5PatchFileWriter.h"
 
-
-
 tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDataWriter::CellDataWriter(
-  const std::string& identifier,
-  int                unknownsPerAxis,
-  int                numberOfUnknowns, const std::string& description,
-  const std::string& metaData,
-  double*            mapping,
-  tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter& writer
+  [[maybe_unused]] const std::string& identifier,
+  [[maybe_unused]] int                unknownsPerAxis,
+  [[maybe_unused]] int                numberOfUnknowns,
+  [[maybe_unused]] const std::string& description,
+  [[maybe_unused]] const std::string& metaData,
+  [[maybe_unused]] double*            mapping,
+  [[maybe_unused]] tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter& writer
 ):
   _writer(writer),
   _identifier(identifier),
@@ -96,8 +95,7 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDataWri
 }
 
 
-tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDataWriter::~CellDataWriter() {
-}
+tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDataWriter::~CellDataWriter() {}
 
 
 void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDataWriter::plotCell( int index, double value ) {
@@ -113,7 +111,7 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDa
 }
 
 
-void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDataWriter::plotCell( int index, double* values ) {
+void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDataWriter::plotCell( [[maybe_unused]] int index, [[maybe_unused]] double* values ) {
 /*
   while (static_cast<int>(_data.size())<(index+1)*_numberOfUnknowns) {
     _data.resize( (index+1)*_numberOfUnknowns );
@@ -184,19 +182,12 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDa
   #endif
 }
 
-
-
-
 void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDataWriter::assignRemainingCellsDefaultValues() {
   while (static_cast<int>(_data.size())<_writer._cellCounter*_numberOfUnknowns) {
     _data.push_back(0.0);
   }
 }
 
-
-
-
-int tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDataWriter::getFirstCellWithinPatch(int index) const {
+int tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDataWriter::getFirstCellWithinPatch([[maybe_unused]] int index) const {
   return -1;
 }
-

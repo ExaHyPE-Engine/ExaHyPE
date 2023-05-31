@@ -12,8 +12,8 @@
 #include "peano4/grid/TraversalObserver.h"
 
 #ifdef Parallel
-  #include <mpi.h>
-  #include <functional>
+#include <mpi.h>
+#include <functional>
 #endif
 
 namespace peano4 {

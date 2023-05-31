@@ -2,9 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <string>
-
 
 namespace peano4 {
   /**
@@ -13,15 +11,6 @@ namespace peano4 {
    * The parallel namespace is Peano's core abstracts from both MPI and
    * multicore parallelisation.
    *
-   *
-   * \section Recreate all DaStGen objects
-   *
-   * <pre>
-java -jar ~/git/DaStGen/DaStGen.jar --plugin PeanoSnippetGenerator --naming Peano4NameTranslator TreeEntry.def  .
-java -jar ~/git/DaStGen/DaStGen.jar --plugin PeanoSnippetGenerator --naming Peano4NameTranslator StartTraversalMessage.def  .
-java -jar ~/git/DaStGen/DaStGen.jar --plugin PeanoSnippetGenerator --naming Peano4NameTranslator TreeManagementMessage.def  .
-    </pre>
-   *
    */
   namespace parallel {
     /**
@@ -29,9 +18,6 @@ java -jar ~/git/DaStGen/DaStGen.jar --plugin PeanoSnippetGenerator --naming Pean
      * types, I use a simple factory mechanism (aka this routine) to hand out integer
      * types.
      */
-    int getTaskType(const std::string&  className);
-
-    //bool isCell
+    int getTaskType();
   }
 }
-

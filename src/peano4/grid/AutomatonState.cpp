@@ -1,22 +1,16 @@
 #include "AutomatonState.h"
 
-
-
 #include <sstream>
 #include <algorithm>
 
-
-
 peano4::grid::AutomatonState::AutomatonState(int  __level, tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, bool  __inverted, std::bitset<Dimensions>  __evenFlags, tarch::la::Vector<DimensionsTimesTwo,int>  __accessNumber){
-setLevel( __level);
-setX( __x);
-setH( __h);
-setInverted( __inverted);
-setEvenFlags( __evenFlags);
-setAccessNumber( __accessNumber);
+  setLevel( __level);
+  setX( __x);
+  setH( __h);
+  setInverted( __inverted);
+  setEvenFlags( __evenFlags);
+  setAccessNumber( __accessNumber);
 }
-
-
 
 peano4::grid::AutomatonState::AutomatonState( const AutomatonState& copy ) {
   setLevel( copy.getLevel() );
@@ -27,9 +21,20 @@ peano4::grid::AutomatonState::AutomatonState( const AutomatonState& copy ) {
   setAccessNumber( copy.getAccessNumber() );
 }
 
+peano4::grid::AutomatonState& peano4::grid::AutomatonState::operator = (const AutomatonState& other) {
+  if (this == &other) {
+    return *this; // Self-assignment check
+  }
 
+  setLevel(other.getLevel());
+  setX(other.getX());
+  setH(other.getH());
+  setInverted(other.getInverted());
+  setEvenFlags(other.getEvenFlags());
+  setAccessNumber(other.getAccessNumber());
 
-
+  return *this;
+}
 
 std::string peano4::grid::AutomatonState::toString() const {
   std::ostringstream out;

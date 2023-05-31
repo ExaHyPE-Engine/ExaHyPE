@@ -94,7 +94,7 @@ test_big_endian(BIG_ENDIAN)
 include(ProcessorCount)
 ProcessorCount(AVAILABLE_PROCESSOR_COUNT)
 find_package(Slurm)
-find_package(Threads REQUIRED)
+find_package(Threads)
 include(CTest)
 # https://stackoverflow.com/questions/31355692/how-do-i-enable-link-time-optimization-lto-with-cmake
 include(CheckIPOSupported)

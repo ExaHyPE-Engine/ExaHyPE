@@ -293,5 +293,7 @@ compile_commands.json
 
 UnitTests2d
 UnitTests3d
+UnitTests2d.trs
+UnitTests3d.trs
 
 .gitignore

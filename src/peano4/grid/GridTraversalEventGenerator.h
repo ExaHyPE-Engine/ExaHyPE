@@ -78,7 +78,7 @@ class peano4::grid::GridTraversalEventGenerator {
   private:
     friend class peano4::grid::tests::GridTraversalEventGeneratorTest;
 
-    static tarch::logging::Log  _log;
+    static tarch::logging::Log _log;
 
     /**
      * Number of underlying tree
@@ -225,9 +225,9 @@ class peano4::grid::GridTraversalEventGenerator {
       const std::set< int >&                    joinTriggered,
       const std::set< int >&                    joining
     ) const;
+
   public:
     GridTraversalEventGenerator(int id);
-
 
     /**
      * Study the adjacency flags and do ignore hanging nodes.
@@ -270,7 +270,6 @@ class peano4::grid::GridTraversalEventGenerator {
       bool        joiningIsConsideredLocal
     ) const;
 
-
     /**
      * A spacetree node as 2^d adjacent vertices. So there are 2^d integers
      * stored within these vertices that overlap with the current node. They
@@ -294,7 +293,6 @@ class peano4::grid::GridTraversalEventGenerator {
       bool          splittingIsConsideredLocal,
       bool          joiningIsConsideredLocal
     ) const;
-
 
     /**
      * Create description of an enter cell traversal.
@@ -394,7 +392,6 @@ class peano4::grid::GridTraversalEventGenerator {
      */
     GridTraversalEvent createPrunedEnterCellTraversalEvent( SpacetreeState spacetreeState, const GridTraversalEvent& event ) const;
     GridTraversalEvent createPrunedLeaveCellTraversalEvent( SpacetreeState spacetreeState, const GridTraversalEvent& event ) const;
-
 
     /**
      * You pass in the vertices and it gives you back the cell type.

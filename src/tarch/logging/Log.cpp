@@ -44,6 +44,7 @@
 
 tarch::logging::Log::Log(const std::string& className):
   _className( className ) {
+
   _startupTime = std::chrono::system_clock::now();
 }
 
@@ -86,9 +87,9 @@ void tarch::logging::Log::traceOut(const std::string& methodName, Message messag
   }
 }
 #else
-void tarch::logging::Log::traceIn(const std::string& methodName, Message message) {}
+void tarch::logging::Log::traceIn(const std::string&, Message) {}
 
-void tarch::logging::Log::traceOut(const std::string& methodName, Message message) {}
+void tarch::logging::Log::traceOut(const std::string&, Message) {}
 #endif
 
 void tarch::logging::Log::indent( bool indent, const std::string& trace, Message message ) const {

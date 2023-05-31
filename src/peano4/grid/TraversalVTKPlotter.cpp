@@ -16,11 +16,8 @@
 
 #include <string>
 
-
-
 tarch::logging::Log           peano4::grid::TraversalVTKPlotter::_log( "peano4::grid::TraversalVTKPlotter" );
 tarch::mpi::BooleanSemaphore  peano4::grid::TraversalVTKPlotter::_sempahore( "peano4::grid::TraversalVTKPlotter" );
-
 
 peano4::grid::TraversalVTKPlotter::TraversalVTKPlotter( const std::string& filename, int treeId ):
   _filename(filename),
@@ -32,14 +29,11 @@ peano4::grid::TraversalVTKPlotter::TraversalVTKPlotter( const std::string& filen
   _coreWriter(nullptr) {
 }
 
-
-peano4::grid::TraversalVTKPlotter::~TraversalVTKPlotter() {
-}
-
+peano4::grid::TraversalVTKPlotter::~TraversalVTKPlotter() {}
 
 void peano4::grid::TraversalVTKPlotter::beginTraversal(
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& h
 ) {
   static int counter = -1;
   counter++;
@@ -66,10 +60,9 @@ void peano4::grid::TraversalVTKPlotter::beginTraversal(
   _coreWriter        = _writer->createCellDataWriter( "core-number", 1 );
 }
 
-
 void peano4::grid::TraversalVTKPlotter::endTraversal(
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& h
 ) {
   assertion(_writer!=nullptr);
 
@@ -96,18 +89,13 @@ void peano4::grid::TraversalVTKPlotter::endTraversal(
 
 }
 
-
 void peano4::grid::TraversalVTKPlotter::loadCell(
-  const GridTraversalEvent&  event
-) {
-}
-
+  [[maybe_unused]] const GridTraversalEvent& event
+) {}
 
 void peano4::grid::TraversalVTKPlotter::storeCell(
-  const GridTraversalEvent&  event
-) {
-}
-
+  [[maybe_unused]]const GridTraversalEvent& event
+) {}
 
 void peano4::grid::TraversalVTKPlotter::enterCell(
   const GridTraversalEvent&  event
@@ -118,9 +106,8 @@ void peano4::grid::TraversalVTKPlotter::enterCell(
   }
 }
 
-
 void peano4::grid::TraversalVTKPlotter::plotCell(
-  const GridTraversalEvent&  event
+  const GridTraversalEvent& event
 ) {
   int vertexIndices[TwoPowerD];
 
@@ -131,10 +118,10 @@ void peano4::grid::TraversalVTKPlotter::plotCell(
     );
   enddforx
 
-	assertion( _cellWriter!=nullptr );
-	int cellIndex = -1;
+  assertion( _cellWriter!=nullptr );
+  int cellIndex = -1;
 
-	#if Dimensions==2
+  #if Dimensions==2
   cellIndex = _cellWriter->plotQuadrangle(vertexIndices);
   #elif Dimensions==3
   cellIndex = _cellWriter->plotHexahedron(vertexIndices);
@@ -148,12 +135,9 @@ void peano4::grid::TraversalVTKPlotter::plotCell(
    _coreWriter->plotCell(cellIndex,tarch::multicore::Core::getInstance().getCoreNumber());
 }
 
-
 void peano4::grid::TraversalVTKPlotter::leaveCell(
-  const GridTraversalEvent&  event
-) {
-}
-
+  [[maybe_unused]]const GridTraversalEvent& event
+) {}
 
 peano4::grid::TraversalObserver*  peano4::grid::TraversalVTKPlotter::clone(int spacetreeId) {
   return new peano4::grid::TraversalVTKPlotter(
@@ -161,7 +145,6 @@ peano4::grid::TraversalObserver*  peano4::grid::TraversalVTKPlotter::clone(int s
     spacetreeId
   );
 }
-
 
 std::vector< peano4::grid::GridControlEvent > peano4::grid::TraversalVTKPlotter::getGridControlEvents() const {
   return std::vector< peano4::grid::GridControlEvent >();

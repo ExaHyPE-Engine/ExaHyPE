@@ -79,23 +79,24 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
      * will free the memory once it has terminated, so the attribute may not
      * be const here.
      */
-    double* __restrict__                         _inputValues;
-    double* __restrict__                         _outputValues;
     const double                                 _t;
     const double                                 _dt;
+    double* __restrict__                         _inputValues;
+    double* __restrict__                         _outputValues;
     int                                          _numberOfInputValues;
     int                                          _numberOfResultValues;
     Functor                                      _functor;
     double                                       _maxEigenvalue;
+
   public:
     /**
      * Create plain enclave task.
      *
      * @param inputValues        Has to be created on heap via tarch::multicore::allocateMemory().
-     * @param enclaveTaskTypeId  Please create it through 
+     * @param enclaveTaskTypeId  Please create it through
      * <pre>
     static int enclaveTaskTypeId = peano4::parallel::Tasks::getTaskType("{{SOLVER_INSTANCE}}");
-</pre>    
+</pre>
      *
      * @see _inputValues for a discussion of const qualifiers
      */
@@ -134,6 +135,3 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
      */
     int getTaskId() const;
 };
-
-
-

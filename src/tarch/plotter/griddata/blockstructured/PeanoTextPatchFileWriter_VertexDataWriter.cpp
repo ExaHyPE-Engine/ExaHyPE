@@ -41,7 +41,7 @@ int tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexD
   return tarch::la::aPowI(_writer._dimensions,_numberOfVerticesPerAxis);
 }
 
-void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, double value ) {
+void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( [[maybe_unused]] int index, double value ) {
   for (int i=0; i<_numberOfUnknowns; i++) {
     if ( std::isnan(value) ) {
       _out << " nan";
@@ -60,7 +60,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::Vertex
   flushIfPatchIsComplete();
 }
 
-void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, double* values ) {
+void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( [[maybe_unused]] int index, double* values ) {
   for (int i=0; i<_numberOfUnknowns; i++) {
     if ( std::isnan(values[i]) ) {
       _out << " nan";
@@ -80,7 +80,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::Vertex
 }
 
 template<typename T>
-void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, T* values ) {
+void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( [[maybe_unused]] int index, T* values ) {
   for (int i=0; i<_numberOfUnknowns; i++) {
     if ( std::isnan(values[i]) ) {
       _out << " nan";

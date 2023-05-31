@@ -51,8 +51,7 @@ void tarch::logging::ITTLogger::continueTrace() {
 }
 
 
-void tarch::logging::ITTLogger::indent( bool indent, const std::string& trace, const std::string& message ) {
-}
+void tarch::logging::ITTLogger::indent( bool, const std::string&, const std::string& ) {}
 
 
 std::string tarch::logging::ITTLogger::getTimeStampHumanReadable( long int timestampNanoseconds ) const {
@@ -86,8 +85,12 @@ std::string tarch::logging::ITTLogger::getTimeStampHumanReadable( long int times
 
 
 std::string tarch::logging::ITTLogger::constructMessageString(
-  std::string          messageType,
-  long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message
+  [[maybe_unused]] std::string messageType,
+  [[maybe_unused]] long int timestampNanoseconds,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
 ) {
   std::ostringstream result;
   result << getTimeStampHumanReadable(timestampNanoseconds)
@@ -153,7 +156,13 @@ void tarch::logging::ITTLogger::error(long int timestampNanoseconds, int rank, i
 }
 
 
-void tarch::logging::ITTLogger::traceIn(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::ITTLogger::traceIn(
+  [[maybe_unused]] long int timestampNanoseconds,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
+) {
   #ifdef UseITT
   if (not _firstTraceWritten) {
     _firstTraceWritten = true;
@@ -171,13 +180,17 @@ void tarch::logging::ITTLogger::traceIn(long int timestampNanoseconds, int rank,
   #endif
 }
 
-
-void tarch::logging::ITTLogger::traceOut(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::ITTLogger::traceOut(
+  [[maybe_unused]] long int timestampNanoseconds,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
+) {
   #ifdef UseITT
   __itt_event_end(_ittHandles[trace.c_str()]);
   #endif
 }
-
 
 void tarch::logging::ITTLogger::close() {
   std::cout.flush();

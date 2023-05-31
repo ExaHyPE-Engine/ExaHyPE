@@ -2,9 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/la/Vector.h"
-
 
 namespace tarch {
   namespace plotter {
@@ -15,7 +13,6 @@ namespace tarch {
     }
   }
 }
-
 
 /**
  * Abstract base class for a patch plotter
@@ -158,6 +155,4 @@ class tarch::plotter::griddata::blockstructured::PatchWriter {
     virtual VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description ) = 0;
     virtual VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description, const std::string& metaData  ) = 0;
     virtual VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description, const std::string& metaData, double* mapping ) = 0;
-
 };
-

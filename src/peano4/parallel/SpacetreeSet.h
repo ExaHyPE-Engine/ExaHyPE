@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/logging/Log.h"
 
 #include "tarch/services/Service.h"
@@ -16,25 +15,22 @@
 
 #include "TreeManagementMessage.h"
 
-
 #include <list>
 #include <map>
 #include <set>
 
-
 namespace peano4 {
   namespace grid {
     class Spacetree;
-    struct GridStatistics;
     class TraversalObserver;
-    class AutomatonState;
+    struct GridStatistics;
+    struct AutomatonState;
   }
 
   namespace parallel {
     class SpacetreeSet;
   }
 }
-
 
 /**
  * The spacetree set has to be a singleton, as it is reponsible to accept
@@ -62,6 +58,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
         SpacetreeSet&                     _spacetreeSet;
         peano4::grid::TraversalObserver&  _observer;
         const bool                        _invertTreeTraversalDirectionBeforeWeStart;
+
       public:
         TraverseTask( peano4::grid::Spacetree&  tree, SpacetreeSet& set, peano4::grid::TraversalObserver&  observer, bool invertTreeTraversalDirectionBeforeWeStart );
 
@@ -720,7 +717,4 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
     std::set<int> getLocalSpacetrees() const;
 };
 
-
 #include "SpacetreeSet.cpph"
-
-

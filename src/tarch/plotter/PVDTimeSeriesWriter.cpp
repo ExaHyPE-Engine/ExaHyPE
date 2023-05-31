@@ -5,7 +5,6 @@
 #include "tarch/la/ScalarOperations.h"
 #include "tarch/Assertions.h"
 
-
 namespace {
   tarch::logging::Log _log( "tarch::plotter::PVDTimeSeriesWriter" );
 
@@ -13,7 +12,6 @@ namespace {
 
   double TimeStampPrecision = 1e-5;
 }
-
 
 double tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile( std::string  dataFile ) {
   if ( dataFile.find( ".pvd" )==std::string::npos ) {
@@ -25,7 +23,6 @@ double tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile( std::s
   logDebug( "getLatestTimeStepInIndexFile(string)", "latest timestamp is " << result );
   return result;
 }
-
 
 void tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile( const std::string& snapshotFileName ) {
   const std::string filename = snapshotFileName + ".pvd";
@@ -41,12 +38,10 @@ void tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile( const std::strin
   writeFile( filename, lines );
 }
 
-
 void tarch::plotter::PVDTimeSeriesWriter::addFileTail( std::vector<std::string>& lines ) {
   lines.push_back( "</Collection>" );
   lines.push_back( "</VTKFile>" );
 }
-
 
 void tarch::plotter::PVDTimeSeriesWriter::removeFileTail( std::vector<std::string>& lines ) {
   if (not lines.empty()) {
@@ -58,7 +53,6 @@ void tarch::plotter::PVDTimeSeriesWriter::removeFileTail( std::vector<std::strin
     }
   }
 }
-
 
 std::tuple< double, int, std::vector<std::string> > tarch::plotter::PVDTimeSeriesWriter::parseFile( const std::string& filename, bool createBackup ) {
   std::ifstream in( filename );
@@ -85,8 +79,7 @@ std::tuple< double, int, std::vector<std::string> > tarch::plotter::PVDTimeSerie
       if (tarch::la::smaller(timestamp,currentTimeStep,TimeStampPrecision)) {
         timestamp = currentTimeStep;
         part      = currentPart;
-      }
-      else if (tarch::la::equals(timestamp,currentTimeStep,TimeStampPrecision)) {
+      } else if (tarch::la::equals(timestamp,currentTimeStep,TimeStampPrecision)) {
         part = std::max(part, currentPart);
       }
     }
@@ -102,7 +95,6 @@ std::tuple< double, int, std::vector<std::string> > tarch::plotter::PVDTimeSerie
   return std::tuple< double, int, std::vector<std::string> >(timestamp, part, fileLines);
 }
 
-
 void tarch::plotter::PVDTimeSeriesWriter::writeFile( const std::string& filename, const std::vector<std::string>& lines ) {
   std::ofstream out;
   out.open( filename.c_str() );
@@ -110,19 +102,16 @@ void tarch::plotter::PVDTimeSeriesWriter::writeFile( const std::string& filename
     for (auto& p: lines) {
       out << p << std::endl;
     }
-  }
-  else {
+  } else {
     logError( "createEmptyNewFile(std::string)", "failed to open " << filename );
   }
 }
-
 
 std::string tarch::plotter::PVDTimeSeriesWriter::createFileEntry( const std::string& snapshotFileName, double timestamp, int partCounter ) {
   std::string newEntry = "<DataSet timestep=\"" + std::to_string(timestamp) + "\" group=\"\" part=\"" + std::to_string(partCounter) + "\" file=\"" + snapshotFileName + "\" />";
   logDebug( "createFileEntry(...)", "added " << newEntry );
   return newEntry;
 }
-
 
 void tarch::plotter::PVDTimeSeriesWriter::appendNewData(const std::string& snapshotFileName, const std::string& dataFile, double timeStamp) {
   const std::string filename = snapshotFileName + ".pvd";

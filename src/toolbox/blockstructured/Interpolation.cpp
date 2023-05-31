@@ -39,7 +39,11 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseCo
   return result;
 }
 
-tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal, int overlap) {
+tarch::la::DynamicMatrix* toolbox::blockstructured::internal::createPiecewiseConstantInterpolationMatrix(
+  [[maybe_unused]] int numberOfDoFsPerAxisInPatch,
+  [[maybe_unused]] int normal,
+  [[maybe_unused]] int overlap
+) {
   tarch::la::DynamicMatrix P1d(3,1,{ {1.0},{1.0},{1.0} });
   P1d.replicateRows( 3, numberOfDoFsPerAxisInPatch, 1, true );
 
@@ -48,7 +52,7 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseCo
   );
 }
 
-tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(
+tarch::la::DynamicMatrix* toolbox::blockstructured::internal::createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(
   const tarch::la::DynamicMatrix&  P1d,
   int                              numberOfDoFsPerAxisInPatch,
   int                              normal
@@ -1123,26 +1127,26 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
 }
 
 void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      const double* __restrict__                normalInterpolationMatrix1d,
-      const double* __restrict__                tangentialInterpolationMatrix1d,
-      const double* __restrict__                coarseGridCellValues,
-      const double* __restrict__                coarseGridFaceValues,
-      double* __restrict__                      fineGridFaceValues
+  [[maybe_unused]] const peano4::datamanagement::FaceMarker& marker,
+  [[maybe_unused]] int                                       numberOfDoFsPerAxisInPatch,
+  [[maybe_unused]] int                                       overlap,
+  [[maybe_unused]] int                                       unknowns,
+  [[maybe_unused]] const double* __restrict__                normalInterpolationMatrix1d,
+  [[maybe_unused]] const double* __restrict__                tangentialInterpolationMatrix1d,
+  [[maybe_unused]] const double* __restrict__                coarseGridCellValues,
+  [[maybe_unused]] const double* __restrict__                coarseGridFaceValues,
+  [[maybe_unused]] double* __restrict__                      fineGridFaceValues
 ) {
   assertion(false);
 }
 
 void toolbox::blockstructured::interpolateCell_AoS_tensor_product(
-      const peano4::datamanagement::CellMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       unknowns,
-      const double* __restrict__                interpolationMatrix1d,
-      const double* __restrict__                coarseGridCellValues,
-      double* __restrict__                      fineGridCellValues
+  [[maybe_unused]] const peano4::datamanagement::CellMarker& marker,
+  [[maybe_unused]] int                                       numberOfDoFsPerAxisInPatch,
+  [[maybe_unused]] int                                       unknowns,
+  [[maybe_unused]] const double* __restrict__                interpolationMatrix1d,
+  [[maybe_unused]] const double* __restrict__                coarseGridCellValues,
+  [[maybe_unused]] double* __restrict__                      fineGridCellValues
 ) {
   assertion(false);
 }

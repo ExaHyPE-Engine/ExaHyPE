@@ -66,8 +66,6 @@ namespace tarch {
    *
    * Depending on the chosen backend, you might get additional counters on top.
    *
-   *
-   *
    * @see tarch::multicore::orchestration::StrategyFactory
    */
   namespace multicore {
@@ -165,13 +163,13 @@ namespace tarch {
          * stores within otherTasks, as these have to be processed by fuse().
          *
          * <h2> Default implementation </h2>
-         * 
+         *
          * My default implementation executes all the passed tasks and then returns 
          * the original task back, i.e. this one is not executed. This is the first
          * execution pattern described above.
          *
          * <h2> Memory ownership </h2>
-         * 
+         *
          * See above: fuse() has to delete all the instances within otherTasks.
          * The calling routine does not have to delete anything there anymore.
          * But it has to destroy the owning object, i.e. the object on which is
@@ -189,7 +187,6 @@ namespace tarch {
          */
         virtual bool fuse( const std::list<Task*>& otherTasks, int targetDevice=Host );
     };
-
 
     /**
      * Helper class if you wanna administer tasks with in a queue
@@ -219,7 +216,6 @@ namespace tarch {
         virtual bool run() override;
     };
 
-
     /**
      * Frequently used implementation for job with a functor.
      */
@@ -236,14 +232,12 @@ namespace tarch {
         virtual bool run() override;
     };
 
-
     /**
      * @param threadCount -1 if you are interested in global number of tasks or a
      *   non-negative integer if you are only interested in one particular thread
      *   and its specific tasks.
      */
     int getNumberOfPendingTasks(int threadCount);
-
 
     /**
      * Process a few tasks from my backlog of tasks
@@ -269,7 +263,6 @@ namespace tarch {
      * @return There have been tasks
      */
     bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max(), bool fifo=true);
-
 
     /**
      * Spawns a single task in a non-blocking fashion
@@ -342,7 +335,6 @@ namespace tarch {
        */
       void deferRunningThreadAndContinueWithOtherTasks();
     }
-
 
     namespace internal {
       /**
@@ -540,8 +532,4 @@ namespace tarch {
   }
 }
 
-
 bool operator<( const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs );
-
-
-
