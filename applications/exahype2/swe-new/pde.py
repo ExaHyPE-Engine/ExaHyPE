@@ -32,3 +32,11 @@ class PDE(exahype2.symhype.FirstOrderConservativePDEFormulation, ABC):
 
     self.eigenvalues[2, 0] = self.u - sympy.sqrt(self.g * self.h)
     self.eigenvalues[2, 1] = self.v - sympy.sqrt(self.g * self.h)
+
+  def implementation_of_reflective_BC(self):
+    return """
+    Qoutside[0] = Qinside[0];
+    Qoutside[1] = -1.f * Qinside[1];
+    Qoutside[2] = -1.f * Qinside[2];
+    Qoutside[3] = Qinside[3];
+    """
