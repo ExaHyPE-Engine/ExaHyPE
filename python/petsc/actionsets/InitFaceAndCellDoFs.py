@@ -9,18 +9,11 @@ import jinja2
 class InitFaceAndCellDoFs(ActionSet):
   """!
 
-Initialise degrees of freedom associated with the mesh vertices
-    
-This simple action set plugs into the situations where we touch a vertex
-for the first time throughout a mesh traversal. Of these events, it ignores
-all those for refined vertices, i.e. it solely handles the unrefined 
-vertices in the spacetree. If focuses on the fine grid.
+Initialise degrees of freedom associated with the cells and Faces.
 
-The injected code snippet is simple and basically asks if a vertex will be 
-refined. If not, it invokes the initialisation routine of the solver. For
-this, the action set has to know the typename and the instance name of the 
-solver. Besides the actual behaviour, the action set also has to include
-the solver in the first place. This happens in get_includes().
+Much the same as the old code to init DoFs on vertices, except here
+we also make the call to the localtoglobalmap. ie we both init the 
+degrees of freedom and the global mapping for indices on faces and cells
   
   """
   
@@ -53,6 +46,9 @@ the solver in the first place. This happens in get_includes().
     }
     else{
       fineGridFace{{SOLVER_NAME}}.setType(facedata::{{SOLVER_NAME}}::Type::Interior);
+
+      //we can also give it a DoF
+      fineGridFace{{SOLVER_NAME}}.setNumber( _faceLocalMap.reserveIndex( {{FACE_CARDINALITY}} ) );
     }
 
     // place some values in the mesh for the face
@@ -74,6 +70,9 @@ the solver in the first place. This happens in get_includes().
 
   TemplateInitCell="""
   if ( not marker.willBeRefined() ){
+    //first, we give it a DoF
+    fineGridCell{{SOLVER_NAME}}.setNumber( _cellLocalMap.reserveIndex( {{CELL_CARDINALITY}} ) );
+
     // place some values in the mesh for the face
     tarch::la::Vector<{{CELL_CARDINALITY}}, double>   value;
     tarch::la::Vector<{{CELL_CARDINALITY}}, double>   rhs;
@@ -91,6 +90,11 @@ the solver in the first place. This happens in get_includes().
   }
 
   """
+  #when we get to the end of the traversal, merge the maps together
+  TemplateEndTraversal="""
+  repositories::{{SOLVER_INSTANCE}}.getCellLocalToGlobalMap().merge( _cellLocalMap );
+  repositories::{{SOLVER_INSTANCE}}.getFaceLocalToGlobalMap().merge( _faceLocalMap );
+"""
   
   def __init__(self,
                solver):
@@ -122,6 +126,14 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       result = jinja2.Template(self.TemplateInitFace).render(**self.d)
       pass 
+    
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.TemplateInitCell).render(**self.d)
+      pass 
+
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+      result = jinja2.Template(self.TemplateEndTraversal).render(**self.d)
+      pass 
     return result
 
 
@@ -150,6 +162,21 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     """
     return False
 
+  def get_attributes(self):
+    """!
+    This time, we will have a L2G map for cells and faces each
+    """
+    return """
+  ::petsc::LocalToGlobalMap  _cellLocalMap;
+  ::petsc::LocalToGlobalMap  _faceLocalMap;
+"""
+
+  def get_constructor_body(self):
+    return """
+  _cellLocalMap.setTreeNumber( treeNumber );
+  _faceLocalMap.setTreeNumber( treeNumber );
+
+"""
 
   def get_includes(self):
     """!

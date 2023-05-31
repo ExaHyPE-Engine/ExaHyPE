@@ -198,8 +198,8 @@ void step() {
         {% if Project_Name=="HDG" %}
         const int totalNumberOfFaces    = repositories::getTotalFaceDofs();
         const int totalNumberOfCells    = repositories::getTotalCellDofs();
-        logInfo( "step()", "total no of faces=" << totalNumberOfFaces );
-        logInfo( "step()", "total no of cells=" << totalNumberOfCells );
+        logInfo( "step()", "total no of face dofs=" << totalNumberOfFaces );
+        logInfo( "step()", "total no of cell dofs=" << totalNumberOfCells );
         {% endif %}
 
         repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );

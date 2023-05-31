@@ -114,7 +114,7 @@ our thread-local copy of the map with the correct tree number.
     
     """
     return """
-  ::petsc::LocalToGlobalMap  _localMap;    
+  ::petsc::LocalToGlobalMap  _localMap;
 """
       
   def get_constructor_body(self):
