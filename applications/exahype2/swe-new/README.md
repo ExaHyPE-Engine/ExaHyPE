@@ -4,14 +4,14 @@
 ## Full Equations ##
 
 $$
-\partial_t \begin{pmatrix}
+\frac{\partial}{\partial_t} \begin{pmatrix}
                 h\\hu\\hv
                \end{pmatrix}
-               + \partial_x
+               + \frac{\partial}{\partial_x}
                \begin{pmatrix}
                 hu\\hu^2 + \frac{1}{2} \cdot gh^2\\huv
                \end{pmatrix}
-               +  \partial_y
+               +  \frac{\partial}{\partial_y}
                \begin{pmatrix}
                 hv\\huv\\hv^2 + \frac{1}{2} \cdot gh^2
                \end{pmatrix} =
