@@ -86,3 +86,47 @@ S[0] = 0;
 S[1] = -g * h * b;
 S[2] = -g * h * b;
 ```
+
+## Scenarios ##
+
+There is a plethora of scenarios implemented in [scenarios](scenarios/), which are going to be quickly detailed here.
+
+Two files are of note here as they are not typical scenarios:
+
+- [scenario.py](scenarios/scenario.py), which is an interface detailing the different methods each scenario has to implement.
+- [template_scenario.py](scenarios/template_scenario.py), which is a template implementation of the fluxes and sources of which every other scenario implemented derives from.
+
+### Standard Scenarios ###
+
+Standard scenarios are taken from the Practical Course Tsunami Simulation (IN4153) held at Technical University Munich in WS21/22.
+
+They are used to test basic functionality of the SWE implementation such as flux and bathymetry.
+
+- [Radial Dam Break](scenarios/radial_dam_break.py):  
+  Scenario simulating a radial dam break.  
+  In the middle of the simulation plane, there is a circular discontinuity in water height leading to a dam break problem at $t=0$.
+- [Radial Bathymetry Dam Break](scenarios/radial_bathymetry_dam_break.py):  
+  Scenario simulating a radial dam break caused by discontinuity in the bathymetry.  
+  In the middle of the simulation plane, there is a circular discontinuity in the bathymetry leading to a discontinuity in water height at $t=0$.
+- [Artificial Tsunami](scenarios/artificial_tsunami.py):  
+  Scenario simulating an artificial tsunami.
+  - The displacment for the tsunami is given by:  
+  $d(x,y) = 5m \cdot d_x(x)d_y(y)$ with $d_x(x) = sin((\frac{x}{500m}+1) \cdot \pi)$, $d_y(y) = -(\frac{y}{500m})^2+1$, on a 1km $\times$ 1km domain.
+  - Bathymetry and water height are given by:  
+  $b(x,y) = -100m$ and $h(x,y,0)=100m$, on a 10km $\times$ 10km domain.
+- [Sea At Rest](scenarios/sea_at_rest.py):  
+  Scenario simulating a sea at rest. It uses the same bathymetry and displacement data as the artificial tsunami scenario but bathymetry + displacement balance out with the water height leading to no expected perturbations.
+
+### Wetting and Drying Scenarios ###
+
+These scenarios are taken from "A continuous/discontinuous Galerkin solution of the shallow water equations with dynamic viscosity, high-order wetting and drying, and implicit time integration" by Marras et al. (2016).
+
+They implement various wetting and drying scenarios to test the inundation capabilities of ExaHyPE.
+
+- [Oscillating Lake](scenarios/oscillating_lake.py):
+- [Three Mounds Channel](scenarios/three_mounds_channel.py):
+- [Circular Island](scenarios/circular_island.py):
+
+### Tsunami Scenario ###
+
+This [scenario](scenarios/tsunami.py) uses a NetCDF reader to read in bathymetry and displacement files and initializes the variables accordingly. With it, tsunamis such as the 2011 Tohoku event can be simulated.
