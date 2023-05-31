@@ -3,7 +3,8 @@
 
 ## Full Equations ##
 
-$\partial_t \begin{pmatrix}
+$$
+\partial_t \begin{pmatrix}
                 h\\hu\\hv
                \end{pmatrix}
                + \partial_x
@@ -16,7 +17,8 @@ $\partial_t \begin{pmatrix}
                \end{pmatrix} =
                \begin{pmatrix}
                 0\\-ghb_x\\-ghb_y
-               \end{pmatrix}$
+               \end{pmatrix}
+$$
 
 With $b(x)$ being the bathymetry measured from a reference $D$ (normal sea level, negative below, positive above), $h(x,y,t)$ being the total positive water depth and $g$ the earth's gravitational acceleration set to $9.81ms^{-2}$. The two velocities $u(x,y,t)$ and $v(x,y,t)$ are the velocities in x- and y-dimension respectively.
 
@@ -38,19 +40,19 @@ All important aspects of the shallow-water equations are modelled in [template_s
 
 The two fluxes in x- and y-dimension respectively are given by:
 
-$
+$$
 F(U) = \begin{pmatrix}
         hu\\hu^2 + \frac{1}{2} \cdot gh^2\\huv
     \end{pmatrix}
-$
+$$
 
 and
 
-$
+$$
 G(U) = \begin{pmatrix}
         hv\\huv\\hv^2 + \frac{1}{2} \cdot gh^2
     \end{pmatrix}
-$
+$$
 
 They are implemented in the following way:
 
@@ -73,11 +75,11 @@ switch(normal) {
 
 The source term
 
-$
+$$
 S(U) =  \begin{pmatrix}
             0\\-ghb_x\\-ghb_y
         \end{pmatrix}
-$
+$$
 
 is implemented as follows:
 
