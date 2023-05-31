@@ -18,7 +18,7 @@ $\partial_t \begin{pmatrix}
                 0\\-ghb_x\\-ghb_y
                \end{pmatrix}$
 
-With $b(x)$ being the bathymetry measured from a reference $D$ (normal sea level, negative below, positive above), $h(x,y,t)$ being the total positive water depth and $g$ the earth's gravitational acceleration set to $9.81ms^{-2}$.
+With $b(x)$ being the bathymetry measured from a reference $D$ (normal sea level, negative below, positive above), $h(x,y,t)$ being the total positive water depth and $g$ the earth's gravitational acceleration set to $9.81ms^{-2}$. The two velocities $u(x,y,t)$ and $v(x,y,t)$ are the velocities in x- and y-dimension respectively.
 
 The eigenvalues (wave speeds) in x-dimension are given by:
 
