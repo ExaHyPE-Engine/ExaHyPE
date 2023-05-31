@@ -8,10 +8,10 @@ import exahype2
 
 dimensions                = 2
 unknowns                  = dimensions + 2 # [rho, u, v, (w), e]
-cell_size                 = 0.005
+cell_size                 = 0.4
 amr_levels                = 1 # Set to 1 to disable adaptive mesh refinement (AMR)
 patch_size                = 4
-end_time                  = 1.0
+end_time                  = 5.0
 plot_interval             = 0.05 # Set to 0 to disable I/O
 mode                      = peano4.output.CompileMode.Release # Switch here between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'
 
@@ -23,7 +23,7 @@ else:
   offset                  = [0.0, 0.0, 0.0]
 
 gamma                     = 1.4
-fluid_viscosity           = 0.0
+fluid_viscosity           = 0.01
 prandtl_number            = 0.7
 lid_drive_cavity_velocity = 1.0 # Wall velocity for lid-driven cavity
 

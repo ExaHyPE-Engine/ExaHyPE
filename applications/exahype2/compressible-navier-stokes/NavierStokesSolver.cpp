@@ -1,6 +1,10 @@
 #include "NavierStokesSolver.h"
 
-tarch::logging::Log applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::_log("applications::exahype2::CompressibleNavierStokes::NavierStokesSolver");
+tarch::logging::Log applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::_log(
+  "applications::exahype2:"
+  ":CompressibleNavierStok"
+  "es::NavierStokesSolver"
+);
 
 enum Coordinates
 {
@@ -53,20 +57,23 @@ enum class Scenario
 {
   LidDrivenCavity,
   ChannelFlow,
-  ChannelFlowWithObstacle, // "Karman Vortex Street" -> Obstacles can be easily added by adding an input reader for meshes (.stl) files.
+  ChannelFlowWithObstacle, // "Karman Vortex Street" -> Obstacles can be easily added by adding an input reader for
+                           // meshes (.stl) files.
   ShockTube,
   Bubbles,
   RayleighTaylorInstability,
   PointExplosion,
 };
-// Scenario scenario = Scenario::LidDrivenCavity;
-Scenario scenario = Scenario::PointExplosion;
+
+Scenario scenario = Scenario::LidDrivenCavity;
+// Scenario scenario = Scenario::PointExplosion;
 
 void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::initialCondition(
-    [[maybe_unused]] double *__restrict__ Q,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double> &volumeCentre,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double> &volumeH,
-    [[maybe_unused]] bool gridIsConstructred)
+  [[maybe_unused]] double* __restrict__ Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] bool                                         gridIsConstructred
+)
 {
   assertion(!std::isnan(Q[rho]));
   assertion(!std::isnan(Q[u]));
@@ -77,28 +84,29 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::initi
   {
   case Scenario::LidDrivenCavity:
     Q[rho] = 1.0;
-    Q[u] = 0.0;
-    Q[v] = 0.0;
-    Q[e] = (100 / Gamma) / (Gamma - 1) + 0.5 * (Q[u] * Q[u] + Q[v] * Q[v]) / Q[rho];
+    Q[u]   = 0.0;
+    Q[v]   = 0.0;
+    Q[e]   = (100 / Gamma) / (Gamma - 1) + 0.5 * (Q[u] * Q[u] + Q[v] * Q[v]) / Q[rho];
     break;
   case Scenario::PointExplosion:
-    const tarch::la::Vector<2, double> circleCentre = {0.5, 0.3};
-    bool isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < 0.05);
-    Q[rho] = 0.1;
-    Q[u] = 0;
-    Q[v] = 0;
-    Q[e] = isInTheCentre ? 1.0 : 0.05; // inner energy
+    const tarch::la::Vector<2, double> circleCentre  = {0.5, 0.3};
+    bool                               isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < 0.05);
+    Q[rho]                                           = 0.1;
+    Q[u]                                             = 0;
+    Q[v]                                             = 0;
+    Q[e]                                             = isInTheCentre ? 1.0 : 0.05; // inner energy
     break;
   }
 }
 
 void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::boundaryConditions(
-    [[maybe_unused]] const double *__restrict__ Qinside,
-    [[maybe_unused]] double *__restrict__ Qoutside,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double> &faceCentre,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double> &volumeH,
-    [[maybe_unused]] double t,
-    [[maybe_unused]] int normal)
+  [[maybe_unused]] const double* __restrict__ Qinside,
+  [[maybe_unused]] double* __restrict__ Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] int                                          normal
+)
 {
   assertion(!std::isnan(Qinside[rho]));
   assertion(!std::isnan(Qinside[u]));
@@ -109,7 +117,7 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::bound
   {
   case Scenario::LidDrivenCavity:
     Qoutside[rho] = Qinside[rho];
-    Qoutside[u] = 0;
+    Qoutside[u]   = 0;
     if (faceCentre[y] >= DomainSize[y] - std::numeric_limits<double>::epsilon())
     { // TODO: DomainOffset missing here
       Qoutside[u] = LidDrivenCavityVelocity;
@@ -119,20 +127,21 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::bound
     break;
   case Scenario::PointExplosion:
     Qoutside[rho] = Qinside[rho];
-    Qoutside[u] = Qinside[u];
-    Qoutside[v] = Qinside[v];
-    Qoutside[e] = Qinside[e];
+    Qoutside[u]   = Qinside[u];
+    Qoutside[v]   = Qinside[v];
+    Qoutside[e]   = Qinside[e];
     break;
   }
 }
 
 double applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::maxEigenvalue(
-    [[maybe_unused]] const double *__restrict__ Q,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double> &faceCentre,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double> &volumeH,
-    [[maybe_unused]] double t,
-    [[maybe_unused]] double dt,
-    [[maybe_unused]] int normal)
+  [[maybe_unused]] const double* __restrict__ Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal
+)
 {
   assertion(Q[rho] > 0);
   assertion(Q[e] > 0);
@@ -147,21 +156,23 @@ double applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::max
 
   const double c_speedOfSound = std::sqrt(Gamma * pressure / Q[rho]);
 
-  const double max_lambda_convective = std::abs(Q[u + normal] / Q[rho]) + c_speedOfSound;
-  const double max_lambda_viscous = std::max(4.0 / 3.0 * Viscosity / Q[rho],
-                                             Gamma * Viscosity / (PrandtlNumber * Q[rho]));
+  const double max_lambda_convective = std::abs(Q[u + normal]) / Q[rho] + c_speedOfSound;
+  const double max_lambda_viscous    = std::max(
+    4.0 / 3.0 * Viscosity / Q[rho], Gamma * Viscosity / (PrandtlNumber * Q[rho])
+  );
 
   return std::max(max_lambda_convective, max_lambda_viscous);
 }
 
 void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::flux(
-    [[maybe_unused]] const double *__restrict__ Q,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double> &faceCentre,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double> &volumeH,
-    [[maybe_unused]] double t,
-    [[maybe_unused]] double dt,
-    [[maybe_unused]] int normal,
-    [[maybe_unused]] double *__restrict__ F)
+  [[maybe_unused]] const double* __restrict__ Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal,
+  [[maybe_unused]] double* __restrict__ F
+)
 {
   assertion(Q[rho] > 0);
   assertion(Q[e] > 0);
@@ -172,10 +183,10 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::flux(
   assertion(!std::isnan(Q[e]));
 
   const double pressure = (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v]) / Q[rho]);
-  assertion(pressure > 0)
+  assertion(pressure > 0);
 
-      F[rho] = Q[u + normal];
-  F[e] = Q[u + normal] * (Q[e] + pressure) / Q[rho];
+  F[rho] = Q[u + normal];
+  F[e]   = Q[u + normal] * (Q[e] + pressure) / Q[rho];
 
   if (normal == 0)
   {
@@ -190,14 +201,15 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::flux(
 }
 
 void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::nonconservativeProduct(
-    [[maybe_unused]] const double *__restrict__ Q,
-    [[maybe_unused]] const double *__restrict__ deltaQ,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double> &faceCentre,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double> &volumeH,
-    [[maybe_unused]] double t,
-    [[maybe_unused]] double dt,
-    [[maybe_unused]] int normal,
-    [[maybe_unused]] double *__restrict__ BTimesDeltaQ)
+  [[maybe_unused]] const double* __restrict__ Q,
+  [[maybe_unused]] const double* __restrict__ deltaQ,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal,
+  [[maybe_unused]] double* __restrict__ BTimesDeltaQ
+)
 {
   assertion(Q[rho] > 0);
   assertion(!std::isnan(Q[rho]));
@@ -231,14 +243,15 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::nonco
   }
 
   BTimesDeltaQ[rho] = 0;
-  BTimesDeltaQ[e] = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v]) / Q[rho];
+  BTimesDeltaQ[e]   = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v]) / Q[rho];
 }
 
 ::exahype2::RefinementCommand applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::refinementCriterion(
-    [[maybe_unused]] const double *__restrict__ Q,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double> &volumeCentre,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double> &volumeH,
-    [[maybe_unused]] double t)
+  [[maybe_unused]] const double* __restrict__ Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+  [[maybe_unused]] double                                       t
+)
 {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
