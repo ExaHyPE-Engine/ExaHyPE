@@ -6,7 +6,8 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-  _localToGlobalMap( ::petsc::LocalToGlobalMap::RankGlobalTreeNumber )  {
+  _cellLocalToGlobalMap( ::petsc::LocalToGlobalMap::RankGlobalTreeNumber ),
+  _faceLocalToGlobalMap( ::petsc::LocalToGlobalMap::RankGlobalTreeNumber )  {
 
 }
 
@@ -16,6 +17,10 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 }
 
 
-::petsc::LocalToGlobalMap&  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLocalToGlobalMap() {
-  return _localToGlobalMap;
+::petsc::LocalToGlobalMap&  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceLocalToGlobalMap() {
+  return _faceLocalToGlobalMap;
+}
+
+::petsc::LocalToGlobalMap&  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellLocalToGlobalMap() {
+  return _cellLocalToGlobalMap;
 }

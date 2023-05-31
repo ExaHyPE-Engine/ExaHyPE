@@ -9,7 +9,6 @@ import os
 from .Solver                                    import Solver
 from petsc.actionsets.EnumerateVertices         import EnumerateVertices
 from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
-from petsc.actionsets.InitFaceDoFs              import InitFaceDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
 from petsc.actionsets.AssemblePETSCMatrix       import AssemblePetscMatrixOnVertices
 

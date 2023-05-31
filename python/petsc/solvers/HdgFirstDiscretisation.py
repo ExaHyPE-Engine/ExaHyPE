@@ -9,7 +9,7 @@ import os
 from .Solver                                    import Solver
 from petsc.actionsets.EnumerateVertices         import EnumerateVertices
 from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
-from petsc.actionsets.InitFaceDoFs              import InitFaceDoFs
+from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
 from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixOnCellsAndFaces
 
@@ -20,7 +20,24 @@ class HdgFirstDiscretisation(Solver):
   """!
    
   this is a copy of the CollocatedLowOrderDiscretisation, but we rewrite
-  to capture DoFs on faces and cells
+  to capture DoFs on faces and cells.
+
+  We reuse some of the files from the first attempt at doing the Poisson problem.
+  A quick summary of the ones we reuse and the ones we rewrite:
+
+  Reuse, with the use of jinja if statements to 
+  add the functionality we need:
+    - Project.* in top level
+    - PETScMain.* in top level
+    - AssemblePETScMatrix.py in action sets
+    - ProjectPETScSolutionOnVerticesBackOntoMesh.py
+    - Solver.py
+    - petscData/* (all the routines for PETSc matrices and solvers etc)
+
+  Rewrite:
+    - EnumerateCellsAndFaces.py
+    - InitFaceAndCellDoFs.py
+    - All the templates in the solver directory
   
   """
   def __init__(self,
@@ -119,8 +136,8 @@ class HdgFirstDiscretisation(Solver):
     
     """
     observer.add_action_set( InitVertexDoFs(self) ) 
-    observer.add_action_set( EnumerateVertices(self) ) 
-    observer.add_action_set( InitFaceDoFs(self) ) 
+    # observer.add_action_set( EnumerateVertices(self) ) 
+    observer.add_action_set( InitFaceAndCellDoFs(self) ) 
     pass
   
   

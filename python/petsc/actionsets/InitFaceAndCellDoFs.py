@@ -6,7 +6,7 @@ import peano4
 import jinja2
 
 
-class InitFaceDoFs(ActionSet):
+class InitFaceAndCellDoFs(ActionSet):
   """!
 
 Initialise degrees of freedom associated with the mesh vertices
@@ -25,15 +25,15 @@ the solver in the first place. This happens in get_includes().
   """
   
   TemplateInitFace="""
-// lambda to determine the pair of vertices that determine 
-// whether face i is on the boundary or not
-// eg if vertices 0 and 1 are both dirichlet, then face 1 must
-// be on the boundary
+  // lambda to determine the pair of vertices that determine 
+  // whether face i is on the boundary or not
+  // eg if vertices 0 and 1 are both dirichlet, then face 1 must
+  // be on the boundary
   auto getCrucialIndices = [](int i) -> const std::pair<int,int>{
-    static constexpr std::pair<int,int> v0 = std::make_pair(0,2);
-    static constexpr std::pair<int,int> v1 = std::make_pair(0,1);
-    static constexpr std::pair<int,int> v2 = std::make_pair(1,3);
-    static constexpr std::pair<int,int> v3 = std::make_pair(2,3);
+    static constexpr std::pair<int,int> v0 = {0,2};
+    static constexpr std::pair<int,int> v1 = {0,1};
+    static constexpr std::pair<int,int> v2 = {1,3};
+    static constexpr std::pair<int,int> v3 = {2,3};
     if (i==0)      return v0;
     else if (i==1) return v1; 
     else if (i==2) return v2;
@@ -50,13 +50,46 @@ the solver in the first place. This happens in get_includes().
       fineGridVertices{{SOLVER_NAME}}(crucialIndices.second).getType() == vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
     ){
       fineGridFace{{SOLVER_NAME}}.setType(facedata::{{SOLVER_NAME}}::Type::Boundary);
-      repositories::incrementBoundaryFaces(1);
     }
     else{
       fineGridFace{{SOLVER_NAME}}.setType(facedata::{{SOLVER_NAME}}::Type::Interior);
-      repositories::incrementFaceDofs(1);
     }
+
+    // place some values in the mesh for the face
+    tarch::la::Vector<{{FACE_CARDINALITY}}, double>   value;
+    tarch::la::Vector<{{FACE_CARDINALITY}}, double>   rhs;
+
+    repositories::{{SOLVER_INSTANCE}}.faceInit(
+      marker.x(),
+      marker.h(),
+      value,
+      rhs
+    );
+
+    /*
+    * todo place these values into the mesh
+    */
   }
+  """
+
+  TemplateInitCell="""
+  if ( not marker.willBeRefined() ){
+    // place some values in the mesh for the face
+    tarch::la::Vector<{{CELL_CARDINALITY}}, double>   value;
+    tarch::la::Vector<{{CELL_CARDINALITY}}, double>   rhs;
+
+    repositories::{{SOLVER_INSTANCE}}.cellInit(
+      marker.x(),
+      marker.h(),
+      value,
+      rhs
+    );
+
+    /*
+    * todo place these values into the mesh
+    */
+  }
+
   """
   
   def __init__(self,
@@ -72,11 +105,12 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
   degrees of freedom are assigned exclusively to the vertices.
     
     """
-    super( InitFaceDoFs, self ).__init__()
+    super( InitFaceAndCellDoFs, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
     self.d["FACE_CARDINALITY"]       = solver.number_of_face_unknowns
+    self.d["CELL_CARDINALITY"]       = solver.number_of_cell_unknowns
 
 
   def get_body_of_operation(self,operation_name):
@@ -125,6 +159,4 @@ Consult petsc.Project for details
 """    
     return """
 #include "repositories/SolverRepository.h"
-
-static void hackyFunction(){};
 """

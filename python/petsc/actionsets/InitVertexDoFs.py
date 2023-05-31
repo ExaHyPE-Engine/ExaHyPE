@@ -58,18 +58,20 @@ the solver in the first place. This happens in get_includes().
     return false;
   };
 
-  switch ( isOnBoundary(marker.x()) ){
-    case true:
-      fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Dirichlet );
-      break;
-    case false:
-      fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::DoF );
-      break;
-  }
 
-{% if SOLVER_NAME=="Poisson" %}
   if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchVertexFirstTime(...)---InitialCondition" );
+    
+    //give the vertices a type, if they won't be refined 
+    switch ( isOnBoundary(marker.x()) ){
+      case true:
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Dirichlet );
+        break;
+      case false:
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::DoF );
+        break;
+    }
+{% if SOLVER_NAME=="Poisson" %}
 
     //init two doubles; pass these by reference into init()
     double value, rhs;
@@ -87,9 +89,9 @@ the solver in the first place. This happens in get_includes().
       fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);
 
     }
-  } 
+  {% endif %}
   logTraceOut( "touchVertexFirstTime(...)---InitialCondition" );
-{% endif %}
+}
 """
   
   def __init__(self,

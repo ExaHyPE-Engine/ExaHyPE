@@ -54,8 +54,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
       double&                                       value,
       double&                                       rhs
       {% else %}
-      const tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
-      const tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
+      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
+      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
       {% endif %}
     ) override;
 
@@ -65,8 +65,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
       // for now, just use value, rhs. not sure what this will be in 
       // future.
       // TODO see if this works if we pass by ref instead of const ref
-      const tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  value,
-      const tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  rhs  
+      tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  value,
+      tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  rhs  
     ) override;
 
     /**
@@ -79,8 +79,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
       // for now, just use value, rhs. not sure what this will be in 
       // future.
       // TODO see if this works if we pass by ref instead of const ref
-      const tarch::la::Vector< {{FACE_CARDINALITY}}, double >&  value,
-      const tarch::la::Vector< {{FACE_CARDINALITY}}, double >&  rhs  
+      tarch::la::Vector< {{FACE_CARDINALITY}}, double >&  value,
+      tarch::la::Vector< {{FACE_CARDINALITY}}, double >&  rhs  
     ) override;
 
 };

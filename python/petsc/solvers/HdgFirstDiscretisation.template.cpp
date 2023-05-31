@@ -18,8 +18,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::vertexInit(
   double&                                       value,
   double&                                       rhs
   {% else %}
-  const tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
-  const tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
+  tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
+  tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
   {% endif %}
 ) {
   // @todo add your stuff here
@@ -30,9 +30,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellInit(
   const tarch::la::Vector<Dimensions, double>&  h,
   // for now, just use value, rhs. not sure what this will be in 
   // future.
-  // TODO see if this works if we pass by ref instead of const ref
-  const tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  value,
-  const tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  rhs  
+  tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  value,
+  tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  rhs  
 ) {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::faceInit(
@@ -40,7 +39,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::faceInit(
   const tarch::la::Vector<Dimensions, double>&  h,
   // for now, just use value, rhs. not sure what this will be in 
   // future.
-  // TODO see if this works if we pass by ref instead of const ref
-  const tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  value,
-  const tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  rhs  
+  tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  value,
+  tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  rhs  
 ) {}

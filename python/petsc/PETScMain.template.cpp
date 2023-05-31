@@ -196,10 +196,10 @@ void step() {
         logInfo( "step()", "total no of dofs="  << totalNumberOfDegreesOfFreedom );
 
         {% if Project_Name=="HDG" %}
-        const int totalNumberOfInteriorFaces    = repositories::getTotalFaceDofs();
-        const int totalNumberOfExteriorFaces    = repositories::getTotalBoundaryFaces();
-        logInfo( "step()", "total no of interior faces=" << totalNumberOfInteriorFaces );
-        logInfo( "step()", "total no of exterior faces=" << totalNumberOfExteriorFaces );
+        const int totalNumberOfFaces    = repositories::getTotalFaceDofs();
+        const int totalNumberOfCells    = repositories::getTotalCellDofs();
+        logInfo( "step()", "total no of faces=" << totalNumberOfFaces );
+        logInfo( "step()", "total no of cells=" << totalNumberOfCells );
         {% endif %}
 
         repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );
