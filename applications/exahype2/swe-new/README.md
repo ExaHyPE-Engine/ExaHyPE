@@ -14,9 +14,12 @@ $$
                +  \frac{\partial}{\partial_y}
                \begin{pmatrix}
                 hv\\huv\\hv^2 + \frac{1}{2} \cdot gh^2
+               \end{pmatrix}
+               + \begin{pmatrix}
+                0\\ghb_x\\ghb_y
                \end{pmatrix} =
                \begin{pmatrix}
-                0\\-ghb_x\\-ghb_y
+                0\\0\\0
                \end{pmatrix}
 $$
 
@@ -34,7 +37,7 @@ The respective derivations of the various aspects of the SWE can be found in "Sh
 
 ## Implementation ##
 
-All important aspects of the shallow-water equations are modelled in [template_scenario.py](scenarios/template_scenario.py) with the eigenvalues being modelled in [pde.py](pde.py) of which [template_scenario.py](scenarios/template_scenario.py) is a child class.
+The fluxes, eigenvalues and a definition of reflective boundary conditions are modelled in [pde.py](pde.py). In [template_scenario.py](scenarios/template_scenario.py), homogeneous Neumann boundary conditions are set for all deriving scenarios, and bed slope term and a simple refinement criterion are defined.
 
 ### Flux Implementation ###
 
@@ -56,38 +59,46 @@ $$
 
 They are implemented in the following way:
 
-```cpp
-switch(normal) {
-    case 0:
-        F[0] = hu;
-        F[1] = (hu * hu)/ h  + (g * h * h) / 2;
-        F[2] = (hu * hv) / h;
-        break;
-    case 1:
-        F[0] = hv;
-        F[1] = (hu * hv) / h;
-        F[2] = (hv * hv) / h + (g * h * h) / 2;
-        break;
-        }
+```python
+# Flux [unknowns, dimensions]
+self.F[0, 0] = self.hu
+self.F[1, 0] = self.hu * self.u + (self.g * self.h**2)/2
+self.F[2, 0] = self.h * self.u * self.v
+
+self.F[0, 1] = self.hv
+self.F[1, 1] = self.h * self.u * self.v
+self.F[2, 1] = self.hv * self.v + (self.g * self.h**2)/2
 ```
 
-### Sources Implementation ###
+with ```u``` and ```v``` defined as ```hu/h``` and ```hv/h``` respectively.
 
-The source term
+### Bed Slope Term ###
+
+The bed slope term
 
 $$
-S(U) =  \begin{pmatrix}
-            0\\-ghb_x\\-ghb_y
-        \end{pmatrix}
+\begin{pmatrix}
+0\\ghb_x\\ghb_y
+\end{pmatrix}
 $$
 
-is implemented as follows:
+is implemented as a non-conservative product as follows:
 
 ```cpp
-S[0] = 0;
-S[1] = -g * h * b;
-S[2] = -g * h * b;
+switch(normal){
+  case 0: //x
+      BTimesDeltaQ[0] = 0.0;
+      BTimesDeltaQ[1] = g * h * b_d;
+      BTimesDeltaQ[2] = 0.0;
+      break;
+  case 1: //y
+      BTimesDeltaQ[0] = 0.0;
+      BTimesDeltaQ[1] = 0.0;
+      BTimesDeltaQ[2] = g * h * b_d;
+      break;
 ```
+
+with ```b_d``` being the spatial derivative of the bathymetry.
 
 ## Scenarios ##
 
