@@ -128,7 +128,8 @@ They are used to test basic functionality of the SWE implementation such as flux
   - Bathymetry and water height are given by:  
   $b(x,y) = -100m$ and $h(x,y,0)=100m$, on a 10km $\times$ 10km domain.
 - [Sea At Rest](scenarios/sea_at_rest.py):  
-  Scenario simulating a sea at rest. It uses the same bathymetry and displacement data as the artificial tsunami scenario but bathymetry + displacement balance out with the water height leading to no expected perturbations.
+  Scenario simulating a sea at rest.  
+  There is a discontinuity parallel to the y-axis at half the length of the x-size of the domain.
 
 ### Wetting and Drying Scenarios ###
 
