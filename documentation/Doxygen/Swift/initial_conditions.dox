@@ -90,7 +90,7 @@ into the domain, these calculations are best modelled as
 
 
 
-# Insert particles from an HDF5 file.
+# Insert particles from an HDF5 file \anchor SwiftHDF5
 
 A basic HDF5 reader that is compatible with IC files from the original Swift code is
 implemented in ```InsertParticlesFromHDF5File.py```.
@@ -107,7 +107,7 @@ In this case, it is recommended to include the following flags:
 
           ./configure ...  --enable-particles --enable-swift --with-hdf5 \
                 CXXFLAGS="-I/$HDF5_ROOT/include" \
-                LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" \
+                LDFLAGS="-I/$HDF5_ROOT/lib" \
                 LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"
 
 
@@ -122,7 +122,12 @@ With Ubuntu, the packages you need are
 and then you can configure with
 
 
-         ./configure --enable-particles --enable-swift --enable-loadbalancing --enable-blockstructured --enable-exahype2 --with-hdf5 CXXFLAGS="--std=c++20 -I/usr/include/hdf5/serial" LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++" --build=x86_64 --host=x86_64
+         ./configure --enable-particles --enable-swift --enable-loadbalancing \
+             --enable-blockstructured --enable-exahype2 --with-hdf5 \
+             CXXFLAGS="--std=c++20 -I/usr/include/hdf5/serial" \
+             LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" \
+             LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++" \
+             --build=x86_64 --host=x86_64
 
 ## Python
 

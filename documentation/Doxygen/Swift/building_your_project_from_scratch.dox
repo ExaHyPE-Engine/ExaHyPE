@@ -68,9 +68,7 @@ working example, see ``SPHLeapfrogFixedInteractionRadius.py``.
 
 The definition of a particle is straightforward. We employ a tool called
 DaStGen 2 which really just is a set of Python classes which represent the
-attributes of a C++ class:
-
-@todo link/reference DaStGen2
+attributes of a C++ class. See \ref page_dastgen for more details on DaStGen.
 
 We build up a set of Python objects sketching a C++ struct and Swift 2 and
 DaStGen eventually dump them into proper C++ code from which it is embedded into the
@@ -102,10 +100,10 @@ what fields are always present. If not, document what fields need to be present.
 
 ## Generating the Particle Life Cycle
 
+With the particle data defined, we can now set up what equations are being solved, and in
+which order, for each particle for each simulation step. This is documented in detail on the
+@ref swift_particle_lifecycle page.
 
-See @ref swift_particle_lifecycle
-
-@todo all of this.
 
 
 
