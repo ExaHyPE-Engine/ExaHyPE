@@ -24,9 +24,9 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
 
     def implementation_of_ncp(self):
         return """
-        double g = 9.81;
-        double h = Q[0];
-        double b_d = deltaQ[3];
+        const double g = 9.81;
+        const double h = Q[0];
+        const double b_d = deltaQ[3];
   
         switch(normal){
         case 0: //x
