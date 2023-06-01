@@ -244,14 +244,6 @@ project.algorithm_step_initial_conditions.add_action_set(
     )
 )
 
-###############################################################################
-# Set up initialization steps
-###############################################################################
-
-# Todo Mladen later: add first kick once we deal with individual time steps
-
-#  project.algorithm_step_init_density_AlgorithmStep = particle.algorithm_steps_dict["Density"]
-
 
 ###############################################################################
 # Set up the plotter
