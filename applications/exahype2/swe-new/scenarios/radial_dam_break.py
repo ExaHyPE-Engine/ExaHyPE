@@ -11,11 +11,12 @@ class Radial_Dam_Break(scenarios.template_scenario.Template_Scenario):
 
         # (sqrt((x - 500.f) * (x - 500.f) + (y - 500.f) * (y - 500.f)) < 100.f) ? 15.f : 10.0f;
         self.initial_values[0] = sympy.Piecewise(
-            (1.1, dam < width[0] / 10), (1.0, True)
+            (1.1, dam < width[0] / 10), 
+            (1.0, True)
         )
         
         self.initial_values[1] = 0.0
         self.initial_values[2] = 0.0
-        self.initial_values[3] = 0.0 
+        self.initial_values[3] = 0.0
         
         pass
