@@ -9,7 +9,7 @@ import exahype2
 
 dimensions            = 2 # this is fixed to 2 in pde.py
 width                 = [10, 10]
-offset                = [0, 0] # TODO offset relevant for netCDF reader? min_z might not be 0 in the case of offset_z != 0
+offset                = [0, 0] # this is fixed to [0, 0]
 end_time              = 0.02
 time_step_relaxation  = 0.5 # taken from tutorial
 plot_interval         = 0.005 # taken from tutorial
@@ -197,7 +197,7 @@ if not os.path.exists(output_path):
 my_project.set_global_simulation_parameters(
   dimensions            = 2,
   size                  = width,
-  offset                = offset,
+  offset                = [0, 0],
   min_end_time          = args.end_time,
   max_end_time          = args.end_time,
   first_plot_time_stamp = 0.0,
