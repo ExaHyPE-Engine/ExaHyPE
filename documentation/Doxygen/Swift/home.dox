@@ -7,14 +7,14 @@
 
 \li \subpage swift_tutorials
 \li \subpage swift_benchmarks
-\li \subpage swift_architecture
-\li \subpage swift_graph_compiler
-\li \subpage swift_initial_conditions
-\li \subpage swift_parallelisation
-\li \subpage swift_particle_lifecycle
 \li \subpage swift_building_project_from_scratch
+\li \subpage swift_initial_conditions
+\li \subpage swift_particle_lifecycle
 \li \subpage swift_visualisation
 \li \subpage swift_runtime_analysis
+\li \subpage swift_architecture
+\li \subpage swift_parallelisation
+\li \subpage swift_graph_compiler
 
 
 
@@ -27,7 +27,7 @@ The integration of the SWIFT kernels and Peano 4 has been made possible by the
 EPSRC ExCALIBUR grants Massively Parallel Particle Hydrodynamics
 for Engineering and Astrophysics (EP/V001523/1) and PAX-SPH.
 Swift 2 is realised as Python layer on top of Peano 4 and brings Peano's core,
-its particle toolsbox and SWIFT together.
+its particle toolbox, and SWIFT together.
 
 
 

@@ -101,8 +101,8 @@ what fields are always present. If not, document what fields need to be present.
 ## Generating the Particle Life Cycle
 
 With the particle data defined, we can now set up what equations are being solved, and in
-which order, for each particle for each simulation step. This is documented in detail on the
-@ref swift_particle_lifecycle page.
+which order, for each particle for each simulation step. This is documented in detail in
+@ref Section_SwiftAlgorithmStep on the @ref swift_particle_lifecycle page.
 
 
 
@@ -199,24 +199,12 @@ initial conditions. Particles outside the domain will be discarded.
 
 After the particles have been read in, some further set-up is needed. For
 example, we need to compute the smoothing lengths and densities of the particles
-in order to compute their time step size before the first step can begin. In
-order to do so, you must tell the project what the "density" algorithm step is
-by specifying
+in order to compute their time step size before the first step can begin.
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
-project.algorithm_step_init_density_AlgorithmStep = density_algorithm_step
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-where ``density_algorithm_step`` is the @ref AlgorithmStep
-(python/swift2/particle/AlgorithmStep.py) that determines the
-particle density and smoothing lengths, and is created as described in
-@ref swift_particle_lifecycle. Usually it will be the exact same @ref AlgorithmStep
-that you use in the particle life cycle as well.
+For details on how to implement the sequence of initialization steps, please refer
+to @ref Section_SwiftAlgorithmStepsInitialization.
 
 
-
-
-\todo add kick1 later, once it's implemented
 
 
 
@@ -224,6 +212,7 @@ that you use in the particle life cycle as well.
 
 ## Writing Output
 
+You need to specify a plotter, and which particle quantities to write.
 
 \todo Go into plotter details. Maybe wait for swift-like hdf5 output.
 

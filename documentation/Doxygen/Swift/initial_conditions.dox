@@ -51,8 +51,8 @@ throw all the particles you want to have into your mesh.
 There are two mainstream ways to implement initial conditions for the
 simulations:
 
-  - Insert particle by coordinates (```InsertParticlesByCoordinates.py```).
-  - Insert particles from an HDF5 file (```InsertParticlesFromHDF5File.py```).
+  - Insert particle by coordinates (```python/swift2/input/InsertParticlesByCoordinates.py```).
+  - Insert particles from an HDF5 file (```python/swift2/input/InsertParticlesFromHDF5File.py```).
 
 Nothing stops you from additing further action sets to
 algorithm_step_initial_conditions. Some scenarios, for example, hard code
@@ -89,8 +89,10 @@ into the domain, these calculations are best modelled as
 @ref swift_particle_lifecycle "steps within the particle lifecycle".
 
 
-
-# Insert particles from an HDF5 file \anchor SwiftHDF5
+<!-- Use 'section' command here to be able to reference the section somewhere
+    else rather than the entire page. 'section' corresponds to h1. First word
+    after 'section' cmd will be the anchor ID you need to use with the 'ref' cmd. -->
+@section SwiftHDF5 Insert particles from an HDF5 file
 
 A basic HDF5 reader that is compatible with IC files from the original Swift code is
 implemented in ```InsertParticlesFromHDF5File.py```.

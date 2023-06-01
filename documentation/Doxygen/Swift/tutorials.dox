@@ -20,7 +20,7 @@ Hereby, it is important that you add the particles toolbox:
           ./configure ... --enable-particles --enable-swift
 
 If you want to use the HDF5 I/O functionalities, you need to configure Peano with
-HDF5 enabled. How to do this is documented in \ref SwiftHDF5.
+HDF5 enabled. How to do this is documented in @ref SwiftHDF5.
 
 
 # Log configuration
