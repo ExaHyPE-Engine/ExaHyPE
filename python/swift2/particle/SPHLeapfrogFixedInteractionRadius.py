@@ -12,7 +12,7 @@ from abc import ABC
 
 class SPHLeapfrogFixedInteractionRadius(Particle):
   """!
-  
+
   SPH particle with fixed interaction radius
 
   Same as LeapfrogFixedInteractionRadius but augmented for full SPH.
@@ -555,7 +555,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
   def algorithm_steps(self):
     """!
-    
+
     Return algorithm steps
 
     Leapfrog consists basically of four steps per particle. We first
@@ -568,7 +568,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     Definitions of the algorithm steps stored in the algorithm_steps_dict are
     placed in _setup_algorithm_steps_dict(self). The dict is set up during
     instantiation of this class.
-    
+
     """
 
     return [
@@ -585,6 +585,22 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self.algorithm_steps_dict["Kick2Extra"],
         self.algorithm_steps_dict["ReduceGlobalQuantities"],
     ]
+
+
+  def initialisation_steps(self):
+    """!
+    Return the (ordered) list of steps to perform during initialization.
+
+    Definitions of the algorithm steps stored in the algorithm_steps_dict are
+    placed in _setup_algorithm_steps_dict(self). The dict is set up during
+    instantiation of this class.
+
+    """
+
+    return [
+        self.algorithm_steps_dict["Density"],
+    ]
+
 
 
   @property
@@ -737,9 +753,4 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
     print(namespace)
 
-
-  def initialisation_steps(self):
-    return [
-        self.algorithm_steps_dict["Density"],
-    ] 
 
