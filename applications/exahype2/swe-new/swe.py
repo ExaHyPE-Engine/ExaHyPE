@@ -115,22 +115,23 @@ elif args.scenario == "Tsunami":
   displ_ext = os.path.splitext(args.displacement_file)[1] 
   if bath_ext not in supported_file_types_bathymetry: raise Exception("Unsupported file type of bathymetry file! Supported extensions are: %s" % ("|".join(supported_file_types_bathymetry)))
   if displ_ext not in supported_file_types_displacement: raise Exception("Unsupported file type of displacement file! Supported extensions are: %s" % ("|".join(supported_file_types_displacement)))
-
-  print("Overwriting max_cell_size to fit finest mesh in data files!")
-  try:
-    import netCDF4
-    for file_path in [args.bathymetry_file, args.displacement_file]:
-      nc_file = netCDF4.Dataset(file_path)
-      # optimize cell size to exactly fit finest mesh width in data
-      maximum_cell_size = min([min([w/d for (d,w) in zip([len(d) for d in nc_file.dimensions.values()], width)]), maximum_cell_size])
-      nc_file.close()
-  except ImportError:
-    print("netCDF4 package not found. Checking -maxd flag.")
-    if args.max_dimension_netcdf is None or args.max_dimension_netcdf <= 0: 
-      raise ValueError("Neither netCDF4 package installed nor valid value passed to -maxd!") 
-    else: 
-      # generally estimates finer mesh width than finest mesh data width
-      maximum_cell_size = min(width)/args.max_dimension_netcdf
+  
+  if args.amr_levels > 0:
+    print("Overwriting max_cell_size to fit finest mesh in data files!")
+    try:
+      import netCDF4
+      for file_path in [args.bathymetry_file, args.displacement_file]:
+        nc_file = netCDF4.Dataset(file_path)
+        # optimize cell size to exactly fit finest mesh width in data
+        maximum_cell_size = min([min([w/d for (d,w) in zip([len(d) for d in nc_file.dimensions.values()], width)]), maximum_cell_size])
+        nc_file.close()
+    except ImportError:
+      print("netCDF4 package not found. Checking -maxd flag.")
+      if args.max_dimension_netcdf is None or args.max_dimension_netcdf <= 0: 
+        raise ValueError("Neither netCDF4 package installed nor valid value passed to -maxd!") 
+      else: 
+        # generally estimates finer mesh width than finest mesh data width
+        maximum_cell_size = min(width)/args.max_dimension_netcdf
 
   from scenarios.tsunami import Tsunami
   my_pde = Tsunami()

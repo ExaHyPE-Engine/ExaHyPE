@@ -44,18 +44,17 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     def implementation_of_refinement_criterion(self):
         # Implementing https://doi.org/10.1007%2Fs00024-016-1412-y could be interesting
         return """
-        return ::exahype2::RefinementCommand::Keep;
-        """
-        """
         ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-        if (tarch::la::greaterEquals(Q[0] > 1e-8 && std::abs(Q[0] + Q[3]), 0.05)) { 
+        if (Q[0] > 1e-8 && std::abs(Q[0] + Q[3]) >= 0.05) { 
             result = ::exahype2::RefinementCommand::Refine;
         }
-        else if(tarch::la::greaterEquals(Q[0] > 1e-8 && 0.01), std::abs(Q[0] + Q[3])) {
+        else if(Q[0] > 1e-8 && std::abs(Q[0] + Q[3]) <= 0.01) {
             result = ::exahype2::RefinementCommand::Erase;
         }
-        logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
         return result;
+        """
+        """
+        return ::exahype2::RefinementCommand::Keep;
         """
     
     def implementation_of_sources(self):
