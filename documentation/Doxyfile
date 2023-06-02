@@ -935,7 +935,19 @@ EXCLUDE_PATTERNS       = */benchmarks/*/celldata \
                          */benchmarks/*/observers \
                          */benchmarks/*/repositories \
                          */benchmarks/*/vertexdata \
-                         */benchmarks/*/Constants.h
+                         */benchmarks/*/Constants.h \
+                         */applications/*/celldata \
+                         */applications/*/globaldata \
+                         */applications/*/observers \
+                         */applications/*/repositories \
+                         */applications/*/vertexdata \
+                         */applications/*/Constants.h \
+                         */tutorials/*/celldata \
+                         */tutorials/*/globaldata \
+                         */tutorials/*/observers \
+                         */tutorials/*/repositories \
+                         */tutorials/*/vertexdata \
+                         */tutorials/*/Constants.h
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
