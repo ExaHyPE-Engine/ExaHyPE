@@ -17,6 +17,8 @@ namespace {
   const int StandardPriority           = 16;
 
   const int BackgroundConsumerPriority = 1;
+
+  int numberOfSpawnedTasks             = 0;
 }
 
 
@@ -85,13 +87,24 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(
 
 
 
+int tarch::multicore::native::getNumberOfPendingTasks() {
+  return numberOfSpawnedTasks;
+}
+
+
 void tarch::multicore::native::spawnTask(Task*  job) {
+  #pragma omp atomic
+  numberOfSpawnedTasks++;
+
   #pragma omp task priority(BackgroundConsumerPriority) untied
   {
     while (job->run()) {
       #pragma omp taskyield
     }
     delete job;
+
+    #pragma omp atomic
+    numberOfSpawnedTasks--;
   }
 }
 
@@ -135,4 +148,16 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
 }
 
 
+/**
+ * There is no draining of the CPU queues in OpenMP, but we can invoke a
+ * taskyield which issues a scheduling point and hence gives OpenMP the
+ * opportunity to disrupt the local execution and instead progress pending
+ * tasks.
+ */
+void tarch::multicore::native::drainTaskQueues() {
+  #pragma omp taskyield
+}
+
+
 #endif
+

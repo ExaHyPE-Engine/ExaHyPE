@@ -396,6 +396,17 @@ namespace tarch {
        *   be host if the tasks should end up on the host.
        */
       void processFusedTask(Task*  firstTask, const std::list< tarch::multicore::Task* >& otherTasks, int device);
+
+      /**
+       * Drain all task queues
+       */
+      void drainTaskQueues();
+
+
+      /**
+       * These are the non-blocking (ready) tasks submitted via spawnTask()
+       */
+      int getNumberOfPendingTasks();
     }
 
 
@@ -437,11 +448,15 @@ namespace tarch {
       bool fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction);
 
       /**
+       * Set up internal queues
+       *
        * Set up the internal queues that our wrapper around the tasking back-end
        * requires. If we worked with only one task queue, this would not be
-       * necessary, but we found such a solution deterimental. Instead, it is
+       * necessary, but we found such a solution detrimental. Instead, it is
        * way better to work with one queue per thread, so we can spawn enclave
        * tasks without any additional locks.
+       *
+       * This routine only evermakes the number of queues grow, never shrink.
        */
       void configureInternalTaskQueues(int numberOfTasks);
 
@@ -458,9 +473,10 @@ namespace tarch {
        * local thread doesn't have any message.
        * I usually flush all queues if and only if I'm at the end of a BSP section.
        * You can however veto this behaviour.
-       *
        */
       void copyInternalTaskQueuesOverIntoGlobalQueue();
+
+      void copyInternalTaskQueueOverIntoGlobalQueue(int threadNumber);
     }
   }
 }
