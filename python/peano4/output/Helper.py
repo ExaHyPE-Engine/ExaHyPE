@@ -25,17 +25,25 @@ def write_file(overwrite,overwrite_is_default,full_qualified_filename):
     return True
 
 def find_cmake_build_dir():
+  # File dir is under src/
   file_dir = os.path.dirname(os.path.realpath(__file__))
   # The root dir of the project is: ../../../ -> one more depth because of the out of source build
-  project_root_dir = os.path.join(file_dir, '../../../..', )
+  # The caller has to be inside the build directory
+  call_directory = os.getcwd()
+  project_root_dir = os.path.abspath(os.path.join(file_dir, '../../..', ))
 
-  # Go through all directories in root dir to find a CMakeCache
-  for path in [path.path for path in os.scandir(project_root_dir) if path.is_dir()]:
-    files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-    if 'CMakeCache.txt' in files:
-      #print( "found CMakeCache.txt in {} and hence assume that user uses CMake".format(path) )
-      return path
-  return ""
+  # Ensure we call the script under Peano4 folder
+  if os.path.commonpath([call_directory, project_root_dir]) != project_root_dir:
+    raise Exception("The Peano4 code generator has to be called in a folder under Peano4 project's root directory. E.g. cd build/... & python ...")
+
+  # We will iterate upwards aka implement "cd .." until we reach the peano4 root, or until we find CMakeCache.txt 
+  current_iter_dir = call_directory
+  while current_iter_dir != project_root_dir:
+    found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt"))
+    if found_cache_file:
+      return current_iter_dir
+    current_iter_dir =os.path.abspath(os.path.join(current_iter_dir, ".."))
+  raise ""
 
 def using_cuda_backend():
   build_dir_path = find_cmake_build_dir()

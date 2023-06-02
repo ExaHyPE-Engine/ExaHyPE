@@ -358,15 +358,13 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
-file(COPY "${PROJECT_SOURCE_DIR}/python" DESTINATION "${CMAKE_BINARY_DIR}")
-file(COPY "${PROJECT_SOURCE_DIR}/tutorials" DESTINATION "${CMAKE_BINARY_DIR}")
-file(COPY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_BINARY_DIR}")
-file(COPY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_BINARY_DIR}")
-
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/python" DESTINATION "${CMAKE_INSTALL_PREFIX}")
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/tutorials" DESTINATION "${CMAKE_INSTALL_PREFIX}")
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_INSTALL_PREFIX}")
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+list(APPEND DRIECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications")
+foreach(item IN LISTS DRIECTORIES_TO_LINK_OVER)
+  #execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/${item}" "${CMAKE_BINARY_DIR}/${item}" )
+  execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/${item}" "${CMAKE_BINARY_DIR}/${item}")
+  install(DIRECTORY "${CMAKE_SOURCE_DIR}/${item}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+  message(WARNING "${CMAKE_SOURCE_DIR}/${item} | ${CMAKE_BINARY_DIR}/${item} | ${item}")
+endforeach()
 
 file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
 include(${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
