@@ -95,6 +95,7 @@ python3 convergence-study.py -cs 2 -s fd4-rk1-limited-ps-3 -no-tracer -et 0.01
 
 
 
+
 ## Production runs
 
 Han's original setup uses the full-blown CCZ4 setup with 
@@ -112,6 +113,22 @@ Code time should be 46
 python3 convergence-study.py -cs 2 -plot -et 60
 
 
+I found it advantageous to use 
+
+~~~~~~~~~~~~~~~~~~~~~~~
+--threading-model native
+~~~~~~~~~~~~~~~~~~~~~~~
+
+as command line argument with CCZ4. The employed FD4 scheme works with very 
+wide boundary layers of width 3. Therefore, any task that is not processed
+immediately introduces a huge memory overhead. Along these lines, picking
+
+~~~~~~~~~~~~~~~~~~~~~~~
+--threading-model fuse-or-process-immediately-1
+~~~~~~~~~~~~~~~~~~~~~~~
+
+might be reasonably whenever you are really short of main memory.
+ 
 
 ## Code remarks (FD4-FV scheme)
 
