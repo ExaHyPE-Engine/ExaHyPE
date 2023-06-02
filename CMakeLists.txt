@@ -360,10 +360,8 @@ write_basic_package_version_file(
 
 list(APPEND DRIECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications")
 foreach(item IN LISTS DRIECTORIES_TO_LINK_OVER)
-  #execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/${item}" "${CMAKE_BINARY_DIR}/${item}" )
   execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/${item}" "${CMAKE_BINARY_DIR}/${item}")
   install(DIRECTORY "${CMAKE_SOURCE_DIR}/${item}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
-  message(WARNING "${CMAKE_SOURCE_DIR}/${item} | ${CMAKE_BINARY_DIR}/${item} | ${item}")
 endforeach()
 
 file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
