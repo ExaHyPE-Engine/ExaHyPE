@@ -240,7 +240,7 @@ database:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
       particle_set=tracer_particles,
       solver=self,
       filename="Tracer-" + name,
@@ -256,7 +256,7 @@ Dumping tracers into a (CSV) database is attractive, as these files are
 easier to parse/postprocess than mesh data files. At the same time, you
 can dump particles more often than you plot data snapshots, and these
 dumps can even be adaptive, i.e. you dump if and only if a particle
-actually moves. The `DumpTrajectoryIntoDatabase` documentation provides
+actually moves. The exahype2.tracer.DumpTracerIntoDatabase documentation provides
 more detail.
 
 The data format within the csv file is rather self-explaining.

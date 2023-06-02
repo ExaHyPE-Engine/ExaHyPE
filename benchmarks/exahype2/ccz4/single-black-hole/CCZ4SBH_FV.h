@@ -23,6 +23,9 @@ namespace benchmarks {
 class benchmarks::exahype2::ccz4::CCZ4SBH_FV: public benchmarks::exahype2::ccz4::AbstractCCZ4SBH_FV {
   private:
     static tarch::logging::Log   _log;
+    static tarch::multicore::BooleanSemaphore _semaphore;
+
+    int _numberOfPatches;
 
   public:
     /**
@@ -75,6 +78,23 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FV: public benchmarks::exahype2::ccz4:
      * check for this cell as well.
      */
     static bool areAdjacentCellsOverlappingWithBHImpactArea( const peano4::datamanagement::CellMarker& marker, int faceNumber );
+
+    /**
+     * Call superclass and after that report/maintain _numberOfPatches.
+     */
+    virtual void startTimeStep(
+      double globalMinTimeStamp,
+      double globalMaxTimeStamp,
+      double globalMinTimeStepSize,
+      double globalMaxTimeStepSize
+    ) override;
+
+    /**
+     * Call superclass and after that report/maintain _numberOfPatches.
+     */
+    virtual void finishTimeStep() override;
+
+    void incNumberOfPatches();
 
   private:
     static bool isCellOverlappingWithBHImpactArea(

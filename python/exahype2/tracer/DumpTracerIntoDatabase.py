@@ -8,9 +8,36 @@ import jinja2
 
 
 
-class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
-  def __init__(self, particle_set, solver, filename, number_of_entries_between_two_db_flushes=65536, data_delta_between_two_snapsots=1e-8, position_delta_between_two_snapsots=1e-8, time_delta_between_two_snapsots=0, output_precision=8, use_relative_deltas=False, initial_record_time=-1, last_record_time=1e8):
+class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
+  """!
+    
+  Dump the tracer data into a csv database
+
+  This action set is to be added to you code if you want to dump tracer data
+  into a database. By default, Peano supports csv files. Please consult the
+  constructor for information on the configuration of these dumps: The dumps
+  are not synchronised with normal IO, but we keep track of the particles/tracers and
+  allow codes to dump updated particle data whenver some attributes or the 
+  tracer position changes significantly. The term significantly can be controlled
+  via relative deltas through the constructor.
+  
+  """     
+  def __init__(self, 
+               particle_set, 
+               solver, 
+               filename, 
+               number_of_entries_between_two_db_flushes=65536, 
+               data_delta_between_two_snapsots=1e-8, 
+               position_delta_between_two_snapsots=1e-8, 
+               time_delta_between_two_snapsots=0, 
+               output_precision=8, 
+               use_relative_deltas=False, 
+               initial_record_time=-1, 
+               last_record_time=1e8
+               ):
     """!
+    
+    Constructor
      
     data_delta_between_two_snapsots: Float
      A particle is dumped into the database if it has switched the domain 
@@ -59,7 +86,7 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
       you can specify at when does the tracer stop dumping data to files.
      
     """
-    super(DumpTrajectoryIntoDatabase,self).__init__(priority=1,parallel=False)
+    super(DumpTracerIntoDatabase,self).__init__(priority=1,parallel=False)
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
