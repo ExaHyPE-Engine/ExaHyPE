@@ -184,7 +184,7 @@ my_solver.set_implementation(
   source_term           = my_pde.implementation_of_sources()
 )
 
-executable_name = "swe-application-2d-scenario-%s-patch-size-%d-cell-size-%f-end-time-%f" % (args.scenario, patch_size, maximum_cell_size, args.end_time)
+executable_name = "swe-application-2d-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (args.scenario, patch_size, args.amr_levels, maximum_cell_size, args.end_time)
 output_path = "output-%s/" % executable_name
 
 my_project = exahype2.Project( ["applications", "exahype2", "swe"], "SWEApplication", ".", executable=executable_name)
