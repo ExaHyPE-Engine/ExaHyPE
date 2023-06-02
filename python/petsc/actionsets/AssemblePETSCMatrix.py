@@ -165,6 +165,7 @@ stencil:
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
     self.d["VERTEX_CARDINALITY"]     = solver.number_of_vertex_unknowns
+
     self.d["STENCIL"]         = "{" + str(stencil[0])
     for el in stencil[1:]:
       self.d["STENCIL"] += ", "
@@ -276,23 +277,13 @@ Define body of constructor
 class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
   ## add templates
 
-  def __init__(self, solver, stencil):
+  def __init__(self, solver):
     super( AssemblePETSCMatrixOnCellsAndFaces, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
     self.d["CELL_CARDINALITY"]   = solver.number_of_cell_unknowns
     self.d["FACE_CARDINALITY"]   = solver.number_of_face_unknowns
-
-    #flatten the stencil
-    stencil=[item for sublist in stencil for item in sublist]
-    
-    #make a dict entry for it
-    self.d["STENCIL"]         = "{" + str(stencil[0])
-    for el in stencil[1:]:
-      self.d["STENCIL"] += ", "
-      self.d["STENCIL"] += str(el)
-    self.d["STENCIL"] += "}"
 
   def get_body_of_operation(self, operation_name):
     ## add touchcellfirsttime

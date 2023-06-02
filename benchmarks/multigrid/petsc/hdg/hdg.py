@@ -23,17 +23,20 @@ parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     default=2, help="Dimensions")
-parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.01, help="Mesh size")
+parser.add_argument("-cd",  "--celldofs",           dest="cellDofs",       default=1, help="Degrees of freedom per cell")
+parser.add_argument("-fd",  "--facedofs",           dest="faceDofs",       default=1, help="Degrees of freedom per cell")
+parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.1, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
 #add a 9 point stencil which will 
 #be passed to PETSc at matrix initialisation stage
-stencil=[
-  [-1/3, -1/3, -1/3],
-  [-1/3,  8/3, -1/3],
-  [-1/3, -1/3, -1/3]
-]
+# stencil=[
+#   [-1/3, -1/3, -1/3],
+#   [-1/3,  8/3, -1/3],
+#   [-1/3, -1/3, -1/3]
+# ]
+stencil=[]
 
 project = petsc.Project(project_name = "HDG", 
                         namespace = [ "benchmarks", "multigrid", "petsc", "hdg" ]
@@ -41,8 +44,8 @@ project = petsc.Project(project_name = "HDG",
                         
                         
 solver = petsc.solvers.HdgFirstDiscretisation("HDG", 
-                                              1,
-                                              1,
+                                              args.cellDofs,
+                                              args.faceDofs,
                                               args.meshsize,
                                               args.meshsize,
                                               stencil

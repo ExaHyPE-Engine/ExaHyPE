@@ -47,6 +47,13 @@ namespace {{N}} {
 
     int getTotalFaceDofs();
     int getTotalCellDofs();
+
+    /**
+    * we order the matrix so that cell-cell coupling sits
+    * in the top left, with face-face coupling in the bottom right
+    */
+    int getGlobalCellIndex(std::pair<int,int> localIndex);
+    int getGlobalFaceIndex(std::pair<int,int> localIndex);
     {% endif %}
 
   }

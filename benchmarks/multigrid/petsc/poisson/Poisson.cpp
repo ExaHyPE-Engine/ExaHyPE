@@ -12,7 +12,6 @@ double initRhs(
 }
 
 benchmarks::multigrid::petsc::poisson::Poisson::Poisson() {
-
 }
 
 

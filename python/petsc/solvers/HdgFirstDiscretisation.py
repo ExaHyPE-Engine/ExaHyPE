@@ -142,7 +142,7 @@ class HdgFirstDiscretisation(Solver):
   
   
   def add_to_assemble(self, observer):
-    observer.add_action_set( AssemblePETSCMatrixOnCellsAndFaces(self, self.stencil) )
+    observer.add_action_set( AssemblePETSCMatrixOnCellsAndFaces(self) )
     pass
   
 

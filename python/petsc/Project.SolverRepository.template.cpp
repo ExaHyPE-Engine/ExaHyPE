@@ -61,5 +61,21 @@ int {{NAMESPACE | join("::")}}::repositories::getTotalCellDofs() {
   return result;
 }
 
+int {{NAMESPACE | join("::")}}::repositories::getGlobalCellIndex(std::pair<int,int> localIndex) {
+  int result;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getGlobalIndex(localIndex);
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalFaceIndex(std::pair<int,int> localIndex) {
+  int result;
+  result += getTotalCellDofs();
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getGlobalIndex(localIndex);
+  {% endfor %}
+  return result;
+}
 
 {% endif %}
