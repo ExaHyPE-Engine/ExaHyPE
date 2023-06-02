@@ -154,3 +154,8 @@ class ExplicitEulerDynamicInteractionRadius(Particle):
     """
     return [] 
 
+
+  #@property
+  #def readme_descriptor(self):
+  #  assert False, "not yet written"
+  #  return """ I will au aufgerufen werden"""
