@@ -946,7 +946,7 @@ if __name__ == "__main__":
                                                                                   project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"))
         
         
-        project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+        project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
           particle_set=tracer_particles,
           solver=my_solver,
           filename=args.path+"Tracer-test",
