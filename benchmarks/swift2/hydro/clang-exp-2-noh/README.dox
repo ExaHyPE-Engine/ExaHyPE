@@ -1,6 +1,6 @@
 /**
 
- @page to-be-done NOH 2 experiment to study upscaling
+ @page benchmarks_swift2_hydro_noh2 NOH 2 experiment to study upscaling
  
  As with all Swift 2 experiments, you have to ensure that you translate with --enable-particles --enable-swift.
  
