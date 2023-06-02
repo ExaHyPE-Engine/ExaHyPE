@@ -12,7 +12,7 @@ as a sequence of operations which have to performed per particle per time step
 or until we have a properly initialised particle. You can visualise a
 particle's algorithm via a simple graph:
 
-@image html particle-lifecycle.png
+@image html particle-lifecycle.png "A typical life cycle of a particle for SPH with a kick-drift-kick time integration scheme"  width=50%
 
 It illustrates that we have some attributes on a particle (left top). Each
 particle runs through a number of steps (right): We start with an initialisation
