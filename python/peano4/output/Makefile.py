@@ -10,6 +10,7 @@ import jinja2
 from .Helper import write_file
 from .Helper import find_cmake_build_dir
 from .Helper import using_cuda_backend
+from .Helper import caller_distance_to_build_root
 
 from .Overwrite import Overwrite
 
@@ -538,16 +539,33 @@ then this message can typically be ignored.
     for i in module_files:
       self.add_Fortran_module( i )
 
+  def generate_make_replacement_command(self):
+    dist = caller_distance_to_build_root()
+    cd_command = "cd "
+    if dist == 0:
+      cd_command = "cd ."
+    else: 
+      for _ in range(dist):
+        cd_command += "../"
+    cd_command = cd_command[:-1]
+
+    make_command = "make " + self.executable_name()
+    command = f'bash -c "{cd_command} && {make_command}"'
+    # raise Exception(command)
+    return command
+
   def generate(self,overwrite,directory):
     cmake_build_dir = find_cmake_build_dir()
-    self.d[ "CMAKE_BUILD_DIR" ]               = cmake_build_dir
+    self.d[ 'USING_CMAKE' ]                   = cmake_build_dir != ""
+    self.d[ 'CMAKE_MAKE_COMMAND' ]            = self.generate_make_replacement_command()
+    self.d[ 'CMAKE_BUILD_DIR' ]               = cmake_build_dir
     self.d[ 'H_HEADERS' ]                     = self.hfiles
     self.d[ 'CXX_SOURCES' ]                   = self.cppfiles
-    self.d[ 'CU_SOURCES' ]                   = self.cufiles
+    self.d[ 'CU_SOURCES' ]                    = self.cufiles
     self.d[ 'FORTRAN_SOURCES' ]               = self.fortranfiles
     self.d[ 'GENERATED_H_HEADERS' ]           = self.generated_hfiles
     self.d[ 'GENERATED_CXX_SOURCES' ]         = self.generated_cppfiles
-    self.d[ 'GENERATED_CU_SOURCES' ]         = self.generated_cufiles
+    self.d[ 'GENERATED_CU_SOURCES' ]          = self.generated_cufiles
     self.d[ 'GENERATED_FORTRAN_SOURCES' ]     = self.generated_fortranfiles
     self.d[ 'GENERATOR' ]                     = sys.argv[0]
 

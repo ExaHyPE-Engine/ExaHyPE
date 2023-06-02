@@ -56,3 +56,27 @@ def using_cuda_backend():
     except Exception:
       return False
   return False
+
+def caller_distance_to_build_root():
+  # File dir is under src/
+  file_dir = os.path.dirname(os.path.realpath(__file__))
+  # The root dir of the project is: ../../../ -> one more depth because of the out of source build
+  # The caller has to be inside the build directory
+  call_directory = os.getcwd()
+  project_root_dir = os.path.abspath(os.path.join(file_dir, '../../..', ))
+
+  # Ensure we call the script under Peano4 folder
+  if os.path.commonpath([call_directory, project_root_dir]) != project_root_dir:
+    return -1
+
+  # We will iterate upwards aka implement "cd .." until we reach the peano4 root, or until we find CMakeCache.txt 
+  current_iter_dir = call_directory
+  dist = 0
+  while current_iter_dir != project_root_dir:
+    found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt"))
+    if found_cache_file:
+      return dist
+    current_iter_dir =os.path.abspath(os.path.join(current_iter_dir, ".."))
+    dist += 1
+
+  raise -1

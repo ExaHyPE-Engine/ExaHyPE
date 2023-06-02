@@ -166,7 +166,7 @@ class Project (object):
         PURPLE = "\033[35m"
         RED = "\033[31m"
         RESET = "\033[0m"
-        error_message = process.stderr.decode().strip()
+        error_message = process.stderr.decode(errors="ignore").strip()
         warnings = re.findall(r"(?i)warning:.*", error_message)
         errors = re.findall(r"(?i)error:.*", error_message)
         # Print warnings into the terminal

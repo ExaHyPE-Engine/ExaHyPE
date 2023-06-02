@@ -95,7 +95,12 @@ FORTRAN_OBJS=$(subst .f,.o,$(subst .f90,.o,$(FORTRAN_SOURCES)))
 FORTRAN_OBJS+=$(subst .f,.o,$(subst .f90,.o,$(GENERATED_FORTRAN_SOURCES)))
 FORTRAN_MODULE_OBJS={% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".o") +" "}} {%- endfor %}
 
+{% if USING_CMAKE %}
+all:
+	{{CMAKE_MAKE_COMMAND}}
+{% else %}
 all: solver
+{% endif %}
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
