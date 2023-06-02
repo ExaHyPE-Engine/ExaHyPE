@@ -179,7 +179,7 @@ See @ref swift_initial_conditions for options (hdf5/inserting)
 Then use
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
-project.algorithm_step_init.add_action_set(...)
+project.algorithm_step_initial_conditions.add_action_set(...)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 \todo elaborate
