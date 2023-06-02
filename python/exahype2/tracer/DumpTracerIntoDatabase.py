@@ -21,6 +21,9 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
   tracer position changes significantly. The term significantly can be controlled
   via relative deltas through the constructor.
   
+  This class uses the C++ class toolbox::particles::TrajectoryDatabase from the 
+  particles toolbox to realise the actual storage.
+  
   """     
   def __init__(self, 
                particle_set, 
@@ -37,55 +40,55 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
                ):
     """!
     
-    Constructor
-     
-    data_delta_between_two_snapsots: Float
-     A particle is dumped into the database if it has switched the domain 
-     partition or its position has changed more then delta_between_two_snapshots. 
-     See toolbox::particles::TrajectoryDatabase::getAction() for a description 
-     how the C++ code interprets this threshold, but it is usually the max norm
-     that is used here. If you set it to a very small number, you'll get a lot 
-     of entries in your database. 
-     
-    position_delta_between_two_snapsots: Float
-     Similar to data_delta_between_two_snapsots but this time it is not the
-     difference in the data that triggers a dump into the database, but a change
-     of position. Obviously, these things can be totally independent (and also can
-     be combined), as particles that move with the domain might not change their 
-     value, as theyare tracer, while stationary seismograms usually do not change
-     their position at all.
-     
-     If you work with stationary particles, you can set this parameter to literally
-     anything, as it will never become relevant. If you want the dump to write a 
-     snapshot only after fixed time intervals, set this value to a very high 
-     threshold, so it never kicks in and triggers a data dump. In this case, only
-     the time stamp differences will issue data writes.
-     
-    time_delta_between_two_snapsots: Float
-     this parameter ask the code to dump particle into database after certain time 
-     interval of time_delta_between_two_snapsots, even data and position do not change 
-     during this time interval. You can set the two parameter above to be extremely big
-     to enforce code dump particle with (roughly) regular time interval. 
-     set it as 0 to switch this feature off.
+Constructor
+ 
+data_delta_between_two_snapsots: Float
+ A particle is dumped into the database if it has switched the domain 
+ partition or its position has changed more then delta_between_two_snapshots. 
+ See toolbox::particles::TrajectoryDatabase::getAction() for a description 
+ how the C++ code interprets this threshold, but it is usually the max norm
+ that is used here. If you set it to a very small number, you'll get a lot 
+ of entries in your database. 
+ 
+position_delta_between_two_snapsots: Float
+ Similar to data_delta_between_two_snapsots but this time it is not the
+ difference in the data that triggers a dump into the database, but a change
+ of position. Obviously, these things can be totally independent (and also can
+ be combined), as particles that move with the domain might not change their 
+ value, as theyare tracer, while stationary seismograms usually do not change
+ their position at all.
+ 
+ If you work with stationary particles, you can set this parameter to literally
+ anything, as it will never become relevant. If you want the dump to write a 
+ snapshot only after fixed time intervals, set this value to a very high 
+ threshold, so it never kicks in and triggers a data dump. In this case, only
+ the time stamp differences will issue data writes.
+ 
+time_delta_between_two_snapsots: Float
+ this parameter ask the code to dump particle into database after certain time 
+ interval of time_delta_between_two_snapsots, even data and position do not change 
+ during this time interval. You can set the two parameter above to be extremely big
+ to enforce code dump particle with (roughly) regular time interval. 
+ set it as 0 to switch this feature off.
 
-    number_of_entries_between_two_db_flushes: Int
-      Number of entries that we dump into the database before it is flushed the next
-      time. Set it to max of an integer or zero to disable on-the-fly dumps. In this
-      case, the database is only flushed when the simulation terminates. So, the
-      thresholds data_delta_between_two_snapsots and position_delta_between_two_snapsots
-      determine how often entries and up in the database, and number_of_entries_between_two_db_flushes
-      determines how often this database is written into a file.
-      
-    use_relative_deltas: Boolean
-      See description of C++ class in toolbox::particles::TrajectoryDatabase
+number_of_entries_between_two_db_flushes: Int
+  Number of entries that we dump into the database before it is flushed the next
+  time. Set it to max of an integer or zero to disable on-the-fly dumps. In this
+  case, the database is only flushed when the simulation terminates. So, the
+  thresholds data_delta_between_two_snapsots and position_delta_between_two_snapsots
+  determine how often entries and up in the database, and number_of_entries_between_two_db_flushes
+  determines how often this database is written into a file.
+  
+use_relative_deltas: Boolean
+  See description of C++ class in toolbox::particles::TrajectoryDatabase
 
-    initial_record_time: Float
-      you can specify from when does the tracer start to dump data to files.
+initial_record_time: Float
+  you can specify from when does the tracer start to dump data to files.
 
-    last_record_time: Float
-      you can specify at when does the tracer stop dumping data to files.
-     
-    """
+last_record_time: Float
+  you can specify at when does the tracer stop dumping data to files.
+ 
+"""
     super(DumpTracerIntoDatabase,self).__init__(priority=1,parallel=False)
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name

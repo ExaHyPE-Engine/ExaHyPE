@@ -286,9 +286,13 @@ thus appreciate any citation of the original release paper
     self._project.output.add( generated_solver_files )
     self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp", generated=True )
 
-  def add_tracer(self,name,attribute_count=0,plot=True):
-    """
-    ## Particle properties
+
+  def add_tracer(self,
+                 name,
+                 attribute_count=0,
+                 plot=True
+                 ):
+    """!
 
     We rely on the particle toolbox. Therefore, our particles have
     already a position x, a cut off radius (which we don't usually 
