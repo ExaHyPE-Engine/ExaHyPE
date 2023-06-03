@@ -138,3 +138,27 @@ class Particle(peano4.toolbox.particles.Particle):
     """
     assert False, "Should be overwritten by subclass"
     return []
+
+
+  @property
+  def readme_descriptor(self):
+    """!
+    
+    Create default readme descriptor
+    
+    You might want to overwrite this for your particular particle 
+    species to get more detailed info the the README.md file generated
+    by Peano.
+    
+    """
+    return """### Particle """ + self.name + """
+    
+  Mesh properties:
+  
+  - particles per cell:         """ + str(self.particles_per_cell) + """
+  - h_min:                      """ + str(self.min_h) + """
+  - h_max:                      """ + str(self.max_h) + """
+  
+  Attributes: """ + str(len(self.data._attributes)) + """
+
+    """

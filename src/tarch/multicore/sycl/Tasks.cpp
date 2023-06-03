@@ -63,8 +63,6 @@ void tarch::multicore::native::spawnTask(Task*  job) {
       delete job;
     });
   });
-
-  e.wait();
 }
 
 
@@ -88,5 +86,9 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
   }
 }
 
+
+void tarch::multicore::native::drainTaskQueues() {
+  tarch::multicore::getHostSYCLQueue().wait();
+}
 
 #endif

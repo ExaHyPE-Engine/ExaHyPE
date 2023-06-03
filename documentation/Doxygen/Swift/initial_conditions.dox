@@ -8,20 +8,20 @@ actual calculation:
 1. Create a regular mesh that is just as fine that it can accommodate the
    largest predicted cut-off radius of all particles.
 2. Insert the particles (initial condition).
-3. Run a set of initialisation steps, where particles can define some 
+3. Run a set of initialisation steps, where particles can define some
    "warm up" calculation steps and are also sorted once more, should they
    have been inserted into the wrong cells.
 
-## The initial (regular) mesh
+# The initial (regular) mesh
 
-The first step is important, even though particles are allowed to change 
-their cut-off radius. It is important to tell the code base right from 
-the start what the biggest and smallest radius might be, but the radius 
+The first step is important, even though particles are allowed to change
+their cut-off radius. It is important to tell the code base right from
+the start what the biggest and smallest radius might be, but the radius
 can change freely in-between those thresholds. Actually the radius might
 even become smaller, but the mesh width you pass in initially is used to
-constrain the AMR throughout the simulation. 
+constrain the AMR throughout the simulation.
 
-The dynamic  mesh refinement might decide to introduce an extremely fine 
+The dynamic  mesh refinement might decide to introduce an extremely fine
 mesh in some places and to erase the mesh somewhere else.
 However, we have to start somewhere, as we do not want to run the initial
 insertion of particles into a single cell, then great this initial grid
@@ -43,16 +43,20 @@ grid, i.e. not a grid where you sometimes erase parts and sometimes add
 parts.
 
 
-## Initial conditions
+# Initial conditions
 
 The initial conditions are added by one mesh sweep modelled by the project's
-attribute algorithm_step_initial_conditions. In this sweep, you have to 
+attribute algorithm_step_initial_conditions. It represents the grid sweep, 
+i.e. mesh sweep, which sets up the inition condition. That is, if you 
+want to insert particles, you have to add action sets to this algorithm
+step calling add_action_set(). The passed action sets have to 
 throw all the particles you want to have into your mesh.
 There are two mainstream ways to implement initial conditions for the
 simulations:
 
-  - Insert particle by coordinates (```InsertParticlesByCoordinates.py```).
-  - Insert particles from an HDF5 file (```InsertParticlesFromHDF5File.py```).
+  - Insert particle by coordinates (```python/swift2/input/InsertParticlesByCoordinates.py```).
+  - Insert particle along a regular mesh (```python/swift2/input/InsertParticlesAlongCartesianGrid.py```).
+  - Insert particles from an HDF5 file (```python/swift2/input/InsertParticlesFromHDF5File.py```).
 
 Nothing stops you from additing further action sets to
 algorithm_step_initial_conditions. Some scenarios, for example, hard code
@@ -70,7 +74,7 @@ attributes:
    the initial conditions to meaningful values.
 2. There are attributes which have to be calculated prior to the kick
    off of the simulation.
-   
+
 To set the intial conditions, it is worth looking into the documentation
 of your particle inserter of choice. Most of them allow you to add some
 further initialisation snippets or tailor the reader, such that you can
@@ -85,12 +89,14 @@ run over all particles within a vertex - once they are inserted - and set
 meaningful attribute values.
 
 If you have to calculate particle attributes after the particles are thrown
-into the domain, these calculations are best modelled as 
+into the domain, these calculations are best modelled as
 @ref swift_particle_lifecycle "steps within the particle lifecycle".
 
 
-
-## Insert particles from an HDF5 file.
+<!-- Use 'section' command here to be able to reference the section somewhere
+    else rather than the entire page. 'section' corresponds to h1. First word
+    after 'section' cmd will be the anchor ID you need to use with the 'ref' cmd. -->
+@section SwiftHDF5 Insert particles from an HDF5 file
 
 A basic HDF5 reader that is compatible with IC files from the original Swift code is
 implemented in ```InsertParticlesFromHDF5File.py```.
@@ -99,7 +105,7 @@ In order to make use of the HDF5 reader, Peano must have been configured with
           ./configure ... --enable-particles --enable-swift --with-hdf5
 
 
-### With Spack/containers
+## With Spack/containers
 
 We assume that ``$HDF5_ROOT`` names the directory that contains your local HDF5 installation,
 e.g. ``/usr`` or ``/usr/lib/x86_64-linux-gnu/hdf5/serial/``.
@@ -107,12 +113,12 @@ In this case, it is recommended to include the following flags:
 
           ./configure ...  --enable-particles --enable-swift --with-hdf5 \
                 CXXFLAGS="-I/$HDF5_ROOT/include" \
-                LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" \
+                LDFLAGS="-I/$HDF5_ROOT/lib" \
                 LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"
 
 
 
-### Ubuntu
+## Ubuntu
 
 With Ubuntu, the packages you need are
 
@@ -122,9 +128,14 @@ With Ubuntu, the packages you need are
 and then you can configure with
 
 
-         ./configure --enable-particles --enable-swift --enable-loadbalancing --enable-blockstructured --enable-exahype2 --with-hdf5 CXXFLAGS="--std=c++20 -I/usr/include/hdf5/serial" LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++" --build=x86_64 --host=x86_64
+         ./configure --enable-particles --enable-swift --enable-loadbalancing \
+             --enable-blockstructured --enable-exahype2 --with-hdf5 \
+             CXXFLAGS="--std=c++20 -I/usr/include/hdf5/serial" \
+             LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" \
+             LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++" \
+             --build=x86_64 --host=x86_64
 
-### Python
+## Python
 
 Some of Swift's Python scripts use HDF5, too, and therefore need the package
 h5py which you can install via pip, e.g.
@@ -132,7 +143,7 @@ h5py which you can install via pip, e.g.
          pip install h5py
 
 
-## General remarks on particle insertion
+# General remarks on particle insertion
 
 There are a few key policies to follow whenever you insert particles:
 
@@ -154,6 +165,17 @@ There are a few key policies to follow whenever you insert particles:
 
 Obviously, the names for the parameters for toolbox::particles::insertParticleIntoCell()
 depend on the location from where you call the routine.
+As you insert particles into cells (even though the code will then assign
+them to vertices adjacent to the cells), you plug into touchCellFirstTime()
+or touchCellLastTime(). I recommend the former. These two events always are
+given a parameter
+
+~~~~~~~~~~~~~~~~~~~~~~
+   const peano4::datamanagement::CellMarker& marker
+~~~~~~~~~~~~~~~~~~~~~~
+
+and you can use peano4::datamanagement::CellMarker::isContained() to check
+if a particle should be fitted into a cell.
 
 
 */

@@ -17,7 +17,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
                additional_includes="",
                guard="true"
                ):
-    """
+    """!
       Insert particles
       
 
@@ -35,7 +35,10 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
          
       computational_domain_offset: [Float]
          Has to be an array with Dimensions entries that specifies the global domain
-         offset.
+         offset. You can pass in an array of floats, and this is definitely the 
+         default use case. However, you can also pass in an arbitrary array of 
+         strings, as long as these strings make sense in the generated C++ code
+         and eventually return a double each.
          
       guard: String (C code)
          A simple boolean expression. You can decide if a particle is inserted or not.

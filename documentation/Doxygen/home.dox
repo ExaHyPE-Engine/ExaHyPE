@@ -32,11 +32,11 @@ hook-in points for applications performing per-element, per-vertex, and so
 forth operations on the grid. It also provides interfaces for dynamic load
 balancing, sophisticated geometry representations, and other features.
 
-Peano is currently available in its fourth generation. 
+Peano is currently available in its fourth generation.
 The development of the original set of Peano codes started around 2002.
-2005-2009, we merged these codes into one Peano kernel (2nd generation). 
+2005-2009, we merged these codes into one Peano kernel (2nd generation).
 In 2009, I started a complete reimplementation of the kernel with special
-emphasis on reusability, application-independent design and the support for rapid prototyping. 
+emphasis on reusability, application-independent design and the support for rapid prototyping.
 This third generation of the code ended around 2019 when we released the
 ExaHyPE code - a hyperbolic equation system solver engine which uses Peano's
 AMR meshes.
@@ -56,7 +56,7 @@ This document therefore covers ExaHyPE, too.
 - Read through the @ref page_installation "installation instructions" and build Peano's core libraries.
 - Skim through the high-level @ref page_architecture "architecture"
 - Pick your project of interest and run through the tutorials and documentation there.
-- Consult the @ref page_conventions "coding conventions" and the info on 
+- Consult the @ref page_conventions "coding conventions" and the info on
   @ref page_documentation "Peano's documentation" before you continue.
 
 */
