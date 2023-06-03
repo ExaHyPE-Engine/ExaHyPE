@@ -73,12 +73,11 @@ class ParticleSet(DoF):
   @property
   def readme_descriptor(self):
     return """
-### Particle """ + self.particle_model.name + """
+### Particle set """ + self.particle_model.name + """
 
-There's no additional information available about this particle
-data structure.
+The particle set is administered through the container """ + self.generator.get_stack_container() + """.
 
-"""
+""" 
 
 
   @property

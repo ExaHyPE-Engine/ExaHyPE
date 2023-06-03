@@ -166,4 +166,9 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
 }
 
 
+void tarch::multicore::native::drainTaskQueues() {
+  backgroundTaskGroup.wait();
+}
+
+
 #endif

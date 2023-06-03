@@ -56,6 +56,7 @@ class InsertParticlesByCoordinates(ActionSet):
     
 
   __Template_TouchCellFirstTime = jinja2.Template("""
+  
   for(int i=0;i<{{N}};i++){
     // It is important to have this asymmetric comparisons with <= as we
     // need to ensure that particles right in the centre are either associated
@@ -63,22 +64,11 @@ class InsertParticlesByCoordinates(ActionSet):
     if (
       not marker.willBeRefined() 
       and 
-      (marker.getOffset()(0) <= coordinates[i][0] and marker.getOffset()(0)+marker.h()(0) > coordinates[i][0])
-      and
-      (marker.getOffset()(1) <= coordinates[i][1] and marker.getOffset()(1)+marker.h()(1) > coordinates[i][1])
-      #if Dimensions==3
-      and
-      (marker.getOffset()(2) <= coordinates[i][2] and marker.getOffset()(2)+marker.h()(2) > coordinates[i][2])
-      #endif
-    )
-    {
+      marker.isContained(_coordinates[i])
+    ) {
       globaldata::{{PARTICLE}}* particle = new globaldata::{{PARTICLE}}();
       
-      #if Dimensions==2
-      toolbox::particles::init(*particle,{coordinates[i][0],coordinates[i][1]},0.0);
-      #else
-      toolbox::particles::init(*particle,{coordinates[i][0],coordinates[i][1],coordinates[i][2]},0.0);
-      #endif
+      toolbox::particles::init(*particle,_coordinates[i],0.0);
       
       // See documentation of constructor on initialisation snippet
       {{INITIALISATION_CALL}}
@@ -123,36 +113,58 @@ class InsertParticlesByCoordinates(ActionSet):
     return result.render(**self.d)
 
 
-  def Read_In_Coor(self):
-    result=""
+  def get_constructor_body(self):
+    """!
+    
+    Initialise the coordinates
+    
+    This routine initialises the coordinates array, but it does so if and only 
+    if this hasn't been done yet. Each tree traversal creates its own action
+    set. However, it would be ridiculously stupid to create the coordinates 
+    multiple times. Rather, I 
+    
+    """
+    result="""
+#pragma clang optimize off
+tarch::multicore::Lock lock (_coordinatesSemaphore);
+if (_coordinates==nullptr) {
+  _coordinates = new tarch::la::Vector<Dimensions,double>[""" + str(self.d["N"]) + """];
+  
+    """
     dimensions = -1
     for i in range(self.d["N"]):
       if len(self._coordinates[i])==3:
-        result+= " coordinates["+str(i)+"][0]="+str(self._coordinates[i][0])+";\n"
-        result+= " coordinates["+str(i)+"][1]="+str(self._coordinates[i][1])+";\n"
+        result+= " _coordinates["+str(i)+"](0)="+str(self._coordinates[i][0])+";\n"
+        result+= " _coordinates["+str(i)+"](1)="+str(self._coordinates[i][1])+";\n"
         result+= " #if Dimensions==3\n"
-        result+= " coordinates["+str(i)+"][2]="+str(self._coordinates[i][2])+";\n"
+        result+= " _coordinates["+str(i)+"](2)="+str(self._coordinates[i][2])+";\n"
         result+= " #endif\n"
         result+= "\n"
         assert dimensions==-1 or dimensions==3, "inconsistent data: all coordinates have to have three entries: {}".format(self._coordinates[i])
         dimensions = 3
       if len(self._coordinates[i])==2:
-        result+= " coordinates["+str(i)+"][0]="+str(self._coordinates[i][0])+";\n"
-        result+= " coordinates["+str(i)+"][1]="+str(self._coordinates[i][1])+";\n"
+        result+= " _coordinates["+str(i)+"](0)="+str(self._coordinates[i][0])+";\n"
+        result+= " _coordinates["+str(i)+"](1)="+str(self._coordinates[i][1])+";\n"
         result+= " assertion(Dimensions==2);\n"
         result+= "\n"
         assert dimensions==-1 or dimensions==2, "inconsistent data: all coordinates have to have three entries: {}".format(self._coordinates[i])
         dimensions = 2
+    result += """
+}
+#pragma clang optimize on
+"""
     return result
 
 
-  def get_constructor_body(self):
-    return f"""
-{self.Read_In_Coor()}
+  def get_static_initialisations(self,full_qualified_classname):
+    return """
+tarch::la::Vector<Dimensions,double>*  """ + full_qualified_classname + """::_coordinates = nullptr;
+tarch::multicore::BooleanSemaphore     """ + full_qualified_classname + """::_coordinatesSemaphore;
 """
-
+    
 
   def get_attributes(self):
      return f"""
-  double coordinates["""+str(self.d["N"])+"""][3];
+    static tarch::multicore::BooleanSemaphore     _coordinatesSemaphore;
+    static tarch::la::Vector<Dimensions,double>*  _coordinates;
 """
