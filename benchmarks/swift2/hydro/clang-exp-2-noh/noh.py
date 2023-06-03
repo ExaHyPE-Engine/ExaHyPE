@@ -1,5 +1,6 @@
 import os
 import argparse
+import math
 import numpy as np
 
 import peano4
@@ -23,7 +24,6 @@ parser.add_argument("-et",    "--end-time",        dest="end_time",       type=f
 parser.add_argument("-plot",  "--plot-delta",      dest="plot_delta",     type=float, default=0.01,             help="Plot delta (0 switches off)" )
 parser.add_argument("-dt",    "--timestep-size",   dest="timestep_size",  type=float, default=1e-4,             help="Global timestep size (initial value)" )
 parser.add_argument("-cfl",   "--cfl-factor",      dest="cfl_factor",     type=float, default=0.1,              help="Value of the CFL constant" )
-parser.add_argument("-cs",    "--cell-size",       dest="cell_size",      type=float, default=0.3,              help="Cell size (default 0.3)" )
 parser.add_argument("-pd",    "--peano-dir",       dest="peanodir",       default="../../../..",                help="Peano4 directory" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False,   help="Switch on assertions" )
 args = parser.parse_args()
@@ -47,7 +47,10 @@ project = swift2.Project( namespace=project_namespace,
 name = "hydroPart"
 dimensions  = args.dimensions
 
-particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name, 
+particle_per_cell = 20
+max_cell_size     = 1.0 / args.particle_number * particle_per_cell / math.sqrt(args.dimensions)
+
+particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name                   = name, 
                                                              dimensions_hydro       = dimensions,
                                                              cfl_factor             = args.cfl_factor, 
                                                              initial_time_step_size = args.timestep_size,
@@ -55,8 +58,8 @@ particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name,
                                                              swift_project_namespace= project_namespace,
                                                              is_sph                 = True,
                                                              particles_per_cell     = 20,
-                                                             min_h                  = args.cell_size,
-                                                             max_h                  = args.cell_size
+                                                             min_h                  = max_cell_size / particle_per_cell,
+                                                             max_h                  = max_cell_size
                                                              )
 
 
@@ -110,7 +113,7 @@ else:
   print(f'Unable to determine the kernel support radius. Please check.'  )
 
 # Max/min allowed values for smoothing length h 
-HYDRO_h_MAX = args.cell_size / 2
+HYDRO_h_MAX = max_cell_size / 2.0
 HYDRO_h_MIN = particle.h_hydro_min
 
 particle.h_hydro_max = HYDRO_h_MAX

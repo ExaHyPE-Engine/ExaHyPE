@@ -178,11 +178,11 @@ also have to inform the project how many attributes you plan to track
 per tracer:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-tracer_particles = project.add_tracer( name=name,attribute_count=59 )
+tracer_particles = project.add_tracer( name="MyFancyParticle" )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Study the in-code documentation of the involved classes. The add_tracer()
-factor method ensure that ExaHyPE keeps track of it and that it also is 
+Study the in-code documentation of the involved classes. The exahype2.Project.add_tracer()
+factory method ensure that ExaHyPE keeps track of it and that it also is 
 printed whenever we write a snapshot. Tracers can
 track only some attributes, they can move or stay at one place, and they
 can also interact with each other.

@@ -161,6 +161,17 @@ There are a few key policies to follow whenever you insert particles:
 
 Obviously, the names for the parameters for toolbox::particles::insertParticleIntoCell()
 depend on the location from where you call the routine.
+As you insert particles into cells (even though the code will then assign
+them to vertices adjacent to the cells), you plug into touchCellFirstTime()
+or touchCellLastTime(). I recommend the former. These two events always are
+given a parameter
+
+~~~~~~~~~~~~~~~~~~~~~~
+   const peano4::datamanagement::CellMarker& marker
+~~~~~~~~~~~~~~~~~~~~~~
+
+and you can use peano4::datamanagement::CellMarker::isContained() to check
+if a particle should be fitted into a cell.
 
 
 */
