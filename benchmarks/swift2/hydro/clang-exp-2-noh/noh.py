@@ -185,11 +185,21 @@ ICs = swift2.scenario.NohProblemIC( dimensions=HYDRO_DIMENSIONS )
 initialisation_snippet = ICs.initialisation_snippet
 
 # Finally, pass this configuration to the initialisation script
-project.algorithm_step_initial_conditions.add_action_set( swift2.input.InsertParticlesByCoordinates(
-  particle_set        = particle_set,
-  initialisation_call = initialisation_snippet,
-  coordinates         = coords,
-  additional_includes = """
+#project.algorithm_step_initial_conditions.add_action_set( swift2.input.InsertParticlesByCoordinates(
+#  particle_set        = particle_set,
+#  initialisation_call = initialisation_snippet,
+#  coordinates         = coords,
+#  additional_includes = """
+##include "swift2/kernels/equation_of_state.h"
+#"""  
+#  )
+#)
+
+project.algorithm_step_initial_conditions.add_action_set( swift2.input.InsertParticlesAlongCartesianGrid(
+  particle_set               = particle_set,
+  initialisation_call        = initialisation_snippet,
+  distance_between_particles_along_one_axis = 1.0/args.particle_number,
+  additional_includes        = """
 #include "swift2/kernels/equation_of_state.h"
 """  
   )

@@ -46,12 +46,16 @@ parts.
 # Initial conditions
 
 The initial conditions are added by one mesh sweep modelled by the project's
-attribute algorithm_step_initial_conditions. In this sweep, you have to
+attribute algorithm_step_initial_conditions. It represents the grid sweep, 
+i.e. mesh sweep, which sets up the inition condition. That is, if you 
+want to insert particles, you have to add action sets to this algorithm
+step calling add_action_set(). The passed action sets have to 
 throw all the particles you want to have into your mesh.
 There are two mainstream ways to implement initial conditions for the
 simulations:
 
   - Insert particle by coordinates (```python/swift2/input/InsertParticlesByCoordinates.py```).
+  - Insert particle along a regular mesh (```python/swift2/input/InsertParticlesAlongCartesianGrid.py```).
   - Insert particles from an HDF5 file (```python/swift2/input/InsertParticlesFromHDF5File.py```).
 
 Nothing stops you from additing further action sets to
