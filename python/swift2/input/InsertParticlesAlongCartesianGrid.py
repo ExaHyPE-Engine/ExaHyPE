@@ -1,16 +1,15 @@
 # This file is part of the Swift2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import peano4.toolbox.particles.InsertRandomParticlesIntoUnrefinedCells
+import peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells
 
 
 
-class InsertParticlesAlongCartesianGrid(peano4.toolbox.particles.InsertRandomParticlesIntoUnrefinedCells):
+class InsertParticlesAlongCartesianGrid(peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells):
   def __init__(self,
                particle_set,
                distance_between_particles_along_one_axis,
                initialisation_call,
-               additional_includes = "",
-               noise=False,
+               additional_includes = ""
                ):
     """!
 
@@ -19,9 +18,10 @@ class InsertParticlesAlongCartesianGrid(peano4.toolbox.particles.InsertRandomPar
 
     """
     super( InsertParticlesAlongCartesianGrid, self ).__init__(particle_set        = particle_set,
-                                                              average_distance_between_particles         = distance_between_particles_along_one_axis,
+                                                              distance_between_particles         = distance_between_particles_along_one_axis,
                                                               initialisation_call = initialisation_call,
-                                                              noise               = noise,
+                                                              noise               = False,
+                                                              computational_domain_offset = ["DomainOffset[0]", "DomainOffset[1]", "DomainOffset[2]"],
                                                               additional_includes = additional_includes + """
 #include "Constants.h"
 """)

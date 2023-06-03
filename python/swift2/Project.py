@@ -140,8 +140,10 @@ class Project(object):
     offset_string += "}"
     size_string   += "}"
     self._project.constants.add_include( """#include <bitset>""")
-    self._project.constants.export_const_with_type( "DomainOffset", offset_string, "std::initializer_list<double>" )
-    self._project.constants.export_const_with_type( "DomainSize", size_string, "std::initializer_list<double>" )
+    self._project.constants.add_include( """#include "tarch/la/Vector.h" """)
+    self._project.constants.add_include( """#include "peano4/utils/Globals.h" """)
+    self._project.constants.export_const_with_type( "DomainOffset", offset_string, "tarch::la::Vector<Dimensions,double>" )
+    self._project.constants.export_const_with_type( "DomainSize", size_string, "tarch::la::Vector<Dimensions,double>" )
     self._project.constants.export( "MinTerminalTime", str(self._min_terminal_time) )
     if self._max_terminal_time>=self._min_terminal_time:
       self._project.constants.export( "MaxTerminalTime", str(self._max_terminal_time) )

@@ -11,3 +11,5 @@ Peano's particle toolbox.
 from .InsertParticlesByCoordinates      import InsertParticlesByCoordinates
 from .InsertParticlesFromHDF5File       import InsertParticlesFromHDF5File
 from .InsertParticlesAlongCartesianGrid import InsertParticlesAlongCartesianGrid
+from .InsertRandomParticlesIntoCells    import InsertRandomParticlesIntoCells
+
