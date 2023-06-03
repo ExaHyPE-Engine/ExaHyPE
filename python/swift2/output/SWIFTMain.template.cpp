@@ -164,6 +164,20 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     continueToSolve         = false;
   }
   else if (
+    ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
+    and
+    ( TimeInBetweenPlots>0.0 )
+  ) {
+    logInfo(
+      "selectNextAlgorithmicStep()",
+      "plot final solution"
+    );
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+    );
+    haveJustWrittenSnapshot = true;
+  }
+  else if (
     TimeInBetweenPlots>0.0
     and
     (repositories::getMinTimeStamp()>=nextMinPlotTimeStamp or repositories::getMaxTimeStamp()>=nextMaxPlotTimeStamp)
