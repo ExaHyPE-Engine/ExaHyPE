@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <CL/sycl.hpp>
 
 namespace tarch::accelerator::info::sycl
 {
