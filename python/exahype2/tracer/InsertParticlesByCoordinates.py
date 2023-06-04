@@ -48,11 +48,9 @@ class InsertParticlesByCoordinates(peano4.toolbox.particles.InsertParticlesByCoo
     
 
   def get_constructor_body(self):
-    # return super( InsertParticlesByCoordinates ).get_constructor_body() + """
-    return f"""
+    return super( InsertParticlesByCoordinates, self ).get_constructor_body() + """
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
-{self.Read_In_Coor()}
 """
 
 

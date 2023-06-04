@@ -249,7 +249,7 @@ class AbstractCCZ4Solver(object):
     tracing to the time stepping and the database update to the plotting.
     ~~~~~~~~~~~~~~~~~~~~~~~
     project.add_action_set_to_timestepping(my_interpolation)
-    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
       particle_set=tracer_particles,
       solver=self,
       filename="Tracer-" + name,
@@ -360,7 +360,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
                                                 project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
                                                 ))
 
-    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
       particle_set=tracer_particles,
       solver=self,
       filename="Tracer-" + name,
@@ -483,7 +483,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
                                                 project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
                                                 ))
 
-    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
         particle_set=tracer_particles,
         solver=self,
         filename="Tracer-" + name,
@@ -643,7 +643,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
                                                 project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
                                                 ))
 
-    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
       particle_set=tracer_particles,
       solver=self,
       filename="Tracer-" + name,
@@ -755,7 +755,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
                                                                                         time_stepping_kernel="toolbox::particles::staticPosition",
                                                                                         project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"))
 
-    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
       particle_set=tracer_particles,
       solver=self,
       filename="Tracer-" + name,
