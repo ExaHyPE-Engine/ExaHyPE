@@ -7,6 +7,7 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #if defined(GPUOffloadingSYCL)
+
 namespace
 {
   std::map<int, sycl::queue> syclQueues;

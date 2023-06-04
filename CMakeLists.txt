@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.20.5)
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
   execute_process(
@@ -170,6 +170,7 @@ list(APPEND MULTICORES_BACKENDS
   "cpp"
   "omp"
   "tbb"
+  "sycl"
 )
 set(WITH_MULTITHREADING "" CACHE STRING "${MULTICORES_BACKENDS}")
 set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${MULTICORES_BACKENDS})
@@ -235,6 +236,11 @@ elseif("${GPU_PREFIX}" STREQUAL "gfx")
   set(AMD_GPU TRUE)
 endif()
 
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "IntelLLVM" AND ("${WITH_GPU}" STREQUAL "sycl" OR "${WITH_MULTITHREADING}" STREQUAL "sycl"))
+  find_package(IntelSYCL REQUIRED)
+  #target_link_libraries(project_options INTERFACE IntelSYCL)
+endif()
+
 if(WITH_CUDA)
   target_compile_options(project_options INTERFACE -cuda)
   target_link_options(project_options INTERFACE -cuda)
@@ -269,7 +275,7 @@ if(WITH_GPU)
       #target_link_options(project_options INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:-mp=gpu;-gpu=${WITH_GPU_ARCH}>")
     endif()
   elseif(WITH_GPU STREQUAL "sycl")
-    set(WITH_MULTITHREADING CACHE "tbb")
+    set(WITH_MULTITHREADING "sycl" CACHE STRING "GPU sycl needs tbb multithreading")
   elseif(WITH_GPU STREQUAL "hip")
   elseif(WITH_GPU STREQUAL "cuda")
     string(SUBSTRING "${WITH_GPU_ARCH}" 3 5 GPU_ARCH_SUFFIX)
