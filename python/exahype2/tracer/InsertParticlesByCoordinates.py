@@ -55,9 +55,7 @@ class InsertParticlesByCoordinates(peano4.toolbox.particles.InsertParticlesByCoo
 
 
   def get_attributes(self):
-    # return super( InsertParticlesByCoordinates ).get_attributes() + """
-    return """
+    return super( InsertParticlesByCoordinates, self ).get_attributes() + """
   int _particleNumberOnThisTree;
   int _spacetreeId;
-  double coordinates["""+str(self.d["N"])+"""][3];
 """

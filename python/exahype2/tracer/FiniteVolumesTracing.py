@@ -9,7 +9,7 @@ import jinja2
 
 
 class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists):
-  """
+  """!
   
   Particle tracing over the Finite Volumes solver. 
 
@@ -35,20 +35,24 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction_
                solver, 
                time_stepping_kernel, 
                project_on_tracer_properties_kernel):
-    """
+    """!
 
-    Set up projection
+    Set up the tracing
     
-    Setting up the projection first and foremost means that we have to couple
+    Setting up the tracing first and foremost means that we have to couple
     the tracer particle set with the solver, and then we have to specify which 
-    projection kernels and which time integrator we want to use.
+    projection kernels and which time integrator we want to use. Basically,
+    we have to provide the C++ kernels which shall be used to move the tracer
+    and to write new data into the tracer. 
     
+    For the time stepping, Peano's particle toolbox provides some default 
+    integrators. If you use stationary tracers, toolbox::particles::StaticPosition
+    (handed in as string) or None do the job. See comment below.
     
-    ## Popular projection kernels in ExaHyPE
-
-    These are frequently used options for project_on_tracer_properties_kernel:
-    
-    - ::exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant
+    For the projection of solution data onto the tracer, the file
+    exahype2/fv/Tracer.h provides a few pre-manufactured routines. Again, the 
+    projection kernel here requires a plain function call, and you have to 
+    ensure that this function call matches the data you actually wanna dump.
 
     
     ## Arguments

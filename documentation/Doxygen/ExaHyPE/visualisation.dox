@@ -26,7 +26,9 @@ It also dumps all the resolution levels of the grid simultaneously.
 Therefore, one of the first postprocessing steps usually is to remove all data
 from the output data set besides the fine grid level.
 
+
 ### Plot descriptive variable names
+
 You can add a plot description to each solver which allows us to render
 more descriptive variable names:
 ~~~~~~~~~~~~~~~~~
@@ -223,6 +225,15 @@ note that you will have to pick an interpolation that fits to your
 solver. In the snippet above, we use a Finite Volume solver and
 therefore pick a projection from the `exahype2::fv` namespace. Other
 discretisations will require other interpolation schemes.
+
+- See exahype2/fv/Tracer.h for an overview of pre-defined routines
+  that map the solution data from Finite Volumes onto particles. As 
+  our Finite Differences scheme is a cell-centered block-structured
+  discretisation, these routines all work for fd / Finite Differences,
+  too.
+- See exahype2/dg/Tracer.h for an overview of pre-defined routines
+  that map the solution data from Discontinuous Galerkin solvers onto 
+  particles. These routines also work for ADER-DG.
 
 
 ### Dump tracer data into CSV database
