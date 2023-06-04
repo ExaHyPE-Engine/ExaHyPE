@@ -2,7 +2,6 @@ import peano4
 import exahype2
 import dastgen2
 
-
 from abc import abstractmethod
 
 
@@ -239,7 +238,9 @@ class AbstractCCZ4Solver(object):
   def add_tracer(self,
                  name,
                  coordinates,
-                 project):
+                 project,
+                 tracer_unknowns = None,
+                 ):
     """!
     
     Add a tracer for the solver to the project solver
@@ -349,15 +350,25 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
   def add_tracer(self,
                  name,
                  coordinates,
-                 project):
-    tracer_particles = project.add_tracer( name=name,attribute_count=59 )
+                 project,
+                 tracer_unknowns = None,
+                 ):
+    number_of_attributes = (self.unknowns + self.auxiliary_variables) if tracer_unknowns==None else len(tracer_unknowns)
+    tracer_particles = project.add_tracer( name=name,attribute_count=number_of_attributes )
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=coordinates))
+    project_on_tracer_properties_kernel = ""
+    if tracer_unknowns==None:
+      project_on_tracer_properties_kernel = "::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
+    elif len(tracer_unknowns)==1:
+      project_on_tracer_properties_kernel = "::exahype2::fv::projectValueOntoParticle_piecewiseLinear<{},{}>".format(i,tracer_unknowns.index(i))
+    else:
+      project_on_tracer_properties_kernel = "::exahype2::fv::projectValuesOntoParticle_piecewiseLinear<{}>".format(tracer_unknowns).replace("[","").replace("]","")
     project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                 self,
                                                 time_stepping_kernel="toolbox::particles::staticPosition",
-                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
+                                                project_on_tracer_properties_kernel=project_on_tracer_properties_kernel
                                                 ))
 
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
@@ -472,15 +483,25 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
   def add_tracer(self,
                  name,
                  coordinates,
-                 project):
-    tracer_particles = project.add_tracer( name=name,attribute_count=59 )
+                 project,
+                 tracer_unknowns = None,
+                 ):
+    number_of_attributes = (self.unknowns + self.auxiliary_variables) if tracer_unknowns==None else len(tracer_unknowns)
+    tracer_particles = project.add_tracer( name=name,attribute_count=number_of_attributes )
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=coordinates))
+    project_on_tracer_properties_kernel = ""
+    if tracer_unknowns==None:
+      project_on_tracer_properties_kernel = "::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
+    elif len(tracer_unknowns)==1:
+      project_on_tracer_properties_kernel = "::exahype2::fv::projectValueOntoParticle_piecewiseLinear<{},{}>".format(i,tracer_unknowns.index(i))
+    else:
+      project_on_tracer_properties_kernel = "::exahype2::fv::projectValuesOntoParticle_piecewiseLinear<{}>".format(tracer_unknowns).replace("[","").replace("]","")
     project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                 self,
                                                 time_stepping_kernel="toolbox::particles::staticPosition",
-                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
+                                                project_on_tracer_properties_kernel=project_on_tracer_properties_kernel
                                                 ))
 
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
@@ -632,15 +653,25 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
   def add_tracer(self,
                  name,
                  coordinates,
-                 project):
-    tracer_particles = project.add_tracer( name=name,attribute_count=59 )
+                 project,
+                 tracer_unknowns = None,
+                 ):
+    number_of_attributes = (self.unknowns + self.auxiliary_variables) if tracer_unknowns==None else len(tracer_unknowns)
+    tracer_particles = project.add_tracer( name=name,attribute_count=number_of_attributes )
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=coordinates))
+    project_on_tracer_properties_kernel = ""
+    if tracer_unknowns==None:
+      project_on_tracer_properties_kernel = "::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
+    elif len(tracer_unknowns)==1:
+      project_on_tracer_properties_kernel = "::exahype2::fv::projectValueOntoParticle_piecewiseLinear<{},{}>".format(i,tracer_unknowns.index(i))
+    else:
+      project_on_tracer_properties_kernel = "::exahype2::fv::projectValuesOntoParticle_piecewiseLinear<{}>".format(tracer_unknowns).replace("[","").replace("]","")
     project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                 self,
                                                 time_stepping_kernel="toolbox::particles::staticPosition",
-                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
+                                                project_on_tracer_properties_kernel=project_on_tracer_properties_kernel
                                                 ))
 
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
@@ -745,11 +776,15 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
   def add_tracer(self,
                  name,
                  coordinates,
-                 project):
-    tracer_particles = project.add_tracer( name=name,attribute_count=59 )
+                 project,
+                 tracer_unknowns = None,
+                 ):
+    number_of_attributes = (self.unknowns + self.auxiliary_variables) if tracer_unknowns==None else len(tracer_unknowns)
+    tracer_particles = project.add_tracer( name=name,attribute_count=number_of_attributes )
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=coordinates))
+    assert tracer_unknowns==None
     project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
                                                                                         my_solver,
                                                                                         time_stepping_kernel="toolbox::particles::staticPosition",
