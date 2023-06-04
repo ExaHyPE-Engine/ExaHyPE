@@ -25,6 +25,10 @@
 #include "tarch/timing/Watch.h"
 #include "tarch/timing/Measurement.h"
 
+#if defined(SharedSYCL) and defined(GPUOffloadingSYCL)
+  #include "tarch/multicore/sycl/Core.h"
+#endif
+
 #include "peano4/peano.h"
 
 #include "exahype2/NonCriticalAssertions.h"
@@ -628,7 +632,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
       h.host_task([=]() {
         submitSYCLKernels(numberOfPatchesPerThread, device, thread);
       });
-    }
+    });
   }
   tarch::multicore::getHostSYCLQueue().wait();
 #elif defined(SharedOMP) and defined(GPUOffloadingSYCL)

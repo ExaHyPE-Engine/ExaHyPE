@@ -8,6 +8,15 @@
 #include "../DeviceInfoUtility.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
+#pragma push_macro("Dimensions")
+#pragma push_macro("assertion")
+#undef Dimensions
+#undef assertion
+#include <CL/sycl.hpp>
+#pragma pop_macro("Dimensions")
+#pragma pop_macro("assertion")
+
+
 namespace tarch::accelerator::info::sycl
 {
   std::vector<std::vector<std::string>> queryDeviceInformation()
