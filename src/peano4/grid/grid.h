@@ -408,9 +408,31 @@ namespace peano4 {
       /**
        * In-situ sort (bubble sort)
        *
+       * The sorting is required to ensure that the merging is deterministic on
+       * a parallel machine. peano4::grid::merge() discusses the details behind
+       * this. Unfortunately, the sorting can be extremely expensive (notably
+       * in 3d). I assume that an "inefficient" merger of the refinement events
+       * is kind of acceptable: In the worst case, most codes will not erase as
+       * aggressively as they could and then trigger more erase operations in
+       * the subsequent mesh traversal.
+       *
+       * The rationale behind this statement is as follows: A cell or region
+       * around a vertex refine if they overlap with a refinement instruction.
+       * It hence does not really make any difference if we fuse two adjacent
+       * refinement instructions or not. Things are different with erase: A
+       * region erases if and only if it is contained completely within one
+       * erase command. So if we have to adjacent cells which say "erase", but
+       * these guys are not merged into one, then an octant which is half
+       * overlapping and half with the other erase command will not erase, as
+       * it is not completely embedded. I therefore typically recommend to
+       * fuse erase commands as aggressively as possible, but to be a little
+       * bit more relaxed with the refines.
+       *
        * @see merge() for a discussion
+       * @param events Input and output set of grid control events
+       * @param maxIterations Maximum number of bubble sort iterations
        */
-      void sort( std::list< peano4::grid::GridControlEvent >& events );
+      void sort( std::list< peano4::grid::GridControlEvent >& events, int maxIterations );
 
       peano4::grid::GridControlEvent createBoundingBoxEvent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
     }

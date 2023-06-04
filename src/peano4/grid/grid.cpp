@@ -133,11 +133,8 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
   internal::removeEraseEventsThatAreCancelledByRefineEvents( refineEvents, eraseEvents );
   logDebug( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
 
-  internal::sort( refineEvents );
-  internal::sort( eraseEvents );
-
-  //internal::generateEraseEventPowersetOfSquareEvents( eraseEvents );
-  //logInfo( "merge(...)", "power set of erase events hosts " << eraseEvents.size() << " event(s)");
+  internal::sort( refineEvents, refineEvents.size() );
+  internal::sort( eraseEvents, std::numeric_limits<int>::max() );
 
   internal::mergeAdjacentRefinementEvents( refineEvents );
   internal::mergeAdjacentRefinementEvents( eraseEvents );
@@ -151,12 +148,15 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
 }
 
 
-void peano4::grid::internal::sort( std::list< peano4::grid::GridControlEvent >& events ) {
+void peano4::grid::internal::sort( std::list< peano4::grid::GridControlEvent >& events, int maxIterations ) {
   if (events.size()<2) return;
 
+  assertion(maxIterations>0);
+
   bool hasChanged = true;
-  while (hasChanged) {
+  while (hasChanged and maxIterations>0) {
     hasChanged = false;
+    maxIterations--;
     std::list< peano4::grid::GridControlEvent >::iterator rightP = events.begin();
     rightP++;
     while (rightP!=events.end()) {
@@ -179,6 +179,10 @@ void peano4::grid::internal::sort( std::list< peano4::grid::GridControlEvent >& 
 
       rightP++;
     }
+  }
+
+  if (maxIterations==0) {
+    logInfo( "sort(...)", "too many refine events (" << events.size() << ") to bring them into a totally sorted order. Continue with a slightly unordered set" );
   }
 }
 
