@@ -3,13 +3,13 @@
 #if defined(GPUOffloadingCPP)
 #include <iostream>
 
-#include "../DeviceInfoUtility.h"
+#include "../DeviceInfo.h"
 
 namespace tarch::accelerator::info::cpp
 {
   std::vector<std::vector<std::string>> queryDeviceInformation()
   {
-    unsigned int                          propertyCount = tarch::accelerator::info::utility::properties.size();
+    unsigned int                          propertyCount = tarch::accelerator::info::properties.size();
     std::vector<std::vector<std::string>> propertyMatrix(propertyCount, std::vector<std::string>(0, "X"));
     return propertyMatrix;
   }
