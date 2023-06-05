@@ -72,16 +72,16 @@ namespace tarch::accelerator::info::sycl
         ::sycl::info::device::name>();
       propertyMatrix[tarch::accelerator::info::utility::getPropertyOffset("Global Memory")][devId]
         = std::to_string(dev.get_info<::sycl::info::device::global_mem_size>() / mb) + " mb";
-      propertyMatrix[tarch::accelerator::info::utility::getPropertyOffset("Shared Memory")][devId]
-        = std::to_string(dev.get_info<::sycl::info::device::local_mem_size>() / kb) + " kb";
+      //propertyMatrix[tarch::accelerator::info::utility::getPropertyOffset("Shared Memory")][devId]
+      //  = std::to_string(dev.get_info<::sycl::info::device::local_mem_size>() / kb) + " kb";
       propertyMatrix[tarch::accelerator::info::utility::getPropertyOffset("Clock Frequency")][devId]
         = std::to_string(dev.get_info<::sycl::info::device::max_clock_frequency>()) + " mHz";
-      propertyMatrix[tarch::accelerator::info::utility::getPropertyOffset("Compute Units (Streaming Multiprocessors)"
+      propertyMatrix[tarch::accelerator::info::utility::getPropertyOffset("Compute Units"
       )][devId]
         = std::to_string(dev.get_info<::sycl::info::device::max_compute_units>());
-      propertyMatrix[tarch::accelerator::info::utility::getPropertyOffset("Subgroup Size (Warp Size)")][devId] = subgroup;
-      propertyMatrix[tarch::accelerator::info::utility::getPropertyOffset("Work Item Sizes (Block Size)")][devId]
-        = work_item;
+      //propertyMatrix[tarch::accelerator::info::utility::getPropertyOffset("Subgroup Size (Warp Size)")][devId] = subgroup;
+      //propertyMatrix[tarch::accelerator::info::utility::getPropertyOffset("Work Item Sizes (Block Size)")][devId]
+      //  = work_item;
 
       devId += 1;
     }
@@ -92,9 +92,14 @@ namespace tarch::accelerator::info::sycl
   {
     auto        propertyMatrix  = queryDeviceInformation();
     int         numberOfDevices = ::sycl::device::get_devices(::sycl::info::device_type::gpu).size();
-    std::string deviceInfoStr   = tarch::accelerator::info::utility::parseDeviceInformation(
-      propertyMatrix, numberOfDevices
-    );
+    std::string deviceInfoStr   = "";
+    if (numberOfDevices == 0){
+      deviceInfoStr   = "No offloading capable GPUs were found";
+    }else{
+      deviceInfoStr   = tarch::accelerator::info::utility::parseDeviceInformation(
+        propertyMatrix, numberOfDevices
+      );
+    }
     std::cout << deviceInfoStr << std::endl;
   }
 } // namespace tarch::accelerator::info::sycl

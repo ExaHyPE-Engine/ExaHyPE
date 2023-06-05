@@ -1,7 +1,8 @@
 #include <algorithm>
 #include <sstream>
 #include <stdexcept>
-
+#include <iostream>
+#include <algorithm>
 #include "DeviceInfoUtility.h"
 
 namespace tarch::accelerator::info::utility
@@ -17,6 +18,68 @@ namespace tarch::accelerator::info::utility
   }
 
   std::string parseDeviceInformation(const std::vector<std::vector<std::string>>& propertyMatrix, int numberOfDevices)
+  {
+    unsigned int propertyCount = properties.size();
+
+    std::stringstream ss;
+
+    // This size is the padding we need to add the porpety-name column
+    unsigned int maxPropertyLengthWithPadding
+      = std::max_element(
+          properties.begin(),
+          properties.end(),
+          [](const std::string& lhs, const std::string& rhs) { return lhs.size() < rhs.size(); }
+        )->size()
+        + 1;
+
+    // Get the string entry of a columng with the highest length
+    std::vector<unsigned int> columnMaxStringSizes(properties.size(), 0);
+    for (unsigned int row = 0; row < properties.size(); row++)
+    {
+      std::vector<unsigned int> col_sizes;
+      for (unsigned int col = 0; col < numberOfDevices; col++)
+      {
+        col_sizes.push_back(propertyMatrix[row][col].size());
+      }
+
+      // Device property is also a part of the column
+      col_sizes.push_back(properties[row].size());
+
+      unsigned int maxLength    = *std::max_element(col_sizes.begin(), col_sizes.end());
+      columnMaxStringSizes[row] = maxLength;
+    }
+
+    unsigned int maxIdLength = std::max(std::to_string(numberOfDevices).size(), std::string("DeviceId").size());
+
+    // Iterate the matrix and write per row, also while accessing the padding we need to add
+    std::string propIdPad(maxIdLength + 1 - std::string("DeviceId").size(), ' ');
+    ss << propIdPad << "DeviceId |";
+    for (unsigned int x = 0; x < properties.size(); x++){
+      std::string propPadding(columnMaxStringSizes[x] + 1 - properties[x].size(), ' ');
+      ss << propPadding << properties[x] << " |";
+    }
+    ss.seekp(-1, ss.cur);
+    ss << "\n";
+
+    for (unsigned int x = 0; x < numberOfDevices; x++)
+    {
+      std::string idPad(maxIdLength + 1 - std::to_string(x).size(), ' ');
+      ss << idPad << x << " |";
+      for  (unsigned int y = 0; y < properties.size(); y ++) //(const auto& row : propertyMatrix)
+      {
+        unsigned int paddingLength = columnMaxStringSizes[y] + 1 - propertyMatrix[y][x].size();
+        std::string  s(paddingLength, ' ');
+        //ss << s << el << "  ";
+        ss << s << propertyMatrix[y][x] << " |";
+      }
+      ss.seekp(-1, ss.cur);
+      ss << "\n";
+    }
+    return ss.str();
+  }
+
+
+  std::string parseDeviceInformationDeviceAsCol(const std::vector<std::vector<std::string>>& propertyMatrix, int numberOfDevices)
   {
     unsigned int propertyCount = properties.size();
 

@@ -20,8 +20,7 @@ namespace tarch::accelerator::info::cpp
     std::string cppBackendWarning = "Iso cpp accelerator back-end has no means to query the number of accelerators or "
                                     "properties\n"
                                     "For best results enable the CUDA or Sycl Backends/API.\n";
-    std::string deviceInfoStr     = tarch::accelerator::info::utility::parseDeviceInformation(propertyMatrix, 0);
-    std::cout << cppBackendWarning << deviceInfoStr << std::endl;
+    std::cout << cppBackendWarning << std::endl;
   }
 } // namespace tarch::accelerator::info::cpp
 #endif
