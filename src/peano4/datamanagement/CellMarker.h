@@ -73,7 +73,7 @@ struct peano4::datamanagement::CellMarker {
     bool willBeRefined() const;
 
     /**
-     * @return x coordinate of a cell is its centre.
+     * @return Centre of cell.
      */
     tarch::la::Vector<Dimensions,double>  x() const;
 

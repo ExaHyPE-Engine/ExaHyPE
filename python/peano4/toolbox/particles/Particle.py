@@ -58,13 +58,15 @@ class Particle(DaStGen2):
     virtual particles. Never read them or use them.
   
   """
-  def __init__(self,name):
+  def __init__(self,
+               name):
     """
     
     :Attributes:
     
     name: String
-      Name of the particle. Has to be a valid C++ class name.
+      Name of the particle. Has to be a valid C++ class name. We pass this
+      to the superclass as fully qualified name
       
     """
     peano4.datamodel.DaStGen2.__init__( self, name )

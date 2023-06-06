@@ -167,7 +167,14 @@ class toolbox::particles::TrajectoryDatabase {
      *   data if and only if it exceeds positionDelta times this maximum. So we use a
      *   relative quantity.
      */
-    TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta = 1e-8, double dataDelta = 1e-8, double timeDelta=0.0, bool clearDatabaseAfterFlush=true, bool deltasAreRelative=false );
+    TrajectoryDatabase(
+      int growthBetweenTwoDatabaseFlushes,
+      double positionDelta = 1e-8,
+      double dataDelta = 1e-8,
+      double timeDelta=0.0,
+      bool clearDatabaseAfterFlush=true,
+      bool deltasAreRelative=false
+    );
     ~TrajectoryDatabase();
 
     /**
@@ -185,7 +192,7 @@ class toolbox::particles::TrajectoryDatabase {
     void clearHistory(bool lockSemaphore=true);
 
     /**
-     * <h2> Thread-safety </h2>
+     * Dump data into CSV file
      *
      * The operation is thread-safe, i.e. it first locks the sempahore and then
      * it continues. If we are supposed to clear the database once we've dumped the CSV
@@ -204,12 +211,19 @@ class toolbox::particles::TrajectoryDatabase {
     void setTimeDeltaBetweenTwoSnapshots( double value );
 
     /**
+     * Add particle snapshot
+     *
      * A particle is always uniquely identified by two integers (an
      * integer pair). This way, we can initialise (hand out) particle
      * numbers without any semaphore.
      *
+     * I do not really care how many attributes one tracks per particle.
+     * We can track none at all (like in this function) or an arbitrary
+     * number. This is the reason why this operation is heavily overloaded.
+     * It is the user's responsibility to use the addParticleSnapshot()
+     * routines in a consistent way.
      *
-     * <h2> Thread-safety </h2>
+     * ## Thread-safety
      *
      * The routine is thread-safe. It actually locks the database before it
      * invokes getAction() and thus will not mess up either the database
