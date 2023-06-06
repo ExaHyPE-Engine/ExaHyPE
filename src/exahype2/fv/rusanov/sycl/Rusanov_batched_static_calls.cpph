@@ -23,9 +23,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingSYCL)
-  //::sycl::property_list prop_list{::sycl::property::queue::enable_profiling()};
-  //::sycl::queue queue{::sycl::gpu_selector_v, prop_list};
-  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+  ::sycl::property_list prop_list{::sycl::property::queue::enable_profiling()};
+  ::sycl::queue queue{::sycl::gpu_selector_v, prop_list};
+  //::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   constexpr int solversHaloSize        = 1;
 
@@ -876,10 +876,10 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
     updateWithFlux.wait();
     updateWithNCP.wait();
   }
-  //auto start = copySolutionEvent.get_profiling_info<::sycl::info::event_profiling::command_start>();
-  //auto stop = evalEigen.get_profiling_info<::sycl::info::event_profiling::command_end>();
-  //auto duration = static_cast<double>(stop - start) / NSEC_IN_SEC;
-  //::std::cout << "Batched kernel execution time: " << duration << "sec" << ::std::endl;
+  auto start = copySolutionEvent.get_profiling_info<::sycl::info::event_profiling::command_start>();
+  auto stop = evalEigen.get_profiling_info<::sycl::info::event_profiling::command_end>();
+  auto duration = static_cast<double>(stop - start) / NSEC_IN_SEC;
+  ::std::cout << "Batched kernel execution time: " << duration << "sec" << ::std::endl;
 
   patchData.destroy(  hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue  );
 

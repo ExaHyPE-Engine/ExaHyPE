@@ -23,10 +23,10 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingSYCL)
-  //::sycl::property_list prop_list{::sycl::property::queue::enable_profiling()};
-  //::sycl::queue queue{::sycl::gpu_selector_v, prop_list};
-  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
-  constexpr std::size_t solversHaloSize        = 1;
+  ::sycl::property_list prop_list{::sycl::property::queue::enable_profiling()};
+  ::sycl::queue queue{::sycl::gpu_selector_v, prop_list};
+  //::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+  constexpr int solversHaloSize        = 1;
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
   exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
@@ -46,13 +46,13 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
   const std::size_t numberOfPatches = hostPatchData.numberOfCells;
   GPUCellData  patchData( hostPatchData, QInEnumerator, QOutEnumerator, queue );
-  ::sycl::range<1> totalWorkItem{numberOfVolumesPerAxisInPatch*(numberOfVolumesPerAxisInPatch+2*solversHaloSize)*(unknowns+auxiliaryVariables)*numberOfPatches};
-  ::sycl::range<1> workgroupSize{numberOfVolumesPerAxisInPatch*(numberOfVolumesPerAxisInPatch+2*solversHaloSize)*(unknowns+auxiliaryVariables)};
+  ::sycl::range<3> totalWorkItem{numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch+2*solversHaloSize, (unknowns+auxiliaryVariables)*numberOfPatches};
+  ::sycl::range<3> workgroupSize{numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch+2*solversHaloSize, unknowns+auxiliaryVariables};
   ::sycl::event event = queue.submit(
     [&](::sycl::handler &handle) {
       handle.parallel_for(
-      ::sycl::nd_range<1> {totalWorkItem, workgroupSize},
-      [=] (::sycl::nd_item<1> i) {/*
+      ::sycl::nd_range<3> {totalWorkItem, workgroupSize},
+      [=] (::sycl::nd_item<3> i) {/*
         if (Dimensions==2 and evaluateSource) {
           handle.parallel_for( // -> should be parallel_for_work_items
                 ::sycl::range<2>{numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
@@ -97,12 +97,12 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
           );
         }*/
         if (Dimensions==2) {
-                  int patchIndex    = i.get_group(0);
-				  int loopIndex     = i.get_local_id(0);
-                  int y             = (loopIndex / ((numberOfVolumesPerAxisInPatch+2*solversHaloSize)*(unknowns+auxiliaryVariables))) % numberOfVolumesPerAxisInPatch;
-                  int x             = (loopIndex / (unknowns+auxiliaryVariables)) % (numberOfVolumesPerAxisInPatch+2*solversHaloSize);
-				  int unknown       = loopIndex % (unknowns+auxiliaryVariables);
-				  if (x < static_cast<int>(numberOfVolumesPerAxisInPatch)) {
+                  int patchIndex    = i.get_group(2);
+                  int y             = i.get_local_id(0);
+                  int x             = i.get_local_id(1);
+				  int unknown       = i.get_local_id(2);
+
+				  if (x < numberOfVolumesPerAxisInPatch) {
                     internal::copySolution_LoopBody(
                       patchData.QIn + patchIndex * QInEnumerator.size(),
                       QInEnumerator,
@@ -142,12 +142,11 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
         }*/
 
         if (Dimensions==2) {
-			      int patchIndex    = i.get_group(0);
-				  int loopIndex     = i.get_local_id(0);
-                  int y             = (loopIndex / ((numberOfVolumesPerAxisInPatch+2*solversHaloSize)*(unknowns+auxiliaryVariables))) % numberOfVolumesPerAxisInPatch;
-                  int x             = (loopIndex / (unknowns+auxiliaryVariables)) % (numberOfVolumesPerAxisInPatch+2*solversHaloSize) - solversHaloSize;
-				  int unknown       = loopIndex % (unknowns+auxiliaryVariables);
-                 
+			      int patchIndex = i.get_group(2);
+                  int y          = i.get_local_id(0);
+                  int x          = i.get_local_id(1)-solversHaloSize;
+				  int unknown       = i.get_local_id(2);
+                  
 				  if (unknown == 0) {
                     internal::computeMaxEigenvalue_LoopBody<Solver>(
                       patchData.QIn + patchIndex * QInEnumerator.size(),
@@ -161,8 +160,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                       tempEigenvalueX,
                       eigenvalueEnumerator
                     );
-
-
+				  
                     internal::computeMaxEigenvalue_LoopBody<Solver>(
                       patchData.QIn + patchIndex * QInEnumerator.size(),
                       QInEnumerator,
@@ -180,9 +178,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 				  i.barrier();
 
                   if (unknown < unknowns && x < static_cast<int>(numberOfVolumesPerAxisInPatch-solversHaloSize)) {
-					  x += solversHaloSize;
-				  //::sycl::ext::oneapi::experimental::printf("loopindex: %d, patchindex: %d, x: %d, y: %d, unknown: %d\n", loopIndex, patchIndex, x, y, unknown);
-                    internal::updateSolutionWithEigenvalueDamping_LoopBody(
+                    x += solversHaloSize;
+					internal::updateSolutionWithEigenvalueDamping_LoopBody(
                       patchData.QIn + patchIndex * QInEnumerator.size(),
                       QInEnumerator,
                       tempEigenvalueX,
@@ -298,13 +295,12 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
 
         if (evaluateFlux and Dimensions==2) {
-			      int patchIndex    = i.get_group(0);
-				  int loopIndex     = i.get_local_id(0);
-                  int y             = (loopIndex / ((numberOfVolumesPerAxisInPatch+2*solversHaloSize)*(unknowns+auxiliaryVariables))) % numberOfVolumesPerAxisInPatch;
-                  int x             = (loopIndex / (unknowns+auxiliaryVariables)) % (numberOfVolumesPerAxisInPatch+2*solversHaloSize) - solversHaloSize;
-				  int unknown       = loopIndex % (unknowns+auxiliaryVariables);
-  
-				  if (unknown == 0) {
+			      int patchIndex = i.get_group(2);
+                  int x          = i.get_local_id(1)-solversHaloSize;
+                  int y          = i.get_local_id(0);
+				  int unknown       = i.get_local_id(2);
+				  
+				  if(unknown == 0) {
                     internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
                       patchData.QIn + patchIndex * QInEnumerator.size(),
                       QInEnumerator,
@@ -318,8 +314,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
                       tempFluxX,
                       fluxEnumerator
                     );
-
-   
+                  
                     internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
                       patchData.QIn + patchIndex * QInEnumerator.size(),
                       QInEnumerator,
@@ -338,8 +333,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 				  i.barrier();
 
                   if (x < static_cast<int>(numberOfVolumesPerAxisInPatch-solversHaloSize) && unknown < unknowns) {
-					  x += solversHaloSize;
-                    internal::updateSolutionWithFlux_LoopBody(
+                    x += solversHaloSize;
+					internal::updateSolutionWithFlux_LoopBody(
                       tempFluxX, tempFluxY, tempFluxZ,
                       fluxEnumerator,
                       patchData.cellCentre[patchIndex],
@@ -613,13 +608,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
 		i.barrier();
         if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-			      int patchIndex    = i.get_group(0);
-				  int loopIndex     = i.get_local_id(0);
-                  int y             = (loopIndex / ((numberOfVolumesPerAxisInPatch+2*solversHaloSize)*(unknowns+auxiliaryVariables))) % numberOfVolumesPerAxisInPatch;
-                  int x             = (loopIndex / (unknowns+auxiliaryVariables)) % (numberOfVolumesPerAxisInPatch+2*solversHaloSize);
-				  int unknown       = loopIndex % (unknowns+auxiliaryVariables);
-                  if (x == 0 && y == 0 && unknown == 0) {
-				  //::sycl::ext::oneapi::experimental::printf("loopindex: %d, patchindex: %d, x: %d, y: %d, unknown: %d\n", loopIndex, patchIndex, x, y, unknown);
+			      int patchIndex = i.get_group(2);
+                  if (i.get_local_id(0) == 0 && i.get_local_id(1) == 0 && i.get_local_id(2) == 0) {
 				    double newMaxEigenvalue = 0.0;
                     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
                       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
@@ -667,10 +657,10 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
     }
   );
   event.wait();
-  //auto start = event.get_profiling_info<::sycl::info::event_profiling::command_start>();
-  //auto stop = event.get_profiling_info<::sycl::info::event_profiling::command_end>();
-  //auto duration = static_cast<double>(stop - start) / NSEC_IN_SEC;
-  //::std::cout << "Patchwise kernel execution time: " << duration << " sec" << ::std::endl;
+  auto start = event.get_profiling_info<::sycl::info::event_profiling::command_start>();
+  auto stop = event.get_profiling_info<::sycl::info::event_profiling::command_end>();
+  auto duration = static_cast<double>(stop - start) / NSEC_IN_SEC;
+  ::std::cout << "Patchwise kernel execution time: " << duration << " sec" << ::std::endl;
   patchData.destroy(  hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue  );
 
   if (tempFluxX!=nullptr)                   ::sycl::free( tempFluxX, queue);
@@ -686,5 +676,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
   assertionMsg(false, "this routine should only be used in combination with SYCL offloading, as it has a device parameter" );
   #endif
 }
+
 
 

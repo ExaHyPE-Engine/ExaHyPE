@@ -37,7 +37,7 @@ exahype2::fv::rusanov::sycl::GPUCellData::GPUCellData(
 
 void exahype2::fv::rusanov::sycl::GPUCellData::destroy(
   ::exahype2::CellData& hostObject,
-  const exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+  const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
   bool copyEigenvaluesBack,
   ::sycl::queue& queue
 ) {
