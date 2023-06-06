@@ -142,11 +142,6 @@ namespace peano4 {
      *
      *        (r_111,r1_112,r_121,r_122,r_211,r1_212,r_221,r_222)
      *
-     * Due to the SFC that we employ for the mesh traversal, it is reasonable
-     * to assume that the refinement events already align in a localised order.
-     * Therefore, I apply a simple bubble sort.
-     *
-     *
      *
      * ##  Erasing the mesh (again)
      *
@@ -364,17 +359,18 @@ namespace peano4 {
       );
 
       /**
+       * Merge adjacent events
+       *
        * This routine merges adjacent events, i.e. events of the same time which
        * share a common face and can be combined into one larger, rectangular
        * event. The routine does not distinguish refine from coarsen events, i.e.
        * you should only pass in events of the same type.
        *
-       * ## Algorithm
-       *
-       * It is basically a huge while loop. As long as we can merge any two events,
-       * we have to continue to try to merge further. Any merge might produce a new,
-       * larger area which then in turn might be a fit to another refinement area.
-       *
+       * To make this routine faster, we first sort() the events geometrically.
+       * After that, we sweep over them and merge. As we have sorted the elements,
+       * we can "only" consider neighbouring events. Once a sweep has completed,
+       * we have to decide to rerun the whole procedure. This is necessary if
+       * something has changed within the list.
        *
        * @see createBoundingBoxEvent()
        * @see twoEventsAreAdjacent()
@@ -397,6 +393,8 @@ namespace peano4 {
       bool refinementEventOverrulesCoarsening( const peano4::grid::GridControlEvent& refineEvent, const peano4::grid::GridControlEvent& eraseEvent );
 
       /**
+       * Are two events adjacent
+       *
        * Two events are adjacent if they have the same h, and if the sum of
        * their bounding box volumes is roughly the same as the bounding box
        * volume of the merger. We notice that the name is slightly wrong:
@@ -406,33 +404,22 @@ namespace peano4 {
       bool twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
 
       /**
-       * In-situ sort (bubble sort)
+       * Sort grid control events geometrically
        *
-       * The sorting is required to ensure that the merging is deterministic on
-       * a parallel machine. peano4::grid::merge() discusses the details behind
-       * this. Unfortunately, the sorting can be extremely expensive (notably
-       * in 3d). I assume that an "inefficient" merger of the refinement events
-       * is kind of acceptable: In the worst case, most codes will not erase as
-       * aggressively as they could and then trigger more erase operations in
-       * the subsequent mesh traversal.
+       * Very simplistic sorting algorithm. The only "interesting" thing
+       * here is the fact that we provide the actual comparison operator. In a
+       * real C++ world, we would define the operator < over GridControlEvent.
+       * This GridControlEvent class however is usually generated, i.e. we
+       * dump it through Python. It would be a little bit of a headache to
+       * add the operator (it would have to be defined in Python, and then
+       * piped into the C++ code), so I decided to wrap one here manually.
        *
-       * The rationale behind this statement is as follows: A cell or region
-       * around a vertex refine if they overlap with a refinement instruction.
-       * It hence does not really make any difference if we fuse two adjacent
-       * refinement instructions or not. Things are different with erase: A
-       * region erases if and only if it is contained completely within one
-       * erase command. So if we have to adjacent cells which say "erase", but
-       * these guys are not merged into one, then an octant which is half
-       * overlapping and half with the other erase command will not erase, as
-       * it is not completely embedded. I therefore typically recommend to
-       * fuse erase commands as aggressively as possible, but to be a little
-       * bit more relaxed with the refines.
+       * The routine defines a natural order over the individual coordinates.
        *
        * @see merge() for a discussion
        * @param events Input and output set of grid control events
-       * @param maxIterations Maximum number of bubble sort iterations
        */
-      void sort( std::list< peano4::grid::GridControlEvent >& events, int maxIterations );
+      void sort( std::list< peano4::grid::GridControlEvent >& events );
 
       peano4::grid::GridControlEvent createBoundingBoxEvent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
     }

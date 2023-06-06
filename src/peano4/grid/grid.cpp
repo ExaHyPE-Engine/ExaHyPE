@@ -53,17 +53,20 @@ bool peano4::grid::isContained( const peano4::grid::AutomatonState& state, const
     tarch::la::allSmallerEquals( state.getX() + (0.5+0.5*upscaleAutomatonState)*state.getH(), event.getOffset()+event.getWidth() );
 }
 
+
 bool peano4::grid::overlaps( const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event ) {
   return tarch::la::allGreaterEquals( state.getX()+ state.getH(), event.getOffset() )
     and
     tarch::la::allSmallerEquals( state.getX(), event.getOffset()+event.getWidth() );
 }
 
+
 bool peano4::grid::overlaps( const tarch::la::Vector<Dimensions,double>& x, const GridControlEvent& event ) {
   return tarch::la::allGreaterEquals( x, event.getOffset() )
     and
     tarch::la::allSmallerEquals( x, event.getOffset()+event.getWidth() );
 }
+
 
 peano4::grid::GridVertex peano4::grid::createVertex(
   GridVertex::State                            state,
@@ -133,9 +136,6 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
   internal::removeEraseEventsThatAreCancelledByRefineEvents( refineEvents, eraseEvents );
   logDebug( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
 
-  internal::sort( refineEvents, refineEvents.size() );
-  internal::sort( eraseEvents, std::numeric_limits<int>::max() );
-
   internal::mergeAdjacentRefinementEvents( refineEvents );
   internal::mergeAdjacentRefinementEvents( eraseEvents );
   logDebug( "merge(...)", "merged refine events into " << refineEvents.size() << " event(s)");
@@ -148,42 +148,19 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
 }
 
 
-void peano4::grid::internal::sort( std::list< peano4::grid::GridControlEvent >& events, int maxIterations ) {
-  if (events.size()<2) return;
+void peano4::grid::internal::sort( std::list< peano4::grid::GridControlEvent >& events ) {
 
-  assertion(maxIterations>0);
-
-  bool hasChanged = true;
-  while (hasChanged and maxIterations>0) {
-    hasChanged = false;
-    maxIterations--;
-    std::list< peano4::grid::GridControlEvent >::iterator rightP = events.begin();
-    rightP++;
-    while (rightP!=events.end()) {
-      std::list< peano4::grid::GridControlEvent >::iterator leftP = rightP;
-      leftP--;
-
-      bool leftOneIsBigger                   = false;
-      bool allComponentsStudiedSoFarAreEqual = true;
-      for (int d=0; d<Dimensions; d++) {
-        leftOneIsBigger |= (allComponentsStudiedSoFarAreEqual and tarch::la::greater(leftP->getOffset(d), rightP->getOffset(d)));
-        allComponentsStudiedSoFarAreEqual &= tarch::la::equals(leftP->getOffset(d), rightP->getOffset(d));
-      }
-      if (leftOneIsBigger) {
-        logDebug( "sort(...)", "swap left=" << leftP->toString() << " with right=" << rightP->toString() );
-        peano4::grid::GridControlEvent tmp = *rightP;
-        *rightP = *leftP;
-        *leftP  = tmp;
-        hasChanged = true;
-      }
-
-      rightP++;
+  auto compare = [](
+    const peano4::grid::GridControlEvent& lhs,
+    const peano4::grid::GridControlEvent& rhs
+  ) -> bool {
+    for (int d=0; d<Dimensions; d++) {
+      if ( tarch::la::smaller(lhs.getOffset(d), rhs.getOffset(d)) ) return true;
     }
-  }
+    return false;
+  };
 
-  if (maxIterations==0) {
-    logInfo( "sort(...)", "too many refine events (" << events.size() << ") to bring them into a totally sorted order. Continue with a slightly unordered set" );
-  }
+  events.sort( compare );
 }
 
 
@@ -208,34 +185,30 @@ void peano4::grid::internal::removeEraseEventsThatAreCancelledByRefineEvents(
 
 
 void peano4::grid::internal::mergeAdjacentRefinementEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents ) {
-  bool hasMergedRefinementEventOrCancelledErase = true;
-  while (hasMergedRefinementEventOrCancelledErase) {
-    std::list< peano4::grid::GridControlEvent >::iterator inputP = inputEvents.begin();
-    hasMergedRefinementEventOrCancelledErase = false;
-    while (inputP!=inputEvents.end() and not hasMergedRefinementEventOrCancelledErase) {
-      std::list< GridControlEvent >::iterator inputPP = inputEvents.begin();
-      while (inputPP!=inputEvents.end() and not hasMergedRefinementEventOrCancelledErase) {
-        logDebug( "mergeAdjacentRefinementEvents(...)", "compare " << inputP->toString() << " vs " << inputPP->toString()  );
+  bool hasMergedEvents = true;
+  while (hasMergedEvents) {
+    internal::sort( inputEvents );
+    hasMergedEvents = false;
 
-        if (
-          inputP!=inputPP
-          and
-          twoEventsAreAdjacent(*inputP,*inputPP)
-        ) {
-          GridControlEvent newEvent = createBoundingBoxEvent(*inputP,*inputPP);
-          logDebug( "mergeAdjacentRefinementEvents(...)", "merge two adjacent events " << inputP->toString() << " and " << inputPP->toString() << ") into " << newEvent.toString() );
-          inputPP = inputEvents.erase(inputPP);
-          inputP  = inputEvents.erase(inputP);
-          inputEvents.push_back(newEvent);
-          hasMergedRefinementEventOrCancelledErase = true;
-        }
-        else {
-          inputPP++;
-        }
+    std::list< peano4::grid::GridControlEvent >::iterator lhs = inputEvents.begin();
+    std::list< peano4::grid::GridControlEvent >::iterator rhs = inputEvents.begin();
+    rhs++;
+
+    while (rhs!=inputEvents.end()) {
+      if (
+        twoEventsAreAdjacent(*rhs,*lhs)
+      ) {
+        GridControlEvent newEvent = createBoundingBoxEvent(*rhs,*lhs);
+        logDebug( "mergeAdjacentRefinementEvents(...)", "merge two adjacent events " << lhs->toString() << " and " << rhs->toString() << ") into " << newEvent.toString() );
+        *lhs = newEvent;
+        inputEvents.erase(rhs);
+        rhs = lhs;
+        rhs++;
+        hasMergedEvents = true;
       }
-
-      if ( not hasMergedRefinementEventOrCancelledErase ) {
-        inputP++;
+      else {
+        lhs++;
+        rhs++;
       }
     }
   }
