@@ -42,6 +42,10 @@
 
 
   class {{CLASSNAME}}: public std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
+    public:
+      typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  DoFType;
+      typedef std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >  Base;
+
     private:
       static tarch::logging::Log _log;
 
@@ -51,6 +55,18 @@
       static tarch::multicore::BooleanSemaphore   _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
 
       static {{CLASSNAME}}     _particlesThatCanNotBeLiftedWithinTheirTree;
+
+      /**
+       * Particles that should be sieved
+       *
+       * This is a set of particles which should be sieved in the next traversal.
+       * However, nobody takes particles directly from this list. Instead, tasks
+       * will work with their own clones of this list.
+       *
+       * @see getSievedParticlesForNextGridTraversal()
+       *
+       * The list is populated by finishedTraversal().
+       */
       static {{CLASSNAME}}     _particlesThatHaveToBeSieved;
 
       static int _numberOfLifts;
@@ -68,6 +84,8 @@
       
       /**
        * Typically updated by boundary merge operations
+       *
+       * @see merge()
        */
       static int _numberOfMergedVirtualParticles;
 
@@ -89,9 +107,19 @@
         tarch::la::Vector<Dimensions,double> getDebugX() const;
         tarch::la::Vector<Dimensions,double> getDebugH() const;
       #endif
+
+      /**
+       * Check if there's already a particle at p's position in the set.
+       *
+       * As we return a non-const iterator, the operation may not be labelled
+       * as const.
+       *
+       *
+       * @return container's end() if there is no duplicate. Otherwise, return
+       *   iterator pointing to existing particle.
+       */
+      Base::iterator particleIsDuplicate( const DoFType*  p );
     public:
-      typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  DoFType;
-      typedef std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >  Base;
 
       /**
        * Merge two particle sets
@@ -104,35 +132,37 @@
        * virtual here.
        *
        * It is important to study this routine in combination with the (Python)
-       * action set UpdateParallelState which is the routine that actually
-       * manages the parallel lifecycle.
+       * action set peano4.toolbox.particles.UpdateParallelState which is the
+       * routine that actually manages the parallel lifecycle.
        *
        * ## Data ownership
        *
        * The merge works with shallow copies. We assume that all necessary real
-       * copying has been done before.
+       * copying has been done before. See peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks()
+       * for a discussion of deep copying in this context.
+       *
+       * If we decide not to insert an incoming particle into our local data
+       * structure, we have to destroy it, as the containers for boundary data
+       * exchange perform deep copies.
+       *
        *
        * ## Particle states
        *
        * We receive particle sets from other trees. These are sent out after
        * particles have been touched for the last time there. Therefore,
-       * their parallel state has already changed. It makes no sense to study
-       * the new and the current state. It is the current state only which
-       * determines what type of particle we have here.
+       * their parallel state has already changed and reflects the latest
+       * state. It makes no sense to study the new and the current state as
+       * they now will be the same. Logically, it is the current state only
+       * which determines what type of particle we have here, as this is the
+       * one that has overwritten the other state.
        *
-       * We furthermore can assume that the sending rank has already eliminated
-       * all of its virtual local copies. These stem from other ranks, i.e.
-       * they are always thrown away before we store a vertex. Consequently,
-       * we also do not sent those guys out.
-       *
-       * If we receive a particle with a local marker, then we can be sure that
-       * the sender has decided that this particle is really local within its
-       * tree. Consequently, we add it, but we have to add it as virtual.
-       *
-       * If we receive a particle with a virtual marker, this particle used to
-       * be local on the sending tree but now has left its domain. We really
-       * do not know if the particle will end up in our domain, but for the
-       * time being, we assume it is the case.
+       * In an ideal world, the sending rank would eliminate all of its virtual
+       * local copies of particles before it sends its stuff out. So it would
+       * send out only its local particles. In practice, we do not rely on this
+       * fact and just ignore incoming particles that have been flagged as
+       * virtual by their sender. This means that our neighbour had a halo
+       * particle (which it must have gotten from somewhere) and now sends this
+       * one back to us. We just ignore it (mind the deletion).
        *
        * It makes no sense to set the new state of the particle here, as the
        * merge always precedes the actual first touch of a particle where the
@@ -147,7 +177,7 @@
        * exchange their local (assumed) particles, so we end up with a particle
        * accumulation on one rank: Multiple copies of the virtual particle drop
        * in. One per tree which assumes it were its own local copy. So I have
-       * to remove duplicates.
+       * to remove duplicates, i.e. ensure that we don't insert duplicates here.
        *
        * The other redundancy results from two adjacent cells on different
        * trees and a vertex in-between which hosts a particle which is actually
@@ -157,8 +187,11 @@
        * accumulate local particles and get more and more. We have to eliminate
        * replicas asap.
        *
-       * In both cases, we have to destroy the local copy as the stacks perform
-       * deep copies.
+       * I started with an implementation which first inserts all the particles
+       * into the vertex and then eliminates those guys which are redundant.
+       * This turns out to be a slow version. It is way faster to find those
+       * guys which are to be added and then to check prior to the insert if
+       * they really should be added or not.
        *
        *
        * @see STDVectorOverContainerOfPointers::startReceive()
@@ -271,6 +304,17 @@
       void particlesCanNotBeLiftedLocally();
 
       /**
+       * Shallow clear
+       *
+       * Plain delegate to superclass clear(), i.e. this routine clears a set
+       * of pointers, but it does not delete the actual particles. If you want
+       * that behaviour, you have to call deleteParticles(). I merely introduce
+       * this wrapper to be able to add this comment on the shallow vs deep
+       * copy/clear mechanism.
+       */
+      void clear();
+
+      /**
        * Inform set that particle cannot be lifted on its current tree
        *
        * This routine basically takes the particle and inserts it into the list
@@ -367,9 +411,25 @@
       );
 
       /**
+       * Deep copy of particles that have to be sieved
+       *
        * This routine returns a deep copy of all the particles that are to be
        * sieved. Use this before you start to traverse your local domain. As
-       * it is a deep copy, you have to invoke deleteParticles().
+       * it is a deep copy, you have to invoke deleteParticles() on the result.
+       * The rationale behind the deep copying is as follows: Individual
+       * threads run through their subdomain in parallel and they should not
+       * compete for a global sieve set. At the same time, you want to
+       * eliminate a particle from the sieve set as soon as you have worked it
+       * in: No code should check that particle again, and you definitely don't
+       * want to insert it multiple times. So I make each thread (subtree) work
+       * with a sieve set of its own which it can manipulate as it wants. At
+       * the end of the traversal, it will delete all remaining particles, i.e.
+       * kill all those deep copies that were not relevant to the local
+       * partition.
+       *
+       * @see deleteParticles() to clean up the local copy.
+       * @see _particlesThatHaveToBeSieved which is the container from which we
+       *   create a deep copy.
        */
       static {{NAMESPACE | join("::")}}::{{CLASSNAME}} getSievedParticlesForNextGridTraversal();
 

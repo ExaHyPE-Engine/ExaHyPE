@@ -193,7 +193,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   TemplateSinglePrecisions = jinja2.Template( """
 
   {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-  double maxEigenvalue(
+  virtual double maxEigenvalue(
     const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q,
     const tarch::la::Vector<Dimensions,double>&  volumeX,
     const tarch::la::Vector<Dimensions,double>&  volumeH,

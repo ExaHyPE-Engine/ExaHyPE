@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 import gc
 import os
+import re
 import sys
 import subprocess
 import multiprocessing
@@ -21,7 +22,7 @@ class Project (object):
   """
 
   def __init__(self, namespace, project_name, directory = "."):
-    """
+    """!
       project_name  Simple string.
     """
     if sys.version_info.major < 3:
@@ -56,7 +57,7 @@ class Project (object):
     return "(#steps=" + str(self.solversteps) + ",model=" + str(self.datamodel) + ")"
 
   def cleanup(self):
-    """
+    """!
       This routine has to be called after you've generated your code.
     """
     self.output.clear()
@@ -73,7 +74,7 @@ class Project (object):
   def generate(self,
                overwrite=peano4.output.Overwrite.Default,
                throw_away_data_after_generation=False):
-    """
+    """!
     Generate all code. If you add stuff to your project after a 
     build, you have to (re-)generate the code. If you compile only
     once, you don't have to invoke this routine explicitly. It is
@@ -122,7 +123,7 @@ class Project (object):
             throw_away_data_after_build=False,
             number_of_parallel_builds=-1,
             additional_libraries=[]):
-    """
+    """!
       Invokes the underlying make/C build mechanism on the project.
 
       number_of_parallel_builds: int
@@ -158,21 +159,34 @@ class Project (object):
         cmake_build_dir = find_cmake_build_dir()
         if cmake_build_dir != "":
           command = f"cd {cmake_build_dir} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
-          result = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          process = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
-          result = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if result.returncode==0:
-          print( result.stdout.decode("utf-8") )
-          print( "compile completed successfully" )
-        else:
-          print( result.stderr.decode("utf-8") )
-          print( "compile not successful" )
+          process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Extract warnings and errors from error message
+        error_message = process.stderr.decode().strip()
+        warnings = re.findall(r"(?i)warning:.*", error_message)
+        errors = re.findall(r"(?i)error:.*", error_message)
+        # Print warnings into the terminal
+        if warnings:
+          print("\nWarnings ({}):".format(len(warnings)))
+          print("\n".join(warnings))
+        if errors:
+          print("\nErrors ({}):".format(len(errors)))
+          error_message = "\n".join(errors)
+        # Check the return code for linker errors
+        # Raise exception with errors
+        if process.returncode != 0:
+          linker_error_message = process.stdout.decode().strip() + "\n" + error_message
+          raise Exception(linker_error_message)
+        print("compile completed successfully")
         self.is_built = True
         self.build_was_successful = True
       except Exception as e:
-        print( "compile was not successful: " + str(e) )
         self.is_built = True
         self.build_was_successful = False
+        print(str(e))
+        print("compile was not successful")
+        sys.exit(1)
     else:
       print( "cannot build as code generation has not been successful" )
 
@@ -185,7 +199,7 @@ class Project (object):
       print( "threw away all data and ran garbage collection" )
 
   def run(self, executable, args=[], prefix=None, pipefile=None, rebuild_if_required=True):
-    """
+    """!
     Runs the code. args should be a list of strings or the empty list.
     prefix is an array, too. A typical invocation looks alike
     project.run( ["16.0", "32.0"], ["/opt/mpi/mpirun", "-n", "1"] )

@@ -10,6 +10,42 @@ namespace {
   [[maybe_unused]] tarch::logging::Log _log( "peano4::grid" );
 }
 
+
+std::string peano4::SplitInstruction::toString(peano4::SplitInstruction::Mode mode) {
+  switch (mode) {
+    case SplitInstruction::Mode::AggressiveTopDown:
+      return "aggressive-top-down";
+      break;
+    case SplitInstruction::Mode::BottomUp:
+      return "bottom-up";
+      break;
+  }
+  return "<undef>";
+}
+
+
+std::string peano4::SplitInstruction::toString() const {
+  std::ostringstream msg;
+  msg << "("
+      << toString(mode)
+      << ",#cells=" << numberOfFineGridCells
+      << ")";
+  return msg.str();
+}
+
+
+std::ostream& operator<<(std::ostream& out, const peano4::SplitInstruction& instruction) {
+  out << instruction.toString();
+  return out;
+}
+
+
+std::ostream& operator<<(std::ostream& out, const peano4::SplitInstruction::Mode& mode) {
+  out << peano4::SplitInstruction::toString(mode);
+  return out;
+}
+
+
 bool peano4::grid::isContained( const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event, double upscaleAutomatonState ) {
   assertion1(upscaleAutomatonState>=1.0,upscaleAutomatonState);
   return tarch::la::allGreaterEquals( state.getX() + (0.5-0.5*upscaleAutomatonState)*state.getH(), event.getOffset() )

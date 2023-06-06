@@ -1,0 +1,312 @@
+/**
+
+@page page_exahype_visualisation Visualisation, tracers and output
+
+ExaHyPE 2  relies on Peano's standard output routines to write file dumps,
+and it employs Peano's standard terminal routines to dump runtime information.
+Further to that, you can enable @ref tarch_logging "Peano's statistics" if you require more in-depth 
+(profile) information.
+
+
+## Solution output
+
+As the files can be rather large, the simulation configuration allows you to
+specify exactly how often you want to see file dumps, and you can also add
+spatial filters.
+The latter help you to visualise only subdomains.
+As we rely on Peano's infrastructure, you can use the script
+python/peano4/visualisation/render.py to convert the output files into vtu files.
+
+
+Consult @ref tarch_patch_files "Peano's generic discussion" of various
+visualisation pathways as well as the patch file format.
+By default, ExaHyPE dumps all data as one large vector Q per Finite
+Volume/integration point, i.e. you get a set of scalars.
+It also dumps all the resolution levels of the grid simultaneously.
+Therefore, one of the first postprocessing steps usually is to remove all data
+from the output data set besides the fine grid level.
+
+### Plot descriptive variable names
+You can add a plot description to each solver which allows us to render
+more descriptive variable names:
+~~~~~~~~~~~~~~~~~
+my_solver.plot_description = "density, velocity_x, velocity_y, energy"
+~~~~~~~~~~~~~~~~~
+
+
+### Output filters
+
+By default, ExaHyPE maps each Finite Volume and each DG quadrature point onto
+a vertex in the output file, i.e., it maps the compute mesh onto an unstructured
+(visualisation) mesh.
+This can result in large data dumps.
+
+
+Peano follows the philosophy that postprocessing should be done
+by postprocessing tools. 
+While Peano's render script provides a filter such that you see only the patch or
+cell average, each dump of the whole
+ simulation data might already be too heavy for many applications. Therefore, you can add filters.
+They restrict the memory footprint a priori.
+A further obvious strategy to bring the memory footprint down is to print less often.
+
+
+Filters can be added to your setup via
+
+~~~~~~~~~~~~~~~~~
+probe_point = [0,0.693,0]
+project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
+project.add_plot_filter( offset,size,10 )
+~~~~~~~~~~~~~~~~~
+
+The example above sets a probe, i.e. every plot step only the patch data around
+the probe is dumped. Every 10 snapshot steps however, the whole domain is
+written.
+I assume that offset and size are configured accordingly.
+
+
+Further to the filters, each solver has an attribute select_dofs_to_print.
+It is set to ```None```` by default which means that all quantities per degree
+of freedom are dumped into the output.
+You can pick only a few entries though via
+
+~~~~~~~~~~~~~~~~~
+my_solver.select_dofs_to_print = [4,5,8]
+~~~~~~~~~~~~~~~~~
+
+
+### Output directory
+
+The command
+
+~~~~~~~~~~~~~~~~~
+project.set_output_path( "/scratch/myfolder" )
+~~~~~~~~~~~~~~~~~
+
+configures Peano with a proper output path. Without this command, all output
+data is written to the working path.
+
+
+
+
+### Multiscale data
+
+All Peano 4 output files dump various resolutions of the data. 
+ExaHyPE 2  atm however does only use the finest mesh resolution to compute
+something.
+The coarser levels hence hold garbage. 
+I therefore strongly recommend that you always run the render script with the
+option ```-filter-fine-grid```.
+This makes the script throw away all coarser resolutions.
+
+
+### Finite Volumes
+
+If you dump Finite Volume data, it becomes difficult to spot how the resulting
+Finite Volumes are organised in patches:
+The organisation in patches is not visible unless you study AMR resolution
+boundaries.
+If you are interested in seeing the patch boundaries, use the
+```--shrink-cells``` option and pass in a value that is smaller than one. 
+You then will see gaps (voids) between the individual patches.
+
+
+### Discontinuous Galerkin
+
+If you use ExaHyPE's Discontinuous Galerkin solvers with non-Lobatto nodes, 
+the file dumps will look pretty ragged.
+This is due to the fact that the DG quadrature points are not placed on the cell
+faces.
+This might be unsatisfying and make some postprocessing (isolines, e.g.)
+difficult, but we found it important to display the actual spatial arrangement
+of the unknowns.
+
+
+The standard postprocessing scripts allow you to rescale individual cells.
+Use ```--shrink-cells``` with a value slightly bigger than one to spread out
+the quadrature points.
+It is important to note that the shrinking distorts the actual physical layout
+of the quadrature points, i.e.~the output will not really reflect the solution
+anymore.
+Alternatively, 
+you can averaging over cells and display only the average.
+Consult the script's help.
+
+
+## Logging output
+
+ExaHyPE searches for a text file exahype.log-filter in the working
+directory.
+If no such file is found (or the file is corrupted), then it will use some
+default filter rules, i.e. dump the information to the terminal that I consider
+to be most important.
+If you want to adopt the output, I strongly recommend that you add a log filter
+configuration file. 
+
+
+Often, users are only interested in a particular phase of the simulation or want 
+to specify different log entries per program phase. The program phases offered
+by default are
+
+- create-grid-but-postpone-refinement
+- create-grid
+- create-grid-and-converge-load-balancing
+- init-grid
+- plot-solution
+- time-step
+
+The syntax of log filter files is discussed in the
+@ref tarch_logging "generic logging documentation of Peano".
+
+
+## Tracers
+
+ExaHyPE's tracers rely on Peano's particle and particle-in-dual-tree
+mechanism.
+They connect ExaHyPE with a completely
+different toolbox of Peano.
+To add tracer support for , you first have to reconfigure our run and
+add the
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure ... --enable-particles
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Adding tracers is fairly simple. Each tracer has to have a name, and you
+also have to inform the project how many attributes you plan to track
+per tracer:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tracer_particles = project.add_tracer( name="MyFancyParticle" )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Study the in-code documentation of the involved classes. The exahype2.Project.add_tracer()
+factory method ensure that ExaHyPE keeps track of it and that it also is 
+printed whenever we write a snapshot. Tracers can
+track only some attributes, they can move or stay at one place, and they
+can also interact with each other.
+
+
+Next, you have add a few action sets to ExaHyPE's solver steps: 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesByCoordinates( 
+  particle_set=tracer_particles, 
+  coordinates=[ [x,x,x], [x,x,x] ]
+  ))
+    
+project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                self,
+                                                time_stepping_kernel="toolbox::particles::staticPosition",
+                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
+                                                ))
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In this example, we add the actual tracer insertion to the initialisation.
+There are different inserters shipped with ExaHyPE. Alternatively, you might
+want to write your own, bespoke particle seed. 
+There are seeds which insert tracers along a Cartesian topology,
+adds some random noise, or read tracer positions from a file. 
+
+Once
+inserted, you can run your code and visualise the particles. However,
+these particles do not track the actual data of
+interest. To facilitate this, you have to map your solution onto the
+particle first. Let `thesolver` be your  solver instance in the Python
+script. Not all solvers currently support tracers (efficiently), but we
+are continuously improving the tracer support. With the solver instance
+and the tracers, we can couple the two ingredients. You have to pick
+different coupling schemes depending on the type of your solver.
+Again, there are different interpolation schemes shipped with ExaHyPE. Please
+note that you will have to pick an interpolation that fits to your
+solver. In the snippet above, we use a Finite Volume solver and
+therefore pick a projection from the `exahype2::fv` namespace. Other
+discretisations will require other interpolation schemes.
+
+
+### Dump tracer data into CSV database
+
+ExaHyPE's particle handling comes along with a set of standard postprocessing
+scripts.
+As we rely on this toolbox, you can use those scripts straightaway.
+They can be found in the directory
+peano4/toolbox/particles/postprocessing.
+To use it, you have to track data.
+
+The likely most important tool for many developers using only few
+particles is the fact that particles can dump their solution into a
+database:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
+      particle_set=tracer_particles,
+      solver=self,
+      filename="Tracer-" + name,
+      number_of_entries_between_two_db_flushes=5000,
+      output_precision=10,
+      data_delta_between_two_snapsots=1e16,
+      time_delta_between_two_snapsots=0.01
+      ))
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Dumping tracers into a (CSV) database is attractive, as these files are
+easier to parse/postprocess than mesh data files. At the same time, you
+can dump particles more often than you plot data snapshots, and these
+dumps can even be adaptive, i.e. you dump if and only if a particle
+actually moves. The exahype2.tracer.DumpTracerIntoDatabase documentation provides
+more detail.
+
+The data format within the csv file is rather self-explaining.
+
+-   Each particle has a unique two-tuple of indices. We do not enumerate
+    the particles globally, but instead give them two numbers. The first
+    one is the tree that has originally generated a particle, and the
+    second number then is a continuous number, i.e. counts the particles
+    per tree. As we have two numbers, we don't have to synchronise any
+    global particle generation. Note that the two-tuple stays invariant
+    per particle. Therefore, a particle might be the 12th that's
+    generated on tree 7, and hence carry the index (7,11). If it moves
+    around, it might as well end up on three 4.
+
+-   Each particle entry is equipped with a time stamp.
+
+-   Each particle entry is equipped with the coordinates of the particle
+    per particle dump. If particles do not move, this is redundant
+    information.
+
+-   Each particle entry then enlists all the particle's data values at
+    the time when we dump.
+
+As we rely on Peano's infrastructure, you can use the script
+python/peano4/toolbox/particles/postprocessing/convert.py to convert the output
+files or to produce seismograms, e.g.
+Please note that each rank potentially writes sequences of databases, 
+i.e. whenever we dump a csv file, we clear the internal database. So 
+when you visualise the data, you have to concatenate databases first. 
+This is also explained in the underlying C++ class
+toolbox::particles::TrajectoryDatabase. As the convert.py script 
+above does support multiple input files, the merge itself is already 
+supported by premanufactured tools.
+
+
+### Encourage particles to spread out evenly
+
+You can make particles interact with eac other. This allows you, for
+example, to realise some SPH on top of the code. One of the most
+convenient features is to encourage tracers to align in a quasi-uniform
+way, i.e. they do follow the solution characteristics but at the same
+time try to space out evenly. This is allowed via a modified, inverted
+Lennard-Jones potential which is parameterised with a distance. If two
+particles are closer than that distance, they repulse each other. If
+they are further away than that distance, they attract each other.
+
+There are further particle-particle interaction scripts in the
+repository. If you want your particles to move, you have to ensure that
+they are sorted into the mesh properly, and that they are exchanged 
+between subpartitions via MPI and shared memory. 
+
+*/
+

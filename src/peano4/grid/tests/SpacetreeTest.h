@@ -51,7 +51,7 @@ PreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdja
 
   public:
     SpacetreeTest();
-    void run() override;
+    virtual void run() override;
 };
 
 

@@ -103,16 +103,16 @@ class tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter:
     VTKTextFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode modeFile, double timeStamp, const int precision=6);
     virtual ~VTKTextFileWriter();
 
-    bool isOpen() override;
+    virtual bool isOpen() override;
 
-    bool writeToFile() override;
+    virtual bool writeToFile() override;
 
-    void clear() override;
+    virtual void clear() override;
 
-    VertexWriter*      createVertexWriter() override;
-    CellWriter*        createCellWriter() override;
-    CellDataWriter*    createCellDataWriter( const std::string& identifier, int recordsPerCell ) override;
-    VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int recordsPerVertex ) override;
+    virtual VertexWriter*      createVertexWriter() override;
+    virtual CellWriter*        createCellWriter() override;
+    virtual CellDataWriter*    createCellDataWriter( const std::string& identifier, int recordsPerCell ) override;
+    virtual VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int recordsPerVertex ) override;
 
     /**
      * This is the vertex writer you have to create to plot the vertices.
@@ -159,10 +159,10 @@ class tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter:
       public:
         virtual ~VertexWriter();
 
-        int plotVertex(const tarch::la::Vector<2,double>& position) override;
-        int plotVertex(const tarch::la::Vector<3,double>& position) override;
+        virtual int plotVertex(const tarch::la::Vector<2,double>& position) override;
+        virtual int plotVertex(const tarch::la::Vector<3,double>& position) override;
 
-        void close() override;
+        virtual void close() override;
     };
 
     /**
@@ -220,17 +220,17 @@ class tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter:
       public:
         virtual ~CellWriter();
 
-        int plotHexahedron(int vertexIndex[8]) override;
+        virtual int plotHexahedron(int vertexIndex[8]) override;
 
-        int plotQuadrangle(int vertexIndex[4]) override;
+        virtual int plotQuadrangle(int vertexIndex[4]) override;
 
-        int plotLine(int vertexIndex[2]) override;
+        virtual int plotLine(int vertexIndex[2]) override;
 
-        int plotTriangle(int vertexIndex[3]) override;
+        virtual int plotTriangle(int vertexIndex[3]) override;
 
-        int plotPoint(int vertexIndex) override;
+        virtual int plotPoint(int vertexIndex) override;
 
-        void close() override;
+        virtual void close() override;
     };
 
     class CellDataWriter:
@@ -275,17 +275,17 @@ class tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter:
       public:
         virtual ~CellDataWriter();
 
-        void close() override;
+        virtual void close() override;
 
-        void plotCell( int index, double value ) override;
-        void plotCell( int index, const tarch::la::Vector<2,double>& value ) override;
-        void plotCell( int index, const tarch::la::Vector<3,double>& value ) override;
-        void plotCell( int index, double* values, int numberOfValues ) override;
+        virtual void plotCell( int index, double value ) override;
+        virtual void plotCell( int index, const tarch::la::Vector<2,double>& value ) override;
+        virtual void plotCell( int index, const tarch::la::Vector<3,double>& value ) override;
+        virtual void plotCell( int index, double* values, int numberOfValues ) override;
 
         double getMinValue() const;
         double getMaxValue() const;
 
-        void assignRemainingCellsDefaultValues() override;
+        virtual void assignRemainingCellsDefaultValues() override;
     };
 
     class VertexDataWriter:
@@ -327,17 +327,17 @@ class tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter:
       public:
         virtual ~VertexDataWriter();
 
-        void close() override;
+        virtual void close() override;
 
-        void plotVertex( int index, double value ) override;
-        void plotVertex( int index, const tarch::la::Vector<2,double>& value ) override;
-        void plotVertex( int index, const tarch::la::Vector<3,double>& value ) override;
-        void plotVertex( int index, double* values, int numberOfValues ) override;
+        virtual void plotVertex( int index, double value ) override;
+        virtual void plotVertex( int index, const tarch::la::Vector<2,double>& value ) override;
+        virtual void plotVertex( int index, const tarch::la::Vector<3,double>& value ) override;
+        virtual void plotVertex( int index, double* values, int numberOfValues ) override;
 
         double getMinValue() const;
         double getMaxValue() const;
 
-        void assignRemainingVerticesDefaultValues() override;
+        virtual void assignRemainingVerticesDefaultValues() override;
     };
 };
 

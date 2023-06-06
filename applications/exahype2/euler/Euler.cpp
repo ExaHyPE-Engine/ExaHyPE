@@ -1,11 +1,11 @@
-#include "selfgravitation-with-Poisson/Euler.h"
+#include "Euler.h"
 
 #include "exahype2/RefinementControl.h"
 
 #include "exahype2/NonCriticalAssertions.h"
 
 #include "exahype2/fv/PatchAccess.h"
-#include "selfgravitation-with-Poisson/Constants.h"
+#include "Constants.h"
 
 
 

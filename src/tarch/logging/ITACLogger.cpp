@@ -26,7 +26,13 @@ tarch::logging::Log tarch::logging::ITACLogger::_log( "tarch::logging::ITACLogge
 tarch::logging::ITACLogger  tarch::logging::ITACLogger::_singleton;
 
 
-tarch::logging::ITACLogger::ITACLogger() {
+tarch::logging::ITACLogger::ITACLogger():
+  _firstTraceWritten(false) {
+  #ifdef UseITAC
+  #if !defined(Parallel)
+  VT_initialize();
+  #endif
+  #endif
 }
 
 
@@ -37,6 +43,25 @@ tarch::logging::ITACLogger& tarch::logging::ITACLogger::getInstance() {
 
 tarch::logging::ITACLogger::~ITACLogger() {
   close();
+  #ifdef UseITAC
+  #if !defined(Parallel)
+  VT_finalize();
+  #endif
+  #endif
+}
+
+
+void tarch::logging::ITACLogger::suspendTrace() {
+  #ifdef UseITAC
+  VT_traceoff();
+  #endif
+}
+
+
+void tarch::logging::ITACLogger::continueTrace() {
+  #ifdef UseITAC
+  VT_traceon();
+  #endif
 }
 
 
@@ -144,6 +169,11 @@ void tarch::logging::ITACLogger::error(long int timestampNanoseconds, int rank, 
 
 void tarch::logging::ITACLogger::traceIn(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
   #ifdef UseITAC
+  if (not _firstTraceWritten) {
+    _firstTraceWritten = true;
+    continueTrace();
+  }
+
   tarch::multicore::Lock lock(_semaphore);
 
   if (_itacHandles.count(trace)==0) {

@@ -1,8 +1,8 @@
 #include "RefinementControl.h"
 
 #include "tarch/multicore/Lock.h"
-#include "tarch/services/ServiceRepository.h"
 #include "peano4/grid/grid.h"
+#include "peano4/parallel/SpacetreeSet.h"
 
 
 exahype2::RefinementCommand exahype2::getDefaultRefinementCommand() {
@@ -39,62 +39,20 @@ std::string toString( exahype2::RefinementCommand value ) {
 
 tarch::logging::Log  exahype2::RefinementControl::_log( "exahype2::RefinementControl" );
 
-
-int exahype2::RefinementControl::_reductionTag( tarch::mpi::Rank::reserveFreeTag("exahype2::RefinementControl") );
-
-
 tarch::multicore::BooleanSemaphore  exahype2::RefinementControl::_semaphore;
 
 
 exahype2::RefinementControl::RefinementControl(double tolerance):
   _Tolerance( tolerance ) {
-  tarch::services::ServiceRepository::getInstance().addService( this, "exahype2::RefinementControl" );
 }
 
 
 exahype2::RefinementControl::~RefinementControl() {
-  tarch::services::ServiceRepository::getInstance().removeService( this );
-}
-
-
-void exahype2::RefinementControl::shutdown() {
-}
-
-
-void exahype2::RefinementControl::receiveDanglingMessages() {
-  #ifdef Parallel
-  for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
-    if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
-      MPI_Status status;
-      int        flag;
-      MPI_Iprobe(rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
-      if (flag) {
-        int numberOfMessages;
-        MPI_Get_count( &status, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), &numberOfMessages );
-        logInfo( "finishStep()", "got " << numberOfMessages << " event(s) from rank " << rank );
-        std::vector< peano4::grid::GridControlEvent > receiveBuffer;
-        receiveBuffer.resize( numberOfMessages );
-        MPI_Recv( receiveBuffer.data(), numberOfMessages, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
-
-        tarch::multicore::Lock lock( _semaphore );
-        for (auto p: receiveBuffer) {
-          _newEvents.push_back( std::pair<peano4::grid::GridControlEvent,int>(p, 2) );
-        }
-      }
-    }
-  }
-  #endif
 }
 
 
 void exahype2::RefinementControl::clear() {
   _newEvents.clear();
-}
-
-
-std::vector< peano4::grid::GridControlEvent >  exahype2::RefinementControl::getGridControlEvents() const {
-  logDebug( "getGridControlEvents()", "return " << _committedEvents.size() << " grid control events" );
-  return _committedEvents;
 }
 
 
@@ -106,6 +64,8 @@ void exahype2::RefinementControl::addCommand(
 ) {
   logTraceInWith3Arguments( "addCommand()", x, h, ::toString(command) );
   tarch::multicore::Lock lock( _semaphore );
+  
+  assertion(lifetime>=1);
 
   switch (command) {
     case ::exahype2::RefinementCommand::Refine:
@@ -152,89 +112,10 @@ void exahype2::RefinementControl::addCommand(
 }
 
 
-#ifdef Parallel
-void exahype2::RefinementControl::freeAllPendingSendRequests() {
-  while (not _sendRequests.empty()) {
-    std::vector<MPI_Request*>::iterator p = _sendRequests.begin();
-    while (p!=_sendRequests.end()) {
-      if (*p==nullptr) {
-        p = _sendRequests.erase(p);
-      }
-      else {
-        int flag;
-        MPI_Test( *p, &flag, MPI_STATUS_IGNORE );
-        if (flag) {
-          *p = nullptr;
-        }
-        p++;
-      }
-    }
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  }
-}
-
-
-void exahype2::RefinementControl::triggerSendOfCopyOfCommittedEvents() {
-  _sendRequests.clear();
-
-  logInfo( "finishStep()", "share my " << _copyOfCommittedEvents.size() << " event(s) with others" );
-  if ( _copyOfCommittedEvents.size()>0 ) {
-    _sendRequests = std::vector< MPI_Request* >( tarch::mpi::Rank::getInstance().getNumberOfRanks(), nullptr );
-    for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
-      if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
-        _sendRequests[rank] = new MPI_Request;
-        MPI_Isend( _copyOfCommittedEvents.data(), _copyOfCommittedEvents.size(), peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), _sendRequests[rank] );
-      }
-    }
-  }
-}
-#endif
-
-
-void exahype2::RefinementControl::finishStep() {
-  _committedEvents.clear();
-
-  int maxLifetime = 0;
-  NewEvents::iterator p = _newEvents.begin();
-  while (p!=_newEvents.end()) {
-    _committedEvents.push_back( p->first );
-    p->second--;
-    if (p->second<=0) {
-      p = _newEvents.erase(p);
-    }
-    else {
-      maxLifetime = std::max( maxLifetime, p->second );
-      p++;
-    }
-  }
-
-  if (not _committedEvents.empty()) {
-    logInfo(
-      "finishStep()",
-      "activate " << _committedEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep). Keep " <<
-      _newEvents.size() << " event(s) to be re-delivered later (max lifetime " << maxLifetime << ")"
-    );
-  }
-
-  #ifdef Parallel
-  freeAllPendingSendRequests();
-  _copyOfCommittedEvents = _committedEvents;
-  triggerSendOfCopyOfCommittedEvents();
-  #endif
-}
-
-
-void exahype2::RefinementControl::merge( const RefinementControl& control ) {
-  tarch::multicore::Lock lock(_semaphore);
-  _newEvents.insert( _newEvents.end(), control._newEvents.begin(), control._newEvents.end() );
-}
-
-
 std::string exahype2::RefinementControl::toString() const {
   std::ostringstream msg;
   msg << "("
-      << "#new-events=" << _newEvents.size()
-      << ",#committed-events=" << _committedEvents.size()
+      << "#events=" << _newEvents.size()
       << ")";
   return msg.str();
 }

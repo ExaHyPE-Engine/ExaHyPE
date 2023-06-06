@@ -26,31 +26,9 @@
 #endif
 
 
-namespace {
-  int tagCounter = 0;
-
-  /**
-   * The MPI standard specifies that the tag upper bound must be at least 32767,
-   * but code code better checks if this is supported by the MPI implementation.
-   * Also, user codes might be nasty and require more tags.
-   */
-  int maxTag = -1;
-
-  void validateMaxTag() {
-    if (
-      maxTag>0
-      and
-      tagCounter>=maxTag
-    ) {
-      tarch::logging::Log _log("tarch::mpi");
-      logError( "validateTag()", "code has requested " << tagCounter << " tags, but the maximum tag supported by MPI implementation is " << maxTag );
-    }
-  }
-}
-
-
-
 tarch::logging::Log tarch::mpi::Rank::_log("tarch::mpi::Rank");
+int     tarch::mpi::Rank::_maxTags     = -1;
+int     tarch::mpi::Rank::_tagCounter  = 0;
 
 
 tarch::mpi::Rank  tarch::mpi::Rank::_singleton;
@@ -58,16 +36,16 @@ tarch::mpi::Rank  tarch::mpi::Rank::_singleton;
 
 
 void tarch::mpi::Rank::releaseTag(int tag) {
-  if (tag==tagCounter-1) {
-    tagCounter--;
+  if (tag==_tagCounter-1) {
+    _tagCounter--;
   }
 }
 
 
 int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName, int numberOfTags) {
   assertion2(numberOfTags>=1,fullQualifiedMessageName,numberOfTags);
-  const int result = tagCounter;
-  tagCounter += numberOfTags;
+  const int result = _tagCounter;
+  _tagCounter += numberOfTags;
 
   // I protect the tag manually (not via log filter), as many tags are actually
   // grabbed before most applications initialise their log filters properly.
@@ -83,7 +61,7 @@ int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName
   }
   #endif
 
-  validateMaxTag();
+  validateMaxTagIsSupported();
 
   return result;
 }
@@ -178,12 +156,24 @@ void tarch::mpi::Rank::writeTimeOutWarning(
       << " message(s) from node " << communicationPartnerRank << " with tag " << tag
     );
 
-    logWarning(
-      "writeTimeOutWarning(...)",
-      "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
-    );
+    if ( _deadlockTimeOut.count()>0 ) {
+      logWarning(
+        "writeTimeOutWarning(...)",
+        "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
+      );
+    }
+    else {
+      logWarning(
+        "writeTimeOutWarning(...)",
+        "deadlock detection switched off as deadlock time out is set to " << _deadlockTimeOut.count() << ", i.e. you will continue to get warnings, but code will not shut down"
+      );
+    }
 
-    if (_timeOutWarning<_deadlockTimeOut/2) {
+    if (
+      _timeOutWarning<_deadlockTimeOut/2
+      or
+      _deadlockTimeOut.count()<=0
+    ) {
       std::chrono::seconds newTimeOutWarning = _timeOutWarning*2;
       logWarning(
         "writeTimeOutWarning(...)",
@@ -464,6 +454,21 @@ void tarch::mpi::Rank::logStatus() const {
 }
 
 
+bool tarch::mpi::Rank::validateMaxTagIsSupported() {
+  if (
+    _maxTags <= 0
+    or
+    _tagCounter<_maxTags
+    ) {
+    return true;
+  }
+  else {
+    logWarning( "validateMaxTagIsSupported()", "maximum tag value is " << _maxTags << " though we would need " << _tagCounter << " tags. Code will likely crash" );
+    return false;
+  }
+}
+
+
 bool tarch::mpi::Rank::init(int* argc, char*** argv) {
   #ifdef Parallel
   int result = MPI_SUCCESS;
@@ -501,7 +506,7 @@ bool tarch::mpi::Rank::init(int* argc, char*** argv) {
   void* rawMaxTag;
   MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &rawMaxTag, &answerFlag);
   if (answerFlag) {
-    maxTag = *(int*)rawMaxTag;
+    _maxTags = *(int*)rawMaxTag;
   }
   else {
     std::cerr << "init(int*,char***)\t was not able to query what the maximum tag value is" << std::endl;
@@ -557,6 +562,9 @@ void tarch::mpi::Rank::setTimeOutWarning( int value ) {
 void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
   assertion( value>=0 );
   _deadlockTimeOut = std::chrono::seconds(value);
+  if (value==0) {
+    logInfo( "setDeadlockTimeOut(int)", "set deadlock timeout to " << _deadlockTimeOut.count() << " and hence disabled timeout checks" );
+  }
 }
 
 

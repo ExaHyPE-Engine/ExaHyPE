@@ -67,7 +67,6 @@ class SodShockIC:
       particle->setHDot  (0.0);        
       particle->setWcount(0.0);        
       particle->setNcount(0  );        
-      particle->setOmega (1.0);  // set to 1 to avoid problem with boundary particles.
       particle->setF     (0.0);        
       particle->setRho_dh(0.0);           
       particle->setWcount_dh(0.0);  
@@ -79,7 +78,6 @@ class SodShockIC:
       particle->setTime(0);
       particle->setHasConverged(false);
       particle->setHasNoNeighbours(false);
-//      particle->setHasBeenKicked(true);
       particle->setResidual(0.0);
       particle->setIterCount(0);
       particle->setIsBoundaryParticle(false);

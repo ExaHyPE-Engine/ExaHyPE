@@ -115,7 +115,6 @@ class GreshoChanVortexIC:
       particle->setHDot  (0.0);        
       particle->setWcount(0.0);        
       particle->setNcount(0  );        
-      particle->setOmega (1.0);  // set to 1 to avoid problem with boundary particles.
       particle->setF     (0.0);        
       particle->setRho_dh(0.0);           
       particle->setWcount_dh(0.0);  
@@ -126,7 +125,6 @@ class GreshoChanVortexIC:
       particle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
       particle->setHasConverged(false);
       particle->setHasNoNeighbours(false);
-      particle->setHasBeenKicked(false);
       particle->setResidual(0.0);
       particle->setIterCount(0);
       particle->setIsBoundaryParticle(false);

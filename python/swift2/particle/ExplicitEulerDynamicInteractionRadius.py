@@ -5,11 +5,22 @@ from swift2.particle.AlgorithmStep import AlgorithmStep
 
 import peano4
 
+from abc import ABC
+
 class ExplicitEulerDynamicInteractionRadius(Particle):
   """
   
   Extension of the explicit Euler to support dynamic cut-off radius 
   adoption. We try to keep a constant number of particles.
+
+ 
+  ## Attributes
+  
+  name: String
+    To be in line with other conventions, I recommend you start with an 
+    uppercase letter. This has to be a valid C++ identifier, i.e. don't 
+    use any special symbols besides an underscore.
+   
   
   @see swift2::kernels::adoptInteractionRadiusAndTriggerRerun()
   
@@ -134,3 +145,17 @@ class ExplicitEulerDynamicInteractionRadius(Particle):
       ),
     ]
 
+
+  def initialisation_steps(self):
+    """!
+    
+    No particular initialisation required
+    
+    """
+    return [] 
+
+
+  #@property
+  #def readme_descriptor(self):
+  #  assert False, "not yet written"
+  #  return """ I will au aufgerufen werden"""

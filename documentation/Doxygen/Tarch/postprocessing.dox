@@ -1,0 +1,497 @@
+/**
+
+@page tarch_patch_files Peano patch files
+
+
+This page discusses how to visualise Peano's native patch files. Some
+extensions of Peano write different file formats. In this case you have 
+to consult the extension-specific documentation.
+
+
+## Postprocessing: The visualisation toolkit, IO and Peano's scripts
+
+We offer five different ways to handle Peano's output, i.e. the native Peano
+patch files:
+
+1.  You visualise them directly within Paraview.
+
+2.  You use a Python-based visualisation suite from the command line.
+
+3.  You convert the patch files via a C++ command line tool into VTK and
+    postprocess the data from there.
+
+4.  You can convert patch files via a python tool into legacy VTK. These
+    can be generated directly on the cluster without the need for
+    paraview/pvpython. This is useful if the cluster does not have the
+    version of paraview installed that is required by the C++ command
+    line tool mentioned above.
+
+The following five sections discuss these three routes, before we provide
+some general visualisation comments. 
+
+
+### Offline/command line conversion with Python/Paraview
+
+This is my favourite starting point for data if I'm interested in whole
+movies and not only particular snapshots. It is inconvenient for large
+datasets, as it is too slow. For large datasets, you might have to move
+on to a conversion via the precompiled scripts.
+
+The command line, Python-based conversion of Peano works if and only if you
+have Paraview plus Python installed. First, ensure Peano's visulisation
+component is in your Python path:
+
+         export PYTHONPATH=../Peano/python
+
+or
+
+         export PYTHONPATH=../Peano/python:/usr/lib/python3/dist-packages
+
+
+After that, use the conversion script there to translate your
+`peano-patch-file`. It is important that you interpret this script
+through `pvpython`:
+
+         pvpython ../Peano/python/peano4/visualisation/render.py
+
+You should see a usage message now.
+
+
+
+### Displaying Peano files directly within Paraview
+
+Peano's postprocessing scripts use Python 3. This means you need a Paraview
+version with Python 3 support (oldish Paraview installations only
+support Python 2.7, and some Paraview downloads don't come along with
+Python support at al).
+
+You can display Peano's patch files directly within Paraview. Again, there
+are different ways. For all of them, Peano's Python environment has to be
+available within Paraview:
+
+
+#### Prepare system
+
+Before you start up Paraview, ensure that both the  `python` directory
+and any third-party Python lib are in your path. On some systems,
+Paraview seems to only know its internal libraries, so you have to add
+these manually. On my system, I use
+
+          export PYTHONPATH=../Peano/python:/usr/lib/python3/dist-packages
+
+The latter holds `jinja2` on my system.
+
+#### Start Paraview's Python environment
+
+You can either manipulate all data directly within Paraview or use
+Paraview's Python terminal to convert data as a batch from Peano's
+native format into native Paraview data. I recommend the direct Paraview
+terminal route to interactively explore data. The actual data processing
+(of time-dependent data) however can be very slow. Once I know what
+information I need, I thus usually switch to Paraview's Python
+interpreter to convert all data into Paraview's native file formats in
+one rush.
+
+@image html paraview.png
+
+For the batch mode, open the terminal `pvpython`. For the interactive
+GUI mode, open Paraview and activate the Python Shell by clicking the
+check box in the View menu.
+
+Both visualisation routes first require you to load Peano's Python
+tools - either within the `pvpython` terminal or the Paraview Python
+window:
+
+          import peano4.visualisation
+
+
+
+#### Work with a whole dataset
+
+Peano provides a Python class peano4.visualise.Visualiser which allows you to navigate
+through the whole data.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+import peano4.visualisation
+visualiser = peano4.visualisation.Visualiser( ”solution-Euler.peano-patch-file” )
+visualiser.display()
+visualiser.append filter(peano4.visualisation.ExtractFineGridFilter())
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The snippet displays the first dataset (time step) from a  data dump.
+Via
+
+~~~~~~~~~~~~~~~~~~~~~~~
+visualiser.select dataset(10)
+visualiser.reload()
+~~~~~~~~~~~~~~~~~~~~~~~
+
+you can, for example, select the 11th data set and display this one.
+
+Running through data sets (time steps) manually is cumbersome in many
+cases. We have not yet managed to integrate our Python-based, bespoke
+postprocessing into Paraview's video replay features, and we also
+experience that it is relatively slow. In such a case, it is more
+convenient to convert all data in one rush into Paraview's native,
+binary file format vtu:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+visualiser.write vtu time series()
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Once this routine terminates, you'll find a file with the extension
+`.pvd` in your directory which you can open and play as video.
+Obviously, this conversion can be triggered in Paraview's Python
+interpreter which is typically faster than Paraview's built-in terminal.
+
+You can trigger the Python postprocessing routines while the simulation
+is running.
+
+
+#### Display a single file
+
+Load the file you are interested in via
+
+~~~~~~~~~~~~~~~~~~~~~~~
+data = peano4.visualisation.render single file( ”solution-Euler-tree-0-0.peano-patch-file”, identifier=”MyQName” )
+~~~~~~~~~~~~~~~~~~~~~~~
+
+This is only one snapshot file, i.e. one file written by one thread in
+one step. We can display the file with
+
+~~~~~~~~~~~~~~~~~~~~~~~
+tp = TrivialProducer() 
+tp.GetClientSideObject().SetOutput(data) 
+Show(tp)
+~~~~~~~~~~~~~~~~~~~~~~~
+
+If we write large parallel files or time series, Peano will typically create
+one file like `solution-Euler.peano-patch-file` which links to all the
+files such as `solution-Euler-tree-0-0.peano-patch-file`. The meta file
+(with the links) is plain text, so you can study it via a text editor.
+Instead of picking a particular file, you can display a particular data
+set (snapshot) from the meta file:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+import peano4.visualisation
+data = peano4.visualisation.render dataset( ”solution-Euler.peano-patch-file”, 
+                                            display_as_tree=False,
+                                            filter=[peano4.visualisation.ExtractFineGridFilter()],
+                                            dataset_number=0, 
+                                            identifier=”MyQName” )
+tp = TrivialProducer()
+tp.GetClientSideObject().SetOutput(data)
+Show(tp)
+~~~~~~~~~~~~~~~~~~~~~~~
+
+### Filters
+
+Peano's snapshots are relatively complex. In practice, you typically want to
+filter data before you pipe it into Paraview. The most popular filter is
+the one which eliminates the coarse grid levels: Peano holds all data in
+multiple resolution. If your code does not exploit this feature, you
+might not be interested in the coarser resolutions, so removing it makes
+sense.
+
+There are more filters or you can write your own custom filters. Study
+the source code for further details.
+
+
+
+## Offline/command-line conversion (executable)
+
+Installing Peano's VTK command line tools can be quite tricky - depending on
+your local VTK installation. At the same time, the command line
+conversion via executables, i.e. not via the Python terminal as
+discussed above, is by far the fastest route. It can even exploit
+multiple cores. I recommend to stick to the Python-based postprocessing
+route as long as possible and to switch to the offline postprocessing
+only for large-scale production data where Python is just too slow
+and/or all postprocessing has to happen on a remote supercomputer as you
+cannot transfer the (raw) Peano data files.
+
+If you configure  with VTK support, Peano builds a command-line tool
+`convert` which you can use to convert 's patch files into plain
+(binary) vtk.
+
+Installing VTK support can be challenging. Here's some things you might
+want to consider/check:
+
+-   To build the  conversion/visualisation tools, you have to translate
+    the code with `--with-vtk`. If you don't specify a path, then
+     assumes that all VTK is installed within `/usr/include`.
+
+-   We next have to know which VTK version you are using. VTK builds a
+    different set of libraries in each generation.  has to know which
+    version you want to use to link against the right set of libraries.
+    The installation script will automatically try to detect your
+    version, but the detection is not very robust. If it is the wrong
+    version, use the `–with-vtk-version=x` switch to set the version
+    manually. We currently support `x` 7,8,9, i.e. we are only
+    interested in the major version of your VTK installation. If you
+    have version 8.90, it is the 8 we are interested in.
+
+-   Next, the script will search for the right libraries. By default,
+    our script assumes that the libraries are have a suffix with the
+    major dot minor number. So we assume that the VTK version 8.90
+    yields a library `vtkIOCore-8.90`. This is the default. The script
+    will try to find this default library and give you some feedback (be
+    careful: if it doesn't find the library, it will still continue as
+    you might want to change the pathes later on). If your library
+    naming convention is different---we've seen systems dropping the
+    version numbers or Paraview installations which append something
+    alike `pv8.90` - then specify your suffix manually through
+    `–with-vtk-suffix`. If your installation does not have a version
+    suffix, as is the case in Fedora, you should pass an empty string to
+    this: `–with-vtk-suffix=”`
+
+-   If your compile passes through but fails in the linking state
+    (object not found), then you have to check if the VTK libraries are
+    in the search path. If they are not (very likely), then add them
+    prior to the compile call:
+
+              export LDFLAGS="-L/opt/vtk/lib64"
+
+Once you have managed to configure with VTK and the build process has
+terminated successfully, your directory `src/convert` holds the actual
+`convert` script. If you call `convert` without arguments, you get a
+usage message. `convert` allows you to extract data from a data dump,
+and store it within the patch files under a new identifier. It also
+allows you to extract a dataset from patch files into vtu. vtu is one of
+VTK's binary file formats.
+
+A standard postprocessing workflow on the command line reads as follows:
+
+1.  Use `convert` to extract certain data from the dumped data files.
+    You might want to extract only the finest grid level, e.g., or to
+    pick a particular unknown. `convert` is given a new identifier
+    (name) for the new tdata set, and it stores the extracted data
+    either within the existing patch files or a new, separate one.
+
+2.  Use `convert` to pick one particular dataset via its identifier and
+    to dump it into a vtu file.
+
+3.  Use Paraview or VisIt to display the vtu file.
+
+Unfortunately, our C++ conversion kernels do not offer all the
+functionality we now find within the Python-based tools. Things alike
+mesh distortion are missing here.
+
+
+
+
+## Probing data
+
+Probe.py can be used to read out the unknowns at a given point within a
+Peano patch file. That is, it identifies the unknowns that are
+associated with an individual cell that is specified through an x, y and
+(optional) z coordinate. Crucially, the single cell is found at the
+finest level of granularity recorded in the peano patch file.
+
+The algorithm does not rely on Paraview/pvpython.
+
+To probe an individual patch file use the following commands:
+
+~~~~~~~~~~~~~~~~~~~~~
+cd Peano export PYTHONPATH=python python3
+python/peano4/visualisation/Probe.py
+--input-file=\<path-to-peano-patch-file\> -x=\<x-axis\> -y=\<y-axix\>
+--set-identifier=\<set-identifier\>
+~~~~~~~~~~~~~~~~~~~~~
+
+Here we probe the patch file passed to --input-file. The point to be
+probed is given as a coordinate to -x and -y. If you work with three
+dimensional data add a -z argument with the value of the z axis to be
+probed. The unkowns at the point (x, y) will be saved in a csv file
+called probe\_output.csv, though the name of this file can be configured
+by adding the --ofname flag to the above command and setting it to the
+name of the output file.
+
+We can also probe whole sets of patch files at once by swapping the
+--input-file flag used above with the --meta-file flag instead. The
+--meta-file should be set as the path to the main file that links to a
+set of Peano patch files. The algorithm will then probe all files that
+are listed in the main file.
+
+In this case, each row in the outputted csv file will list the unknowns
+from an individual patch file. The rows are ordered chronologically.
+This csv, then, will capture the change in unknowns at a given point
+within the mesh over time.
+
+
+
+## Tweaking your pictures
+
+Peano's default VTK plotters project Peano's tree-based grid onto an
+unstructured mesh, as VTK does not support tree meshes. The underlying
+mechanism is straightforward:
+
+1.  If a vertex is touched/read the first time, it is dumped as vertex
+    of the unstructured output mesh if it is not refined, i.e. if no
+    other vertex does exist at the same location on a finer mesh level.
+
+2.  If a hanging vertex is created, we add a new vertex to the output
+    dump if this hanging vertex has not been written before. The
+    plotters typically maintain one big hash map to bookkeep which
+    hanging vertices have already been written.
+
+3.  If the tree traversal runs into an unrefined cell, this cell is made
+    a cell of the unstructured output mesh.
+
+The block format/the conversion tools in contrast generate all the
+points multiple times. If you have to cells sharing a vertex, the vertex
+is dumped twice. For patch-based problems, this is okish, as the number
+of vertices that are shared is way smaller than the total number of
+vertices in the domain (vertices within a patch are not dumped multiple
+times). As a consequence of the redundant vertex dumps, isosurfaces,
+e.g., might not work. If you need them, it is reasonable to project/map
+the actual data onto a regular mesh first.
+
+If your PDE has $m$ quantities, Peano's block format dumps them into a
+vector of cardinality $m$ per vertex or cell, respectively. Most
+visualisation filters/tools however require data to be either scalar or
+vector data. In Paraview, use the calculator filter to extract only some
+quantities from the data dump. Alternatively, you can ask the convert
+tool to extract only some data into the vtu output.
+
+Please note that most visualisation codes (such as Paraview) do
+interpolate bi-/tri-linearly within the cells. If a cell's face is
+adjacent to cells on finer levels, hanging vertices on the face exist.
+If they do not hold the linearly interpolated value, you will discover
+visualisation artifacts.
+
+For smooth output pictures of meshes with adaptivity, you have to
+
+-   set the plotted properties on hanging vertices due to $d$-linear
+    interpolation, and
+
+-   you have to add the plotter mapping after you have invoked the
+    mapping that does initialise the hanging vertices.
+
+Please note that the dumped unstructured mesh is a non-conformal mesh.
+Algorithms such as isosurface identification thus might yield invalid
+results - it depends on your visualisation algorithms.
+
+
+    
+## Peano's block-structured output format
+
+Peano has introduced its own block-structured output format.
+Its idea is that a mesh is dumped as an unstructured set of cell where each cell
+is uniquely identified through its offset and its size. 
+The mesh data format lacks any topological information (connectivity).
+A cell always is a patch, i.e. holds a (topological) Cartesian mesh of
+dimensions @f$ k \times k @f$ or @f$ k \times k \times k @f$, respectively.
+If you work without patches, @f$ k=2 @f$. 
+In this case, the block format obviously can yield a significant overhead.
+
+
+
+### A minimal ASCII example file
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Peano output file
+# Version 0.1
+#
+format ascii
+dimensions 3
+patch-size 6 6 6
+
+begin vertex-metadata "identifier A"
+  number-of-unknowns 58
+  meta-data "This is some fancy meta data"  
+end vertex-values
+
+begin vertex-metadata "time"
+  number-of-unknowns 1
+  meta-data "This is some fancy meta data"  
+end vertex-values
+
+begin patch
+  offset 0.0 0.0 0.0
+  size   0.5 0.5 0.5
+  begin vertex-values "identifier A"
+    18.0 123.0 ...
+  end vertex-values
+  begin vertex-values "time"
+    1.0 1.0 ...
+  end vertex-values
+end patch 
+
+begin patch
+  offset 0.5 0.0 0.0
+  size   0.25 0.25 0.25
+  ...
+end patch 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+This spec file specifies a simple grid that
+
+- The actual grid plotted consists of two patches (boxes discretised with a small regular grid).
+- Both small grids consist of @f$ 6 \times 6 \times 6 @f$ cells. They all have
+  the same size, i.e. are equally spaced. 
+- Each vertex holds two sets of unknowns. The first set is called
+  `identifier A` and each entry (per vertex) comprises 58 double
+  unknowns. The second set of unknowns per vertex is called `time` and is
+  a scalar quantity.
+- The data per cube is ordered lexicographically, i.e. we run along the
+  x-axis first, then along the y-axis, and finally along the z-axis. 
+- All data is held as SoA, i.e. we first give all the 58 unknowns of the
+  first vertex within the cube, then the 58 unknowns of the right neighbour
+  vertex, and so forth.
+- All output data is ASCII.
+- Patches may overlap in both space and time.
+
+
+
+### More sophiciated dumps
+
+- The file format supports `cell-values`.
+
+- Each `vertex-values` or `cell-values` section in the
+  header of the file, i.e. not embedded into a patch, may have a section
+
+~~~~~~~~~~~~~~~~~~~~
+   begin mapping
+     0.0 0.0 0.0
+     0.1 0.1 0.1
+     0.4 0.4 0.4
+     ...
+   end mapping
+~~~~~~~~~~~~~~~~~~~~
+
+  If no mapping is present, our code dumps a regular subgrid (patch) per
+  `patch` region. If a mapping is present, the mapping has exactly @f$ (6+1)
+  \cdot (6+1) \cdot (6+1) @f$ entries in the example from the previous section.
+  Each entry is a 3d coordinate relative to the unit cube and specifies how the
+  topologially regular grid prescribed within a patch is to be mapped. You might
+  for example plot points of the topologically regular grid with 
+  Gauss-Legendre spacing.
+- The plotter by default always creates two types of files: The actual
+  data files as described above and one meta file. The meta file solely links to
+  the actual data:
+
+~~~~~~~~~~~~~~~~~~~~
+# 
+# Peano patch file 
+# Version 0.1 
+# 
+format ASCII
+begin dataset
+  include "conserved-1-rank-0.peano-patch-file"
+end dataset
+begin dataset
+  include "conserved-2-rank-0.peano-patch-file"
+end dataset
+~~~~~~~~~~~~~~~~~~~~
+
+  Per snapshot (typically time step), the plotter adds on `dataset`
+  entry. Each data set holds one data file per active rank. Each rank writes its
+  actual data into a separate file. 
+
+
+    
+    
+*/

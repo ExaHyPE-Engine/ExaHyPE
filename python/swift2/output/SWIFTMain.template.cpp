@@ -23,7 +23,6 @@
 
 #include "Constants.h"
 
-#include "toolbox/loadbalancing/RecursiveSubdivision.h"
 #include "tarch/logging/LogFilterFileReader.h"
 
 #ifdef UseFEExcept
@@ -34,11 +33,14 @@
 
 
 #include "observers/CreateGrid.h"
-#include "observers/Init.h"
+#include "observers/InitialConditions.h"
 #include "observers/Plot.h"
-#include "observers/Sort.h"
 
 {% for STEP in SOLVERSTEP_NAMES %}
+#include "observers/{{STEP}}.h"
+{% endfor %}
+
+{% for STEP in INITIALISATIONSTEP_NAMES %}
 #include "observers/{{STEP}}.h"
 {% endfor %}
 
@@ -51,24 +53,45 @@ tarch::logging::Log _log("::");
 
 
 tarch::timing::Measurement   createGridMeasurement;
-tarch::timing::Measurement   initMeasurement;
-tarch::timing::Measurement   sortMeasurement;
+tarch::timing::Measurement   initialConditionMeasurement;
+tarch::timing::Measurement   initialisationMeasurement;
 tarch::timing::Measurement   plotMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 
 
 bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
   static bool   gridConstructed                             = false;
-  static bool   gridInitialised                             = false;
-  static bool   initialisationSorted                        = false;
+  static bool   initialised                                 = false;
   static double nextMaxPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
   static double nextMinPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
   static bool   haveJustWrittenSnapshot                     = false;
   static tarch::la::Vector<Dimensions,double> minH          = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
-  static int    globalNumberOfTrees                         = 0;
   bool          continueToSolve                             = true;
 
   if (false) {} // just there to make my script's syntax easier
+  {% for STEP_NUMBER in range(0,INITIALISATIONSTEP_NAMES|length-1) %}
+  /**
+   * Part of one complete time step cycle, i.e. one sequence of steps
+   */
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}
+    and
+    repositories::rerunPreviousGridSweep()
+  ) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}} )
+    );
+  }
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}
+    and
+    not repositories::rerunPreviousGridSweep()
+  ) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER+1]}} )
+    );
+  }
+  {% endfor %}
   {% for STEP_NUMBER in range(0,SOLVERSTEP_NAMES|length-1) %}
   /**
    * Part of one complete time step cycle, i.e. one sequence of steps
@@ -104,9 +127,10 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
         "selectNextAlgorithmicStep()",
         "h_min=" << tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <<
         ", which his smaller than global h_max=" << GlobalMaxH <<
-        ". Stop grid construction"
+        ". Continue with load balancing "
       );
-      gridConstructed = true;
+//      ". Stop grid construction"
+//      gridConstructed = true;
     }
     if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
@@ -118,19 +142,19 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
       gridConstructed = true;
     }
   }
-  else if (not gridInitialised) {
+  else if (gridConstructed and not initialised) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Init )
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitialConditions )
     );
 
-    gridInitialised = true;
+    initialised = true;
   }
-  else if (not initialisationSorted) {
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::InitialConditions
+  ) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Sort )
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[0]}} )
     );
-
-    initialisationSorted = true;
   }
   else if (
     ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
@@ -138,6 +162,20 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     ( TimeInBetweenPlots==0.0 or haveJustWrittenSnapshot )
   ) {
     continueToSolve         = false;
+  }
+  else if (
+    ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
+    and
+    ( TimeInBetweenPlots>0.0 )
+  ) {
+    logInfo(
+      "selectNextAlgorithmicStep()",
+      "plot final solution"
+    );
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+    );
+    haveJustWrittenSnapshot = true;
   }
   else if (
     TimeInBetweenPlots>0.0
@@ -242,34 +280,19 @@ void {{NAMESPACE | join("::")}}::step() {
         createGridMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::Init:
+    case repositories::StepRepository::Steps::InitialConditions:
       {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "init" );
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "initial-conditions" );
         watch.start();
-        otterPhaseBegin( "init" );
-        observers::Init  observer;
-        observers::Init::prepareTraversal();
+        otterPhaseBegin( "initial-conditions" );
+        observers::InitialConditions  observer;
+        observers::InitialConditions::prepareTraversal();
         repositories::startInitialisationStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         repositories::finishInitialisationStep();
-        observers::Init::unprepareTraversal();
+        observers::InitialConditions::unprepareTraversal();
         watch.stop();
-        initMeasurement.setValue( watch.getCalendarTime() );
-      }
-      break;
-    case repositories::StepRepository::Steps::Sort:
-      {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "sort" );
-        watch.start();
-        otterPhaseBegin( "sort" );
-        observers::Sort  observer;
-        observers::Sort::prepareTraversal();
-        repositories::startSortingStep();
-        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        repositories::finishSortingStep();
-        observers::Sort::unprepareTraversal();
-        watch.stop();
-        sortMeasurement.setValue( watch.getCalendarTime() );
+        initialConditionMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
     case repositories::StepRepository::Steps::Plot:
@@ -295,6 +318,7 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::{{SOLVERSTEP_NAMES[0]}}  observer;
         observers::{{SOLVERSTEP_NAMES[0]}}::prepareTraversal();
         repositories::startTimeStep();
+        repositories::startIntermediateStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         repositories::finishIntermediateStep();
         observers::{{SOLVERSTEP_NAMES[0]}}::unprepareTraversal();
@@ -320,12 +344,28 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::{{SOLVERSTEP_NAMES[-1]}}::prepareTraversal();
         repositories::startIntermediateStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishIntermediateStep();
         repositories::finishTimeStep();
         observers::{{SOLVERSTEP_NAMES[-1]}}::unprepareTraversal();
         watch.stop();
         timeStepMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
+    {% for STEP_NUMBER in range(0,INITIALISATIONSTEP_NAMES|length) %}
+    case repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}:
+      {
+        otterPhaseSwitch( "{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}" );
+        repositories::startInitialisationStep();
+        observers::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}  observer;
+        observers::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}::prepareTraversal();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishInitialisationStep();
+        observers::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}::unprepareTraversal();
+        watch.stop();
+        initialisationMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    {% endfor %}
     case repositories::StepRepository::Steps::Undef:
       assertion(false);
       break;
@@ -396,13 +436,13 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-  otterTraceInitialise(OTTER_SRC_ARGS());
+  otterTraceInitialise();
 
 
   #if defined(SharedOMP)
   #pragma omp parallel
   {
-  #pragma omp master 
+  #pragma omp master
   {
   #endif
   if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
@@ -412,8 +452,8 @@ int main(int argc, char** argv) {
 
     logInfo("main()", "terminated successfully");
     logInfo("main()", "grid construction:  " << createGridMeasurement.getAccumulatedValue() << "s\t" << createGridMeasurement.toString() );
-    logInfo("main()", "init simulation:    " << initMeasurement.getAccumulatedValue() << "s\t" << initMeasurement.toString() );
-    logInfo("main()", "(initial) sort:     " << sortMeasurement.getAccumulatedValue() << "s\t" << initMeasurement.toString() );
+    logInfo("main()", "initial conditions: " << initialConditionMeasurement.getAccumulatedValue() << "s\t" << initialConditionMeasurement.toString() );
+    logInfo("main()", "initialisation:     " << initialisationMeasurement.getAccumulatedValue() << "s\t" << initialisationMeasurement.toString() );
     logInfo("main()", "plotting:           " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString() );
     logInfo("main()", "time stepping:      " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString() );
   }
@@ -426,6 +466,8 @@ int main(int argc, char** argv) {
   }
   }
   #endif
+
+  otterTraceFinalise();
 
   peano4::shutdownSingletons();
   {{NAMESPACE | join("::")}}::repositories::DataRepository::shutdownDatatypes();

@@ -4,7 +4,9 @@ import os
 import re
 import jinja2
 
+
 from .Helper import write_file
+from .Helper import using_cuda_backend
 
 from .Overwrite import Overwrite
 
@@ -268,15 +270,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::unprepareTraversal() {
 
   def __format_template_per_action(self,output_file,template,reverse_order=False, manual_dict=None):
     """
-    
+
      Takes the specified template file, iterates over actions and pastes
      the template into the output file once per action. Per action, the dictionary's
      entries are updated. Otherwise, the dictionary remains unchanged.
-     
-     
+
+
      output_file:
        Handle on output file
-     
+
     """
     local_actions = [x for x in self.included_actions]
     if reverse_order:
@@ -340,7 +342,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
   TemplateLoadCell_VertexLoad = """
   // Load vertex {{name}}
-  {
+  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
       int inVertexStack          = event.getVertexDataFrom(i);
@@ -368,7 +373,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
           assertionVectorNumericalEquals7( data.getDebugX(), marker.x(outVertexStackPosition), event.toString(), data.getDebugX(), marker.toString(), inVertexStack, i, outVertexStackPosition, _spacetreeId );
           assertionVectorNumericalEquals6( data.getDebugH(), marker.h(),                       event.toString(), data.getDebugX(), marker.toString(), inVertexStack, i, _spacetreeId );
         }
-        #endif      
+        #endif
         view.set(outVertexStackPosition,data);
       }
       else {
@@ -380,11 +385,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         ) << " (" << marker.toString() << ")" );
         data.setDebugX( marker.x(outVertexStackPosition) );
         data.setDebugH( marker.h() );
-        #endif      
+        #endif
         view.set(outVertexStackPosition,data);
       }
     }
-  }
+    return false;
+  }));
 """
 
 
@@ -400,7 +406,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       marker.select(pick);
 
       logDebug( "enterCell(...)", inVertexStack << "->" << pick << " (is-local=" << marker.isLocal() << ")" );
-      
+
       if (
         inVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
@@ -449,7 +455,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
   TemplateLoadCell_FaceLoad = """
   // Load face {{logical_type_name}}
-  {
+  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoTimesD );
     for (int i=0; i<TwoTimesD; i++) {
       int inFaceStack          = event.getFaceDataFrom(i);
@@ -493,7 +502,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         view.set(outFaceStackPosition,data);
       }
     }
-  }
+    return false;
+  }));
 """
 
 
@@ -507,7 +517,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
       marker.select(pick);
 
-      assertion3( marker.isLocal() or not event.getIsCellLocal(), marker.toString(), event.toString(), i );
+      assertion4( 
+        marker.isLocal() or not event.getIsCellLocal(), 
+        marker.toString(), 
+        event.toString(), 
+        i, 
+        _spacetreeId 
+      );
 
       if (
         inFaceStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
@@ -558,7 +574,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
   TemplateLoadCell_CellLoad = """
   // Load cell {{logical_type_name}}
-  {
+  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( 1 );
 
     peano4::datamanagement::CellMarker  marker(event);
@@ -582,17 +601,17 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
     ) {
       assertion3( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
       {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop() );
-      
+
       #if PeanoDebug>0
       assertionVectorNumericalEquals4( data.getDebugX(), marker.x(), data.getDebugX(), data.getDebugH(), marker.toString(), _spacetreeId );
       assertionVectorNumericalEquals4( data.getDebugH(), marker.h(), data.getDebugX(), data.getDebugH(), marker.toString(), _spacetreeId );
       #endif
-      
+
       view.set(0,data);
     }
     else {
       {{full_qualified_type}} data;
-    
+
       #if PeanoDebug>0
       logDebug( "loadCell(...)", "initialise meta data of cell {{name}} with " << marker.x() << " x " << marker.h()  << " (" << marker.toString() << ")");
       data.setDebugX( marker.x() );
@@ -600,10 +619,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       #endif
       view.set(0,data);
     }
-  }
-  
-  
-  
+    return false;
+  }));
 """
 
 
@@ -672,9 +689,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
   def mkSubDict(self, keys):
       """
-      
+
       Create the particular subdictionary that's used for an expression.
-      
+
       """
       temp = {}
       for k in keys:
@@ -690,7 +707,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
   def __generate_loadCell(self,output_file):
     output_file.write( jinja2.Template( self.TemplateLoadCell_Prologue ).render(**self.d) )
-    
+
     for vertex in self.vertices:
       temp = {
         "name": vertex.name,
@@ -774,12 +791,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   TemplateLoadCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::loadCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "loadCell(...)", _spacetreeId, event.toString() );
+  
+  std::vector< tarch::multicore::Task* >  tasks;
 """
 
 
   TemplateStoreCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::storeCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "storeCell(...)", _spacetreeId, event.toString() );
+  std::vector< tarch::multicore::Task* >  tasks;
 """
 
 
@@ -822,9 +842,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 """
 
 
-  TemplateLeaveCell_CellStore_Epilogue = """
+  TemplateStoreCell_CellStore = """
   // Handle cell {{logical_type_name}}
-  {
+  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [&]()->bool {
     const int inCellStack   = peano4::grid::PeanoCurve::CallStack;
     const int outCellStack  = event.getCellData();
     logDebug("storeCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack );
@@ -846,9 +869,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,outCellStack))->push( view.get(0) );
     }
     else {
-      logDebug( 
-        "storeCell(...)", 
-        "do not store cell {{name}} with " << marker.x() << " x " << marker.h() << ":" << 
+      logDebug(
+        "storeCell(...)",
+        "do not store cell {{name}} with " << marker.x() << " x " << marker.h() << ":" <<
         "  destroy=" << (outCellStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity) <<
         ", no-data=" << (outCellStack==peano4::grid::TraversalObserver::NoData) <<
         ", is-in/out=" << peano4::grid::PeanoCurve::isInOutStack(outCellStack) <<
@@ -858,7 +881,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         )
       );
     }
-  }
+    return false;
+  }));
 """
 
 
@@ -919,9 +943,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   }
 """
 
-  TemplateLeaveCell_FaceStore_Epilogue = """
+  TemplateStoreCell_FaceStore = """
   // Store face {{logical_type_name}}
-  {
+  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoTimesD );
     for (int i=0; i<TwoTimesD; i++) {
       int inFaceStackPosition  = event.getFaceDataFrom(i);
@@ -954,7 +981,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         ) );
       }
     }
-  }
+    return false;
+  }));
 """
 
   TemplateLeaveCell_VertexStore_MappingCall = """
@@ -1010,9 +1038,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   }
 """
 
-  TemplateLeaveCell_VertexStore_Epilogue = """
+  TemplateStoreCell_VertexStore = """
   // Store vertex {{logical_type_name}}
-  {
+  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
       int inVertexStackPosition  = event.getVertexDataFrom(i);
@@ -1042,7 +1073,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         logDebug( "storeCell(...)", "do not store vertex {{name}} with " << marker.x(inVertexStackPosition) << " x " << marker.h() );
       }
     }
-  }
+    return false;
+  }));
 """
 
 
@@ -1055,6 +1087,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
 
   TemplateLoadCell_Epilogue = """
+  tarch::multicore::spawnAndWait(tasks);
   logTraceOutWith1Argument( "loadCell(...)", _spacetreeId );
 }
 
@@ -1063,6 +1096,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
 
   TemplateStoreCell_Epilogue = """
+  tarch::multicore::spawnAndWait( tasks );
   logTraceOutWith1Argument( "storeCell(...)", _spacetreeId );
 }
 
@@ -1117,7 +1151,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
   def __generate_storeCell(self,output_file):
     output_file.write( jinja2.Template( self.TemplateStoreCell_Prologue ).render(**self.d) )
-    
+
     cells_inverted    = [x for x in self.cells]
     faces_inverted    = [x for x in self.faces]
     vertices_inverted = [x for x in self.vertices]
@@ -1127,40 +1161,40 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
     vertices_inverted.reverse()
 
     for cell in cells_inverted:
-      temp = { 
-        "name" : cell.name, 
-        "logical_type_name" : cell.get_logical_type_name(), 
+      temp = {
+        "name" : cell.name,
+        "logical_type_name" : cell.get_logical_type_name(),
         "full_qualified_type" : cell.get_full_qualified_type(),
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments
       }
       self.d[ "name" ]                 = cell.name
-      output_file.write( jinja2.Template( self.TemplateLeaveCell_CellStore_Epilogue ).render(**temp) )
+      output_file.write( jinja2.Template( self.TemplateStoreCell_CellStore ).render(**temp) )
 
     for face in faces_inverted:
-      temp = { 
-        "name" : face.name, 
-        "enumeration_type":face.get_enumeration_type(), 
-        "logical_type_name":face.get_logical_type_name(), 
+      temp = {
+        "name" : face.name,
+        "enumeration_type":face.get_enumeration_type(),
+        "logical_type_name":face.get_logical_type_name(),
         "full_qualified_type":face.get_full_qualified_type(),
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments
       }
       self.d[ "name" ]                 = face.name
-      output_file.write( jinja2.Template( self.TemplateLeaveCell_FaceStore_Epilogue ).render(**temp) )
+      output_file.write( jinja2.Template( self.TemplateStoreCell_FaceStore ).render(**temp) )
 
     for vertex in vertices_inverted:
-      temp = { 
-        "name":vertex.name, 
-        "enumeration_type": vertex.get_enumeration_type(), 
-        "logical_type_name":vertex.get_logical_type_name(), 
+      temp = {
+        "name":vertex.name,
+        "enumeration_type": vertex.get_enumeration_type(),
+        "logical_type_name":vertex.get_logical_type_name(),
         "full_qualified_type":vertex.get_full_qualified_type(),
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments
       }
       self.d[ "name" ]                 = vertex.name
-      output_file.write( jinja2.Template( self.TemplateLeaveCell_VertexStore_Epilogue ).render(**temp) )
+      output_file.write( jinja2.Template( self.TemplateStoreCell_VertexStore ).render(**temp) )
 
     output_file.write( jinja2.Template( self.TemplateStoreCell_Epilogue ).render({}) )
-    
-      
+
+
   TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllVerticalDataExchangeStacks( int masterId ) {
   logTraceInWith2Arguments( "exchangeAllVerticalDataExchangeStacks(...)", masterId, _spacetreeId  );
@@ -1294,21 +1328,21 @@ void {{FULL_QUALIFIED_CLASSNAME}}::finishAllOutstandingSendsAndReceives() {
   TemplateSendVertex_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {
   logTraceInWith4Arguments( "sendVertex(int,int,int)", position, toStack, event.toString(), _spacetreeId );
-  
+
 """
-  
+
   TemplateSendVertex_SendCall = """
   {
     peano4::datamanagement::VertexMarker  marker(event,position);
 
-    const {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( 
+    const {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
       repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top(TwoPowerD-1-position);
-    if ( 
+    if (
       data.storePersistently(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-      ) 
+      )
       and
       data.send(marker)
     ) {
@@ -1338,11 +1372,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4:
   TemplateSendFace_SendCall = """
   {
     peano4::datamanagement::FaceMarker  marker(event,position);
-    const {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( 
+    const {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
       repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top(TwoTimesD-1-position);
     if (
-      data.storePersistently(marker) 
+      data.storePersistently(marker)
       and
       data.send(
         marker
@@ -1370,7 +1404,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4:
   TemplateSendCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {
   logTraceInWith3Arguments( "sendCell(int,int,int)", toStack, event.toString(), _spacetreeId );
-  
+
 """
 
   TemplateSendCell_SendCall = """
@@ -1381,14 +1415,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::Travers
       data.storePersistently(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-      ) 
+      )
       and
       data.send(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       )
     ) {
-    
+
       logDebug( "sendCell(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId );
 
       repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
@@ -1448,19 +1482,19 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
   logTraceInWith4Arguments( "receiveAndMergeFace(...)", position, fromStack, event.toString(), _spacetreeId );
 """
 
-  
+
   TemplateReceiveAndMergeVertex_ReceiveAndMergeCalls = """
   {
     peano4::datamanagement::VertexMarker  marker(event,position);
-    {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( 
+    {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
       repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top(TwoPowerD-1-position);
 
-    if ( 
+    if (
       data.loadPersistently(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-      ) 
+      )
       and
       data.receiveAndMerge(
         marker
@@ -1471,7 +1505,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
         not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->empty(),
         _spacetreeId, fromStack, event.toString(), position, marker.toString()
       );
-      
+
       auto   incomingData = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
         _spacetreeId, fromStack
       )->pop() );
@@ -1484,7 +1518,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
         assertion8(
           data.getDebugX()!=incomingData.getDebugX(),
           data.getDebugX(), incomingData.getDebugX(),
-          data.getDebugH(), incomingData.getDebugH(), 
+          data.getDebugH(), incomingData.getDebugH(),
           fromStack, event.toString(), marker.toString(), _spacetreeId );
         assertionVectorNumericalEquals6(
           data.getDebugH(), incomingData.getDebugH(),
@@ -1509,15 +1543,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
   TemplateReceiveAndMergeFace_ReceiveAndMergeCalls = """
   {
     peano4::datamanagement::FaceMarker  marker(event,position);
-    {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( 
+    {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
       repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top(TwoTimesD-1-position);
 
-    if ( 
+    if (
       data.loadPersistently(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-      ) 
+      )
       and
       data.receiveAndMerge(
         marker
@@ -1534,7 +1568,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
         assertion8(
           tarch::la::countEqualEntries(data.getDebugX(), incomingData.getDebugX())==Dimensions-1,
           data.getDebugX(), incomingData.getDebugX(),
-          data.getDebugH(), incomingData.getDebugH(), 
+          data.getDebugH(), incomingData.getDebugH(),
           fromStack, event.toString(), marker.toString(), _spacetreeId );
         assertionVectorNumericalEquals6(
           data.getDebugH(), incomingData.getDebugH(),
@@ -1559,15 +1593,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
   {
     peano4::datamanagement::CellMarker  marker(event);
 
-    {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( 
+    {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
       repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
     )->top();
 
-    if ( 
+    if (
       data.loadPersistently(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-      ) 
+      )
       and
       data.receiveAndMerge(
         marker
@@ -1584,7 +1618,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
         assertion8(
           tarch::la::countEqualEntries(data.getDebugX(), incomingData.getDebugX())==Dimensions-1,
           data.getDebugX(), incomingData.getDebugX(),
-          data.getDebugH(), incomingData.getDebugH(), 
+          data.getDebugH(), incomingData.getDebugH(),
           fromStack, event.toString(), marker.toString(), _spacetreeId );
         assertionVectorNumericalEquals6(
           data.getDebugH(), incomingData.getDebugH(),
@@ -1604,7 +1638,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
   }
 """
 
-  
+
   TemplateExchangeRoutines_deleteAllStacks_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
   logTraceInWith1Argument( "deleteAllStacks()", _spacetreeId );
@@ -1686,10 +1720,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
 
     s+=  jinja2.Template( self.TemplateSendVertex_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
     for vertex in self.vertices:
-      temp = { 
-        "name" : vertex.name, 
-        "enumeration_type":vertex.get_enumeration_type(), 
-        "logical_type_name":vertex.get_logical_type_name(), 
+      temp = {
+        "name" : vertex.name,
+        "enumeration_type":vertex.get_enumeration_type(),
+        "logical_type_name":vertex.get_logical_type_name(),
         "full_qualified_type":vertex.get_full_qualified_type(),
         "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments
@@ -1699,10 +1733,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
 
     s+=  jinja2.Template( self.TemplateSendFace_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
     for face in self.faces:
-      temp = { 
-        "name" : face.name, 
-        "enumeration_type":face.get_enumeration_type(), 
-        "logical_type_name":face.get_logical_type_name(), 
+      temp = {
+        "name" : face.name,
+        "enumeration_type":face.get_enumeration_type(),
+        "logical_type_name":face.get_logical_type_name(),
         "full_qualified_type":face.get_full_qualified_type(),
         "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments
@@ -1712,9 +1746,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
 
     s+=  jinja2.Template( self.TemplateSendCell_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
     for cell in self.cells:
-      temp = { 
-        "name" : cell.name, 
-        "logical_type_name":cell.get_logical_type_name(), 
+      temp = {
+        "name" : cell.name,
+        "logical_type_name":cell.get_logical_type_name(),
         "full_qualified_type":cell.get_full_qualified_type(),
         "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments
@@ -1724,9 +1758,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
 
     s+=  jinja2.Template( self.TemplateReceiveAndMergeCell_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
     for cell in self.cells:
-      temp = { 
-        "name" : cell.name, 
-        "logical_type_name":cell.get_logical_type_name(), 
+      temp = {
+        "name" : cell.name,
+        "logical_type_name":cell.get_logical_type_name(),
         "full_qualified_type":cell.get_full_qualified_type(),
         "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments
@@ -1736,10 +1770,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
 
     s+=  jinja2.Template( self.TemplateReceiveAndMergeFace_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
     for face in self.faces:
-      temp = { 
-        "name" : face.name, 
-        "enumeration_type":face.get_enumeration_type(), 
-        "logical_type_name":face.get_logical_type_name(), 
+      temp = {
+        "name" : face.name,
+        "enumeration_type":face.get_enumeration_type(),
+        "logical_type_name":face.get_logical_type_name(),
         "full_qualified_type":face.get_full_qualified_type(),
         "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments
@@ -1749,10 +1783,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
 
     s+=  jinja2.Template( self.TemplateReceiveAndMergeVertex_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
     for vertex in self.vertices:
-      temp = { 
-        "name" : vertex.name, 
-        "enumeration_type":vertex.get_enumeration_type(), 
-        "logical_type_name":vertex.get_logical_type_name(), 
+      temp = {
+        "name" : vertex.name,
+        "enumeration_type":vertex.get_enumeration_type(),
+        "logical_type_name":vertex.get_logical_type_name(),
         "full_qualified_type":vertex.get_full_qualified_type(),
         "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments
@@ -1794,6 +1828,10 @@ tarch::logging::Log {{FULL_QUALIFIED_CLASSNAME}}::_log( "{{FULL_QUALIFIED_CLASSN
   def __generate_implementation(self,overwrite,full_qualified_filename):
     if write_file(overwrite,self.default_overwrite,full_qualified_filename):
       import inspect, os
+      cuda = using_cuda_backend()
+      if cuda:
+        full_qualified_filename = full_qualified_filename.replace(".cpp", ".cu")
+
       print( "{} written by {}".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__))))
 
       output_file = open( full_qualified_filename, "w" )

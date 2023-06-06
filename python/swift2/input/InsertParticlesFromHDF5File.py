@@ -12,7 +12,10 @@ import numpy as np
 
 class InsertParticlesFromHDF5File(ActionSet):
   def __init__(self, particle_set, filename):
-    """
+    """!
+    
+Read position from HDF5 and insert particles
+
     
     Read an HDF5 file and insert particles into the simulation box. This is
     typically used to read an Initial Condition file.
@@ -49,8 +52,7 @@ class InsertParticlesFromHDF5File(ActionSet):
     std::vector <double> InternalEnergyWithinVoxel  = _fileReaderHDF5.getInternalEnergyWithinVoxel();
     std::vector <int>    PartidWithinVoxel          = _fileReaderHDF5.getParticleIDsWithinVoxel();
 
-    // Skip index of particles already inserted
-    int indexEntry = _particleNumberOnThisTree;
+    int indexEntry = 0;
 
     // Now loop over these particle coordinates
     for (auto& p: coords) {
@@ -62,16 +64,13 @@ class InsertParticlesFromHDF5File(ActionSet):
       toolbox::particles::init(*newParticle, p, 0.0);
       _particleNumberOnThisTree++;
 
-      // Just insert them; will be re-assigned later anyway
-      fineGridVertices{{PARTICLES_CONTAINER}}(0).push_back( newParticle );
-
       /* 
        * Initialise the full set of particle attributes 
        */
 
-      // @TODO assign values read from the hdf5 file 
-
       tarch::la::Vector<Dimensions,double> Velocity;
+      /* Density is not encoded in all SWIFT HDF5 IC files as it is recomputed
+      by the density loop anyway. Here we just initialse to an arbitrary value */
       const double Density         = 1.0;
       const double Mass            = MassWithinVoxel[indexEntry];
       const double SmoothingLength = SmoothingLengthWithinVoxel[indexEntry];
@@ -103,7 +102,7 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setMass           ( Mass );
       newParticle->setSmoothingLength( SmoothingLength );
 
-//      /* Hard coded for Sod 1D */
+//      /* Hard coded for Sod 1D test */
 //      newParticle->setSmoothingLength( 0.005 );
 
       newParticle->setU              ( InternalEnergy ); 
@@ -139,7 +138,6 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setHDot  (0.0);        
       newParticle->setWcount(0.0);        
       newParticle->setNcount(0  );        
-      newParticle->setOmega (1.0);  // set to 1 to avoid problem with boundary particles.
       newParticle->setF     (0.0);        
       newParticle->setRho_dh(0.0);           
       newParticle->setWcount_dh(0.0);  
@@ -150,7 +148,6 @@ class InsertParticlesFromHDF5File(ActionSet):
 //      newParticle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
       newParticle->setHasConverged(false);
       newParticle->setHasNoNeighbours(false);
-//      newParticle->setHasBeenKicked(true);
       newParticle->setResidual(0.0);
       newParticle->setIterCount(0);
       newParticle->setIsBoundaryParticle(false);
@@ -169,9 +166,11 @@ class InsertParticlesFromHDF5File(ActionSet):
 
       indexEntry++;
 
-      logInfo( "Init2peano4()", "_spacetreeId: " << _spacetreeId << 
-                             ", _particleNumberOnThisTree: " << _particleNumberOnThisTree );
-
+      toolbox::particles::insertParticleIntoCell(
+        marker,
+        newParticle,
+        fineGridVerticeshydroPartSet
+      );
     }
     
     logDebug( "touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " 
@@ -215,6 +214,7 @@ class InsertParticlesFromHDF5File(ActionSet):
 #include "tarch/multicore/Lock.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
+#include "toolbox/particles/particles.h"
 #include "toolbox/particles/FileReaderHDF5.h"
 #include "toolbox/particles/ParticleFactory.h"
 

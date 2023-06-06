@@ -150,6 +150,7 @@ class CellCenteredFiniteDifferences(object):
     self._action_set_copy_new_faces_onto_old_faces            = None
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = None
     self._action_set_postprocess_solution                     = None
+    self._action_set_preprocess_solution                      = None
 
     self._compute_time_step_size                         = "#error Not yet defined"
     self._compute_new_time_step_size                     = "#error Not yet defined"
@@ -252,7 +253,7 @@ h_volume_max:           """ + str( self._max_meshcell_h ) + """
 
 Real type of this solver: """ + str(type(self)) + """
 
-We assume of domain size of (0,""" + str(domain_size) + """)^d. Peano 4 will cut this domain equidistantly 
+We assume that you use a domain size of (0,""" + str(domain_size) + """)^d. Peano 4 will cut this domain equidistantly 
 and recursively into three parts along each coordinate axis. This yields a spacetree.
 
 The spacetree will at least have """ + str(self.get_min_number_of_spacetree_levels(domain_size)) + """ levels.
@@ -506,6 +507,8 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     # only once if it does not exist
     if self._action_set_postprocess_solution == None:
       self._action_set_postprocess_solution                   = exahype2.solvers.rkfd.actionsets.EmptyPostprocessSolution( self )
+    if self._action_set_preprocess_solution == None:
+      self._action_set_preprocess_solution                    = exahype2.solvers.rkfd.actionsets.EmptyPreprocessSolution( self )
     
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
@@ -515,22 +518,46 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 
 
   def _store_cell_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
   def _load_cell_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
 
   def _store_face_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
   def _load_face_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
@@ -627,6 +654,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
      
     
     """
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
@@ -751,6 +779,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_update_face_label )
@@ -814,8 +843,8 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 
     output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
-    output.makefile.add_cpp_file( self._name + ".cpp" )
+    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
 
   def set_solver_constants(self, datastring): self._solver_constants = datastring
 
@@ -929,8 +958,10 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
  
   @preprocess_reconstructed_patch.setter
   def preprocess_reconstructed_patch(self, kernel):
-    """
-  
+    """!
+        
+    Please consult exahype2.solvers.fv.FV.preprocess_reconstructed_patch() for 
+    a documentation on this routine.
 
     """
     self._preprocess_reconstructed_patch  = kernel

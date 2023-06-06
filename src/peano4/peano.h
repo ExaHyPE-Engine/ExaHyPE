@@ -5,70 +5,10 @@
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
 
-/**
- *
- * @mainpage Peano 4
- *
- * Welcome to the source code documentation of Peano 4.
- *
- * @image html peano4/architecture-layers.png
- *
- * @section Documentation
- *
- * The high-level documentation of Peano 4 is contained within a guidebook. The
- * guidebook is written in TeX and can be downloaded from the Peano webpage at
- * <a href="www.peano-framework.org">www.peano-framework.org</a>. It is automatically
- * updated around once a week. If you want to access the latest version, you have
- * to build the pdf yourself. Change into the cookbook directory of your checkout
- * (parallel to src) and run pdflatex. Our guidebook also contains extensive
- * build instructions.
- *
- *
- * Peano is shipped with a couple of low-level demonstrators. One of them is a mere
- * run of all of the unit tests. To run them, switch into src/examples/unittests.
- * Unit tests are held within subdirectories of the respective class/function that
- * they test. The way they use a function is some good documentation complementing
- * what we write into the documentation.
- *
- *
- * @section Rationale
- *
- * We follow the convention that the header files only hold the declarations, while
- * the cpp files hold the actual implementations. We kind of gave up on this convention
- * in few particular places for speed, i.e. whenever a compiler should do inlining,
- * i.e. remove function calls, but doesn't. If we found such places and suffered
- * significantly in terms of performance, then we moved the implementation into the
- * headers. We also use header-based implementations for template (the header
- * implementation files then have the extension .cpph), but as soon as compilers do
- * widely support templates that are not headers or we have moved functions over to
- * the new C++ auto keyword, we'll move all into the implementation files.
- *
- * I decided a while ago that all documentation should be in the headers if possible.
- * There's two reasons for that:
- *
- * - Most documentation focuses on what a function does not how it does it. Therefore,
- *   the docu belongs to the declaration.
- * - If an implementation is so complicated or long that you need documentation within
- *  the source code to understand it, then the function needs to be simplified or split up.
- *
- * These are only rules of thumb.
- *
- *
- * @section Syntax Conventions
- *
- * We mainly follow mainstream Java syntax conventions in Peano for historic reasons and
- * as this is a real OO/C++ project. Some important principles are:
- *
- * - One file per class
- * - Consistent naming conventions
- * - Long, self-explaining names (no acronyms)
- * - One subdirectory per namespace
- *
- */
 
 
 /**
- * @dir peano
+ * @dir src/peano4
  *
  * Peano's core layer. It sits on top of the technical architecture.
  */

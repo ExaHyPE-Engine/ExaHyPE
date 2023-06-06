@@ -64,7 +64,10 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
   while (not isContained) {
     ::tarch::logging::Statistics::getInstance().inc( LookupMissesIdentifier );
 
-    ::tarch::multicore::processPendingTasks(1,false);
+    bool foundTask = ::tarch::multicore::processPendingTasks(1,false);
+    if (not foundTask) {
+      ::tarch::multicore::Core::getInstance().yield();
+    }
 
     finishedTasksLock.lock();
     isContained = _finishedTasks.count( number )>0;
@@ -79,9 +82,19 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
 
   tarch::multicore::releaseTaskNumber(number);
 
-  otterSynchroniseDescendantTasks();
+  otterSynchroniseTasks(NULL, otter_sync_descendants);
 
   return storedData;
+}
+
+
+void exahype2::EnclaveBookkeeping::waitForTaskAndDiscardResult(int number) {
+  logTraceInWith1Argument( "waitForTaskAndDiscardResult(int)", number );
+
+  Entry storedData = waitForTaskToTerminateAndReturnResult(number);
+  tarch::freeMemory( storedData.data, tarch::MemoryLocation::Heap );
+
+  logTraceOut( "waitForTaskAndDiscardResult(int)" );
 }
 
 

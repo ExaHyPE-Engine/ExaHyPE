@@ -19,7 +19,8 @@ exahype2::EnclaveTask::EnclaveTask(
   int                                            numberOfResultValues,
   Functor                                        functor
 ):
-  tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),enclaveTaskTypeId,tarch::multicore::Task::DefaultPriority),
+  tarch::multicore::Task(enclaveTaskTypeId,tarch::multicore::Task::DefaultPriority),
+  _taskNumber(tarch::multicore::reserveTaskNumber()),
   _marker(marker),
   _t(t),
   _dt(dt),
@@ -33,17 +34,19 @@ exahype2::EnclaveTask::EnclaveTask(
   logTraceOut( "EnclaveTask(...)" );
 }
 
+
 bool exahype2::EnclaveTask::run() {
   logTraceInWith1Argument( "run()", getTaskId() );
 
-  otterTaskBegin();
+  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
   computeTask();
 
   EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
-  otterTaskEnd();
+  otterTaskEnd(task);
   logTraceOut( "run()" );
   return false;
 }
+
 
 void exahype2::EnclaveTask::computeTask() {
   assertion( _outputValues==nullptr );
@@ -54,4 +57,9 @@ void exahype2::EnclaveTask::computeTask() {
 
   logDebug( "computeTask()", "lambda=" << _maxEigenvalue );
   _functor();
+}
+
+
+int exahype2::EnclaveTask::getTaskId() const {
+  return _taskNumber;
 }

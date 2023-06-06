@@ -12,7 +12,7 @@
 #include <map>
 
 /**
- * @page Interpolation Halo layer interpolation
+ * @page toolbox_blockstructured_interpolation Halo layer interpolation
  *
  * When we create hanging faces, we have to interpolate from coarse to
  * fine.
@@ -497,6 +497,53 @@ namespace toolbox {
       double* __restrict__                      fineGridCellValues
     );
 
+    /**
+     * This interpolation should be used if a cell hosts two sets of unknowns
+     *
+     * Frequently used if your code hosts two PDE solvers. In principle, it is
+     * up to the user to decide if they want to interpolate from pure cell data
+     * or use a reconstructed patch, i.e. cell data plus halo. However, if the
+     * finer cell has more degrees of freedom than the source, then any
+     * interpolation without halo data will yield wrong results close to the
+     * boundary of the patch.
+     *
+     * Here's some ASCII art to illustrate this:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * |------|------|------|------|------|------|
+     * |--|--|--|--|--|--|--|--|--|--|--|--|--|--|
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * Inside the domain, all interpolation is straightforward. However, we do
+     * not have valid data for the very left and very right volume on the fine
+     * grid. Such data are only available once we know the halo data, too.
+     *
+     *
+     * ## Data validity
+     *
+     * There is one important catch when you interpolate linearly from a
+     * coarse patch into a fine one: In ExaHyPE 2, we typically only have
+     * face-connected data. Therefore, those coarse grid entries along the
+     * patch diagonals are invalid, and we have to ignore them. Simply leaving
+     * them away however is not an option, as we then would accumulate partial
+     * contributions which do not sum up to 1.0.
+     *
+     *
+     *
+     * @param haloSourcePatch
+     * @param haloDestinationPatch Note that we only interpolate into the
+     *   interior of the patch correctly.
+     */
+    void interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
+      int                                       numberOfDoFsPerAxisInSourcePatch,
+      int                                       numberOfDoFsPerAxisInDestinationPatch,
+      int                                       haloSourcePatch,
+      int                                       haloDestinationPatch,
+      int                                       unknowns,
+      const double* __restrict__                sourceValues,
+      double* __restrict__                      destinationValues
+    );
+
     namespace internal {
       /**
        * The realisation relies on the following observations/follows these
@@ -579,6 +626,12 @@ namespace toolbox {
        * This is a volumetric version of the interpolation.
        */
       tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, bool extrapolateLinearly);
+
+      tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(
+        int numberOfDoFsPerAxisInInputPatch,
+        int numberOfDoFsPerAxisInOutputPatch,
+        bool extrapolateLinearly
+      );
 
     /**
      * Create piecewise constant interpolation matrix

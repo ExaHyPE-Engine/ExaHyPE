@@ -1,0 +1,282 @@
+/**
+
+@page page_exahype_performance_optimisation Performance optimisation
+
+
+This section discusses some ExaHyPE-specific performance optimisation steps.
+While ExaHyPE and its baseline, Peano, provide simplistic performance analysis 
+features to spot some flaws, a proper performance optimisation has to be guided
+by external performance analysis tools.
+Furthermore, please read @ref page_peano_performance_optimisation "Peano's generic performance optimisation remarks" parallel to this 
+page.
+All of the recommendations on  apply for ExaHyPE, too.
+
+
+The page consists of two big parts.
+A first one gives kind of a quick-n-dirty roadmap which defines a workflow how 
+to search for flaws in your parallelisation.
+The second part of the page runs through various scalability issues on the 
+different machine levels (core, node, cluster, gpus).
+
+
+
+## Roadmap
+
+1. Check if your code scales on a single node and if the scalability is 
+   stable, i.e. does not become worse once you add more and more cores. This might be 
+   counter-intuitive if you are interested in large-scale applications - notably
+   as the number of cores on your machine is fixed, so you have limited freedom 
+   there - but it is important to understand this behaviour prior to any 
+   subsequent steps. Node scalability issues propagate through to all further 
+   optimisation steps. You can alter the cores that an ExaHyPE executable uses 
+   by altering the command line argument   
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+   ./myexecutable --threads XXX
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+   Peano offers @ref peano_runtime_analysis "some Python scripts" that allow 
+   users to visualise the scalability behaviour. If the scalability is poor,
+   consult the section below on Multithreading optimisation.
+ 
+2. Check if you use all cores. It is important to know that you stagnate once
+   you add more cores before you check for this property. If your runtime goes 
+   up, it makes no sense to study this item. You first should fix item 1. 
+   If you do not use all cores, study the remarks below on enclave tasking and
+   multicore kernels. Check that you have enough enclave tasks and that these
+   enclave tasks use all cores if you still suffer from underutilisation on a 
+   node.
+     
+3. To be written ...
+   
+
+
+## Single core optimisation
+
+### The code is extremely bandwidth-bound and seems to move data forth and back all the time
+
+Most ExaHyPE solvers store their data on (call) stacks to localise all memory 
+accesses. This implies that they move their data around a lot. This 
+materialises in profiles similar to
+
+~~~~~~~~~~~~~~~~~~~
+Top Hotspots
+Function                                                           Module           CPU Time  % of CPU Time(%)
+-----------------------------------------------------------------  --------------  ---------  ----------------
+applications::exahype2::ccz4::ncp                                  peano4_bbhtest   559.299s             13.3%
+__memmove_avx_unaligned_erms                                       libc.so.6        529.383s             12.6%
+toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product  peano4_bbhtest   505.116s             12.0%
+applications::exahype2::ccz4::source                               peano4_bbhtest   347.667s              8.3%
+__kmpc_set_lock                                                    libiomp5.so      340.473s              8.1%
+[Others]                                                           N/A             1916.907s             45.7%
+~~~~~~~~~~~~~~~~~~~
+
+where memory movements (__memmove_avx_unaligned_erms) end up high on the list.
+You can alter 
+this behaviour by switching to a heap-based memory administration. Consult the 
+documentation of the solver of interest, but the ``fix'' always looks similar to 
+
+         self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
+
+i.e. you have to swap how a patch is mapped onto a C++ implementation. Most solvers provide a routine
+
+         my_solver.switch_to_heap_storage(True, True)
+
+
+which does the switch for you. Please around with different True, False 
+combinations. 
+Once you have switched, you should also consult @ref peano_performance_optimisation "Peano's generic remarks on alignment", 
+and you might want to change your kernel into a variant which optimises aggressively for vector registers (and can 
+potentially even use GPUs). This topic is discussed below.
+
+
+
+
+
+### The PDE term routines (sources, ncp, fluxes, eigenvalues, ...) are extremely expensive 
+
+In principle, that's what you want to see. If this is the case, then you should next follow the recommendations for GPU
+parallelisation. These focus on GPU efficiency, but the optimisations also pay off significantly for CPUs.
+
+
+
+
+## Multithreading optimisation
+
+
+### The trees aka subpartitions are imbalanced
+
+This effect is discussed in the @ref page_peano_performance_optimisation "generic performance optimisation".
+The discussion therein mentions to test various load balancing strategies. 
+For ExaHypE2, we found
+
+- toolbox::loadbalancing::SpreadOut to yield the best initial geometric load 
+  balancing when we work with rather regular meshes.
+- toolbox::loadbalancing::RecursiveBipartition to yield good
+  geometric load balancing for adaptive meshes.
+
+However, we usually follow the following strategy along the arguments
+in @ref page_peano_performance_optimisation "recommendation for Peano":
+
+1. We start with 
+   ~~~~~~~~~~~~~~~~~~~~~~~~
+   project.set_load_balancing("toolbox::loadbalancing::SpreadOut","" )
+   ~~~~~~~~~~~~~~~~~~~~~~~~
+   for a first run. This allows us to do a first run an see what the mesh 
+   looks like.
+   
+2. If the mesh is reasonably adaptive, we will get a poor domain splitting
+   quality (use the @ref page_peano_runtime_analysis "analysis scripts"). 
+   In this case, switch to 
+   ~~~~~~~~~~~~~~~~~~~~~~~~
+   project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0,16))" )
+   ~~~~~~~~~~~~~~~~~~~~~~~~
+   It typically is advantageous to restrict the number of initial trees per node to 
+   1/4 or 1/8 of the cores available. That's the magic 16 here.
+
+3. If the resulting partitions become to small and the load balancing fails to 
+   balance out the partitions if we restrict the total number of trees (that
+   is an additional argument after the 16, but consult the constructor
+   docu), we calculate what partition size we want to have and switch to
+   ~~~~~~~~~~~~~~~~~~~~~~~~
+   project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.98,1000,16))" )
+   ~~~~~~~~~~~~~~~~~~~~~~~~
+   where the 1000 here is an appropriate indicative tree size.
+
+If you find out that the number of trees is smaller than the cores, you have 
+to switch to multi-core compute kernels in ExaHyPE. You also should try to 
+use enclave tasking.
+
+
+### Very high spin time and not enough trees for the all cores
+
+This topic is covered by @ref page_peano_performance_optimisation "Peano's 
+section calls The code shows very high spin time".
+In ExaHyPE 2's context it means that you do not have enough trees to keep 
+all cores busy, i.e. your mesh is too small or your subpartitions are too 
+big. 
+However, you migth find out that decreasing the subpartitions actually 
+increases the runtime.
+This is reasonable, as each subdomain requires a significant administrative
+overhead to keep all halo data consistent.
+If you are in such a "deadlock" (not enough subpartitions, but the subpartitions
+cannot be smaller), you have to switch to a solver with enclave tasking.
+
+
+
+### There is a lack of enclave tasks
+
+The nicest task-based programming approach does not pay off if you don't 
+produce enough tasks to keep every core busy. To find out how many 
+tasks Peano produces, recompile the code with the @ref page_peano_runtime_analysis "statistics tracking enabled".
+
+
+
+ExaHyPE takes all collected information and dumps it into a file called
+statistics.csv (or similar) which you can open in Excel or LibreOffice. 
+The default main file as generated takes care of this, i.e. you can change
+the behaviour by modifying the main.
+You find information on the format written in tarch::logging::Statistics, but
+a Python script call similar to 
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+python3 ~/git/Peano/python/peano4/postprocessing/plot-statistics.py -c 1,3,5,6 -o csv statistics-rank-0.csv
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+should be sufficient to extract the quantities of interest. With the 
+statistics, we can directly see how many fork-join/bsp-type grid traversals
+per time step we encounter:
+
+@image html performance_optimisation_bsp.png
+
+In this example, we get an impression that the number of traversals always 
+kicks off at 50+, but then slides down. 
+So the individual traversals finish at different speed.
+The last 32 traversal tasks/sweeps then all finish at the same time.
+Once we examine the number of local tasks per thread
+
+@image html performance_optimisation_local-tasks.png
+
+we see that this varies widely. Yet, there rarely are more than 16 tasks 
+in the local queues at any time. 
+More interesting is the number of tasks in the global task queue:
+
+@image html performance_optimisation_global-tasks.png
+
+The tarch's tasking backend does track the number of ready tasks in the
+system. If enclave tasking is enabled, you should have columns which 
+show how many tasks are in the system over time. See the documentation of
+tarch::multicore for some further information. 
+With up to 8,000 enclave tasks per time step in the example above, we 
+can conclude that there is always a healthy number of tasks available.
+
+
+If you do not see any pending tasks or no tasks at all, the individual 
+subdomains are simply too small to find enough tasks.
+Therefore, the code might struggle to keep all cores busy.
+It cannot deploy enclave tasks to idling tasks.
+There are a few things that you can try:
+
+- Solve a bigger problem.
+- Check if you can use fewer subdomains such that the individual subdomains
+  are bigger.
+- Work with more regular grids. They usually help you to generate more tasks. 
+  So avoid steep AMR changes.
+
+
+### The code does not use all cores
+
+Hereon, we assume that you have doublechecked that the code tries to use one
+subtree (partition) per core and that these partitions are reasonably balanced.
+Details are discussed in \ref peano_performance_optimisation "Peano's generic optimisation discussion".
+Furthermore, we assume that you have already introduced enclave tasking in 
+your solver, and you also have validated that enough enclave tasks are 
+produced (see above). In this case, it might be reasonable to switch the 
+compute kernel.
+
+
+For the FD4 scheme and OpenMP, we provide for example compute kernels which theoretically can spread out over the
+whole node. The kernel is slower than the default version on one core, but
+it can use further cores and thus eventually becomes faster. Usually, you
+have to follow a few steps to enable this alternative kernel:
+
+- Switch to an enclave solver.
+- Instruct the enclave solver that there it can use stateless PDE
+  terms. For this, pass the constructor the argument
+  
+        pde_terms_without_state=True
+        
+        
+- Ensure that the routine patchCanUseStatelessPDETerms() return true most of the time (this is the default).
+- Make the solver use a solver on the CPU which uses the batched taskgraph 
+  realisation. Most ExaHyPE solver have an attribute similar to
+  
+  
+        self._fused_compute_kernel_call_cpu
+        
+  which is initialised with some default kernel call. Browse through your 
+  code and alter it such that it uses
+
+        solver_variant                           = SolverVariant.Multicore,
+        kernel_variant                           = KernelVariant.BatchedAoSHeap,
+
+  and a batched solver variant (patch-wise or similar makes limited
+  sense). Usually, the kernels are constructed in set_implementation(), so 
+  it might make sense to plug into this one (overwrite it, call the 
+  supertype's implementation, and then switch the kernel).
+
+
+This idea corresponds to the last remark in the section 
+"The individual trees are of significantly different sizes" of 
+\ref page_peano_performance_optimisation "Peano's generic optimisation discussion".
+
+<b>Important:</b> Not all compute kernels/solver variants benefit from the 
+multithreaded kernels. Notably on NUMA machines and lower-order numerical
+schemes, we see that the multicore kernel variants tend to make the performance
+worse.
+
+
+
+## MPI optimisation
+
+
+ */
+ 

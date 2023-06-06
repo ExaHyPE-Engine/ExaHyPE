@@ -157,18 +157,27 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
 
     if ( select.compare( "--threads" ) ==0 ) {
       cores = std::atoi(argv[argument+1]);
-      logInfo( "parseCommandLineArguments(...)", "manually reset number of used cores to " << cores );
+      // manual selection, as log filters are not there yet
+      if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+        logInfo( "parseCommandLineArguments(...)", "manually reset number of used cores to " << cores );
+      }
     }
     else if ( select.compare( "--gpus" ) ==0 ) {
       std::string specifier = argv[argument+1];
       std::string delimiter = ",";
       if ( specifier.compare( "all" ) ==0 ) {
-        logInfo( "parseCommandLineArguments(...)", "enable all devices" );
+        // manual selection, as log filters are not there yet
+        if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+          logInfo( "parseCommandLineArguments(...)", "enable all devices" );
+        }
       }
       else if (specifier.find( delimiter ) == std::string::npos) {
         int gpu = std::atoi(specifier.c_str());
         gpuDevices.insert(gpu);
-        logInfo( "parseCommandLineArguments(...)", "enable only GPU " << gpu );
+        // manual selection, as log filters are not there yet
+        if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+          logInfo( "parseCommandLineArguments(...)", "enable only GPU " << gpu );
+        }
       }
       else {
         size_t pos = 0;
@@ -180,7 +189,10 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
           specifier.erase(0, pos + delimiter.length());
         }
 
-        logInfo( "parseCommandLineArguments(...)", "manually set GPU filter with " << gpuDevices.size() << " devices enabled" );
+        // manual selection, as log filters are not there yet
+        if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+          logInfo( "parseCommandLineArguments(...)", "manually set GPU filter with " << gpuDevices.size() << " devices enabled" );
+        }
       }
     }
     else if ( select.compare( "--log-filter-file" ) == 0 ) {
@@ -189,7 +201,10 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
     else if ( select.compare( "--timeout" ) == 0 ) {
       int timeout = std::atoi(argv[argument+1]);
       tarch::mpi::Rank::getInstance().setDeadlockTimeOut( timeout );
-      logInfo( "parseCommandLineArguments(...)", "manually set timeout to " << timeout );
+      // manual selection, as log filters are not there yet
+      if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+        logInfo( "parseCommandLineArguments(...)", "manually set timeout to " << timeout );
+      }
     }
     else if ( select.compare( "--threading-model" ) == 0 ) {
       auto* realisation = tarch::multicore::orchestration::parseRealisation( argv[argument+1] );
@@ -211,7 +226,10 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
   tarch::accelerator::Device::getInstance().configure( gpuDevices );
 
   if ( not tarch::logging::LogFilterFileReader::parsePlainTextFile( logFilterFile ) ) {
-    logWarning( "main()", "no exahype.log-filter file found or file has been corrupted. Use default logging configuration" );
+    // manual selection, as log filters are not there yet
+    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+      logWarning( "main()", "no exahype.log-filter file found or file has been corrupted. Use default logging configuration" );
+    }
     setDefaultLogStatements();
   }
 

@@ -76,7 +76,7 @@ AC_LANG(C++)
 # Compiler options. Allow icpc and gnu. Plus minimum version check.
 #
 
-AX_COMPILER_VENDOR
+#AX_COMPILER_VENDOR
 
 #AX_CXX_COMPILE_STDCXX_11
 
@@ -258,6 +258,20 @@ if test "$gpu" == cpp; then
 fi
 
 
+#
+# PETSc
+#
+AC_ARG_WITH(petsc,
+  AS_HELP_STRING([--with-petsc],[switch on PETSc support]),
+  [ AC_MSG_CHECKING(for petsc)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);                              petsc=false ;;
+      *)     AC_MSG_RESULT(yes);                             petsc=${withval}  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for petsc); AC_MSG_RESULT(no); petsc=false ])
+
+AM_CONDITIONAL([UsePETSc],    [test "$petsc" != petsc])
+
 
 #
 # ===============================================================
@@ -378,6 +392,44 @@ fi
 
 
 #
+# Otter
+#
+AC_ARG_WITH(otter,
+  AS_HELP_STRING([--with-otter],[enable Otter [default=false]]),
+  [ AC_MSG_CHECKING(for otter)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_otter=false ;;
+      *)     AC_MSG_RESULT(yes);   use_otter=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for otter); AC_MSG_RESULT(no); use_otter=false ])
+AM_CONDITIONAL([UseOtter],[test "x$use_otter" = xtrue])
+
+# internal toolboxes don't need ifdefs, but here we need them
+if test "$use_otter" == true; then
+  AC_DEFINE([UseOtter], [UseOtter], [UseOtter])
+fi
+
+
+#
+# libxsmm
+#
+AC_ARG_WITH(libxsmm,
+  AS_HELP_STRING([--with-libxsmm],[enable libxsmm [default=false]]),
+  [ AC_MSG_CHECKING(for libxsmm)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_libxsmm=false ;;
+      *)     AC_MSG_RESULT(yes);   use_libxsmm=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for libxsmm); AC_MSG_RESULT(no); use_libxsmm=false ])
+AM_CONDITIONAL([UseLibXSMM],[test "x$use_libxsmm" = xtrue])
+
+if test "$use_libxsmm" == true; then
+  AC_DEFINE([UseLibXSMM], [UseLibXSMM], [UseLibXSMM])
+fi
+
+
+
+#
 # ===============================================================
 #   Floating-point exception handling
 # ===============================================================
@@ -412,11 +464,12 @@ fi
 # Vendor-specific toolchain (logging devices, memory allocation libraries, ...)
 #
 AC_ARG_WITH(toolchain,
-  AS_HELP_STRING([--with-toolchain],[build with vendor-specific toolchain [default=no,intel,nvidia,scorep,chrome,gnu]]),
+  AS_HELP_STRING([--with-toolchain],[build with vendor-specific toolchain [default=no,itac,itt,nvptx,scorep,chrome,gnu]]),
   [ AC_MSG_CHECKING(for toolchain)
     case "${withval}" in
       no)        AC_MSG_RESULT(no);                                           toolchain=false ;;
-      intel)     AC_MSG_RESULT(build with support for the Intel SDK);         toolchain=intel  ;;
+      itac)      AC_MSG_RESULT(build with support for the Intel's ITAC);      toolchain=itac  ;;
+      itt)       AC_MSG_RESULT(build with support for the Intel's Instrumentation and Tracing Technology (ITT));      toolchain=itt  ;;
       nvidia)    AC_MSG_RESULT(build with support for the NVIDIA SDK);        toolchain=nvidia ;;
       scorep)    AC_MSG_RESULT(build with support for the Score-P);           toolchain=scorep ;;
       chrome)    AC_MSG_RESULT(build with logging support for Google Chrome); toolchain=chrome ;;
@@ -430,11 +483,40 @@ AC_ARG_WITH(toolchain,
   ]
 )
 
-if test "$toolchain" == intel; then
+if test "$toolchain" == itac; then
   AC_DEFINE([UseITAC], [1], [UseITAC])
   AC_DEFINE([UseLogService], [ITACLogger], [ITACLogger])
+  
+  CXXFLAGS_PEANO_2D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  CXXFLAGS_PEANO_2D_STATS+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  CXXFLAGS_PEANO_2D_ASSERTS+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
+  CXXFLAGS_PEANO_2D_TRACE+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  CXXFLAGS_PEANO_2D_DEBUG+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
+  
+  CXXFLAGS_PEANO_3D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  CXXFLAGS_PEANO_3D_STATS+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  CXXFLAGS_PEANO_3D_ASSERTS+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
+  CXXFLAGS_PEANO_3D_TRACE+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  CXXFLAGS_PEANO_3D_DEBUG+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
 fi
 
+
+if test "$toolchain" == itt; then
+  AC_DEFINE([UseITT], [1], [UseITT])
+  AC_DEFINE([UseLogService], [ITTLogger], [ITTLogger])
+  
+  CXXFLAGS_PEANO_2D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  CXXFLAGS_PEANO_2D_STATS+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  CXXFLAGS_PEANO_2D_ASSERTS+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
+  CXXFLAGS_PEANO_2D_TRACE+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  CXXFLAGS_PEANO_2D_DEBUG+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
+  
+  CXXFLAGS_PEANO_3D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  CXXFLAGS_PEANO_3D_STATS+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  CXXFLAGS_PEANO_3D_ASSERTS+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
+  CXXFLAGS_PEANO_3D_TRACE+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  CXXFLAGS_PEANO_3D_DEBUG+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
+fi
 
 
 if test "$toolchain" == scorep; then
@@ -444,7 +526,7 @@ if test "$toolchain" == scorep; then
   #CXXFLAGS+=" -ip -ipo "
 fi
 
-if test "$toolchain" == nvidia; then
+if test "$toolchain" == nvptx; then
   AC_DEFINE([UseNVIDIA], [1], [UseNVIDIA])
   AC_DEFINE([UseLogService], [NVTXLogger], [NVTXLogger])
   AC_CHECK_HEADERS([nvtx3/nvToolsExt.h],[],[AC_MSG_ERROR([header <nvtx3/nvToolsExt.h> not found])])
@@ -460,9 +542,10 @@ fi
 
 
 
+
 #
 # ===============================================================
-#   Toolbox - enable
+#   Toolboxes (actives with enable)
 #
 # A toolbox is an optional extension of Peano (package). As there
 # are dependencies between the toolboxes, this part only analyses
@@ -475,15 +558,15 @@ fi
 #
 # FEM 
 #
-AC_ARG_ENABLE(fem,
-  AS_HELP_STRING([--enable-fem],[enable FEM  [default=false]]),
-  [ AC_MSG_CHECKING(for fem)
+AC_ARG_ENABLE(finiteelements,
+  AS_HELP_STRING([--enable-finiteelements],[enable finite elements toolbox  [default=false]]),
+  [ AC_MSG_CHECKING(for finiteelements)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);    toolbox_fem=false ;;
-      *)     AC_MSG_RESULT(yes);   toolbox_fem=true  ;;
+      no)    AC_MSG_RESULT(no);    toolbox_finiteelements=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_finiteelements=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for fem); AC_MSG_RESULT(no); toolbox_fem=false ])
-AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$toolbox_fem" = xtrue])
+  [ AC_MSG_CHECKING(for finiteelements); AC_MSG_RESULT(no); toolbox_finiteelements=false ])
+AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$toolbox_finiteelements" = xtrue])
 
 
 #
@@ -589,50 +672,16 @@ AC_ARG_WITH(delta,
 AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
 
 
-#
-# Otter
-#
-AC_ARG_WITH(otter,
-  AS_HELP_STRING([--with-otter],[enable Otter [default=false]]),
-  [ AC_MSG_CHECKING(for otter)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);    use_otter=false ;;
-      *)     AC_MSG_RESULT(yes);   use_otter=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for otter); AC_MSG_RESULT(no); use_otter=false ])
-AM_CONDITIONAL([UseOtter],[test "x$use_otter" = xtrue])
 
-# internal toolboxes don't need ifdefs, but here we need them
-if test "$use_otter" == true; then
-  AC_DEFINE([UseOtter], [UseOtter], [UseOtter])
-fi
-
-
-#
-# libxsmm
-#
-AC_ARG_WITH(libxsmm,
-  AS_HELP_STRING([--with-libxsmm],[enable libxsmm [default=false]]),
-  [ AC_MSG_CHECKING(for libxsmm)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);    use_libxsmm=false ;;
-      *)     AC_MSG_RESULT(yes);   use_libxsmm=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for libxsmm); AC_MSG_RESULT(no); use_libxsmm=false ])
-AM_CONDITIONAL([UseLibXSMM],[test "x$use_libxsmm" = xtrue])
-
-if test "$use_libxsmm" == true; then
-  AC_DEFINE([UseLibXSMM], [UseLibXSMM], [UseLibXSMM])
-fi
 
 #
 # ===============================================================
-#   Toolbox - setup
+#   Setup toolboxes and extensions
 #
-# Run through the set of toolboxes that are enabled, configure
-# them properly, i.e. augment the Peano compile and link flags,
-# and check for consistency, i.e. whether all dependencies are 
-# ok.
+# Run through the set of toolboxes and extensions that are enabled, 
+# configure them properly, i.e. augment the Peano compile and 
+# linker flags, and check for consistency, i.e. whether all 
+# dependencies are ok.
 # ===============================================================
 #
 
@@ -640,7 +689,9 @@ fi
 #
 # FEM 
 #
-if test "$toolbox_fem" != false; then
+if test "$toolbox_finiteelements" != false; then
+  AC_DEFINE([UseToolboxFiniteElements], [1], [UseToolboxFiniteElements])
+  
   LDADD_PEANO_2D_RELEASE=" -lToolboxFiniteElements2d         $LDADD_PEANO_2D_RELEASE"
   LDADD_PEANO_2D_STATS="   -lToolboxFiniteElements2d_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxFiniteElements2d_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -665,6 +716,8 @@ fi
 # Multiprecision 
 #
 if test "$toolbox_multiprecision" != false; then
+  AC_DEFINE([UseToolboxMultiprecision], [1], [UseToolboxMultiprecision])
+  
   LDADD_PEANO_2D_RELEASE=" -lToolboxMultiprecision         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxMultiprecision_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxMultiprecision_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -689,6 +742,8 @@ fi
 # Load balancing 
 #
 if test "$toolbox_loadbalancing" != false; then
+  AC_DEFINE([UseToolboxLoadBalancing], [1], [UseToolboxLoadBalancing])
+  
   LDADD_PEANO_2D_RELEASE=" -lToolboxLoadBalancing2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxLoadBalancing2d_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxLoadBalancing2d_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -713,6 +768,8 @@ fi
 # Blockstructured
 #
 if test "$toolbox_blockstructured" != false; then
+  AC_DEFINE([UseToolboxBlockstructured], [1], [UseToolboxBlockstructured])
+  
   LDADD_PEANO_2D_RELEASE=" -lToolboxBlockstructured2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxBlockstructured2d_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxBlockstructured2d_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -737,6 +794,8 @@ fi
 # Particles 
 #
 if test "$toolbox_particles" != false; then
+  AC_DEFINE([UseToolboxParticles], [1], [UseToolboxParticles])
+  
   LDADD_PEANO_2D_RELEASE+=" -lToolboxParticles2d         $LDADD_PEANO_2D_RELEASE " 
   LDADD_PEANO_2D_STATS+="   -lToolboxParticles2d_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS+=" -lToolboxParticles2d_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -754,6 +813,34 @@ if test "$toolbox_particles" != false; then
   LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/toolbox/particles "
   LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/toolbox/particles "
   LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/toolbox/particles "
+fi
+
+
+#
+# PETSC
+#
+if test "$petsc" != false; then
+  AC_DEFINE([UsePETSc], [1], [UsePETSc])
+  if test "$toolbox_finiteelements" == false; then
+    AC_MSG_ERROR([PETSc requires the finite elements toolbox (run with --help to see the correct enable statement)])
+  fi
+  LDADD_PEANO_2D_RELEASE=" -lPETSc         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lPETSc_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE="   -lPETSc_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lPETSc_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE=" -lPETSc         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lPETSc_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lPETSc_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lPETSc_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/petsc "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/petsc "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/petsc "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/petsc "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/petsc "
 fi
 
 
@@ -788,17 +875,16 @@ if test "$toolbox_exahype" != false; then
 fi
 
 
-
 if test "$use_libxsmm" != false; then
   #Libxsmm
   echo "Checking whether libxsmm needs to be installed or built"
-  if @<:@ ! -d Submodules @:>@; then
-    mkdir Submodules
-    echo "Created libxsmm directory in Submodules"
+  if @<:@ ! -d submodules @:>@; then
+    mkdir submodules
+    echo "Created libxsmm directory in submodules"
   fi
-  if @<:@ ! -e Submodules/libxsmm/.git @:>@; then
-    echo "Initializing libxsmm in Submodules/libxsmm, this may take a while"
-    cd Submodules
+  if @<:@ ! -e submodules/libxsmm/.git @:>@; then
+    echo "Initializing libxsmm in submodules/libxsmm, this may take a while"
+    cd submodules
     git clone https://github.com/libxsmm/libxsmm.git
     cd libxsmm
     git checkout 9b7bbb95c
@@ -809,12 +895,12 @@ if test "$use_libxsmm" != false; then
   fi
   
   # build libxsmm
-  if @<:@ ! -d Submodules/libxsmm/bin @:>@ || @<:@ ! -e Submodules/libxsmm/bin/libxsmm_gemm_generator @:>@; then
+  if @<:@ ! -d submodules/libxsmm/bin @:>@ || @<:@ ! -e submodules/libxsmm/bin/libxsmm_gemm_generator @:>@; then
     REBUILD_LIBXSMM=true
   fi
   if @<:@ "$REBUILD_LIBXSMM" = true @:>@; then
     echo "Building libxsmm gemm generator"
-    cd Submodules/libxsmm
+    cd submodules/libxsmm
     git restore samples
     make realclean --silent
     make generator --silent
@@ -928,6 +1014,7 @@ AC_CONFIG_FILES([Makefile
   src/toolbox/particles/Makefile
   src/convert/Makefile
   src/exahype2/Makefile
+  src/petsc/Makefile
   src/swift2/Makefile
   src/unittests/Makefile
 ])

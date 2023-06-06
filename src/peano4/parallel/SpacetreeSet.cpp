@@ -248,16 +248,13 @@ void peano4::parallel::SpacetreeSet::addSpacetree( int masterId, int newTreeId )
 }
 
 
-int peano4::parallel::SpacetreeSet::TraverseTask::_typeId( peano4::parallel::getTaskType("peano4::parallel::SpacetreeSet::TraverseTask") );
-
-
 peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
   peano4::grid::Spacetree&          tree,
   SpacetreeSet&                     set,
   peano4::grid::TraversalObserver&  observer,
   bool                              invertTreeTraversalDirectionBeforeWeStart
 ):
-  Task(0,_typeId,0),
+  Task(Task::DontFuse,Task::DefaultPriority),
   _spacetree(tree),
   _spacetreeSet(set),
   _observer( observer ),
@@ -266,13 +263,14 @@ peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
 
 
 bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
-  otterTaskBegin();
+  // AT: ideally would have a parent task to pass here to record ancestry
+  otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
   _spacetreeSet.createObserverCloneIfRequired(_observer,_spacetree._id);
   if (_invertTreeTraversalDirectionBeforeWeStart) {
     _spacetree._root.setInverted( not _spacetree._root.getInverted() );
   }
   _spacetree.traverse( *_spacetreeSet._clonedObserver[_spacetree._id], true );
-  otterTaskEnd();
+  otterTaskEnd(task);
   return false;
 }
 
@@ -716,8 +714,12 @@ std::set<int> peano4::parallel::SpacetreeSet::getLocalSpacetrees() const {
 }
 
 
-bool peano4::parallel::SpacetreeSet::split(int treeId, int cells, int targetRank) {
-  logTraceInWith3Arguments( "split(int,int,int)", treeId, cells, targetRank );
+bool peano4::parallel::SpacetreeSet::split(
+  int treeId,
+  const peano4::SplitInstruction& instruction,
+  int targetRank
+) {
+  logTraceInWith3Arguments( "split(int,SplitInstruction,int)", treeId, instruction, targetRank );
   peano4::grid::Spacetree&  tree = getSpacetree( treeId );
 
   if ( tree.maySplit() ) {
@@ -725,14 +727,14 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, int cells, int targetRank
 
     if (tarch::mpi::Rank::getInstance().getRank()!=targetRank) {
       #ifdef Parallel
-      logDebug( "split(int,int,int)", "request new tree on rank " << targetRank );
+      logDebug( "split(int,SplitInstruction,int)", "request new tree on rank " << targetRank );
       peano4::parallel::TreeManagementMessage requestMessage;
       requestMessage.setMasterSpacetreeId(treeId);
       requestMessage.setWorkerSpacetreeId(-1);
       requestMessage.setAction( peano4::parallel::TreeManagementMessage::Action::RequestNewRemoteTree );
       TreeManagementMessage::sendAndPollDanglingMessages(requestMessage, targetRank, _requestMessageTag);
 
-      logDebug( "split(int,int,int)", "message " << requestMessage.toString() << " sent - wait for answer" );
+      logDebug( "split(int,SplitInstruction,int)", "message " << requestMessage.toString() << " sent - wait for answer" );
 
       peano4::parallel::TreeManagementMessage answerMessage;
       TreeManagementMessage::receiveAndPollDanglingMessages(answerMessage, targetRank, getAnswerTag(treeId));
@@ -751,10 +753,10 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, int cells, int targetRank
     }
 
     if (newSpacetreeId>=0) {
-      tree.split(newSpacetreeId, cells);
+      tree.split(newSpacetreeId, instruction);
       if ( tarch::getMemoryUsage(tarch::MemoryUsageFormat::MByte)*2 > tarch::getTotalMemory(tarch::MemoryUsageFormat::MByte) ) {
         logWarning(
-          "split(int,int)",
+          "split(int,SplitInstruction,int)",
           "Peano 4 uses " << tarch::getMemoryUsage(tarch::MemoryUsageFormat::MByte) << " MB on rank " <<
           tarch::mpi::Rank::getInstance().getRank() << " and is asked to split. Total memory is " <<
           tarch::getTotalMemory(tarch::MemoryUsageFormat::MByte) << " MB, i.e. we might run out of memory"
@@ -762,15 +764,15 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, int cells, int targetRank
       }
 
       logInfo(
-        "split(int,int)",
-        "trigger split of tree " << treeId << " into tree " << newSpacetreeId << " with " << cells << " fine grid cells"
+        "split(int,SplitInstruction,int)",
+        "trigger split of tree " << treeId << " into tree " << newSpacetreeId << " with " << instruction
       );
-      logTraceOutWith1Argument( "split(int,int,int)", true );
+      logTraceOutWith1Argument( "split(int,SplitInstruction,int)", true );
       return true;
     }
   }
 
-  logTraceOutWith1Argument( "split(int,int,int)", false );
+  logTraceOutWith1Argument( "split(int,SplitInstruction,int)", false );
   return false;
 }
 

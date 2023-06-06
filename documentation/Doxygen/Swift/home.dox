@@ -1,0 +1,84 @@
+/**
+
+@page swift_home Swift
+
+
+\tableofcontents
+
+\li \subpage swift_tutorials
+\li \subpage swift_benchmarks
+\li \subpage swift_building_project_from_scratch
+\li \subpage swift_initial_conditions
+\li \subpage swift_particle_lifecycle
+\li \subpage swift_visualisation
+\li \subpage swift_runtime_analysis
+\li \subpage swift_architecture
+\li \subpage swift_parallelisation
+\li \subpage swift_graph_compiler
+
+
+
+@image html logos/excalibur.png
+
+Swift 2 is a <a href="https://swift.dur.ac.uk">SWIFT (SPH With Inter-dependent Fine-grained
+Tasking)</a> clone which combines the SWIFT SPH kernels
+(tasks) with Peano's particle-in-dual-tree concept.
+The integration of the SWIFT kernels and Peano 4 has been made possible by the
+EPSRC ExCALIBUR grants Massively Parallel Particle Hydrodynamics
+for Engineering and Astrophysics (EP/V001523/1) and PAX-SPH.
+Swift 2 is realised as Python layer on top of Peano 4 and brings Peano's core,
+its particle toolbox, and SWIFT together.
+
+
+
+# Signpost
+
+- For instructions on how to get started with Swift 2, check the \ref swift_tutorials site
+- For documentation of some ready-to-go examples and benchmarks, check the \ref swift_benchmarks page
+- Detailed documentation on how to set up a new project from scratch (and how the projects/particles/physics are generated in general) is on the \ref swift_building_project_from_scratch page
+- How to plot results is explained in \ref swift_visualisation
+
+
+# Bibliography
+
+Whenever you build a Peano application, you get all the C++ code plus a
+Makefile.
+You also get a Readme file (similar file name to your executable) which
+enlists which algorithmic building blocks you employ.
+This Readme file might be your first point of recherche.
+
+
+The best reference for Swift is
+
+      @inproceedings{10.1145/2929908.2929916,
+        author = {Schaller, Matthieu and Gonnet, Pedro and Chalk, Aidan B. G. and Draper, Peter W.},
+        title = {SWIFT: Using Task-Based Parallelism, Fully Asynchronous Communication, and Graph Partition-Based Domain Decomposition for Strong Scaling on More than 100,000 Cores},
+        year = {2016},
+        publisher = {Association for Computing Machinery},
+        doi = {10.1145/2929908.2929916},
+        booktitle = {Proceedings of the Platform for Advanced Scientific Computing Conference},
+        articleno = {2},
+        numpages = {10},
+        series = {PASC '16}
+      }
+
+
+The official pidt paper is
+
+
+
+      @article{WEINZIERL201642,
+        title = {Two particle-in-grid realisations on spacetrees},
+        journal = {Parallel Computing},
+        volume = {52},
+        pages = {42 - 64},
+        year = {2016},
+        issn = {0167-8191},
+        doi = {https://doi.org/10.1016/j.parco.2015.12.007},
+        author = {T. Weinzierl and B. Verleye and P. Henri and D. Roose}
+      }
+
+
+
+
+*/

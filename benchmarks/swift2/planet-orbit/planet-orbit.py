@@ -19,6 +19,7 @@ parser.add_argument("-c",   "--clean",             dest="clean_temporary_directo
 parser.add_argument("-d",   "--dimensions",        dest="dimensions",     type=int,   default=2,                    help="Spatial dimensions (default 2)" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0,                  help="End of simulation" )
 parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=float, default=1e-3,                 help="Global timestep size (initial value)" )
+parser.add_argument("-plot",  "--plot-delta",      dest="plot_delta",     type=float, default=0.01,             help="Plot delta (0 switches off)" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3,                  help="Cell size (default 0.3)" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../..",                       help="Peano4 directory" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False,       help="Switch on assertions" )
@@ -104,7 +105,7 @@ project.set_global_simulation_parameters(
   min_end_time          = args.end_time,
   max_end_time          = 0.0,
   first_plot_time_stamp = 0.0, 
-  time_in_between_plots = args.end_time/200, 
+  time_in_between_plots = args.plot_delta,
   periodic_BC           = periodic_boundary_conditions,
   plotter_precision     =8  # plotter precision
 )
@@ -154,7 +155,7 @@ EARTH_V_INI_Y = str(V_MAX / LENGTH_UNIT * T)
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
-project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new toolbox::loadbalancing::RecursiveSubdivision::DefaultConfiguration()")
+project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new toolbox::loadbalancing::DefaultConfiguration()")
 
 
 
@@ -304,7 +305,7 @@ initialisation_snippet = """
 #
 # I either insert sun and earth or only the earth
 #
-project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesByCoordinates(
+project.algorithm_step_initial_conditions.add_action_set( swift2.input.InsertParticlesByCoordinates(
   particle_set         = particle_set,
   initialisation_call  = initialisation_snippet,
   coordinates          = [ (EARTH_X_INI,EARTH_Y_INI,0) ] )
@@ -334,7 +335,6 @@ project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesByCoordi
 # which returns an object that holds global information about this particle 
 # type. 
 ###############################################################################
-#particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particle_set, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
 particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", 
                                                                       particle_set, 
                                                                       "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name) )
@@ -384,7 +384,7 @@ if args.clean_temporary_directories:
   for dir in dirs:
     shutil.rmtree( dir )
 
-peano4_project.generate( throw_away_data_after_generation=True )
+peano4_project.generate( overwrite=peano4.output.Overwrite.Always, throw_away_data_after_generation=True )
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
 
 # remove output files from previous runs

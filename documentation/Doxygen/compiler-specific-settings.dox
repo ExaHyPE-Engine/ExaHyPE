@@ -1,0 +1,332 @@
+/**
+
+@page page_compiler_specific_settings Vendor software stacks and system- and compiler-specific settings
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+
+Peano has three different approaches how to handle system- and compiler-specific
+settings and properties:
+
+- Most of the system-specific information should be specified through CXXFLAGS
+  or LDFLAGS, i.e. when you configure the original setup. These flags as well
+  as all the information about enabled toolboxes, extensions, and so forth are
+  dumped into the config.h and the Makefiles. C++ codes will read config.h to
+  take the settings into account, and the Python API will parse the generated
+  Makefile to extract the relevant info and use it for all codes built on top
+  of Peano, too.
+- At compile time, the system will furthermore read out the compiler version,
+  and it will include the compiler-specific settings for this particular
+  compiler. This allows Peano to use certain defines for certain compiler
+  flavours.
+- Peano offers special toolchains for special vendors.
+
+
+
+# Compiler-specific settings
+
+Peano relies on a header tarch/compiler/CompilerSpecificSettings.h.
+This header reads out the compiler version and includes a particular flavour
+of the header for this compiler, i.e. the header reads out some compiler preprocessor directives and then includes the
+one it find most appropriate.
+You may always include your own file derived from one of the other headers in
+the directory.
+
+Whenever we find incompatibilities between different compilers, we try to
+resolve them through defines within the compiler-specific settings.
+The setting also are used to configure for particular machine specifica such
+as default alignment.
+Most expressions within the compiler-specific settings header can manually
+be overwritten via defines.
+Consult the file implementation for details.
+
+
+
+# Intel (oneAPI) toolchain
+
+<img width="10%" src="https://upload.wikimedia.org/wikipedia/en/f/fa/OneAPI-rgb-3000.png" />
+
+Peano provides support for Intel's (oneAPI) toolchain through two routes:
+The ITAC interface and the Instrumentation and Tracing Technology (ITT).
+To activate either of these toolchains, you have to reconfigure with one of
+the two options below:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+./configure ... --with-toolchain=itac
+./configure ... --with-toolchain=itt
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Broadly speaking, the toolchains alters the code in two ways:
+
+- It enables ITAC or ITT.
+- It switches the line logger to the ITAC or ITT logger. That is, trace data are not
+  pipes onto the terminal anymore, but are passed into the ITAC or ITT API.
+- It adds some Intel-specific compile flags.
+
+The enumeration shows that the name Intel toolchain is misleading.
+We are actually not tailoring the build to the Intel toolchain, but we tailor
+the setup to the Intel analysis tools.
+Most production runs will not use the Intel toolchain, but rather set all
+Intel-specific flags for compiler and linker manually.
+
+
+## Intel compiler flags
+
+At the moment, we add the following flags to the compile when the Intel toolchain is
+activated:
+
+- We add
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  CXXFLAGS="... -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  to all compiles.
+- We add
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  CXXFLAGS="... -DTBB_USE_ASSERT"
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  to all debug and assert builds.
+
+
+## The loggers
+
+Even though you have switched to the Intel loggers, you will not get
+any trace information if you build in release mode. You have to switch
+to the trace mode (or assertions or debug) - compare general remarks on
+@ref page_architecture "Peano's build modi" - to get traces or annotation
+info.
+
+Once you try to trace your code with the Intel tool, the size of the traces
+quickly becomes unmanageable or the performance might go down.
+Therefore, we disable the trace by default.
+The first trace command will then enable it.
+
+For further discussion on logging, please see the \ref tarch_logging "generic logging description for Peano".
+
+
+
+# NVIDIA NVC++ toolchain
+
+<img width="20%" src="https://www.nvidia.com/content/dam/en-zz/Solutions/about-nvidia/logo-and-brand/01-nvidia-logo-vert-500x200-2c50-p@2x.png" />
+
+The NVIDIA toolchain requires us to make `CXX` and `CC` point to the C++
+compiler, as both are passed the same arguments by configure, which are
+actually only understood by the C++ version.
+
+Some compute kernels of some Peano extensions (such as ExaHyPE) are not
+available with the NVIDIA tools, as the
+compiler is pretty picky.
+It refuses, for example, to place temporary array variables on the call stack.
+So you might have to play around with the software configuration.
+
+
+## OpenMP and OpenMP offloading
+
+NVIDIA's compiler does not support all of OpenMP. Therefore, its OpenMP
+implementation is rather picky when it comes to copy constructors and
+other C++ features.  has internal workarounds for all of these items,
+i.e. the build should in principle succeed yet the code might be
+slightly slower than the Intel or native Clang counterpart.
+
+The OpenMP offloading requires us to specify both the GPU OpenMP target
+and a corresponding CUDA version.
+It is important to recognise that `--with-gpu=omp` activates the
+offloading from 's point of view. However, as long as the NVIDIA
+compiler is not told which device to use, it will give you
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Found 0 devices
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+devices if you run the code.
+
+
+## Source code annotation
+
+NVIDIA's NVPTX logging is supported by picking the
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--with-toolchain=nvptx
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+toolchain.
+
+
+
+# AMD toolchain
+
+For the AMD toolchain we need to load either ROCm or AOMP. Both modules
+should have AMD's version of Clang. With the AMD toolchain we use AMD's
+modified Clang. We again need to point `CXX` and `CC` to the Clang
+compiler.
+
+## OpenMP
+
+The Clang compiler does not support omp_get_mapped_ptr() at the moment.
+We have implemented a workaround mk_omp_get_mapped_ptr() in
+src/tarch/multicore/omp/MkUtils.h which does the same trick.
+
+For the configuration with OpenMP GPU offloading, we again specify
+`--with-gpu=omp` to make Peano GPU aware. Furthermore, we need to add AMD
+specific offloading instructions:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure  --enable-exahype  --enable-loadbalancing --enable-blockstructured --with-gpu=omp  --with-multithreading=omp CC=clang CXX=clang++  CXXFLAGS="-O3 -std=c++20 -fopenmp -O3 -std=c++20 --offload-arch=<gpu-arch>"  LDFLAGS="-fopenmp --offload-arch=<gpu-arch> -lstdc++fs"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where `<gpu-arch>` is either `gfx906` (MI 50), `gfx908` (MI 100), or
+`gfx90a` (MI 200 series).
+
+
+# Clang (native)
+
+On Ubuntu and many other systems, clang is not shipped automatically
+with OpenMP. Instead, you have to install the package `libomp-dev`.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+./configure CC=clang CXX=clang++  CXXFLAGS="-O3 -std=c++20-mtune=native -march=native -fopenmp"  --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Should you require OpenMP offloading, i.e. GPU, support, you have to add
+the OpenMP target instructions:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+./configure CC=clang CXX=clang++  CXXFLAGS="-O3 -std=c++20 -mtune=native -march=native -fopenmp" -fopenmp-targets=nvptx64 --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp
+~~~~~~~~~~~~~~~~~~~~~~~
+
+# Example machine configurations
+
+## Hamilton
+
+<img width="20%" src="https://nccadmin.webspace.durham.ac.uk/wp-content/themes/core/assets/img/theme/branding-assets/durham-university-logo.svg" />
+
+Hamilton 8 is Durham's internal supercomputer.
+It is a system powered by AMD EPYC processors.
+I nevertheless prefer the Intel toolchain on the machine:
+
+~~~~~~~~~~~~~~~~~~~~~~
+module purge
+module load oneapi
+export FLAVOUR_NOCONFLICT=1
+module load gcc
+module load intelmpi
+
+export I_MPI_CXX=icpx
+~~~~~~~~~~~~~~~~~~~~~~
+
+Hamilton's oneapi module is built against a GCC version which is too old and lacks
+important features within its standard library.
+Therefore, you have to manuall load the latest gcc.
+This is usually prevented by the system and leads to a conflict (so that you
+can't have multiple GCC versions loaded).
+We therefore have to disable conflict checks a priori.
+
+
+If you use mpiicpc, the MPI wrapper still refers to icpc even though icpc is
+officially deprecated.
+Therefore, I manually have to repoint it to icpx.
+The other options to do this (via additional script arguments, e.g.) all failed
+on this machine.
+
+
+- MPI production runs
+~~~~~~~~~~~~~~~~~~~~~~
+./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran
+~~~~~~~~~~~~~~~~~~~~~~
+- Performance analysis runs with single node tracing
+~~~~~~~~~~~~~~~~~~~~~~
+module load vtune
+./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes -I${VTUNE_HOME}/vtune/latest/include" LDFLAGS="-fiopenmp -g -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itt
+~~~~~~~~~~~~~~~~~~~~~~
+- MPI performance analysis runs
+~~~~~~~~~~~~~~~~~~~~~~
+module load vtune
+./configure CC=icpx CXX=icpx CXXFLAGS="-I${VTUNE_HOME}/vtune/latest/include -I${VT_ROOT}/include -Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g -L${VT_LIB_DIR} -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-lVT ${VT_ADD_LIBS} -littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itac
+~~~~~~~~~~~~~~~~~~~~~~
+
+
+Further to these flags, I @ref faq "pause and resume the data collection" manually in
+ExaHyPE and Swift. This is however something I do in the main() routine of
+the respective applications.
+
+
+## NCC
+
+I recommend atm to use `gpu10`, `gpu11` or `gpu12`, i.e. the A100
+machines. By default, I usually work with NVC++ on this cluster, but the
+OneAPI software stack should work, too.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module load nsight-systems cuda llvm
+module load mvapich2/2.3.5-2
+
+./configure --enable-exahype --enable-loadbalancing-toolbox --with-multithreading=omp --with-mpi=mpicxx --with-gpu=omp CXX=clang++ CXXFLAGS="-fopenmp -fopenmp-targets=nvptx64-nvidia-cuda"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+### OpenMP with NVC++
+
+I use the setup
+
+~~~~~~~~~~~~~~~~~~~~~~~
+./configure CXX=nvc++ CC=nvc++ CXXFLAGS="-O4 --std=c++17 -mp=gpu -gpu=cc80" LDFLAGS="-mp=gpu -gpu=cc80" --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-blockstructured --enable-loadbalancing CPP=cpp FC=/apps/nvidia-hpc-sdk/Linux_x86_64/22.3/compilers/bin/nvfortran
+~~~~~~~~~~~~~~~~~~~~~~~
+
+on the A100 nodes.
+
+We had some issues (compiler crashes) with NVC++ 2022.5. Those are filed
+with NVIDIA. For the time being, please revert to another compiler
+generation. Version 2022.3 works for example.
+
+Some nodes (e.g. gpu3) have Titan XP which doesn't support OpenMP
+offloading; only GPUs with compute capability >=70 can offload with
+OpenMP. You can check the GPU model with `nvidia-smi -L`.
+
+Note that there is a bug in the NVIDIA software stack at the moment.
+Many runs will crash with a complaint about a lack of visible devices.
+Ensure hence that you set the following environment before you start
+your experiments:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~
+export CUDA_VISIBLE_DEVICES=0
+~~~~~~~~~~~~~~~~~~~~~~~
+
+### SYCL offloading with oneAPI
+
+I used this to configure Peano with Intel's TBB enabled
+
+~~~~~~~~~~~~~~~~~~~~~~~
+source /opt/intel/oneapi/setvars.sh
+module load cuda
+
+./configure CC=clang++ CXX=clang++ LIBS="-ltbb" LFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda" CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Note: Codeplay's website has some useful information on compiler flags.
+
+It also needs at least 2023.0.0 version of oneAPI with Codeplay's nvidia
+GPU plugin which is not installed on NCC; the LLVM compiler doesn't
+support the `-Xsycl-target-backend=` flag, so please check your Makefile.
+
+I had linker errors about undefined referennces when building Peano with
+TBB. Just add the path to any relevant library if you experienced this.
+
+When running the executable on the GPU, include `SYCL_DEVICE_FILTER=gpu`
+before the terminal command to explicitly tell SYCL to run the code on GPU.
+In the case of a runtime error, it is also useful to add `SYCL_PI_TRACE=2`
+to check where the error was raised.
+
+### DINE
+
+We have to write this part next week when we start the workshop.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module load oneAPI
+module load intel_mpi
+module load gnu_comp/11.1.0
+export I_MPI_CXX=icpx
+./configure --enable-exahype --enable-blockstructured --enable-loadbalancing --enable-particles CC=icc CXX=icpx --with-multithreading=omp --with-mpi=mpiicpc CXXFLAGS="-std=c++20 -fopenmp -g -funroll-loops -O3 -g3"
+~~~~~~~~~~~~~~~~~~~~~~~
+
+ */
+

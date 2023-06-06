@@ -11,6 +11,47 @@ import dastgen2.attributes.Integer
 
 
 class ParticleParticleInteraction_Sets(ActionSet):
+  """!
+
+Tree walker to realise particle-particle interactions with particles held by different adjacent cells or on different mesh levels.
+
+This code has the same semantics as peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.
+However, it provides a different implementation. Please consult the 
+documentation of ParticleParticleInteraction_StackOfLists for a description
+of the arguments, plug-in points and the semantics of the two sets. 
+
+
+## Realisation
+
+Both the active set and the local set are realised as proper sets over 
+pointers. The sets are updated in touchCellFirstTime() and touchCellLastTime(),
+i.e. when we walk down the tree or up again:
+
+In touchCellFirstTime(), i.e. while we go from coarse to fine, we first
+look at all the particles which are associated to an adjacent vertex of 
+the cell and are contained within the cell itself. These particles form 
+the local set. 
+
+Furthermore, we take the active set from coarser levels, and we add all 
+the particles which are associated with an adjacent vertex of the current
+cell. If particles more from coarse to fine while we walk through the tree, 
+we encounter one out of two situations:
+- If they are sieved within "our" current tree, we add them twice to the 
+  active set. Once on the coarser level and then again on the finer one
+  into which they are sieved. For the present tree walker, this does not 
+  matter, as we work with a set of pointers. The particle might be added
+  "too early", but it is not added multiple times to the active set.
+- If they are sieved within another tree eventually, we might add it to 
+  the active set even though they should be sieved down into another 
+  branch of the tree. Should not make a difference.
+  
+In touchCellLastTime(), we take all the particles which are associated to
+any adjacent vertex of the current cell, and we remove those particles 
+from the active set. 
+      
+
+    """
+
   def __init__(self, 
                particle_set, 
                particle_particle_interaction_kernel, 
@@ -20,47 +61,7 @@ class ParticleParticleInteraction_Sets(ActionSet):
                unprepare_traversal_kernel="", 
                additional_includes="", 
                active_particle_set=None ):
-    """
-
-    Tree walker to realise particle-particle interactions with particles held
-    by different adjacent cells or on different mesh levels.
-    
-    This code has the same semantics as ParticleParticleInteraction_StackOfLists.
-    However, it provides a different implementation. Please consult the 
-    documentation of ParticleParticleInteraction_StackOfLists for a description
-    of the arguments, plug-in points and the semantics of the two sets. 
-
-
-    ## Realisation
-    
-    Both the active set and the local set are realised as proper sets over 
-    pointers. The sets are updated in touchCellFirstTime() and touchCellLastTime(),
-    i.e. when we walk down the tree or up again:
-    
-    In touchCellFirstTime(), i.e. while we go from coarse to fine, we first
-    look at all the particles which are associated to an adjacent vertex of 
-    the cell and are contained within the cell itself. These particles form 
-    the local set. 
-    
-    Furthermore, we take the active set from coarser levels, and we add all 
-    the particles which are associated with an adjacent vertex of the current
-    cell. If particles more from coarse to fine while we walk through the tree, 
-    we encounter one out of two situations:
-    - If they are sieved within "our" current tree, we add them twice to the 
-      active set. Once on the coarser level and then again on the finer one
-      into which they are sieved. For the present tree walker, this does not 
-      matter, as we work with a set of pointers. The particle might be added
-      "too early", but it is not added multiple times to the active set.
-    - If they are sieved within another tree eventually, we might add it to 
-      the active set even though they should be sieved down into another 
-      branch of the tree. Should not make a difference.
-      
-    In touchCellLastTime(), we take all the particles which are associated to
-    any adjacent vertex of the current cell, and we remove those particles 
-    from the active set. 
-      
-
-    """
+    super(ParticleParticleInteraction_Sets,self).__init__()
     self._particle_set = particle_set
     self.d = {}
     self.d[ "LOCAL_PARTICLE" ]                    = particle_set.particle_model.name

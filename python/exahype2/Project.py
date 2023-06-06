@@ -11,18 +11,22 @@ import sys
 import exahype2.grid
 import exahype2.solvers
 
+
 class Project(object):
-  """
-  Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4 
-  project with a particular set of actions (algorithmic phases) 
-  that you can choose from and with particular solver types. It 
+  """!"
+      
+  ExaHyPE 2 project
+  
+  Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4
+  project with a particular set of actions (algorithmic phases)
+  that you can choose from and with particular solver types. It
   realises a builder mechanism, i.e. you build up your ExaHyPE2
   project and then you finally tell the project "give me the Peano4
   project". From hereon, you can use this Peano4 project to actually
   set up the Peano4 application.
 
   The project will have a marker per cell that encodes stuff alike
-  a boundary marker. But it is also used to coordinate different 
+  a boundary marker. But it is also used to coordinate different
   solver types.
 
   @see generate_Peano4_project()
@@ -57,7 +61,7 @@ class Project(object):
     self.plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
     self.perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
 
-  def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
+  def set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
     """
       load_balancer_name: string
         Should be full-qualified name of the load balancer. 
@@ -147,9 +151,11 @@ class Project(object):
       size_string   += str(self._domain_size[i])
     offset_string += "}"
     size_string   += "}"
-    self._project.constants.add_include( """#include <bitset>""") 
-    self._project.constants.export_const_with_type( "DomainOffset", offset_string, "std::initializer_list<double>" )
-    self._project.constants.export_const_with_type( "DomainSize", size_string, "std::initializer_list<double>" )
+    self._project.constants.add_include( """#include <bitset>""")
+    self._project.constants.add_include( """#include "tarch/la/Vector.h" """)
+    self._project.constants.add_include( """#include "peano4/utils/Globals.h" """)
+    self._project.constants.export_const_with_type( "DomainOffset", offset_string, "tarch::la::Vector<Dimensions,double>" )
+    self._project.constants.export_const_with_type( "DomainSize", size_string, "tarch::la::Vector<Dimensions,double>" )
     self._project.constants.export( "MinTerminalTime", str(self._min_terminal_time) )
     if self._max_terminal_time>=self._min_terminal_time:
       self._project.constants.export( "MaxTerminalTime", str(self._max_terminal_time) )
@@ -280,11 +286,15 @@ thus appreciate any citation of the original release paper
       True)
 
     self._project.output.add( generated_solver_files )
-    self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
+    self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp", generated=True )
 
-  def add_tracer(self,name,attribute_count=0,plot=True):
-    """
-    ## Particle properties
+
+  def add_tracer(self,
+                 name,
+                 attribute_count=0,
+                 plot=True
+                 ):
+    """!
 
     We rely on the particle toolbox. Therefore, our particles have
     already a position x, a cut off radius (which we don't usually 
@@ -368,12 +378,12 @@ thus appreciate any citation of the original release paper
     #
     # Initialisation
     #
-    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
+    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
         
     #
     # Move particles
     #
-    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
+    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
     
     #
     # Plotter: The timestamp here is slightly wrong, as I use the min time stamp. It 
@@ -399,17 +409,20 @@ thus appreciate any citation of the original release paper
       
       self.plot_solution.add_action_set( particle_plotter ) 
       
-    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
+    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
     
     self._tracer_particles.append(particles)
 
     return particles
 
+
   def add_action_set_to_timestepping(self, action_set):
     self.perform_time_step.add_action_set( action_set )
 
+
   def add_action_set_to_initialisation(self, action_set):
     self.init_grid.add_action_set( action_set )
+
 
   def generate_Peano4_project(self, verbose=False):
     """
@@ -453,9 +466,8 @@ thus appreciate any citation of the original release paper
       solver.add_actions_to_create_grid( self.create_grid_and_converge_lb,         evaluate_refinement_criterion=False )
       solver.add_actions_to_plot_solution( self.plot_solution, self._output_path )
       solver.add_actions_to_perform_time_step( self.perform_time_step )
-      
+
       solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._dimensions )
-      
 
     self.__generate_solver_repository();
 

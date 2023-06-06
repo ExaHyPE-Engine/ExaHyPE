@@ -31,28 +31,25 @@ namespace otter {
 
 
 #if defined(UseOtter)
-#include <otter/otter-serial.h>
+#include <otter/otter-task-graph.h>
 #else
+
+// use sub header:
+// https://github.com/Otter-Taskification/otter/blob/dev/include/otter/otter-task-graph-stub.h
+
 #define OTTER_SRC_ARGS()
-
-#define otterTraceInitialise(context)
+#define otter_task_context void
+#define otter_sync_children
+#define otter_sync_descendants
+#define otterTraceInitialise()
 #define otterTraceFinalise()
-#define otterParallelBegin(context)
-#define otterParallelEnd()
-#define otterTaskBegin(context)
-#define otterTaskEnd()
-#define otterLoopBegin(context)
-#define otterLoopEnd()
-#define otterLoopIterationBegin(context)
-#define otterLoopIterationEnd()
-#define otterSynchroniseChildTasks(context)
-#define otterSynchroniseDescendantTasks(context)
-// #define otterTraceStart()  - should not be there. We can do this via phases
-// #define otterTraceStop()
-#define otterPhaseBegin(name)
+#define otterTraceStart()
+#define otterTraceStop()
+#define otterTaskBegin(...) ((void*)0)
+#define otterTaskEnd(...)
+#define otterSynchroniseTasks(...)
+#define otterPhaseBegin(...)
 #define otterPhaseEnd()
-#define otterPhaseSwitch(name)
+#define otterPhaseSwitch(...)
+
 #endif
-
-
-

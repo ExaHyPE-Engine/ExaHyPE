@@ -16,6 +16,7 @@ ExaHyPE2Sources = \
   PlotFilter.cpp \
   RefinementControl.cpp \
   PrecisionControl.cpp \
+  RefinementControlService.cpp \
   TimeStepping.cpp \
   UserInterface.cpp \
   UnitTests.cpp \

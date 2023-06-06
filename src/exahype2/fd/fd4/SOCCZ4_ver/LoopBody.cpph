@@ -1,0 +1,836 @@
+#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "exahype2/Solver.h"
+#include "exahype2/fd/PatchUtils.h"
+#include <algorithm>    // std::find
+#include <vector>
+
+namespace {
+  /**
+   * Helper for computeDifferentialSourceTerm_LoopBody().
+   */
+  template <class QInEnumeratorType>
+  void computeCentralDifferencesForDifferentialSourceTerm(
+    const double* __restrict__     QIn,
+    const QInEnumeratorType&       QInEnumerator,
+    int                            patchIndex,
+    const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+    int                                            normal,
+    double*                        CentralQ,
+    double*                        DeltaQ
+  ) {
+    tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
+    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
+    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
+    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume3 = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightAdjacentVolume3 = volumeIndex;
+
+    rightAdjacentVolume1(normal)++;
+    rightAdjacentVolume2(normal)++;
+    rightAdjacentVolume2(normal)++;
+    rightAdjacentVolume3(normal)++;
+    rightAdjacentVolume3(normal)++;
+    rightAdjacentVolume3(normal)++;
+     leftAdjacentVolume1(normal)--;
+     leftAdjacentVolume2(normal)--;
+     leftAdjacentVolume2(normal)--;
+     leftAdjacentVolume3(normal)--;
+     leftAdjacentVolume3(normal)--;
+     leftAdjacentVolume3(normal)--;
+
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      CentralQ[unknown] =              QIn[ QInEnumerator(patchIndex,      centralVolume, unknown) ];
+      DeltaQ[unknown]   = (8.0/12.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown) ] -
+                          (8.0/12.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown) ] -
+                          (1.0/12.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown) ] +
+                          (1.0/12.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown) ];
+    }
+  }
+
+
+  /**
+   * Helper for computeDifferentialSourceTerm_LoopBody().
+   */
+  template <class QInEnumeratorType>
+  void computeCentralDifferencesWithLimiterForDifferentialSourceTerm(
+    const double* __restrict__     QIn,
+    const QInEnumeratorType&       QInEnumerator,
+    int                            patchIndex,
+    const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+    int                                            normal,
+    double*                        CentralQ,
+    double*                        DeltaQ
+  ) {
+    tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
+    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
+    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
+    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume3 = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightAdjacentVolume3 = volumeIndex;
+
+    rightAdjacentVolume1(normal)++;
+    rightAdjacentVolume2(normal)++;
+    rightAdjacentVolume2(normal)++;
+    rightAdjacentVolume3(normal)++;
+    rightAdjacentVolume3(normal)++;
+    rightAdjacentVolume3(normal)++;
+     leftAdjacentVolume1(normal)--;
+     leftAdjacentVolume2(normal)--;
+     leftAdjacentVolume2(normal)--;
+     leftAdjacentVolume3(normal)--;
+     leftAdjacentVolume3(normal)--;
+     leftAdjacentVolume3(normal)--;
+
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      CentralQ[unknown] =              QIn[ QInEnumerator(patchIndex,      centralVolume, unknown) ];
+
+      if (unknown==23 or unknown==24 or unknown==25 or unknown==55 or unknown==56 or unknown==57) {
+        if (QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,17+normal) ]>=0){   // means the considered point is on the right of the singularity
+           if ( QIn[ QInEnumerator(patchIndex,      centralVolume, unknown) ]*QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown) ] < 0 ){ //change signs between itself and its left neighbour)
+             DeltaQ[unknown]   =  QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown) ] +
+                                 -QIn[ QInEnumerator(patchIndex,       centralVolume,unknown) ]; //then we use simple 2nd order schme.
+           }  else if ( QIn[ QInEnumerator(patchIndex,leftAdjacentVolume1, unknown) ]*QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown) ] < 0 ){ //change signs between its left neighbour and neighbour of neighbour)
+             DeltaQ[unknown]   = ( -3.0/12.0) * QIn[ QInEnumerator(patchIndex,  leftAdjacentVolume1,unknown) ] +
+                                 (-10.0/12.0) * QIn[ QInEnumerator(patchIndex,        centralVolume,unknown) ] +
+                                 ( 18.0/12.0) * QIn[ QInEnumerator(patchIndex, rightAdjacentVolume1,unknown) ] +
+                                 ( -6.0/12.0) * QIn[ QInEnumerator(patchIndex, rightAdjacentVolume2,unknown) ] +
+                                 (  1.0/12.0) * QIn[ QInEnumerator(patchIndex, rightAdjacentVolume3,unknown) ];
+           } else {
+             DeltaQ[unknown]   = (8.0/12.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown) ] -
+                                 (8.0/12.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown) ] -
+                                 (1.0/12.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown) ] +
+                                 (1.0/12.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown) ];
+           }
+        }
+        else { //on the left of the singularity
+          if ( QIn[ QInEnumerator(patchIndex,      centralVolume, unknown) ]*QIn[ QInEnumerator(patchIndex, rightAdjacentVolume1,unknown) ] < 0 ){ //change signs between itself and its right neighbour)
+            DeltaQ[unknown]   =  QIn[ QInEnumerator(patchIndex,       centralVolume,unknown) ] +
+                                -QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown) ]; //then we use simple 2nd order schme.
+          } else if ( QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1, unknown) ]*QIn[ QInEnumerator(patchIndex, rightAdjacentVolume2,unknown) ] < 0 ){ //change signs between its left neighbour and neighbour of neighbour)
+            DeltaQ[unknown]   = (  3.0/12.0) * QIn[ QInEnumerator(patchIndex, rightAdjacentVolume1,unknown) ] +
+                                ( 10.0/12.0) * QIn[ QInEnumerator(patchIndex,        centralVolume,unknown) ] +
+                                (-18.0/12.0) * QIn[ QInEnumerator(patchIndex,  leftAdjacentVolume1,unknown) ] +
+                                (  6.0/12.0) * QIn[ QInEnumerator(patchIndex,  leftAdjacentVolume2,unknown) ] +
+                                ( -1.0/12.0) * QIn[ QInEnumerator(patchIndex,  leftAdjacentVolume3,unknown) ];
+          } else {
+            DeltaQ[unknown]   = (8.0/12.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown) ] -
+                                (8.0/12.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown) ] -
+                                (1.0/12.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown) ] +
+                                (1.0/12.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown) ];
+          }
+        }
+      }
+      else {
+        DeltaQ[unknown]   = (8.0/12.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown) ] -
+                            (8.0/12.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown) ] -
+                            (1.0/12.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown) ] +
+                            (1.0/12.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown) ];
+      }
+    }
+  }
+
+
+  /**
+   * Helper for computeDifferentialSourceTerm_LoopBody().
+   */
+  template <class QInEnumeratorType>
+  void addLopsidedAvectionToDifferentialSourceTerm(
+    const double* __restrict__                     QIn,
+    const QInEnumeratorType&                       QInEnumerator,
+    int                                            patchIndex,
+    const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+    int                                            normal,
+    double*                                        QDifferentialSourceTermGathered
+  ) {
+    double*                 AdvectionDeltaQ = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+
+    tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
+    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
+    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
+    tarch::la::Vector<Dimensions,int>  leftAdjacentVolume3 = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightAdjacentVolume3 = volumeIndex;
+
+    rightAdjacentVolume1(normal)++;
+    rightAdjacentVolume2(normal)++;
+    rightAdjacentVolume2(normal)++;
+    rightAdjacentVolume3(normal)++;
+    rightAdjacentVolume3(normal)++;
+    rightAdjacentVolume3(normal)++;
+     leftAdjacentVolume1(normal)--;
+     leftAdjacentVolume2(normal)--;
+     leftAdjacentVolume2(normal)--;
+     leftAdjacentVolume3(normal)--;
+     leftAdjacentVolume3(normal)--;
+     leftAdjacentVolume3(normal)--;
+
+    int QwithoutAdvection[11]={0,1,2,3,4,5,16,17,18,19,54}; //these are quantities that do not need advection
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      bool NeedAdvection = (std::find(std::begin(QwithoutAdvection), std::end(QwithoutAdvection), unknown) == std::end(QwithoutAdvection));
+      //if the unknown index is not in the list above, it needs an advection.
+      if (NeedAdvection) {
+         if (QIn[QInEnumerator(patchIndex, centralVolume, 17+normal)]>0){
+           AdvectionDeltaQ[unknown] =
+                               ( -3.0/12.0) * QIn[ QInEnumerator(patchIndex,  leftAdjacentVolume1,unknown) ] +
+                               (-10.0/12.0) * QIn[ QInEnumerator(patchIndex,        centralVolume,unknown) ] +
+                               ( 18.0/12.0) * QIn[ QInEnumerator(patchIndex, rightAdjacentVolume1,unknown) ] +
+                               ( -6.0/12.0) * QIn[ QInEnumerator(patchIndex, rightAdjacentVolume2,unknown) ] +
+                               (  1.0/12.0) * QIn[ QInEnumerator(patchIndex, rightAdjacentVolume3,unknown) ];
+         } else {
+           AdvectionDeltaQ[unknown] =
+                               (  3.0/12.0) * QIn[ QInEnumerator(patchIndex, rightAdjacentVolume1,unknown) ] +
+                               ( 10.0/12.0) * QIn[ QInEnumerator(patchIndex,        centralVolume,unknown) ] +
+                               (-18.0/12.0) * QIn[ QInEnumerator(patchIndex,  leftAdjacentVolume1,unknown) ] +
+                               (  6.0/12.0) * QIn[ QInEnumerator(patchIndex,  leftAdjacentVolume2,unknown) ] +
+                               ( -1.0/12.0) * QIn[ QInEnumerator(patchIndex,  leftAdjacentVolume3,unknown) ];
+         }
+         QDifferentialSourceTermGathered[unknown]-=QIn[QInEnumerator(patchIndex, centralVolume, 17+normal)]*AdvectionDeltaQ[unknown];
+      }
+    }
+
+    delete[] AdvectionDeltaQ;
+  }
+}
+
+template <class QInEnumeratorType, class QOutEnumeratorType>
+void exahype2::fd::fd4::internal::computeAuxiliaryVariables_LoopBody(
+  double* __restrict__                         QIn,
+  const QInEnumeratorType&                     QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  int                                          normal,
+  const QOutEnumeratorType&                    QOutEnumerator
+) {
+
+  tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
+  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
+
+  rightAdjacentVolume1(normal)++;
+  rightAdjacentVolume2(normal)++;
+  rightAdjacentVolume2(normal)++;
+   leftAdjacentVolume1(normal)--;
+   leftAdjacentVolume2(normal)--;
+   leftAdjacentVolume2(normal)--;
+
+  double cellsize = patchSize(normal) / QOutEnumerator._numberOfDoFsPerAxisInCell;
+  double gradcoef = 1.0/(12.0*cellsize);
+
+  //std::cout<<"called here"<<std::endl;
+  // A[normal] = \partial_{normal}\alpha
+  // alpha is Q[16]
+  //std::cout<<"before:"<<QIn[ QInEnumerator(patchIndex,centralVolume,23+normal) ]<<std::endl;
+  QIn[ QInEnumerator(patchIndex,centralVolume,23+normal) ] =     gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,16) ] -
+                                                             8.0*gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,16) ] +  
+                                                             8.0*gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,16) ] -
+                                                                 gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,16) ];
+  //std::cout<<"after:"<<QIn[ QInEnumerator(patchIndex,centralVolume,23+normal) ]<<std::endl;
+
+  // P[normal] = \partial_{normal}\phi
+  // phi is Q[54]
+  QIn[ QInEnumerator(patchIndex,centralVolume,55+normal) ] =     gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,54) ] -
+                                                             8.0*gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,54) ] +  
+                                                             8.0*gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,54) ] -
+                                                                 gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,54) ];
+
+  // B[normal][i] = \partial_{normal}\beta^i
+  // beta^i is Q[17] - Q[19]
+  for (int i=0; i<3; i++) {
+    QIn[ QInEnumerator(patchIndex,centralVolume,26+3*normal+i) ] =     gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,17+i) ] -
+                                                                   8.0*gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,17+i) ] +  
+                                                                   8.0*gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,17+i) ] -
+                                                                       gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,17+i) ];
+  }
+
+  // D[normal][i][j] = 0.5*\partial_{normal}\tilde{\gamma}_{ij} -- note the 1/2 factor
+  // \tilde{\gamma}_{ij} is Q[0] - Q[5]
+  for (int i=0; i<3; i++) {
+  for (int j=i; j<3; j++) {
+    int k = (i==0?j:i+j+1);
+    QIn[ QInEnumerator(patchIndex,centralVolume,35+6*normal+k) ] = 0.5*gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,k) ] -
+                                                                   4.0*gradcoef * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,k) ] +  
+                                                                   4.0*gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,k) ] -
+                                                                   0.5*gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,k) ];
+  }
+  }
+
+}
+
+
+
+
+template <class QInEnumeratorType, class QOutEnumeratorType>
+void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
+  const double* __restrict__                     QIn,
+  const QInEnumeratorType&                       QInEnumerator,
+  exahype2::fd::NonconservativeProduct           DifferentialSource,
+  const tarch::la::Vector<Dimensions,double>&    patchCentre,
+  const tarch::la::Vector<Dimensions,double>&    patchSize,
+  int                                            patchIndex,
+  const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
+  double* __restrict__                           QDiffSrc,
+  const QOutEnumeratorType&                      QDiffSrcEnumerator,
+  DifferentialSourceTermVariant                  variant
+) {
+    double*                        CentralQ = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+    double*                          DeltaQ = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+    double* QDifferentialSourceTermGathered = new double[QDiffSrcEnumerator._unknowns];
+
+    switch (variant) {
+      case DifferentialSourceTermVariant::CentralDifferences:
+      case DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection:
+        computeCentralDifferencesForDifferentialSourceTerm(
+          QIn,
+          QInEnumerator,
+          patchIndex,
+          volumeIndex,
+          normal,
+          CentralQ,
+          DeltaQ
+        );
+        break;
+      case DifferentialSourceTermVariant::CentralDifferencesWithLimiter:
+      case DifferentialSourceTermVariant::CentralDifferencesWithLimiterAndLopsidedAdvection:
+        computeCentralDifferencesWithLimiterForDifferentialSourceTerm(
+          QIn,
+          QInEnumerator,
+          patchIndex,
+          volumeIndex,
+          normal,
+          CentralQ,
+          DeltaQ
+        );
+        break;
+    }
+
+    DifferentialSource(
+      CentralQ, DeltaQ,
+      ::exahype2::fd::getGridCellCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      QDifferentialSourceTermGathered
+    );
+
+    switch (variant) {
+      case DifferentialSourceTermVariant::CentralDifferences:
+      case DifferentialSourceTermVariant::CentralDifferencesWithLimiter:
+        break;
+      case DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection:
+      case DifferentialSourceTermVariant::CentralDifferencesWithLimiterAndLopsidedAdvection:
+        addLopsidedAvectionToDifferentialSourceTerm(
+          QIn,
+          QInEnumerator,
+          patchIndex,
+          volumeIndex,
+          normal,
+          QDifferentialSourceTermGathered
+        );
+        break;
+    }
+
+    // scatter
+    for (int unknown=0; unknown<QDiffSrcEnumerator._unknowns; unknown++) {
+      QDiffSrc[ QDiffSrcEnumerator(patchIndex,volumeIndex,unknown) ] = QDifferentialSourceTermGathered[unknown];
+    }
+
+    delete[] CentralQ;
+    delete[] DeltaQ;
+    delete[] QDifferentialSourceTermGathered;
+}
+
+
+template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
+void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
+  const double* __restrict__                     QIn,
+  const QInEnumeratorType&                       QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&    patchCentre,
+  const tarch::la::Vector<Dimensions,double>&    patchSize,
+  int                                            patchIndex,
+  const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
+  double* __restrict__                           QDiffSrc,
+  const QOutEnumeratorType&                      QDiffSrcEnumerator,
+  DifferentialSourceTermVariant                  variant
+) {
+  double*                        CentralQ = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double*                          DeltaQ = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double* QDifferentialSourceTermGathered = new double[QDiffSrcEnumerator._unknowns];
+
+  switch (variant) {
+    case DifferentialSourceTermVariant::CentralDifferences:
+    case DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection:
+      computeCentralDifferencesForDifferentialSourceTerm(
+        QIn,
+        QInEnumerator,
+        patchIndex,
+        volumeIndex,
+        normal,
+        CentralQ,
+        DeltaQ
+      );
+      break;
+    case DifferentialSourceTermVariant::CentralDifferencesWithLimiter:
+    case DifferentialSourceTermVariant::CentralDifferencesWithLimiterAndLopsidedAdvection:
+      computeCentralDifferencesWithLimiterForDifferentialSourceTerm(
+        QIn,
+        QInEnumerator,
+        patchIndex,
+        volumeIndex,
+        normal,
+        CentralQ,
+        DeltaQ
+      );
+      break;
+  }
+
+  Solver::nonconservativeProduct(
+    CentralQ, DeltaQ,
+    ::exahype2::fd::getGridCellCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+    ::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+    t,
+    dt,
+    normal,
+    QDifferentialSourceTermGathered,
+    ::exahype2::Solver::Offloadable::Yes
+  );
+
+  switch (variant) {
+    case DifferentialSourceTermVariant::CentralDifferences:
+    case DifferentialSourceTermVariant::CentralDifferencesWithLimiter:
+      break;
+    case DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection:
+    case DifferentialSourceTermVariant::CentralDifferencesWithLimiterAndLopsidedAdvection:
+      addLopsidedAvectionToDifferentialSourceTerm(
+        QIn,
+        QInEnumerator,
+        patchIndex,
+        volumeIndex,
+        normal,
+        QDifferentialSourceTermGathered
+      );
+      break;
+  }
+
+  // scatter
+  for (int unknown=0; unknown<QDiffSrcEnumerator._unknowns; unknown++) {
+    QDiffSrc[ QDiffSrcEnumerator(patchIndex,volumeIndex,unknown) ] = QDifferentialSourceTermGathered[unknown];
+  }
+
+  delete[] CentralQ;
+  delete[] DeltaQ;
+  delete[] QDifferentialSourceTermGathered;
+}
+
+
+template <class QInEnumeratorType, class QOutEnumeratorType>
+void exahype2::fd::fd4::internal::computeKreissOligerDissipationTerm_LoopBody(
+  const double* __restrict__                     QIn,
+  const QInEnumeratorType&                       QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&    patchCentre,
+  const tarch::la::Vector<Dimensions,double>&    patchSize,
+  int                                            patchIndex,
+  const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
+  double* __restrict__                           QKODsp,
+  const QOutEnumeratorType&                      QKODspEnumerator
+) {
+  double KOGathered[QInEnumerator._unknowns];
+
+  tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
+  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume3 = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightAdjacentVolume3 = volumeIndex;
+
+  rightAdjacentVolume1(normal)++;
+  rightAdjacentVolume2(normal)++;
+  rightAdjacentVolume2(normal)++;
+  rightAdjacentVolume3(normal)++;
+  rightAdjacentVolume3(normal)++;
+  rightAdjacentVolume3(normal)++;
+   leftAdjacentVolume1(normal)--;
+   leftAdjacentVolume2(normal)--;
+   leftAdjacentVolume2(normal)--;
+   leftAdjacentVolume3(normal)--;
+   leftAdjacentVolume3(normal)--;
+   leftAdjacentVolume3(normal)--;
+
+  // gather
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    KOGathered[unknown] = (-20.0/64.0) * QIn[ QInEnumerator(patchIndex,      centralVolume, unknown) ] + 
+                          ( 15.0/64.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown) ] +
+                          ( 15.0/64.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown) ] - 
+                          (  6.0/64.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown) ] -
+                          (  6.0/64.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown) ] +
+                          (  1.0/64.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume3,unknown) ] + 
+                          (  1.0/64.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume3,unknown) ];
+  }
+
+  // scatter
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QKODsp[ QKODspEnumerator(patchIndex,volumeIndex,unknown) ] = KOGathered[unknown];
+  }
+}
+
+
+template <typename QOutEnumeratorType>
+void exahype2::fd::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopBody(
+  const double* __restrict__                   QDiffSrcX,
+  const double* __restrict__                   QDiffSrcY,
+  const double* __restrict__                   QDiffSrcZ,
+  const QOutEnumeratorType&                    QDiffSrcEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  int                                          unknown,
+  double                                       dt,
+  double* __restrict__                         QOut,
+  const QOutEnumeratorType&                    QOutEnumerator
+) {
+  auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QDiffSrc, int normal) {
+    // QDiffSrc is B_i*deltaQ_i for the central volume, and B here is defined on the LEFT of the equation.
+    double QDiffSrcTerm = QDiffSrc[QDiffSrcEnumerator(patchIndex, volumeIndex, unknown)];
+    //take care we have an extra minus sign because we moved the diffsrc terms to the RIGHT!
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QDiffSrcTerm;
+
+    #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
+    assertion8(
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+      QDiffSrcTerm, QDiffSrcTerm,
+      dt, normal, unknown, patchSize,
+      volumeIndex,
+      QOutEnumerator(patchIndex, volumeIndex, unknown)
+    );
+    #endif
+  };
+
+                     updateAlongOneCoordinateDirection( QDiffSrcX, 0 );
+                     updateAlongOneCoordinateDirection( QDiffSrcY, 1 );
+  if (Dimensions==3) updateAlongOneCoordinateDirection( QDiffSrcZ, 2 );
+}
+
+
+template <typename QOutEnumeratorType>
+void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
+  const double                                 KOSigma,
+  const double* __restrict__                   QKODspX,
+  const double* __restrict__                   QKODspY,
+  const double* __restrict__                   QKODspZ,
+  const QOutEnumeratorType&                    QKODspEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  int                                          unknown,
+  double                                       dt,
+  double* __restrict__                         QOut,
+  const QOutEnumeratorType&                    QOutEnumerator
+) {
+  auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QKODsp, int normal) {
+    double QKODspTerm = QKODsp[QKODspEnumerator(patchIndex, volumeIndex, unknown)];
+
+    int flag=0;
+    //double sigmaKO=8.0;
+    if (flag==0){
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += KOSigma * dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QKODspTerm;
+    }
+
+    if (flag==1){
+      if ( (unknown>=23 and unknown<=52) or (unknown>=55 and unknown<=57) ){
+        QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += KOSigma * dt / patchSize(normal) /patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QKODspTerm;
+      } else {
+        QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += KOSigma * dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QKODspTerm;
+      }
+    }
+
+    #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
+    assertion8(
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+      QKODspTerm, QKODspTerm,
+      dt, normal, unknown, patchSize,
+      volumeIndex,
+      QOutEnumerator(patchIndex, volumeIndex, unknown)
+    );
+    #endif
+  };
+
+                     updateAlongOneCoordinateDirection( QKODspX, 0 );
+                     updateAlongOneCoordinateDirection( QKODspY, 1 );
+  if (Dimensions==3) updateAlongOneCoordinateDirection( QKODspZ, 2 );
+}
+
+
+template <class QInEnumeratorType, class QOutEnumeratorType>
+void exahype2::fd::fd4::internal::computeFlux_LoopBody(
+  const double* __restrict__                     QIn,
+  const QInEnumeratorType&                       QInEnumerator,
+  exahype2::fd::Flux                             flux,
+  const tarch::la::Vector<Dimensions,double>&    patchCentre,
+  const tarch::la::Vector<Dimensions,double>&    patchSize,
+  int                                            patchIndex,
+  const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
+  double* __restrict__                           QFlux,
+  const QOutEnumeratorType&                      QFluxEnumerator
+) {
+  double* tempQ          = new double[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
+  double* tempFlux       = new double[QInEnumerator._unknowns];
+  double* QFluxGathered  = new double[QInEnumerator._unknowns];
+
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxGathered[unknown] = 0.0;
+  }
+
+  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
+
+  rightAdjacentVolume1(normal) += 1;
+  rightAdjacentVolume2(normal) += 2;
+   leftAdjacentVolume1(normal) -= 1;
+   leftAdjacentVolume2(normal) -= 2;
+
+  //F^-
+  for (int unknown=0; unknown<QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    tempQ[unknown] = QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1, unknown) ];
+  }
+  flux(
+      tempQ,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      tempFlux
+  );
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxGathered[unknown] -= (8.0/12.0)*tempFlux[unknown]/(::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
+  }
+
+  //F^--
+  for (int unknown=0; unknown<QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    tempQ[unknown] = QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2, unknown) ];
+  }
+  flux(
+      tempQ,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      tempFlux
+  );
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxGathered[unknown]+=(1.0/12.0)*tempFlux[unknown]/(::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
+  }
+
+  //F^+
+  for (int unknown=0; unknown<QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    tempQ[unknown] = QIn[ QInEnumerator(patchIndex, rightAdjacentVolume1, unknown) ];
+  }
+  flux(
+      tempQ,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      tempFlux
+  );
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxGathered[unknown]+=(8.0/12.0)*tempFlux[unknown]/(::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
+  }
+
+  //F^++
+  for (int unknown=0; unknown<QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    tempQ[unknown] = QIn[ QInEnumerator(patchIndex, rightAdjacentVolume2, unknown) ];
+  }
+  flux(
+      tempQ,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      tempFlux
+  );
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxGathered[unknown]-=(1.0/12.0)*tempFlux[unknown]/(::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
+  }
+
+  // scatter accumulated result
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
+  }
+
+  delete[] tempQ;
+  delete[] tempFlux;
+  delete[] QFluxGathered;
+}
+
+
+template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
+void exahype2::fd::fd4::internal::computeFlux_LoopBody(
+  const double* __restrict__                     QIn,
+  const QInEnumeratorType&                       QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&    patchCentre,
+  const tarch::la::Vector<Dimensions,double>&    patchSize,
+  int                                            patchIndex,
+  const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
+  double* __restrict__                           QFlux,
+  const QOutEnumeratorType&                      QFluxEnumerator
+) {
+  double* tempQ          = new double[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
+  double* tempFlux       = new double[QInEnumerator._unknowns];
+  double* QFluxGathered  = new double[QInEnumerator._unknowns];
+
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxGathered[unknown] = 0.0;
+  }
+
+  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
+
+  rightAdjacentVolume1(normal) += 1;
+  rightAdjacentVolume2(normal) += 2;
+   leftAdjacentVolume1(normal) -= 1;
+   leftAdjacentVolume2(normal) -= 2;
+
+  //F^-
+  for (int unknown=0; unknown<QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    tempQ[unknown] = QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1, unknown) ];
+  }
+  Solver::flux(
+      tempQ,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      tempFlux,
+      ::exahype2::Solver::Offloadable::Yes
+  );
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxGathered[unknown] -= (8.0/12.0)*tempFlux[unknown]/(::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
+  }
+
+  //F^--
+  for (int unknown=0; unknown<QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    tempQ[unknown] = QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2, unknown) ];
+  }
+  Solver::flux(
+      tempQ,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      tempFlux,
+      ::exahype2::Solver::Offloadable::Yes
+  );
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxGathered[unknown]+=(1.0/12.0)*tempFlux[unknown]/(::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
+  }
+
+  //F^+
+  for (int unknown=0; unknown<QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    tempQ[unknown] = QIn[ QInEnumerator(patchIndex, rightAdjacentVolume1, unknown) ];
+  }
+  Solver::flux(
+      tempQ,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      tempFlux,
+      ::exahype2::Solver::Offloadable::Yes
+  );
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxGathered[unknown]+=(8.0/12.0)*tempFlux[unknown]/(::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
+  }
+
+  //F^++
+  for (int unknown=0; unknown<QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    tempQ[unknown] = QIn[ QInEnumerator(patchIndex, rightAdjacentVolume2, unknown) ];
+  }
+  Solver::flux(
+      tempQ,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      tempFlux,
+      ::exahype2::Solver::Offloadable::Yes
+  );
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxGathered[unknown]-=(1.0/12.0)*tempFlux[unknown]/(::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
+  }
+
+  // scatter accumulated result
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
+  }
+
+  delete[] tempQ;
+  delete[] tempFlux;
+  delete[] QFluxGathered;
+}
+
+
+template <typename QOutEnumeratorType>
+void exahype2::fd::fd4::internal::updateSolutionWithFlux_LoopBody(
+  const double* __restrict__                   QFluxX,
+  const double* __restrict__                   QFluxY,
+  const double* __restrict__                   QFluxZ,
+  const QOutEnumeratorType&                    QFluxEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  int                                          unknown,
+  double                                       dt,
+  double* __restrict__                         QOut,
+  const QOutEnumeratorType&                    QOutEnumerator
+) {
+  auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QFlux, int normal) {
+    
+    // F here is defined on the LEFT of the equation.
+    double QFluxterm = QFlux[QFluxEnumerator(patchIndex, volumeIndex, unknown)];
+    //take care we have an extra minus sign because we moved the terms to the RIGHT!
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] -= dt * QFluxterm;
+  };
+
+                     updateAlongOneCoordinateDirection( QFluxX, 0 );
+                     updateAlongOneCoordinateDirection( QFluxY, 1 );
+  if (Dimensions==3) updateAlongOneCoordinateDirection( QFluxZ, 2 );
+}
+

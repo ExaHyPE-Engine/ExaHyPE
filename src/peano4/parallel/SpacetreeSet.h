@@ -12,6 +12,7 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 
 #include "peano4/maps/maps.h"
+#include "peano4/grid/grid.h"
 
 #include "TreeManagementMessage.h"
 
@@ -61,8 +62,6 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
         SpacetreeSet&                     _spacetreeSet;
         peano4::grid::TraversalObserver&  _observer;
         const bool                        _invertTreeTraversalDirectionBeforeWeStart;
-        
-        static int _typeId;
       public:
         TraverseTask( peano4::grid::Spacetree&  tree, SpacetreeSet& set, peano4::grid::TraversalObserver&  observer, bool invertTreeTraversalDirectionBeforeWeStart );
 
@@ -70,12 +69,14 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
          * I create the copy of the observer, run the traversal on my local
          * tree _spacetree and finally destroy the local observer copy.
          */
-        bool run() override;
+        virtual bool run() override;
     };
 
   public:
     /**
-     * This is the kind of routine that does boundary data exchange, i.e.
+     * Realise domain boundary exchange (over multiple scales)
+     *
+     * This routine realises the boundary data exchange, i.e. it
      * send outs in iteration n and receives (see counterpart routine), but
      * the received data is used only in traversal n+1. The whole exchange
      * thus asynchronous (logically).
@@ -85,6 +86,59 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * the actual vertex data exchange. As these routines all are invoked
      * via tasks, this routine is typically invoked by multiple threads
      * concurrently.
+     *
+     *
+     * ## Deep copy semantics for shared memory
+     *
+     * Whenever we copy a container over to another thread, we use the
+     * clone(). When we study the memory ownership, it is important to
+     * memorise that the boundary exchange containers are copies of "real"
+     * containers of the code. That is, the mesh looks at a face or vertex
+     * and stores its content persistently within the tree. Once it has
+     * done this, it analyses if this face or vertex is adjacent to a domain
+     * boundary. If so, it copies the data of interest into the boundary
+     * container. After the traversal, this copy is either sent out to
+     * another rank, or we clone() it into the container of another tree
+     * on the same rank (shared memory data exchange). After that, the
+     * original boundary container is cleared.
+     *
+     *
+     * If you work with containers over pointers, the clone()
+     * should create a deep copy, whereas otherwise any push and pull only
+     * moves pointers around. That is, a container holding boundary data
+     * basically holds pointers to data that is also held by containers
+     * administering interior data. After the traversal, it is the clone()
+     * which ensures that we actually create copies, i.e. work with
+     * real halo data which is replicated if data belongs to another tree -
+     * even if that tree resides on the same rank. Therefore, we can clear()
+     * the output stack. All data there had been pointers to data which are
+     * still held by the local tree.
+     *
+     *
+     * It is the responsibility of the actual merge to ensure that data on the
+     * input containers are probably merged into the local data. If these data
+     * are pointers, it is the responsibility of the merge to ensure that they
+     * are properly deleted. The input stack will be empty after the traversal,
+     * as the grid management will pull all data and pipe it into merges, but
+     * if they hold pointers, you have to take special care.
+     *
+     * @see python4/peano4/toolbox/particles/ParticleSet.template.h and the
+     *   merge() implementation therein for an example of a merge of a set of
+     *   pointers.
+     *
+     *
+     * ## Copy semantics for distributed memory
+     *
+     * If you launch a distributed memory exchange, it is the responsibility
+     * of the container to create a real copy on the incoming rank. If your
+     * container managed pointers, this is obviously a deep copy. It is also
+     * the container's responsibility to ensure that all data are freed when
+     * we call clear() after the send is complete.
+     *
+     * If your container holds pointers, it holds pointers which are also held
+     * by some containers that are responsible for the interior. So the clear()
+     * is just fine, as it eliminates redundant pointers.
+     *
      *
      * @param symmetricDataCardinality If two ranks A and B are adjacent to
      *   each other, and if A send n entries to B, then B received exactly
@@ -576,7 +630,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * See the description in mpi.h for a howto where this routine is
      * used and how to use it.
      */
-    void receiveDanglingMessages() override;
+    virtual void receiveDanglingMessages() override;
 
     /**
      * @see Spacetree::Spacetree()
@@ -588,7 +642,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
       const std::bitset<Dimensions>&               periodicBC = 0
     );
 
-    void shutdown() override;
+    virtual void shutdown() override;
 
     /**
      * Invoke traverse on all spacetrees in parallel.
@@ -634,66 +688,14 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * Split a local tree.
      *
      * If the target tree shall be stored on the local node, then you pass
-     * <pre>
-      peano4::parallel::Node::getInstance().getRank(treeId)
-       </pre>
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * peano4::parallel::Node::getInstance().getRank(treeId)
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
      * as last argument. Splits on the local node allow Peano to exploit more
-     * cores on the node.
-     *
-     * <h2> Split process </h2>
-     *
-     * @image html SpacetreeSet_split.png
-     *
-     * If you split a tree, the original tree, i.e. the source of the data,
-     * makes the new tree run through two states: split triggered and splitting.
-     *
-     * In a usual run, Peano's trees do exchange data in a way similar to the
-     * Jacobi smoothing: Each tree traverses its domain and sends out all
-     * boundary data. I call this horizontal communication as it is data exchange
-     * between non-overlapping domains which can be arranged on one grid level.
-     * In the next iteration, the data from neighbours has arrived and can be
-     * merged in. We obtain a criss-cross communication pattern (blue steps)
-     * where an iteration feeds into the neighbour's iteration n+1.
-     *
-     * While a new id is booked by one tree if a split is triggered, this new tree
-     * does not yet physically exist. The original (source) tree keeps the
-     * complete ownership of all data, i.e. it does all refines and coarses and
-     * also creates all events. However, it already enters the new, yet to be
-     * created, tree's indices into all adjacency lists with are consequently
-     * sent out to the other ranks. This is the yellow step above. After the grid
-     * sweep, we mark the new tree id as splitting. At this point, all neighbours
-     * continue to send to the original tree, as they are not yet aware of any
-     * domain partition updates.
-     *
-     * While an id is associated with splitting (orange), we know that all the other
-     * trees around start to send data to the new tree that is yet to be
-     * created: they receive the information about the updated adjacency and can
-     * send out their stuff to the new tree. Which does not exist yet (grey).
-     *
-     * So the splitting rank (orange) traverses its domain and invokes all
-     * events. It has the semantic ownership. It merges in all boundary data from
-     * neighbours, but is does not send out the boundary data (anymore).
-     * After the splitting tree traversal has terminated, we establish
-     * the new tree by duplicating all the local data. This includes the
-     * user data, too.
-     *
-     * The new tree (light green) subsequently is traversed once as empty
-     * tree. That is, all data travel over the stacks, but no events are invoked
-     * and no communication is happening. The purpose of this empty traversal is
-     * to get all data inot the right order.
-     *
-     * Once the empty traversal has terminated, we run over the new tree
-     * again. This time, we label it as new (dark green). While we still do not
-     * invoke any event, we now do send out data. This is the sole purpose of the
-     * new traversal.
-     *
-     * It is not guaranteed that the splits are all successful. See the routine
-     * peano4::grid::Spacetree::isCellSplitCandidate() which identifies cells
-     * that can be split. Effectively, you might call split and not get any
-     * tree decomposition at all.
-     *
-     * @see peano4::grid::Spacetree::split() This is the routine to tell a
-     *   particular spacetree to trigger a split in the next grid sweep.
+     * cores on the node. The details of the total splitting procedure are
+     * discussed in @ref peano_domain_decomposition "Peano's generic domain decomposition" discussion.
      *
      *
      * @param treeId  Id of tree that should split, i.e. give away cells to a
@@ -704,7 +706,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      *   count only with one towards this quota.
      * @param targetRank  Rank which should host the new tree.
      */
-    bool split(int treeId, int cells, int targetRank);
+    bool split(int treeId, const peano4::SplitInstruction& instruction, int targetRank);
 
     /**
      * Codes hold one spacetree set per rank. With this routine, you can find

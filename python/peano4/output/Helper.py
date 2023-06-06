@@ -33,5 +33,18 @@ def find_cmake_build_dir():
   for path in [path.path for path in os.scandir(project_root_dir) if path.is_dir()]:
     files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
     if 'CMakeCache.txt' in files:
+      #print( "found CMakeCache.txt in {} and hence assume that user uses CMake".format(path) )
       return path
   return ""
+
+def using_cuda_backend():
+  build_dir_path = find_cmake_build_dir()
+  if build_dir_path != "":
+    try:
+      with open(os.path.join(build_dir_path,"CMakeCache.txt")) as cache:
+        for line in cache:
+          if "WITH_GPU:STRING=cuda" in line:
+            return True
+    except Exception:
+      return False
+  return False

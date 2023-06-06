@@ -1,0 +1,85 @@
+/**
+
+ @page swift_parallelisation Parallelisation
+
+ In line with the work by Schaller et al, Swift 2 uses a combination of domain
+ decomposition and task-based parallelism. As we base our update upon Peano, we
+ augment it with additional levels of parallelism.
+
+
+# Difference to the original Swift code
+
+ - The domain decomposition between ranks is based upon a space-filling curve.
+   The original code uses a regular coarse grid and partitions this coarse grid
+   into chunks via a graph partitioning (Metis). In Peano, we work with a
+   spactree and this tree is cut into chunks. Notably, we do not impose a
+   regular grid on top.
+ - The domain decomposition can be applied once more per rank: each rank can
+   split up its domain further into chunks along the space-filling curves.
+   These chunks then go to separate threads (as part of a high-level task
+   decomposition).
+ - Within each chunk (per thread), we then apply task-based parallelism.
+ - The structure of the task graph is determined via a graph compiler (see
+   remarks on @ref swift_architecture "the code architecture") and not baked
+   into the mesh traversal core.
+ - We provide tasking backends for OpenMP, SYCL, TBB and C++. However, there is
+   at the moment no custom QuickSched backend anymore.
+
+
+# Non-overlapping domain decomposition
+
+ Non-overlapping domain decomposition is used between the ranks. Per rank,
+ we then support multiple subdomains as well.
+
+## The subdomains per rank
+
+ If you have multiple subdomains per rank, we mirror the implementation of the
+ MPI code: Each thread which is responsible for a subdomain holds its subtree
+ and its particles. These are local copies to the subdomain, i.e. halo
+ particles are ***replicated***. After a thread has finished the traversal of
+ its local subdomain, these replica are exchanged - just like they are in MPI.
+ For this, the code has to manually copy the particles at the subdomain
+ interfaces.
+
+
+ The traversal of multiple subdomains per rank is realised via tasks. That is,
+ each rank triggers a small number of high-level tasks which respresent the
+ traversal of local subdomains. These tasks in return then issue more tasks in
+ the traditional Swift-sense, i.e. tasks that are responsible for the actual
+ Physics. If you switch off the domain decomposition per rank, you end up with
+ a sole task-based formalism (no domain decomposition) per rank. If you pick
+ a graph compiler which does not map the logical steps per particle onto
+ various tasks and if you switch on the per-rank domain decomposition in return,
+ then you end up with a classic, old-fashioned domain decomposition.
+
+
+ This yet has to be written. Likely a lot of references into Peano, besides
+ the discussion of the particle handling.
+
+ @todo A lot to write here
+
+
+# Q&As
+
+ Obviously, most all of @ref faq "Peano's (generic) frequently asked questions"
+ and \ref developer_faq "developer troubleshooting remarks" hold for Swift 2, too.
+
+ - The load balancing is active if and only if you pick a load balancer within
+   your Python script. So if you remove the load balancing call or if you pick
+   toolbox::loadbalancing::NoLoadBalancing as your load balancing strategy,
+   then you effectively switch off the domain decomposition (for both MPI and
+   per core). If you do so, you do ***not*** disable the task-based parallelism
+   however. The task-based parallelism is eliminated if and only if you
+   configure the underlying Peano without any shared memory parallelism.
+ - If your load balancing behaves strangly, you should activate all log messages
+   from toolbox::loadbalancing in your log filter. This should provide you with
+   information what is going on (filter for the load balancing information in
+   your output). Often, developers use for example a SpreadOut configuration,
+   but the actual mesh then is so small that the load balancing never manages
+   to spread out, i.e. the machine is overprovisioned. In this case, for example,
+   a switch to SpreadOutOnceGridStagnates as strategy helps. Load balancing is
+   tricky and might have to be revisited per experimental setup or code development
+   cycle.
+
+ */
+

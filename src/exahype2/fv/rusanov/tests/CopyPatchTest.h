@@ -29,5 +29,5 @@ class exahype2::fv::rusanov::tests::CopyPatchTest: public tarch::tests::TestCase
     /**
      * This routine is triggered by the TestCaseCollection
      */
-    void run() override;
+    virtual void run() override;
 };

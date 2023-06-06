@@ -6,7 +6,6 @@ from .Project import Project
 
 import swift2.input
 import swift2.scenario
-import swift2.kernels
 import swift2.particle
 
 print( "Swift 2" )

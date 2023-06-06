@@ -203,11 +203,11 @@ def create_abstract_solver_declarations(flux_implementation,
       int                                          normal,
       Offloadable
     )
-    #if defined(GPUOffloadingSYCL)
-    {}
-    #else
+    //#if defined(GPUOffloadingSYCL)
+    //{}
+    //#else
     ;
-    #endif
+    //#endif
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
@@ -435,7 +435,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-#if !defined(GPUOffloadingSYCL)
+//#if !defined(GPUOffloadingSYCL)
 GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -447,7 +447,7 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
 ) {
   {{EIGENVALUES_IMPLEMENTATION}};
 }
-#endif
+//#endif
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
@@ -458,7 +458,7 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-#if !defined(GPUOffloadingSYCL)
+//#if !defined(GPUOffloadingSYCL)
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -475,7 +475,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   {{FLUX_IMPLEMENTATION}}
   {% endif %}
 }
-#endif
+//#endif
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
@@ -547,7 +547,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   Template = jinja2.Template( """
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    void sourceTerm(
+    virtual void sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,

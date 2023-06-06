@@ -1,0 +1,87 @@
+/** 
+
+@page page_exahype_solvers_finite_volumes Finite Volumes
+
+
+ExaHyPE 2 offers a range of Finite Volume solvers. They are designed to be
+stand-alone solvers, but nothing stops you from using them as a posteriori
+limiters by @ref page_exahype_coupling "coupling them to higher order schemes".
+
+
+## Data structures
+
+All Finite Volume solvers work with blockstructured AMR: They embed @f$N \times N@f$ patches 
+into the octants (cells of the spacetree). To avoid confusion, I prefer to 
+use the term volume for the cells within the patch, as cell would be
+ambigous given that we construct the  host mesh from spacetree cells.
+
+@image html block-structured.png
+
+With one patch per cell, we could traverse the mesh and do something per
+cell. This however is of limited value. We have to couple the phenomena
+what is going on in neighbouring cells.  realises a strict element-wise
+traversal, i.e. there's no way to access the neighbour cell of a cell
+directly. However, we can hijack the faces.
+
+The idea here is that we embed a @f$2 \times N@f$ (@f$d=2@f$) or
+@f$2 \times N \times N@f$ (@f$d=3@f$), respectively, patch into each face. Let
+this auxiliary patch overlap the adjacent cells. Then, we effectively
+have a halo of one cell available within each cell: We know the cell
+data. We also have access to the @f$2d@f$ faces where each hosts a
+degenerated patch. One later of this patch is a copy of our own data,
+i.e. does not give us additional information. The other layer of the
+auxiliary patch however holds data from the neighbour. It gives us
+information from the neighbour patch.
+
+
+### Keeping face data and patch data consistent
+
+Projecting the patches onto the face data structures and back is a
+mechnical task. Therefore,  offers a toolbox to relieve you from the
+pain to recode it over and over again. Using this toolbox, you add the
+projections to your algorithmic steps, and the API then automatically
+injects these features (aspects) into your code:
+
+@image html ProjectPatchOntoFaces.png
+
+The image above illustrates what `ProjectPatchOntoFaces` does: It knows
+the dimensions of both the patches and the face auxiliary data
+structures and thus can ensure that the right data is copied from the
+cell into the @f$2^d@f$ faces when we leave a cell throughout the grid
+traversal.
+
+
+### Augment patch with halo
+
+The action set `ReconstructPatchAndApplyFunctor` works slighlty
+different yet can be read, from a patch projection point of view, as
+transpose of `ProjectPatchOntoFaces`: It creates a auxiliary variable
+`reconstructedX` with X being the name you gave the Unknowns of the
+patch. This auxiliary variable has the dimensions
+@f$N+2 \times N+2 \times N+2@f$. It then copies over the patch data into
+this auxiliary patch and uses the faces to supplement it with halo data
+around it. So that it, you get the original patch data plus the cells
+around it in one big patch.
+
+
+## Code organisation
+
+Peano offers a toolbox in toolbox::blockstructured which offers most of the
+basic data structures and action sets. 
+The actual patches can either be embedded as plain arrays into each cell, or
+they can be held as arrays on the heap and the cells hold (smart) pointers
+to these heap objects.
+It depends on your use case which variant is faster.
+
+
+On the Python API side, the class exahype2.solvers.fv.FV is the base class
+of all Finite Volume solvers. 
+Its class documentation holds a lot of background information on the solver
+design and data flows.
+There are two major subclasses: exahype2.solvers.fv.SingleSweep and 
+exahype2.solvers.fv.EnclaveTasking.
+They realise a straightforward realisation with one mesh traversal per 
+time step or the @ref page_exahype_solvers_enclave_solvers "enclave concept", respectively. 
+
+
+*/

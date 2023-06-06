@@ -7,10 +7,14 @@ from enum import Enum
 from exahype2.solvers.fv.PDETerms import PDETerms
 import exahype2
 
+from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
+
+
 class SolverVariant(Enum):
   WithVirtualFunctions = 0,
   Stateless            = 1,
   Accelerator          = 2
+
 
 def create_abstract_solver_declarations(flux_implementation,
                                         ncp_implementation,
@@ -418,7 +422,7 @@ def create_solver_declarations(flux_implementation,
   Template = jinja2.Template( """
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    void sourceTerm(
+    virtual void sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
@@ -429,7 +433,7 @@ def create_solver_declarations(flux_implementation,
 
     {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     #error point sources not defined yet
-    void pointSource(
+    virtual void pointSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
@@ -902,7 +906,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
   solver_variant: SolverVariant
     Picks different implementation variants
   """
-  if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and solver_variant==SolverVariant.WithVirtualFunctions:
+  if isinstance( polynomial_basis, GaussLegendreBasis) and solver_variant==SolverVariant.WithVirtualFunctions:
     return """cellIntegral_patchwise_in_situ_GaussLegendre_functors(
       cellData,
       {{ORDER}},                                                   
@@ -967,7 +971,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }} //usePointSource
     );
 """
-  elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and solver_variant==SolverVariant.Stateless:
+  elif isinstance( polynomial_basis, GaussLegendreBasis) and solver_variant==SolverVariant.Stateless:
     return """cellIntegral_patchwise_in_situ_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
       cellData,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux
@@ -976,7 +980,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }}  //usePointSource
     );
 """
-  elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and solver_variant==SolverVariant.Accelerator:
+  elif isinstance( polynomial_basis, GaussLegendreBasis) and solver_variant==SolverVariant.Accelerator:
     return """cellIntegral_patchwise_in_situ_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
       targetDevice,
       cellData,
@@ -990,7 +994,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
     return "#solver variant not implemented yet"
 
 def create_add_solver_contributions_call(polynomial_basis):
-  if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis):
+  if isinstance( polynomial_basis, GaussLegendreBasis):
     return """integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     #if Dimensions==2
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
@@ -1018,7 +1022,7 @@ def create_add_solver_contributions_call(polynomial_basis):
     return "#error Not supported yet"
 
 def create_multiply_with_inverted_mass_matrix_call( polynomial_basis):
-  if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis):
+  if isinstance( polynomial_basis, GaussLegendreBasis):
     return """multiplyWithInvertedMassMatrix_GaussLegendre(
       cellData,
       {{ORDER}},                                                   

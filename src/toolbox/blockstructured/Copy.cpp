@@ -5,6 +5,37 @@
 #include <algorithm>
 
 
+void toolbox::blockstructured::copyUnknowns(
+  int                                numberOfDoFsPerAxisInPatch,
+  const double* __restrict__         source,
+  int                                sourceHalo,
+  double* __restrict__               dest,
+  int                                destHalo,
+  int                                unknowns
+) {
+  #if Dimensions==2
+  for (int x=0; x<numberOfDoFsPerAxisInPatch; x++)
+  for (int y=0; y<numberOfDoFsPerAxisInPatch; y++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    int sourceIndexLinearised = (x + sourceHalo + (y+sourceHalo)*(numberOfDoFsPerAxisInPatch+2*sourceHalo) ) * unknowns + unknown;
+    int destIndexLinearised   = (x + destHalo + (y+destHalo)*(numberOfDoFsPerAxisInPatch+2*destHalo) ) * unknowns + unknown;
+    dest[destIndexLinearised] = source[sourceIndexLinearised];
+  }
+  #elif Dimensions==3
+  for (int x=0; x<numberOfDoFsPerAxisInPatch; x++)
+  for (int y=0; y<numberOfDoFsPerAxisInPatch; y++)
+  for (int z=0; z<numberOfDoFsPerAxisInPatch; z++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    int sourceIndexLinearised = (x + sourceHalo + (y+sourceHalo)*(numberOfDoFsPerAxisInPatch+2*sourceHalo) + (z+sourceHalo)*(numberOfDoFsPerAxisInPatch+2*sourceHalo)*(numberOfDoFsPerAxisInPatch+2*sourceHalo) ) * unknowns + unknown;
+    int destIndexLinearised   = (x + destHalo   + (y+destHalo)  *(numberOfDoFsPerAxisInPatch+2*destHalo)   + (z+destHalo)*(numberOfDoFsPerAxisInPatch+2*destHalo)*(numberOfDoFsPerAxisInPatch+2*destHalo) ) * unknowns + unknown;
+    dest[destIndexLinearised] = source[sourceIndexLinearised];
+  }
+  #else
+    #error Dimensions not supported
+  #endif
+}
+
+
 void toolbox::blockstructured::copyUnknown(
   int                                numberOfDoFsPerAxisInPatch,
   const double* __restrict__         source,
