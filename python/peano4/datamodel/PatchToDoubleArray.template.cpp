@@ -118,6 +118,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
 ) const {
   return {{STORE_PERSISTENT_CONDITION}};
 }
+{% endif -%}
 
 {% if DATA_ASSOCIATION == 2 -%}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker) {
@@ -155,6 +156,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
 ) const {
   return {{STORE_PERSISTENT_CONDITION}};
 }
+{% endif -%}
 
 {% if DATA_ASSOCIATION == 3 -%}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker) {
@@ -192,6 +194,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
 ) const {
   return {{STORE_PERSISTENT_CONDITION}};
 }
+{% endif -%}
 
 #ifdef Parallel
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
