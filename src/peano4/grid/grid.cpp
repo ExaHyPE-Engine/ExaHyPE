@@ -156,6 +156,7 @@ void peano4::grid::internal::sort( std::list< peano4::grid::GridControlEvent >& 
   ) -> bool {
     for (int d=0; d<Dimensions; d++) {
       if ( tarch::la::smaller(lhs.getOffset(d), rhs.getOffset(d)) ) return true;
+      if ( tarch::la::greater(lhs.getOffset(d), rhs.getOffset(d)) ) return false;
     }
     return false;
   };
@@ -222,15 +223,19 @@ void peano4::grid::internal::mergeAdjacentRefinementEvents( std::list< peano4::g
     }
   }
 
-/*
-  if (inputEvents.size()>100) {
+  if (inputEvents.size()>10) {
     logInfo( "mergeAdjacentRefinementEvents(...)", "#entries: " << inputEvents.size() );
-    std::list< peano4::grid::GridControlEvent >::iterator p = inputEvents.begin();
-    logInfo( "mergeAdjacentRefinementEvents(...)", "1st: " << p->toString() );
-    p++;
-    logInfo( "mergeAdjacentRefinementEvents(...)", "2nd: " << p->toString() );
+    for (auto& p: inputEvents ) {
+      logInfo( "mergeAdjacentRefinementEvents(...)", "- " << p.toString() );
+    }
+
+    std::list< peano4::grid::GridControlEvent >::iterator lhs = inputEvents.begin();
+    std::list< peano4::grid::GridControlEvent >::iterator rhs = inputEvents.begin();
+    rhs++;
+    twoEventsAreAdjacent(*rhs,*lhs,Tolerance,1);
+
     exit(-1);
-  }*/
+  }
 }
 
 
@@ -407,10 +412,10 @@ bool peano4::grid::internal::twoEventsAreAdjacent( const peano4::grid::GridContr
             or (tarch::la::countEqualEntries(lhs.getOffset(),rhs.getOffset())==1 and tarch::la::equalsReturnIndex(lhs.getOffset(),rhs.getOffset())==direction);
 
   const double relativeTolerance = tarch::la::relativeEps( tarch::la::volume(lhs.getWidth()), tarch::la::volume(rhs.getWidth()), tolerance );
-
+  const double fusedEventsSize   = tarch::la::volume(lhs.getWidth()) + tarch::la::volume(rhs.getWidth());
   return guard
      and tarch::la::equals( lhs.getH(), rhs.getH(), relativeTolerance )
-     and tarch::la::volume(boundingEventSize) <= (1.0+tolerance) * (tarch::la::volume(lhs.getWidth()) + tarch::la::volume(rhs.getWidth()));
+     and tarch::la::smallerEquals( tarch::la::volume(boundingEventSize), fusedEventsSize, 1.0+relativeTolerance);
 };
 
 
