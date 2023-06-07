@@ -8,7 +8,6 @@
 #include "config.h"
 #if defined(UseOtter)
 #define OTTER_TASK_GRAPH_ENABLE_USER
-#define ROOT_TASK_LABEL "[ROOT TASK]"
 #endif
 
 #include "{{MAIN_NAME}}.h"
@@ -250,6 +249,12 @@ void step() {
 
   static int creepingNumberOfLocalCells = 0;
 
+  OTTER_DECLARE_HANDLE(root_task);
+#if OTTER_ROOT_TASK_EXPLICIT
+  OTTER_BORROW_FROM_POOL(root_task, otter::label::root);
+#endif
+  OTTER_DECLARE_HANDLE(step_task);
+
   switch ( stepName ) {
     case repositories::StepRepository::Steps::CreateGridButPostponeRefinement:
       {
@@ -257,11 +262,19 @@ void step() {
 
         repositories::startGridConstructionStep();
 
+        OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
+        OTTER_TASK_START(step_task);
+
         observers::CreateGridButPostponeRefinement  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
+
+        OTTER_TASK_WAIT_FOR(step_task, children);
+        OTTER_TASK_END(step_task);
+        OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
+        OTTER_TASK_WAIT_FOR(root_task, descendants);
 
         repositories::finishGridConstructionStep();
       }
@@ -271,12 +284,20 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
 
         repositories::startGridConstructionStep();
+
+        OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
+        OTTER_TASK_START(step_task);
         
         observers::CreateGrid  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
+
+        OTTER_TASK_WAIT_FOR(step_task, children);
+        OTTER_TASK_END(step_task);
+        OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
+        OTTER_TASK_WAIT_FOR(root_task, descendants);
 
         repositories::finishGridConstructionStep();
 
@@ -313,11 +334,19 @@ void step() {
 
         repositories::startGridConstructionStep();
 
+        OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
+        OTTER_TASK_START(step_task);
+
         observers::CreateGridButPostponeRefinement  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
+
+        OTTER_TASK_WAIT_FOR(step_task, children);
+        OTTER_TASK_END(step_task);
+        OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
+        OTTER_TASK_WAIT_FOR(root_task, descendants);
 
         repositories::finishGridConstructionStep();
 
@@ -341,15 +370,26 @@ void step() {
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-grid" );
         repositories::loadBalancer.enable(false);
-        otterPhaseBegin( "init" );
+
+        #if OTTER_USE_PHASES
+        OTTER_PHASE_BEGIN( otter::phase::init );
+        #endif
 
         repositories::startGridInitialisationStep();
+
+        OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
+        OTTER_TASK_START(step_task);
         
         observers::InitGrid  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
+
+        OTTER_TASK_WAIT_FOR(step_task, children);
+        OTTER_TASK_END(step_task);
+        OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
+        OTTER_TASK_WAIT_FOR(root_task, descendants);
 
         repositories::finishGridInitialisationStep();
       }
@@ -362,14 +402,25 @@ void step() {
         const double minTimeStepSize = repositories::getMinTimeStepSize();
         const double maxTimeStepSize = repositories::getMaxTimeStepSize();
 
-        otterPhaseSwitch( "plot" );
+        #if OTTER_USE_PHASES
+        OTTER_PHASE_SWITCH( otter::phase::plot );
+        #endif
+
         repositories::startPlottingStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
+
+        OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
+        OTTER_TASK_START(step_task);
 
         observers::PlotSolution  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         plotMeasurement.setValue( watch.getCalendarTime() );
+
+        OTTER_TASK_WAIT_FOR(step_task, children);
+        OTTER_TASK_END(step_task);
+        OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
+        OTTER_TASK_WAIT_FOR(root_task, descendants);
         
         repositories::finishPlottingStep();
       }
@@ -389,15 +440,14 @@ void step() {
         const double minMeshSize     = repositories::getMinMeshSize();
         const double maxMeshSize     = repositories::getMaxMeshSize();
 
-        otterPhaseSwitch( "time-step" );
+        #if OTTER_USE_PHASES
+        OTTER_PHASE_SWITCH( otter::phase::timestep );
+        #endif
+
         repositories::startTimeStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
 
-        OTTER_DECLARE(root_task);
-        OTTER_DECLARE(timestep_task);
-
-        OTTER_BORROW(root_task, ROOT_TASK_LABEL);
-        OTTER_INIT(timestep_task, root_task, 101, true, "[timestep task]");
-        OTTER_TASK_START(timestep_task);
+        OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
+        OTTER_TASK_START(step_task);
         
         observers::TimeStep  observer;
         watch.start();
@@ -405,10 +455,10 @@ void step() {
         watch.stop();
         timeStepMeasurement.setValue( watch.getCalendarTime() );
 
-        OTTER_SYNCHRONISE(timestep_task, children);
-        OTTER_TASK_END(timestep_task);
-        OTTER_POP(timestep_task, "[timestep task]");
-        OTTER_SYNCHRONISE(root_task, descendants);
+        OTTER_TASK_WAIT_FOR(step_task, children);
+        OTTER_TASK_END(step_task);
+        OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
+        OTTER_TASK_WAIT_FOR(root_task, descendants);
         
         repositories::finishTimeStep();
       }
@@ -472,10 +522,11 @@ int main(int argc, char** argv) {
 
   OTTER_INITIALISE();
 
-  // TODO: Add Otter root task
-  OTTER_DECLARE(root);
-  OTTER_INIT(root, NULL, 0, true, ROOT_TASK_LABEL);
+#if OTTER_ROOT_TASK_EXPLICIT
+  OTTER_DECLARE_HANDLE(root);
+  OTTER_INIT_TASK(root, OTTER_NULL_TASK, 0, otter_add_to_pool, otter::label::root);
   OTTER_TASK_START(root);
+#endif
 
   #if defined(SharedOMP)
   #pragma omp parallel
@@ -522,7 +573,10 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().writeToCSV();
 
+#if OTTER_ROOT_TASK_EXPLICIT
   OTTER_TASK_END(root);
+#endif
+
   OTTER_FINALISE();
 
   repositories::finishSimulation();

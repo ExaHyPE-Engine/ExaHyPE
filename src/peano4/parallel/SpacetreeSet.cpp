@@ -1,8 +1,7 @@
 #include "config.h"
+
 #if defined(UseOtter)
 #define OTTER_TASK_GRAPH_ENABLE_USER
-#define ROOT_TASK_LABEL "[ROOT TASK]"
-#define TRAVERSE_TASK_LABEL_FMT "TraverseTask(_id=%d)"
 #endif
 
 #include "SpacetreeSet.h"
@@ -271,13 +270,14 @@ peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
   _invertTreeTraversalDirectionBeforeWeStart(invertTreeTraversalDirectionBeforeWeStart) {
 }
 
-#define LOCAL_TASK "unknown local task"
 bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
 
-  OTTER_DECLARE(root_task);
-  OTTER_DECLARE(local_task);
-  OTTER_BORROW(root_task, ROOT_TASK_LABEL);
-  OTTER_INIT(local_task, root_task, 2, true, LOCAL_TASK);
+  OTTER_DECLARE_HANDLE(root_task);
+  OTTER_DECLARE_HANDLE(local_task);
+#if OTTER_ROOT_TASK_EXPLICIT
+  OTTER_BORROW_FROM_POOL(root_task, otter::label::root);
+#endif
+  OTTER_INIT_TASK(local_task, root_task, 2, otter_add_to_pool, otter::label::unknown);
   OTTER_TASK_START(local_task);
 
   _spacetreeSet.createObserverCloneIfRequired(_observer,_spacetree._id);

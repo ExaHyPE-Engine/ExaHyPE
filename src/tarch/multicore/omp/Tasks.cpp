@@ -1,9 +1,7 @@
 #include "config.h"
+
 #if defined(UseOtter)
 #define OTTER_TASK_GRAPH_ENABLE_USER
-#define ROOT_TASK_LABEL "[ROOT TASK]"
-#define TIMESTEP_TASK_LABEL "[timestep task]"
-#define TRAVERSE_TASK_LABEL_FMT "TraverseTask(_id=%d)"
 #endif
 
 #include "tarch/Assertions.h"
@@ -189,8 +187,8 @@ namespace {
     int       pendingTasks  = NumberOfThreads;
     int       spawnedTasks  = 0;
 
-    OTTER_DECLARE(timestep_task);
-    OTTER_POP(timestep_task, TIMESTEP_TASK_LABEL);
+    OTTER_DECLARE_HANDLE(step_task);
+    OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
 
     #if defined(OpenMPTaskGroup)
     #pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks, tasks, strategy) firstprivate(NumberOfThreads) priority(StandardPriority) untied
@@ -204,8 +202,8 @@ namespace {
         #pragma omp atomic
         spawnedTasks++;
 
-        OTTER_DECLARE(traversal_task);
-        OTTER_INIT(traversal_task, timestep_task, 102, true, "[traversal task %d of %d]", i+1, NumberOfThreads);
+        OTTER_DECLARE_HANDLE(traversal_task);
+        OTTER_INIT_TASK(traversal_task, step_task, 102, otter_add_to_pool, otter::label::traverse_fmt, i+1, NumberOfThreads);
         OTTER_TASK_START(traversal_task);
 
         if (i<tasks.size()) {
@@ -251,8 +249,8 @@ namespace {
 
     // indicate a synchronisation on the traversal tasks executed in the taskloop (NOT the enclave tasks)
     // this mirrors the taskwait above
-    OTTER_SYNCHRONISE(timestep_task, children);
-    OTTER_PUSH(timestep_task, TIMESTEP_TASK_LABEL);
+    OTTER_TASK_WAIT_FOR(step_task, children);
+    OTTER_ADD_TO_POOL(step_task, otter::label::step);
 
     #ifdef UseSmartMPI
     taskWaitTime.stop();
