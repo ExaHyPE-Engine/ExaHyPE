@@ -203,7 +203,7 @@ void peano4::grid::internal::mergeAdjacentRefinementEvents( std::list< peano4::g
         *lhs = newEvent;
         lhs = inputEvents.erase(rhs);
         rhs = lhs;
-        rhs++;
+        if (rhs!=inputEvents.end()) rhs++;
         hasMergedEvents = true;
       }
       else {
