@@ -57,7 +57,7 @@ class DynamicMeshRefinementAnalysis(ActionSet):
                max_particles_per_cell=65536,
                min_h = 0.1,
                max_h = 0.01,
-               scale_marker = 0.8):
+               scale_marker = 1.0):
     """!
     
     Construct the action set

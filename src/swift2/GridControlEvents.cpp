@@ -14,5 +14,5 @@ void swift2::commitGridControlEvents( const std::list< peano4::grid::GridControl
     committedGridControlEvents.push_back(p);
   }
 
-  committedGridControlEvents = peano4::grid::merge( committedGridControlEvents, 1.2 );
+  committedGridControlEvents = peano4::grid::merge( committedGridControlEvents, 0.4 );
 }

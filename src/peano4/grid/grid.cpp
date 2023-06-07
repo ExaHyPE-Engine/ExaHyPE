@@ -185,10 +185,11 @@ void peano4::grid::internal::removeEraseEventsThatAreCancelledByRefineEvents(
 
 
 void peano4::grid::internal::mergeAdjacentRefinementEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents, int Tolerance ) {
-  bool hasMergedEvents = true;
-  while (hasMergedEvents) {
+  int searchDirection = Dimensions-1;
+
+  while (searchDirection>=0) {
     internal::sort( inputEvents );
-    hasMergedEvents = false;
+    bool hasMergedEvents = false;
 
     std::list< peano4::grid::GridControlEvent >::iterator lhs = inputEvents.begin();
     std::list< peano4::grid::GridControlEvent >::iterator rhs = inputEvents.begin();
@@ -196,22 +197,40 @@ void peano4::grid::internal::mergeAdjacentRefinementEvents( std::list< peano4::g
 
     while (rhs!=inputEvents.end()) {
       if (
-        twoEventsAreAdjacent(*rhs,*lhs,Tolerance)
+        twoEventsAreAdjacent(*rhs,*lhs,Tolerance,searchDirection)
       ) {
-        GridControlEvent newEvent = createBoundingBoxEvent(*rhs,*lhs);
-        logDebug( "mergeAdjacentRefinementEvents(...)", "merge two adjacent events " << lhs->toString() << " and " << rhs->toString() << ") into " << newEvent.toString() );
-        *lhs = newEvent;
-        lhs = inputEvents.erase(rhs);
-        rhs = lhs;
-        if (rhs!=inputEvents.end()) rhs++;
-        hasMergedEvents = true;
+          GridControlEvent newEvent = createBoundingBoxEvent(*rhs,*lhs);
+          logDebug( "mergeAdjacentRefinementEvents(...)", "merge two adjacent events " << lhs->toString() << " and " << rhs->toString() << ") into " << newEvent.toString() );
+          *lhs = newEvent;
+          lhs = inputEvents.erase(rhs);
+          rhs = lhs;
+          if (rhs!=inputEvents.end()) rhs++;
+          hasMergedEvents = true;
       }
       else {
         lhs++;
         rhs++;
       }
     }
+
+    if (not hasMergedEvents) {
+      logInfo( "mergeAdjacentRefinementEvents(...)", "searched " << inputEvents.size() << " events along direction " << searchDirection );
+      searchDirection--;
+    }
+    else {
+      searchDirection = Dimensions-1;
+    }
   }
+
+/*
+  if (inputEvents.size()>100) {
+    logInfo( "mergeAdjacentRefinementEvents(...)", "#entries: " << inputEvents.size() );
+    std::list< peano4::grid::GridControlEvent >::iterator p = inputEvents.begin();
+    logInfo( "mergeAdjacentRefinementEvents(...)", "1st: " << p->toString() );
+    p++;
+    logInfo( "mergeAdjacentRefinementEvents(...)", "2nd: " << p->toString() );
+    exit(-1);
+  }*/
 }
 
 
@@ -380,14 +399,18 @@ bool peano4::grid::internal::refinementEventOverrulesCoarsening( const peano4::g
 };
 
 
-bool peano4::grid::internal::twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs, double Tolerance ) {
+bool peano4::grid::internal::twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs, double tolerance, int direction ) {
   tarch::la::Vector<Dimensions,double> boundingEventOffset = tarch::la::min( lhs.getOffset(), rhs.getOffset() );
   tarch::la::Vector<Dimensions,double> boundingEventSize   = tarch::la::max( lhs.getOffset()+lhs.getWidth(), rhs.getOffset()+rhs.getWidth() ) - boundingEventOffset;
 
-  const double relativeTolerance = tarch::la::relativeEps( lhs.getWidth()(0), rhs.getWidth()(0), Tolerance );
-  assertion( relativeTolerance>0.0 );
-  return tarch::la::equals( lhs.getH(), rhs.getH(), relativeTolerance )
-     and tarch::la::volume(boundingEventSize) <= (1.0+relativeTolerance) * tarch::la::volume(lhs.getWidth()) + tarch::la::volume(rhs.getWidth());
+  bool guard = direction<0
+            or (tarch::la::countEqualEntries(lhs.getOffset(),rhs.getOffset())==1 and tarch::la::equalsReturnIndex(lhs.getOffset(),rhs.getOffset())==direction);
+
+  const double relativeTolerance = tarch::la::relativeEps( tarch::la::volume(lhs.getWidth()), tarch::la::volume(rhs.getWidth()), tolerance );
+
+  return guard
+     and tarch::la::equals( lhs.getH(), rhs.getH(), relativeTolerance )
+     and tarch::la::volume(boundingEventSize) <= (1.0+tolerance) * (tarch::la::volume(lhs.getWidth()) + tarch::la::volume(rhs.getWidth()));
 };
 
 
