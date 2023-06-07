@@ -2,6 +2,9 @@
 
 @page benchmarks_exahype2_euler_kernel_benchmarks Benchmarks of Compute Kernels for the Euler Equations
 
+To allow comparison, we use 1 thread, 2D patch with patch-size 8 to run the
+benchmark. 
+
 ExaHyPE 2's implementation of the Euler equations is shipped
 with a benchmark to assess the speed of the compute kernels.
 The benchmark solely computes the throughput on one core or one GPU and thus
