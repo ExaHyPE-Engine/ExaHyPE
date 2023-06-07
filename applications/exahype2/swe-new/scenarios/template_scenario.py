@@ -43,7 +43,11 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
         
     def implementation_of_refinement_criterion(self):
         # Implementing https://doi.org/10.1007%2Fs00024-016-1412-y could be interesting
+        # Maybe also Richardson Extrapolation Error?
         return """
+        return ::exahype2::RefinementCommand::Keep;
+        """
+        """
         ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
         if (Q[0] > 1e-8 && std::abs(Q[0] + Q[3]) >= 0.05) { 
             result = ::exahype2::RefinementCommand::Refine;
@@ -52,9 +56,6 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
             result = ::exahype2::RefinementCommand::Erase;
         }
         return result;
-        """
-        """
-        return ::exahype2::RefinementCommand::Keep;
         """
     
     def implementation_of_sources(self):
