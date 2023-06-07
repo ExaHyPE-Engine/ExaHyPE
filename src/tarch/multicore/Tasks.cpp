@@ -24,17 +24,27 @@
 
 
 namespace {
+  /**
+   * Used to administer task numbers
+   */
   tarch::multicore::BooleanSemaphore  activeTasksSemaphore;
   std::set<int>                       activeTaskNumbers;
 
   /**
-   * Temporary task queue which is used if and only if we hold back tasks
+   * Task queue of tasks which we hold back
    */
-  typedef std::list< tarch::multicore::Task* > NonblockingTasks;
+  struct NonblockingTasks {
+    NonblockingTasks() = default;
+    ~NonblockingTasks() = default;
+    NonblockingTasks(const NonblockingTasks&) = delete;
 
-  NonblockingTasks                     globalNonblockingTasks;
-  std::vector<NonblockingTasks>        localNonblockingTasks;
-  tarch::multicore::BooleanSemaphore   nonblockingTasksSemaphore;
+    typedef std::list< tarch::multicore::Task* > Tasks;
+    Tasks                                tasks;
+    tarch::multicore::BooleanSemaphore   semaphore;
+  };
+
+  NonblockingTasks                 globalNonblockingTasks;
+  std::vector<NonblockingTasks*>   localNonblockingTasks;
 
   tarch::multicore::orchestration::Strategy* orchestrationStrategy = tarch::multicore::orchestration::createDefaultStrategy();
 
@@ -57,10 +67,10 @@ namespace {
   bool processOnePendingTaskLIFO() {
     tarch::multicore::Task* myTask = nullptr;
 
-    tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-    if (not globalNonblockingTasks.empty()) {
-      myTask = globalNonblockingTasks.back();
-      globalNonblockingTasks.pop_back();
+    tarch::multicore::Lock lock(globalNonblockingTasks.semaphore);
+    if (not globalNonblockingTasks.tasks.empty()) {
+      myTask = globalNonblockingTasks.tasks.back();
+      globalNonblockingTasks.tasks.pop_back();
     }
     lock.free();
 
@@ -78,10 +88,10 @@ namespace {
   bool processOnePendingTaskFIFO() {
     tarch::multicore::Task* myTask = nullptr;
 
-    tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-    if (not globalNonblockingTasks.empty()) {
-      myTask = globalNonblockingTasks.front();
-      globalNonblockingTasks.pop_front();
+    tarch::multicore::Lock lock(globalNonblockingTasks.semaphore);
+    if (not globalNonblockingTasks.tasks.empty()) {
+      myTask = globalNonblockingTasks.tasks.front();
+      globalNonblockingTasks.tasks.pop_front();
     }
     lock.free();
 
@@ -95,56 +105,6 @@ namespace {
     }
     else return false;
   }
-
-
-  bool mapOnePendingTaskOntoNativeTask() {
-    tarch::multicore::Task* myTask = nullptr;
-
-    tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-    if (not globalNonblockingTasks.empty()) {
-      myTask = globalNonblockingTasks.front();
-      globalNonblockingTasks.pop_front();
-    }
-    lock.free();
-
-    if (myTask!=nullptr) {
-      tarch::multicore::native::spawnTask(myTask);
-    }
-    return myTask!=nullptr;
-  }
-
-
-  /**
-   * @return Number of processed tasks
-   */
-  int processPendingTasksFIFO(int maxTasks) {
-    NonblockingTasks extractedTasks;
-
-    tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-
-    NonblockingTasks::iterator cutIteration = globalNonblockingTasks.begin();
-    while (
-      cutIteration!=globalNonblockingTasks.end()
-      and
-      maxTasks>0
-    ) {
-      maxTasks--;
-      cutIteration++;
-    }
-
-    extractedTasks.splice( extractedTasks.begin(), globalNonblockingTasks, globalNonblockingTasks.begin(), cutIteration );
-    lock.free();
-
-    for (auto& task: extractedTasks) {
-      bool requeue = task->run();
-      if (requeue)
-        spawnTask( task );
-      else
-        delete task;
-    }
-
-    return extractedTasks.size();
-  }
 }
 
 
@@ -152,32 +112,16 @@ namespace {
  * @return Number of processed tasks
  */
 int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
-  NonblockingTasks extractedTasks;
+  NonblockingTasks::Tasks extractedTasks;
 
-  tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-  maxTasks = std::min( static_cast<int>(globalNonblockingTasks.size()), maxTasks );
-  NonblockingTasks::iterator cutIteration = globalNonblockingTasks.begin();
-  std::advance( cutIteration, globalNonblockingTasks.size() - maxTasks );
-  extractedTasks.splice( extractedTasks.begin(), globalNonblockingTasks, cutIteration, globalNonblockingTasks.end() );
+  tarch::multicore::Lock lock(globalNonblockingTasks.semaphore);
+  maxTasks = std::min( static_cast<int>(globalNonblockingTasks.tasks.size()), maxTasks );
+  NonblockingTasks::Tasks::iterator cutIteration = globalNonblockingTasks.tasks.begin();
+  std::advance( cutIteration, globalNonblockingTasks.tasks.size() - maxTasks );
+  extractedTasks.splice( extractedTasks.begin(), globalNonblockingTasks.tasks, cutIteration, globalNonblockingTasks.tasks.end() );
   lock.free();
 
-/*
-  NonblockingTasks::iterator cutIteration = globalNonblockingTasks.begin();
-  while (
-    cutIteration!=globalNonblockingTasks.end()
-    and
-    maxTasks>0
-  ) {
-    maxTasks--;
-    cutIteration++;
-  }
-    
-  extractedTasks.splice( extractedTasks.begin(), globalNonblockingTasks, globalNonblockingTasks.begin(), cutIteration );
-  lock.free();
-*/
-
-//  for (auto& task: extractedTasks) {
-  for (NonblockingTasks::reverse_iterator task = extractedTasks.rbegin(); task != extractedTasks.rend(); task++) {
+  for (NonblockingTasks::Tasks::reverse_iterator task = extractedTasks.rbegin(); task != extractedTasks.rend(); task++) {
     tarch::multicore::native::spawnTask(*task);
   }
 
@@ -185,57 +129,18 @@ int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
 }
 
 
-/**
- * ## Statistics
- *
- * We do log the number of thread-local tasks, but also found out that these are
- * often tiny. So if you sample it, it might not come through.
- */
-bool tarch::multicore::internal::processThreadLocalTask(int threadNumber) {
-  ::tarch::logging::Statistics::getInstance().log( ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber].size() );
-
-  tarch::multicore::Task* myTask = localNonblockingTasks[threadNumber].front();
-  localNonblockingTasks[threadNumber].pop_front();
-
-  bool requeue = myTask->run();
-  if (requeue)
-    spawnTask( myTask );
-  else
-    delete myTask;
-
-  return true;
-}
-
-
-/**
- * ## Algorithm:
- *
- * - Lock queue and pop first task from queue.
- * - If there is a task and task's canFuse() returns true:
- *   - As long as there are further tasks in the queue and these tasks have the same task type
- *     (an integer), append these tasks to tasksOfSameType.
- * - If there has been a task: Call native::processFusedTask() on the task and the list (which might be empty)
- *
- * ## Thread safety
- *
- * I assume that this routine is only called within an environment which has already
- * locked the queues. So I do not care about any thread safety here myself.
- *
- *
- * @return Number of merged/processed tasks
- */
 bool tarch::multicore::internal::fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction) {
-  logDebug( "fusePendingTasks(int)", "process " << globalNonblockingTasks.size() << " tasks subject to " << fuseInstruction.toString() );
+  logDebug( "fusePendingTasks(int)", "process " << globalNonblockingTasks.tasks.size() << " tasks subject to " << fuseInstruction.toString() );
 
-  ::tarch::logging::Statistics::getInstance().log( GlobalPendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks(-1) );
+  ::tarch::logging::Statistics::getInstance().log( GlobalPendingTasksStatisticsIdentifier, tarch::multicore::internal::getNumberOfWithholdPendingTasks() );
 
   tarch::multicore::Task* myTask = nullptr;
   std::list< tarch::multicore::Task* > tasksOfSameType;
 
-  tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-  if (not globalNonblockingTasks.empty()) {
-    myTask = globalNonblockingTasks.front();
-    globalNonblockingTasks.pop_front();
+  tarch::multicore::Lock lock(globalNonblockingTasks.semaphore);
+  if (not globalNonblockingTasks.tasks.empty()) {
+    myTask = globalNonblockingTasks.tasks.front();
+    globalNonblockingTasks.tasks.pop_front();
   }
 
   if (
@@ -243,9 +148,9 @@ bool tarch::multicore::internal::fusePendingTasks(const tarch::multicore::orches
     and
     myTask->canFuse()
   ) {
-    auto pp = globalNonblockingTasks.begin();
+    auto pp = globalNonblockingTasks.tasks.begin();
     while (
-      pp!=globalNonblockingTasks.end()
+      pp!=globalNonblockingTasks.tasks.end()
       and
       (*pp)->getTaskType()==myTask->getTaskType()
       and
@@ -254,7 +159,7 @@ bool tarch::multicore::internal::fusePendingTasks(const tarch::multicore::orches
       tasksOfSameType.size()<fuseInstruction.maxTasks-1
     ) {
       tasksOfSameType.push_back( *pp );
-      pp = globalNonblockingTasks.erase(pp);
+      pp = globalNonblockingTasks.tasks.erase(pp);
     }
     lock.free();
 
@@ -331,21 +236,15 @@ bool tarch::multicore::TaskComparison::operator() (Task* lhs, Task* rhs) const {
   return *lhs < *rhs;
 }
 
-// TODO (AT): do we want to try annotating task creation directly in the class constructors & destructors?
-tarch::multicore::Task::Task( int id, int taskType, int priority ):
-  _id(id),
+
+tarch::multicore::Task::Task( int taskType, int priority ):
   _taskType( taskType ),
   _priority( priority ) {
 }
 
 
 bool tarch::multicore::Task::canFuse() const {
-  return false;
-}
-
-
-bool tarch::multicore::Task::isSmartMPITask() const {
-  return false;
+  return _taskType!=DontFuse;
 }
 
 
@@ -365,6 +264,7 @@ int tarch::multicore::Task::getTaskType() const {
 
 
 bool tarch::multicore::Task::fuse( const std::list<Task*>& otherTasks, int device ) {
+  assertion( canFuse() );
   for (auto pp: otherTasks) {
     tarch::multicore::Task* currentTask = pp;
     while (currentTask->run()) {}
@@ -374,23 +274,8 @@ bool tarch::multicore::Task::fuse( const std::list<Task*>& otherTasks, int devic
 }
 
 
-int tarch::multicore::Task::getTaskId() const {
-  return _id;
-}
-
-
-bool tarch::multicore::Task::split(std::list<tarch::multicore::Task*>&) {
-  return true;
-}
-
-
-bool tarch::multicore::Task::canSplit() const {
-  return false;
-}
-
-
-tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor( int id, int taskType, int priority, const std::function<bool()>& taskFunctor ):
-  Task(id, taskType, priority),
+tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor( int taskType, int priority, const std::function<bool()>& taskFunctor ):
+  Task(taskType, priority),
   _taskFunctor(taskFunctor)  {
 }
 
@@ -400,8 +285,8 @@ bool tarch::multicore::TaskWithCopyOfFunctor::run() {
 }
 
 
-tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor( int id, int taskType, int priority, std::function<bool()>& taskFunctor ):
-  Task(id, taskType, priority),
+tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor( int taskType, int priority, std::function<bool()>& taskFunctor ):
+  Task(taskType, priority),
   _taskFunctor(taskFunctor)  {
 }
 
@@ -414,21 +299,20 @@ bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
 bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
   assertion(maxTasks>=0);
 
-  ::tarch::logging::Statistics::getInstance().log( GlobalPendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks(-1) );
-
   bool  result        = false;
   while (maxTasks>0) {
-    if (fifo and processOnePendingTaskFIFO() ) {
+    if (fifo) {
       maxTasks--;
-      result = true;
-    }
-    else if (not fifo and processOnePendingTaskLIFO() ) {
-      maxTasks--;
-      result = true;
+      result |= processOnePendingTaskFIFO();
     }
     else {
-      native::deferRunningThreadAndContinueWithOtherTasks();
-      maxTasks=0;
+      maxTasks--;
+      result |= processOnePendingTaskLIFO();
+    }
+
+    if (not result and maxTasks==0) {
+      internal::copyInternalTaskQueuesOverIntoGlobalQueue();
+      native::drainTaskQueues();
     }
   }
 
@@ -439,33 +323,35 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
 void tarch::multicore::spawnTask(Task*  task) {
   assertion( task!=nullptr );
 
-  #ifdef UseSmartMPI
-  if ( task->isSmartMPITask() and smartmpi::spawn( dynamic_cast<smartmpi::Task*>(task) )) {
-    return;
-  }
-  #endif
-
   int threadNumber = Core::getInstance().getThreadNumber();
   assertion1( threadNumber>=0, threadNumber );
   assertion2( threadNumber<localNonblockingTasks.size(), threadNumber, localNonblockingTasks.size());
 
-  if ( localNonblockingTasks[threadNumber].size()>=orchestrationStrategy->getNumberOfTasksToHoldBack() ) {
+  #ifdef UseSmartMPI
+  if ( task->isSmartMPITask() and smartmpi::spawn( dynamic_cast<smartmpi::Task*>(task) )) {
+  }
+  else
+  #endif
+  if ( localNonblockingTasks[threadNumber]->tasks.size()>=orchestrationStrategy->getNumberOfTasksToHoldBack() ) {
     logDebug( "spawnTasks(int)", "spawn native task" );
     native::spawnTask(task);
   }
   else {
-    localNonblockingTasks[threadNumber].push_back(task);
-    ::tarch::logging::Statistics::getInstance().log( ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber].size() );
+    tarch::multicore::Lock lock(localNonblockingTasks[threadNumber]->semaphore);
+    localNonblockingTasks[threadNumber]->tasks.push_back(task);
+    lock.free();
 
-    logDebug( "spawnTask(...)", "enqueued task (#tasks=" << localNonblockingTasks[threadNumber].size() << ")" );
+    ::tarch::logging::Statistics::getInstance().log( ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber]->tasks.size() );
+
+    logDebug( "spawnTask(...)", "enqueued task (#tasks=" << localNonblockingTasks[threadNumber]->tasks.size() << ")" );
 
     auto fusionCommand = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
     if (
-      localNonblockingTasks[threadNumber].size()>=fusionCommand.minTasks
+      localNonblockingTasks[threadNumber]->tasks.size()>=fusionCommand.minTasks
       and
       orchestrationStrategy->fuseTasksImmediatelyWhenSpawned()
     ) {
-      internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+      internal::copyInternalTaskQueueOverIntoGlobalQueue(threadNumber);
       internal::fusePendingTasks(fusionCommand);
     }
   }
@@ -473,205 +359,112 @@ void tarch::multicore::spawnTask(Task*  task) {
 
 
 
-/**
-* Process a set of tasks and wait for their completion
-*
-* @todo stimmt so nimmer
-*
-* Run over a set of task and wait until they are complete. Each of these tasks
-* can spawn further tasks. We do not have to wait for these guys.
-*
-* Logically, this is a plain task loop where we wait only for the direct
-* children only. Technically, we need however something
-* more sophisticated.
-*
-* - OpenMP implementations fail to "backfill" idling threads with OpenMP tasks
-*   when we hit a taskwait, and we know that the tasks within the passed
-*   container are highly ill-balanced.
-* - A lot of OpenMP tools do not support OpenMP's taskloop properly.
-* - The tasks within tasks spawn a lot of further tiny tasks. All OpenMP
-*   implementations
-*
-* The strategy is thus straightforward: Normally, we map OpenMP tasks directly
-* onto OpenMP tasks. If we hit this routine, we however start to buffer all
-* the tiny tasks that are created by the big tasks in the container in a local
-* queue. We release the tiny ones eventually after the big tasks
-* have terminated. At the same time, we map the each big task onto a proper
-* OpenMP tasks which checks towards the end of its lifetime whether its
-* colleagues have finished, too. If this is not the case, they process a few
-* of these pending tiny tasks and check again.
-*
-* <h2> Problem context </h2>
-*
-* The taskwait pragma allows the scheduler to process other tasks. This way,
-* it should keep cores busy all the time. However, several groups have
-* reported that this is not the case. See in particular
-*
-* Jones, Christopher Duncan (Fermilab): Using OpenMP for HEP Framework Algorithm Scheduling
-* http://cds.cern.ch/record/2712271
-*
-* The presentation slides can be found at https://zenodo.org/record/3598796#.X6eVv8fgqV4.
-*
-* This documentation clarifies that some OpenMP runtimes do (busy) waits within
-* the taskwait construct to be able to continue immediately. They do not
-* process other tasks meanwhile. We want to support a variaty of runtimes -
-* GCC for example is important for us due to its NVIDIA GPU support = and
-* we therefore do supply the layered implementation. Also, we need a, again
-* for our GPU/dynamic LB stuff, a variant where we have scheduler control.
-*
-* Our own ExaHyPE 2 POP review came to the same conclusion.
-*
-*
-* <h2> Implementation </h2>
-*
-* I originally thought we could just work with parallel fors. However, this
-* does not work, as we don't want to spawn our own parallel region here. We
-* expect the overarching main loop to be a parallel region. This main things
-* has to be embedded into a single/master statement, so it is only executed
-* on one thread. As a result, by the time we hit spawnAndWait, we are working
-* within a single environment. If we spawn parallel for within a single
-* environment, OpenMP will complain. It won't work, as we operate within
-* single. So I rely here a sequential loop which produces tasks.
-*
-* The implementation is straightforward: We use a counter that we set to the
-* number of work items or number of threads; whichever is bigger. Per loop
-* iteration, we produce one task. Every task decrements this counter upon completion.
-* That is: each task knows towards the end of its lifetime how many other
-* tasks are still up and running.
-*
-* @image html layered-openmp-steps.png
-*
-*
-* ## Statistics
-*
-* It is important to know how many BSP sections are active at a point. So I disable
-* any sampling here.
-*
-* @see  processPendingTasks(int)
-*/
 void tarch::multicore::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
   static tarch::logging::Log _log( "tarch::multicore" );
 
   if (not tasks.empty()) {
-    ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true );
+    static int nestedSpawnAndWaits = 0;
+    static tarch::multicore::BooleanSemaphore nestingSemaphore;
 
-    orchestrationStrategy->startBSPSection();
-    
-    native::spawnAndWait(tasks,orchestrationStrategy);
-    orchestrationStrategy->endBSPSection();
+    tarch::multicore::Lock nestingLock( nestingSemaphore, false );
+    nestingLock.lock();
+    nestedSpawnAndWaits++;
+    const int localNestedSpawnAndWaits = nestedSpawnAndWaits;
+    nestingLock.free();
 
-    internal::copyInternalTaskQueuesOverIntoGlobalQueue(-1);
+    orchestrationStrategy->startBSPSection(localNestedSpawnAndWaits);
 
-    const auto fusionInstruction = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
-    bool successInFusing = true;
-    while ( successInFusing and globalNonblockingTasks.size()>=fusionInstruction.minTasks) {
-      successInFusing = tarch::multicore::internal::fusePendingTasks(fusionInstruction);
+    switch (orchestrationStrategy->paralleliseForkJoinSection(localNestedSpawnAndWaits, tasks.size(), tasks[0]->getTaskType())) {
+      case tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunSerially:
+        {
+          for (auto& p: tasks) {
+            while (p->run()) {
+              Core::getInstance().yield();
+            }
+            delete p;
+          }
+        }
+        break;
+      case tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel:
+        {
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true );
+          native::spawnAndWaitAsTaskLoop(tasks);
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true );
+
+          // AT: ideally would record the handle of the encountering task here to correctly identify child tasks
+          otterSynchroniseTasks(NULL, otter_sync_children);
+
+          internal::copyInternalTaskQueuesOverIntoGlobalQueue();
+          int  numberOfPendingTasks = tarch::multicore::internal::getNumberOfWithholdPendingTasks();
+          auto fusionInstruction    = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
+
+          bool successInFusing = true;
+          while ( successInFusing and globalNonblockingTasks.tasks.size()>=fusionInstruction.minTasks) {
+            successInFusing = tarch::multicore::internal::fusePendingTasks(fusionInstruction);
+          }
+
+          if ( not globalNonblockingTasks.tasks.empty() ) {
+            int numberOfTasksToProcessNow = std::max(0,static_cast<int>(globalNonblockingTasks.tasks.size())-orchestrationStrategy->getNumberOfTasksToHoldBack());
+            internal::mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
+          }
+        }
+        break;
+      case tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndIgnoreWithholdSubtasks:
+        {
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true );
+          native::spawnAndWaitAsTaskLoop(tasks);
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true );
+
+          // AT: ideally would record the handle of the encountering task here to correctly identify child tasks
+          otterSynchroniseTasks(NULL, otter_sync_children);
+        }
+        break;
     }
 
-    if ( not globalNonblockingTasks.empty() ) {
-      int numberOfTasksToProcessNow = std::max(0,static_cast<int>(globalNonblockingTasks.size())-orchestrationStrategy->getNumberOfTasksToHoldBack());
-      internal::mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
-    }
+    orchestrationStrategy->endBSPSection(localNestedSpawnAndWaits);
 
-    ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true );
+    nestingLock.lock();
+    nestedSpawnAndWaits--;
+    nestingLock.free();
   }
 }
 
 
-bool tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
- tarch::multicore::orchestration::Strategy*     strategy
-) {
-  const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
-  const int  threadNumber = tarch::multicore::Core::getInstance().getThreadNumber();
-
-  tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks(threadNumber);
-
-  bool processedSomeTasks = false;
-  if (
-    numberOfPendingTasks>0
-    and
-    fusion.minTasks!=std::numeric_limits<int>::max()
-  ) {
-    tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
-    tarch::multicore::internal::fusePendingTasks(fusion);
-    processedSomeTasks = true;
-  }
-  else if (numberOfPendingTasks>0) {
-    processedSomeTasks = tarch::multicore::internal::processThreadLocalTask(threadNumber);
-  }
-  else if (
-    tarch::multicore::getNumberOfPendingTasks(-1)>0
-    and
-    fusion.minTasks!=std::numeric_limits<int>::max()
-  ) {
-    processedSomeTasks |= tarch::multicore::internal::fusePendingTasks(fusion);
-    if (not processedSomeTasks) {
-      const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-      processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
-    }
-  }
-  else if (
-    tarch::multicore::getNumberOfPendingTasks(-1)>0
-  ) {
-    const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-    processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
-  }
-  else {
-    assertion( tarch::multicore::getNumberOfPendingTasks(-1)==0 );
-
-    for (int threadNumber=0; threadNumber<tarch::multicore::Core::getInstance().getThreadNumber(); threadNumber++) {
-      tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
-    }
-
-    processedSomeTasks = tarch::multicore::getNumberOfPendingTasks(-1) > 0;
-  }
-
-  return processedSomeTasks;
-}
-
-
-void tarch::multicore::internal::configureInternalTaskQueues(int numberOfTasks) {
-  localNonblockingTasks.resize(numberOfTasks);
-}
-
-
-void tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(int threadNumber) {
-  if (threadNumber<0) {
-    tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-
-    for (int threadNumber=0; threadNumber<localNonblockingTasks.size(); threadNumber++) {
-      ::tarch::logging::Statistics::getInstance().log( ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber].size() );
-    }
-
-    for (auto& p: localNonblockingTasks) {
-      std::copy(
-        p.begin(),
-        p.end(),
-        std::back_inserter(globalNonblockingTasks)
-      );
-      p.clear();
-    }
-  }
-  else if ( not localNonblockingTasks[threadNumber].empty() ) {
-    tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-    ::tarch::logging::Statistics::getInstance().log( ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber].size() );
-    std::copy(
-      localNonblockingTasks[threadNumber].begin(),
-      localNonblockingTasks[threadNumber].end(),
-      std::back_inserter(globalNonblockingTasks)
-    );
-    localNonblockingTasks[threadNumber].clear();
+void tarch::multicore::internal::configureInternalTaskQueues(int numberOfThreads) {
+  while (localNonblockingTasks.size()<numberOfThreads) {
+    localNonblockingTasks.push_back( new NonblockingTasks() );
   }
 }
 
 
-int tarch::multicore::getNumberOfPendingTasks(int threadNumber) {
-  return threadNumber<0
-    ? globalNonblockingTasks.size() + tarch::multicore::native::getNumberOfPendingTasks()
-    : localNonblockingTasks[threadNumber].size();
+void tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue() {
+  for (int i=0; i<localNonblockingTasks.size(); i++) {
+    copyInternalTaskQueueOverIntoGlobalQueue(i);
+  }
+}
+
+
+void tarch::multicore::internal::copyInternalTaskQueueOverIntoGlobalQueue(int threadNumber) {
+  assertion( threadNumber>=0 );
+
+  ::tarch::logging::Statistics::getInstance().log( ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber]->tasks.size() );
+  tarch::multicore::Lock globalLock(globalNonblockingTasks.semaphore);
+  tarch::multicore::Lock localLock(localNonblockingTasks[threadNumber]->semaphore);
+  std::copy(
+    localNonblockingTasks[threadNumber]->tasks.begin(),
+    localNonblockingTasks[threadNumber]->tasks.end(),
+    std::back_inserter(globalNonblockingTasks.tasks)
+  );
+  logDebug( "copyInternalTaskQueuesOverIntoGlobalQueue()", "added " << localNonblockingTasks[threadNumber]->tasks.size() << " tasks to global tasks. #global pending tasks=" << tarch::multicore::internal::getNumberOfWithholdPendingTasks() );
+  localNonblockingTasks[threadNumber]->tasks.clear();
+  ::tarch::logging::Statistics::getInstance().log( GlobalPendingTasksStatisticsIdentifier, tarch::multicore::internal::getNumberOfWithholdPendingTasks() );
+}
+
+
+int tarch::multicore::internal::getNumberOfWithholdPendingTasks() {
+  return globalNonblockingTasks.tasks.size();
 }
 
 
@@ -690,23 +483,13 @@ void tarch::multicore::native::spawnTask(Task*  job) {
 }
 
 
-void tarch::multicore::native::spawnAndWait(
-  const std::vector< Task* >&  tasks,
-  orchestration::Strategy*     strategy
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(
+  const std::vector< Task* >&  tasks
 ) {
   for (auto& p: tasks) {
     while (p->run()) {}
     delete p;
   }
-}
-
-
-int tarch::multicore::native::getNumberOfPendingTasks() {
-  return 0;
-}
-
-
-void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
 }
 
 
@@ -718,6 +501,10 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
   else {
     delete myTask;
   }
+}
+
+
+void tarch::multicore::native::drainTaskQueues() {
 }
 
 #endif

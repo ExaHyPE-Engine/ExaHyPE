@@ -165,6 +165,14 @@ namespace swift2 {
     );
 
 
+    template <typename ParticleContainer>
+    void flagBoundaryParticles(
+      const ParticleContainer&  localParticles,
+      const double nparts,
+      const tarch::la::Vector<Dimensions,double>& domainSize,
+      const tarch::la::Vector<Dimensions,double>& domainOffset
+    );
+
   }
 }
 

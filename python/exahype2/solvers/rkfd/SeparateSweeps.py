@@ -347,8 +347,6 @@ class SeparateSweeps( CellCenteredFiniteDifferences ):
     if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
     if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
     
-    if boundary_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
-      assert False, "boundary conditions cannot be none"
     if refinement_criterion==exahype2.solvers.fv.PDETerms.None_Implementation:
       assert False, "refinement criterion cannot be none"
     if initial_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:

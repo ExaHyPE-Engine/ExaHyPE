@@ -92,13 +92,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     ) final;
     void finishPlottingStep() final;
 
-    double getMaxMeshSize() const override final;
-    double getMinMeshSize() const override final;
+    virtual double getMaxMeshSize() const override final;
+    virtual double getMinMeshSize() const override final;
 
-    bool mayPlot() const override;
+    virtual bool mayPlot() const override;
 
-    void startSimulation() override;
-    void finishSimulation() override;
+    virtual void startSimulation() override;
+    virtual void finishSimulation() override;
 
     /**
      * By construction, we always are in the first and last sweep of time

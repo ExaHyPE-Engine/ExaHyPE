@@ -1,0 +1,43 @@
+
+
+
+
+
+Modelling the fluxes and Riemann solvers with SymPy
+---------------------------------------------------
+
+You can model your fluxes, Riemann solvers and so forth with SymPy,
+i.e. through symbolic formulations---as long as you use a generic
+numerical Riemann solver such as Rusanov. The  SymPy wrapper is held
+within the  subpackage `exahype2.sympy`.
+
+I provide a couple of classes for different PDE variants that should be
+compatible to particular  Finite Volume and ADER-DG solvers. All SymPy
+classes wrap around SymPy's symbolic expressions, and thus allow users
+to work with these expressions directly. Once you have finished you
+modelling, the wrappers offer some code generation which again decorate
+SymPy's code generation, adds some glue code and can inject the generate
+into a  solver.
+
+The Euler equations modelled via this interface then add the following
+code snippet to the Python script that models :
+
+This `pde` object here can create C++ code that we can plug directly
+into the respective  routines:
+
+With this call, the modelled PDE feeds, via code generation, directly
+into the  solver. When we remodel the PDE, everything is updated
+automatically.
+
+If you study the interface of `set_implementation`, you will notice that
+you can also model boundary or initial conditions this way. In this
+example, we however only modelled flux and eigenvalues. The remaining
+callbacks remain plain C++.
+
+For further resources, please visit SymPy's homepage, and maybe you also
+want to have a look into projects like EinsteinPy or galgebra which
+provide tools for astrophysics or geometric algebra, respectively. As we
+rely on SymPy and expose all the SymPy expressions, they are compatible
+with .
+
+

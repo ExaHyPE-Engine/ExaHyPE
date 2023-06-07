@@ -61,6 +61,7 @@ from the active set.
                unprepare_traversal_kernel="", 
                additional_includes="", 
                active_particle_set=None ):
+    super(ParticleParticleInteraction_Sets,self).__init__()
     self._particle_set = particle_set
     self.d = {}
     self.d[ "LOCAL_PARTICLE" ]                    = particle_set.particle_model.name

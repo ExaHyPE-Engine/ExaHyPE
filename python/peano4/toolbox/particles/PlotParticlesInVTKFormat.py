@@ -54,6 +54,8 @@ class PlotParticlesInVTKFormat(ActionSet):
          Pass in prefined constants to use default behaviour.
 
     """
+    super( PlotParticlesInVTKFormat, self ).__init__(priority=1, parallel=False)
+    
     self.d = {}
     self.d[ "FILENAME" ]                           = filename
     self.d[ "PARTICLE" ]                           = particle_set.particle_model.name

@@ -34,6 +34,6 @@ class tarch::mpi::tests::StringTest: public tarch::tests::TestCase {
     /**
      * This routine is triggered by the TestCaseCollection
      */
-    void run() override;
+    virtual void run() override;
 };
 

@@ -5,6 +5,9 @@ from swift2.particle.AlgorithmStep import AlgorithmStep
 
 import peano4
 
+from abc import ABC
+
+
 class ExplicitEulerFixedInteractionRadius(Particle):
   """!
   
@@ -169,3 +172,16 @@ after it has called the baseline constructor.
       ),
     ]
 
+
+  def initialisation_steps(self):
+    """!
+    
+    No particular initialisation required
+    
+    """
+    return [] 
+
+
+  #@property
+  #def readme_descriptor(self):
+  #  return """ ### Particle """ + self.name

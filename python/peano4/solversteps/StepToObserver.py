@@ -20,4 +20,4 @@ class StepToObserver(object):
       self.step.cell_data
     )
     output.artefacts.append( observer )
-    output.makefile.add_cpp_file( observer.get_cpp_file_name() )
+    output.makefile.add_cpp_file( observer.get_cpp_file_name(), generated=True )

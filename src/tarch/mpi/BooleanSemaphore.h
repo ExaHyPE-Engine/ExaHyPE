@@ -95,7 +95,7 @@ class tarch::mpi::BooleanSemaphore {
 
       public:
         void init();
-        void shutdown() override;
+        virtual void shutdown() override;
 
         /**
          * Destructor of the service. As the service is a singleton and a service
@@ -121,7 +121,7 @@ class tarch::mpi::BooleanSemaphore {
          * Now, only one message is there and, consequently, the second thread 
          * deadlocks.
          */
-        void receiveDanglingMessages() override;
+        virtual void receiveDanglingMessages() override;
 
         /**
          * Don't use this routine. It returns the global semaphore and is only used

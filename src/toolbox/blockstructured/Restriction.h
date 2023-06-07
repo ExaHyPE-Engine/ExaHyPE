@@ -134,6 +134,19 @@ namespace toolbox {
 
 
     /**
+     * This routine should be used if a cell hosts two sets of unknowns
+     *
+     * Frequently used if your code hosts two PDE solvers.
+     */
+    void restrictCellIntoOverlappingCell_inject(
+      int                                       numberOfDoFsPerAxisInSourcePatch,
+      int                                       numberOfDoFsPerAxisInDestinationPatch,
+      int                                       unknowns,
+      double*                                   sourceValues,
+      double*                                   destinationValues
+    );
+
+    /**
      * This routine is used when we delete a cell due to dynamic AMR
      */
     void restrictCell_AoS_averaging(

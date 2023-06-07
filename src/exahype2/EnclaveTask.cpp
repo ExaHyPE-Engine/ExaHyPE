@@ -28,7 +28,8 @@ exahype2::EnclaveTask::EnclaveTask(
   int                                            numberOfResultValues,
   Functor                                        functor
 ):
-  tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),enclaveTaskTypeId,tarch::multicore::Task::DefaultPriority),
+  tarch::multicore::Task(enclaveTaskTypeId,tarch::multicore::Task::DefaultPriority),
+  _taskNumber(tarch::multicore::reserveTaskNumber()),
   _marker(marker),
   _t(t),
   _dt(dt),
@@ -49,6 +50,7 @@ exahype2::EnclaveTask::EnclaveTask(
   OTTER_INIT_TASK(enclave_task, root_task, 1, otter_add_to_pool, otter::label::enclave);
 #endif
 }
+
 
 bool exahype2::EnclaveTask::run() {
   logTraceInWith1Argument( "run()", getTaskId() );
@@ -74,6 +76,7 @@ bool exahype2::EnclaveTask::run() {
   return false;
 }
 
+
 void exahype2::EnclaveTask::computeTask() {
   assertion( _outputValues==nullptr );
   assertion( _numberOfResultValues>0 );
@@ -83,4 +86,9 @@ void exahype2::EnclaveTask::computeTask() {
 
   logDebug( "computeTask()", "lambda=" << _maxEigenvalue );
   _functor();
+}
+
+
+int exahype2::EnclaveTask::getTaskId() const {
+  return _taskNumber;
 }

@@ -71,6 +71,11 @@ void applications::exahype2::ccz4::enforceCCZ4constraints(double * luh)
     luh[ 9] =   Aex[1][1];
     luh[10] =   Aex[1][2];
     luh[11] =   Aex[2][2];
+
+    //new constraints: a minimum for phi(chi) and alpha
+    luh[16]=std::fmax(1e-16,luh[16]);
+    luh[54]=std::fmax(1e-16,luh[54]);
+
     //
     // As suggested by our PRD referee, we also enforce the algebraic constraint that results from the first spatial derivative of the constraint
     // det \tilde{\gamma}_ij = 0, which leads to
@@ -163,7 +168,7 @@ void applications::exahype2::ccz4::admconstraints(double* constraints, const dou
     const double traceK = Q[53];
     const double dtraceK[3] = {gradQin[53][0], gradQin[53][1], gradQin[53][2]};
 
-    const double phi = std::exp(std::fmax(-20., std::fmin(20.,Q[54])));
+    const double phi = std::fmax(1e-2,Q[54]); 
     const double phi2 = phi*phi;
     const double PP[3] = {Q[55], Q[56], Q[57]};
 
@@ -234,25 +239,34 @@ void applications::exahype2::ccz4::admconstraints(double* constraints, const dou
     for (int u = 0; u < 3; u++) Kup[i][j] += phi2*g_contr[i][u] * Kmix[j][u]; // Note the transposition is in the indices
 
     double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    double Christoffel_tilde[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
-    for (int l = 0; l < 3; l++) Christoffel[i][j][k]  += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l] * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] );
+    for (int l = 0; l < 3; l++) {
+        Christoffel_tilde[i][j][k] += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] );
+        Christoffel[i][j][k]  += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l]/phi * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] );
+    }
 
     double dChristoffel[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
+    double dChristoffel_tilde[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+ 
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     for (int m = 0; m < 3; m++)
     for (int k = 0; k < 3; k++)
     for (int l = 0; l < 3; l++)
     {
-        dChristoffel[k][i][j][m] += 0.5*g_contr[m][l] * (
+        dChristoffel[k][i][j][m] += 0.5*g_contr[m][l] * ( //npc part
             dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j]
-            - g_cov[j][l]*(dPP[k][i] + dPP[i][k]) - g_cov[i][l]*(dPP[k][j]+dPP[j][k]) +  g_cov[i][j]*(dPP[k][l]+dPP[l][k]) )
-            +dgup[k][m][l]*(DD[i][j][l]+DD[j][i][l]-DD[l][i][j])
-            -dgup[k][m][l]*(g_cov[j][l]*PP[i]+g_cov[i][l]*PP[j]-g_cov[i][j]*PP[l])
-            -2*g_contr[m][l]*(DD[k][j][l]*PP[i]+DD[k][i][l]*PP[j]-DD[k][i][j]*PP[l]);
+            - g_cov[j][l]*(dPP[k][i] + dPP[i][k])/phi - g_cov[i][l]*(dPP[k][j]+dPP[j][k])/phi +  g_cov[i][j]*(dPP[k][l]+dPP[l][k])/phi )
+            +dgup[k][m][l]*(DD[i][j][l]+DD[j][i][l]-DD[l][i][j])  //src part
+            -dgup[k][m][l]*(g_cov[j][l]*PP[i]+g_cov[i][l]*PP[j]-g_cov[i][j]*PP[l])/phi
+            -2*g_contr[m][l]*(DD[k][j][l]*PP[i]+DD[k][i][l]*PP[j]-DD[k][i][j]*PP[l])/phi
+            +g_contr[m][l]*(g_cov[j][l]*PP[i]*PP[k]+g_cov[i][l]*PP[j]*PP[k]-g_cov[i][j]*PP[k]*PP[l])/phi2;
+
+        dChristoffel_tilde[k][i][j][m] += dgup[k][m][l]*(DD[i][j][l]+DD[j][i][l]-DD[l][i][j])
+            +0.5*g_contr[m][l]*(dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j]);
     }
 
     double Riemann[3][3][3][3] = {0};
@@ -278,15 +292,57 @@ void applications::exahype2::ccz4::admconstraints(double* constraints, const dou
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) Kupdown += Kex[i][j]*Kup[i][j];
 
+// following is added to calculate nabla_i Z^i
+    double Gtilde[3] = {0,0,0};
+    for (int l = 0; l < 3; l++)
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++) Gtilde[i] += g_contr[j][l] * Christoffel_tilde[j][l][i];
+
+    const double Ghat[3] = {Q[13], Q[14], Q[15]};
+
+    const double dGhat[3][3] = {
+        {gradQin[13][0],gradQin[14][0],gradQin[15][0]},
+        {gradQin[13][1],gradQin[14][1],gradQin[15][1]},
+        {gradQin[13][2],gradQin[14][2],gradQin[15][2]}
+    };
+
+    double dGtilde[3][3] = {0,0,0,0,0,0,0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int k = 0; k < 3; k++)
+    for (int j = 0; j < 3; j++)
+    for (int l = 0; l < 3; l++) dGtilde[k][i] += dgup[k][j][l]*Christoffel_tilde[j][l][i]+g_contr[j][l]*dChristoffel_tilde[k][j][l][i];
+
+    double Z[3] = {0,0,0}; // Matrix vector multiplications
+    for (int i=0;i<3;i++)
+    for (int j=0;j<3;j++) Z[i] += 0.5* g_cov[i][j]* (Ghat[j] - Gtilde[j]);//needed here
+
+    double dZ[3][3] = {0,0,0,0,0,0,0,0,0};
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++)
+    for (int k = 0; k < 3; k++) dZ[k][i] += DD[k][i][j]*(Ghat[j]-Gtilde[j])+0.5*g_cov[i][j]*(dGhat[k][j]-dGtilde[k][j]);
+
+    double nablaZ[3][3] = {0,0,0,0,0,0,0,0,0};
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++)
+    {
+      nablaZ[i][j] = dZ[i][j];
+      for (int k = 0; k < 3; k++) nablaZ[i][j] -= Christoffel[i][j][k]*Z[k];
+    }
+
+    double nablaZcontracted=0;
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++) nablaZcontracted += g_contr[i][j]*nablaZ[i][j]; // TODO fuse these steps
+    nablaZcontracted*=phi2;
+
+//end here
+
     double Ham=0;
     Ham = R-Kupdown+traceK*traceK;
 
     double dKex[3][3][3]={0};
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
-    for (int k = 0; k < 3; k++) dKex[k][i][j]= (1.0/phi2)*(
-            dAex[k][i][j]-2*Aex[i][j]*PP[k]+(1.0/3)*dtraceK[k]*g_cov[i][j]
-            +(2.0/3)*traceK*DD[k][i][j]-(2.0/3)*traceK*g_cov[i][j]*PP[k]);
+    for (int k = 0; k < 3; k++) dKex[k][i][j]  = (1.0/phi2)*(dAex[k][i][j]+(1./3)*g_cov[i][j]*dtraceK[k]+(2./3)*traceK*DD[k][i][j])-2*Kex[i][j]*PP[k]/phi;
 
     double Mom[3]={0,0,0};
     for (int i = 0; i < 3; i++)
@@ -303,8 +359,11 @@ void applications::exahype2::ccz4::admconstraints(double* constraints, const dou
     constraints[1]  =   Mom[0];
     constraints[2]  =   Mom[1];
     constraints[3]  =   Mom[2];
-    constraints[4]  =   1.0/invdet-1.0;
-    constraints[5]  =   traceA;
+    constraints[4]  =   R;
+    constraints[5]  =   Kupdown;
+    constraints[6]  =   nablaZcontracted;
+    //constraints[4]  =   1.0/invdet-1.0;
+    //constraints[5]  =   traceA;
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target

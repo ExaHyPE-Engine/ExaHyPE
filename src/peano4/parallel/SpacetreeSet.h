@@ -63,8 +63,6 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
         SpacetreeSet&                     _spacetreeSet;
         peano4::grid::TraversalObserver&  _observer;
         const bool                        _invertTreeTraversalDirectionBeforeWeStart;
-        
-        static int _typeId;
       public:
         TraverseTask( peano4::grid::Spacetree&  tree, SpacetreeSet& set, peano4::grid::TraversalObserver&  observer, bool invertTreeTraversalDirectionBeforeWeStart );
 
@@ -72,7 +70,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
          * I create the copy of the observer, run the traversal on my local
          * tree _spacetree and finally destroy the local observer copy.
          */
-        bool run() override;
+        virtual bool run() override;
     };
 
   public:
@@ -633,7 +631,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * See the description in mpi.h for a howto where this routine is
      * used and how to use it.
      */
-    void receiveDanglingMessages() override;
+    virtual void receiveDanglingMessages() override;
 
     /**
      * @see Spacetree::Spacetree()
@@ -645,7 +643,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
       const std::bitset<Dimensions>&               periodicBC = 0
     );
 
-    void shutdown() override;
+    virtual void shutdown() override;
 
     /**
      * Invoke traverse on all spacetrees in parallel.

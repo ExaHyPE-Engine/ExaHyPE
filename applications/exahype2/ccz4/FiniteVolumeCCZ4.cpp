@@ -35,6 +35,18 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* t
 		tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
 		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 		tp->TP_epsilon=1e-6;}
+
+  if (CCZ4swi==4){
+    tp->par_b=1.0;
+    tp->center_offset[0]=-3.0; tp->center_offset[1]=-2.0; tp->center_offset[2]=0.0;
+    tp->target_M_plus=1.0;//adm mass
+    tp->par_P_plus[0]=0.1; tp->par_P_plus[1]=0.1; tp->par_P_plus[2]=0.0;//linear momentum
+    tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
+    tp->target_M_minus=0.0;//adm mass
+    tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=0.0; tp->par_P_minus[2]=0.0;//linear momentum
+    tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin    
+    tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
+    tp->TP_epsilon=1e-6;}
 		
 	if (CCZ4swi==1){
 		tp->par_b=2.0;
@@ -406,7 +418,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   if (CCZ4ReSwi==6){
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       constexpr int NumberOfRefinementLayers = 2;
-      double Radius[NumberOfRefinementLayers] = {5, 3.5};
+      double Radius[NumberOfRefinementLayers] = {4, 3};
       double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
 
       result = ::exahype2::RefinementCommand::Keep;

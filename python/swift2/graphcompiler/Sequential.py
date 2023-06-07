@@ -11,9 +11,87 @@ from swift2.actionsets.AMRLogic import add_mesh_management_optimise_mesh
 
 
 
-def serialise_and_map_onto_separate_mesh_traversals(species_sets, 
-                                                    verbose=True):
-  """
+def translate_one_step_of_species_into_mesh_traversal(step,
+                                                      current_species_set,
+                                                      mesh_traversals,
+                                                      alter_particle_position,
+                                                      preamble = "Step",
+                                                      verbose = False
+                                                      ):
+      priority = 0
+        
+      new_step                = peano4.solversteps.Step( "{}{}{}_sweep{}".format(preamble,current_species_set.particle_model.name,step.name,len(mesh_traversals)), add_user_defined_actions=False ) 
+
+      action_set_update_marker = UpdateParticleMarker(current_species_set)
+      action_set_update_marker.priority = new_step.highest_priority()+1
+      action_set_update_marker.parallel = True
+      priority = priority+1
+      new_step.add_action_set(action_set_update_marker)
+
+      #
+      # Pick computational kernel
+      # =========================
+      # This is where the actual computation per step is done. We have two 
+      # fundamentally different kernels: one keeps track of (multiscale) 
+      # neighbours, while the other just updates the particles within the
+      # octant (cell).
+      #
+      if step.dependencies==AlgorithmStep.Dependencies.NEIGHBOURS:
+        if verbose:
+          print( "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} uses peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists action set".format( len(mesh_traversals), step.name, current_species_set.particle_model.name ) )
+        action_set_particle_particle_interaction = peano4.toolbox.particles.ParticleParticleInteraction_Sets(
+            particle_set                                           = current_species_set,
+            particle_particle_interaction_kernel                   = step.cell_kernel,
+            touch_vertex_first_time_compute_particle_update_kernel = step.touch_vertex_first_time_kernel,
+            touch_vertex_last_time_compute_particle_update_kernel  = step.touch_vertex_last_time_kernel,
+            prepare_traversal_kernel                               = step.prepare_traversal_kernel,
+            unprepare_traversal_kernel                             = step.unprepare_traversal_kernel,
+            additional_includes                                    = step.includes,
+            active_particle_set                                    = step.input_particles
+          )
+        action_set_particle_particle_interaction.priority = new_step.highest_priority()+1
+        action_set_particle_particle_interaction.parallel = True
+        priority = priority + 1
+        new_step.add_action_set(action_set_particle_particle_interaction)
+      elif step.dependencies==AlgorithmStep.Dependencies.SELF:
+        if verbose:
+          print( "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} uses peano4.toolbox.particles.ParticlePerCellUpdate action set".format( len(mesh_traversals), step.name, current_species_set.particle_model.name ) )
+          
+        action_set_particle_update = peano4.toolbox.particles.ParticlePerCellUpdate(
+            particle_set                                           = current_species_set,
+            particle_cell_update_kernel                            = step.cell_kernel,
+            touch_vertex_first_time_compute_particle_update_kernel = step.touch_vertex_first_time_kernel,
+            touch_vertex_last_time_compute_particle_update_kernel  = step.touch_vertex_last_time_kernel,
+            prepare_traversal_kernel                               = step.prepare_traversal_kernel,
+            unprepare_traversal_kernel                             = step.unprepare_traversal_kernel,
+            additional_includes                                    = step.includes,
+            active_particle_set                                    = step.input_particles
+          )
+        action_set_particle_update.priority = new_step.highest_priority()+1
+        action_set_particle_update.parallel = True
+        priority = priority + 1
+        new_step.add_action_set(action_set_particle_update)
+      else:
+        assert False, "step {} seems to have no action at all".format( step )
+        
+      #
+      # As we have a 1:1 mapping, we can directly translate the effect into flags
+      #
+      if step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS:
+        alter_particle_position.append( True )
+      else:
+        alter_particle_position.append( False )
+
+        
+      mesh_traversals.append( new_step )
+    
+
+
+def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets, 
+                                                                      verbose=True):
+  """!
+  
+  Simpest graph compiler mapping each step per particle onto one mesh traversal
   
   Very simple compiler which takes each individual algorithmic step 
   per species and maps it onto one mesh traversal. We won't get any
@@ -50,67 +128,76 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets,
   """
   mesh_traversals = []
   alter_particle_position = []
-  
+
+  if verbose:
+    print( "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: start graph construction" )
+    
   for current_species_set in species_sets:
     for step in current_species_set.particle_model.algorithm_steps():
-      new_step                = peano4.solversteps.Step( "Step{}{}_sweep{}".format(current_species_set.particle_model.name,step.name,len(mesh_traversals)), add_user_defined_actions=False ) 
-
-      new_step.add_action_set(UpdateParticleMarker(current_species_set), append_at_end=True)
-
-      #
-      # Pick computational kernel
-      # =========================
-      # This is where the actual computation per step is done. We have two 
-      # fundamentally different kernels: one keeps track of (multiscale) 
-      # neighbours, while the other just updates the particles within the
-      # octant (cell).
-      #
-      if step.dependencies==AlgorithmStep.Dependencies.NEIGHBOURS:
-        if verbose:
-          print( "GRAPH COMPILER DEBUG [serialise_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} uses peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists action set".format( len(mesh_traversals), step.name, current_species_set.particle_model.name ) )
-        new_step.add_action_set(peano4.toolbox.particles.ParticleParticleInteraction_Sets(
-            particle_set                                           = current_species_set,
-            particle_particle_interaction_kernel                   = step.cell_kernel,
-            touch_vertex_first_time_compute_particle_update_kernel = step.touch_vertex_first_time_kernel,
-            touch_vertex_last_time_compute_particle_update_kernel  = step.touch_vertex_last_time_kernel,
-            prepare_traversal_kernel                               = step.prepare_traversal_kernel,
-            unprepare_traversal_kernel                             = step.unprepare_traversal_kernel,
-            additional_includes                                    = step.includes,
-            active_particle_set                                    = step.input_particles
-          ), append_at_end=True)
-      elif step.dependencies==AlgorithmStep.Dependencies.SELF:
-        if verbose:
-          print( "GRAPH COMPILER DEBUG [serialise_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} uses peano4.toolbox.particles.ParticlePerCellUpdate action set".format( len(mesh_traversals), step.name, current_species_set.particle_model.name ) )
-        new_step.add_action_set(peano4.toolbox.particles.ParticlePerCellUpdate(
-            particle_set                                           = current_species_set,
-            particle_cell_update_kernel                            = step.cell_kernel,
-            touch_vertex_first_time_compute_particle_update_kernel = step.touch_vertex_first_time_kernel,
-            touch_vertex_last_time_compute_particle_update_kernel  = step.touch_vertex_last_time_kernel,
-            prepare_traversal_kernel                               = step.prepare_traversal_kernel,
-            unprepare_traversal_kernel                             = step.unprepare_traversal_kernel,
-            additional_includes                                    = step.includes,
-            active_particle_set                                    = step.input_particles
-          ), append_at_end=True)
-      else:
-        assert False, "step {} seems to have no action at all".format( step )
-        
-      #
-      # As we have a 1:1 mapping, we can directly translate the effect into flags
-      #
-      if step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS:
-        alter_particle_position.append( True )
-      else:
-        alter_particle_position.append( False )
-
-        
-      mesh_traversals.append( new_step )
+      translate_one_step_of_species_into_mesh_traversal(step,
+                                                        current_species_set,
+                                                        mesh_traversals,
+                                                        alter_particle_position,
+                                                        "Step",
+                                                        verbose
+                                                        )
           
   add_mesh_management_optimise_mesh( mesh_traversals, 
                                      alter_particle_position, 
                                      species_sets,
                                      verbose )
+  
+  if verbose:
+    print( "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: finished graph construction" )
+
   return mesh_traversals
   
   
   
+def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species_sets, 
+                                                                      verbose=True):
+  """!
   
+  Translate each initialisation step for each particle into a separate mesh sweep
+  
+  We always add one more sorting step after all of that
+
+  """  
+  mesh_traversals = []
+  alter_particle_position = []
+   
+  verbose = True
+
+  if verbose:
+    print( "GRAPH COMPILER DEBUG [serialise_initialisation_steps_and_map_onto_separate_mesh_traversals]: start graph construction" )
+   
+  for current_species_set in species_sets:
+    for step in current_species_set.particle_model.initialisation_steps():
+      translate_one_step_of_species_into_mesh_traversal(step,
+                                                        current_species_set,
+                                                        mesh_traversals,
+                                                        alter_particle_position,
+                                                        "Initialisation",
+                                                        verbose
+                                                        )
+
+  additional_initialisation_step = peano4.solversteps.Step( "InitialisationStartInitialSort", add_user_defined_actions=False ) 
+  mesh_traversals.append( additional_initialisation_step )
+  alter_particle_position.append( True )
+
+  additional_initialisation_step = peano4.solversteps.Step( "InitialisationFinaliseInitialSort", add_user_defined_actions=False ) 
+  mesh_traversals.append( additional_initialisation_step )
+  alter_particle_position.append( True )
+
+  if verbose:
+    print( "GRAPH COMPILER DEBUG [serialise_initialisation_steps_and_map_onto_separate_mesh_traversals]: initial graph built with {} steps".format(len(mesh_traversals)) )
+          
+  add_mesh_management_optimise_mesh( mesh_traversals, 
+                                     alter_particle_position, 
+                                     species_sets,
+                                     verbose )
+  
+  if verbose:
+    print( "GRAPH COMPILER DEBUG [serialise_initialisation_steps_and_map_onto_separate_mesh_traversals]: finished graph construction with {} steps".format(len(mesh_traversals)) )
+
+  return mesh_traversals

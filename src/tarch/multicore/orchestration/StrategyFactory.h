@@ -22,7 +22,8 @@ namespace tarch {
       std::string getListOfRealisations();
 
       /**
-       * My default strategy is native.
+       * My default strategy is BackfillAndDeployRoundRobin() with the default
+       * to fuse 16 tasks into one (GPU) task.
        */
       Strategy* createDefaultStrategy();
     }

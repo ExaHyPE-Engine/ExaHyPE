@@ -99,6 +99,16 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
 }
 
 
+void exahype2::EnclaveBookkeeping::waitForTaskAndDiscardResult(int number) {
+  logTraceInWith1Argument( "waitForTaskAndDiscardResult(int)", number );
+
+  Entry storedData = waitForTaskToTerminateAndReturnResult(number);
+  tarch::freeMemory( storedData.data, tarch::MemoryLocation::Heap );
+
+  logTraceOut( "waitForTaskAndDiscardResult(int)" );
+}
+
+
 void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& maxEigenvalue) {
   logTraceInWith1Argument( "waitForTaskToTerminateAndCopyResultOver(int,double,double&)", number );
 

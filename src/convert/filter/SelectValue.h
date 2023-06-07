@@ -22,6 +22,6 @@ class convert::filter::SelectValue: public convert::filter::Filter {
 	const double _to;
   public:
 	SelectValue( double from, double to );
-	void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) override;
+	virtual void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) override;
 };
 

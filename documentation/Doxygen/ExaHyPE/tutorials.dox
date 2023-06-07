@@ -1,10 +1,34 @@
 /**
 @page page_exahype_tutorials Tutorials
 
-
 \tableofcontents
 
+These tutorials are meant to be an introduction into ExaHyPE2. ExaHyPE2 is part of Peano4,
+which is an open source framework for solvers on dynamically adaptive Cartesian meshes that was developed by a team led by Tobias Weinzierl,
+who is at the time of writing Professor at the department of Computer Science of Durham University in the United Kingdom.
 
-Yet to be written
+ExaHyPE2 itself is a hyperbolic PDE engine, its goal is to provide a generic engine in which users can
+implement the specifics of their hyperbolic PDEs and have these be solved by the engine.
+This is what we will endeavor to do in the following.
+ExaHyPE2 solves partial differential equations of the following form:
+
+@f$
+  \frac{\partial Q}{\partial t} + \nabla . F(Q, \nabla Q) + B(Q) . \nabla Q= S(Q) + \sum_{i = 1}^{n_{ps}} \delta_i
+@f$
+
+Here @f$`F`@f$ is called the \textit{flux} @f$`B`@f$ is the \textit{non-conservative product} (often shortened to \textit{NCP})
+and $S$ is the \textit{source} of the equation.
+
+For simplicity the easiest way to think of each of these is as follows:
+
+- The flux contains terms linked to the transmission of a quantity within the domain such as the flow of heat from a hot part of the domain to a colder one. It concerns quantities that do not change but merely move from part to another.
+- The NCP, as the term \textit{non-conservative} would imply, contains terms that are transmitted but can increase or decrease. One example for this would be friction, which causes the overall velocity of the system to decrease.
+- The Source contains terms that are acted upon the system from outside, such as gravity or someone acting upon it.
+
+\li \subpage tutorials_exahype2_advection
+\li \subpage tutorials_exahype2_swe
+\li \subpage tutorials_exahype2_euler
+\li \subpage tutorials_exahype2_acoustic_wave
+\li \subpage tutorials_exahype2_elastic_wave
 
 */

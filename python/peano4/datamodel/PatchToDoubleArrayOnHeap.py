@@ -32,7 +32,7 @@ class PatchToDoubleArrayOnHeap(PatchToDoubleArray):
     """
       Pass in a version of output
     """
-    output.makefile.add_cpp_file( self.data.namespace[-1] + "/" + self.data.name + ".cpp" )
+    output.makefile.add_cpp_file( self.data.namespace[-1] + "/" + self.data.name + ".cpp", generated=True )
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix+".template.h",

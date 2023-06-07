@@ -25,5 +25,5 @@ class exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest : public tarc
 
     virtual ~ApplySplit1DRiemannToPatchTest() = default;
 
-    void run() override;
+    virtual void run() override;
 };

@@ -7,9 +7,29 @@ import jinja2
 
 
 class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
-
-  def __init__(self,particle_set,average_distance_between_particles,initialisation_call,round_down = False, noise=True,additional_includes=""):
-    """
+  """!
+    
+  Insert particles
+      
+  The particles are topologically Cartesian, i.e. they are not totally random. So
+  we embed a Cartesian "grid" of particles into each unrefined cell, and then add
+  some noise to them. As the individual cells are not coupled with each other, and
+  as we do not evaluate any global coordinates, the overall result will not be 
+  random, even if you switch off noise completely, as the spacing between two
+  regular particle layouts between two neighbouring cells is not "synchronised".
+  
+  """
+  
+  def __init__(self,
+               particle_set,
+               average_distance_between_particles,
+               initialisation_call,
+               round_down = False, 
+               noise=True,
+               additional_includes=""
+               ):
+    """!
+    
       Insert particles
       
       The particles are topologically Cartesian, i.e. they are not totally random. So
@@ -25,7 +45,8 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
          I take this as particle set.
          
       average_distance_between_particles: Float
-         Some positive floating point value.
+         Some positive floating point value. I call it average, as it is an 
+         average if you apply noise. Otherwise, it is the precise distance.
          
       initialisation_call: String (C++ code snippet)
         Arbitrary code snippet which can work over a pointer particle. The object
@@ -42,6 +63,8 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
         are actually then initialised through this code snippet.
 
     """
+    super(InsertRandomParticlesIntoUnrefinedCells,self).__init__(priority=1, parallel=False)
+    
     self.d = {}
     self.d[ "PARTICLE" ]                           = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]                = particle_set.name

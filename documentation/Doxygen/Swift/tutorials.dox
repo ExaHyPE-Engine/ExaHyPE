@@ -6,54 +6,57 @@ As an alternative to the "from scratch" docu below, the @ref benchmarks_swift2_p
 has a lot of introductory comments.
 
 
-## A first Swift 2 application
-
-Our interface for Swift 2 is almost complete realised in Python.
-We configure the whole simulation in Python, but typically make the key 
-steps of a simulation point to generic C++ routines which are shipped with
-Peano 4.
-Alterantively, we can inject C++ code manually into the Python code (which is
-great for prototyping).
-Once the Python script is executed, it generates a plain C++ code with a
-makefile which waves Peano's core and the SPH kernels together.
-
-We start with the creation of a Swift 2 project:
+\todo For the time being, I'm keeping a detailed documentation of how to build an application from scratch in \ref swift_building_project_from_scratch
 
 
-~~~~~~~~~~~~~~~~~~~~~
-project = swift2.Project( namespace=['''benchmarks''', '''swift2''', '''planetorbit'''], 
-                          project_name='''planetorbit''', 
-                          executable=orbit-exec )
-~~~~~~~~~~~~~~~~~~~~~
+# Configure Peano
+
+As Swift 2 is a Peano extension, you first have to
+@ref page_installation "configure and build the core Peano code base",
+i.e. its libraries, before you start any work.
+Hereby, it is important that you add the particles toolbox:
 
 
-Next, we have to add a particle species.
-The definition of a particle is straightforward. We employ a tool called
-DaStGen 2 which really just is a set of Python classes which represent the 
-attributes of a C++ class: 
-We build up a set of Python objects sketching a C++ struct and Swift 2 and
-DaStGen eventually dump them into proper C++ code from which it is embedded into the 
-actual simulator.   
+          ./configure ... --enable-particles --enable-swift
+
+If you want to use the HDF5 I/O functionalities, you need to configure Peano with
+HDF5 enabled. How to do this is documented in @ref SwiftHDF5.
 
 
-~~~~~~~~~~~~~~~~~~~~~
-     import dastgen2
+# Log configuration
 
-     particle = peano4.toolbox.particles.Particle('''Particle''')
+Swift 2 uses @ref tarch_logging "the standard logging API of Peano as shipped with the tarch".
+By default, the generated code searches for a file `swift2.log-filter` in the execution directory.
+If no such file exists, the code falls back to defaults.
+If all info entries are white-listed, i.e. if the log filter configuration is similar to
 
-     v_attr = peano4.dastgen2.Peano4DoubleArray('''v''','''Dimensions''')
-     mass_attr = dastgen2.attributes.Double('''mass''')
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+info  tarch                                -1     white always-on
+info  peano4                               -1     white always-on
+info  benchmarks                           -1     white always-on
+info  swift2                               -1     white always-on
+info  toolbox                              -1     white always-on
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-     particle.data.add_attribute(v_attr)
-     particle.data.add_attribute(mass_attr)
-~~~~~~~~~~~~~~~~~~~~~
+you should get outputs similar to
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+0:00:00 rank:0  ::step()    info    run Init
+00:00:04    rank:0  toolbox::loadbalancing::RecursiveSubdivision::enable()  info    switched load balancing off
+00:00:04    rank:0  benchmarks::swift2::noh::vertexdata::hydroPartSet::reduceAndPrintStatistics()   info    #lifts=0, #drops=0, #sieves=0, #lifts(assignments)-into-sieve-set=0, #reassignments=0, #local particles=1600 (#remaining=1600, #incoming=0, #leaving=0), #merged virtual particles=0, #eliminated spatial duplicates=0 (#virtual=0,#local=0)
+00:00:04    rank:0  toolbox::loadbalancing::RecursiveSubdivision::updateLoadBalancing() info    load balancing's action none with internal state(state=switched-off,global-cell-count=81,lightest-rank-no=1,lightest-rank-weight=81,round-robin-token=0,number-of-state-updated-without-any-split=2,global-number-of-splits=0,local-number-of-splits=0,global-number-of-trees=2,global-number-of-ranks-with-enabled-lb=0,blacklist={(#0:0/3)},heaviest-local-tree=0 (analysed),heaviest-local-weight=41 (analysed),#local-trees=2,is-local-balancing-bad=0)
+00:00:04    rank:0  toolbox::loadbalancing::dumpStatistics()    info    2 tree(s): (#0:41/40)(#1:40/41) total=81/81 (local/remote)
+00:00:00    rank:0  ::step()    info    run Sort
+00:00:04    rank:0  benchmarks::swift2::noh::vertexdata::hydroPartSet::reduceAndPrintStatistics()   info    #lifts=0, #drops=0, #sieves=0, #lifts(assignments)-into-sieve-set=0, #reassignments=0, #local particles=1600 (#remaining=1600, #incoming=0, #leaving=0), #merged virtual particles=387, #eliminated spatial duplicates=0 (#virtual=0,#local=0)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+While this information is valuable per se, the code base comes along with
+some @ref swift_runtime_analysis "analysis scripts in Python" to visualise
+the runtime behaviour. Also, the generic @ref peano_runtime_analysis "Peano analysis scripts"
+can visualise aspects of the runtime behaviour.
 
 
-Though conceptionally a plain C++ pretty printer, the DaStGen2 Python API
-can create some fancy C++ annotations. You can, for example, specify ranges
-in which integers live, or you can prescribe the precision you wanna have 
-for floating point values. If you have a specialised LLVM compiler, these
-annotations will be used to generate aggressively optimised code.
 
+\todo Write down how to create and run an example. For now, refer users to \ref swift_building_project_from_scratch
 
 */
