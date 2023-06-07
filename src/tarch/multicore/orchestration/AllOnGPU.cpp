@@ -9,13 +9,17 @@ tarch::multicore::orchestration::AllOnGPU::AllOnGPU(int device):
 }
 
 
-void tarch::multicore::orchestration::AllOnGPU::startBSPSection() {
-  _isInBspSection = true;
+void tarch::multicore::orchestration::AllOnGPU::startBSPSection(int nestedParallelismLevel) {
+  if (nestedParallelismLevel<=1) {
+    _isInBspSection = true;
+  }
 }
 
 
-void tarch::multicore::orchestration::AllOnGPU::endBSPSection() {
-  _isInBspSection = false;
+void tarch::multicore::orchestration::AllOnGPU::endBSPSection(int nestedParallelismLevel) {
+  if (nestedParallelismLevel<=1) {
+    _isInBspSection = false;
+  }
 }
 
 
@@ -34,6 +38,11 @@ bool tarch::multicore::orchestration::AllOnGPU::fuseTasksImmediatelyWhenSpawned(
 }
 
 
-bool tarch::multicore::orchestration::AllOnGPU::processPendingTasksWhileWaitingInBSPSection() {
-  return false;
+tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::AllOnGPU::paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
+  if (nestedParallelismLevel<=1) {
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel;
+  }
+  else {
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndIgnoreWithholdSubtasks;
+  }
 }

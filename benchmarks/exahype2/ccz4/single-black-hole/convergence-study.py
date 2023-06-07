@@ -20,10 +20,9 @@ from CCZ4Solver import CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeS
 # for the coupling
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
-PatchSize = 4
 
 
-def construct_FV_limiter(min_cell_size, max_cell_size):
+def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
     """!
     
     Construct the Finite Volume (limiter) scheme
@@ -37,8 +36,7 @@ def construct_FV_limiter(min_cell_size, max_cell_size):
 
 
     class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
-        # todo muss viel groesser sein
-      UpscalingFactor = 5
+      SubPatchSize = int( FD4PatchSize*4*4 )
         
       def __init__(self,
                    name, 
@@ -46,9 +44,9 @@ def construct_FV_limiter(min_cell_size, max_cell_size):
                    max_cell_size,
                    ):
         super( Limiter, self ).__init__(name               = name +  "_FV",
-                                        patch_size         = PatchSize*self.UpscalingFactor,
-                                        min_volume_h       = min_cell_size/PatchSize/self.UpscalingFactor, 
-                                        max_volume_h       = max_cell_size/PatchSize/self.UpscalingFactor,
+                                        patch_size         = self.SubPatchSize,
+                                        min_volume_h       = min_cell_size/self.SubPatchSize, 
+                                        max_volume_h       = max_cell_size/self.SubPatchSize,
                                         )
         self.double_constants[ "BlackHoleFVRegion" ] = 1.0
  
@@ -56,6 +54,7 @@ def construct_FV_limiter(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Restriction.h"        
 #include "toolbox/blockstructured/Interpolation.h"        
 """        
+        self.switch_to_heap_storage(True, True)
 
   
       def _store_cell_data_default_guard(self):
@@ -156,10 +155,10 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
         
         CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
                                                                         name            = name + "_FD4", 
-                                                                        patch_size      = PatchSize,
+                                                                        patch_size      = FD4PatchSize,
                                                                         rk_order        = 1,
-                                                                        min_meshcell_h  = min_cell_size/PatchSize, 
-                                                                        max_meshcell_h  = max_cell_size/PatchSize,
+                                                                        min_meshcell_h  = min_cell_size/FD4PatchSize, 
+                                                                        max_meshcell_h  = max_cell_size/FD4PatchSize,
                                                                         )
 
         self._user_action_set_includes += """
@@ -168,6 +167,8 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """        
+
+        self.switch_to_heap_storage(True, True)
 
 
       def create_action_sets(self):
@@ -357,6 +358,8 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
   ) { 
     logTraceIn( "touchCellFirstTime(...)-inject" );
     
+    repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.incNumberOfPatches();
+    
     ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FD4.NumberOfGridCellsPerPatchPerAxis,
@@ -375,6 +378,133 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
                               min_cell_size  = min_cell_size, 
                               max_cell_size  = max_cell_size, 
                               )
+    
+    my_solver.set_implementation(initial_conditions   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                 refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                 boundary_conditions  = exahype2.solvers.fv.PDETerms.None_Implementation
+                                 )
+    my_solver.add_all_solver_constants()
+  
+    update_solver_parameters_for_single_black_hole (my_solver)
+    return my_solver
+
+
+def construct_FD4_solver(min_cell_size, max_cell_size):
+    """!
+    
+    Construct 4th order Finite Differences solver without a limiter
+    
+    """
+
+    class Solver(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking):
+      """!
+      
+      Construct solver
+      
+      """
+      def __init__(self,
+                   name,
+                   min_cell_size,
+                   max_cell_size
+                   ):
+        self._name_without_FD4_extension = name
+        
+        CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
+                                                                        name            = name + "_FD4", 
+                                                                        patch_size      = FD4PatchSize,
+                                                                        rk_order        = 1,
+                                                                        min_meshcell_h  = min_cell_size/FD4PatchSize, 
+                                                                        max_meshcell_h  = max_cell_size/FD4PatchSize,
+                                                                        )
+
+        self._user_action_set_includes += """
+#include "toolbox/blockstructured/Projection.h"        
+#include "toolbox/blockstructured/Restriction.h"        
+#include "toolbox/blockstructured/Interpolation.h"        
+#include "toolbox/blockstructured/Copy.h"        
+"""        
+
+        self.switch_to_heap_storage(True, True)
+     
+
+      def create_action_sets(self):
+        """!
+        
+        Tailor action set behaviour
+        
+        We first make a few additional cells skeleton cells. The rationale 
+        behind additional skeletons is given in the @ref benchmarks_exahype2_ccz4_single_black_hole "generic overview". 
+        Given the first remark there on FD4-FV coupling, one would be tempted 
+        to use the predicate
+        
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        self._action_set_update_cell.additional_skeleton_guard = " " "(
+  repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.isCellOverlappingWithBHImpactArea(marker) 
+  and
+  not repositories::InstanceOf" " " + self._name_without_FD4_extension + " " "_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) 
+)
+" " "        
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        
+        Once we study the other items (notably the fourth), we see that it is
+        reasonable to make all the overlap region a skeleton within the FD4
+        solver.
+        
+        """
+        super( Solver, self ).create_action_sets()
+        
+        self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
+          double Qinf[59]={1.0, 0.0, 0.0, 1.0, 0.0, 1.0,        //q0-5
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                      //q6-11
+             0.0, 0.0, 0.0, 0.0,                                //q12-15
+             1.0, 0.0, 0.0, 0.0,                                //q16-19
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                      //q20-25
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,       //q26-34
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,       //q35-52
+             0.0, 1.0, 0.0, 0.0, 0.0, 0.0                       //q53-58
+          }; //approximate background solution at infinity 
+          ::exahype2::fd::applySommerfeldConditions(
+            [&](
+              const double * __restrict__                  Q,
+              const tarch::la::Vector<Dimensions,double>&  faceCentre,
+              const tarch::la::Vector<Dimensions,double>&  gridCellH,
+              double                                       t,
+              double                                       dt,
+              int                                          normal
+            ) -> double {
+              return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
+            },
+            [&](
+              double * __restrict__                        Q,
+              const tarch::la::Vector<Dimensions,double>&  faceCentre,
+              const tarch::la::Vector<Dimensions,double>&  gridCellH
+            ) -> void {
+              for (int i=0; i<"""+str(self._unknowns+self._auxiliary_variables)+"""; i++) {
+                Q[i] = 0.0;
+              }
+              Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
+              Q[16] = 0.95; Q[54] = 0.95;
+            },
+            marker.x(),
+            marker.h(),
+            {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+            {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
+            {{OVERLAP}},
+            {{NUMBER_OF_UNKNOWNS}},
+            {{NUMBER_OF_AUXILIARY_VARIABLES}},
+            marker.getSelectedFaceNumber(),
+            {0.0, 0.0, 0.0},
+            fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
+            fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
+          );
+          """        
+
+    my_solver = Solver(name           = "CCZ4SBH" , 
+                       min_cell_size  = min_cell_size, 
+                       max_cell_size  = max_cell_size, 
+                       )
     
     my_solver.set_implementation(initial_conditions   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                  refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -408,18 +538,31 @@ if __name__ == "__main__":
     parser.add_argument("-et",  "--end-time",          dest="end_time",         type=float, default=1.0, help="End of simulation" )
     parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.5, help="Cell size (default 0.5)" )
     parser.add_argument("-asserts", "--asserts",       dest="asserts",          action="store_true", default=False, help="Switch on assertions" )
+    parser.add_argument("-no-tracer", "--no-tracer",   dest="no_tracer",        action="store_true", default=False, help="Switch off tracers (by default enabled)" )
     parser.add_argument("-plot",    "--plot",          dest="plot",             action="store_true", default=False, help="Switch on plotting" )
+    parser.add_argument("-s",   "--solver",            dest="solver",           choices=["fd4-rk1-ps-3", "fd4-rk1-ps-6", "fd4-rk1-limited-ps-3", "fd4-rk1-limited-ps-6"], required=True, help="Pick solver type" )
     
     args = parser.parse_args()
     
     
     project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable="peano_sbh_" + str(args.cell_size))
-    
-    my_primary_solver   = construct_limited_FD4_solver( args.cell_size, args.cell_size )
-    my_secondary_solver = construct_FV_limiter( args.cell_size, args.cell_size )
 
-    project.add_solver(my_primary_solver)
-    project.add_solver(my_secondary_solver)
+    added_limiter = False
+    if "fd4-rk1-ps-" in args.solver:    
+      FD4PatchSize = int(args.solver[-1])
+      my_primary_solver   = construct_FD4_solver( args.cell_size, args.cell_size )
+      project.add_solver(my_primary_solver)
+      added_limiter = False
+    elif "fd4-rk1-limited-ps-" in args.solver:    
+      FD4PatchSize = int(args.solver[-1])
+      my_primary_solver   = construct_limited_FD4_solver( args.cell_size, args.cell_size )
+      my_secondary_solver = construct_FV_limiter_for_FD4( args.cell_size, args.cell_size )
+      project.add_solver(my_primary_solver)
+      project.add_solver(my_secondary_solver)
+      added_limiter = True
+    else:
+      raise "unknown solver type {}".format( args.solver )
+
 
         
     ########################################################################################
@@ -438,8 +581,7 @@ if __name__ == "__main__":
     domain_size = [   18,    18,    18]
     
     if args.plot:
-        # @todo zu klein
-      plot_interval = 0.0001
+      plot_interval = args.end_time/60.0
     else:
       plot_interval = 0.0
     
@@ -465,16 +607,17 @@ if __name__ == "__main__":
     ########################################################################################
     # Add tracer
     ########################################################################################
-    number_of_tracers = 1000
-    tracer_coordinates = [ [ (i/ domain_size[0] / 2.0),0,0] for i in range(0,number_of_tracers) ]
-    my_primary_solver.add_tracer(name        = "PrimaryTracer", 
-                                 coordinates = tracer_coordinates,
-                                 project     = project
-                                 )
-    my_secondary_solver.add_tracer(name        = "SecondaryTracer", 
+    if not args.no_tracer:
+      number_of_tracers = 1000
+      tracer_coordinates = [ [ (i/ domain_size[0] / 2.0),0,0] for i in range(0,number_of_tracers) ]
+      my_primary_solver.add_tracer(name        = "PrimaryTracer", 
                                    coordinates = tracer_coordinates,
                                    project     = project
                                    )
+      my_secondary_solver.add_tracer(name        = "SecondaryTracer", 
+                                     coordinates = tracer_coordinates,
+                                     project     = project
+                                     )
 
     
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
@@ -494,7 +637,8 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/FuncAndJacobian.cpp" )
     peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/Newton.cpp" )
     peano4_project.output.makefile.add_CXX_flag( "-DIncludeTwoPunctures" )
-         
-    
+    if added_limiter:
+      peano4_project.output.makefile.add_CXX_flag( "-DCoupleWithFV" )
+             
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )

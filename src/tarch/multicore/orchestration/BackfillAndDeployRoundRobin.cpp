@@ -25,13 +25,17 @@ void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::toggleDevice(
 }
 
 
-void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::startBSPSection() {
-  _inBSPSection = true;
+void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::startBSPSection(int nestedParallelismLevel) {
+  if (nestedParallelismLevel<=1) {
+    _inBSPSection = true;
+  }
 }
 
 
-void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::endBSPSection() {
-  _inBSPSection = false;
+void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::endBSPSection(int nestedParallelismLevel) {
+  if (nestedParallelismLevel<=1) {
+    _inBSPSection = false;
+  }
 }
 
 
@@ -56,6 +60,11 @@ bool tarch::multicore::orchestration::BackfillAndDeployRoundRobin::fuseTasksImme
 }
 
 
-bool tarch::multicore::orchestration::BackfillAndDeployRoundRobin::processPendingTasksWhileWaitingInBSPSection() {
-  return true;
+tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::BackfillAndDeployRoundRobin::paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
+  if (nestedParallelismLevel<=1) {
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel;
+  }
+  else {
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndIgnoreWithholdSubtasks;
+  }
 }

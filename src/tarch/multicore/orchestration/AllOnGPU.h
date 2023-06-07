@@ -28,8 +28,8 @@ class tarch::multicore::orchestration::AllOnGPU: public tarch::multicore::orches
   public:
     AllOnGPU(int device);
 
-    virtual void startBSPSection() override;
-    virtual void endBSPSection()   override;
+    virtual void startBSPSection(int nestedParallelismLevel) override;
+    virtual void endBSPSection(int nestedParallelismLevel)   override;
 
     /**
      * Within a BSP section, I hold all tasks back. Afterwards, I release all
@@ -53,9 +53,9 @@ class tarch::multicore::orchestration::AllOnGPU: public tarch::multicore::orches
     virtual bool fuseTasksImmediatelyWhenSpawned() override;
 
     /**
-     * No
+     * No if we encounter nested parallelism.
      */
-    virtual bool processPendingTasksWhileWaitingInBSPSection() override;
+    virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) override;
 
 };
 
