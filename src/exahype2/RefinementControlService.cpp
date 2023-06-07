@@ -128,7 +128,7 @@ void exahype2::RefinementControlService::finishStep() {
   _remoteNewEvents.clear();
 
 
-  _committedEvents = ::peano4::grid::merge( _committedEvents );
+  _committedEvents = ::peano4::grid::merge( _committedEvents, 0.4 );
 }
 
 

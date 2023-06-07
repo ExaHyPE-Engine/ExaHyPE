@@ -170,8 +170,20 @@ namespace peano4 {
      *
      * The algorithm has to be idempotent, i.e. if we invoke it multiple times
      * over the input set, the outcome should always remain the same.
+     *
+     * @param events Set of events which we try to merge
+     *
+     * @param Tolerance Relative tolerance passed into the actual merger, i.e.
+     *   the tolerance at which two events are merged, even though they might
+     *   not exactly be adjacent. A default of 10% (relative tolerance) is
+     *   sufficient for most cases, but there might be situation where a larger
+     *   tolerance is reasonable to ensure that some events which are slightly
+     *   disjoint are actually merged, too.
      */
-    std::vector< GridControlEvent > merge( std::vector< GridControlEvent>  events, const double Tolerance = 0.1 );
+    std::vector< GridControlEvent > merge(
+      std::vector< GridControlEvent>  events,
+      const double Tolerance = 0.1
+    );
 
     /**
      * Factory mechanism
@@ -375,7 +387,7 @@ namespace peano4 {
        * @see createBoundingBoxEvent()
        * @see twoEventsAreAdjacent()
        */
-      void mergeAdjacentRefinementEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents );
+      void mergeAdjacentRefinementEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents, int Tolerance );
 
       /**
        * Helper function which helps us throughout the merge.
@@ -401,7 +413,7 @@ namespace peano4 {
        * We are not only flagging adjacent events, we are even searching for
        * adjacent events of the same size.
        */
-      bool twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
+      bool twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs, double Tolerance );
 
       /**
        * Sort grid control events geometrically

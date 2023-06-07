@@ -136,8 +136,8 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
   internal::removeEraseEventsThatAreCancelledByRefineEvents( refineEvents, eraseEvents );
   logDebug( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
 
-  internal::mergeAdjacentRefinementEvents( refineEvents );
-  internal::mergeAdjacentRefinementEvents( eraseEvents );
+  internal::mergeAdjacentRefinementEvents( refineEvents, Tolerance );
+  internal::mergeAdjacentRefinementEvents( eraseEvents, Tolerance );
   logDebug( "merge(...)", "merged refine events into " << refineEvents.size() << " event(s)");
 
   std::vector< peano4::grid::GridControlEvent > result;
@@ -184,7 +184,7 @@ void peano4::grid::internal::removeEraseEventsThatAreCancelledByRefineEvents(
 }
 
 
-void peano4::grid::internal::mergeAdjacentRefinementEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents ) {
+void peano4::grid::internal::mergeAdjacentRefinementEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents, int Tolerance ) {
   bool hasMergedEvents = true;
   while (hasMergedEvents) {
     internal::sort( inputEvents );
@@ -196,12 +196,12 @@ void peano4::grid::internal::mergeAdjacentRefinementEvents( std::list< peano4::g
 
     while (rhs!=inputEvents.end()) {
       if (
-        twoEventsAreAdjacent(*rhs,*lhs)
+        twoEventsAreAdjacent(*rhs,*lhs,Tolerance)
       ) {
         GridControlEvent newEvent = createBoundingBoxEvent(*rhs,*lhs);
         logDebug( "mergeAdjacentRefinementEvents(...)", "merge two adjacent events " << lhs->toString() << " and " << rhs->toString() << ") into " << newEvent.toString() );
         *lhs = newEvent;
-        inputEvents.erase(rhs);
+        lhs = inputEvents.erase(rhs);
         rhs = lhs;
         rhs++;
         hasMergedEvents = true;
@@ -380,12 +380,14 @@ bool peano4::grid::internal::refinementEventOverrulesCoarsening( const peano4::g
 };
 
 
-bool peano4::grid::internal::twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs ) {
+bool peano4::grid::internal::twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs, double Tolerance ) {
   tarch::la::Vector<Dimensions,double> boundingEventOffset = tarch::la::min( lhs.getOffset(), rhs.getOffset() );
   tarch::la::Vector<Dimensions,double> boundingEventSize   = tarch::la::max( lhs.getOffset()+lhs.getWidth(), rhs.getOffset()+rhs.getWidth() ) - boundingEventOffset;
 
-  return tarch::la::equals( lhs.getH(), rhs.getH() )
-     and tarch::la::volume(boundingEventSize) <= tarch::la::volume(lhs.getWidth()) + tarch::la::volume(rhs.getWidth());
+  const double relativeTolerance = tarch::la::relativeEps( lhs.getWidth()(0), rhs.getWidth()(0), Tolerance );
+  assertion( relativeTolerance>0.0 );
+  return tarch::la::equals( lhs.getH(), rhs.getH(), relativeTolerance )
+     and tarch::la::volume(boundingEventSize) <= (1.0+relativeTolerance) * tarch::la::volume(lhs.getWidth()) + tarch::la::volume(rhs.getWidth());
 };
 
 

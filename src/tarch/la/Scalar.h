@@ -23,6 +23,8 @@ namespace tarch {
     #endif
 
     /**
+     * Determine a relative tolerance from one or two values
+     *
      * This routine takes NUMERICAL_ZERO_DIFFERENCE and scales it with value if
      * value is bigger than one. If it falls below one, then it returns the
      * original NUMERICAL_ZERO_DIFFERENCE.
