@@ -156,6 +156,7 @@ void peano4::grid::internal::sort( std::list< peano4::grid::GridControlEvent >& 
   ) -> bool {
     for (int d=0; d<Dimensions; d++) {
       if ( tarch::la::smaller(lhs.getOffset(d), rhs.getOffset(d)) ) return true;
+      if ( tarch::la::greater(lhs.getOffset(d), rhs.getOffset(d)) ) return false;
     }
     return false;
   };
@@ -222,6 +223,7 @@ void peano4::grid::internal::mergeAdjacentRefinementEvents( std::list< peano4::g
     }
   }
 
+
 /*
   if (inputEvents.size()>100) {
     logInfo( "mergeAdjacentRefinementEvents(...)", "#entries: " << inputEvents.size() );
@@ -230,7 +232,8 @@ void peano4::grid::internal::mergeAdjacentRefinementEvents( std::list< peano4::g
     p++;
     logInfo( "mergeAdjacentRefinementEvents(...)", "2nd: " << p->toString() );
     exit(-1);
-  }*/
+  }
+*/
 }
 
 
