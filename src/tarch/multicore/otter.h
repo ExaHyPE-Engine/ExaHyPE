@@ -38,6 +38,8 @@ namespace label{
     static const char *enclave = "[anonymous enclave task]";
     static const char *traverse_fmt = "[traversal task %d of %d]";
     static const char *unknown = "unknown task";
+    static const char *TaskWithCopyOfFunctor = "TaskWithCopyOfFunctor";
+    static const char *TaskWithoutCopyOfFunctor = "TaskWithoutCopyOfFunctor";
 }
 
 namespace phase {

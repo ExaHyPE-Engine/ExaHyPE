@@ -1,3 +1,8 @@
+#include "config.h"
+#if defined(UseOtter)
+#define OTTER_TASK_GRAPH_ENABLE_USER
+#endif
+
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/services/ServiceRepository.h"
@@ -277,22 +282,40 @@ bool tarch::multicore::Task::fuse( const std::list<Task*>& otherTasks, int devic
 tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor( int taskType, int priority, const std::function<bool()>& taskFunctor ):
   Task(taskType, priority),
   _taskFunctor(taskFunctor)  {
+    OTTER_DECLARE_HANDLE(step_task);
+    OTTER_DECLARE_HANDLE(this_task);
+    OTTER_BORROW_FROM_POOL(step_task, otter::label::step);
+    OTTER_INIT_TASK(this_task, step_task, 555, otter_add_to_pool, otter::label::TaskWithCopyOfFunctor);
 }
 
 
 bool tarch::multicore::TaskWithCopyOfFunctor::run() {
-  return _taskFunctor();
+  OTTER_DECLARE_HANDLE(this_task);
+  OTTER_REMOVE_FROM_POOL(this_task, otter::label::TaskWithCopyOfFunctor);
+  OTTER_TASK_START(this_task);
+  bool result = _taskFunctor();
+  OTTER_TASK_END(this_task);
+  return result;
 }
 
 
 tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor( int taskType, int priority, std::function<bool()>& taskFunctor ):
   Task(taskType, priority),
   _taskFunctor(taskFunctor)  {
+    OTTER_DECLARE_HANDLE(step_task);
+    OTTER_DECLARE_HANDLE(this_task);
+    OTTER_BORROW_FROM_POOL(step_task, otter::label::step);
+    OTTER_INIT_TASK(this_task, step_task, 444, otter_add_to_pool, otter::label::TaskWithoutCopyOfFunctor);
 }
 
 
 bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
-  return _taskFunctor();
+  OTTER_DECLARE_HANDLE(this_task);
+  OTTER_REMOVE_FROM_POOL(this_task, otter::label::TaskWithoutCopyOfFunctor);
+  OTTER_TASK_START(this_task);
+  bool result = _taskFunctor();
+  OTTER_TASK_END(this_task);
+  return result;
 }
 
 
