@@ -394,7 +394,8 @@ void tarch::multicore::spawnAndWait(
           ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true );
 
           // AT: ideally would record the handle of the encountering task here to correctly identify child tasks
-          otterSynchroniseTasks(NULL, otter_sync_children);
+          // TODO(AT): update with macro?
+        //   otterSynchroniseTasks(NULL, otter_sync_children);
 
           internal::copyInternalTaskQueuesOverIntoGlobalQueue();
           int  numberOfPendingTasks = tarch::multicore::internal::getNumberOfWithholdPendingTasks();
@@ -418,7 +419,8 @@ void tarch::multicore::spawnAndWait(
           ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true );
 
           // AT: ideally would record the handle of the encountering task here to correctly identify child tasks
-          otterSynchroniseTasks(NULL, otter_sync_children);
+          // TODO(AT): update with macro?
+        //   otterSynchroniseTasks(NULL, otter_sync_children);
         }
         break;
     }

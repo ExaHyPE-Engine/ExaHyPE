@@ -61,6 +61,8 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(
 ) {
   assertion( not tasks.empty() );
 
+  // TODO(AT): re-insert annotations here? i.e. step_task -> traversal_task[s]?
+
   #if defined(OpenMPTaskGroup)
   #pragma omp taskloop nogroup shared(tasks) priority(StandardPriority) untied
   #endif
