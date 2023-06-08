@@ -417,6 +417,16 @@ thus appreciate any citation of the original release paper
 
 
   def add_action_set_to_timestepping(self, action_set):
+    """!
+    
+    Add a new action set to the time stepping
+    
+    You have to be careful with the priorities, i.e. you might want to 
+    use myproject.perform_time_step.max_priority() or myproject.perform_time_step.min_priority()
+    to find out which 
+    priority you should assign to action_set.
+    
+    """
     self.perform_time_step.add_action_set( action_set )
 
 
