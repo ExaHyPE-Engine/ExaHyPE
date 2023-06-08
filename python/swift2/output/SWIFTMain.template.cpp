@@ -127,9 +127,10 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
         "selectNextAlgorithmicStep()",
         "h_min=" << tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <<
         ", which his smaller than global h_max=" << GlobalMaxH <<
-        ". Stop grid construction"
+        ". Continue with load balancing "
       );
-      gridConstructed = true;
+//      ". Stop grid construction"
+//      gridConstructed = true;
     }
     if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
@@ -161,6 +162,20 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     ( TimeInBetweenPlots==0.0 or haveJustWrittenSnapshot )
   ) {
     continueToSolve         = false;
+  }
+  else if (
+    ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
+    and
+    ( TimeInBetweenPlots>0.0 )
+  ) {
+    logInfo(
+      "selectNextAlgorithmicStep()",
+      "plot final solution"
+    );
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+    );
+    haveJustWrittenSnapshot = true;
   }
   else if (
     TimeInBetweenPlots>0.0

@@ -8,5 +8,8 @@ towards the SPH code. Most of them are relatively simplistic wrappers around
 Peano's particle toolbox.
 
 """
-from .InsertParticlesByCoordinates import InsertParticlesByCoordinates
-from .InsertParticlesFromHDF5File  import InsertParticlesFromHDF5File
+from .InsertParticlesByCoordinates      import InsertParticlesByCoordinates
+from .InsertParticlesFromHDF5File       import InsertParticlesFromHDF5File
+from .InsertParticlesAlongCartesianGrid import InsertParticlesAlongCartesianGrid
+from .InsertRandomParticlesIntoCells    import InsertRandomParticlesIntoCells
+

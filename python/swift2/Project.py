@@ -140,8 +140,10 @@ class Project(object):
     offset_string += "}"
     size_string   += "}"
     self._project.constants.add_include( """#include <bitset>""")
-    self._project.constants.export_const_with_type( "DomainOffset", offset_string, "std::initializer_list<double>" )
-    self._project.constants.export_const_with_type( "DomainSize", size_string, "std::initializer_list<double>" )
+    self._project.constants.add_include( """#include "tarch/la/Vector.h" """)
+    self._project.constants.add_include( """#include "peano4/utils/Globals.h" """)
+    self._project.constants.export_const_with_type( "DomainOffset", offset_string, "tarch::la::Vector<Dimensions,double>" )
+    self._project.constants.export_const_with_type( "DomainSize", size_string, "tarch::la::Vector<Dimensions,double>" )
     self._project.constants.export( "MinTerminalTime", str(self._min_terminal_time) )
     if self._max_terminal_time>=self._min_terminal_time:
       self._project.constants.export( "MaxTerminalTime", str(self._max_terminal_time) )
@@ -160,7 +162,7 @@ class Project(object):
     self._project.constants.export_string( "BuildInformation",     build_string )
     self._project.constants.export_string( "ConfigureInformation", self._project.output.makefile.configure_call )
 
-    self._project.output.readme.add_package_description( """
+    readme_text = """
 
 ### SWIFT 2
 
@@ -173,10 +175,45 @@ citation of the original SWIFT paper
          title = {t.b.d.}
        }
 
+"""
 
-""" )
+    if self._dimensions==2:
+      readme_text += """
+
+    We assume that you use a domain of ("""+ str(self._domain_offset[0]) + """,""" + str(self._domain_size[0]-self._domain_offset[0]) + """)x("""+ str(self._domain_offset[1]) + """,""" + str(self._domain_size[1]-self._domain_offset[1]) + """). 
+    """
+    else:
+      readme_text += """
+
+We assume that you use a domain of ("""+ str(self._domain_offset[0]) + """,""" + str(self._domain_size[0]-self._domain_offset[0]) + """)x("""+ str(self._domain_offset[1]) + """,""" + str(self._domain_size[1]-self._domain_offset[1]) + """)x("""+ str(self._domain_offset[2]) + """,""" + str(self._domain_size[2]-self._domain_offset[2]) + """). 
+"""
+
+    readme_text += """
+
+Peano 4 will cut this domain equidistantly and recursively into three parts along each coordinate axis. This yields a spacetree.
+
+The coarsest mesh chosen has a mesh width of h_max=""" + str(self._global_max_h) + """.
+As Peano realises three-partitioning, the actual maximum mesh size will be h_max=""" + str(self.__real_max_mesh_size()[0]) + """.
+This corresponds to at least """ + str(self.__real_max_mesh_size()[1]) + """ spacetree levels.
+The coarsest regular mesh hence will host """ + str( (3**self._dimensions)**(self.__real_max_mesh_size()[1]) ) + """ octants.
+
+Once this resultion is reached, the mesh will stop the initial load balancing, insert the 
+particles and then kick off the simulation. The mesh might be refined and erased subsequently,
+but it will never become closer than these constraints.
+
+"""
+    self._project.output.readme.add_package_description(readme_text)
 
 
+  def __real_max_mesh_size(self):
+    h     = self._domain_size[0]
+    level = 0                       
+    while h>self._global_max_h:
+      h = h / 3.0
+      level += 1
+    return (h, level)
+        
+  
   def __configure_makefile(self):
     self._project.output.makefile.set_dimension(self._dimensions)
     self._project.output.makefile.set_executable_name(self._executable_name)

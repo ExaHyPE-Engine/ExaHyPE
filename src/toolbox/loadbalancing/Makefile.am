@@ -18,6 +18,7 @@ ToolboxLoadBalancing_SOURCES = \
   SplitOversizedTree.cpp \
   SpreadOut.cpp \
   SpreadOutHierarchically.cpp \
+  SpreadOutOnceGridStagnates.cpp \
   State.cpp \
   Statistics.cpp
   

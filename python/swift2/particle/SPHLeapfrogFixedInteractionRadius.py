@@ -79,7 +79,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                constant_time_step_size=True,
                swift_project_namespace="SPH",
                sph_flavour = 'minimal',
-               is_sph = True,
+               is_sph = True, # @todo THis is weird: If a class is called SPH, why is this an argument?
                particles_per_cell = 0, # makes no sense, and should likely be forbidden
                min_h = 0.3,
                max_h = 0.3,
@@ -91,7 +91,6 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                                                )
 
     # Simulation properties
-    self._name = name
     self._cfl_factor                = cfl_factor
     self._initial_time_step_size    = initial_time_step_size
 
@@ -346,7 +345,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                   """::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
                       localParticles, 1, {} );""".format(self._is_sph),
       prepare_traversal_kernel       =
-                  """::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>({},{},{});""".format(self._name,
+                  """::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>({},{},{});""".format(self.name,
                                                                                                             self._cfl_factor,
                                                                                                             self._initial_time_step_size,
                                                                                                             self._adjustTimeStepSize),
@@ -535,11 +534,11 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
       prepare_traversal_kernel       = """
                                        globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
                                        globaldata::{PARTICLE}::getSpecies().clearVelocity();
-                                       """.replace( "{PARTICLE}", self._name ),
+                                       """.replace( "{PARTICLE}", self.name ),
       unprepare_traversal_kernel     = """
                                        globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
                                        ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
-                                       """.replace( "{PARTICLE}", self._name ),
+                                       """.replace( "{PARTICLE}", self.name ),
       includes                       = """
                                        #include "Constants.h"
                                        #include "swift2/statistics/Reports.h"
@@ -743,3 +742,14 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self.algorithm_steps_dict["Density"],
     ] 
 
+  @property
+  def readme_descriptor(self):
+    return super(SPHLeapfrogFixedInteractionRadius,self).readme_descriptor + """
+    
+  Time integrator: SPH Leapfrog
+  
+  - interaction radius:             fixed
+  - CFL factor:                     """ + str(self._cfl_factor) + """
+  - dt_initial:                     """ + str(self._initial_time_step_size) + """
+  
+    """

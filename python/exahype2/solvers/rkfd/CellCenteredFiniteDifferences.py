@@ -937,14 +937,14 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     self.create_action_sets()
 
 
-  @patch_size.setter
+  @unknowns.setter
   def unknowns(self, value):
     self._unknowns = value
     self.create_data_structures()
     self.create_action_sets()
 
 
-  @patch_size.setter
+  @auxiliary_variables.setter
   def auxiliary_variables(self, value):
     self._auxiliary_variables = value
     self.create_data_structures()

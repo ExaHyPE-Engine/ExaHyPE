@@ -46,7 +46,7 @@ tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::VTKTextFileWrite
         tarch::la::smaller(
           timeStamp,
           tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName),
-          tarch::la::relativeEps( timeStamp, tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName), DefaultTimeStampPrecision )
+          tarch::la::relativeEpsNormaledAgainstValueGreaterOne( timeStamp, tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName), DefaultTimeStampPrecision )
         )
       ) {
         logWarning( "PeanoTextPatchFileWriter(...)", "there is an index file " << indexFileName << " with data for time stamp " << tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName) << ". Will be overwritten as we dump data for time " << timeStamp );

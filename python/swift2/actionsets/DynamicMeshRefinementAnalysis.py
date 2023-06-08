@@ -10,7 +10,7 @@ import peano4
 
 
 class DynamicMeshRefinementAnalysis(ActionSet):
-  """
+  """!
 
     AMR criterion based upon the particle density
 
@@ -23,6 +23,9 @@ class DynamicMeshRefinementAnalysis(ActionSet):
     
     Different to the default toolbox variant, Swift's marker doesn't need to
     distinguish a new and an old marker. 
+    
+    Please consult the constructor, i.e. __init__(), for some information
+    on algorithm variants and the implementation.
     
   """
   
@@ -53,12 +56,14 @@ class DynamicMeshRefinementAnalysis(ActionSet):
                min_particles_per_cell=1,
                max_particles_per_cell=65536,
                min_h = 0.1,
-               max_h = 0.01):
-    """
-
-    :: Arguments
+               max_h = 0.01,
+               scale_marker = 0.8):
+    """!
     
+    Construct the action set
 
+    ## Arguments
+    
     particle_set: peano4.toolbox.particles.ParticleSet
        Instance of the particle set that is to be used as trigger. Each particle in the
        set has a cut-off radius and this one is used to guide the AMR.
@@ -73,15 +78,23 @@ class DynamicMeshRefinementAnalysis(ActionSet):
        counter per cell.
        
     max_particles_per_cell: Integer
-       Forces the code to refine if there are more than max_particles_per_cell particles
-       held. Has to be bigger or equal to min_particles_per_cell. 
+       Forces the code to refine if there are more than max_particles_per_cell 
+       particles held. Has to be bigger or equal to min_particles_per_cell. 
        
        Whenever the AMR criterion refines, it can happen that particles do not 
        drop down further, as their cut-off radius is too small.
        
-       You can also set this argument to zero as well. In this case, the action sets 
-       refines all the way down until the mesh size just fits the cut-off radius. It 
-       even refines a cell if there's only one particle in it.
+       You can also set this argument to zero as well. In this case, the action
+       sets refines all the way down until the mesh size just fits the cut-off 
+       radius. It even refines a cell if there's only one particle in it.
+       
+    scale_marker: Float
+       In principle, many particle codes create a mesh that is by magnitudes 
+       too fine. Therefore, it makes sense to make the refinement events a 
+       little bit smaller than the actual underlying cell. However, if they are
+       small, the ::peano4::grid::merge() operation might not be able to fuse
+       them, i.e. you have to be careful that you increase the tolerance there
+       in return.
        
     """
     if min_particles_per_cell<0:
@@ -98,6 +111,7 @@ class DynamicMeshRefinementAnalysis(ActionSet):
       "MAX_H":                   max_h,
       "PARTICLE_SET":            particle_set.name,
       "PARTICLE":                particle_set.particle_model.name,
+      "SCALE_MARKER":            scale_marker
     }
     pass
 
@@ -201,7 +215,7 @@ class DynamicMeshRefinementAnalysis(ActionSet):
     and
     marker.h()(0)/3.0>{{MIN_H}}
   ) {
-    const double ScaleMarker = 0.8;
+    const double ScaleMarker = {{SCALE_MARKER}};
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );
     newEntry.setOffset( marker.getOffset() + marker.h() * (1.0-ScaleMarker) / 2.0 );

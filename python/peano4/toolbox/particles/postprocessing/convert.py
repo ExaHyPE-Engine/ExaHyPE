@@ -28,7 +28,7 @@ print( """
 
 ExaHyPE 2 - Particle toolbox postprocessing
 ===========================================
-(C) Holger Schulz, Tobias Weinzierl, Han Zhang
+(C) Mladen Ivkovic, Tobias Weinzierl, Han Zhang
 
 Type in --help to find out about the arguments.
 
