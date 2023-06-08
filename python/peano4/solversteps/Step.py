@@ -89,7 +89,7 @@ class Step:
     Return minimum priority over all action sets associated with this step.
     
     """
-    return min(i.priority for i in self.action_sets)
+    return min( [i.priority for i in self.action_sets] )
 
 
   def max_priority(self):
@@ -98,7 +98,7 @@ class Step:
     Return max priority over all action sets associated with this step.
     
     """
-    return max(i.priority for i in self.action_sets)
+    return max( [i.priority for i in self.action_sets] )
     
 
   def add_action_set(self,action_set):
