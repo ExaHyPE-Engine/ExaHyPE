@@ -292,9 +292,12 @@ thus appreciate any citation of the original release paper
   def add_tracer(self,
                  name,
                  attribute_count=0,
-                 plot=True
+                 plot=True,
+                 priority_within_action_sets=-1
                  ):
     """!
+    
+    Add a tracer to the project
 
     We rely on the particle toolbox. Therefore, our particles have
     already a position x, a cut off radius (which we don't usually 
@@ -332,6 +335,11 @@ thus appreciate any citation of the original release paper
 
     @see peano4.toolbox.particles.PlotParticlesInVTKFormat.add_attribute_to_plot()
 
+    ## Action set order
+    
+    We add the particle ordering with priority -1. This should do the job
+    for most setups, but we might be wrong.
+    
     ## Arguments
 
     name: String
@@ -349,6 +357,13 @@ thus appreciate any citation of the original release paper
       it writes patch files. You can switch this behaviour off. A lot of codes
       do so if they dump the tracer data independently into another database
       anyway.
+      
+    priority_within_action_sets: Integer
+      You have to clarify what the priority of the tracer is within the 
+      action sets. By default, all ExaHyPE solvers start with priority 
+      0 and then up to n. So you are fine with using the default of -1
+      which means that the tracer precedes any solver. However, there 
+      might be cases where you wanna move the priorities manually.
 
     Returns the particle set that you can use to modify further 
     """
@@ -379,11 +394,20 @@ thus appreciate any citation of the original release paper
     # Initialisation
     #
     self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
+
+    update_particle_association_action_set = peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles)
+    update_particle_association_action_set.priority = priority_within_action_sets
+    update_particle_association_action_set.parallel = True
+
+    update_particle_parallel_state_action_set = peano4.toolbox.particles.UpdateParallelState(particles)
+    update_particle_parallel_state_action_set.priority = priority_within_action_sets
+    update_particle_parallel_state_action_set.parallel = True
         
     #
     # Move particles
     #
-    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
+    self.perform_time_step.add_action_set(update_particle_association_action_set)
+    self.perform_time_step.add_action_set(update_particle_parallel_state_action_set)
     
     #
     # Plotter: The timestamp here is slightly wrong, as I use the min time stamp. It 
@@ -409,7 +433,8 @@ thus appreciate any citation of the original release paper
       
       self.plot_solution.add_action_set( particle_plotter ) 
       
-    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
+    self.plot_solution.add_action_set(update_particle_association_action_set)
+    self.plot_solution.add_action_set(update_particle_parallel_state_action_set)
     
     self._tracer_particles.append(particles)
 
