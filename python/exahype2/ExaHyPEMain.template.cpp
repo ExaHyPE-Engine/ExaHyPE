@@ -260,6 +260,10 @@ void step() {
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid-but-postpone-refinement" );
 
+        #if OTTER_USE_PHASES
+        OTTER_PHASE_SWITCH( otter::phase::create_grid_no_refine );
+        #endif
+
         repositories::startGridConstructionStep();
 
         OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
@@ -282,6 +286,10 @@ void step() {
     case repositories::StepRepository::Steps::CreateGrid:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
+
+        #if OTTER_USE_PHASES
+        OTTER_PHASE_SWITCH( otter::phase::create_grid );
+        #endif
 
         repositories::startGridConstructionStep();
 
@@ -314,6 +322,11 @@ void step() {
     	}
 
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid-and-converge-load-balancing" );
+        
+        #if OTTER_USE_PHASES
+        OTTER_PHASE_SWITCH( otter::phase::create_grid_converge );
+        #endif
+
         // The smaller here corresponds to the -1 below
         if (
           ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()<0
@@ -372,7 +385,7 @@ void step() {
         repositories::loadBalancer.enable(false);
 
         #if OTTER_USE_PHASES
-        OTTER_PHASE_BEGIN( otter::phase::init );
+        OTTER_PHASE_SWITCH( otter::phase::init );
         #endif
 
         repositories::startGridInitialisationStep();

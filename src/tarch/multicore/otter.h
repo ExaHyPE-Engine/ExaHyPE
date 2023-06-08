@@ -46,6 +46,9 @@ namespace phase {
     static const char *init = "init";
     static const char *plot = "plot";
     static const char *timestep = "time-step";
+    static const char *create_grid = "create-grid";
+    static const char *create_grid_no_refine = "create-grid-but-postpone-refinement";
+    static const char *create_grid_converge = "create-grid-and-converge-load-balancing";
 }
 
 }
