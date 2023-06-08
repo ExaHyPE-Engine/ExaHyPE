@@ -181,11 +181,15 @@ elif solver_type in rkdg_rusanov_solvers:
   
   from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
 
+  # No other scenario has hard-coded methods, so only this one works
+  from scenarios.rkdg_test_scenario import RKDG_Test_Scenario
+  my_pde = RKDG_Test_Scenario()
+
   my_solver = solvers[solver_type](
     name                      = solver_name,
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
-    face_projections          = FaceProjections.SolutionAndGradient, # taken from python/exahype2/solvers/rkdg/RungeKuttaDG.py
+    face_projections          = FaceProjections.Solution, # according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2? TODO
     unknowns                  = 3,
     auxiliary_variables       = 1,
     max_cell_h                = maximum_cell_size, # must be at least as fine as bathymetry file if netCDF is used
