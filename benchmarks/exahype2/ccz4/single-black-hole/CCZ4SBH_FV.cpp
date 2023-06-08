@@ -3,8 +3,11 @@
 #include "exahype2/RefinementControl.h"
 #include "peano4/datamanagement/FaceMarker.h"
 #include "repositories/SolverRepository.h"
+#include "tarch/multicore/Lock.h"
 
-tarch::logging::Log   benchmarks::exahype2::ccz4::CCZ4SBH_FV::_log( "benchmarks::exahype2::ccz4::CCZ4SBH_FV" );
+
+tarch::multicore::BooleanSemaphore  benchmarks::exahype2::ccz4::CCZ4SBH_FV::_semaphore;
+tarch::logging::Log                 benchmarks::exahype2::ccz4::CCZ4SBH_FV::_log( "benchmarks::exahype2::ccz4::CCZ4SBH_FV" );
 
 
 benchmarks::exahype2::ccz4::CCZ4SBH_FV::CCZ4SBH_FV() {
@@ -89,4 +92,34 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::isCellOverlappingWithBHImpactArea(
   const tarch::la::Vector<Dimensions,double>&  cellH
 ) {
   return tarch::la::norm2(cellCentre) - tarch::la::norm2(0.5*cellH) < BlackHoleFVRegion;
+}
+
+
+void benchmarks::exahype2::ccz4::CCZ4SBH_FV::startTimeStep(
+  double globalMinTimeStamp,
+  double globalMaxTimeStamp,
+  double globalMinTimeStepSize,
+  double globalMaxTimeStepSize
+) {
+  AbstractCCZ4SBH_FV::startTimeStep(
+    globalMinTimeStamp,
+    globalMaxTimeStamp,
+    globalMinTimeStepSize,
+    globalMaxTimeStepSize
+  );
+
+  _numberOfPatches = 0;
+}
+
+
+void benchmarks::exahype2::ccz4::CCZ4SBH_FV::finishTimeStep() {
+  AbstractCCZ4SBH_FV::finishTimeStep();
+
+  logInfo( "finishTimeStep()", "number of patches on this rank=" << _numberOfPatches );
+}
+
+
+void benchmarks::exahype2::ccz4::CCZ4SBH_FV::incNumberOfPatches() {
+  tarch::multicore::Lock lock(_semaphore);
+  _numberOfPatches++;
 }

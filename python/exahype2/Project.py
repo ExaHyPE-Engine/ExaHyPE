@@ -13,7 +13,10 @@ import exahype2.solvers
 
 
 class Project(object):
-  """
+  """!"
+      
+  ExaHyPE 2 project
+  
   Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4
   project with a particular set of actions (algorithmic phases)
   that you can choose from and with particular solver types. It
@@ -148,9 +151,11 @@ class Project(object):
       size_string   += str(self._domain_size[i])
     offset_string += "}"
     size_string   += "}"
-    self._project.constants.add_include( """#include <bitset>""") 
-    self._project.constants.export_const_with_type( "DomainOffset", offset_string, "std::initializer_list<double>" )
-    self._project.constants.export_const_with_type( "DomainSize", size_string, "std::initializer_list<double>" )
+    self._project.constants.add_include( """#include <bitset>""")
+    self._project.constants.add_include( """#include "tarch/la/Vector.h" """)
+    self._project.constants.add_include( """#include "peano4/utils/Globals.h" """)
+    self._project.constants.export_const_with_type( "DomainOffset", offset_string, "tarch::la::Vector<Dimensions,double>" )
+    self._project.constants.export_const_with_type( "DomainSize", size_string, "tarch::la::Vector<Dimensions,double>" )
     self._project.constants.export( "MinTerminalTime", str(self._min_terminal_time) )
     if self._max_terminal_time>=self._min_terminal_time:
       self._project.constants.export( "MaxTerminalTime", str(self._max_terminal_time) )
@@ -283,9 +288,13 @@ thus appreciate any citation of the original release paper
     self._project.output.add( generated_solver_files )
     self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp", generated=True )
 
-  def add_tracer(self,name,attribute_count=0,plot=True):
-    """
-    ## Particle properties
+
+  def add_tracer(self,
+                 name,
+                 attribute_count=0,
+                 plot=True
+                 ):
+    """!
 
     We rely on the particle toolbox. Therefore, our particles have
     already a position x, a cut off radius (which we don't usually 

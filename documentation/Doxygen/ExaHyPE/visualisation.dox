@@ -178,11 +178,11 @@ also have to inform the project how many attributes you plan to track
 per tracer:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-tracer_particles = project.add_tracer( name=name,attribute_count=59 )
+tracer_particles = project.add_tracer( name="MyFancyParticle" )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Study the in-code documentation of the involved classes. The add_tracer()
-factor method ensure that ExaHyPE keeps track of it and that it also is 
+Study the in-code documentation of the involved classes. The exahype2.Project.add_tracer()
+factory method ensure that ExaHyPE keeps track of it and that it also is 
 printed whenever we write a snapshot. Tracers can
 track only some attributes, they can move or stay at one place, and they
 can also interact with each other.
@@ -240,7 +240,7 @@ database:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
       particle_set=tracer_particles,
       solver=self,
       filename="Tracer-" + name,
@@ -256,7 +256,7 @@ Dumping tracers into a (CSV) database is attractive, as these files are
 easier to parse/postprocess than mesh data files. At the same time, you
 can dump particles more often than you plot data snapshots, and these
 dumps can even be adaptive, i.e. you dump if and only if a particle
-actually moves. The `DumpTrajectoryIntoDatabase` documentation provides
+actually moves. The exahype2.tracer.DumpTracerIntoDatabase documentation provides
 more detail.
 
 The data format within the csv file is rather self-explaining.

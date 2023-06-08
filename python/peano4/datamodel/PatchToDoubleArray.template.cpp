@@ -120,8 +120,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
 }
 {% endif -%}
 
-
-
 {% if DATA_ASSOCIATION == 2 -%}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker) {
   {{MERGE_METHOD_DEFINITION}}
@@ -159,7 +157,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
   return {{STORE_PERSISTENT_CONDITION}};
 }
 {% endif -%}
-
 
 {% if DATA_ASSOCIATION == 3 -%}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker) {

@@ -2,7 +2,9 @@
 
 @page swift_visualisation Visualisation
 
-Swift 2 relies on Peano's standard output routines to write file dumps. 
+# The Peano Way
+
+Swift 2 relies on Peano's standard output routines to write file dumps.
 As the files can be rather large, the simulation configuration allows you to
 specify exactly how often you want to see file dumps, and you can also add
 spatial filters.
@@ -13,16 +15,16 @@ Consult also @ref tarch_patch_files "Peano's generic discussion" of various
 visualisation pathways.
 
 
-## Python support for vtu format
+# Python support for vtu format
 
 Besides the infrastructure that Peano provides, in Swift we very often require
 to visualise the different simulation quantities in detail, e.g. to compare the
 output of the simulation against a reference such as typically a known
 analytical solution.
-For this purpose, a rudimentary reader for particles (points) stored in ``.vtu`` 
-files is provided. To use it, the 
-<a href="https://github.com/joergbuchwald/VTUinterface"> ``VTUInterface``</a> 
-python library is required. The library can be installed using pip, i.e.  invoking 
+For this purpose, a rudimentary reader for particles (points) stored in ``.vtu``
+files is provided. To use it, the
+<a href="https://github.com/joergbuchwald/VTUinterface"> ``VTUInterface``</a>
+python library is required. The library can be installed using pip, i.e.  invoking
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 pip install VTUinterface
@@ -53,8 +55,8 @@ reader = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=0.1)
 partData = reader.load() # this is where the actual reading happens
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The reader will return an object (``partData``) with attributes representing particle 
-fields with the same name as they were set in the ``.vtu`` files, save for necessary 
+The reader will return an object (``partData``) with attributes representing particle
+fields with the same name as they were set in the ``.vtu`` files, save for necessary
 changes to prevent illegal characters in attribute names. To display what the actual
 attribute names are, you can run ``partData.show_attribute_list()``:
 
@@ -83,7 +85,7 @@ reader = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=0.1)
 partData = reader.load()
 
 # show me what particle fields are stored.
-# These are also the field names that you can access 
+# These are also the field names that you can access
 # as the `partData` object's attributes.
 partData.show_attribute_list()
 

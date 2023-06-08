@@ -504,6 +504,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
 {
     // Han 09-2022: add a parameter to switch off or on the advection here
     const double advec=0.0;
+    const double advec_aux=0.0;
     // Baojiu-01-08-22: changed the line below to make sure alpha>0.0001
     //const double alpha = std::exp(std::fmax(-20., std::fmin(20.,Q[16])));
     const double alpha = std::fmax(1e-4,Q[16]);
@@ -861,7 +862,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     {
         // Baojiu-01-08-22: alpha*fa -> alpha^2*fa
         // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
-        dtA[i] = -alpha*alpha*fa*(dtraceK[i] - dK0[i] - CCZ4c*2*dTheta[i]) + advec*(beta[0]*dAA[0][i] + beta[1]*dAA[1][i] + beta[2]*dAA[2][i]);
+        dtA[i] = -alpha*alpha*fa*(dtraceK[i] - dK0[i] - CCZ4c*2*dTheta[i]) + advec_aux*(beta[0]*dAA[0][i] + beta[1]*dAA[1][i] + beta[2]*dAA[2][i]);
     }
     for (int k = 0; k < 3; k++)
     {
@@ -890,7 +891,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
 
     // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) dtB[i][j] += CCZ4bs*advec*(beta[0]*dBB[0][i][j] + beta[1]*dBB[1][i][j] + beta[2]*dBB[2][i][j]);
+    for (int j = 0; j < 3; j++) dtB[i][j] += CCZ4bs*advec_aux*(beta[0]*dBB[0][i][j] + beta[1]*dBB[1][i][j] + beta[2]*dBB[2][i][j]);
 
     // NOTE 0 value param
     for (int i = 0; i < 3; i++)
@@ -915,11 +916,11 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
-    for (int k = 0; k < 3; k++) dtD[i][j][k] += advec*(beta[0]*dDD[0][i][j][k] + beta[1]*dDD[1][i][j][k] + beta[2]*dDD[2][i][j][k]);
+    for (int k = 0; k < 3; k++) dtD[i][j][k] += advec_aux*(beta[0]*dDD[0][i][j][k] + beta[1]*dDD[1][i][j][k] + beta[2]*dDD[2][i][j][k]);
 
     // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
     double dtP[3] = {0,0,0};
-    for (int i = 0; i < 3; i++) dtP[i] = advec*(beta[0]*dPP[0][i] + beta[1]*dPP[1][i] + beta[2]*dPP[2][i]);
+    for (int i = 0; i < 3; i++) dtP[i] = advec_aux*(beta[0]*dPP[0][i] + beta[1]*dPP[1][i] + beta[2]*dPP[2][i]);
     for (int k = 0; k < 3; k++)
     {
         double temp=0;
