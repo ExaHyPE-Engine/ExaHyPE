@@ -699,7 +699,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   }
 }
 
-template <typename Solver>
+template <typename Solver, int numberOfUnknowns, int numberOfAuxiliaryVariables>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const double* __restrict__                                         QIn,
   const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
