@@ -19,13 +19,19 @@ maximum_cell_size     = 0.1
 amr_levels            = 3 
 auxiliary_variables   = 1 # bathymetry, this is fixed to 1 in pde.py
 
-solvers = {
+fv_rusanov_solvers = {
   #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
   #"FVRusanovGlobalFixedEnclave":exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
   "FVRusanovGlobalAdaptive":exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep,
   "FVRusanovGlobalAdaptiveEnclave":exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
   #"FVRusanovLocalEnclave":exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking,
 }
+
+rkdg_rusanov_solvers = {
+  "RKDGRusanovGlobalAdaptive": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep
+}
+
+solvers = rkdg_rusanov_solvers | fv_rusanov_solvers
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -59,12 +65,14 @@ parser.add_argument("-et",      "--end-time",          dest="end_time",       ty
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. finite volume cell (3 by default)" )
 parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR" )
 parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=False,              help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
-parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,              help="Compile (on by default)" )
+parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)" )
 parser.add_argument("-c",       "--scenario",          dest="scenario",       choices=scenarios,          default="Radial_Dam_Break", help="|".join(scenarios))
-parser.add_argument("-bf",      "--bathymetry-file",   dest="bathymetry_file", type=str,                  required=False,            help="Path to file containing bathymetry relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_bathymetry)))
-parser.add_argument("-df",      "--displacement-file", dest="displacement_file",type=str,                 required=False,            help="Path to file containing displacement relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_displacement)))
-parser.add_argument("-ops",     "--optimal-patch-size",dest="optimal_patch_size",action="store_true",     default=False,             help="Set to use optimal patch size for GPUs of 32.")
-parser.add_argument("-maxd",    "--max_dimension_netcdf",dest="max_dimension_netcdf",type=int,            required=False,            help="Use when netCDF4 package not installed to pass maximum dimension to the program.")
+parser.add_argument("-bf",      "--bathymetry-file",   dest="bathymetry_file", type=str,                  required=False,             help="Path to file containing bathymetry relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_bathymetry)))
+parser.add_argument("-df",      "--displacement-file", dest="displacement_file",type=str,                 required=False,             help="Path to file containing displacement relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_displacement)))
+parser.add_argument("-ops",     "--optimal-patch-size",dest="optimal_patch_size",action="store_true",     default=False,              help="Set to use optimal patch size for GPUs of 32.")
+parser.add_argument("-maxd",    "--max_dimension_netcdf",dest="max_dimension_netcdf",type=int,            required=False,             help="Use when netCDF4 package not installed to pass maximum dimension to the program.")
+parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   required=False,             help="Set order of space discretisation for Discontinuous Galerkin." )
+parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   required=False,             help="Set order of time discretisation for Runge-Kutta scheme." )
 args = parser.parse_args()
 
 maximum_cell_size = args.max_cell_size
@@ -146,18 +154,44 @@ solver_type = args.solver
 if args.gpu:
   if not "Enclave" in solver_type:
     solver_type += "Enclave"
+    if solver_type not in solvers:
+      raise ValueError("The requested solver %s is not available for GPUs!" % solver_type)
 solver_name = "SWESolver" + str(solver_type)
+
 if args.gpu:
   solver_name += "GPU"
-my_solver = solvers[solver_type](
-  name                      = solver_name,
-  patch_size                = patch_size,
-  unknowns                  = 3,
-  auxiliary_variables       = 1,
-  max_volume_h              = maximum_cell_size, # must be at least as fine as bathymetry file if netCDF is used
-  min_volume_h              = maximum_cell_size * 3.0**(-args.amr_levels),
-  time_step_relaxation      = time_step_relaxation
-)
+
+my_solver = None
+# finite volume rusanov solver?
+if solver_type in fv_rusanov_solvers:
+  my_solver = solvers[solver_type](
+    name                      = solver_name,
+    patch_size                = patch_size,
+    unknowns                  = 3,
+    auxiliary_variables       = 1,
+    max_volume_h              = maximum_cell_size, # must be at least as fine as bathymetry file if netCDF is used
+    min_volume_h              = maximum_cell_size * 3.0**(-args.amr_levels),
+    time_step_relaxation      = time_step_relaxation
+  )
+
+# rkdg rusanov solver?
+elif solver_type in rkdg_rusanov_solvers:
+  if args.dg_order is None or args.rk_order is None:
+    raise ValueError("When using, both the -dg-order and -rk-order have to be set!")
+  
+  from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
+
+  my_solver = solvers[solver_type](
+    name                      = solver_name,
+    rk_order                  = args.rk_order,
+    polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
+    face_projections          = FaceProjections.SolutionAndGradient, # taken from python/exahype2/solvers/rkdg/RungeKuttaDG.py
+    unknowns                  = 3,
+    auxiliary_variables       = 1,
+    max_cell_h                = maximum_cell_size, # must be at least as fine as bathymetry file if netCDF is used
+    min_cell_h                = maximum_cell_size * 3.0**(-args.amr_levels),
+    time_step_relaxation      = time_step_relaxation
+  )
 
 if args.gpu:
   my_solver.set_pde_terms_without_state(True)
