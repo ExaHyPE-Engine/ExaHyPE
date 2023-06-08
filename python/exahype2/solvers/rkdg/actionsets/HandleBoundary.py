@@ -127,9 +127,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATES" ]            = self.guards
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
-      result  = jinja2.Template(self.TemplateHandleBoundary_Prologue).render(**self.d)
-      result += jinja2.Template(self.TemplateHandleBoundary_KernelCalls).render(**self.d)
-      result += jinja2.Template(self.TemplateHandleBoundary_Epilogue).render(**self.d)
+      result  = jinja2.Template(self.TemplateHandleBoundary_Prologue + self.TemplateHandleBoundary_KernelCalls + self.TemplateHandleBoundary_Epilogue).render(**d)
       pass 
     return result
 
