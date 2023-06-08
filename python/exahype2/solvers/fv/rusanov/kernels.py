@@ -411,7 +411,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-#if !defined(GPUOffloadingSYCL)
+//#if !defined(GPUOffloadingSYCL)
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -426,7 +426,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
   {% endif %}
 }
-#endif
+//#endif
 {% endif %}
 
 
