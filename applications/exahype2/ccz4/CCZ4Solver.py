@@ -718,9 +718,9 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
                use_heap_storage = True
                ):  
     AbstractCCZ4Solver.__init__(self)
-    exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
-                                                                                  name                 = name,
-                                                                                     rk_order             = rk_order,
+    exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
+                                                                                    name                 = name,
+                                                                                    rk_order             = rk_order,
                                                                                      polynomials          = polynomials,
                                                                                      face_projections     = exahype2.solvers.rkdg.FaceProjections.Solution,
                                                                                      unknowns             = sum(self._FO_formulation_unknowns.values()),
@@ -786,7 +786,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
         particle_set=tracer_particles, coordinates=coordinates))
     assert tracer_unknowns==None
     project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
-                                                                                        my_solver,
+                                                                                        solver=self,
                                                                                         time_stepping_kernel="toolbox::particles::staticPosition",
                                                                                         project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"))
 

@@ -650,6 +650,23 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
+
+    self._action_set_initial_conditions.priority                                      = 1
+    self._action_set_initial_conditions_for_grid_construction.priority                = 1
+    self._action_set_AMR.priority                                                     = 2
+    self._action_set_AMR_commit_without_further_analysis.priority                     = 2
+    self._action_set_linear_combination_of_estimates.priority                         = 1
+    self._action_set_project_linear_combination_onto_faces.priority                   = 1
+    self._action_set_solve_volume_integral.priority                                   = 1
+    self._action_set_handle_boundary.priority                                         = 1
+    self._action_set_solve_Riemann_problem.priority                                   = 1
+    self._action_set_add_volume_and_face_solution.priority                            = 1
+    self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.priority = 1
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = 1
+    self._action_set_postprocess_solution.priority                                    = 3
+    self._action_set_preprocess_solution.priority                                     = -1
+    self._action_set_update_face_label.priority                                       = 1  
+    self._action_set_update_cell_label.priority                                       = 1
         
 
   def _store_cell_data_default_guard(self):
@@ -1168,12 +1185,12 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
   
   @property
   def postprocess_updated_cell_after_Runge_Kutta_step(self):
-    return self._postprocess_updated_cell
+    return self._postprocess_updated_cell_after_Runge_Kutta_step
 
 
   @property
   def postprocess_updated_cell_after_final_linear_combination(self):
-    return self._postprocess_updated_cell
+    return self._postprocess_updated_cell_after_final_linear_combination
 
 
   @postprocess_updated_cell_after_Runge_Kutta_step.setter
