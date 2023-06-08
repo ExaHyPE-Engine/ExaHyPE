@@ -3,5 +3,97 @@
 @page page_exahype_solvers_aderdg ADER-DG solvers
 
 
+ADER-DG conceptually consists only of three steps: prediction, Riemann solve 
+and correction. While this is conceptually simple, challenges arise once we 
+consider dynamic AMR or local time stepping. This section discusses different
+ADER-DG implementation flavours. The flavours differ in the way they map the
+three core steps onto mesh traversals.
+
+@image html ADER-DG.png
+
+It is important to reiterate the data dependencies and to introduce some 
+intermediate steps which are required to couple the core algorithmic steps:
+
+- The ***prediction*** uses the cell data and determines an (educated) solution
+  guess over the cell in space and time. This is step (1) in the sketch above.
+  We keep the guess at the terminal time and
+- we ***project*** the space-time solution within the cell onto the faces. The
+  faces now hold a space-time approximation.
+- We solve the ***Riemann*** problem on the faces in space and time. This is 
+  step (2) from the sketch.
+- We ***backproject*** the solution of the Riemann solves into the space-time
+  cell domain and compute its additional contribution on top of the guess for 
+  the final solution. For linear PDEs, this compute step simplifies, as we can 
+  integrate over the Riemann solutions first and then only project the final
+  result in time on the face onto the final slab on the cell. There's no need
+  to project back into a space-time volumetric representation first.
+- We ***correct*** the educated guess using the backprojected data and obtain 
+  a new solution. This is step (3) in the cartoon above.
+  
+To discuss the temporal logic of these steps, it is important to reiterate that
+Peano runs through the underlying spacetree in a top-down fashion and users can 
+only plug into vertex, face and cell events. That is, we can never access the 
+adjacent cells of a cell or a face, and we have no control over the order of 
+the traversal. We only know that it follows these top-down/bottom-up 
+constraints. 
+
+@image html spacetree.png
+
+## Algorithmic blueprint of a two-sweep realisation
+
+
+
+
+
+
+
+
+
+
  */
  
+ 
+ 
+Jedenfalls, nach meinem Verständnis ist die reihenfolge der Operationen in ExaHyPE2 an einer AMR-grenze wie folgt:
+
+
+“
+
+Touch coarse face first time
+
+
+[A]
+
+[x3]
+create hanging face
+
+touch fine cell first time
+
+touch fine cell last time
+
+destroy hanging face
+
+
+[B]
+
+Touch coarse face last time
+“
+
+
+Und entweder in [A] oder in [B], aber beide im selben, kommen:
+
+
+“
+touch coarse cell first time
+
+touch coarse cell last time
+“
+
+
+diese können in [A] oder [B] auftauchen abhängig vom traversal, wegen der space-filling curve können sie in der einen oder anderen Richtung kommen. In Ader-DG wollen wir diesen Pattern zweimal wiederholen, einmal im Predictor-, einmal im Corrector-step.
+Austausche zwischen fine und coarse cell sind nur in create hanging face und destroy hanging face möglich.
+
+Im Predictor-step ist es nicht möglich den Riemann-löser auf der feinen face aufzurufen da “touch coarse cell” möglicherweise noch nicht aufgeruft wurde (wenn es erst in [B] geschieht) und wir daher nicht garantieren können dass die nötigen Daten da sind.
+
+Im Corrector-step ist es aber auch nicht möglich da es erst nach [A] geschiehen kann, das heisst wenn “touch coarse cell” in [A] geschieht kann dieses gelöste Riemann-Problem nicht für den corrector-step auf der groben Zelle verwendet werden.
+Desweiteren wird die fine-face nicht persistent gehalten, das heisst ihre Daten müssen im Corrector-step schon auf der groben face interpoliert sein worden, und die Vermischung der Daten aus den unterschiedlichen Zellen würde wahrscheinlich jeglichen Gewinn an Genauigkeit den wir haben wieder verschwinden lassen.
