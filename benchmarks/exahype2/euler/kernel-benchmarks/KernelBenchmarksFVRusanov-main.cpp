@@ -744,7 +744,6 @@ int main(int argc, char** argv) {
   otterTraceFinalise();
 
   delete[] validOutcome;
-  exit(0);
   repositories::finishSimulation();
   repositories::DataRepository::shutdownDatatypes();
   tarch::multicore::shutdownSmartMPI();
