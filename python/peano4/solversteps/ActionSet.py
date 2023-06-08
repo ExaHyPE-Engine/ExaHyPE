@@ -12,7 +12,8 @@ grid traversal view that I have implemented within Peano. They
 listen to the tree traversal through notifications alike "this 
 is the first time I see (touch) a vertex". A list of messages 
 that we can listen to is specified by this class through class
-attributes starting with OPERATION_.
+attributes starting with OPERATION_. Peano's documentation holds
+a @pageref peano_action_sets "discussion of events and their temporal and spatial ordering". 
     
 For each grid traversal, Peano expects one C++ observer. The
 observer is represented within Python through 
