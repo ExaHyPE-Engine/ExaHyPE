@@ -378,7 +378,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
                                                 time_stepping_kernel="toolbox::particles::staticPosition",
                                                 project_on_tracer_properties_kernel=project_on_tracer_properties_kernel
                                                 )
-    tracing_action_set.priority = self._action_set_compute_final_linear_combination.priority+1
+    tracing_action_set.priority = self._action_set_update_cell.priority+1
     project.add_action_set_to_timestepping(tracing_action_set)
 
     dump_into_database_action_set = exahype2.tracer.DumpTracerIntoDatabase(
@@ -390,7 +390,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
       data_delta_between_two_snapsots=1e16,
       time_delta_between_two_snapsots=0.01
       )  
-    dump_into_database_action_set.priority = self._action_set_compute_final_linear_combination.priority+2
+    dump_into_database_action_set.priority = self._action_set_update_cell.priority+2
     project.add_action_set_to_timestepping(dump_into_database_action_set)
 
 
