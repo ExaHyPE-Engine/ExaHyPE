@@ -931,7 +931,8 @@ if __name__ == "__main__":
         tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
         project.add_action_set_to_initialisation( 
           exahype2.tracer.InsertParticlesByCoordinates( 
-            particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]]))
+            particle_set=tracer_particles, coordinates=[[0,0,8.0],[0,0,-8.0],[8.0,8.0,0]]))
+            #particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]]))
         #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename="test-design.dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
       
         project.add_action_set_to_timestepping(
@@ -940,13 +941,14 @@ if __name__ == "__main__":
           )
         )
         
-        project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
-                                                                                  my_solver,
-                                                                                  time_stepping_kernel="toolbox::particles::staticPosition",
-                                                                                  project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"))
+        tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                               my_solver,
+                                                               time_stepping_kernel="toolbox::particles::staticPosition",
+                                                               project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear")
+        tracer_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+1
+        project.add_action_set_to_timestepping(tracer_action_set)
         
-        
-        project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
+        dump_action_set=exahype2.tracer.DumpTracerIntoDatabase(
           particle_set=tracer_particles,
           solver=my_solver,
           filename=args.path+"Tracer-test",
@@ -954,8 +956,10 @@ if __name__ == "__main__":
           output_precision=8,
           data_delta_between_two_snapsots=1e16,
           position_delta_between_two_snapsots=1e16,
-          time_delta_between_two_snapsots=0.1
-          ))
+          time_delta_between_two_snapsots=0.05
+          )
+        dump_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+2
+        project.add_action_set_to_timestepping(dump_action_set)
 
 
     #if not args.add_tracer==0:
