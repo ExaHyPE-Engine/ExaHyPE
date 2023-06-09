@@ -130,6 +130,11 @@ class Step:
 
 
   def highest_priority(self):
+    """!
+    
+    Return max priority over all action sets associated with this step.
+    
+    """
     self.__sort()
     if (len(self.action_sets)==0):
       return 0
@@ -137,6 +142,11 @@ class Step:
 
 
   def lowest_priority(self):
+    """!
+    
+    Return minimum priority over all action sets associated with this step.
+    
+    """
     self.__sort()
     if (len(self.action_sets)==0):
       return 0

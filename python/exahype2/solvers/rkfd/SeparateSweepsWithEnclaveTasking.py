@@ -424,7 +424,9 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
 
     self._action_set_merge_enclave_task_outcome             = MergeEnclaveTaskOutcome(self)                                                                                 
     self._action_set_update_cell                            = UpdateCell(self)
-    
+
+    self._action_set_update_cell.priority                = self._baseline_action_set_priority + 4
+    self._action_set_merge_enclave_task_outcome.priority = self._baseline_action_set_priority + 4
     #
     # have a single guard (technically)
     #
