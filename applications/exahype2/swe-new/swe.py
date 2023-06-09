@@ -235,6 +235,63 @@ my_project.set_output_path(output_path)
 if not os.path.exists(output_path):
   os.mkdir(output_path)
 
+try:
+  raise ImportError()
+  import umbridge
+  # add particles/probes
+  probes = my_project.add_tracer(name="Probes",attribute_count=4)
+  my_project.add_action_set_to_initialisation(
+    exahype2.tracer.InsertParticlesByCoordinates(
+      # TODO currently simply adds tracer into the middle of the domain
+      particle_set = probes, coordinates=[[width[0]/2, width[1]/2]]
+    )
+  )
+  my_project.add_action_set_to_timestepping(
+    peano4.toolbox.particles.UpdateParallelState(
+      particle_set = probes
+    )
+  )
+  
+  if solver_type in fv_rusanov_solvers:
+    # TODO only project h and t onto particle
+    my_project.add_action_set_to_timestepping(
+      exahype2.tracer.FiniteVolumesTracing(
+        probes, 
+        my_solver, 
+        time_stepping_kernel="toolbox::particles::staticPosition", 
+        project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant"
+      )
+    )
+  else:
+    # TODO only project h and t onto particle
+    my_project.add_action_set_to_timestepping(
+      exahype2.tracer.DiscontinuousGalerkinTracing(
+        probes, 
+        my_solver, 
+        time_stepping_kernel="toolbox::particles::staticPosition", 
+        project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle_piecewiseConstant"
+      )
+    )
+
+  my_project.add_action_set_to_timestepping(
+    exahype2.tracer.DumpTracerIntoDatabase(
+      probes,
+      my_solver,
+      output_path + "tracer-test",
+      65536,
+      1e10,
+      1e10,
+      0,
+      8,
+      False,
+      -1,
+      args.end_time
+    )
+  )
+
+except ImportError:
+  print("UM-Bridge not found! Uncertainty Quantification not available!")
+
 my_project.set_global_simulation_parameters(
   dimensions            = 2,
   size                  = width,
