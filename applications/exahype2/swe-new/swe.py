@@ -13,8 +13,8 @@ offset                = [0, 0] # this is fixed to [0, 0]
 end_time              = 0.02
 time_step_relaxation  = 0.5 # taken from tutorial
 plot_interval         = 0.005 # taken from tutorial
-patch_size            = 17
-optimal_patch_size    = 32 # optimal for GPUs
+patch_size            = 32
+optimal_patch_size    = 32 # optimal for GPUs TODO: no longer
 maximum_cell_size     = 0.1
 amr_levels            = 3 
 auxiliary_variables   = 1 # bathymetry, this is fixed to 1 in pde.py
@@ -177,7 +177,9 @@ if solver_type in fv_rusanov_solvers:
 # rkdg rusanov solver?
 elif solver_type in rkdg_rusanov_solvers:
   if args.dg_order is None or args.rk_order is None:
-    raise ValueError("When using, both the -dg-order and -rk-order have to be set!")
+    raise ValueError("When using RKDG, both the -dg-order and -rk-order have to be set!")
+  
+  solver_name += "RK%dDG%d" % (args.rk_order, args.dg_order)
   
   from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
 
@@ -189,7 +191,7 @@ elif solver_type in rkdg_rusanov_solvers:
     name                      = solver_name,
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
-    face_projections          = FaceProjections.Solution, # according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2? TODO
+    face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2? 
     unknowns                  = 3,
     auxiliary_variables       = 1,
     max_cell_h                = maximum_cell_size, # must be at least as fine as bathymetry file if netCDF is used
@@ -222,7 +224,7 @@ my_solver.set_implementation(
   source_term           = my_pde.implementation_of_sources()
 )
 
-executable_name = "swe-application-2d-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (args.scenario, patch_size, args.amr_levels, maximum_cell_size, args.end_time)
+executable_name = "swe-application-2d-solver-name-%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (solver_name, args.scenario, patch_size, args.amr_levels, maximum_cell_size, args.end_time)
 output_path = "output-%s/" % executable_name
 
 my_project = exahype2.Project( ["applications", "exahype2", "swe"], "SWEApplication", ".", executable=executable_name)
