@@ -943,8 +943,8 @@ if __name__ == "__main__":
         
         tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                my_solver,
-                                                               time_stepping_kernel="toolbox::particles::staticPosition",
-                                                               project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear")
+                                                               project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear",
+                                                               )
         tracer_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+1
         project.add_action_set_to_timestepping(tracer_action_set)
         
