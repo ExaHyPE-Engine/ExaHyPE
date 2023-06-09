@@ -368,6 +368,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
     project_on_tracer_properties_kernel = ""
     if tracer_unknowns==None:
       project_on_tracer_properties_kernel = "::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
+#      project_on_tracer_properties_kernel = "::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler"
     elif len(tracer_unknowns)==1:
       project_on_tracer_properties_kernel = "::exahype2::fv::projectValueOntoParticle_piecewiseLinear<{},{}>".format(i,tracer_unknowns.index(i))
     else:
@@ -375,8 +376,16 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
 
     tracing_action_set = exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                 self,
-                                                time_stepping_kernel="toolbox::particles::staticPosition",
-                                                project_on_tracer_properties_kernel=project_on_tracer_properties_kernel
+                                                project_on_tracer_properties_kernel=project_on_tracer_properties_kernel,
+#                                                projection_kernel_arguments="""
+#marker,
+#{{PATCH_SIZE}},
+#{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+#fineGridCell{{SOLVER_NAME}}Q.value,
+#fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
+#{16,17,18},
+#*p
+#"""
                                                 )
     tracing_action_set.priority = self._action_set_update_cell.priority+1
     project.add_action_set_to_timestepping(tracing_action_set)
@@ -520,7 +529,6 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
       
     tracing_action_set = exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                 self,
-                                                time_stepping_kernel="toolbox::particles::staticPosition",
                                                 project_on_tracer_properties_kernel=project_on_tracer_properties_kernel
                                                 )
     tracing_action_set.priority = self._action_set_compute_final_linear_combination.priority+1
@@ -702,7 +710,6 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 
     tracing_action_set = exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                 self,
-                                                time_stepping_kernel="toolbox::particles::staticPosition",
                                                 project_on_tracer_properties_kernel=project_on_tracer_properties_kernel
                                                 )
     tracing_action_set.priority = self._action_set_compute_final_linear_combination.priority+1
@@ -834,7 +841,6 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
     
     tracing_action_set = exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
                                                                                         solver=self,
-                                                                                        time_stepping_kernel="toolbox::particles::staticPosition",
                                                                                         project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle")
     tracing_action_set.priority = self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.priority+1
     project.add_action_set_to_timestepping( tracing_action_set )
