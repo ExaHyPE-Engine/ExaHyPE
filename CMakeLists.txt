@@ -26,8 +26,7 @@ set(META_PROJECT_NAME "Peano")
 set(META_PROJECT_DESCRIPTION
   "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes"
 )
-set(META_AUTHOR_ORGANIZATIONfind_package(NetCDF REQUIRED)
-  "Durham University and Technische Universitaet Muenchen")
+set(META_AUTHOR_ORGANIZATION"Durham University and Technische Universitaet Muenchen")
 set(META_AUTHOR_DOMAIN "www.peano-framework.org")
 set(META_VERSION_REVISION "${GIT_COMMIT_HASH_SHORT}")
 set(META_GIT_BRANCH "${GIT_BRANCH}")
