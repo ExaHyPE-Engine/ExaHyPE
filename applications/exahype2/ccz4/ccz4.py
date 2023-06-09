@@ -503,15 +503,15 @@ if __name__ == "__main__":
 
     std::fstream fin;
     std::string att="_"""+args.tra_name+""".txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
-    const int n_a_v=0;
+    const int n_a_v=""" + str( self._auxiliary_variables ) + """;
     const double overlap=3;
 
     if (tarch::la::equals(timeStamp,0.0)){//initialization
       fin.open((p1+att),std::ios::out|std::ios::trunc);
-      fin << "0.1 0.0 0.0 0.0 0.0" << std::endl;//4.461538
+      fin << "2.0 0.0 0.0 0.0 0.0" << std::endl;//4.461538
       fin.close();
       fin.open((p2+att),std::ios::out|std::ios::trunc);
-      fin << "-0.1 0.0 0.0 0.0 0.0" << std::endl;//-5.538462
+      fin << "-2.0 0.0 0.0 0.0 0.0" << std::endl;//-5.538462
       fin.close();
       //fin.open((tem+att),std::ios::out|std::ios::trunc);
       //fin << "tem file" << std::endl;
@@ -927,8 +927,8 @@ if __name__ == "__main__":
 ########################################################################################
 #Tracer setting 
 ########################################################################################
-    if args.add_tracer==5:
-        tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
+    if args.add_tracer==1:
+        tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
         project.add_action_set_to_initialisation( 
           exahype2.tracer.InsertParticlesByCoordinates( 
             particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]]))
@@ -950,7 +950,7 @@ if __name__ == "__main__":
           particle_set=tracer_particles,
           solver=my_solver,
           filename=args.path+"Tracer-test",
-          number_of_entries_between_two_db_flushes=1000000,
+          number_of_entries_between_two_db_flushes=100000,
           output_precision=8,
           data_delta_between_two_snapsots=1e16,
           position_delta_between_two_snapsots=1e16,
