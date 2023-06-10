@@ -160,4 +160,4 @@ class DynamicAMR( AbstractAderDGActionSet ):
   def get_includes(self):
     return super(DynamicAMR,self).get_includes() + """
 #include <cstring>
-"""    
+"""

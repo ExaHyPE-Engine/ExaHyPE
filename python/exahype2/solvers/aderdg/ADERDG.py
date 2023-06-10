@@ -337,6 +337,20 @@ class ADERDG( object ):
       self._action_set_prediction = Prediction_generic(self, self._store_cell_data_default_guard())
       self._action_set_correction = Correction_generic(self, self._store_cell_data_default_guard())
 
+    self._action_set_update_face_label.priority = 0
+    self._action_set_update_cell_label.priority = 0
+
+    self._action_set_initial_conditions.priority = 1
+    self._action_set_initial_conditions_for_grid_construction.priority = 1
+    self._action_set_handle_boundary.priority = 1
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = 1
+    self._action_set_prediction.priority = 1
+    self._action_set_correction.priority = 1 #needs to happen after handle_boundary but this is done on faces anyway
+
+    self._action_set_AMR.priority = 2
+    self._action_set_AMR_commit_without_further_analysis.priority = 2
+    self._action_set_postprocess_solution.priority = 3
+
 
   def create_readme_descriptor(self, domain_offset, domain_size):
     return """ ExaHyPE 2 Ader-DG solver of order: """ + str(self._order) + """
