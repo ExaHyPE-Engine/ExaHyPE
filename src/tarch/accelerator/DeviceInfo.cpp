@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <sstream>
 #include <stdexcept>
+#include <iostream>
 
 #if defined(WITH_CUDA_API) or defined(GPUOffloadingCUDA)
 #include "cuda/DeviceInfo.h"
@@ -101,13 +102,21 @@ namespace tarch::accelerator::info
 
     // Iterate the matrix and write per row, also while accessing the padding we need to add
     std::string propIdPad(maxIdLength + 1 - std::string("DeviceId").size(), ' ');
+    unsigned int lineLength = 0;
+    
     ss << propIdPad << "DeviceId |";
+    lineLength += propIdPad.size() + 10;
     for (unsigned int x = 0; x < properties.size(); x++){
       std::string propPadding(columnMaxStringSizes[x] + 1 - properties[x].size(), ' ');
       ss << propPadding << properties[x] << " |";
+      lineLength += propPadding.size() + properties[x].size() + 2;
     }
     ss.seekp(-1, ss.cur);
+    lineLength -= 1;
     ss << "\n";
+
+    std::string dash(lineLength, '-');
+    ss << dash << "\n";
 
     for (unsigned int x = 0; x < numberOfDevices; x++)
     {
@@ -197,5 +206,48 @@ namespace tarch::accelerator::info
       x += 1;
     }
     return ss.str();
+  }
+
+  void offloadCapabilityTest(){
+#if  defined(GPUOffloadingCUDA)
+    std::vector<bool> testResults = tarch::accelerator::info::cuda::testKernelLaunch();
+#elif defined(GPUOffloadingSYCL)
+    std::vector<bool> testResults = tarch::accelerator::info::sycl::testKernelLaunch();
+#elif defined(GPUOffloadingOMP)
+    // An empty table, with OpenMP we will only know how many GPUs we have
+    std::vector<bool> testResults = tarch::accelerator::info::omp::testKernelLaunch();
+#elif defined(GPUOffloadingCPP)
+    // Can't get any information with cpp GPU offloading rn
+    std::vector<bool> testResults = tarch::accelerator::info::cpp::testKernelLaunch();
+#else
+    // Print noinformation since we do not have an accelerator
+    std::cout << "No GPU Accelerator Backend is enabled. The code will run on CPUs." << std::endl;
+    return;
+#endif
+
+    unsigned int offloadCapableGPUCount = 0;
+    std::string failMessage;
+    for (unsigned int i = 0; i < testResults.size(); i++){
+      if (!testResults[i]){
+        // Using std::format would be nice but 10.06.2023 CUDA does support gcc upto 12, no std::format supprot
+        failMessage += "GPU Device " + std::to_string(i) + " could not successfully launch a GPU kernel\n";
+      } else {
+        offloadCapableGPUCount += 1;
+      }
+    }
+
+    if (testResults.size() != 0){
+      if (offloadCapableGPUCount < testResults.size()){
+        if (offloadCapableGPUCount == 0){
+          throw std::runtime_error("None of the found GPUs could successfully launch GPU Kernels");
+        }else{
+          throw std::runtime_error(failMessage);
+        }
+      } else {
+        std::cout << "Kernel launch test successful" << std::endl;
+      }
+    } else {
+      throw std::runtime_error("Peano 4 was configured to run on accelerators, but no offloading capable GPU was found.");
+    }
   }
 } // namespace tarch::accelerator::info

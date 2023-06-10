@@ -13,7 +13,11 @@ foreach(mode IN LISTS BUILD_MODES)
   target_compile_definitions(Tarch_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS})
   target_link_options(Tarch_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
   target_link_libraries(Tarch_${mode_lower} PUBLIC project_options)
-  target_link_libraries(Tarch_${mode_lower} PRIVATE project_warnings)
+
+  # The check is necessary as having cuda objects inside tarch, this will fail
+  if (NOT "${WITH_GPU}" STREQUAL "cuda")
+    target_link_libraries(Tarch_${mode_lower} PRIVATE project_warnings)
+  endif()
 
   if("${CMAKE_CXX_COMPILER_ID}" MATCHES "IntelLLVM" AND ("${WITH_GPU}" STREQUAL "sycl" OR "${WITH_MULTITHREADING}" STREQUAL "sycl"))
         add_sycl_to_target(TARGET Tarch_${mode_lower})

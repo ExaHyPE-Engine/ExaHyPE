@@ -26,6 +26,10 @@ namespace tarch::accelerator::info::omp
     //std::string deviceInfoStr     = tarch::accelerator::info::parseDeviceInformation(propertyMatrix, 0);
     std::cout << ompBackendWarning << deviceInfoStr << std::endl;
   }
+
+  std::vector<bool> testKernelLaunch() {
+    return std::vector<bool>();
+  }
 } // namespace tarch::accelerator::info::omp
 
 #endif

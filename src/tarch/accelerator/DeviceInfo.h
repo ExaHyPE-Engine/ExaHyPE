@@ -5,9 +5,6 @@
 
 namespace tarch::accelerator::info
 {
-  std::vector<std::vector<std::string>> queryDeviceInformation();
-  void                                  printDeviceInformation();
-
   const std::vector<std::string> properties = {
     "Device Name",
     "Global Memory",
@@ -16,8 +13,10 @@ namespace tarch::accelerator::info
     "Compute Units",
     };
 
-  size_t      getPropertyOffset(const char name[]);
-  std::string parseDeviceInformation(const std::vector<std::vector<std::string>>& propertyMatrix, int numberOfDevices);
-  std::string parseDeviceInformationDeviceAsCol(const std::vector<std::vector<std::string>>& propertyMatrix, int numberOfDevices);
-
+  std::vector<std::vector<std::string>> queryDeviceInformation();
+  void                                  printDeviceInformation();
+  size_t                                getPropertyOffset(const char name[]);
+  std::string                           parseDeviceInformation(const std::vector<std::vector<std::string>>& propertyMatrix, int numberOfDevices);
+  std::string                           parseDeviceInformationDeviceAsCol(const std::vector<std::vector<std::string>>& propertyMatrix, int numberOfDevices);
+  void                                  offloadCapabilityTest();
 } // namespace tarch::accelerator::info

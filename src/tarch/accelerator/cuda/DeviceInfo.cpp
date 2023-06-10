@@ -8,6 +8,7 @@
 #include "../DeviceInfo.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
+std::vector<bool> testKernelLaunchCUDACall();
 namespace tarch::accelerator::info::cuda
 {
 
@@ -61,6 +62,9 @@ namespace tarch::accelerator::info::cuda
     std::cout << deviceInfoStr << std::endl;
   }
 
+  std::vector<bool> testKernelLaunch() {
+    return testKernelLaunchCUDACall();
+  }
 } // namespace tarch::accelerator::info::cuda
 
 #endif

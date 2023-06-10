@@ -97,6 +97,39 @@ namespace tarch::accelerator::info::sycl
     }
     std::cout << deviceInfoStr << std::endl;
   }
+
+  std::vector<bool> testKernelLaunch()
+  {
+    std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
+
+    std::vector<bool> offloadResults(devices.size(), false);
+    bool a = false;
+
+    for (unsigned int i = 0; i < devices.size(); i++)
+    {
+      ::sycl::device& device = devices[i];
+      ::sycl::queue queue(device);
+      ::sycl::buffer<bool, 1> a_sycl(&a, ::sycl::range<1>(1));
+      std::cout << device.get_info<::sycl::info::device::name>() << std::endl;
+
+      queue.submit([&](::sycl::handler& cgh) {
+        ::sycl::stream out(1024, 256, cgh);
+        ::sycl::accessor a_acc = a_sycl.get_access<::sycl::access::mode::read_write>(cgh);
+        //::sycl::accessor a_acc{a_sycl, cgh, ::sycl::read_write};
+
+        cgh.parallel_for(1, [=] (::sycl::id<1> idx) {
+          a_acc[0] = true;
+        });
+      });
+
+      offloadResults[i] = a;
+      a = false;
+
+      queue.wait();
+    }
+
+    return offloadResults;
+  }
 } // namespace tarch::accelerator::info::sycl
 
 #endif

@@ -22,5 +22,9 @@ namespace tarch::accelerator::info::cpp
                                     "For best results enable the CUDA or Sycl Backends/API.\n";
     std::cout << cppBackendWarning << std::endl;
   }
+
+  std::vector<bool> testKernelLaunch() {
+    return std::vector<bool>();
+  }
 } // namespace tarch::accelerator::info::cpp
 #endif
