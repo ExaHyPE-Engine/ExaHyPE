@@ -30,7 +30,7 @@ We therefore study three different numerical schemes:
 export PYTHONPATH=../../../../python
 export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 
-python3 convergence-study.py -cs 2 -plot
+python3 convergence-study.py -cs 2 -plot -s fd4-rk1-limited-ps-6
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 As always, the parameter --help makes the Python script yield further info.
@@ -132,43 +132,6 @@ might be reasonably whenever you are really short of main memory.
 
 ## Code remarks (FD4-FV scheme)
 
-### Time step size
-
-As we combine solvers, we have to ensure that their time step sizes match. This 
-means that the Finite Volume patch size has to be calibrated
-with @f$ p^{2}=16 @f$ relative to the high order's patch size. If they 
-had the same mesh size, the higher order schemes would take significantly smaller time step sizes.
-However, we want to havee the same spatial and temporal accuacy, so we need a
-smaller mesh size for the Finite Volume scheme. The file
-benchmarks/exahype2/ccz4/single-black-hole/convergence-study.py and the solvers
-within applications/exahype2/ccz/CCZ4Solver.py hold further details.
-Please note that the FD4 scheme works with stencils which span 7 cells, so 
-its effective discretisation size is (7-1)/(3-1) larger than the Finite Volume's 
-stencils, i.e. seven cells vs 3 cells along each coordinate axis with the 
-cell centres holding the unknowns.
-
-While we recalibrate the numerical constant C to take the different spatial
-discretisation orders into account, a simple rescaling does not yet ensure
-that both the Finite Differences and Finite Volume solver run in-sync. The 
-Finite Volume scheme will be subject to a higher numerical dissipation, while 
-the Finite Differences scheme might run into numerical oscillations/instabilities.
-At the same time, the limiter will always run at a significantly higher resolution
-than its higher-order counterpart and capture the singularity. It might therefore
-happen that it actually yields a smaller admissibile time step size.
-
-
-We try to keep all coupling and other logic within the higher order solver. Our
-intention is to have a generic limiter which can work with multiple solvers, once
-we have multiple higher order schemes. As a consequence, I introduced a new 
-benchmarks::exahype2::ccz4::CCZ4SBH_FV::reduceAdmissibleTimeStepSize() which 
-allows us to reset the admissible time step size. Next, each higher order solver
-overwrites startTimeStep(), computes the minimum over the available time step 
-sizes, and sets this minimum as own admissible size as well as the admissible
-time step size of the limiter.
-
-
-### Solution coupling
-
 Even simple initial conditions can make our higher-order Finite Differences solver
 fail: The higher order solution representation is not capable to resolve
 shocks properly (or steep gradients), and the solution therefore starts
@@ -186,63 +149,126 @@ Instead, we accept that both
 FD4 and FV have their pros and cons and try to use each solver where it
 unfolds its full potential. 
 
-
 @todo Remove the KO terms here
 
-Our coupling strategy follows @ref page_exahype_coupling "the default coupling schema" of
-ExaHyPE. Different to the other coupling schemes, we however let higher-order 
+@image html two-different-solvers.png
+
+The image above illustrates our concept: There's an FD4 solver which computes
+the solution in the whole domain. This solution is is illustrated via the horizontal
+cut. In an area around the black hole (cross-shaped here; we visualise a
+slice through this domain), an additional 
+Finite Volume solver is active. In each time step, the FD4 solver sets
+the boundary conditions of the Finite Volume solver. Those are the dark 
+blue cells around the Finite Volume patches. With these coupling boundary 
+conditions and global Sommerfeld conditions for the FD4 scheme, both solvers
+advance in time by one time step. After that one, the Finite Volume scheme
+overwrites the FD4 scheme no points which are covered by both numerical 
+schemes. We restrict the FV solution into the FD4 solution via a trivial
+injection.
+
+
+This coupling strategy follows @ref page_exahype_coupling "the default coupling schema" of
+ExaHyPE. Different to the generic coupling recipes there, we however let higher-order 
 solver cover the whole domain. As FV only will be used in a tiny region, this 
 overhead is acceptable. Furthermore, we do not use any fancy colouring to 
 decide which solver is active wher. We hard-code this information, as we know
 where our black hole is. Since we couple solely PDE terms, we get away with a
 volumetric coupling without any additional material or auxiliary parameters.
- 
+
+
+Mathematically, the Finite Volume solver serves as a priori limiter to the
+FD4 solution. It is a priori, as we do not wait for the FD4 solution to 
+determine if we need Finite Volumes. We overwrite always. For the realisation,
+we try to keep as much coupling logic as possible within the FD4 scheme: 
+The limiter knows where to compute. Beyond that, all the remaining logic is 
+realised with the FD4 solver, as this solver knows what the data layout of 
+FD4 is. Furthermore, this separation of responsibilities allows us, in theory,
+to use the same limiter with RKDG as well.
+
+
+### Time step size
+
+As we combine solvers, we have to ensure that their time step sizes match. This 
+means that the Finite Volume patch size has to be calibrated
+with @f$ p^{2}=16 @f$ relative to the high order's patch size. If they 
+had the same mesh size, the higher order schemes would take significantly smaller time step sizes.
+However, we want to havee the same spatial and temporal accuacy, so we need a
+smaller mesh size for the Finite Volume scheme. The file
+benchmarks/exahype2/ccz4/single-black-hole/convergence-study.py and the solvers
+within applications/exahype2/ccz/CCZ4Solver.py hold further details.
+
+
+As the FD4 scheme works with subpatches per octree cell (octant) of size
+@f$ 3^d @f$ or @f$ 6^d @f$ respectively, we get Finite Volume patches around 
+the centre which are of the size @f$ (3\cdot 16)^d = 48^d @f$ or 
+@f$ (6\cdot 16)^d = 96^d @f$. They host up to 884736 volumes.
+They are large.
+
+
+Although we recalibrate the patch sizes to take the different spatial
+discretisation orders into account, this not yet ensure
+that both the Finite Differences and Finite Volume solver run in-sync. The 
+Finite Volume scheme will be subject to a higher numerical dissipation, while 
+the Finite Differences scheme might run into numerical oscillations/instabilities.
+At the same time, the limiter will always run at a significantly higher resolution
+than its higher-order counterpart and capture the singularity. It might therefore
+happen that it actually yields a smaller admissibile time step size.
+Therefore, it remains important that both solvers agree on a common time step 
+size after each time step, even though both solvers should come up with an 
+admissible time step size of roughly the same order.
+
+
+We try to keep all coupling and other logic within the higher order solver. Our
+intention is to have a generic limiter which can work with multiple solvers, once
+we have multiple higher order schemes. As a consequence, I introduced a new 
+benchmarks::exahype2::ccz4::CCZ4SBH_FV::reduceAdmissibleTimeStepSize() which 
+allows us to reset the admissible time step size. Next, each higher order solver
+overwrites startTimeStep(), computes the minimum over the available time step 
+sizes, and sets this minimum as own admissible size as well as the admissible
+time step size of the limiter.
+
+
+### The Finite Volume solver
+
 Our FV solver is, through various inheritance levels, a subclass of 
 peano.exahype2.solvers.fv.EnclaveTasking which in turn inherits from
-peano.exahype2.solvers.fv.FV. It is the routine
-peano.exahype2.solvers.fv.FV.create_data_structures() which associates
-a peano4.datamodel.Patch called _patch with the solver. This is the core
-data per cell which hosts both the unkonwns and the auxiliary variables per
-cell. 
+peano.exahype2.solvers.fv.FV. The solver is a text-book FV scheme,
+with one major added functionality: We add the implementation the routines 
+benchmarks::exahype2::ccz4::CCZ4SBH_FV::isCellOverlappingWithBHImpactArea()
+and 
+benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAdjacentCellsOverlappingWithBHImpactArea(), i.e. 
+we implement the actual logic where to apply the limiter within the C++ class.
 
-We follow @ref page_exahype_coupling "localisation recommendations for solver coupling" and
+
+Within the Python code, we follow @ref page_exahype_coupling "localisation recommendations for solver coupling" and
 overwrite the routines _store_cell_data_default_guard()
 and _load_cell_data_default_guard() such that only data within a certain 
 radius around the black hole are actually held. 
 An analogous scheme holds for the faces.
-All of these routines rely on the class functions
+For the implementation of these guards, we rely on the previously introduced
 benchmarks::exahype2::ccz4::CCZ4SBH_FV::isCellOverlappingWithBHImpactArea()
 and 
-benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAdjacentCellsOverlappingWithBHImpactArea(), i.e. 
-I implement the actual logic within my C++ class and try to keep the Python glue code 
-to a minimum.
+benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAdjacentCellsOverlappingWithBHImpactArea().
 
 
-Overall, our domain decomposition is similar to the sketch in the 
-@ref page_exahype_coupling "generic coupling description", but the red-orange-yellow
-part covers the whole domain.
+It is the routine
+peano.exahype2.solvers.fv.FV.create_action_sets() which configures all the dynamic
+behaviour. After calling the superclass implementation, we modifiy the two guards
+_action_set_update_cell.guard and _action_set_merge_enclave_task_outcome.guard to
+ensure that the solution is also only computed on those cells which hold meaningful
+data. Without those guards, the solver would invoke the compute kernels everywhere,
+even though the majority of the mesh holds only garbage solution which is neither
+stores nor loaded persistently in-between two mesh traversals.
+        
 
-@image html coupling.png
+### The FD4 solver
+
+To realise the coupling, we have to augment the FD4 solver by some additional 
+pre- and post-processing steps:
 
 
-The image below visualises how the Finite Volumes are embedded into the overall
-computational domain. This is very low resolution simulation. Therefore, the
-central FV region is cross-shaped, whereas it will become more spherical as the 
-resolution increases. It is taken from the code and also visualises explicitly
-that the higher-order scheme overlaps the whole domain, while the FV scheme steps
-in only in a few places:
-
-@image html grid-setup.png
-
-
-To realise our scheem, we have to plug into a few routines, introduce coupling
-terms, alter some operators, and be careful in general with the ordering of 
-the solvers. 
-
-1. The Finite Volume solver is only active in its small local area around the 
-   black hole. Consequently, we do not have to load or store data far away.
-   We also should not compute anything far away. All data there would be 
-   temporary anyway (as we don't load or store) and hence hold garbage.
+1. We add Sommerfeld boundary conditions. This is important, as the FD4 solver 
+   will be responsible to simulate the solution close to the domain boundaries.
 
 2. The primary solver takes its reconstructed solution, i.e. the Q values within
    the patch plus its halo (of size 3 for FD) and projects this information 
@@ -262,128 +288,62 @@ the solvers.
    provide access to the patch data plus its halo. However, plugging into this
    routine 
    makes assumptions on the evaluation order: We have to know that the FV code
-   has not started any calculation yet.  
-   Therefore, this coupling has to happen within either solver's preprocessing
+   has not started any calculation yet. We conclude that the 
+   coupling has to happen within either solver's _action_set_preprocess_solution
    action set as a preamble of its actual time step. 
+
+3. The preprocessing has to be of type exahype2.solvers.rkfd.actionsets.PreprocessReconstructedSolutionWithHalo
+   as we need the area around the FD4 patch to set interpolate into all the 
+   "edge" volumes of the Finite Volume patch. This PreprocessReconstructedSolutionWithHalo
+   is itself a subclass of peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor and
+   reconstructs the FD4 solver's halo (temporarily) into a field called oldQWithHalo
+   before it invokes a functor on the reconstructed data. 
    
-   The problem with the preprocessing and reconstruction is that outer faces 
-   around the FV domain will hold garbage. 
+4. We use oldQWithHalo to project the solution down into a temporary FV patch.
+   The temporary patch is called interpolatedFVDataWithHalo, and the actual 
+   interpolation is realised through toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(). 
+   At the end of the functor, we free the interpolatedFVDataWithHalo again.
+
+5. Before we free it, we take interpolatedFVDataWithHalo and map it onto the 
+   FV faces for those faces which are not in-between two FV cells. For this, 
+   we utilise ::toolbox::blockstructured::projectPatchHaloOntoFaces. This routine
+   expects 2d face data always. For the faces in-between two FV patches which 
+   we don't want to overwrite, we pass in some temporary arrays just to make 
+   the function work, but we throw these temporary face data away immediately
+   afterwards.
    
-   @image html wrong-storage-scheme-with-enclaves.png
-   
-   In the patch at the front of this cut through the domain, the halos above 
-   the top row of visible Finite Volume volumes did hold garbage, i.e. they
-   illustrate this fact. This garbage propagates one cell down into the domain
-   if we are not careful, then pollutes the data on the faces and consequently 
-   transitions into the central area where we need an accurate FV solution. 
-   
-   Therefore, we reconstruct the FD4 solver's halo (temporarily), and use these
-   data to project the solution down into a temporary FV patch including one 
-   halo layer. We take the data from within this patch and copy it over into 
-   the FV data. Now the FV patch data holds the updated interpolated data from
-   the current time step. Next, we take the halo of one from this temporarily
-   reconstructed patch and write it onto the faces of the cell. This way, we 
-   ensure that they don't hold garbage. 
-   
-3. After the FV solver has updated its data, we can restrict it. However, we
-   have to be sure that the FD4 solver will not overwrite these data.
-   
+Once the fifth step has terminated, the Finite Volume solver's patches have a 
+properly befilled QNew on the faces. This QNew usually holds the halo copy from
+neighbouring patches. Where these neighbouring patches do not exist in the 
+FV scheme, we now have interpolated data from the FD4 solution. 
 
 
-@todo: Niemals volumetrisch koppeln. Braucht kein Mensch. D.h. sogar diese 
-  komische Randidentifikation ist nicht noetig.
-  Das grosse Problem ist der Rand auf dem FV, also die Face-Info. Das machen
-  wir durch:
-  Preprocessing interpoliert auf eigentliche Daten, da diese sonst u.U. schon
-  weg sind. Das sind temporaere Daten, die brauchen wir eignelithc gar net.
+Our scheme couples the FD4 solver to the Finite Volume scheme over the faces.
+However, we realise the coupling volumetric, i.e we project volumetric data
+from FD4 onto FV data (temporarily) and from there project the volumetric 
+Finite Volume representation again onto the faces. This not particularly 
+elegant, and there might be way faster realisations which omit this 
+temporary volumetric step, but is a realisation which can be implemented
+with the on-board routines and the logic of it is rather clear.
 
 
-    // @todo natuerlich super kompliziert. Wir interpolieren volumetrisch, brauchen dann aber nur die auessere Halo
+The coupling from the Finite Volume scheme to FD4 in contrast is a real
+volumetric coupling: We overwrite the FD4's self._action_set_postprocess_solution 
+with an instance of exahype2.solvers.rkfd.actionsets.PatchWisePostprocessSolution.
+This postprocessing is be executed after both the Finite Volume and the 
+Differences scheme have updated their patch. This is ensured by the 
+fact that postprocessing steps always plug into touchCellLastTime (cmp
+@ref peano_action_sets "Peano's generic discussion of the order of events").
 
 
-## Original coupling via faces
 
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        self._action_set_preprocess_solution = exahype2.solvers.rkfd.actionsets.PreprocessReconstructedSolutionWithHalo(self,
-"""
-    const int sizeOfPatch = (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables);
-    const int sizeOfFace = 2
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables);
-      
-    double* interpolatedFVDataWithHalo = ::tarch::allocateMemory<double>(sizeOfPatch, ::tarch::MemoryLocation::Heap);
-    double* dummyFace0 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
-    double* dummyFace1 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
-    double* dummyFace2 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
-    double* dummyFace3 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
-    double* dummyFace4 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
-    double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::MemoryLocation::Heap);
-
-    ::toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FD4.NumberOfGridCellsPerPatchPerAxis,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-      3, // halo in FD4
-      1, // halo in FV
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
-      oldQWithHalo, 
-      interpolatedFVDataWithHalo
-    );
-    
-//    ## @todo Docu: If we project only QOld, nothing happens, as this one is abackup only
-//    Update will be rolled over after the time step, so it not of use either
-/*
-    ::toolbox::blockstructured::projectPatchHaloOntoFaces(
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-      1,      // int    haloSize,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
-      interpolatedFVDataWithHalo,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(0).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(1).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(2).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(3).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(4).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(5).value
-    );
-*/
-
-   // @todo Darf ich auch ordentlich dokumenteiren
-    const 
-    double* dummyFace = ::tarch::allocateMemory<double>(
-        (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables),
-      ::tarch::MemoryLocation::Heap
-    );
-
-    ::toolbox::blockstructured::projectPatchHaloOntoFaces(
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-      1,      // int    haloSize,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
-      interpolatedFVDataWithHalo,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,0) ? dummyFace0 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(0).value,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,1) ? dummyFace1 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(1).value,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,2) ? dummyFace2 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(2).value,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,3) ? dummyFace3 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(3).value,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,4) ? dummyFace4 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(4).value,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,5) ? dummyFace5 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(5).value
-    );
-
-    ::tarch::freeMemory(interpolatedFVDataWithHalo, tarch::MemoryLocation::Heap );
-    ::tarch::freeMemory(dummyFace0, tarch::MemoryLocation::Heap );
-    ::tarch::freeMemory(dummyFace1, tarch::MemoryLocation::Heap );
-    ::tarch::freeMemory(dummyFace2, tarch::MemoryLocation::Heap );
-    ::tarch::freeMemory(dummyFace3, tarch::MemoryLocation::Heap );
-    ::tarch::freeMemory(dummyFace4, tarch::MemoryLocation::Heap );
-    ::tarch::freeMemory(dummyFace5, tarch::MemoryLocation::Heap );
-""")
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+For the realisation, we employ the built-in routine toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(),
+and we call this routine for every cell which holds Finite Volume data, i.e. overlaps
+with the black hole. This is slightly different to @ref page_exahype_coupling "ExaHypE's generic coupling sketch", where
+I recommend to have at least one whole cell overlap between any two solvers:
+I do not only inject data from Finite Volume patches back which are completely
+surrounded by further FV patches.
+It seemed to me to be a waste of compute power to do this. 
+Rather make the black hole influence area smaller.
 
 */
