@@ -6,6 +6,7 @@ import sys
 
 
 def merge_partial_files(partial_files, merged_file_path):
+  print("start to merge file:", merged_file_path,end='...')
   with open(merged_file_path, 'w') as merged_patch_file:
     # First we need to write the header for our new patch
     # file. We can open any of the partial patch files
@@ -26,6 +27,7 @@ def merge_partial_files(partial_files, merged_file_path):
             merged_patch_file.write('\n')
           if reading_patches:
             merged_patch_file.write(line)
+  print("Merged.")
 
 def read_meta_file(path_to_metafile):
   merged_files = []  # stores names of merged files

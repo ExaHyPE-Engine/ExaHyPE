@@ -86,9 +86,9 @@ inline tarch::la::Vector<Dimensions*2,int> FindCellIndex(
 				{index(3)=-1;}
 			else if (coor[0]>(Offset(0)+(i+0.5)*volumeH))
 				{index(3)=1;}
-		}
+		}//////
 	}
-	index(0)++; //to include the extra layer
+	index(0)+=3; //to include the extra layer
 	//std::cout<<coor[0]<<" "<<(Offset(0)+index(0)*volumeH)<<" "<<(Offset(0)+(index(0)+1)*volumeH)<<" "<< (Offset(0)+(index(0)+0.5)*volumeH) <<std::endl;
 	for (int i=0;i<patchSize;i++){
 		if (coor[1]>(Offset(1)+i*volumeH) and coor[1]<(Offset(1)+(i+1)*volumeH))
@@ -99,7 +99,7 @@ inline tarch::la::Vector<Dimensions*2,int> FindCellIndex(
 				{index(4)=1;}
 		}
 	}
-	index(1)++; //to include the extra layer
+	index(1)+=3; //to include the extra layer
 	//std::cout<<coor[1]<<" "<<(Offset(1)+index(1)*volumeH)<<" "<<(Offset(1)+(index(1)+1)*volumeH)<<" "<< (Offset(1)+(index(1)+0.5)*volumeH) <<std::endl;
 	for (int i=0;i<patchSize;i++){
 		if (coor[2]>(Offset(2)+i*volumeH) and coor[2]<(Offset(2)+(i+1)*volumeH))
@@ -110,7 +110,7 @@ inline tarch::la::Vector<Dimensions*2,int> FindCellIndex(
 				{index(5)=1;}
 		}
 	}
-	index(2)++; //to include the extra layer
+	index(2)+=3; //to include the extra layer
 	return index;
 }
 

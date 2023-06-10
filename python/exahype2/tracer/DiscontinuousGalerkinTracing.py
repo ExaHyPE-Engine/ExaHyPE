@@ -31,8 +31,16 @@ class DiscontinuousGalerkinTracing(peano4.toolbox.particles.ParticleParticleInte
   def __init__(self,
                particle_set, 
                solver, 
-               time_stepping_kernel, 
-               project_on_tracer_properties_kernel):
+               project_on_tracer_properties_kernel,
+               projection_kernel_arguments="""
+        marker,
+        {{ORDER}},
+        repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+        fineGridCell{{SOLVER_NAME}}Q.value,
+        *p
+""",
+               ):
     """
 
     @see FiniteVolumesTracing.__init()__.
@@ -48,8 +56,8 @@ class DiscontinuousGalerkinTracing(peano4.toolbox.particles.ParticleParticleInte
     self.tracerDict[ "ORDER" ]                    = solver._basis.order
     self.tracerDict[ "NUMBER_OF_UNKNOWNS" ]             = solver._unknowns
     self.tracerDict[ "NUMBER_OF_AUXILIARY_VARIABLES" ]  = solver._auxiliary_variables
-    self.tracerDict[ "TIME_STEPPING_KERNEL" ]           = time_stepping_kernel
     self.tracerDict[ "PROJECTION_KERNEL" ]              = project_on_tracer_properties_kernel   
+    self.tracerDict[ "PROJECTION_KERNEL_ARGUMENTS" ]   = jinja2.Template( projection_kernel_arguments ).render(**self.tracerDict )
         
     cell_compute_kernel = """
 if ( 
@@ -59,30 +67,15 @@ if (
   and
   repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
 ) {
-  const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
   for (auto* p: localParticles) {
     if ( 
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet
     ) {
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::Moved;
 
-      {% if PROJECTION_KERNEL!=None %}
       {{PROJECTION_KERNEL}}(
-        marker,
-        {{ORDER}},
-        repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-        fineGridCell{{SOLVER_NAME}}Q.value,
-        *p
+        {{PROJECTION_KERNEL_ARGUMENTS}}
       );
-      {% endif %}
-
-      {% if TIME_STEPPING_KERNEL!=None %}
-      {{TIME_STEPPING_KERNEL}}(
-        *p,
-        timeStepSize
-      );
-      {% endif %}
     }
   }
 }
@@ -122,7 +115,6 @@ if (
 #include "peano4/utils/Loop.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
-#include "toolbox/particles/Tracer.h"
 #include "repositories/SolverRepository.h"
 #include "exahype2/dg/Tracer.h"
 """ )
