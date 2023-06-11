@@ -20,7 +20,6 @@ class EmptyPostprocessSolution(AbstractRungeKuttaDGActionSet):
     super(EmptyPostprocessSolution,self).__init__(solver)
     # Is there for compatibility reasons
     self.guard               = "true"
-    self.priority            = 2
     
 
   def get_body_of_operation(self,operation_name):

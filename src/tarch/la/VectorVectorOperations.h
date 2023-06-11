@@ -107,6 +107,9 @@ namespace tarch {
 
     /**
      * Compares to vectors on equality by means of a numerical accuracy.
+     *
+     * @param tolerance Absolute tolerance. If you prefer to use a relative
+     *  measure, you might want to use tarch::la::relativeEps()
      */
     template<int Size, typename Scalar>
     bool equals (
@@ -120,6 +123,9 @@ namespace tarch {
      * as soon as one is greater than the other.
      *
      * Defines an absolute pairwise ordering between (unequal) vectors.
+     *
+     * @param tolerance Absolute tolerance. If you prefer to use a relative
+     *  measure, you might want to use tarch::la::relativeEps()
      */
     template<int Size, typename Scalar>
     bool firstGreater (
@@ -131,6 +137,9 @@ namespace tarch {
     /**
      * Returns true, if one component of lVector is greater than the corresponding
      * component in rVector up to numerical accuracy.
+     *
+     * @param tolerance Absolute tolerance. If you prefer to use a relative
+     *  measure, you might want to use tarch::la::relativeEps()
      */
     template<int Size, typename Scalar>
     bool oneGreater (
@@ -153,6 +162,9 @@ namespace tarch {
     /**
      * Returns true, if all components of lVector are greater than the corresponding
      * components in rVector up to numerical accuracy.
+     *
+     * @param tolerance Absolute tolerance. If you prefer to use a relative
+     *  measure, you might want to use tarch::la::relativeEps()
      */
     template<int Size, typename Scalar>
     bool allGreater (
