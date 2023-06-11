@@ -60,34 +60,34 @@ namespace tarch::accelerator::info
   }
 
 
-  size_t getPropertyOffset(const char name[])
+  size_t getPropertyOffset(const char name[], const std::vector<std::string>& identifiers)
   {
-    auto it = std::find(properties.begin(), properties.end(), std::string(name));
-    if (it == properties.end())
+    auto it = std::find(identifiers.begin(), identifiers.end(), std::string(name));
+    if (it == identifiers.end())
     {
-      throw std::runtime_error("Property input name not a part of the properties list!");
+      throw std::runtime_error("Property input name not a part of the identifiers list!");
     }
-    return std::distance(properties.begin(), it);
+    return std::distance(identifiers.begin(), it);
   }
 
-  std::string parseDeviceInformation(const std::vector<std::vector<std::string>>& propertyMatrix, int numberOfDevices)
+  std::string parseMatrix(const std::vector<std::vector<std::string>>& propertyMatrix, int numberOfDevices, const std::vector<std::string>& identifiers)
   {
-    unsigned int propertyCount = properties.size();
+    unsigned int propertyCount = identifiers.size();
 
     std::stringstream ss;
 
     // This size is the padding we need to add the porpety-name column
     unsigned int maxPropertyLengthWithPadding
       = std::max_element(
-          properties.begin(),
-          properties.end(),
+          identifiers.begin(),
+          identifiers.end(),
           [](const std::string& lhs, const std::string& rhs) { return lhs.size() < rhs.size(); }
         )->size()
         + 1;
 
     // Get the string entry of a columng with the highest length
-    std::vector<unsigned int> columnMaxStringSizes(properties.size(), 0);
-    for (unsigned int row = 0; row < properties.size(); row++)
+    std::vector<unsigned int> columnMaxStringSizes(identifiers.size(), 0);
+    for (unsigned int row = 0; row < identifiers.size(); row++)
     {
       std::vector<unsigned int> col_sizes;
       for (unsigned int col = 0; col < numberOfDevices; col++)
@@ -96,7 +96,7 @@ namespace tarch::accelerator::info
       }
 
       // Device property is also a part of the column
-      col_sizes.push_back(properties[row].size());
+      col_sizes.push_back(identifiers[row].size());
 
       unsigned int maxLength    = *std::max_element(col_sizes.begin(), col_sizes.end());
       columnMaxStringSizes[row] = maxLength;
@@ -110,10 +110,10 @@ namespace tarch::accelerator::info
     
     ss << propIdPad << "DeviceId |";
     lineLength += propIdPad.size() + 10;
-    for (unsigned int x = 0; x < properties.size(); x++){
-      std::string propPadding(columnMaxStringSizes[x] + 1 - properties[x].size(), ' ');
-      ss << propPadding << properties[x] << " |";
-      lineLength += propPadding.size() + properties[x].size() + 2;
+    for (unsigned int x = 0; x < identifiers.size(); x++){
+      std::string propPadding(columnMaxStringSizes[x] + 1 - identifiers[x].size(), ' ');
+      ss << propPadding << identifiers[x] << " |";
+      lineLength += propPadding.size() + identifiers[x].size() + 2;
     }
     ss.seekp(-1, ss.cur);
     lineLength -= 1;
@@ -126,7 +126,7 @@ namespace tarch::accelerator::info
     {
       std::string idPad(maxIdLength + 1 - std::to_string(x).size(), ' ');
       ss << idPad << x << " |";
-      for  (unsigned int y = 0; y < properties.size(); y ++) //(const auto& row : propertyMatrix)
+      for  (unsigned int y = 0; y < identifiers.size(); y ++) //(const auto& row : propertyMatrix)
       {
         unsigned int paddingLength = columnMaxStringSizes[y] + 1 - propertyMatrix[y][x].size();
         std::string  s(paddingLength, ' ');
@@ -135,79 +135,6 @@ namespace tarch::accelerator::info
       }
       ss.seekp(-1, ss.cur);
       ss << "\n";
-    }
-    return ss.str();
-  }
-
-
-  std::string parseDeviceInformationDeviceAsCol(const std::vector<std::vector<std::string>>& propertyMatrix, int numberOfDevices)
-  {
-    unsigned int propertyCount = properties.size();
-
-    std::stringstream ss;
-
-    // This size is the padding we need to add the porpety-name column
-    unsigned int maxPropertyLengthWithPadding
-      = std::max_element(
-          properties.begin(),
-          properties.end(),
-          [](const std::string& lhs, const std::string& rhs) { return lhs.size() < rhs.size(); }
-        )->size()
-        + 1;
-
-    // Get the string entry of a columng with the highest length
-    std::vector<unsigned int> columnMaxStringSizes(numberOfDevices, 0);
-    for (unsigned int col = 0; col < numberOfDevices; col++)
-    {
-      std::vector<unsigned int> col_sizes;
-      for (unsigned int row = 0; row < properties.size(); row++)
-      {
-        col_sizes.push_back(propertyMatrix[row][col].size());
-      }
-
-      // Device Id is also a part of the column
-      col_sizes.push_back(std::to_string(col).size());
-
-      unsigned int maxLength    = *std::max_element(col_sizes.begin(), col_sizes.end());
-      columnMaxStringSizes[col] = maxLength;
-    }
-
-    // Generate the first 2 lines with the device ids and dash seperator
-    unsigned int lineLength = 0;
-    std::string  propPadding(maxPropertyLengthWithPadding, ' ');
-    ss << propPadding << "|";
-    lineLength += maxPropertyLengthWithPadding + 1;
-    for (unsigned int i = 0; i < numberOfDevices; i++)
-    {
-      std::string paddingNeeded = std::string((columnMaxStringSizes[i] + 1) - std::to_string(i).size(), ' ');
-      ss << paddingNeeded << i << "  ";
-      lineLength += paddingNeeded.size() + std::to_string(i).size() + 2;
-    }
-    lineLength -= 2;
-    ss.seekp(-2, ss.cur);
-    ss << "\n";
-    std::string dashLine(lineLength, '-');
-    ss << dashLine << "\n";
-    // Generation of first 2 lines ends here
-
-    // Iterate the matrix and write per row, also while accessing the padding we need to add
-    unsigned int x = 0;
-    unsigned int y = 0;
-    for (const auto& row : propertyMatrix)
-    {
-      std::string propPadding(maxPropertyLengthWithPadding - properties[x].size(), ' ');
-      ss << properties[x] << propPadding << "|";
-      y = 0;
-      for (const auto& el : row)
-      {
-        unsigned int paddingLength = columnMaxStringSizes[y] + 1 - el.size();
-        std::string  s(paddingLength, ' ');
-        ss << s << el << "  ";
-        y += 1;
-      }
-      ss.seekp(-1, ss.cur);
-      ss << "\n";
-      x += 1;
     }
     return ss.str();
   }
@@ -257,5 +184,55 @@ namespace tarch::accelerator::info
     } else {
       throw std::runtime_error("Peano 4 was configured to run on accelerators, but no offloading capable GPU was found.");
     }
+  }
+
+
+  void runBenchmarks(){
+    std::cout << "Started Streaming Benchmarks" << std::endl;
+
+    std::vector<BenchmarkResultInNanoSeconds> results;
+#if defined(GPUOffloadingCUDA)
+    results = tarch::accelerator::info::cuda::runBenchmarks();
+#elif defined(GPUOffloadingSYCL)
+    results = tarch::accelerator::info::sycl::runBenchmarks();
+#elif defined(GPUOffloadingOMP)
+    results = tarch::accelerator::info::omp::runBenchmarks();
+#elif defined(GPUOffloadingCPP)
+    results = tarch::accelerator::info::cpp::runBenchmarks();
+#else
+    return;
+#endif
+    parseBenchmarkResults(results);
+
+    std::cout << "Completed Streaming Benchmarks" << std::endl;
+
+    throw std::runtime_error("END ME");
+  }
+
+  void parseBenchmarkResults(std::vector<BenchmarkResultInNanoSeconds>& benchmarkResults){
+    std::vector<std::vector<std::string>> benchmarkResultsStringRepresentations(4, std::vector<std::string>(benchmarkResults.size(), ""));
+
+    // A * 1e-9 / (B * 1e-9) = A / B
+    // Therefore Byte / NanoSecond = GB / Second
+    for (uint i = 0; i < benchmarkResults.size(); i++)
+    {
+      std::stringstream ss;
+      auto& benchmarkResult = benchmarkResults[i];
+      ss << benchmarkResult.allocatedDataSize * benchmarkResult.repeats * (1.0/static_cast<double>(benchmarkResult.CPUtoGPUCopy)) << " Gb/s";
+      benchmarkResultsStringRepresentations[tarch::accelerator::info::getPropertyOffset("CPU-to-GPU Copy", benchmarkIdentifiers)][i] = ss.str();
+      ss.str(std::string());
+      ss << benchmarkResult.allocatedDataSize * benchmarkResult.repeats * (1.0/static_cast<double>(benchmarkResult.GPUtoCPUCopy)) << " Gb/s";
+      benchmarkResultsStringRepresentations[tarch::accelerator::info::getPropertyOffset("GPU-to-CPU Copy", benchmarkIdentifiers)][i] = ss.str(); 
+      ss.str(std::string());
+      ss << benchmarkResult.allocatedDataSize * benchmarkResult.repeats * (1.0/static_cast<double>(benchmarkResult.GPUMalloc))    << " Gb/s";
+      benchmarkResultsStringRepresentations[tarch::accelerator::info::getPropertyOffset("GPU-Malloc",      benchmarkIdentifiers)][i]      = ss.str(); 
+      ss.str(std::string());
+      ss << benchmarkResult.copiedDataSize    * benchmarkResult.repeats * (1.0/static_cast<double>(benchmarkResult.GPUtoGPUCopy)) << " Gb/s";
+      benchmarkResultsStringRepresentations[tarch::accelerator::info::getPropertyOffset("GPU-to-GPU Copy", benchmarkIdentifiers)][i] = ss.str(); 
+      ss.str(std::string());
+    }
+
+    std::string benchmarkTableOutput = parseMatrix(benchmarkResultsStringRepresentations, benchmarkResults.size(),  benchmarkIdentifiers);
+    std::cout << benchmarkTableOutput << std::endl;
   }
 } // namespace tarch::accelerator::info

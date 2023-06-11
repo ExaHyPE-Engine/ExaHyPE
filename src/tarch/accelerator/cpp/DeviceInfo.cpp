@@ -31,5 +31,9 @@ namespace tarch::accelerator::info::cpp
     return v;
     #endif
   }
+
+  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks() {
+    return std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds>();
+  }
 } // namespace tarch::accelerator::info::cpp
 #endif

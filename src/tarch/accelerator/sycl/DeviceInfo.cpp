@@ -91,7 +91,7 @@ namespace tarch::accelerator::info::sycl
     if (numberOfDevices == 0){
       deviceInfoStr   = "No offloading capable GPUs were found";
     }else{
-      deviceInfoStr   = tarch::accelerator::info::parseDeviceInformation(
+      deviceInfoStr   = tarch::accelerator::info::parseMatrix(
         propertyMatrix, numberOfDevices
       );
     }
@@ -128,6 +128,10 @@ namespace tarch::accelerator::info::sycl
     }
 
     return offloadResults;
+  }
+
+  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks() {
+    return std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds>();
   }
 } // namespace tarch::accelerator::info::sycl
 

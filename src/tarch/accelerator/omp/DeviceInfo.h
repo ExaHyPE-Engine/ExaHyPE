@@ -3,9 +3,13 @@
 #include <string>
 #include <vector>
 
+namespace tarch::accelerator::info {
+  struct BenchmarkResultInNanoSeconds;
+}
 namespace tarch::accelerator::info::omp
 {
-  std::vector<std::vector<std::string>> queryDeviceInformation();
-  void                                  printDeviceInformation();
-  std::vector<bool>                     testKernelLaunch();
+  std::vector<std::vector<std::string>>     queryDeviceInformation();
+  void                                      printDeviceInformation();
+  std::vector<bool>                         testKernelLaunch();
+  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks();
 } // namespace tarch::accelerator::info::omp
