@@ -1,6 +1,6 @@
 #include "DeviceInfo.h"
 
-#if defined(WITH_CUDA_API)
+#if defined(_NVHPC_CUDA)
 #include <cuda_runtime.h>
 #include <iostream>
 #include <sstream>

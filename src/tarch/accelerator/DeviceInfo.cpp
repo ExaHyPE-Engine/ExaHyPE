@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <iostream>
 
-#if defined(WITH_CUDA_API) or defined(GPUOffloadingCUDA)
+#if defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
 #include "cuda/DeviceInfo.h"
 #endif
 
@@ -27,7 +27,7 @@ namespace tarch::accelerator::info
 {
   std::vector<std::vector<std::string>> queryDeviceInformation()
   {
-#if defined(WITH_CUDA_API) or defined(GPUOffloadingCUDA)
+#if defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
     return tarch::accelerator::info::cuda::queryDeviceInformation();
 #elif defined(GPUOffloadingSYCL)
     return tarch::accelerator::info::sycl::queryDeviceInformation();
@@ -43,7 +43,7 @@ namespace tarch::accelerator::info
 
   void printDeviceInformation()
   {
-#if defined(WITH_CUDA_API) or defined(GPUOffloadingCUDA)
+#if defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
     return tarch::accelerator::info::cuda::printDeviceInformation();
 #elif defined(GPUOffloadingSYCL)
     return tarch::accelerator::info::sycl::printDeviceInformation();
