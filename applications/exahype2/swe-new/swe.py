@@ -258,7 +258,6 @@ try:
       exahype2.tracer.FiniteVolumesTracing(
         probes, 
         my_solver, 
-        time_stepping_kernel="toolbox::particles::staticPosition", 
         project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant"
       )
     )
@@ -267,8 +266,7 @@ try:
     my_project.add_action_set_to_timestepping(
       exahype2.tracer.DiscontinuousGalerkinTracing(
         probes, 
-        my_solver, 
-        time_stepping_kernel="toolbox::particles::staticPosition", 
+        my_solver,  
         project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle_piecewiseConstant"
       )
     )
