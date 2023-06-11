@@ -239,7 +239,7 @@ try:
   raise ImportError()
   import umbridge
   # add particles/probes
-  probes = my_project.add_tracer(name="Probes",attribute_count=4)
+  probes = my_project.add_tracer(name="Probes",attribute_count=4) # maybe add a plot=False here to turn off vtu output
   my_project.add_action_set_to_initialisation(
     exahype2.tracer.InsertParticlesByCoordinates(
       # TODO currently simply adds tracer into the middle of the domain

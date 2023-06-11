@@ -378,9 +378,8 @@ thus appreciate any citation of the original release paper
     particle_number = peano4.dastgen2.Peano4IntegerArray("number","2")
     particle.data.add_attribute(particle_number)
 
-    particles = peano4.toolbox.particles.ParticleSet(particle)
-
     self._project.datamodel.add_global_object(particle)
+    particles = peano4.toolbox.particles.ParticleSet(particle)
     self._project.datamodel.add_vertex(particles)
 
     self.plot_solution.use_vertex(particles)
