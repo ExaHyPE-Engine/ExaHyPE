@@ -101,7 +101,6 @@ namespace tarch::accelerator::info::sycl
   std::vector<bool> testKernelLaunch()
   {
     std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
-
     std::vector<bool> offloadResults(devices.size(), false);
     bool a = false;
 

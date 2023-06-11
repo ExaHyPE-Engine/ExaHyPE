@@ -1,3 +1,6 @@
+
+#if defined(GPUOffloadingCUDA)
+
 #include <vector>
 #include <stdio.h>
 #include <iostream>
@@ -32,3 +35,5 @@ std::vector<bool> testKernelLaunchCUDACall(){
 
     return offloadResults;
 }
+
+#endif

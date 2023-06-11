@@ -8,7 +8,10 @@
 #include "../DeviceInfo.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
+#if defined(GPUOffloadingCUDA)
 std::vector<bool> testKernelLaunchCUDACall();
+#endif
+
 namespace tarch::accelerator::info::cuda
 {
 
@@ -63,7 +66,13 @@ namespace tarch::accelerator::info::cuda
   }
 
   std::vector<bool> testKernelLaunch() {
-    return testKernelLaunchCUDACall();
+    #if defined(GPUOffloadingCUDA)
+      return testKernelLaunchCUDACall();
+    #else
+      int  numberOfDevices;
+      cudaGetDeviceCount(&numberOfDevices);
+      return std::vector<bool>(numberOfDevices, false);
+    #endif
   }
 } // namespace tarch::accelerator::info::cuda
 

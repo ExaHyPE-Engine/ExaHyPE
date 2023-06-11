@@ -24,7 +24,12 @@ namespace tarch::accelerator::info::cpp
   }
 
   std::vector<bool> testKernelLaunch() {
-    return std::vector<bool>();
+    #if !defined(_NVHPC_STDPAR_GPU)
+    return std::vector<bool>(1, false);
+    #else
+    std::vector<bool> v;
+    return v;
+    #endif
   }
 } // namespace tarch::accelerator::info::cpp
 #endif

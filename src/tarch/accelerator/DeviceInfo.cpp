@@ -7,14 +7,18 @@
 
 #if defined(WITH_CUDA_API) or defined(GPUOffloadingCUDA)
 #include "cuda/DeviceInfo.h"
-#elif defined(GPUOffloadingSYCL)
+#endif
+
+#if defined(GPUOffloadingSYCL)
 #include "sycl/DeviceInfo.h"
-#elif defined(GPUOffloadingOMP)
+#endif
+
+#if defined(GPUOffloadingOMP)
 #include "omp/DeviceInfo.h"
-#elif defined(GPUOffloadingCPP)
+#endif
+
+#if defined(GPUOffloadingCPP)
 #include "cpp/DeviceInfo.h"
-#else
-#include <iostream>
 #endif
 
 // #else if defined(WITH_SYCL_API) // Possible TODO to differentiate SYCL_API and Sycl
@@ -209,16 +213,20 @@ namespace tarch::accelerator::info
   }
 
   void offloadCapabilityTest(){
-#if  defined(GPUOffloadingCUDA)
+#if defined(GPUOffloadingCUDA)
     std::vector<bool> testResults = tarch::accelerator::info::cuda::testKernelLaunch();
 #elif defined(GPUOffloadingSYCL)
     std::vector<bool> testResults = tarch::accelerator::info::sycl::testKernelLaunch();
 #elif defined(GPUOffloadingOMP)
-    // An empty table, with OpenMP we will only know how many GPUs we have
     std::vector<bool> testResults = tarch::accelerator::info::omp::testKernelLaunch();
 #elif defined(GPUOffloadingCPP)
-    // Can't get any information with cpp GPU offloading rn
     std::vector<bool> testResults = tarch::accelerator::info::cpp::testKernelLaunch();
+    if (testResults.size() == 0){
+      std::cout << "Iso C++ GPU-Parallelism with NVHPC compilers can't check kernel launch tests currently, skipping" << std::endl;
+      return;
+    } else if (testResults.size() == 1 && !testResults[0]){
+      throw std::runtime_error("None of the found GPUs could successfully launch GPU Kernels (Check for wrong compile configuration)");
+    }
 #else
     // Print noinformation since we do not have an accelerator
     std::cout << "No GPU Accelerator Backend is enabled. The code will run on CPUs." << std::endl;
