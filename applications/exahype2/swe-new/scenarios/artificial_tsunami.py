@@ -13,8 +13,8 @@ class Artificial_Tsunami(scenarios.template_scenario.Template_Scenario):
         Q[0] = 100;
         Q[1] = 0.0;
         Q[2] = 0.0;
-        double _x = 10000/DomainSize.begin()[0] * volumeCentre(0) - 5000;
-        double _y = 10000/DomainSize.begin()[1] * volumeCentre(1) - 5000;
+        double _x = 10000/DomainSize(0) * volumeCentre(0) - 5000;
+        double _y = 10000/DomainSize(1) * volumeCentre(1) - 5000;
         Q[3] = -100;
         // Displacement
         if (abs(_x) <= 500 && abs(_y) <= 500)
