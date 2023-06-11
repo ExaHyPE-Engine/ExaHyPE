@@ -13,7 +13,7 @@
 
 #if defined(GPUOffloadingCUDA)
 std::vector<bool> testKernelLauncher();
-void copyKernelLauncher(const float* a, float* b, size_t N);
+void copyKernelLauncher(const float* a, float* b, size_t N, uint threadsPerBlock);
 
 #define CHECK_CUDA_ERROR() { check_error(__FILE__, __LINE__); }
 void check_error(const char *file, int line) {
@@ -92,12 +92,12 @@ namespace tarch::accelerator::info::cuda
   }
 
 #if defined(GPUOffloadingCUDA)
-  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks() {
+  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks(uint threadsPerBlock) {
     int  numberOfDevices;
     cudaGetDeviceCount(&numberOfDevices);
     std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});
 
-    constexpr uint64_t repeats = 20;
+    constexpr uint64_t repeats = 10;
 
     for (int deviceId = 0; deviceId < numberOfDevices; deviceId++)
     {
@@ -158,7 +158,7 @@ namespace tarch::accelerator::info::cuda
 
         // Copy Kernel inside GPU
         cudaEventRecord(start, 0);
-        copyKernelLauncher(a_dev, b_dev, N);
+        copyKernelLauncher(a_dev, b_dev, N, threadsPerBlock);
         cudaDeviceSynchronize();
         cudaEventRecord(stop, 0);
         cudaEventSynchronize(stop);

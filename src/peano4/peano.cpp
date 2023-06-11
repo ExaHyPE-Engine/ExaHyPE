@@ -84,10 +84,6 @@ void peano4:: writeCopyrightMessage() {
       buildInfo += " gpus)";
     }
 
-    tarch::accelerator::info::printDeviceInformation();
-    tarch::accelerator::info::offloadCapabilityTest();
-    tarch::accelerator::info::runBenchmarks();
-
     #if PeanoDebug>0
     buildInfo += ", debug level=" + std::to_string(PeanoDebug);
     #endif
@@ -137,6 +133,10 @@ int peano4::initParallelEnvironment(int* argc, char*** argv) {
   #endif
 
   writeCopyrightMessage();
+
+  tarch::accelerator::info::printDeviceInformation();
+  tarch::accelerator::info::offloadCapabilityTest();
+  tarch::accelerator::info::runBenchmarks();
 
   return result;
 }

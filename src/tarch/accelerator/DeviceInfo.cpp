@@ -189,24 +189,28 @@ namespace tarch::accelerator::info
 
   void runBenchmarks(){
     std::cout << "Started Streaming Benchmarks" << std::endl;
-
+    
     std::vector<BenchmarkResultInNanoSeconds> results;
 #if defined(GPUOffloadingCUDA)
-    results = tarch::accelerator::info::cuda::runBenchmarks();
+    for (uint i : {32, 64, 128, 256, 512, 1024}){
+      std::cout << "Benchmark with Threads/Block = " << i << std::endl;
+      results = tarch::accelerator::info::cuda::runBenchmarks(i);
+      parseBenchmarkResults(results);
+    }
 #elif defined(GPUOffloadingSYCL)
     results = tarch::accelerator::info::sycl::runBenchmarks();
+    parseBenchmarkResults(results);
 #elif defined(GPUOffloadingOMP)
     results = tarch::accelerator::info::omp::runBenchmarks();
+    parseBenchmarkResults(results);
 #elif defined(GPUOffloadingCPP)
     results = tarch::accelerator::info::cpp::runBenchmarks();
+    parseBenchmarkResults(results);
 #else
     return;
 #endif
-    parseBenchmarkResults(results);
 
     std::cout << "Completed Streaming Benchmarks" << std::endl;
-
-    throw std::runtime_error("END ME");
   }
 
   void parseBenchmarkResults(std::vector<BenchmarkResultInNanoSeconds>& benchmarkResults){

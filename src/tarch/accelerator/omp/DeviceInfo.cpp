@@ -53,7 +53,7 @@ namespace tarch::accelerator::info::omp
     int  numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
     std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});
 
-    constexpr uint64_t repeats = 20;
+    constexpr uint64_t repeats = 10;
 
     for (int deviceId = 0; deviceId < numberOfDevices; deviceId++)
     {

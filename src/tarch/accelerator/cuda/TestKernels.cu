@@ -51,8 +51,8 @@ __global__ void copyKernelDouble(const double * a, double * b)
   b[i] = a[i];
 }
 
-void copyKernelLauncher(const float* a, float* b, size_t N){
-  copyKernelFloat<<<N/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(a, b);
+void copyKernelLauncher(const float* a, float* b, size_t N, uint threadsPerBlock){
+  copyKernelFloat<<<N/threadsPerBlock, threadsPerBlock>>>(a, b);
 }
 
 #endif
