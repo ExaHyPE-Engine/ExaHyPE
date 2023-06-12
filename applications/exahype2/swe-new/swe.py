@@ -74,6 +74,7 @@ parser.add_argument("-maxd",    "--max_dimension_netcdf",dest="max_dimension_net
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   required=False,             help="Set order of space discretisation for Discontinuous Galerkin." )
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   required=False,             help="Set order of time discretisation for Runge-Kutta scheme." )
 parser.add_argument("-o,"       "--output",            dest="output_path",    type=str,                   default="./",               help="Output path for project output. The project will create a new folder at the given path. Default is the current directory.")
+parser.add_argument("-probes",  nargs='+',             dest="probe_coordinates",type=str,                 required=False,             help="Provide one or more tuples of coordinates [x,y] for tracers (e.g. [15,20.23] [5,14.123]). Coordinates have to be in reference to the simulation domain and must not contain a white space!")
 args = parser.parse_args()
 
 maximum_cell_size = args.max_cell_size
@@ -155,7 +156,7 @@ if args.gpu:
   if not "Enclave" in solver_type:
     solver_type += "Enclave"
     if solver_type not in solvers:
-      raise ValueError("The requested solver %s is not available for GPUs!" % solver_type)
+      raise ValueError("The requested solver {} is not available for GPUs!".format(solver_type))
 solver_name = "SWESolver" + str(solver_type)
 
 if args.gpu:
@@ -240,15 +241,23 @@ my_project.set_output_path(output_path)
 if not os.path.exists(output_path):
   os.mkdir(output_path)
 
-try:
-  #raise ImportError()
-  import umbridge
+if args.probe_coordinates != None:
+
+  import re 
+  # sanitize coordinates
+  coordinates = []
+  for coords in args.probe_coordinates:
+    if re.search("^\[[0-9]+\.?[0-9]*\,[0-9]+\.?[0-9]*\]$", coords):
+      splits = re.split("[\[ | \] | \( | \) | \,]", coords)
+      print([float(splits[1]), float(splits[2])])
+      coordinates.append([float(splits[1]), float(splits[2])])
+    else:
+      raise ValueError("Could not parse the illegal coordinates: {}! Is there maybe a white space within the brackets?".format(coords)) 
   # add particles/probes
-  probes = my_project.add_tracer(name="Probes",attribute_count=4) # maybe add a plot=False here to turn off vtu output
+  probes = my_project.add_tracer(name="Probes",attribute_count=4, plot=False) # maybe add a plot=False here to turn off vtu output
   my_project.add_action_set_to_initialisation(
     exahype2.tracer.InsertParticlesByCoordinates(
-      # TODO currently simply adds tracer into the middle of the domain
-      particle_set = probes, coordinates=[[width[0]/2, width[1]/2]]
+      particle_set = probes, coordinates=coordinates
     )
   )
   my_project.add_action_set_to_timestepping(
@@ -282,18 +291,15 @@ try:
       my_solver,
       output_path + "tracer-test",
       65536,
-      1e10,
-      1e10,
-      0,
+      1e50,
+      1e50,
+      0.001,
       8,
       False,
-      -1,
+      0.001,
       args.end_time
     )
   )
-
-except ImportError:
-  print("UM-Bridge not found! Uncertainty Quantification not available!")
 
 my_project.set_global_simulation_parameters(
   dimensions            = 2,
