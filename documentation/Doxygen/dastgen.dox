@@ -43,7 +43,7 @@ particle always has some pre-defined routines and attributes such as a position
 in space.
 
 
-## Attributes
+# Attributes
 
 If you want to add further attributes to the DaStGen2 data model, use the
 routine dastgen2.DataModel.add_attribute(). Each C++ data type that we use has
@@ -64,7 +64,7 @@ the native C++/DaStGen objects which use Peano-specific features. If you add
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 my_model.add_attribute( dastgen2.attributes.DoubleArray("myArray1", "14") )
-my_model.add_attribute( peano4.dastgen2.Peano4DoubleArray("myArray2", "14")) 
+my_model.add_attribute( peano4.dastgen2.Peano4DoubleArray("myArray2", "14"))
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 you get two double arrays of size 14. In the fist case, the attribute will be
@@ -73,7 +73,7 @@ mapped onto a tarch::la::Vector of size 14, i.e. use Peano's built-in technical
 architecture.
 
 
-## Aspects
+# Aspects
 
 Peano usually adds the peano4.dastgen2.MPIAndStorage aspect to most of its
 storage classes. Most solvers, particle models, ... provide factory methods to

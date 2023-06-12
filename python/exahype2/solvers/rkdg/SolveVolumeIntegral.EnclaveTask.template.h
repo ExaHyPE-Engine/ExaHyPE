@@ -45,7 +45,7 @@
 /**
  * Single task that can also take multiple tasks and deploy them to the GPU
  *
- * @author ExaHyPE's code generator written by Holger Schulz and Tobias Weinzierl 
+ * @author ExaHyPE's code generator written by Tobias Weinzierl
  */
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 #ifdef UseSmartMPI

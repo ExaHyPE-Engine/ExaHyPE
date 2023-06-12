@@ -4,9 +4,7 @@
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
-
 #include "tarch/la/DynamicMatrix.h"
-
 
 namespace toolbox {
   namespace blockstructured {
@@ -45,15 +43,9 @@ namespace toolbox {
       double*                                   values
     );
 
-
     void clearCell(
-      const peano4::datamanagement::CellMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       unknowns,
-      double*                                   values
+      const peano4::datamanagement::CellMarker& marker, int numberOfDoFsPerAxisInPatch, int unknowns, double* values
     );
-
-
 
     /**
      * Restrict data by injection
@@ -104,9 +96,8 @@ namespace toolbox {
       int                                       unknowns,
       double*                                   fineGridValues,
       double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
+      bool                                      swapInsideOutside = false
     );
-
 
     /**
      * Restrict data by injection
@@ -123,7 +114,6 @@ namespace toolbox {
       double*                                   coarseGridValues
     );
 
-
     void restrictCell_AoS_inject(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -132,18 +122,32 @@ namespace toolbox {
       double*                                   coarseGridValues
     );
 
-
     /**
      * This routine should be used if a cell hosts two sets of unknowns
      *
-     * Frequently used if your code hosts two PDE solvers.
+     * Frequently used if your code hosts two PDE solvers. This routine
+     * runs over all the dofs in destinationValues, computes their
+     * position, rounds it to the closest dof within sourceValues, and
+     * then copies the data over. This is, we assume that both the source
+     * and destination field represent voxels (similar to a Finite Volume)
+     * scheme or data which is hold within the centre of a subgrid
+     * (totally staggered dof layout).
+     *
+     * The description above assumes that numberOfDoFsPerAxisInDestinationPatch<=numberOfDoFsPerAxisInSourcePatch.
+     * While the routine also works if this is not the case, injecting
+     * from a coarser mesh into a finer one introduces a huge numerical
+     * inaccuracy (it is basically piece-wise constant) and you hence
+     * might be better off with a linear restriction. If the inequality
+     * is "violated", I'd however call this rather a projection and therefore
+     * you have to search through the provided projection routines to find
+     * such a linear scheme.
      */
     void restrictCellIntoOverlappingCell_inject(
-      int                                       numberOfDoFsPerAxisInSourcePatch,
-      int                                       numberOfDoFsPerAxisInDestinationPatch,
-      int                                       unknowns,
-      double*                                   sourceValues,
-      double*                                   destinationValues
+      int     numberOfDoFsPerAxisInSourcePatch,
+      int     numberOfDoFsPerAxisInDestinationPatch,
+      int     unknowns,
+      double* sourceValues,
+      double* destinationValues
     );
 
     /**
@@ -156,7 +160,6 @@ namespace toolbox {
       double*                                   fineGridValues,
       double*                                   coarseGridValues
     );
-
 
     /**
      * Consult commend on interpolation that clarifies why we need two
@@ -171,7 +174,6 @@ namespace toolbox {
       double*                                   fineGridValues,
       double*                                   coarseGridValues
     );
-
 
     /**
      * Restrict with averaging
@@ -196,18 +198,17 @@ namespace toolbox {
       int                                       unknowns,
       double*                                   fineGridValues,
       double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
+      bool                                      swapInsideOutside = false
     );
 
     void restrictCell_AoS_tensor_product(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      const double* __restrict__                tangentialRestrictionMatrix1d,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      const double* __restrict__ tangentialRestrictionMatrix1d,
+      double* fineGridValues,
+      double* coarseGridValues
     );
-
 
     /**
      * Restrict whole halo layer
@@ -227,12 +228,11 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__                normalRestrictionMatrix1d,
-      const double* __restrict__                tangentialRestrictionMatrix1d,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      const double* __restrict__ normalRestrictionMatrix1d,
+      const double* __restrict__ tangentialRestrictionMatrix1d,
+      double* fineGridValues,
+      double* coarseGridValues
     );
-
 
     /**
      * Restrict inner halo half of face data
@@ -414,15 +414,14 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      const double* __restrict__                normalRestrictionMatrix1d,
-      const double* __restrict__                tangentialRestrictionMatrix1d,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
+      const double* __restrict__ normalRestrictionMatrix1d,
+      const double* __restrict__ tangentialRestrictionMatrix1d,
+      double* fineGridValues,
+      double* coarseGridValues,
+      bool    swapInsideOutside = false
     );
 
     namespace internal {
-
 
       /**
        * Clear half of a halo layer
@@ -457,7 +456,6 @@ namespace toolbox {
         double*                                   values
       );
 
-
       /**
        * Helper function
        *
@@ -471,16 +469,14 @@ namespace toolbox {
         const peano4::datamanagement::CellMarker& fineGridCellMarker,
         int                                       numberOfDoFsPerAxisInPatch,
         std::function<void(
-          tarch::la::Vector<Dimensions,int> coarseVolume,
-          tarch::la::Vector<Dimensions,int> fineVolume,
-          tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
-          tarch::la::Vector<Dimensions,double> fineVolumeCentre,
-          double coarseVolumeH,
-          double fineVolumeH
-        )> update
+          tarch::la::Vector<Dimensions, int>    coarseVolume,
+          tarch::la::Vector<Dimensions, int>    fineVolume,
+          tarch::la::Vector<Dimensions, double> coarseVolumeCentre,
+          tarch::la::Vector<Dimensions, double> fineVolumeCentre,
+          double                                coarseVolumeH,
+          double                                fineVolumeH
+        )>                                        update
       );
-    }
-  }
-}
-
-
+    } // namespace internal
+  }   // namespace blockstructured
+} // namespace toolbox
