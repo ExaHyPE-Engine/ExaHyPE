@@ -193,16 +193,19 @@ def is_cppfile(filename):
     Does this look like a cpp file?
     """
 
-    if (
-        filename.endswith(".h")
-        or filename.endswith(".hpp")
-        or filename.endswith(".cpph")
-        or filename.endswith(".c")
-        or filename.endswith(".cpp")
-        or filename.endswith(".cu")
-        or filename.endswith(".cuh")
-    ):
-        return True
+    suffixes = [".h", ".hpp", ".cpph", ".c", ".cpp", ".cu", ".cuh"]
+
+    for suf in suffixes:
+        if filename.endswith(suf):
+            # Don't format jinja template files. clang-format can't handle those.
+            if filename.endswith(".template" + suf):
+                if verbose:
+                    print(
+                        "file", filename, "looks like a jinja template file. Skipping"
+                    )
+                return False
+            else:
+                return True
 
     return False
 
