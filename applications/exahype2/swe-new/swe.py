@@ -213,11 +213,8 @@ if args.gpu:
   my_solver.set_pde_terms_without_state(True)
 
 my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".format("true" if args.dynamic_amr else "false"))
-if args.scenario == "Artificial_Tsunami" or args.scenario == "":
-  my_solver.add_user_solver_includes("#include <cmath>")
-  my_solver.add_user_solver_includes("#include \"Constants.h\"")
 
-if args.scenario == "Circular_Island":
+if args.scenario == "Artificial_Tsunami" or args.scenario == "Circular_Island":
   my_solver.add_user_solver_includes("#include <cmath>")
 
 if args.scenario == "Tsunami":
@@ -277,7 +274,7 @@ try:
       exahype2.tracer.DiscontinuousGalerkinTracing(
         probes, 
         my_solver,  
-        project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle_piecewiseConstant"
+        project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
       )
     )
 
