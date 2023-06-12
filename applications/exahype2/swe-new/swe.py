@@ -31,7 +31,9 @@ rkdg_rusanov_solvers = {
   "RKDGRusanovGlobalAdaptive": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep
 }
 
-solvers = rkdg_rusanov_solvers | fv_rusanov_solvers
+solvers = {}
+solvers.update(rkdg_rusanov_solvers)
+solvers.update(fv_rusanov_solvers)
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -236,7 +238,7 @@ if not os.path.exists(output_path):
   os.mkdir(output_path)
 
 try:
-  raise ImportError()
+  #raise ImportError()
   import umbridge
   # add particles/probes
   probes = my_project.add_tracer(name="Probes",attribute_count=4) # maybe add a plot=False here to turn off vtu output
@@ -309,4 +311,4 @@ if args.scenario == "Artificial_Tsunami":
   peano4_project.constants.define("_USE_MATH_DEFINES")
 peano4_project.generate()
 if(args.compile):
-  peano4_project.build(make_clean_first=True, throw_away_data_after_build=True)
+  peano4_project.build(make_clean_first=True, throw_away_data_after_build=False)
