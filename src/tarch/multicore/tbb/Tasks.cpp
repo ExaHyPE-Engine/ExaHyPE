@@ -1,24 +1,21 @@
+#include "tarch/multicore/Tasks.h"
+
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
-
-#include "tarch/multicore/multicore.h"
-#include "tarch/multicore/Tasks.h"
-#include "tarch/multicore/Core.h"
-#include "tarch/multicore/BooleanSemaphore.h"
-#include "tarch/multicore/Lock.h"
-#include "tarch/services/ServiceRepository.h"
 #include "tarch/mpi/Rank.h"
-
-
+#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/Core.h"
+#include "tarch/multicore/Lock.h"
+#include "tarch/multicore/multicore.h"
+#include "tarch/services/ServiceRepository.h"
 
 #if defined(SharedTBB)
-#include <tbb/task_group.h>
 #include <tbb/task_arena.h>
+#include <tbb/task_group.h>
 
 namespace {
-  tarch::multicore::BooleanSemaphore  suspensionPointSemaphore;
-}
-
+  tarch::multicore::BooleanSemaphore suspensionPointSemaphore;
+} // namespace
 
 /**
  * We seem to need this task group. Has to be investigated.
@@ -88,59 +85,53 @@ namespace {
  * @see spawnTask()
  *
  */
-void tarch::multicore::native::spawnAndWaitAsTaskLoop(
-  const std::vector< tarch::multicore::Task* >&  tasks
-) {
-  assertion( not tasks.empty() );
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
+  assertion(not tasks.empty());
 
   // is implicitly executed within root arena, as the invoking task is
   // run within root arena
   ::tbb::task_group taskGroup;
-  for (auto& p: tasks) {
-    taskGroup.run(
-      [&tasks,p]() -> void {
-        while (p->run()) {
-          tarch::multicore::Core::getInstance().yield();
-        }
-        delete p;
+  for (auto& p : tasks) {
+    taskGroup.run([&tasks, p]() -> void {
+      while (p->run()) {
+        tarch::multicore::Core::getInstance().yield();
       }
-    );
+      delete p;
+    });
   }
   taskGroup.wait();
 }
-
 
 /**
  * Read spawnAndWaitAsTaskLoop() first.
  *
  * @see spawnAndWaitAsTaskLoop()
  */
-void tarch::multicore::native::spawnTask(Task*  job) {
+void tarch::multicore::native::spawnTask(Task* job) {
   // Does not work, as we have virtual functions, too.
-/*
-  backgroundTaskQueue.submit([&] (sycl::handler& commandGroupHandler) {
-    commandGroupHandler.single_task(
-      [job] () -> void {
-        //nonblockingTasksCounter--;
-      }
-    );
-  });
-*/
-
+  /*
+    backgroundTaskQueue.submit([&] (sycl::handler& commandGroupHandler) {
+      commandGroupHandler.single_task(
+        [job] () -> void {
+          //nonblockingTasksCounter--;
+        }
+      );
+    });
+  */
 
   // Serial version
-/*
-  while (job->run()) {}
-  delete job;
-  nonblockingTasksCounter--;
-*/
-
-  backgroundTaskGroup.run([&,job]{
+  /*
     while (job->run()) {}
+    delete job;
+    nonblockingTasksCounter--;
+  */
+
+  backgroundTaskGroup.run([&, job] {
+    while (job->run()) {
+    }
     delete job;
   });
 }
-
 
 /**
  * It is not clear what happens if I use tasksOfSameType directly within the task.
@@ -152,23 +143,20 @@ void tarch::multicore::native::spawnTask(Task*  job) {
  * default. But I leave it in here to highlight that three variables are copied,
  * but tasksOfSameType is not copied and not used within the task.
  */
-void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
-  std::list< tarch::multicore::Task* > copyOfTasksOfSameType = tasksOfSameType;
-  backgroundTaskGroup.run([&,myTask,copyOfTasksOfSameType]{
-    bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType,device);
-     if (stillExecuteLocally) {
-       tarch::multicore::native::spawnTask(myTask);
-     }
-     else {
-       delete myTask;
-     }
+void tarch::multicore::native::processFusedTask(
+  Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
+) {
+  std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
+  backgroundTaskGroup.run([&, myTask, copyOfTasksOfSameType] {
+    bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
+    if (stillExecuteLocally) {
+      tarch::multicore::native::spawnTask(myTask);
+    } else {
+      delete myTask;
+    }
   });
 }
 
-
-void tarch::multicore::native::drainTaskQueues() {
-  backgroundTaskGroup.wait();
-}
-
+void tarch::multicore::native::drainTaskQueues() { backgroundTaskGroup.wait(); }
 
 #endif

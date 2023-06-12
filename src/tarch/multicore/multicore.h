@@ -1,27 +1,21 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include <string>
 
 #include "config.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-
-#include <string>
-
-
 #if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP) || defined(SharedSYCL)
-  #define SharedMemoryParallelisation
+#define SharedMemoryParallelisation
 #endif
-
 
 #pragma once
 
-
 namespace tarch {
 
-
   /**
- 
+
  @namespace tarch::multicore
 
 
@@ -44,14 +38,14 @@ namespace tarch {
 
  ## Writing your own code with multithreading features
 
- If you wanna distinguish in your code between multicore and no-multicore variants, 
+ If you wanna distinguish in your code between multicore and no-multicore variants,
  please use
 
 ~~~~~~~~~~~~~~~~~~~~~~~~
 #include "tarch/multicore/multicore.h"
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-and  
+and
 
 ~~~~~~~~~~~~~~~~~~~~~~~~
 #if defined(SharedMemoryParallelisation)
@@ -254,15 +248,14 @@ and
 
  */
   namespace multicore {
-     /**
-      * Switch on SmartMPI
-      *
-      * If you use SmartMPI, then the bookkeeping registers the the local scheduling.
-      * If you don't use SmartMPI, this operation becomes nop, i.e. you can always
-      * call it and configure will decide whether it does something useful.
-      */
-     void initSmartMPI();
-     void shutdownSmartMPI();
-  }
-}
-
+    /**
+     * Switch on SmartMPI
+     *
+     * If you use SmartMPI, then the bookkeeping registers the the local scheduling.
+     * If you don't use SmartMPI, this operation becomes nop, i.e. you can always
+     * call it and configure will decide whether it does something useful.
+     */
+    void initSmartMPI();
+    void shutdownSmartMPI();
+  } // namespace multicore
+} // namespace tarch

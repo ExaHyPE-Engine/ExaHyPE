@@ -1,22 +1,21 @@
-#include "tarch/Assertions.h"
-
-#include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Tasks.h"
-#include "tarch/multicore/Core.h"
-#include "tarch/multicore/sycl/Core.h"
-#include "tarch/multicore/BooleanSemaphore.h"
-#include "tarch/multicore/Lock.h"
-#include "tarch/services/ServiceRepository.h"
+
+#include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/Core.h"
+#include "tarch/multicore/Lock.h"
+#include "tarch/multicore/multicore.h"
+#include "tarch/services/ServiceRepository.h"
+#include "tarch/multicore/sycl/Core.h"
 
 #if defined(SharedSYCL)
-#include <tbb/task_group.h>
 #include <tbb/task_arena.h>
+#include <tbb/task_group.h>
 
 namespace {
-  tarch::multicore::BooleanSemaphore  suspensionPointSemaphore;
-}
-
+  tarch::multicore::BooleanSemaphore suspensionPointSemaphore;
+} // namespace
 
 /**
  * Native mapping of a task loop onto a SYCL loop
@@ -24,21 +23,19 @@ namespace {
  * @see spawnTask()
  *
  */
-void tarch::multicore::native::spawnAndWaitAsTaskLoop(
-  const std::vector< tarch::multicore::Task* >&  tasks
-) {
-  assertion( not tasks.empty() );
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
+  assertion(not tasks.empty());
 
-  for (auto& p: tasks) {
-    tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
-      while (p->run()) {}
+  for (auto& p : tasks) {
+    tarch::multicore::getHostSYCLQueue().submit([&](auto& h) {
+      while (p->run()) {
+      }
       delete p;
     });
   }
 
   tarch::multicore::getHostSYCLQueue().wait();
 }
-
 
 /**
  * Read spawnAndWaitAsTaskLoop() first.
@@ -56,15 +53,15 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(
  *
  * @see spawnAndWaitAsTaskLoop()
  */
-void tarch::multicore::native::spawnTask(Task*  job) {
-  sycl::event e = tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
+void tarch::multicore::native::spawnTask(Task* job) {
+  sycl::event e = tarch::multicore::getHostSYCLQueue().submit([&](auto& h) {
     h.host_task([=]() {
-      while (job->run()) {}
+      while (job->run()) {
+      }
       delete job;
     });
   });
 }
-
 
 /**
  * It is not clear what happens if I use tasksOfSameType directly within the task.
@@ -76,19 +73,17 @@ void tarch::multicore::native::spawnTask(Task*  job) {
  * default. But I leave it in here to highlight that three variables are copied,
  * but tasksOfSameType is not copied and not used within the task.
  */
-void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
-  bool stillExecuteLocally = myTask->fuse(tasksOfSameType,device);
+void tarch::multicore::native::processFusedTask(
+  Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
+) {
+  bool stillExecuteLocally = myTask->fuse(tasksOfSameType, device);
   if (stillExecuteLocally) {
     tarch::multicore::native::spawnTask(myTask);
-  }
-  else {
+  } else {
     delete myTask;
   }
 }
 
-
-void tarch::multicore::native::drainTaskQueues() {
-  tarch::multicore::getHostSYCLQueue().wait();
-}
+void tarch::multicore::native::drainTaskQueues() { tarch::multicore::getHostSYCLQueue().wait(); }
 
 #endif

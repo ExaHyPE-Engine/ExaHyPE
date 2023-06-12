@@ -1,9 +1,9 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .RungeKuttaDG    import RungeKuttaDG
-from .SeparateSweeps  import SeparateSweeps
-from .PDETerms        import PDETerms
- 
+from .RungeKuttaDG import RungeKuttaDG
+from .SeparateSweeps import SeparateSweeps
+from .PDETerms import PDETerms
+
 import peano4
 import exahype2
 
@@ -11,13 +11,15 @@ import jinja2
 
 import os
 
-from exahype2.solvers.fv.actionsets.AbstractFVActionSet             import AbstractFVActionSet
+from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
-from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import (
+    ReconstructPatchAndApplyFunctor,
+)
 
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
-  Template = """
+    Template = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ( 
     not marker.hasBeenRefined()
@@ -40,183 +42,202 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   }
   {% endfor %}
 """
-  def __init__(self,solver):
-    super( MergeEnclaveTaskOutcome, self ).__init__(solver)
-    self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
 
+    def __init__(self, solver):
+        super(MergeEnclaveTaskOutcome, self).__init__(solver)
+        self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
 
-  def get_body_of_operation(self,operation_name):
-    result = ""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "LABEL_NAME" ] = self.label_name      
-      d[ "PREDICATES" ] = self._solver._secondary_sweeps_of_Runge_Kutta_step_on_cell
-      result = jinja2.Template(self.Template).render(**d)
-      pass 
-    return result
+    def get_body_of_operation(self, operation_name):
+        result = ""
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
+        ):
+            d = {}
+            self._solver._init_dictionary_with_default_parameters(d)
+            self._solver.add_entries_to_text_replacement_dictionary(d)
+            d["LABEL_NAME"] = self.label_name
+            d["PREDICATES"] = self._solver._secondary_sweeps_of_Runge_Kutta_step_on_cell
+            result = jinja2.Template(self.Template).render(**d)
+            pass
+        return result
 
+    def get_action_set_name(self):
+        return (
+            __name__.replace(".py", "").replace(".", "_") + "_MergeEnclaveTaskOutcome"
+        )
 
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_") + "_MergeEnclaveTaskOutcome"
-
-
-  def get_includes(self):
-    return super( MergeEnclaveTaskOutcome, self ).get_includes() + """
+    def get_includes(self):
+        return (
+            super(MergeEnclaveTaskOutcome, self).get_includes()
+            + """
 #include "exahype2/EnclaveBookkeeping.h"
-"""    
+"""
+        )
 
 
-class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
-  """
-  
+class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
+    """
+
     Two separate sweeps per Runge-Kutta sweep where volumetric operations
-    are outsourced into dedicated tasks. 
-
-    
-
-  """
+    are outsourced into dedicated tasks.
 
 
-  def __init__(self, 
-               name, 
-               rk_order, 
-               polynomial_basis, 
-               number_of_face_projections,
-               unknowns, 
-               auxiliary_variables, 
-               min_cell_h, 
-               max_cell_h, 
-               plot_grid_properties,
-               pde_terms_without_state):
-    """
-
-    See superclass constructor for all the interesting info.
-    
-    It is important to notice that we still use the separate sweep template classes
-    here.
 
     """
-    super(SeparateSweepsWithEnclaveTasking, self).__init__(name, 
-                                                           rk_order, 
-                                                           polynomial_basis, 
-                                                           number_of_face_projections,
-                                                           unknowns, 
-                                                           auxiliary_variables, 
-                                                           min_cell_h, 
-                                                           max_cell_h, 
-                                                           plot_grid_properties)
-    
-    self._solver_template_file_class_name     = "SeparateSweeps"
-    self._pde_terms_without_state             = pde_terms_without_state
 
-    self._fused_volumetric_kernel_call_cpu       = "#error Not yet defined. Set self._fused_volumetric_kernel_call_cpu in your Python solver class."
-    self._fused_volumetric_kernel_call_gpu       = "#error Not yet defined. Set self._fused_volumetric_kernel_call_gpu in your Python solver class."
-   
-    self.create_action_sets()
-    self.create_data_structures()
-    
+    def __init__(
+        self,
+        name,
+        rk_order,
+        polynomial_basis,
+        number_of_face_projections,
+        unknowns,
+        auxiliary_variables,
+        min_cell_h,
+        max_cell_h,
+        plot_grid_properties,
+        pde_terms_without_state,
+    ):
+        """
 
+        See superclass constructor for all the interesting info.
 
-  def create_data_structures(self):
-    """
-    
-     First, call the superclass' create_data_structures() to ensure that all 
-     the data structures are in place.
+        It is important to notice that we still use the separate sweep template classes
+        here.
 
-     The linear combination is to be computed if and only if      
-    
-    """
-    super(SeparateSweepsWithEnclaveTasking, self).create_data_structures()
-    
-            
-  def create_action_sets(self):
-    """
+        """
+        super(SeparateSweepsWithEnclaveTasking, self).__init__(
+            name,
+            rk_order,
+            polynomial_basis,
+            number_of_face_projections,
+            unknowns,
+            auxiliary_variables,
+            min_cell_h,
+            max_cell_h,
+            plot_grid_properties,
+        )
 
-      Call superclass routine and then reconfigure the update cell call.
-      Only the UpdateCell action set is specific to an enclave solver.
-      
-      This operation is implicity called via the superconstructor.
-      
-      It is important that we add the action set at the right point. See
-      add_actions_to_perform_time_step() for a discussion.       
-      
-    """
-    super(SeparateSweepsWithEnclaveTasking, self).create_action_sets()
+        self._solver_template_file_class_name = "SeparateSweeps"
+        self._pde_terms_without_state = pde_terms_without_state
 
-    self._action_set_solve_volume_integral.spawn_volume_kernel_as_task = True
+        self._fused_volumetric_kernel_call_cpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_cpu in your Python solver class."
+        self._fused_volumetric_kernel_call_gpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_gpu in your Python solver class."
 
-    self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
-    self._action_set_merge_enclave_task_outcome.priority = self._baseline_action_set_priority + 1
+        self.create_action_sets()
+        self.create_data_structures()
 
-    
-  def add_implementation_files_to_project(self, namespace, output, dimensions):
-    """
-      Add the enclave task for the GPU
-    """
+    def create_data_structures(self):
+        """
 
-    super(SeparateSweepsWithEnclaveTasking, self).add_implementation_files_to_project(namespace, output, dimensions)
-    templatefile_prefix = os.path.join(os.path.dirname(os.path.realpath(__file__)), "SolveVolumeIntegral.EnclaveTask.template")
+        First, call the superclass' create_data_structures() to ensure that all
+        the data structures are in place.
 
-    implementationDictionary = {}
-    self._init_dictionary_with_default_parameters(implementationDictionary)
-    self.add_entries_to_text_replacement_dictionary(implementationDictionary)
-    
-    # Some includes might logically belong into the action sets, but now they are 
-    # 'outsourced' into the enclave task. So we manually add it here.
-    implementationDictionary[ "SOLVER_INCLUDES" ] += self.user_solver_includes
-    implementationDictionary[ "SOLVER_INCLUDES" ] += self.user_action_set_includes
+        The linear combination is to be computed if and only if
 
-    task_name = self._volumetric_solver_enclave_task_name()
-    generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-      "{}.h".format(templatefile_prefix),
-      "{}.cpp".format(templatefile_prefix),
-      task_name,
-      namespace + ["tasks"],
-      "tasks",
-      implementationDictionary,
-      True)
+        """
+        super(SeparateSweepsWithEnclaveTasking, self).create_data_structures()
 
-    output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp", generated=True )
+    def create_action_sets(self):
+        """
 
-    if self._pde_terms_without_state:
-        # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
-        # this hack has to suffice
-        peanodir = templatefile_prefix.split("python/exahype2",1)[0]
-        output.makefile.d["PEANODIR"] = peanodir
-        exahype2.gpu.add_exahype_objects(output.makefile)
+        Call superclass routine and then reconfigure the update cell call.
+        Only the UpdateCell action set is specific to an enclave solver.
 
+        This operation is implicity called via the superconstructor.
 
-  def _volumetric_solver_enclave_task_name(self): 
-    return "{}_VolumetricSolverEnclaveTask".format(self._name)
+        It is important that we add the action set at the right point. See
+        add_actions_to_perform_time_step() for a discussion.
 
+        """
+        super(SeparateSweepsWithEnclaveTasking, self).create_action_sets()
 
-  def add_actions_to_perform_time_step(self, step):
-    """
-    
-      Add enclave aspect to time stepping. If you study the superclass'
-      routine add_actions_to_perform_time_step() and consider that this action
-      set is invoked in the secondary grid sweep, then it becomes clear that
-      this merger has to come first, i.e. we first add the action set and then
-      we call the superclass' add_action_set().
-      
-      We need the result of the volumetric operation before we sum up this
-      volumetric solution and the Riemann solution. 
-       
-    """
-    super(SeparateSweepsWithEnclaveTasking, self).add_actions_to_perform_time_step(step)
-    step.add_action_set( self._action_set_merge_enclave_task_outcome )
+        self._action_set_solve_volume_integral.spawn_volume_kernel_as_task = True
 
+        self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)
+        self._action_set_merge_enclave_task_outcome.priority = (
+            self._baseline_action_set_priority + 1
+        )
 
-  def add_entries_to_text_replacement_dictionary(self,d):
-    super(SeparateSweepsWithEnclaveTasking, self).add_entries_to_text_replacement_dictionary(d)
-    d[ "FUSED_VOLUMETRIC_KERNEL_CALL_CPU"] = jinja2.Template(self._fused_volumetric_kernel_call_cpu, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "FUSED_VOLUMETRIC_KERNEL_CALL_GPU"] = jinja2.Template(self._fused_volumetric_kernel_call_gpu, undefined=jinja2.DebugUndefined).render( **d )
+    def add_implementation_files_to_project(self, namespace, output, dimensions):
+        """
+        Add the enclave task for the GPU
+        """
 
-    d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
-    d[ "STATELESS_PDE_TERMS" ]  = self._pde_terms_without_state
- 
-    
- 
+        super(
+            SeparateSweepsWithEnclaveTasking, self
+        ).add_implementation_files_to_project(namespace, output, dimensions)
+        templatefile_prefix = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "SolveVolumeIntegral.EnclaveTask.template",
+        )
+
+        implementationDictionary = {}
+        self._init_dictionary_with_default_parameters(implementationDictionary)
+        self.add_entries_to_text_replacement_dictionary(implementationDictionary)
+
+        # Some includes might logically belong into the action sets, but now they are
+        # 'outsourced' into the enclave task. So we manually add it here.
+        implementationDictionary["SOLVER_INCLUDES"] += self.user_solver_includes
+        implementationDictionary["SOLVER_INCLUDES"] += self.user_action_set_includes
+
+        task_name = self._volumetric_solver_enclave_task_name()
+        generated_solver_files = (
+            peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+                "{}.h".format(templatefile_prefix),
+                "{}.cpp".format(templatefile_prefix),
+                task_name,
+                namespace + ["tasks"],
+                "tasks",
+                implementationDictionary,
+                True,
+            )
+        )
+
+        output.add(generated_solver_files)
+        output.makefile.add_cpp_file("tasks/" + task_name + ".cpp", generated=True)
+
+        if self._pde_terms_without_state:
+            # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
+            # this hack has to suffice
+            peanodir = templatefile_prefix.split("python/exahype2", 1)[0]
+            output.makefile.d["PEANODIR"] = peanodir
+            exahype2.gpu.add_exahype_objects(output.makefile)
+
+    def _volumetric_solver_enclave_task_name(self):
+        return "{}_VolumetricSolverEnclaveTask".format(self._name)
+
+    def add_actions_to_perform_time_step(self, step):
+        """
+
+        Add enclave aspect to time stepping. If you study the superclass'
+        routine add_actions_to_perform_time_step() and consider that this action
+        set is invoked in the secondary grid sweep, then it becomes clear that
+        this merger has to come first, i.e. we first add the action set and then
+        we call the superclass' add_action_set().
+
+        We need the result of the volumetric operation before we sum up this
+        volumetric solution and the Riemann solution.
+
+        """
+        super(SeparateSweepsWithEnclaveTasking, self).add_actions_to_perform_time_step(
+            step
+        )
+        step.add_action_set(self._action_set_merge_enclave_task_outcome)
+
+    def add_entries_to_text_replacement_dictionary(self, d):
+        super(
+            SeparateSweepsWithEnclaveTasking, self
+        ).add_entries_to_text_replacement_dictionary(d)
+        d["FUSED_VOLUMETRIC_KERNEL_CALL_CPU"] = jinja2.Template(
+            self._fused_volumetric_kernel_call_cpu, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["FUSED_VOLUMETRIC_KERNEL_CALL_GPU"] = jinja2.Template(
+            self._fused_volumetric_kernel_call_gpu, undefined=jinja2.DebugUndefined
+        ).render(**d)
+
+        d["SEMAPHORE_LABEL"] = exahype2.grid.UpdateCellLabel.get_attribute_name(
+            self._name
+        )
+        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
