@@ -929,24 +929,29 @@ if __name__ == "__main__":
 ########################################################################################
     if args.add_tracer==1:
         tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
-        project.add_action_set_to_initialisation( 
-          exahype2.tracer.InsertParticlesByCoordinates( 
+        init_action_set =  exahype2.tracer.InsertParticlesByCoordinates( 
             #particle_set=tracer_particles, coordinates=[[0,0,8.0],[0,0,-8.0],[8.0,8.0,0]]))
-            particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]]))
-        #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename="test-design.dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
-      
-        project.add_action_set_to_timestepping(
-          peano4.toolbox.particles.UpdateParallelState(
-            particle_set=tracer_particles
-          )
-        )
+            particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]])
+        init_action_set.priority = 0
+        project.add_action_set_to_initialisation( init_action_set )
+
+
+        # Not required anymore, as will be done by tracer routine itself. See
+        # exahype2.Project.add_tracer()
+        # -------------------------------------------------------------------
+        #project.add_action_set_to_timestepping(
+        #  peano4.toolbox.particles.UpdateParallelState(
+        #    particle_set=tracer_particles
+        #  )
+        #)
         
         tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                my_solver,
                                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear",
                                                                )
-        tracer_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+1
+        tracer_action_set.priority = my_solver._action_set_update_cell.priority+1
         project.add_action_set_to_timestepping(tracer_action_set)
+        project.add_action_set_to_initialisation(tracer_action_set)
         
         dump_action_set=exahype2.tracer.DumpTracerIntoDatabase(
           particle_set=tracer_particles,
@@ -958,20 +963,24 @@ if __name__ == "__main__":
           position_delta_between_two_snapsots=1e16,
           time_delta_between_two_snapsots=0.05
           )
-        dump_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+2
+        dump_action_set.priority = my_solver._action_set_update_cell.priority+2
         project.add_action_set_to_timestepping(dump_action_set)
 
     if args.add_tracer==2:
         tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
-        project.add_action_set_to_initialisation( 
-          exahype2.tracer.InsertParticlesByCoordinates( 
-            particle_set=tracer_particles, coordinates=[[0.1,0,0],[-0.1,0,0]]))
+        init_action_set = exahype2.tracer.InsertParticlesByCoordinates( 
+            particle_set=tracer_particles, coordinates=[[0.1,0,0],[-0.1,0,0]])
+        init_action_set.priority = 0
+        project.add_action_set_to_initialisation( init_action_set )
 
-        project.add_action_set_to_timestepping(
-          peano4.toolbox.particles.UpdateParallelState(
-            particle_set=tracer_particles
-          )
-        )
+        # Not required anymore, as will be done by tracer routine itself. See
+        # exahype2.Project.add_tracer()
+        # -------------------------------------------------------------------
+        #project.add_action_set_to_timestepping(
+        #  peano4.toolbox.particles.UpdateParallelState(
+        #    particle_set=tracer_particles
+        #  )
+        #)
         
         tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                my_solver,
@@ -989,6 +998,7 @@ if __name__ == "__main__":
                                                                )
         tracer_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+1
         project.add_action_set_to_timestepping(tracer_action_set)
+        project.add_action_set_to_initialisation(tracer_action_set)
         
         dump_action_set=exahype2.tracer.DumpTracerIntoDatabase(
           particle_set=tracer_particles,
