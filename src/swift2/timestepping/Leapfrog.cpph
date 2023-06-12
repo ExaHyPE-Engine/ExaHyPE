@@ -40,6 +40,7 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
     ) {
 
       if( isSPH ){
+        /* @ TODO why do we need the isSPH check here? */
         /* Kick the particle */
         particle->setV_full( particle->getV_full() + timeStepSizeKick * particle->getA() );
 
@@ -48,26 +49,26 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
          */
         if( kickNumber == 2 ){
           /*
-           * Reset predicted values for next Drift step 
+           * Reset predicted values for next Drift step
            * Done by "hydro_reset_predicted_values" in SWIFT
            */
-          
+
           /* Re-set the predicted velocities */
           particle->setV( particle->getV_full() );
-          
+
           /* Re-set the entropy */
           particle->setU( particle->getU_full() );
 
           /* Re-compute the pressure */
-          const double pressure = 
+          const double pressure =
             gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
 
           /* Compute the new sound speed */
           const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
-     
+
           /* Update variables */
           particle->setPressure(pressure);
-          particle->setSoundSpeed(soundspeed);
+          particle->setSoundSpeed(soundspeed); // @TODO Mladen: Why on earth are we storing soundspeed??
           particle->setV_sig_AV( std::max(particle->getV_sig_AV(), 2.0 * soundspeed) );
         } // End if Kick 2
 
@@ -96,14 +97,14 @@ void swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
 
       /* Integrate the internal energy forward in time */
       const double delta_u = particle->getUDot() * dt_therm;
-    
+
       /* Do not decrease the energy by more than a factor of 2 */
       particle->setU_full( std::max( particle->getU_full() + delta_u,
                                           particle->getU_full() * 0.5 ) );
 
       /* Check against absolute minimum.
        * Default value is zero. */
-      if (particle->getU_full() < 0.0) 
+      if (particle->getU_full() < 0.0)
       {
         particle->setU_full(0.0);
         particle->setUDot(0.0);
@@ -124,6 +125,9 @@ void swift2::timestepping::computePredictHydro(
     const double dt_drift = timeStepSize;
     const double dt_therm = dt_kick_hydro;
 
+  // @TODO: Mladen: This is only valid for the "Minimal" SPH scheme
+  // Needs cleanup
+
   for (auto* particle: localParticles) {
     if (
       particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
@@ -134,18 +138,21 @@ void swift2::timestepping::computePredictHydro(
         /* Predict velocities for hydro terms */
         particle->setV( particle->getV() + particle->getA() * dt_kick_hydro );
 
-        /* 
+        /*
          * Predict additional particle fields forward in time after the Drift step
          */
-        
+
         /* Predict the internal energy */
         particle->setU( particle->getU() + particle->getUDot() * dt_therm );
 
         /* Predict smoothing length */
         const double h_inv = 1.0 / particle->getSmoothingLength();
         const double w1 = particle->getHDot() * h_inv * dt_drift;
-//        particle->setSmoothingLength( particle->getSmoothingLength() * std::exp(w1) );
-        
+        // @TODO Mladen: this is wrong. It should be uncommented.
+        // It's ok while debugging sod-1D though as you have hardcoded
+        // the smoothing length.
+        particle->setSmoothingLength( particle->getSmoothingLength() * std::exp(w1) );
+
         /* Predict density */
         const double w2 = - hydroDimensions * w1;
         particle->setDensity( particle->getDensity() * std::exp(w2) );
@@ -153,15 +160,18 @@ void swift2::timestepping::computePredictHydro(
         particle->setU( std::max( particle->getU(), 0.0) );
 
         /* Compute the new pressure */
-        const double pressure = 
+        const double pressure =
           gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
 
         /* Compute the new sound speed */
-        const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
+        // const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
+        const double soundspeed = gas_soundspeed_from_pressure(particle->getDensity(), pressure);
 
         particle->setPressure(pressure);
         particle->setSoundSpeed(soundspeed);
-        particle->setV_sig_AV( std::max(particle->getV_sig_AV(), 2.0 * soundspeed) );
+        particle->setV_sig_AV(
+            std::max(particle->getV_sig_AV(), 2.0 * soundspeed)
+            );
     }
   }
 }
@@ -169,7 +179,7 @@ void swift2::timestepping::computePredictHydro(
 
 
 
-/* 
+/*
  *
  * Debugging:
  * Fake Drift step in which we move a particle into the midpoint of a cell.
@@ -191,14 +201,14 @@ void swift2::timestepping::moveParticleIntoCriticalLine(
       not particle->getIsBoundaryParticle()
     ) {
 
-      /* 
+      /*
        * Disappearing particle test.
        * Just move the position to the central axis of a cell and watch it
        * disappear.
        */
       tarch::la::Vector<Dimensions,double> xCritical = {1.0/6.0 , 0.5};
       particle->setX( xCritical );
-      
+
       /* Flag this particle as Moved */
       particle->setMoveState( std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved );
 
