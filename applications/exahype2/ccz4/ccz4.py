@@ -68,7 +68,7 @@ if __name__ == "__main__":
     parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
     parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures", "flat"], required="True", help="Scenario" )
     parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
-    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
+    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-static point tracer, 2-moving point tracer" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
@@ -961,54 +961,47 @@ if __name__ == "__main__":
         dump_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+2
         project.add_action_set_to_timestepping(dump_action_set)
 
+    if args.add_tracer==2:
+        tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
+        project.add_action_set_to_initialisation( 
+          exahype2.tracer.InsertParticlesByCoordinates( 
+            particle_set=tracer_particles, coordinates=[[0.1,0,0],[-0.1,0,0]]))
 
-    #if not args.add_tracer==0:
-    if 0:
-      tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
-      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=65 )
-       #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
-      project.add_action_set_to_timestepping(
-        exahype2.tracer.FiniteVolumesTracing(
-          tracer_particles,my_solver,
-          [17,18,19],range(65),-1,
-          #time_stepping_kernel="toolbox::particles::LinearInterp",
-          time_stepping_kernel="toolbox::particles::StaticPosition"#,
-          #observer_kernel="toolbox::particles::ObLinearInterp"
+        project.add_action_set_to_timestepping(
+          peano4.toolbox.particles.UpdateParallelState(
+            particle_set=tracer_particles
+          )
         )
-      )
-      project.add_action_set_to_timestepping(
-        peano4.toolbox.particles.UpdateParallelState(
-          particle_set=tracer_particles
-        )
-      )
-      if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=-15, b=15, N_x=1000,N_y=1,N_z=1)
-        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"Line.dat" #slide.dat #volume.dat
-      if args.add_tracer==4:  
-        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
-      if args.add_tracer==5:
-        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesByCoordinates ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
-      if args.add_tracer==6 or args.add_tracer==7:
-        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
-      
-      if path=="./": path1="."
-      else: path1=path
-      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
-        particle_set=tracer_particles,
-        solver=my_solver,
-        filename=path1+"zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=2000,
-        output_precision=10,
-        position_delta_between_two_snapsots=1e16,
-        data_delta_between_two_snapsots=1e16,
-        time_delta_between_two_snapsots=0.02,
-        use_relative_deltas=False,
-        initial_record_time=55#args.end_time*2.0/3.0
-        #last_record_time=1e3
-      ))
-      #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
-      #,,-1,"zz",1000))
-
+        
+        tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                               my_solver,
+                                                               project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler",
+                                                               projection_kernel_arguments="""
+                                                                marker,
+                                                                {{PATCH_SIZE}},
+                                                                {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+                                                                fineGridCell{{SOLVER_NAME}}Q.value,
+                                                                fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
+                                                                {0,1,2},
+                                                                {-1,-1,-1},
+                                                                *p
+                                                               """
+                                                               )
+        tracer_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+1
+        project.add_action_set_to_timestepping(tracer_action_set)
+        
+        dump_action_set=exahype2.tracer.DumpTracerIntoDatabase(
+          particle_set=tracer_particles,
+          solver=my_solver,
+          filename=args.path+"Tracer-test",
+          number_of_entries_between_two_db_flushes=100000,
+          output_precision=8,
+          data_delta_between_two_snapsots=1e16,
+          position_delta_between_two_snapsots=1e16,
+          time_delta_between_two_snapsots=0.05
+          )
+        dump_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+2
+        project.add_action_set_to_timestepping(dump_action_set)
 
 ########################################################################################
 #linking stuff
