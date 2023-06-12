@@ -160,6 +160,7 @@ list(APPEND MULTICORES_BACKENDS
   "tbb"
 )
 set(WITH_MULTITHREADING "" CACHE STRING "${MULTICORES_BACKENDS}")
+set(WITH_MULTITHREADING "omp")
 set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${MULTICORES_BACKENDS})
 
 if(WITH_MULTITHREADING)
@@ -282,7 +283,7 @@ else()
 endif()
 
 set(WITH_DIMENSIONS "2" CACHE STRING "Build with number of dimensions")
-option(WITH_MPI "Build with distributed memory parallelisation" OFF)
+option(WITH_MPI "Build with distributed memory parallelisation" ON)
 option(WITH_OTTER "Build with Otter" OFF)
 option(ENABLE_EXAHYPE "Enable ExaHyPE2" ON)
 option(ENABLE_SWIFT "Enable Swift2" ON)
@@ -291,7 +292,7 @@ option(ENABLE_MULTIPRECISION "Enable the multi-precision toolbox" ON)
 option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" ON)
 option(ENABLE_PARTICLES "Enable the particles toolbox" ON)
 option(ENABLE_BLOCKSTRUCTURED "Enable the blockstructured toolbox" ON)
-option(WITH_NETCDF "Enable output writing with NetCDF." ON)
+option(WITH_NETCDF "Enable input reading with NetCDF." ON)
 
 if(WITH_MPI)
   find_package(MPI REQUIRED)
