@@ -332,11 +332,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
   logDebug( "finishedTraversal()", "rolled over local list and now have " << _particlesThatHaveToBeSieved.size() << " sieve particles to sieve" );
 
   _particlesThatHaveToBeSieved.eliminateSpatialDuplicates();
-  logDebug(
-    "finishedTraversal()",
-    "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left to sieve " <<
-    "(local particles that are rolled over=" << _particlesThatCanNotBeLiftedWithinTheirTree.size() << ")"
-  );
+  if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
+    logInfo(
+      "finishedTraversal()",
+      "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left to sieve " <<
+      "(local particles that are rolled over=" << _particlesThatCanNotBeLiftedWithinTheirTree.size() << ")"
+    );
+  }
   // shallow clear, as the pointers have already been rolled over into _particlesThatHaveToBeSieved
   _particlesThatCanNotBeLiftedWithinTheirTree.clear();
 }
