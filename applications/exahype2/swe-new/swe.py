@@ -185,9 +185,17 @@ elif solver_type in rkdg_rusanov_solvers:
   
   from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
 
-  # No other scenario has hard-coded methods, so only this one works
-  from scenarios.rkdg_test_scenario import RKDG_Test_Scenario
-  my_pde = RKDG_Test_Scenario()
+  if args.scenario == "Artificial_Tsunami":
+    from scenarios.rkdg_test_artificial_tsunami import RKDG_Test_Artificial_Tsunami
+    my_pde = RKDG_Test_Artificial_Tsunami()
+  elif args.scenario == "Radial_Bathymetry_Dam_Break":
+    from scenarios.rkdg_test_radial_bathymetry_dam_break import RKDG_Test_Radial_Bathymetry_Dam_Break
+    my_pde = RKDG_Test_Radial_Bathymetry_Dam_Break()
+  else:
+    from scenarios.rkdg_test_radial_dam_break import RKDG_Test_Radial_Dam_Break
+    my_pde = RKDG_Test_Radial_Dam_Break()
+
+  
 
   my_solver = solvers[solver_type](
     name                      = solver_name,
@@ -205,7 +213,7 @@ if args.gpu:
   my_solver.set_pde_terms_without_state(True)
 
 my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".format("true" if args.dynamic_amr else "false"))
-if args.scenario == "Artificial_Tsunami":
+if args.scenario == "Artificial_Tsunami" or args.scenario == "":
   my_solver.add_user_solver_includes("#include <cmath>")
   my_solver.add_user_solver_includes("#include \"Constants.h\"")
 
