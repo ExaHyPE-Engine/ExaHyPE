@@ -217,3 +217,38 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear(
     );
   }
 }
+
+
+template <typename Particle>
+void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
+  const peano4::datamanagement::CellMarker&    marker,
+  int                                          voxelsPerAxis,
+  int                                          unknownsPerVoxel,
+  const double* __restrict__                   Q,
+  double                                       timeStepSize,
+  tarch::la::Vector<Dimensions,int>            indices,
+  Particle&                                    particle
+) {
+  for (int unknown=0; unknown<unknownsPerVoxel; unknown++) {
+    double value =       ::exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
+        marker,
+        voxelsPerAxis,
+        unknownsPerVoxel,
+        Q,
+        particle.getX(),
+        unknown
+      );
+
+    assertion(value==value);
+    particle.setData(
+      unknown, value
+    );
+  }
+
+  for (int d=0; d<Dimensions; d++) {
+    particle.setX(
+      d,
+      particle.getX(d) + timeStepSize * particle.getData( indices(d) )
+    );
+  }
+}
