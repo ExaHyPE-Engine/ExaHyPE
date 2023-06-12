@@ -14,7 +14,6 @@ end_time              = 0.02
 time_step_relaxation  = 0.5 # taken from tutorial
 plot_interval         = 0.005 # taken from tutorial
 patch_size            = 32
-optimal_patch_size    = 32 # optimal for GPUs TODO: no longer
 maximum_cell_size     = 0.1
 amr_levels            = 3 
 auxiliary_variables   = 1 # bathymetry, this is fixed to 1 in pde.py
@@ -71,17 +70,16 @@ parser.add_argument(            "--no-compile",        dest="compile",        ac
 parser.add_argument("-c",       "--scenario",          dest="scenario",       choices=scenarios,          default="Radial_Dam_Break", help="|".join(scenarios))
 parser.add_argument("-bf",      "--bathymetry-file",   dest="bathymetry_file", type=str,                  required=False,             help="Path to file containing bathymetry relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_bathymetry)))
 parser.add_argument("-df",      "--displacement-file", dest="displacement_file",type=str,                 required=False,             help="Path to file containing displacement relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_displacement)))
-parser.add_argument("-ops",     "--optimal-patch-size",dest="optimal_patch_size",action="store_true",     default=False,              help="Set to use optimal patch size for GPUs of 32.")
 parser.add_argument("-maxd",    "--max_dimension_netcdf",dest="max_dimension_netcdf",type=int,            required=False,             help="Use when netCDF4 package not installed to pass maximum dimension to the program.")
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   required=False,             help="Set order of space discretisation for Discontinuous Galerkin." )
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   required=False,             help="Set order of time discretisation for Runge-Kutta scheme." )
+parser.add_argument("-o,"       "--output",            dest="output_path",    type=str,                   default="./",               help="Output path for project output. The project will create a new folder at the given path. Default is the current directory.")
 args = parser.parse_args()
 
 maximum_cell_size = args.max_cell_size
-patch_size = optimal_patch_size if args.optimal_patch_size else args.patch_size
-
-if args.scenario not in scenarios:
-  raise ValueError("Provided scenario \"{}\" not supported!".format(args.scenario))
+patch_size = args.patch_size if args.patch_size != None else patch_size
+if not args.output_path.endswith("/"):
+  args.output_path += "/"
 
 my_pde = None
 if args.scenario == "Radial_Bathymetry_Dam_Break":
@@ -232,7 +230,7 @@ my_solver.set_implementation(
 )
 
 executable_name = "swe-application-2d-solver-name-%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (solver_name, args.scenario, patch_size, args.amr_levels, maximum_cell_size, args.end_time)
-output_path = "output-%s/" % executable_name
+output_path = args.output_path+"output-%s/" % executable_name
 
 my_project = exahype2.Project( ["applications", "exahype2", "swe"], "SWEApplication", ".", executable=executable_name)
 my_project.add_solver( my_solver )
