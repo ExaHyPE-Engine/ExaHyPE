@@ -346,7 +346,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     patchData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
     patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
-    patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_id;
+    patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
     patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
     delete p;
     currentTask++;
@@ -356,7 +356,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   patchData.cellSize[currentTask]    = _marker.h();
   patchData.t[currentTask]           = _t;
   patchData.dt[currentTask]          = _dt;
-  patchData.id[currentTask]          = _id;
+  patchData.id[currentTask]          = _taskNumber;
   patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
 

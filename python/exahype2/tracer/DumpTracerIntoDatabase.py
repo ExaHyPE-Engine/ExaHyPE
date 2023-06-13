@@ -110,7 +110,13 @@ last_record_time: Float
     self.number_of_entries_between_two_db_flushes = number_of_entries_between_two_db_flushes
 
   __Template_TouchCellLastTime = jinja2.Template("""
-if ( not marker.willBeRefined() and fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
+if ( 
+  not marker.willBeRefined() 
+  and 
+  fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() 
+  and
+  repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
+) {
   double IniRecord={{INI_RECORD}};
   double LastRecord={{LAST_RECORD}};
   for (int i=0; i<TwoPowerD; i++) {

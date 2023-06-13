@@ -6,6 +6,7 @@ import sys
 
 
 def merge_partial_files(partial_files, merged_file_path):
+  print("start to merge file:", merged_file_path,end='...')
   with open(merged_file_path, 'w') as merged_patch_file:
     # First we need to write the header for our new patch
     # file. We can open any of the partial patch files
@@ -17,8 +18,11 @@ def merge_partial_files(partial_files, merged_file_path):
         else:
           merged_patch_file.write(line)
 
+    count=0
     for infile in partial_files:
       reading_patches = False # allows us to skip headers
+      count+=1
+      #print(str(count)+"/"+str(len(partial_files)))
       with open(infile, 'r') as patch_file:
         for line in patch_file:
           if 'begin patch' in line and not reading_patches:
@@ -26,6 +30,7 @@ def merge_partial_files(partial_files, merged_file_path):
             merged_patch_file.write('\n')
           if reading_patches:
             merged_patch_file.write(line)
+  print("Merged.")
 
 def read_meta_file(path_to_metafile):
   merged_files = []  # stores names of merged files
@@ -33,9 +38,14 @@ def read_meta_file(path_to_metafile):
                      # into the same file
   timestamps = []
   merged_file_number = 0
+  target=0
   with open(path_to_metafile, 'r') as metafile:
     for line in metafile.readlines():
-      if 'end dataset' in line:
+      if 'end dataset' in line and merged_file_number<target:
+        partial_files.clear()
+        print("jump snapshot",merged_file_number)
+        merged_file_number += 1
+      elif 'end dataset' in line:
         # merged files will be put in the same dir as the original meta-file
         merged_file_name = 'merged_patch_file_' + str(merged_file_number) + '.peano-patch-file'
 
@@ -48,8 +58,9 @@ def read_meta_file(path_to_metafile):
         partial_files.clear()
         merged_file_number += 1
 
-      if 'timestamp' in line:
+      if 'timestamp' in line and merged_file_number>=target:
         timestamps.append(line)
+        print(line)
 
       words = line.split()
 
@@ -68,7 +79,7 @@ def read_meta_file(path_to_metafile):
   # to the directory of the original meta-file
   with open(os.path.join(
       os.path.dirname(path_to_metafile),
-      'merged_meta_file.peano-patch-file'), 'w') as new_meta_file:
+      'merged_meta_file_2.peano-patch-file'), 'w') as new_meta_file:
     new_meta_file.write("# \n"
                         "# Peano patch file \n"
                         "# Version 0.2 \n"

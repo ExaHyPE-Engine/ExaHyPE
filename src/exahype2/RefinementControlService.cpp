@@ -6,6 +6,9 @@
 #include "tarch/multicore/Lock.h"
 
 
+#include "peano4/grid/grid.h"
+
+
 tarch::logging::Log  exahype2::RefinementControlService::_log( "exahype2::RefinementControlService" );
 
 int exahype2::RefinementControlService::_reductionTag( tarch::mpi::Rank::reserveFreeTag("exahype2::RefinementControlService") );
@@ -123,6 +126,9 @@ void exahype2::RefinementControlService::finishStep() {
      _committedEvents.push_back(p);
   }
   _remoteNewEvents.clear();
+
+
+  _committedEvents = ::peano4::grid::merge( _committedEvents );
 }
 
 
@@ -165,8 +171,6 @@ void exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() {
 #endif
 
 std::vector< peano4::grid::GridControlEvent >  exahype2::RefinementControlService::getGridControlEvents() const {
-// @todo Debug
-        logInfo( "getGridControlEvents()", "return " << _committedEvents.size() << " grid control events" );
   return _committedEvents;
 }
 

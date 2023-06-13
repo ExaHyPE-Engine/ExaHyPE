@@ -11,7 +11,9 @@ import peano4
 import jinja2
 
 class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
-  """
+  """!
+  
+  Action set determining the final solution using a linear combination of previous Runge-Kutta guesses
   
   We solve the ODE
   

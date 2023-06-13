@@ -11,4 +11,8 @@ from .Filter            import get_initial_position_labels
 
 from .MatplotlibPlotter import seismogram
 
-from .ParticleVTUReader import ParticleVTUReader
+try:
+  from .ParticleVTUReader import ParticleVTUReader
+except:
+  print( "WARNING: VTU particle reader not available" )
+
