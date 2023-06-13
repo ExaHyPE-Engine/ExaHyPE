@@ -214,11 +214,6 @@ the SISC paper
 #    self.d["LIBS"] += " -l" + library_name + " "
     self.d["LIBS"] += library_name + " "
 
-    if self.d['MODE'].lower() == "release":
-      self.d["CMAKE_LIBS"].append(f"{library_name}{self.d['DIM']}d")
-    else:
-      self.d["CMAKE_LIBS"].append(f"{library_name}{self.d['DIM']}d_{self.d['MODE'].lower()}")
-
   def set_mode( self, mode ):
     """
       mode should be of type CompileMode. Pass in

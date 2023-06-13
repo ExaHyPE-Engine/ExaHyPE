@@ -9,8 +9,8 @@ import jinja2
 
 
 class DiscontinuousGalerkinTracing(peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists):
-  """
-  
+  """!
+    
   Particle tracing over the DG solver. 
 
   Please consult the class FiniteVolumesTracing for details on the semantics
@@ -63,9 +63,11 @@ class DiscontinuousGalerkinTracing(peano4.toolbox.particles.ParticleParticleInte
 if ( 
   not marker.willBeRefined() 
   and 
-  fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() 
-  and
-  repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
+  (
+    (fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() and repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep())
+    or
+    repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
+  )
 ) {
   for (auto* p: localParticles) {
     if ( 

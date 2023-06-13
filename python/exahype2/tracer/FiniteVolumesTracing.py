@@ -19,7 +19,12 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction_
   ## Update plug-in points
   
   We only update cells which are marked with getHasUpdated(). For enclave solvers,
-  we assume that this flag is only set after a cell has updated.
+  we assume that this flag is only set after a cell has updated. Further to that,
+  we also trace in the grid initialisation. If we did not trace there, the first
+  dump prior to the first time step always would yield garbage. It would not even
+  help to add tracing to the plot, as the tracing typically is cell-based, whereas
+  most plotters plug into touchVertexFirstTime(), i.e. they still would dump
+  the particle data prior to the actual tracing.
   
   The class supports different ways how the data is projected onto tracer 
   attributes (both which data entries and how they are interpolated), as 
@@ -97,9 +102,11 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction_
 if ( 
   not marker.willBeRefined() 
   and 
-  fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() 
-  and
-  repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
+  (
+    (fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() and repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep())
+    or
+    repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
+  )
 ) {
   for (auto* p: localParticles) {
     if ( 

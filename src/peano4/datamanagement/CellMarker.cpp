@@ -38,26 +38,8 @@ peano4::datamanagement::CellMarker::CellMarker(
                     and _areAllVerticesInsideDomain
                     and not _isOneVertexHanging;
 
-  // @tood Bin mir net sicher
-
   _willBeEnclave  = couldBeEnclave and not _willBeRefined  and not _isOneVertexCreatedOrDestroyed;
   _hasBeenEnclave = couldBeEnclave and not _hasBeenRefined and not _isOneVertexCreatedOrDestroyed;
-
-
-/*
-  return
-     // @todo Docu
-     // Das ist ja in dem Moment noch wurscht
-     // D Fall dass ein Vertex hanging war und jetzt auf new geht, dann gilt
-     // areAllVerticesRefined net, weil dass ja refined davor und jetzt gesetzt haben muss
-// neu darf er net sein.
-// delete darf er schon sein, weil dann war er zuvor halt persistent
-     and not _isOneVertexCreated
-//     and not _isOneVertexCreatedOrDestroyed
-//     and not _subtreeIsChanging
-     and (not isRefined or _areAllVerticesRefined);
-*/
-
 }
 
 

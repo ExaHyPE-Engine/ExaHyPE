@@ -765,7 +765,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     step.add_action_set( self._action_set_update_cell_label )
     #    step.add_action_set( self._action_set_project_patch_onto_faces )
 
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
+    plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._patch, 
       dataset_name=self._unknown_identifier(), 
@@ -778,10 +778,12 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
       precision="PlotterPrecision",
       time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
       select_dofs = self.select_dofs_to_print
-    ))
+    )
+    plot_patches_action_set.priority = self._baseline_action_set_priority
+    step.add_action_set( plot_patches_action_set )
 
     if self._plot_grid_properties:    
-      step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
+      plot_grid_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
         guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
@@ -789,7 +791,9 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """
-      ))
+      )
+      plot_grid_action_set.priority = self._baseline_action_set_priority
+      step.add_action_set( plot_grid_action_set )
       
     pass
    
