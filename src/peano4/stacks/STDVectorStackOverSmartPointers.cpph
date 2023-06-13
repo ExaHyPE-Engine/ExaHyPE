@@ -323,7 +323,7 @@ T peano4::stacks::STDVectorStackOverSmartPointers<T>::pop() {
   assertion( not empty() );
   T result = std::move( _data.back() );
   _data.pop_back();
-  return std::move( result );
+  return result;
 }
 
 

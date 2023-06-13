@@ -286,6 +286,9 @@ class peano4::stacks::STDVectorStackOverSmartPointers {
     /**
      * Pops element from a stack.
      *
+     * I have to be careful how and why I use std::move here, as we employ
+     * smart pointers. I found that a move after the return confuses the 
+     * reference counting, and eventually leads to memory leaks.
      */
     T pop();
 
