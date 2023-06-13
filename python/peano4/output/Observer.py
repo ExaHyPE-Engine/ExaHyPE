@@ -341,8 +341,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
 
   TemplateLoadCell_VertexLoad = """
-  // Load vertex {{local_type_name}}
-  std::function<bool ()> loadVertex{{local_type_name}} = 
+  // Load vertex {{logical_type_name}}
+  std::function<bool ()> loadVertex{{logical_type_name}} = 
     [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
@@ -393,7 +393,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
     tarch::multicore::Task::DontFuse,
     tarch::multicore::Task::DefaultPriority,
-    loadVertex{{local_type_name}}
+    loadVertex{{logical_type_name}}
   ));
   
 """
