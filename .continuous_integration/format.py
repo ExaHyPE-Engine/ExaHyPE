@@ -5,13 +5,20 @@ import sys
 import argparse
 import subprocess
 
-
-verbose = True  # will be overwritten by arg parser
+# Some repository setup.
 peano_repo_rootdir_name = "Peano"
-default_clang_format_file_name = ".clang-format"
 python_venv_dir = ".formatting_python_env"
+
+# These can be overwritten by optional cmdline arg
+default_clang_format_file_name = ".clang-format"
 target_branch = "p4"
 
+# Formatting tools versions
+black_version = "23.3.0"
+clang_version = "16.0.5"
+
+# Global variables for easy access
+verbose = True  # will be overwritten by arg parser
 black_checked = False
 clang_checked = False
 
@@ -68,9 +75,32 @@ def check_black(black_cmd):
     """
     global black_checked
     if not black_checked:
+        # Does it run?
         run = subprocess.run(
-            black_cmd + " --version", shell=True, stdout=subprocess.DEVNULL, check=True
+            black_cmd + " --version",
+            shell=True,
+            stdout=None,
+            check=True,
+            capture_output=True,
         )
+
+        # Now check the version
+        stdout = run.stdout.decode("UTF-8")
+        stdout = stdout.strip()
+        stdout_split = stdout.split()
+
+        if stdout_split[0] != "black,":
+            raise ValueError("black --version output was:", stdout, " ???")
+
+        installed_version = stdout_split[1]
+        if installed_version != black_version:
+            raise ValueError(
+                (
+                    "black formatter executable has version {0} but I require {1}.\n"
+                    + "Please remove all contents from the directory '{2}' and re-run this script."
+                ).format(installed_version, black_version, python_venv_dir)
+            )
+
         black_checked = True
 
     return
@@ -83,9 +113,32 @@ def check_clang(clang_cmd):
     """
     global clang_checked
     if not clang_checked:
+        # Does it run?
         run = subprocess.run(
-            clang_cmd + " --version", shell=True, stdout=subprocess.DEVNULL, check=True
+            clang_cmd + " --version",
+            shell=True,
+            stdout=None,
+            check=True,
+            capture_output=True,
         )
+
+        # Now check the version
+        stdout = run.stdout.decode("UTF-8")
+        stdout = stdout.strip()
+        stdout_split = stdout.split()
+
+        if stdout_split[0] != "clang-format":
+            raise ValueError("clang-format --version output was:", stdout, " ???")
+
+        installed_version = stdout_split[2]
+        if installed_version != clang_version:
+            raise ValueError(
+                (
+                    "clang-format executable has version {0} but I require {1}.\n"
+                    + "Please remove all contents from the directory '{2}' and re-run this script."
+                ).format(installed_version, clang_version, python_venv_dir)
+            )
+
         clang_checked = True
 
     return
@@ -107,7 +160,7 @@ def install_black_formatting_tool():
 
     # The actual install
     run = subprocess.run(
-        bfepython + " -m pip install click==8.1.3 black==23.3.0",
+        bfepython + " -m pip install click==8.1.3 black==" + black_version,
         shell=True,
         check=True,
     )
@@ -135,7 +188,7 @@ def install_clang_formatting_tool():
 
     # The actual install
     run = subprocess.run(
-        clangpython + " -m pip install clang-format==16.0.5",
+        clangpython + " -m pip install clang-format==" + clang_version,
         shell=True,
         check=True,
     )
