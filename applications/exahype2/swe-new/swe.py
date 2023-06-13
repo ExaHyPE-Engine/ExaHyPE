@@ -73,7 +73,7 @@ parser.add_argument("-df",      "--displacement-file", dest="displacement_file",
 parser.add_argument("-maxd",    "--max_dimension_netcdf",dest="max_dimension_netcdf",type=int,            required=False,             help="Use when netCDF4 package not installed to pass maximum dimension to the program.")
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   required=False,             help="Set order of space discretisation for Discontinuous Galerkin." )
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   required=False,             help="Set order of time discretisation for Runge-Kutta scheme." )
-parser.add_argument("-o,"       "--output",            dest="output_path",    type=str,                   default="./",               help="Output path for project output. The project will create a new folder at the given path. Default is the current directory.")
+parser.add_argument("-o",       "--output",            dest="output_path",    type=str,                   default="./",               help="Output path for project output. The project will create a new folder at the given path. Default is the current directory.")
 parser.add_argument("-probes",  nargs='+',             dest="probe_coordinates",type=str,                 required=False,             help="Provide one or more tuples of coordinates [x,y] for tracers (e.g. [15,20.23] [5,14.123]). Coordinates have to be in reference to the simulation domain and must not contain a white space!")
 args = parser.parse_args()
 
@@ -81,6 +81,10 @@ maximum_cell_size = args.max_cell_size
 patch_size = args.patch_size if args.patch_size != None else patch_size
 if not args.output_path.endswith("/"):
   args.output_path += "/"
+
+#########################################
+# Set up scenario to use                #
+#########################################  
 
 my_pde = None
 if args.scenario == "Radial_Bathymetry_Dam_Break":
@@ -111,6 +115,7 @@ elif args.scenario == "Circular_Island":
   my_pde = Circular_Island()
 
 elif args.scenario == "Tsunami":
+
   # check whether flags are set
   if args.bathymetry_file is None: raise Exception("No bathymetry file supplied for the tsunami scenario!")
   if args.displacement_file is None: raise Exception("No displacement file supplied for the tsunami scenario!")
@@ -146,25 +151,40 @@ elif args.scenario == "Tsunami":
   my_pde = Tsunami()
 
 else:
+  # This is the default scenario
   from scenarios.radial_dam_break import Radial_Dam_Break
   my_pde = Radial_Dam_Break(width=width)
 
 my_pde.substitute_expression(my_pde.g, 9.81)
+
+#########################################
+# Set up solver for GPU                 #
+#########################################  
 
 solver_type = args.solver
 if args.gpu:
   if not "Enclave" in solver_type:
     solver_type += "Enclave"
     if solver_type not in solvers:
+      # This is necessary as "-s RKDGRusanovGlobalAdaptive -g" for example currently leads to this scenario
       raise ValueError("The requested solver {} is not available for GPUs!".format(solver_type))
 solver_name = "SWESolver" + str(solver_type)
 
 if args.gpu:
   solver_name += "GPU"
 
+#########################################
+# Set up solver                         #
+#########################################  
+
 my_solver = None
 # finite volume rusanov solver?
 if solver_type in fv_rusanov_solvers:
+
+#########################################
+# Set up solver parameters for FV       #
+#########################################  
+
   my_solver = solvers[solver_type](
     name                      = solver_name,
     patch_size                = patch_size,
@@ -177,13 +197,16 @@ if solver_type in fv_rusanov_solvers:
 
 # rkdg rusanov solver?
 elif solver_type in rkdg_rusanov_solvers:
+  # necessary flags set?
   if args.dg_order is None or args.rk_order is None:
     raise ValueError("When using RKDG, both the -dg-order and -rk-order have to be set!")
   
+  # add flags to solver name for easier distinguishing between executables
   solver_name += "RK%dDG%d" % (args.rk_order, args.dg_order)
   
   from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
 
+  # TODO currently, we have to use different scenarios as the function signatures differ between FV and RKDG
   if args.scenario == "Artificial_Tsunami":
     from scenarios.rkdg_test_artificial_tsunami import RKDG_Test_Artificial_Tsunami
     my_pde = RKDG_Test_Artificial_Tsunami()
@@ -194,7 +217,9 @@ elif solver_type in rkdg_rusanov_solvers:
     from scenarios.rkdg_test_radial_dam_break import RKDG_Test_Radial_Dam_Break
     my_pde = RKDG_Test_Radial_Dam_Break()
 
-  
+#########################################
+# Set up solver parameters for RKDG     #
+#########################################  
 
   my_solver = solvers[solver_type](
     name                      = solver_name,
@@ -211,6 +236,10 @@ elif solver_type in rkdg_rusanov_solvers:
 if args.gpu:
   my_solver.set_pde_terms_without_state(True)
 
+#########################################
+# Add solver constants if necessary     #
+#########################################
+
 my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".format("true" if args.dynamic_amr else "false"))
 
 if args.scenario == "Artificial_Tsunami" or args.scenario == "Circular_Island":
@@ -219,6 +248,10 @@ if args.scenario == "Artificial_Tsunami" or args.scenario == "Circular_Island":
 if args.scenario == "Tsunami":
   my_solver.add_user_solver_includes("#include \"parser/TopologyParser.h\"")
   my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(\"%s\", \"%s\");" % (args.bathymetry_file, args.displacement_file))
+
+#########################################
+# Set up solver implementation          #
+#########################################
 
 my_solver.set_implementation(
   initial_conditions    = my_pde.implementation_of_initial_conditions(),
@@ -233,6 +266,10 @@ my_solver.set_implementation(
 executable_name = "swe-application-2d-solver-name-%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (solver_name, args.scenario, patch_size, args.amr_levels, maximum_cell_size, args.end_time)
 output_path = args.output_path+"output-%s/" % executable_name
 
+#########################################
+# Set up exahype2 project               #
+#########################################
+
 my_project = exahype2.Project( ["applications", "exahype2", "swe"], "SWEApplication", ".", executable=executable_name)
 my_project.add_solver( my_solver )
 my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
@@ -241,9 +278,15 @@ my_project.set_output_path(output_path)
 if not os.path.exists(output_path):
   os.mkdir(output_path)
 
+#########################################
+# Insert probes into simulation domain? #
+#########################################
+
 if args.probe_coordinates != None:
 
+  # import regex for sanitizing coordinates
   import re 
+
   # sanitize coordinates
   coordinates = []
   for coords in args.probe_coordinates:
@@ -253,19 +296,23 @@ if args.probe_coordinates != None:
       coordinates.append([float(splits[1]), float(splits[2])])
     else:
       raise ValueError("Could not parse the illegal coordinates: {}! Is there maybe a white space within the brackets?".format(coords)) 
-  # add particles/probes
+    
+  # add particles/probes to simulation domain at given coordinates
   probes = my_project.add_tracer(name="Probes",attribute_count=4, plot=False) # maybe add a plot=False here to turn off vtu output
   my_project.add_action_set_to_initialisation(
     exahype2.tracer.InsertParticlesByCoordinates(
       particle_set = probes, coordinates=coordinates
     )
   )
+
+  # add probes to be updated during timestepping
   my_project.add_action_set_to_timestepping(
     peano4.toolbox.particles.UpdateParallelState(
       particle_set = probes
     )
   )
   
+  # add fv probe
   if solver_type in fv_rusanov_solvers:
     # TODO only project h and t onto particle
     my_project.add_action_set_to_timestepping(
@@ -275,6 +322,8 @@ if args.probe_coordinates != None:
         project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant"
       )
     )
+
+  #add dg probe
   else:
     # TODO only project h and t onto particle
     my_project.add_action_set_to_timestepping(
@@ -285,6 +334,7 @@ if args.probe_coordinates != None:
       )
     )
 
+  # add data dumping at end of simulation to timestepping
   my_project.add_action_set_to_timestepping(
     exahype2.tracer.DumpTracerIntoDatabase(
       probes,
@@ -301,6 +351,10 @@ if args.probe_coordinates != None:
     )
   )
 
+#########################################
+# Set simulation parameters             #
+#########################################
+
 my_project.set_global_simulation_parameters(
   dimensions            = 2,
   size                  = width,
@@ -312,12 +366,21 @@ my_project.set_global_simulation_parameters(
   periodic_BC           = [False, False, False]
 )
 
+#########################################
+# Generate and build peano4 project     #
+#########################################
+
 peano4_project = my_project.generate_Peano4_project(verbose=True)
+
+# add additional cpps to makefile if necessary
 if args.scenario == "Tsunami": 
   peano4_project.output.makefile.add_cpp_file("parser/TopologyParser.cpp")
   peano4_project.output.makefile.add_cpp_file("parser/NetCDFReader.cpp")
+
+# define project constants if necessary
 if args.scenario == "Artificial_Tsunami":
   peano4_project.constants.define("_USE_MATH_DEFINES")
+
 peano4_project.generate()
 if(args.compile):
-  peano4_project.build(make_clean_first=True, throw_away_data_after_build=False)
+  peano4_project.build(make_clean_first=True, throw_away_data_after_build=True)
