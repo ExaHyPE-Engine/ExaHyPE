@@ -79,7 +79,7 @@ def read_meta_file(path_to_metafile):
   # to the directory of the original meta-file
   with open(os.path.join(
       os.path.dirname(path_to_metafile),
-      'merged_meta_file_2.peano-patch-file'), 'w') as new_meta_file:
+      'merged_meta_file.peano-patch-file'), 'w') as new_meta_file:
     new_meta_file.write("# \n"
                         "# Peano patch file \n"
                         "# Version 0.2 \n"
