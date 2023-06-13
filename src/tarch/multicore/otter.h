@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "config.h"
 #define OTTER_ROOT_PHASES_MODE 2
 
@@ -31,27 +30,30 @@
  * consequently use Otter. The drawback is that we have to ensure that the functions
  * and macros here are always consistent with the latest Otter version.
  */
-namespace otter {
-namespace label{
-    static const char *root = "[ROOT TASK]";
-    static const char *step = "[STEP TASK]";
-    static const char *enclave = "[anonymous enclave task]";
-    static const char *traverse_fmt = "[traversal task %d of %d]";
-    static const char *unknown = "unknown task";
-    static const char *TaskWithCopyOfFunctor = "TaskWithCopyOfFunctor";
-    static const char *TaskWithoutCopyOfFunctor = "TaskWithoutCopyOfFunctor";
-}
+namespace otter
+{
+  namespace label
+  {
+    static const char* root                     = "[ROOT TASK]";
+    static const char* step                     = "[STEP TASK]";
+    static const char* enclave                  = "[anonymous enclave task]";
+    static const char* traverse_fmt             = "[traversal task %d of %d]";
+    static const char* unknown                  = "unknown task";
+    static const char* TaskWithCopyOfFunctor    = "TaskWithCopyOfFunctor";
+    static const char* TaskWithoutCopyOfFunctor = "TaskWithoutCopyOfFunctor";
+  } // namespace label
 
-namespace phase {
-    static const char *init = "init";
-    static const char *plot = "plot";
-    static const char *timestep = "time-step";
-    static const char *create_grid = "create-grid";
-    static const char *create_grid_no_refine = "create-grid-but-postpone-refinement";
-    static const char *create_grid_converge = "create-grid-and-converge-load-balancing";
-}
+  namespace phase
+  {
+    static const char* init                  = "init";
+    static const char* plot                  = "plot";
+    static const char* timestep              = "time-step";
+    static const char* create_grid           = "create-grid";
+    static const char* create_grid_no_refine = "create-grid-but-postpone-refinement";
+    static const char* create_grid_converge  = "create-grid-and-converge-load-balancing";
+  } // namespace phase
 
-}
+} // namespace otter
 
 #if defined(UseOtter)
 #include <otter/otter-task-graph-user.h>
