@@ -435,7 +435,7 @@ int main(int argc, char** argv) {
 //#ifdef UseFenv
   //tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 //#endif
-feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+//feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
   #if PeanoDebug>=2
   tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection();
