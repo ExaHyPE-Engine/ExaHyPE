@@ -128,6 +128,10 @@ class exahype2::RefinementControlService: public tarch::services::Service {
      * This has to happen after the actual MPI exchange, so we can be sure
      * that remote events are not immediately sent back again.
      *
+     * I found it to be very important to merge the committed events immediately:
+     * Peano's spacetrees will merge, too, but if we work with 100 trees per node,
+     * each and every one will merge locally. This is time we better spend on
+     * something else.
      */
     void finishStep();
 

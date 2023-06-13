@@ -1,9 +1,8 @@
 template <typename Particle>
 void toolbox::particles::explicitEuler(
   Particle&                                 particle,
-  double                                    timeStepSize,
-  const ParticleTimeSteppingAccessor auto&  accessor
+  double                                    timeStepSize
 ) {
-  accessor.x(particle) += timeStepSize * accessor.v(particle);
+  particle.x() += timeStepSize * particle.v();
 }
 

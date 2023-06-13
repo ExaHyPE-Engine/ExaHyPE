@@ -161,6 +161,8 @@ namespace tarch {
            */
         std::function<bool()>   _taskFunctor;
       public:
+        TaskWithCopyOfFunctor() = delete;
+        TaskWithCopyOfFunctor( const TaskWithCopyOfFunctor& ) = delete;
         TaskWithCopyOfFunctor( int taskType, int priority, const std::function<bool()>& taskFunctor );
 
         virtual bool run() override;
@@ -178,6 +180,9 @@ namespace tarch {
          */
         std::function<bool()>&   _taskFunctor;
       public:
+        TaskWithoutCopyOfFunctor() = delete;
+        TaskWithoutCopyOfFunctor( const TaskWithoutCopyOfFunctor& ) = delete;
+
         TaskWithoutCopyOfFunctor( int taskType, int priority, std::function<bool()>& taskFunctor );
 
         virtual bool run() override;
