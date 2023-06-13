@@ -965,7 +965,7 @@ if __name__ == "__main__":
         tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
         project.add_action_set_to_initialisation( 
           exahype2.tracer.InsertParticlesByCoordinates( 
-            particle_set=tracer_particles, coordinates=[[0.1,0,0],[-0.1,0,0]]))
+            particle_set=tracer_particles, coordinates=[[2.0,0,0],[-2.0,0,0]]))
 
         project.add_action_set_to_timestepping(
           peano4.toolbox.particles.UpdateParallelState(
@@ -982,7 +982,7 @@ if __name__ == "__main__":
                                                                 {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
                                                                 fineGridCell{{SOLVER_NAME}}Q.value,
                                                                 fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-                                                                {0,1,2},
+                                                                {17,18,19},
                                                                 {-1,-1,-1},
                                                                 *p
                                                                """
