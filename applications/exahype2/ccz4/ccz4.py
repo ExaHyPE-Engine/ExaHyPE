@@ -932,6 +932,9 @@ if __name__ == "__main__":
         init_action_set =  exahype2.tracer.InsertParticlesByCoordinates( 
             #particle_set=tracer_particles, coordinates=[[0,0,8.0],[0,0,-8.0],[8.0,8.0,0]]))
             particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]])
+        #init_action_set = exahype2.tracer.InsertParticlesFromFile( 
+        #                            particle_set=tracer_particles, filename="test-design.dat", scale_factor=abs(offset[0])*0.8)
+        #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
         init_action_set.priority = 0
         project.add_action_set_to_initialisation( init_action_set )
 
