@@ -11,7 +11,7 @@ from exahype2.solvers.ButcherTableau                import ButcherTableau
 
 
 class ProjectPatchOntoFaces( AbstractRKFDActionSet ):
-  """
+  """!
   
    Project patch data onto faces, so the faces hold valid data which 
    can feed into the subsequent Runge-Kutta step

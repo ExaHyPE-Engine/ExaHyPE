@@ -786,9 +786,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
 
   def add_actions_to_init_grid(self, step):
-    """
+    """!
 
-    @todo
+     Add the action sets to the grid initialisation
         
      The AMR stuff has to be the very first thing. Actually, the AMR routines' 
      interpolation doesn't play any role here. But the restriction indeed is
@@ -797,16 +797,13 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      add the AMR action set first which means it will be called last when we go
      from fine to coarse levels within the tree.
      
-     :: Ordering ::
+     ## Ordering
      
      The order of the action sets is preserved throughout the steps down within
      the tree hierarchy. It is inverted throughout the backrolling. 
      
      This is what we want to achieve:
      
-     - Roll updates over on the faces onto Q_old and Q_new.
-     - Copy new face data into old face data, as this is the initial sweep, i.e.
-       the old face data otherwise might hold rubbish.
      - Restrict the data to the coarser level if we are on a hanging face. 
      
     

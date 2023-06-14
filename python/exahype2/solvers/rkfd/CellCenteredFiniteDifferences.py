@@ -540,6 +540,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     self._action_set_initial_conditions.priority                       = self._baseline_action_set_priority+1
     self._action_set_initial_conditions_for_grid_construction.priority = self._baseline_action_set_priority+1
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = self._baseline_action_set_priority
+    self._action_set_copy_new_faces_onto_old_faces.priority                                    = self._baseline_action_set_priority
     self._action_set_roll_over_update_of_faces.priority                                        = self._baseline_action_set_priority + 1
     self._action_set_update_face_label.priority                                                = self._baseline_action_set_priority + 2
     self._action_set_update_cell_label.priority                                                = self._baseline_action_set_priority + 2
@@ -666,6 +667,8 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
   def add_actions_to_init_grid(self, step):
     """!
     
+     Add your actions to init grid
+    
      The AMR stuff has to be the very first thing. Actually, the AMR routines' 
      interpolation doesn't play any role here. But the restriction indeed is
      very important, as we have to get the face data for BCs et al. The action 
@@ -677,20 +680,34 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
      to DG, where we need face data for the current time step's solution. Here,
      we ensure that all halos are valid for the subsequent time step again.
      
-     :: Ordering ::
+     ## Ordering 
      
      The order of the action sets is preserved throughout the steps down within
      the tree hierarchy. It is inverted throughout the backrolling. 
      
      This is what we want to achieve:
      
-     - Roll updates over on the faces onto Q_old and Q_new.
-     - Copy new face data into old face data, as this is the initial sweep, i.e.
-       the old face data otherwise might hold rubbish.
+     - Project solution onto faces. This happens in touchCellLastTime(). See
+       exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces for comments.
+       The project will end up in QUpdate.
+     - Roll updates over on the faces from QUpdate into Q_new. This is done
+       by RollOverUpdateFace, which requires in turn that the getUpdated()
+       flag is set. As the roll-over plugs into touchFaceLastTime(), it will
+       always be called after the projection, since the latter is a cell 
+       operation.
+     - Copy new face data Q_new into old face data Q_old, as this is the 
+       initial sweep, i.e. the old face data otherwise might hold rubbish.
+       This is a backup operation realised through the action set 
+       BackupPatchOverlap. This one plugs into touchFaceLastTime() too. 
+       Therefore, it is important that its priority is smaller than the one
+       of the roll-over, since we invert the call order for the touch-last
+       events.
      - Restrict the data to the coarser level if we are on a hanging face. 
      
     
     """
+    assert self._action_set_copy_new_faces_onto_old_faces.priority < self._action_set_roll_over_update_of_faces.priority
+    
     step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
