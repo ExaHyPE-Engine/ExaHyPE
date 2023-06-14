@@ -77,6 +77,7 @@ class HdgFirstDiscretisation(Solver):
     # self._cellDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["interior", "exterior"] ) )
 
     #add in some unknowns for the faces 
+    #our aim is to have multiple dofs per face, but we just store the starting index in "number"
     self._face_unknowns = face_dofs
     self._faceDof = peano4.datamodel.DaStGen2( name )
     self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(face_dofs) ) )
@@ -189,9 +190,6 @@ class HdgFirstDiscretisation(Solver):
         "SOLVER_INCLUDES": "",
         "MIN_H": self.min_h,
         "MAX_H": self.max_h,
-        ###
-        # fix this
-        ###
         "VERTEX_CARDINALITY": self._vertex_unknowns,
         "CELL_CARDINALITY":   self._cell_unknowns,
         "FACE_CARDINALITY":   self._face_unknowns,

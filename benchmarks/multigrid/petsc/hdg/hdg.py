@@ -22,21 +22,26 @@ parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
 parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument("-d",   "--dimensions",         dest="dimensions",     default=2, help="Dimensions")
-parser.add_argument("-cd",  "--celldofs",           dest="cellDofs",       default=1, help="Degrees of freedom per cell")
-parser.add_argument("-fd",  "--facedofs",           dest="faceDofs",       default=1, help="Degrees of freedom per cell")
+parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
+parser.add_argument("-deg", "--degree",             dest="degree",         type=int, default=3, help="Polynomial degree")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.1, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
-#add a 9 point stencil which will 
-#be passed to PETSc at matrix initialisation stage
-# stencil=[
-#   [-1/3, -1/3, -1/3],
-#   [-1/3,  8/3, -1/3],
-#   [-1/3, -1/3, -1/3]
-# ]
-stencil=[]
+
+'''
+set the number of cell and face dofs
+'''
+cellDofs = 1 #we aren't using this; hardcode as 1
+faceDofs = 3**(args.dimensions-1) #3 per face in 2d, 9 in 3d
+
+'''
+add a stencil. should be 12*12 in 2d and 54 * 54 in 3d
+'''
+stencil=[
+  [1 for _ in range(faceDofs * 2 * args.dimensions)]
+    for _ in range(faceDofs * 2 * args.dimensions)
+]
 
 project = petsc.Project(project_name = "HDG", 
                         namespace = [ "benchmarks", "multigrid", "petsc", "hdg" ]
@@ -44,8 +49,8 @@ project = petsc.Project(project_name = "HDG",
                         
                         
 solver = petsc.solvers.HdgFirstDiscretisation("HDG", 
-                                              args.cellDofs,
-                                              args.faceDofs,
+                                              cellDofs,
+                                              faceDofs,
                                               args.meshsize,
                                               args.meshsize,
                                               stencil
