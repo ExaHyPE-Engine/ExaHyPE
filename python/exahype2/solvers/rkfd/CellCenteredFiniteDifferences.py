@@ -459,12 +459,14 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 
   @abstractmethod
   def create_action_sets(self):
-    """
-    
+    """!
+
+     Create required action sets
+         
      Overwrite in subclasses if you wanna create different
      action sets.
      
-     :: Call order and ownership
+     ## Call order and ownership
      
      This operation can be called multiple times. However, only the very
      last call matters. All previous calls are wiped out.
@@ -495,7 +497,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
      scheme. Therefore, I have to hold the interpolation and restriction
      scheme seperatae.
      
-     :: Injecting your own guards
+     ## Injecting your own guards
      
      If you inject your own guards, you should combine them with a storage
      predicate, i.e. _store_cell_data_default_guard() and 
@@ -503,6 +505,14 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
      combine the guard with further boolean expressions. Also, you have to 
      study carefully if a predicate accepts a unique guard or a set of 
      guards.
+     
+     
+     ## Priorities
+     
+     All action sets are given the right (default) priorities in this step. 
+     You can alter them in subclasses, but it might be more appropriate to
+     set the priorities of your own action sets relative to the existing
+     ones using self._baseline_action_set_priority.
      
     """
     self._action_set_initial_conditions                          = exahype2.solvers.rkfd.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
@@ -542,7 +552,6 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     self._action_set_preprocess_solution.priority                      = self._baseline_action_set_priority
         
     self._action_set_update_cell = None
-
 
 
   def _store_cell_data_default_guard(self):
@@ -600,7 +609,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 
   
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
-    """
+    """!
     
       Add all required data to the Peano4 project's datamodel 
       so it is properly built up
@@ -655,7 +664,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 
 
   def add_actions_to_init_grid(self, step):
-    """
+    """!
     
      The AMR stuff has to be the very first thing. Actually, the AMR routines' 
      interpolation doesn't play any role here. But the restriction indeed is
@@ -728,7 +737,9 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     
   
   def add_actions_to_plot_solution(self, step, output_path):
-    """
+    """!
+    
+     Add action sets to plotting grid sweep
     
      Consult the discussion in add_actions_to_init_grid() around the order
      of the individual action sets.
@@ -765,7 +776,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     step.add_action_set( self._action_set_update_cell_label )
     #    step.add_action_set( self._action_set_project_patch_onto_faces )
 
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
+    plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._patch, 
       dataset_name=self._unknown_identifier(), 
@@ -778,10 +789,12 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
       precision="PlotterPrecision",
       time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
       select_dofs = self.select_dofs_to_print
-    ))
+    )
+    plot_patches_action_set.priority = self._baseline_action_set_priority
+    step.add_action_set( plot_patches_action_set )
 
     if self._plot_grid_properties:    
-      step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
+      plot_grid_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
         guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
@@ -789,7 +802,9 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """
-      ))
+      )
+      plot_grid_action_set.priority = self._baseline_action_set_priority
+      step.add_action_set( plot_grid_action_set )
       
     pass
    

@@ -29,7 +29,7 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
 
 
 class RungeKuttaDG(object):
-  """ 
+  """! 
   
     An abstract class for any RKDG solver of any order 
     
@@ -886,7 +886,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
           mapping.append( (x,y,z) )
           
           
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
+    plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._current_time_step,
       dataset_name=self._unknown_identifier(), 
@@ -901,10 +901,12 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
       time_stamp_evaluation="repositories::getMinTimeStamp()", 
       plot_cell_data=False,
       select_dofs = self.select_dofs_to_print
-    ))
+    )
+    plot_patches_action_set.priority = self._baseline_action_set_priority
+    step.add_action_set( plot_patches_action_set )
 
     if self._plot_grid_properties:    
-      step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
+      plot_grid_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
         guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
@@ -913,7 +915,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 #include "../repositories/SolverRepository.h"
 """,     
         plot_cell_data=False
-      ))
+      )
+      plot_grid_action_set.priority = self._baseline_action_set_priority
+      step.add_action_set( plot_grid_action_set )
       
     pass
    
