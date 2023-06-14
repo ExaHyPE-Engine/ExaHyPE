@@ -266,6 +266,66 @@ class AbstractCCZ4Solver(object):
     pass
   
         
+class CCZ4Solver_FV_GlobalAdaptiveTimeStep(AbstractCCZ4Solver,exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep):
+  """!
+  
+  CCZ4 solver using finite volumes and global adaptive time stepping incl enclave tasking
+  
+  Please consult CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking.
+    
+  """
+  def __init__(self,
+               name,
+               patch_size,
+               min_volume_h,
+               max_volume_h,
+               ):  
+    AbstractCCZ4Solver.__init__(self)
+    exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep.__init__(self,
+                                                                    name                 = name,
+                                                                    patch_size           = patch_size,
+                                                                    unknowns             = sum(self._FO_formulation_unknowns.values()),
+                                                                    auxiliary_variables  = 0,
+                                                                    min_volume_h         = min_volume_h,
+                                                                    max_volume_h         = max_volume_h,
+                                                                    time_step_relaxation = AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation
+                                                                    )
+    self._add_standard_includes()
+
+    self.set_implementation(
+          boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          ncp                  = construct_FV_ncp(),
+          flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
+          source_term          = construct_FV_source_term(),
+          refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          eigenvalues          = construct_FV_eigenvalues()
+        )    
+
+    self.postprocess_updated_patch += consruct_FV_postprocessing_kernel()
+
+  def add_tracer(self,
+                 name,
+                 coordinates,
+                 project,
+                 tracer_unknowns = None,
+                 ):
+    """!
+    
+    Add tracer to project
+    
+    project: exahype2.Project
+    
+    """
+    add_tracer_to_FV_solver(name,
+                             coordinates,
+                             project,
+                             tracer_unknowns,
+                             self,
+                             )
+
+
+  
+        
 class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking):
   """!
   
@@ -312,40 +372,14 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
 
     self.set_implementation(
           boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
-          ncp                  = """
-  double deltaQSerialised[NumberOfUnknowns*3];
-  for (int i=0; i<NumberOfUnknowns; i++) {
-    deltaQSerialised[i+0*NumberOfUnknowns] = 0.0;
-    deltaQSerialised[i+1*NumberOfUnknowns] = 0.0;
-    deltaQSerialised[i+2*NumberOfUnknowns] = 0.0;
-
-    deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
-  }
-  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
-""",
+          ncp                  = construct_FV_ncp(),
           flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
-          source_term          = """
-  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
-  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
-""",
+          source_term          = construct_FV_source_term(),
           refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
-          eigenvalues          = """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
-"""          
+          eigenvalues          = construct_FV_eigenvalues()
         )    
 
-    self.postprocess_updated_patch += """
-{
-    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
-    int index = 0;
-    for (int i=0;i<itmax;i++)
-    {
-      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-"""
-
+    self.postprocess_updated_patch += construct_FV_postprocessing_kernel()
 
   def add_tracer(self,
                  name,
@@ -360,7 +394,108 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
     project: exahype2.Project
     
     """
-    number_of_attributes = (self.unknowns + self.auxiliary_variables) if tracer_unknowns==None else len(tracer_unknowns)
+    add_tracer_to_FV_solver(name,
+                             coordinates,
+                             project,
+                             tracer_unknowns,
+                             self,
+                             )
+
+
+def construct_FD4_ncp():
+  return """
+  double deltaQSerialised[NumberOfUnknowns*3];
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    deltaQSerialised[i+0*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+1*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+2*NumberOfUnknowns] = 0.0;
+
+    deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
+  }
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+"""
+
+
+def construct_FV_ncp():
+  return """
+  double deltaQSerialised[NumberOfUnknowns*3];
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    deltaQSerialised[i+0*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+1*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+2*NumberOfUnknowns] = 0.0;
+
+    deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
+  }
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+"""
+
+
+def construct_FD4_source_term():
+  return """
+  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+"""
+
+
+def construct_FV_source_term():
+  return """
+  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+"""
+
+
+def construct_FD4_eigenvalues():
+  return """
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+"""
+
+
+def construct_FV_eigenvalues():
+  return """
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+"""          
+
+
+def construct_FD4_postprocessing_kernel():
+  return """
+{
+    constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
+
+
+def construct_FV_postprocessing_kernel():
+  return """
+{
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
+
+
+def add_tracer_to_FV_solver(name,
+                            coordinates,
+                            project,
+                            tracer_unknowns,
+                            solver,
+                            ):
+    """!
+    
+    I realise this as a separate routine, as we need it for all FV flavours
+    
+    """
+    number_of_attributes = (solver.unknowns + solver.auxiliary_variables) if tracer_unknowns==None else len(tracer_unknowns)
     tracer_particles = project.add_tracer( name=name,attribute_count=number_of_attributes )
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
@@ -375,35 +510,69 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
       project_on_tracer_properties_kernel = "::exahype2::fv::projectValuesOntoParticle_piecewiseLinear<{}>".format(tracer_unknowns).replace("[","").replace("]","")
 
     tracing_action_set = exahype2.tracer.FiniteVolumesTracing(tracer_particles,
-                                                self,
-                                                project_on_tracer_properties_kernel=project_on_tracer_properties_kernel,
-#                                                projection_kernel_arguments="""
-#marker,
-#{{PATCH_SIZE}},
-#{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-#fineGridCell{{SOLVER_NAME}}Q.value,
-#fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-#{16,17,18},
-#*p
-#"""
-                                                )
-    tracing_action_set.priority = self._action_set_update_cell.priority+1
+                                                              solver,
+                                                              project_on_tracer_properties_kernel=project_on_tracer_properties_kernel,
+                                                              )
+    tracing_action_set.priority = solver._action_set_update_cell.priority+1
     project.add_action_set_to_timestepping(tracing_action_set)
 
     dump_into_database_action_set = exahype2.tracer.DumpTracerIntoDatabase(
-      particle_set=tracer_particles,
-      solver=self,
-      filename=name + "-" + self._name,
-      number_of_entries_between_two_db_flushes=5000,
-      output_precision=10,
-      data_delta_between_two_snapsots=1e16,
-      time_delta_between_two_snapsots=0.01
+      particle_set                             = tracer_particles,
+      solver                                   = solver,
+      filename                                 = name + "-" + solver._name,
+      number_of_entries_between_two_db_flushes = 5000,
+      output_precision                         = 10,
+      data_delta_between_two_snapsots          = 1e16,
+      time_delta_between_two_snapsots          = 0.01
       )  
-    dump_into_database_action_set.priority = self._action_set_update_cell.priority+2
+    dump_into_database_action_set.priority = solver._action_set_update_cell.priority+2
+    project.add_action_set_to_timestepping(dump_into_database_action_set)
+    
+        
+def add_tracer_to_FD4_solver(name,
+                             coordinates,
+                             project,
+                             tracer_unknowns,
+                             solver,
+                             ):
+    """!
+    
+    I realise this as a separate routine, as we need it for all FD4 flavours
+    
+    """
+    number_of_attributes = (solver.unknowns + solver.auxiliary_variables) if tracer_unknowns==None else len(tracer_unknowns)
+    tracer_particles = project.add_tracer( name=name,attribute_count=number_of_attributes )
+    project.add_action_set_to_initialisation( 
+      exahype2.tracer.InsertParticlesByCoordinates( 
+        particle_set=tracer_particles, coordinates=coordinates))
+    project_on_tracer_properties_kernel = ""
+    if tracer_unknowns==None:
+      project_on_tracer_properties_kernel = "::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
+    elif len(tracer_unknowns)==1:
+      project_on_tracer_properties_kernel = "::exahype2::fv::projectValueOntoParticle_piecewiseLinear<{},{}>".format(i,tracer_unknowns.index(i))
+    else:
+      project_on_tracer_properties_kernel = "::exahype2::fv::projectValuesOntoParticle_piecewiseLinear<{}>".format(tracer_unknowns).replace("[","").replace("]","")
+      
+    tracing_action_set = exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                solver,
+                                                project_on_tracer_properties_kernel=project_on_tracer_properties_kernel
+                                                )
+    tracing_action_set.priority = solver._action_set_compute_final_linear_combination.priority+1
+    project.add_action_set_to_timestepping(tracing_action_set)
+
+    dump_into_database_action_set = exahype2.tracer.DumpTracerIntoDatabase(
+        particle_set                             = tracer_particles,
+        solver                                   = solver,
+        filename                                 = name + "-" + solver._name,
+        number_of_entries_between_two_db_flushes = 5000,
+        output_precision                         = 10,
+        data_delta_between_two_snapsots          = 1e16,
+        time_delta_between_two_snapsots          = 0.01
+        )
+    dump_into_database_action_set.priority = solver._action_set_compute_final_linear_combination.priority+2
     project.add_action_set_to_timestepping(dump_into_database_action_set)
 
 
-  
 class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking):
   """!
   
@@ -463,40 +632,15 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
 
     self.set_implementation(
           boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
-          ncp                  = """
-  double deltaQSerialised[NumberOfUnknowns*3];
-  for (int i=0; i<NumberOfUnknowns; i++) {
-    deltaQSerialised[i+0*NumberOfUnknowns] = 0.0;
-    deltaQSerialised[i+1*NumberOfUnknowns] = 0.0;
-    deltaQSerialised[i+2*NumberOfUnknowns] = 0.0;
-
-    deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
-  }
-  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
-""",
+          ncp                  = construct_FD4_ncp(),
           flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
-          source_term          = """
-  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
-  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
-""",
+          source_term          = construct_FD4_source_term(),
           refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
-          eigenvalues          = """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
-"""
-        )
+          eigenvalues          = construct_FD4_eigenvalues(),
+          )
 
-    self.postprocess_updated_patch += """
-{
-    constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
-    int index = 0;
-    for (int i=0;i<itmax;i++)
-    {
-      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-"""
-
+    self.postprocess_updated_patch += construct_FD4_postprocessing_kernel()
+    
     exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( self, "TP_linear_with_linear_extrap_normal_interp" ) 
     exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   self, "TP_average_normal_extrap" ) 
 
@@ -514,38 +658,87 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
     project: exahype2.Project
     
     """
-    number_of_attributes = (self.unknowns + self.auxiliary_variables) if tracer_unknowns==None else len(tracer_unknowns)
-    tracer_particles = project.add_tracer( name=name,attribute_count=number_of_attributes )
-    project.add_action_set_to_initialisation( 
-      exahype2.tracer.InsertParticlesByCoordinates( 
-        particle_set=tracer_particles, coordinates=coordinates))
-    project_on_tracer_properties_kernel = ""
-    if tracer_unknowns==None:
-      project_on_tracer_properties_kernel = "::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
-    elif len(tracer_unknowns)==1:
-      project_on_tracer_properties_kernel = "::exahype2::fv::projectValueOntoParticle_piecewiseLinear<{},{}>".format(i,tracer_unknowns.index(i))
-    else:
-      project_on_tracer_properties_kernel = "::exahype2::fv::projectValuesOntoParticle_piecewiseLinear<{}>".format(tracer_unknowns).replace("[","").replace("]","")
-      
-    tracing_action_set = exahype2.tracer.FiniteVolumesTracing(tracer_particles,
-                                                self,
-                                                project_on_tracer_properties_kernel=project_on_tracer_properties_kernel
-                                                )
-    tracing_action_set.priority = self._action_set_compute_final_linear_combination.priority+1
-    project.add_action_set_to_timestepping(tracing_action_set)
+    add_tracer_to_FD4_solver(name,
+                             coordinates,
+                             project,
+                             tracer_unknowns,
+                             self,
+                             )
 
-    dump_into_database_action_set = exahype2.tracer.DumpTracerIntoDatabase(
-        particle_set=tracer_particles,
-        solver=self,
-        filename=name + "-" + self._name,
-        number_of_entries_between_two_db_flushes=5000,
-        output_precision=10,
-        data_delta_between_two_snapsots=1e16,
-        time_delta_between_two_snapsots=0.01
-        )
-    dump_into_database_action_set.priority = self._action_set_compute_final_linear_combination.priority+2
-    project.add_action_set_to_timestepping(dump_into_database_action_set)
 
+
+
+class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(AbstractCCZ4Solver,exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep):
+  """!
+  
+  CCZ4 solver using fourth-order finite differences and global adaptive time stepping incl enclave tasking
+  
+  Consult CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking please.
+    
+  """
+  def __init__(self,
+               name,
+               patch_size,
+               rk_order,
+               min_meshcell_h,
+               max_meshcell_h,
+               ):  
+    """!
+    
+    Constructor
+    
+    Calibrate the default time step size calibration with 1/16 to take into 
+    account that we have a higher-order numerical scheme.
+        
+    """
+    AbstractCCZ4Solver.__init__(self)
+    exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep.__init__(self,
+                                                              name                 = name,
+                                                              patch_size           = patch_size,
+                                                              rk_order             = rk_order,
+                                                              unknowns             = sum(self._FO_formulation_unknowns.values()),
+                                                              auxiliary_variables  = 0,
+                                                              min_meshcell_h         = min_meshcell_h,
+                                                              max_meshcell_h         = max_meshcell_h,
+                                                              time_step_relaxation = AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation / 16.0
+                                                              )
+    
+    self._add_standard_includes()
+
+    self.set_implementation(
+          boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          ncp                  = construct_FD4_ncp(),
+          flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
+          source_term          = construct_FD4_source_term(),
+          refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          eigenvalues          = construct_FD4_eigenvalues(),
+          )
+
+    self.postprocess_updated_patch += construct_FD4_postprocessing_kernel()
+    
+    exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( self, "TP_linear_with_linear_extrap_normal_interp" ) 
+    exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   self, "TP_average_normal_extrap" ) 
+
+
+  def add_tracer(self,
+                 name,
+                 coordinates,
+                 project,
+                 tracer_unknowns = None,
+                 ):
+    """!
+    
+    Add tracer to project
+    
+    project: exahype2.Project
+    
+    """
+    add_tracer_to_FD4_solver(name,
+                             coordinates,
+                             project,
+                             tracer_unknowns,
+                             self,
+                             )
 
 
 class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking):
