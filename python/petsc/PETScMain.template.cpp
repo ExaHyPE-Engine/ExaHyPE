@@ -200,9 +200,12 @@ void step() {
         const int totalNumberOfCells    = repositories::getTotalCellDofs();
         logInfo( "step()", "total no of face dofs=" << totalNumberOfFaces );
         logInfo( "step()", "total no of cell dofs=" << totalNumberOfCells );
-        {% endif %}
+        logInfo( "step()", "initialising petsc matrix with " << totalNumberOfFaces << " dofs" );
+        repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfFaces );
 
+        {%else%}
         repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );
+        {% endif %}
         
         watch.stop();
         initMeasurement.setValue( watch.getCalendarTime() );
@@ -217,9 +220,7 @@ void step() {
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
 
         //assemble the matrix
-        {% if Project_Name=="Poisson" %}
         repositories::instanceOfPetsc.assemble();
-        {% endif %}
         watch.stop();
         assembleMeasurement.setValue( watch.getCalendarTime() );
       }

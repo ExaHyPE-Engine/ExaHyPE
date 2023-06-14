@@ -53,7 +53,14 @@ class {{NAMESPACE | join("::")}}::PetscData{
     void incrementDoubleAtIndexij(int i, int j, double val);
     void applyStencilToA(int numRows, int rowIndices, int numCols, int colIndices, double values[], double scale);
 
-    void insertLocalMatrix( std::vector< std::pair<int,int> > indices, std::vector<double> values );
+
+    /**
+    * method to insert values into matrix based on stencil
+    * \param indices - the indices of the DoFs in question
+    * \param values  - logically 2d array of doubles
+              the length of values should be equal to indices.size() * indices.size()
+    */
+    void insertLocalMatrix( const std::vector< int >& indices, const double* values );
 
     /**
     * method to insert value and rhs into the _x and _b vectors 

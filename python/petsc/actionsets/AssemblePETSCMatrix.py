@@ -277,7 +277,24 @@ Define body of constructor
 class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
   ## add templates
   TemplateInitCell = """
-  return;
+  if (not marker.willBeRefined()){
+    //init temp vector to collect the indices we use
+    std::vector<int> faceDofIndices;
+
+    //enumerate the faces
+    for (int face=0; face<2*Dimensions; face++){
+      //get global index
+      std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}(face).getNumber());
+      int globalIndex = repositories::{{SOLVER_INSTANCE}}.getFaceLocalToGlobalMap().getGlobalIndex(localIndex);
+
+      //insert the faceDofs into our temp vector.
+      for (int i=0; i<_faceDofs; i++)
+        faceDofIndices.push_back( globalIndex + i );
+    }
+
+    //we have constructed everything we need. send to petsc.
+    repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, _stencil.data() );
+  }
 """
 
   def __init__(self, solver):
@@ -359,6 +376,7 @@ Consult petsc.Project for details
     """!
     """
     return f"""
-  int _spacetreeId;    
+  int _spacetreeId;
+  const int _faceDofs = {self.d["FACE_CARDINALITY"]}; 
   const tarch::la::Matrix<{self.d["stencilRows"]},{self.d["stencilRows"]},double> _stencil = {self.d["STENCIL"]};
 """
