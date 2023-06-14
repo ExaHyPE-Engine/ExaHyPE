@@ -13,21 +13,6 @@ Enumerate the vertices
   
   """
   
-  
-#   TemplateEnumerateVertex = """
-#   if ( 
-#     not marker.willBeRefined() 
-#     and
-#     fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
-#   ) { 
-#     logTraceIn( "touchVertexFirstTime(...)---InitialCondition" );
-
-#     fineGridVertex{{SOLVER_NAME}}.setNumber( _localMap.reserveIndex( {{VERTEX_CARDINALITY}} ) );
-    
-#     logTraceOut( "touchVertexFirstTime(...)---InitialCondition" );
-#   } 
-# """
-
   TemplateEnumerateCell = """
   if ( not marker.willBeRefined() ){
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );

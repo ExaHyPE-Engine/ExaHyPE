@@ -285,12 +285,38 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     self.d["CELL_CARDINALITY"]   = solver.number_of_cell_unknowns
     self.d["FACE_CARDINALITY"]   = solver.number_of_face_unknowns
 
+    ##handling stencil
+
+    ##first, capture the dimensions of the stencil
+    self.d["stencilRows"] = len(solver.stencil)
+    self.d["stencilCols"] = len(solver.stencil[0])
+    #pass in stencil as a list of lists
+    #convert it to a flat list for passing as std::initializer_list
+    stencil=[item for sublist in solver.stencil for item in sublist]
+    self.d["STENCIL"] = "{" + str(stencil[0])
+    for el in stencil[1:]:
+      self.d["STENCIL"] += ", "
+      self.d["STENCIL"] += str(el)
+    self.d["STENCIL"] += "}"
+
+  def get_constructor_body(self):
+    return f"""
+    _spacetreeId = treeNumber;
+"""
+
+
   def get_body_of_operation(self, operation_name):
+    """!
+    for now, only touch face first time
+    """
     ## add touchcellfirsttime
 
     ## add touch face first time
-
-    return """"""
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.TemplateInitCell).render(**self.d)
+      pass 
+    return result
 
   def get_action_set_name(self):
     """!
@@ -323,5 +349,13 @@ Consult petsc.Project for details
     
 """    
     return """
+#include "tarch/la/Matrix.h"
 #include "repositories/SolverRepository.h"
+"""
+  def get_attributes(self):
+    """!
+    """
+    return f"""
+  int _spacetreeId;    
+  const tarch::la::Matrix<{self.d["stencilRows"]},{self.d["stencilRows"]},double> _stencil = {self.d["STENCIL"]};
 """
