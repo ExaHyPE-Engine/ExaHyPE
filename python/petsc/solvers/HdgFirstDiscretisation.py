@@ -7,7 +7,7 @@ import dastgen2
 import os
 
 from .Solver                                    import Solver
-from petsc.actionsets.EnumerateVertices         import EnumerateVertices
+from petsc.actionsets.EnumerateCellsAndFaces    import EnumerateCellsAndFaces
 from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
@@ -137,8 +137,8 @@ class HdgFirstDiscretisation(Solver):
     
     """
     observer.add_action_set( InitVertexDoFs(self) ) 
-    # observer.add_action_set( EnumerateVertices(self) ) 
     observer.add_action_set( InitFaceAndCellDoFs(self) ) 
+    observer.add_action_set( EnumerateCellsAndFaces(self) ) 
     pass
   
   

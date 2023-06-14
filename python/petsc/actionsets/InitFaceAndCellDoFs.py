@@ -35,6 +35,8 @@ degrees of freedom and the global mapping for indices on faces and cells
   };
 
   if (!marker.willBeRefined()){
+    logTraceIn( "touchFaceFirstTime(...)---InitialCondition" );
+
     int faceNumber = marker.getSelectedFaceNumber();
     std::pair<int,int> crucialIndices = getCrucialIndices(faceNumber);
     if(
@@ -46,9 +48,6 @@ degrees of freedom and the global mapping for indices on faces and cells
     }
     else{
       fineGridFace{{SOLVER_NAME}}.setType(facedata::{{SOLVER_NAME}}::Type::Interior);
-
-      //we can also give it a DoF
-      fineGridFace{{SOLVER_NAME}}.setNumber( _faceLocalMap.reserveIndex( {{FACE_CARDINALITY}} ) );
     }
 
     // place some values in the mesh for the face
@@ -65,14 +64,13 @@ degrees of freedom and the global mapping for indices on faces and cells
     /*
     * todo place these values into the mesh
     */
+    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
+
   }
   """
 
   TemplateInitCell="""
   if ( not marker.willBeRefined() ){
-    //first, we give it a DoF
-    fineGridCell{{SOLVER_NAME}}.setNumber( _cellLocalMap.reserveIndex( {{CELL_CARDINALITY}} ) );
-
     // place some values in the mesh for the face
     tarch::la::Vector<{{CELL_CARDINALITY}}, double>   value;
     tarch::la::Vector<{{CELL_CARDINALITY}}, double>   rhs;
@@ -90,11 +88,6 @@ degrees of freedom and the global mapping for indices on faces and cells
   }
 
   """
-  #when we get to the end of the traversal, merge the maps together
-  TemplateEndTraversal="""
-  repositories::{{SOLVER_INSTANCE}}.getCellLocalToGlobalMap().merge( _cellLocalMap );
-  repositories::{{SOLVER_INSTANCE}}.getFaceLocalToGlobalMap().merge( _faceLocalMap );
-"""
   
   def __init__(self,
                solver):
@@ -131,9 +124,6 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
       result = jinja2.Template(self.TemplateInitCell).render(**self.d)
       pass 
 
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
-      result = jinja2.Template(self.TemplateEndTraversal).render(**self.d)
-      pass 
     return result
 
 
@@ -164,18 +154,12 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
 
   def get_attributes(self):
     """!
-    This time, we will have a L2G map for cells and faces each
     """
     return """
-  ::petsc::LocalToGlobalMap  _cellLocalMap;
-  ::petsc::LocalToGlobalMap  _faceLocalMap;
 """
 
   def get_constructor_body(self):
     return """
-  _cellLocalMap.setTreeNumber( treeNumber );
-  _faceLocalMap.setTreeNumber( treeNumber );
-
 """
 
   def get_includes(self):

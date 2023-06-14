@@ -28,7 +28,7 @@ Enumerate the vertices
   if ( not marker.willBeRefined() ){
     logTraceIn( "touchFaceFirstTime(...)---InitialCondition" );
 
-    fineGridCell{{SOLVER_NAME}}.setNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) )
+    fineGridFace{{SOLVER_NAME}}.setNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) )
 
     logTraceOut( "touchFaceFirstTime(...)---InitialCondition" );
   }
@@ -55,7 +55,7 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
   degrees of freedom are assigned exclusively to the vertices.
     
     """
-    super( EnumerateVertices, self ).__init__()
+    super( EnumerateCellsAndFaces, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
