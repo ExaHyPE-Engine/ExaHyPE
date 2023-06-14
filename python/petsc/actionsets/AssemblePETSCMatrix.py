@@ -276,6 +276,9 @@ Define body of constructor
 
 class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
   ## add templates
+  TemplateInitCell = """
+  return;
+"""
 
   def __init__(self, solver):
     super( AssemblePETSCMatrixOnCellsAndFaces, self ).__init__()
