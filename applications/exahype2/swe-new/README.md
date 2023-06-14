@@ -4,14 +4,14 @@
 ## Full Equations ##
 
 $$
-\frac{\partial}{\partial_t} \begin{pmatrix}
+\frac{\partial}{\partial t} \begin{pmatrix}
                 h\\hu\\hv
                \end{pmatrix}
-               + \frac{\partial}{\partial_x}
+               + \frac{\partial}{\partial x}
                \begin{pmatrix}
                 hu\\hu^2 + \frac{1}{2} \cdot gh^2\\huv
                \end{pmatrix}
-               +  \frac{\partial}{\partial_y}
+               +  \frac{\partial}{\partial y}
                \begin{pmatrix}
                 hv\\huv\\hv^2 + \frac{1}{2} \cdot gh^2
                \end{pmatrix}
@@ -23,7 +23,7 @@ $$
                \end{pmatrix}
 $$
 
-With $b(x)$ being the bathymetry measured from a reference $D$ (normal sea level, negative below, positive above), $h(x,y,t)$ being the total positive water depth and $g$ the earth's gravitational acceleration set to $9.81ms^{-2}$. The two velocities $u(x,y,t)$ and $v(x,y,t)$ are the velocities in x- and y-dimension respectively.
+With $b(x,y)$ being the bathymetry measured from a reference $D$ (normal sea level, negative below, positive above), $h(x,y,t)$ being the total positive water depth and $g$ the earth's gravitational acceleration set to $9.81ms^{-2}$. The two velocities $u(x,y,t)$ and $v(x,y,t)$ are the velocities in x- and y-dimension respectively.
 
 The eigenvalues (wave speeds) in x-dimension are given by:
 
