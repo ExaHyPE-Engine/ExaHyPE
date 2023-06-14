@@ -388,7 +388,7 @@ bool peano4::grid::internal::twoEventsAreAdjacent( const peano4::grid::GridContr
   const double relativeTolerance = tarch::la::relativeEps( tarch::la::volume(lhs.getWidth()), tarch::la::volume(rhs.getWidth()), tolerance );
   const double fusedEventsSize   = tarch::la::volume(lhs.getWidth()) + tarch::la::volume(rhs.getWidth());
   return tarch::la::equals( lhs.getH(), rhs.getH(), relativeTolerance )
-     and tarch::la::smallerEquals( tarch::la::volume(boundingEventSize), fusedEventsSize, 1.0+relativeTolerance);
+     and tarch::la::smallerEquals( tarch::la::volume(boundingEventSize), fusedEventsSize, relativeTolerance);
 };
 
 

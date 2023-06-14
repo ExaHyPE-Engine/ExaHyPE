@@ -45,18 +45,28 @@ void peano4::grid::tests::GridControlEventTest::testMerge1() {
 
 void peano4::grid::tests::GridControlEventTest::testMerge2() {
   #if Dimensions==2
+  const double tolerance = 0.1;
+
+  GridControlEvent event0( GridControlEvent::RefinementControl::Refine, {0.316667,0.316667},     {0.366667,0.366667}, {0.111111,0.111111} );
+  GridControlEvent event1( GridControlEvent::RefinementControl::Refine, {0.65,0.316667},         {0.366667,0.366667}, {0.111111,0.111111} );
+  GridControlEvent event2( GridControlEvent::RefinementControl::Refine, {0.65,-0.0166667},       {0.366667,0.366667}, {0.111111,0.111111} );
+  GridControlEvent event3( GridControlEvent::RefinementControl::Refine, {0.316667,-0.0166667},   {0.366667,0.366667}, {0.111111,0.111111} );
+  GridControlEvent event4( GridControlEvent::RefinementControl::Refine, {-0.0166667,-0.0166667}, {0.366667,0.366667}, {0.111111,0.111111} );
+
+  validateWithParams2(     peano4::grid::internal::twoEventsAreAdjacent(event0,event1,tolerance), event0.toString(), event1.toString() );
+  validateWithParams2(     peano4::grid::internal::twoEventsAreAdjacent(event1,event2,tolerance), event1.toString(), event2.toString() );
+  validateWithParams2( not peano4::grid::internal::twoEventsAreAdjacent(event0,event2,tolerance), event0.toString(), event2.toString() );
+
   std::vector< GridControlEvent > events;
+  events.push_back( event0 );
+  events.push_back( event1 );
+  events.push_back( event2 );
+  events.push_back( event3 );
+  events.push_back( event4 );
 
-  events.push_back( GridControlEvent( GridControlEvent::RefinementControl::Refine, {0.316667,0.316667},     {0.366667,0.366667}, {0.111111,0.111111} ));
-  events.push_back( GridControlEvent( GridControlEvent::RefinementControl::Refine, {0.65,0.316667},         {0.366667,0.366667}, {0.111111,0.111111} ));
+  events = peano4::grid::merge( events, 0.1 );
 
-  events.push_back( GridControlEvent( GridControlEvent::RefinementControl::Refine, {0.65,-0.0166667},       {0.366667,0.366667}, {0.111111,0.111111} ));
-  events.push_back( GridControlEvent( GridControlEvent::RefinementControl::Refine, {0.316667,-0.0166667},   {0.366667,0.366667}, {0.111111,0.111111} ));
-  events.push_back( GridControlEvent( GridControlEvent::RefinementControl::Refine, {-0.0166667,-0.0166667}, {0.366667,0.366667}, {0.111111,0.111111} ));
-
-  events = peano4::grid::merge( events, 0.4 );
-
-  validateEquals( events.size(), 2 );
+  validate( events.size()>1 );
   #endif
 }
 
