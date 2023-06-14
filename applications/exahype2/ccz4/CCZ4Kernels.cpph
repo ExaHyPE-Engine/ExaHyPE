@@ -120,19 +120,6 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
 //      Christoffel[i][j][k]       += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l]/phi * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] );
 //  }
 //
-//  double Gtilde[3] = {0,0,0};
-//  for (int l = 0; l < 3; l++)
-//  for (int j = 0; j < 3; j++)
-//  for (int i = 0; i < 3; i++) Gtilde[i] += g_contr[j][l] * Christoffel_tilde[j][l][i];
-//
-//  const double Ghat[3] = {Q[13], Q[14], Q[15]};
-//
-//  double Z[3] = {0,0,0}; // Matrix vector multiplications
-//  for (int i=0;i<3;i++)
-//  for (int j=0;j<3;j++) Z[i] += 0.5*CCZ4ds*( g_cov[i][j]* (Ghat[j] - Gtilde[j]));
-//  double Zup[3] = {0,0,0};
-//  for (int i=0;i<3;i++)
-//  for (int j=0;j<3;j++) Zup[i] += phi2 * g_contr[i][j] * Z[j];
 //
 //  double dChristoffelSrc[3][3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 //  double dChristoffel_tildeSrc[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -210,6 +197,20 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int j = 0; j < 3; j++)
     for (int k = 0; k < 3; k++)
     for (int l = 0; l < 3; l++) Christoffel_tilde_down[i][j][k] += g_cov[i][l]*Christoffel_tilde[j][k][l];
+
+    double Gtilde[3] = {0,0,0};
+    for (int l = 0; l < 3; l++)
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++) Gtilde[i] += g_contr[j][l] * Christoffel_tilde[j][l][i];
+//
+    const double Ghat[3] = {Q[13], Q[14], Q[15]};
+//
+    double Z[3] = {0,0,0}; // Matrix vector multiplications
+    for (int i=0;i<3;i++)
+    for (int j=0;j<3;j++) Z[i] += 0.5*CCZ4ds*( g_cov[i][j]* (Ghat[j] - Gtilde[j]));
+    double Zup[3] = {0,0,0};
+    for (int i=0;i<3;i++)
+    for (int j=0;j<3;j++) Zup[i] += phi2 * g_contr[i][j] * Z[j];
 
     double RicciPlusNablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0}; 
     for (int i = 0; i < 3; i++)
@@ -489,7 +490,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     S[51] = dtD[2][1][2];
     S[52] = dtD[2][2][2];
     S[53] = dtTraceK;
-    S[54] = dtphi;
+    S[54] = dtchi;
     for (int i = 0; i < 3; i++) S[55+i] = dtP[i];
     S[58] = 0;
     //used only in soccz4
@@ -740,7 +741,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
           for (int l = 0; l < 3; l++)
           {
              RicciPlusNablaZNCP[i][j] -= 0.5*g_contr[k][l]*( dDD[k][l][i][j] + dDD[l][k][i][j] ); 		// explicit symmetrisation
-             RicciPlusNablaZNCP[i][j] += 0.5*g_cov[i][j]*g_contr[k][l]*( dPP[k][l] + dPP[l][k] )/(np*chi;) 	// Baojiu-13-06-23: changed to chi=phi^n
+             RicciPlusNablaZNCP[i][j] += 0.5*g_cov[i][j]*g_contr[k][l]*( dPP[k][l] + dPP[l][k] )/(np*chi); 	// Baojiu-13-06-23: changed to chi=phi^n
           }
        }
     }
@@ -919,7 +920,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     double dtgamma[3][3] = {0,0,0,0,0,0,0,0,0};
     double dtalpha = 0;
     double dtbeta[3] = {0,0,0};
-    double dtphi = 0;
+    double dtchi = 0;
 
     BgradQ[0]  = -dtgamma[0][0];
     BgradQ[1]  = -dtgamma[0][1];
@@ -971,7 +972,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     BgradQ[51] = -dtD[2][1][2];
     BgradQ[52] = -dtD[2][2][2];
     BgradQ[53] = -dtTraceK;
-    BgradQ[54] = -dtphi;
+    BgradQ[54] = -dtchi;
     for (int i = 0; i < 3; i++) BgradQ[55+i] = -dtP[i];
     BgradQ[58] = 0;
     //if (dtP[1]!=0) printf("dtP[1] = %g, dtP[2] = %g \n\n",dtP[1],dtP[2]);
