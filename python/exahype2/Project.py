@@ -13,7 +13,7 @@ import exahype2.solvers
 
 
 class Project(object):
-  """!"
+  """!
       
   ExaHyPE 2 project
   
@@ -292,9 +292,13 @@ thus appreciate any citation of the original release paper
   def add_tracer(self,
                  name,
                  attribute_count=0,
-                 plot=True
+                 plot=True,
+                 sort_priority_within_action_sets=-1,
+                 plot_priority_within_action_sets=65536
                  ):
     """!
+    
+    Add a tracer to the project
 
     We rely on the particle toolbox. Therefore, our particles have
     already a position x, a cut off radius (which we don't usually 
@@ -316,7 +320,9 @@ thus appreciate any citation of the original release paper
     constraint, we do not need a velocity vector. However, we need an
     additional enumeration which clarifies if a 
     particle has moved already or not. This enumeration is needed by the
-    particle update routines.
+    particle update routines. Obviously, nothing stops you from adding
+    a separate velocity field to the tracer object and thus to redefine
+    this behaviour.
 
     Finally, we add each 
     particle a number which is a tuple consisting of the tree number
@@ -332,6 +338,20 @@ thus appreciate any citation of the original release paper
 
     @see peano4.toolbox.particles.PlotParticlesInVTKFormat.add_attribute_to_plot()
 
+    ## Action set order
+    
+    We add the particle ordering with priority -1. This should do the job
+    for most setups, but we might be wrong. The following action sets are
+    automatically added:
+    
+    - UpdateParallelState is added to each and every time step and plotting
+      sweep. As we also add
+    - UpdateParticleGridAssociation_LiftDrop to each and every time step, 
+      particles can move at any point. We always resort them immediately.
+      
+    Both action sets are assigned the standard priority of sort_priority_within_action_sets.
+    
+    
     ## Arguments
 
     name: String
@@ -349,6 +369,13 @@ thus appreciate any citation of the original release paper
       it writes patch files. You can switch this behaviour off. A lot of codes
       do so if they dump the tracer data independently into another database
       anyway.
+      
+    sort_priority_within_action_sets: Integer
+      You have to clarify what the priority of the tracer is within the 
+      action sets. By default, all ExaHyPE solvers start with priority 
+      0 and then up to n. So you are fine with using the default of -1
+      which means that the tracer precedes any solver. However, there 
+      might be cases where you wanna move the priorities manually.
 
     Returns the particle set that you can use to modify further 
     """
@@ -379,11 +406,20 @@ thus appreciate any citation of the original release paper
     # Initialisation
     #
     self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
+
+    update_particle_association_action_set = peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles)
+    update_particle_association_action_set.priority = sort_priority_within_action_sets
+    update_particle_association_action_set.parallel = True
+
+    update_particle_parallel_state_action_set = peano4.toolbox.particles.UpdateParallelState(particles)
+    update_particle_parallel_state_action_set.priority = sort_priority_within_action_sets
+    update_particle_parallel_state_action_set.parallel = True
         
     #
     # Move particles
     #
-    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
+    self.perform_time_step.add_action_set(update_particle_association_action_set)
+    self.perform_time_step.add_action_set(update_particle_parallel_state_action_set)
     
     #
     # Plotter: The timestamp here is slightly wrong, as I use the min time stamp. It 
@@ -406,10 +442,11 @@ thus appreciate any citation of the original release paper
                                              2,
                                              "tarch::la::convertScalar<double>(p->getNumber())"
                                              )
-      
+      particle_plotter.priority = plot_priority_within_action_sets
       self.plot_solution.add_action_set( particle_plotter ) 
       
-    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
+    self.plot_solution.add_action_set(update_particle_association_action_set)
+    self.plot_solution.add_action_set(update_particle_parallel_state_action_set)
     
     self._tracer_particles.append(particles)
 
@@ -417,7 +454,26 @@ thus appreciate any citation of the original release paper
 
 
   def add_action_set_to_timestepping(self, action_set):
+    """!
+    
+    Add a new action set to the time stepping
+    
+    You have to be careful with the priorities, i.e. you might want to 
+    use myproject.perform_time_step.max_priority() or myproject.perform_time_step.min_priority()
+    to find out which 
+    priority you should assign to action_set.
+    
+    """
     self.perform_time_step.add_action_set( action_set )
+
+
+  def add_action_set_to_plot_solution(self, action_set):
+    """!
+    
+    Add a new action set to the plotting
+        
+    """
+    self.plot_solution.add_action_set( action_set )
 
 
   def add_action_set_to_initialisation(self, action_set):

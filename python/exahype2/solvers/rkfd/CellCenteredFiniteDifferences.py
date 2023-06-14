@@ -75,7 +75,19 @@ class CellCenteredFiniteDifferences(object):
   """
   
       
-  def __init__(self, name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace):
+  def __init__(self, 
+               name, 
+               patch_size, 
+               overlap, 
+               rk_order, 
+               unknowns, 
+               auxiliary_variables, 
+               min_meshcell_h, 
+               max_meshcell_h, 
+               plot_grid_properties, 
+               kernel_namespace,
+               baseline_action_set_priority = 0,
+               ):
     """
   name: string
      A unique name for the solver. This one will be used for all generated 
@@ -179,6 +191,8 @@ class CellCenteredFiniteDifferences(object):
     self._hold_cell_data_on_heap_with_smart_pointer = False
     self._hold_face_data_on_heap_with_smart_pointer = False
 
+    self._baseline_action_set_priority = baseline_action_set_priority
+    
     self.create_data_structures()
     self.create_action_sets()
 
@@ -512,6 +526,20 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
+
+    self._action_set_initial_conditions.priority                       = self._baseline_action_set_priority+1
+    self._action_set_initial_conditions_for_grid_construction.priority = self._baseline_action_set_priority+1
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = self._baseline_action_set_priority
+    self._action_set_roll_over_update_of_faces.priority                                        = self._baseline_action_set_priority + 1
+    self._action_set_update_face_label.priority                                                = self._baseline_action_set_priority + 2
+    self._action_set_update_cell_label.priority                                                = self._baseline_action_set_priority + 2
+    self._action_set_handle_boundary.priority                                                  = self._baseline_action_set_priority + 3
+    #self._action_set_update_cell                                                      = self._baseline_action_set_priority + 4
+    self._action_set_project_patch_onto_faces.priority                                         = self._baseline_action_set_priority + 5
+    self._action_set_compute_final_linear_combination.priority                                 = self._baseline_action_set_priority + 5
+    self._action_set_AMR.priority                                                              = self._baseline_action_set_priority + 6
+    self._action_set_postprocess_solution.priority                     = self._baseline_action_set_priority # will be in touch last
+    self._action_set_preprocess_solution.priority                      = self._baseline_action_set_priority
         
     self._action_set_update_cell = None
 
@@ -737,7 +765,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     step.add_action_set( self._action_set_update_cell_label )
     #    step.add_action_set( self._action_set_project_patch_onto_faces )
 
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
+    plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._patch, 
       dataset_name=self._unknown_identifier(), 
@@ -750,10 +778,12 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
       precision="PlotterPrecision",
       time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
       select_dofs = self.select_dofs_to_print
-    ))
+    )
+    plot_patches_action_set.priority = self._baseline_action_set_priority
+    step.add_action_set( plot_patches_action_set )
 
     if self._plot_grid_properties:    
-      step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
+      plot_grid_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
         guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
@@ -761,7 +791,9 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """
-      ))
+      )
+      plot_grid_action_set.priority = self._baseline_action_set_priority
+      step.add_action_set( plot_grid_action_set )
       
     pass
    

@@ -163,7 +163,8 @@ class RungeKuttaDG(object):
                rk_order, 
                polynomial_basis, 
                face_projections: FaceProjections, 
-               unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
+               unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties,
+               baseline_action_set_priority = 0):
     """
     
   Constructor of the Runge-Kutta Discontinuous Galerkin solver
@@ -304,6 +305,8 @@ class RungeKuttaDG(object):
 
     self._hold_cell_data_on_heap_with_smart_pointer = False
     self._hold_face_data_on_heap_with_smart_pointer = False
+    
+    self._baseline_action_set_priority = baseline_action_set_priority
     
     self.create_data_structures()
     self.create_action_sets()
@@ -650,6 +653,25 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
+
+    self._action_set_update_face_label.priority                                       = self._baseline_action_set_priority + 1  
+    self._action_set_update_cell_label.priority                                       = self._baseline_action_set_priority + 1
+    self._action_set_linear_combination_of_estimates.priority                         = self._baseline_action_set_priority + 2
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = self._baseline_action_set_priority + 2
+    self._action_set_project_linear_combination_onto_faces.priority                   = self._baseline_action_set_priority + 3 # depends on lienar combination of estimates
+    self._action_set_solve_volume_integral.priority                                   = self._baseline_action_set_priority + 3 # the two 3s could run in parallel
+    self._action_set_handle_boundary.priority                                         = self._baseline_action_set_priority + 2
+    self._action_set_solve_Riemann_problem.priority                                   = self._baseline_action_set_priority + 3 # boundary has to be known
+    self._action_set_add_volume_and_face_solution.priority                            = self._baseline_action_set_priority + 3 # can also run in parallel, as it never occurs at same time
+    self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.priority = self._baseline_action_set_priority + 4 # depends on other guys
+    self._action_set_AMR.priority                                                     = self._baseline_action_set_priority + 5
+    self._action_set_AMR_commit_without_further_analysis.priority                     = self._baseline_action_set_priority + 5
+    
+    self._action_set_initial_conditions.priority                                      = self._baseline_action_set_priority + 1
+    self._action_set_initial_conditions_for_grid_construction.priority                = self._baseline_action_set_priority + 1
+    
+    self._action_set_preprocess_solution.priority                                     = self._baseline_action_set_priority # touch cell first time, i.e. enter cell
+    self._action_set_postprocess_solution.priority                                    = self._baseline_action_set_priority # touch cell last time, i.e. leave cell
         
 
   def _store_cell_data_default_guard(self):
@@ -827,9 +849,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     
   
   def add_actions_to_plot_solution(self, step, output_path):
-    """
+    """!
     
-     @todo
+     Dump snapshot of solution
      
      Consult the discussion in add_actions_to_init_grid() around the order
      of the individual action sets.
@@ -864,7 +886,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
           mapping.append( (x,y,z) )
           
           
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
+    plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._current_time_step,
       dataset_name=self._unknown_identifier(), 
@@ -879,10 +901,12 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
       time_stamp_evaluation="repositories::getMinTimeStamp()", 
       plot_cell_data=False,
       select_dofs = self.select_dofs_to_print
-    ))
+    )
+    plot_patches_action_set.priority = self._baseline_action_set_priority
+    step.add_action_set( plot_patches_action_set )
 
     if self._plot_grid_properties:    
-      step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
+      plot_grid_properties_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
         guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
@@ -891,7 +915,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 #include "../repositories/SolverRepository.h"
 """,     
         plot_cell_data=False
-      ))
+      )
+      plot_grid_properties_action_set.priority = self._baseline_action_set_priority
+      step.add_action_set( plot_grid_properties_action_set )
       
     pass
    
@@ -1168,12 +1194,12 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
   
   @property
   def postprocess_updated_cell_after_Runge_Kutta_step(self):
-    return self._postprocess_updated_cell
+    return self._postprocess_updated_cell_after_Runge_Kutta_step
 
 
   @property
   def postprocess_updated_cell_after_final_linear_combination(self):
-    return self._postprocess_updated_cell
+    return self._postprocess_updated_cell_after_final_linear_combination
 
 
   @postprocess_updated_cell_after_Runge_Kutta_step.setter

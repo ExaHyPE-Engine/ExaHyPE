@@ -926,20 +926,20 @@ void applications::exahype2::ccz4::TestingOutput(double* terms, const double* co
     double traceB = BB[0][0] + BB[1][1] + BB[2][2];
     const double AA[3] = {Q[23], Q[24], Q[25]};
 
-    for (int l = 0; l < 3; l++) terms[7]+=BB[0][l]*PP[l];
-    terms[8] = (1.0/3.0)*alpha*traceK*PP[0];
-    terms[9] = -(1.0/3.0)*traceB*PP[0];
-    terms[10]= (1.0/3.0)*phi*alpha*dtraceK[0];
-    terms[11]= (1.0/3.0)*phi*traceK*AA[0];
-    for (int l = 0; l < 3; l++) terms[12] -= 1./6.*phi*(dBB[0][l][l] + dBB[l][0][l]);
+    for (int l = 0; l < 3; l++) terms[7]+=BB[0][l]*PP[l]; //66
+    terms[8] = (1.0/3.0)*alpha*traceK*PP[0]; //67
+    terms[9] = -(1.0/3.0)*traceB*PP[0]; //68
+    terms[10]= (1.0/3.0)*phi*alpha*dtraceK[0]; //69
+    terms[11]= (1.0/3.0)*phi*traceK*AA[0]; //70
+    for (int l = 0; l < 3; l++) terms[12] -= 1./6.*phi*(dBB[0][l][l] + dBB[l][0][l]);  //71
     double temp=0;
     for (int m = 0; m < 3; m++)
     for (int n = 0; n < 3; n++) temp += g_contr[m][n]*dAex[0][m][n];
-    terms[13] += 1./3.*alpha*temp;
+    terms[13] += 1./3.*alpha*temp; //72
     temp=0;
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) temp += dgup[0][i][j]*Aex[i][j];
-    terms[14] += 1./3.*alpha*temp;  
+    terms[14] += 1./3.*alpha*temp;  //73
 
     //constraints[4]  =   1.0/invdet-1.0;
     //constraints[5]  =   traceA;

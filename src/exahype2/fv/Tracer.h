@@ -121,6 +121,56 @@ namespace exahype2 {
 
 
     /**
+     * Project all values from solution onto particle and use a piecewise linear interpolation and advance particle along an explicit Euler
+     *
+     * This is a natural extension of projectAllValuesOntoParticle_piecewiseLinear()
+     * which accepts two additional arguments. The first one is the time step size,
+     * and the second one is a set of Dimensions integers. The routine takes the
+     * input data and maps it onto the particle attributes. After that, it assumes
+     * that the indices indicies[0], indicies[1] and indicies[2] actually denote
+     * the particle's velocities and it updates the velocity according to an
+     * explicit Euler. We also provide a set of scale factor for velocity in case the 
+     * user would like to tune the velocity accordingly. e.g. if the velocity is the 
+     * inverse of the indiced quantities, enter {-1,-1,-1}.
+     *
+     * To use this extended mapping, you have to use the Python API similar to the
+     * following snippet:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * tracing_action_set = exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+     *   self,
+     *   project_on_tracer_properties_kernel="projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler",
+     *   projection_kernel_arguments="""
+     *     marker,
+     *     {{PATCH_SIZE}},
+     *     {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+     *     fineGridCell{{SOLVER_NAME}}Q.value,
+     *     fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
+     *     {16,17,18},
+     *     {1,1,1},
+     *     *p
+     *   """
+     *   )
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * Compared to other variants, we have replaced the function call with
+     * projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler. This kernel
+     * now accepts a few additional parameters besides
+     */
+    template <typename Particle>
+    void projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
+      const peano4::datamanagement::CellMarker&    marker,
+      int                                          voxelsPerAxis,
+      int                                          unknownsPerVoxel,
+      const double* __restrict__                   Q,
+      double                                       timeStepSize,
+      tarch::la::Vector<Dimensions,int>            indices,
+      tarch::la::Vector<Dimensions,int>            factors,
+      Particle&                                    particle
+    );
+
+
+    /**
      * Map multiple variables from input field onto particle
      *
      *

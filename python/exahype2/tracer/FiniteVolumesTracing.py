@@ -19,7 +19,12 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction_
   ## Update plug-in points
   
   We only update cells which are marked with getHasUpdated(). For enclave solvers,
-  we assume that this flag is only set after a cell has updated.
+  we assume that this flag is only set after a cell has updated. Further to that,
+  we also trace in the grid initialisation. If we did not trace there, the first
+  dump prior to the first time step always would yield garbage. It would not even
+  help to add tracing to the plot, as the tracing typically is cell-based, whereas
+  most plotters plug into touchVertexFirstTime(), i.e. they still would dump
+  the particle data prior to the actual tracing.
   
   The class supports different ways how the data is projected onto tracer 
   attributes (both which data entries and how they are interpolated), as 
@@ -33,8 +38,15 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction_
   def __init__(self,
                particle_set, 
                solver, 
-               time_stepping_kernel, 
-               project_on_tracer_properties_kernel):
+               project_on_tracer_properties_kernel,
+               projection_kernel_arguments="""
+        marker,
+        {{PATCH_SIZE}},
+        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+        fineGridCell{{SOLVER_NAME}}Q.value,
+        *p
+"""               ,
+               ):
     """!
 
     Set up the tracing
@@ -83,40 +95,28 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction_
     self.tracerDict[ "PATCH_SIZE" ]               = solver._patch_size
     self.tracerDict[ "NUMBER_OF_UNKNOWNS" ]             = solver._unknowns
     self.tracerDict[ "NUMBER_OF_AUXILIARY_VARIABLES" ]  = solver._auxiliary_variables
-    self.tracerDict[ "TIME_STEPPING_KERNEL" ]           = time_stepping_kernel
     self.tracerDict[ "PROJECTION_KERNEL" ]              = project_on_tracer_properties_kernel   
+    self.tracerDict[ "PROJECTION_KERNEL_ARGUMENTS" ]   = jinja2.Template( projection_kernel_arguments ).render(**self.tracerDict )
         
     cell_compute_kernel = """
 if ( 
   not marker.willBeRefined() 
   and 
-  fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() 
-  and
-  repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
+  (
+    (fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() and repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep())
+    or
+    repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
+  )
 ) {
-  const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
   for (auto* p: localParticles) {
     if ( 
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet
     ) {
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::Moved;
 
-      {% if PROJECTION_KERNEL!=None %}
       {{PROJECTION_KERNEL}}(
-        marker,
-        {{PATCH_SIZE}},
-        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-        fineGridCell{{SOLVER_NAME}}Q.value,
-        *p
+        {{PROJECTION_KERNEL_ARGUMENTS}}
       );
-      {% endif %}
-
-      {% if TIME_STEPPING_KERNEL!=None %}
-      {{TIME_STEPPING_KERNEL}}(
-        *p,
-        timeStepSize
-      );
-      {% endif %}
     }
   }
 }
@@ -156,7 +156,6 @@ if (
 #include "peano4/utils/Loop.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
-#include "toolbox/particles/Tracer.h"
 #include "repositories/SolverRepository.h"
 #include "exahype2/fv/Tracer.h"
 """ )

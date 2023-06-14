@@ -412,15 +412,11 @@ namespace peano4 {
        * volume of the merger. We notice that the name is slightly wrong:
        * We are not only flagging adjacent events, we are even searching for
        * adjacent events of the same size.
-       *
-       * @param direction A value between 0 and Dimensions-1 if you wanna
-       *   only check along one direction. Otherwise pass in -1.
        */
       bool twoEventsAreAdjacent(
         const peano4::grid::GridControlEvent& lhs,
         const peano4::grid::GridControlEvent& rhs,
-        double Tolerance,
-        int direction
+        double Tolerance
       );
 
       /**
