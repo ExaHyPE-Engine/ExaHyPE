@@ -223,7 +223,6 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
       // NOTE parameters are stored in abstract superclass
       const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
       const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
-      std::cout << "A=" << tempA << ", B=" << tempB << ", alpha=" << alpha << ", qmin=" << qmin << std::endl;
       double tem = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
       bool flag = false;
       return tem;
