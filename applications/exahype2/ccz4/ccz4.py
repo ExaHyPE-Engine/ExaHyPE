@@ -928,7 +928,7 @@ if __name__ == "__main__":
 #Tracer setting 
 ########################################################################################
     if args.add_tracer==1:
-        tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
+        tracer_particles = project.add_tracer( name="Tracer",attribute_count=66 )
         init_action_set =  exahype2.tracer.InsertParticlesByCoordinates( 
             #particle_set=tracer_particles, coordinates=[[0,0,8.0],[0,0,-8.0],[8.0,8.0,0]]))
             particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]])
