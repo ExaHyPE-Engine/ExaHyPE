@@ -355,13 +355,13 @@ void applications::exahype2::ccz4::admconstraints(double* constraints, const dou
     }
 
     memset(constraints, 0, 6*sizeof(double));
-    constraints[0]  =   Ham;
-    constraints[1]  =   Mom[0];
-    constraints[2]  =   Mom[1];
-    constraints[3]  =   Mom[2];
-    constraints[4]  =   R;
-    constraints[5]  =   Kupdown;
-    constraints[6]  =   nablaZcontracted;
+    constraints[0]  =   Ham;        //59
+    constraints[1]  =   Mom[0];     //60
+    constraints[2]  =   Mom[1];     //61
+    constraints[3]  =   Mom[2];     //62
+    constraints[4]  =   R;          //63
+    constraints[5]  =   Kupdown;    //64
+    constraints[6]  =   nablaZcontracted;   //65
     //constraints[4]  =   1.0/invdet-1.0;
     //constraints[5]  =   traceA;
 }
@@ -676,22 +676,12 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
 #endif
 void applications::exahype2::ccz4::TestingOutput(double* terms, const double* const Q, const double* const gradQSerialised)
 {
-    const double alpha = std::exp(std::fmax(-20., std::fmin(20.,Q[16])));
-    //printf("alpha %f\n",alpha);
-    const double alpha2 = alpha*alpha;
-    double fa  = 1.0;
-    double faa = 0.0;
-    fa  =  2./alpha;
-    faa = -fa/alpha;
-    const double traceK = Q[53];
-
     constexpr int nVar(59);
-
     double gradQin[59][3] ={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
+    // De-serialise input data and fill static array
     for (int normal=0; normal<3; normal++)
     for (int i=0; i<nVar; i++) gradQin[i][normal] = gradQSerialised[i+normal*nVar];
-
 
     // Note g_cov is symmetric
     const double g_cov[3][3] = { {Q[0], Q[1], Q[2]}, {Q[1], Q[3], Q[4]}, {Q[2], Q[4], Q[5]} };
@@ -703,33 +693,77 @@ void applications::exahype2::ccz4::TestingOutput(double* terms, const double* co
         {-(-Q[1]*Q[4]+Q[3]*Q[2])*invdet, -( Q[0]*Q[4]-Q[1]*Q[2])*invdet,  ( Q[0]*Q[3]-Q[1]*Q[1])*invdet}
     };
 
-
     // NOTE Aex is symmetric
     double Aex[3][3] = { {Q[6], Q[7], Q[8]}, {Q[7], Q[9], Q[10]}, {Q[8], Q[10], Q[11]} };
 
     double traceA = 0;
     for (int i=0;i<3;i++)
     for (int j=0;j<3;j++) traceA+=g_contr[i][j]*Aex[i][j];
-    //traceA *= 1./3;
+    traceA *= 1./3;
 
     for (int i=0;i<3;i++)
-    for (int j=0;j<3;j++) Aex[i][j] -= 1./3. * traceA * g_cov[i][j];
+    for (int j=0;j<3;j++) Aex[i][j] -= traceA * g_cov[i][j];
 
-    // Matrix multiplications Amix = matmul(g_contr, Aex) Aup  = matmul(g_contr, mytranspose(Amix))
-    double Amix[3][3]={0,0,0,0,0,0,0,0,0};
-    for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)
-    for (int u = 0; u < 3; u++) Amix[i][j] += g_contr[i][u] * Aex[u][j];
-    double Aup[3][3]={0,0,0,0,0,0,0,0,0};
-    for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)
-    for (int u = 0; u < 3; u++) Aup[i][j] += g_contr[i][u] * Amix[j][u]; // Note the transposition is in the indices
+    const double dAex[3][3][3] = {
+        {{gradQin[6][0],gradQin[7][0],gradQin[8][0]}, {gradQin[7][0], gradQin[9][0], gradQin[10][0]},  {gradQin[8][0], gradQin[10][0], gradQin[11][0]}},
+        {{gradQin[6][1],gradQin[7][1],gradQin[8][1]}, {gradQin[7][1], gradQin[9][1], gradQin[10][1]},  {gradQin[8][1], gradQin[10][1], gradQin[11][1]}},
+        {{gradQin[6][2],gradQin[7][2],gradQin[8][2]}, {gradQin[7][2], gradQin[9][2], gradQin[10][2]},  {gradQin[8][2], gradQin[10][2], gradQin[11][2]}}
+    };
+
+    const double traceK = Q[53];
+    const double dtraceK[3] = {gradQin[53][0], gradQin[53][1], gradQin[53][2]};
+
+    const double phi = std::fmax(1e-2,Q[54]); 
+    const double phi2 = phi*phi;
+    const double PP[3] = {Q[55], Q[56], Q[57]};
+
+    const double dPP[3][3] = {
+        {gradQin[55][0],gradQin[56][0],gradQin[57][0]},
+        {gradQin[55][1],gradQin[56][1],gradQin[57][1]},
+        {gradQin[55][2],gradQin[56][2],gradQin[57][2]}
+    };
 
     const double DD[3][3][3] = {
         {{Q[35], Q[36], Q[37]}, {Q[36], Q[38], Q[39]}, {Q[37], Q[39], Q[40]}},
         {{Q[41], Q[42], Q[43]}, {Q[42], Q[44], Q[45]}, {Q[43], Q[45], Q[46]}},
         {{Q[47], Q[48], Q[49]}, {Q[48], Q[50], Q[51]}, {Q[49], Q[51], Q[52]}}
     };
+    const double dDD[3][3][3][3] = {
+        {
+                {
+                        {gradQin[35][0],gradQin[36][0],gradQin[37][0]}, {gradQin[36][0],gradQin[38][0],gradQin[39][0]}, {gradQin[37][0],gradQin[39][0],gradQin[40][0]},
+                },
+                {
+                        {gradQin[41][0],gradQin[42][0],gradQin[43][0]}, {gradQin[42][0],gradQin[44][0],gradQin[45][0]}, {gradQin[43][0],gradQin[45][0],gradQin[46][0]},
+                },
+                {
+                        {gradQin[47][0],gradQin[48][0],gradQin[49][0]}, {gradQin[48][0],gradQin[50][0],gradQin[51][0]}, {gradQin[49][0],gradQin[51][0],gradQin[52][0]}
+                }
+        },
+        {
+                {
+                        {gradQin[35][1],gradQin[36][1],gradQin[37][1]}, {gradQin[36][1],gradQin[38][1],gradQin[39][1]}, {gradQin[37][1],gradQin[39][1],gradQin[40][1]},
+                },
+                {
+                        {gradQin[41][1],gradQin[42][1],gradQin[43][1]}, {gradQin[42][1],gradQin[44][1],gradQin[45][1]}, {gradQin[43][1],gradQin[45][1],gradQin[46][1]},
+                },
+                {
+                        {gradQin[47][1],gradQin[48][1],gradQin[49][1]}, {gradQin[48][1],gradQin[50][1],gradQin[51][1]}, {gradQin[49][1],gradQin[51][1],gradQin[52][1]}
+                }
+        },
+        {
+                {
+                        {gradQin[35][2],gradQin[36][2],gradQin[37][2]}, {gradQin[36][2],gradQin[38][2],gradQin[39][2]}, {gradQin[37][2],gradQin[39][2],gradQin[40][2]},
+                },
+                {
+                        {gradQin[41][2],gradQin[42][2],gradQin[43][2]}, {gradQin[42][2],gradQin[44][2],gradQin[45][2]}, {gradQin[43][2],gradQin[45][2],gradQin[46][2]},
+                },
+                {
+                        {gradQin[47][2],gradQin[48][2],gradQin[49][2]}, {gradQin[48][2],gradQin[50][2],gradQin[51][2]}, {gradQin[49][2],gradQin[51][2],gradQin[52][2]}
+                }
+        }
+    };
+
     double dgup[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     for (int k = 0; k < 3; k++)
     for (int m = 0; m < 3; m++)
@@ -737,30 +771,73 @@ void applications::exahype2::ccz4::TestingOutput(double* terms, const double* co
     for (int n = 0; n < 3; n++)
     for (int j = 0; j < 3; j++) dgup[k][m][l] -= g_contr[m][n]*g_contr[j][l]*2*DD[k][n][j];
 
-    const double PP[3] = {Q[55], Q[56], Q[57]};
-    const double dPP[3][3] = {
-        {gradQin[55][0],gradQin[56][0],gradQin[57][0]},
-        {gradQin[55][1],gradQin[56][1],gradQin[57][1]},
-        {gradQin[55][2],gradQin[56][2],gradQin[57][2]}
-    };
-    const double delta[3][3]={{1,0,0},{0,1,0},{0,0,1}};
+    double Kex[3][3]={ 0 };
+    for (int i=0;i<3;i++)
+    for (int j=0;j<3;j++) Kex[i][j]=Aex[i][j]/phi2 + (1./3)*traceK*g_cov[i][j]/phi2;
+    double Kmix[3][3]={0,0,0,0,0,0,0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int u = 0; u < 3; u++) Kmix[i][j] += phi2*g_contr[i][u] * Kex[u][j];
+    double Kup[3][3]={0,0,0,0,0,0,0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int u = 0; u < 3; u++) Kup[i][j] += phi2*g_contr[i][u] * Kmix[j][u]; // Note the transposition is in the indices
 
     double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    double Christoffel_tilde[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    //double Christoffel_kind1[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
+    double Christoffel_tilde[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
+    for (int l = 0; l < 3; l++) {
+        Christoffel_tilde[i][j][k] += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] );
+        Christoffel[i][j][k]  += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l]/phi * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] );
+    }
+
+    double dChristoffel[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    double dChristoffel_tilde[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+ 
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int m = 0; m < 3; m++)
+    for (int k = 0; k < 3; k++)
+    for (int l = 0; l < 3; l++)
     {
-        //Christoffel_kind1[i][j][k] = DD[k][i][j] + DD[j][i][k] - DD[i][j][k];
-        for (int l = 0; l < 3; l++)
-        {
-            Christoffel_tilde[i][j][k] += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] );
-            Christoffel[i][j][k]       += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l] * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] );
+        dChristoffel[k][i][j][m] += 0.5*g_contr[m][l] * ( //npc part
+            dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j]
+            - g_cov[j][l]*(dPP[k][i] + dPP[i][k])/phi - g_cov[i][l]*(dPP[k][j]+dPP[j][k])/phi +  g_cov[i][j]*(dPP[k][l]+dPP[l][k])/phi )
+            +dgup[k][m][l]*(DD[i][j][l]+DD[j][i][l]-DD[l][i][j])  //src part
+            -dgup[k][m][l]*(g_cov[j][l]*PP[i]+g_cov[i][l]*PP[j]-g_cov[i][j]*PP[l])/phi
+            -2*g_contr[m][l]*(DD[k][j][l]*PP[i]+DD[k][i][l]*PP[j]-DD[k][i][j]*PP[l])/phi
+            +g_contr[m][l]*(g_cov[j][l]*PP[i]*PP[k]+g_cov[i][l]*PP[j]*PP[k]-g_cov[i][j]*PP[k]*PP[l])/phi2;
+
+        dChristoffel_tilde[k][i][j][m] += dgup[k][m][l]*(DD[i][j][l]+DD[j][i][l]-DD[l][i][j])
+            +0.5*g_contr[m][l]*(dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j]);
+    }
+
+    double Riemann[3][3][3][3] = {0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int m = 0; m < 3; m++)
+    for (int k = 0; k < 3; k++){
+        Riemann[i][k][j][m] = dChristoffel[k][i][j][m] - dChristoffel[j][i][k][m];
+        for (int l = 0; l < 3; l++){
+            Riemann[i][k][j][m] += Christoffel[i][j][l]*Christoffel[l][k][m]-Christoffel[i][k][l]*Christoffel[l][j][m];
         }
     }
 
+    double Ricci[3][3] = {0,0,0,0,0,0,0,0,0};
+    for (int m = 0; m < 3; m++)
+    for (int n = 0; n < 3; n++)
+    for (int l = 0; l < 3; l++) Ricci[m][n] += Riemann[m][l][n][l];
+
+    double R=0;
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++) R += phi2*g_contr[i][j]*Ricci[i][j];
+    double Kupdown=0;
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++) Kupdown += Kex[i][j]*Kup[i][j];
+
+// following is added to calculate nabla_i Z^i
     double Gtilde[3] = {0,0,0};
     for (int l = 0; l < 3; l++)
     for (int j = 0; j < 3; j++)
@@ -768,138 +845,104 @@ void applications::exahype2::ccz4::TestingOutput(double* terms, const double* co
 
     const double Ghat[3] = {Q[13], Q[14], Q[15]};
 
-    const double phi = std::exp(std::fmax(-20., std::fmin(20.,Q[54])));
-    const double phi2 = phi*phi;
-
-    double Z[3] = {0,0,0};
-    for (int i=0;i<3;i++)
-    for (int j=0;j<3;j++) Z[i] += 0.5*( g_cov[i][j]* (Ghat[j] - Gtilde[j]));
-    double Zup[3] = {0,0,0};
-    for (int i=0;i<3;i++)
-    for (int j=0;j<3;j++) Zup[i] += phi2 * g_contr[i][j] * Z[j];
-
-
-    const double dDD[3][3][3][3] = {
-        {
-            {
-                {gradQin[35][0],gradQin[36][0],gradQin[37][0]}, {gradQin[36][0],gradQin[38][0],gradQin[39][0]}, {gradQin[37][0],gradQin[39][0],gradQin[40][0]},
-            },
-            {
-                {gradQin[41][0],gradQin[42][0],gradQin[43][0]}, {gradQin[42][0],gradQin[44][0],gradQin[45][0]}, {gradQin[43][0],gradQin[45][0],gradQin[46][0]},
-            },
-            {
-                {gradQin[47][0],gradQin[48][0],gradQin[49][0]}, {gradQin[48][0],gradQin[50][0],gradQin[51][0]}, {gradQin[49][0],gradQin[51][0],gradQin[52][0]}
-            }
-        },
-        {
-            {
-                {gradQin[35][1],gradQin[36][1],gradQin[37][1]}, {gradQin[36][1],gradQin[38][1],gradQin[39][1]}, {gradQin[37][1],gradQin[39][1],gradQin[40][1]},
-            },
-            {
-                {gradQin[41][1],gradQin[42][1],gradQin[43][1]}, {gradQin[42][1],gradQin[44][1],gradQin[45][1]}, {gradQin[43][1],gradQin[45][1],gradQin[46][1]},
-            },
-            {
-                {gradQin[47][1],gradQin[48][1],gradQin[49][1]}, {gradQin[48][1],gradQin[50][1],gradQin[51][1]}, {gradQin[49][1],gradQin[51][1],gradQin[52][1]}
-            }
-        },
-        {
-            {
-                {gradQin[35][2],gradQin[36][2],gradQin[37][2]}, {gradQin[36][2],gradQin[38][2],gradQin[39][2]}, {gradQin[37][2],gradQin[39][2],gradQin[40][2]},
-            },
-            {
-                {gradQin[41][2],gradQin[42][2],gradQin[43][2]}, {gradQin[42][2],gradQin[44][2],gradQin[45][2]}, {gradQin[43][2],gradQin[45][2],gradQin[46][2]},
-            },
-            {
-                {gradQin[47][2],gradQin[48][2],gradQin[49][2]}, {gradQin[48][2],gradQin[50][2],gradQin[51][2]}, {gradQin[49][2],gradQin[51][2],gradQin[52][2]}
-            }
-        }
-    };
-
-    double dChristoffelSrc[3][3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    double dChristoffel_tildeSrc[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    for (int l = 0; l < 3; l++)
-    for (int m = 0; m < 3; m++)
-    for (int j = 0; j < 3; j++)
-    for (int i = 0; i < 3; i++)
-    for (int k = 0; k < 3; k++)
-    {
-        dChristoffelSrc[k][i][j][m] +=     dgup[k][m][l]*(      DD[i][j][l]+      DD[j][i][l]-DD[l][i][j])
-                                      -    dgup[k][m][l]*(g_cov[j][l]*PP[i]+g_cov[i][l]*PP[j]-g_cov[i][j]*PP[l])
-                                      -2.0*g_contr[m][l]*(DD[k][j][l]*PP[i]+DD[k][i][l]*PP[j]-DD[k][i][j]*PP[l]);
-
-        dChristoffel_tildeSrc[k][i][j][m] += dgup[k][m][l]*(DD[i][j][l]+DD[j][i][l]-DD[l][i][j]);
-    }
-
-    double RiemannSrc[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    for (int m = 0; m < 3; m++)
-    for (int j = 0; j < 3; j++)
-    for (int k = 0; k < 3; k++)
-    for (int i = 0; i < 3; i++)
-    {
-      RiemannSrc[i][k][j][m] = dChristoffelSrc[k][i][j][m] - dChristoffelSrc[j][i][k][m];
-      for (int l = 0; l < 3; l++) RiemannSrc[i][k][j][m] += Christoffel[i][j][l]*Christoffel[l][k][m] - Christoffel[i][k][l]*Christoffel[l][j][m];
-    }
-
-    double RicciSrc[3][3] = {0,0,0,0,0,0,0,0,0};
-    for (int l = 0; l < 3; l++)
-    for (int n = 0; n < 3; n++)
-    for (int m = 0; m < 3; m++) RicciSrc[m][n] += RiemannSrc[m][l][n][l];
-
-
     const double dGhat[3][3] = {
         {gradQin[13][0],gradQin[14][0],gradQin[15][0]},
         {gradQin[13][1],gradQin[14][1],gradQin[15][1]},
         {gradQin[13][2],gradQin[14][2],gradQin[15][2]}
     };
 
-   // Here we directly compute the derivative of Gtilde from its original definition as contracted Christoffel symbol,
-    // without assuming unit determinant of the conformal metric. Back to the roots, and as few assumptions as possible...
-    double dGtildeSrc[3][3] = {0,0,0,0,0,0,0,0,0};
-    for (int l = 0; l < 3; l++)
+    double dGtilde[3][3] = {0,0,0,0,0,0,0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int k = 0; k < 3; k++)
+    for (int j = 0; j < 3; j++)
+    for (int l = 0; l < 3; l++) dGtilde[k][i] += dgup[k][j][l]*Christoffel_tilde[j][l][i]+g_contr[j][l]*dChristoffel_tilde[k][j][l][i];
+
+    double Z[3] = {0,0,0}; // Matrix vector multiplications
+    for (int i=0;i<3;i++)
+    for (int j=0;j<3;j++) Z[i] += 0.5* g_cov[i][j]* (Ghat[j] - Gtilde[j]);//needed here
+
+    double dZ[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
-    for (int k = 0; k < 3; k++) dGtildeSrc[k][i] += dgup[k][j][l]*Christoffel_tilde[j][l][i] + g_contr[j][l]*dChristoffel_tildeSrc[k][j][l][i];
+    for (int k = 0; k < 3; k++) dZ[k][i] += DD[k][i][j]*(Ghat[j]-Gtilde[j])+0.5*g_cov[i][j]*(dGhat[k][j]-dGtilde[k][j]);
 
-    double dZSrc[3][3] = {0,0,0,0,0,0,0,0,0};
-    for (int j = 0; j < 3; j++)
-    for (int i = 0; i < 3; i++)
-    for (int k = 0; k < 3; k++) dZSrc[k][i] += (DD[k][i][j]*(Ghat[j]-Gtilde[j]) - 0.5*g_cov[i][j]*dGtildeSrc[k][j]);
-
-    double nablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0};
+    double nablaZ[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     {
-      nablaZSrc[i][j] = dZSrc[i][j];
-      for (int k = 0; k < 3; k++) nablaZSrc[i][j] -= Christoffel[i][j][k]*Z[k];
+      nablaZ[i][j] = dZ[i][j];
+      for (int k = 0; k < 3; k++) nablaZ[i][j] -= Christoffel[i][j][k]*Z[k];
     }
 
-    double RicciPlusNablaZSrc[3][3];
+    double nablaZcontracted=0;
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) RicciPlusNablaZSrc[i][j] = RicciSrc[i][j] + nablaZSrc[i][j] + nablaZSrc[j][i];
+    for (int j = 0; j < 3; j++) nablaZcontracted += g_contr[i][j]*nablaZ[i][j]; // TODO fuse these steps
+    nablaZcontracted*=phi2;
 
-    double RPlusTwoNablaZSrc = 0;
-    for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) RPlusTwoNablaZSrc += g_contr[i][j]*RicciPlusNablaZSrc[i][j]; // TODO fuse these steps
-    RPlusTwoNablaZSrc*=phi2;
+//end here
 
-    double Aupdown = 0;
-    for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) Aupdown += Aex[i][j]*Aup[i][j];
+    double Ham=0;
+    Ham = R-Kupdown+traceK*traceK;
 
-    double RicciNoSym[3][3]={0,0,0,0,0,0,0,0,0};
+    double dKex[3][3][3]={0};
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
-    {
-      RicciNoSym[i][j] = dPP[i][j]+PP[i]*PP[j]; //22.06.09 this line may need to be changed.
-      for (int m = 0; m < 3; m++)
-      for (int k = 0; k < 3; k++) RicciNoSym[i][j] += delta[i][j]*g_contr[m][k]*(dPP[m][k]-PP[m]*PP[k]);
+    for (int k = 0; k < 3; k++) dKex[k][i][j]  = (1.0/phi2)*(dAex[k][i][j]+(1./3)*g_cov[i][j]*dtraceK[k]+(2./3)*traceK*DD[k][i][j])-2*Kex[i][j]*PP[k]/phi;
+
+    double Mom[3]={0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int l = 0; l < 3; l++){
+        Mom[i] += phi2*g_contr[j][l]*(dKex[l][i][j]-dKex[i][j][l]);
+        for (int m = 0; m < 3; m++){
+            Mom[i] += phi2*g_contr[j][l]*(-Christoffel[j][l][m]*Kex[m][i]+Christoffel[j][i][m]*Kex[m][l]);
+        }
     }
 
-    memset(terms, 0, 2*sizeof(double));
-    terms[0]  =   RPlusTwoNablaZSrc;
-    terms[1]  =   - Aupdown + (2.0/3.0)*traceK*traceK;
+    memset(terms, 0, 15*sizeof(double));
+    terms[0]  =   Ham;        //59
+    terms[1]  =   Mom[0];     //60
+    terms[2]  =   Mom[1];     //61
+    terms[3]  =   Mom[2];     //62
+    terms[4]  =   R;          //63
+    terms[5]  =   Kupdown;    //64
+    terms[6]  =   nablaZcontracted;   //65
+    //calculate the terms for Px
+    const double alpha = std::fmax(1e-4,Q[16]);
+    const double dBB[3][3][3] = {
+        {
+            { gradQin[26][0], gradQin[27][0], gradQin[28][0]}, { gradQin[29][0], gradQin[30][0], gradQin[31][0]}, { gradQin[32][0], gradQin[33][0], gradQin[34][0]}
+        },
+        {
+            { gradQin[26][1], gradQin[27][1], gradQin[28][1]}, { gradQin[29][1], gradQin[30][1], gradQin[31][1]}, { gradQin[32][1], gradQin[33][1], gradQin[34][1]}
+        },
+        {
+            { gradQin[26][2], gradQin[27][2], gradQin[28][2]}, { gradQin[29][2], gradQin[30][2], gradQin[31][2]}, { gradQin[32][2], gradQin[33][2], gradQin[34][2]}
+        }
+    };
+    const double BB[3][3] = {
+        {Q[26], Q[27], Q[28]}, {Q[29], Q[30], Q[31]}, {Q[32], Q[33], Q[34]}
+    };
+    double traceB = BB[0][0] + BB[1][1] + BB[2][2];
+    const double AA[3] = {Q[23], Q[24], Q[25]};
+
+    for (int l = 0; l < 3; l++) terms[7]+=BB[0][l]*PP[l]; //66
+    terms[8] = (1.0/3.0)*alpha*traceK*PP[0]; //67
+    terms[9] = -(1.0/3.0)*traceB*PP[0]; //68
+    terms[10]= (1.0/3.0)*phi*alpha*dtraceK[0]; //69
+    terms[11]= (1.0/3.0)*phi*traceK*AA[0]; //70
+    for (int l = 0; l < 3; l++) terms[12] -= 1./6.*phi*(dBB[0][l][l] + dBB[l][0][l]);  //71
+    double temp=0;
+    for (int m = 0; m < 3; m++)
+    for (int n = 0; n < 3; n++) temp += g_contr[m][n]*dAex[0][m][n];
+    terms[13] += 1./3.*alpha*temp; //72
+    temp=0;
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) terms[2+i*3+j]=RicciNoSym[i][j];
+    for (int j = 0; j < 3; j++) temp += dgup[0][i][j]*Aex[i][j];
+    terms[14] += 1./3.*alpha*temp;  //73
+
+    //constraints[4]  =   1.0/invdet-1.0;
+    //constraints[5]  =   traceA;
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target

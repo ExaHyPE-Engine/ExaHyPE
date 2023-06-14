@@ -138,11 +138,6 @@ namespace peano4 {
      *
      *        (r_111,r1_112,r_121,r_122,r_211,r1_212,r_221,r_222)
      *
-     * Due to the SFC that we employ for the mesh traversal, it is reasonable
-     * to assume that the refinement events already align in a localised order.
-     * Therefore, I apply a simple bubble sort.
-     *
-     *
      *
      * ##  Erasing the mesh (again)
      *
@@ -171,8 +166,20 @@ namespace peano4 {
      *
      * The algorithm has to be idempotent, i.e. if we invoke it multiple times
      * over the input set, the outcome should always remain the same.
+     *
+     * @param events Set of events which we try to merge
+     *
+     * @param Tolerance Relative tolerance passed into the actual merger, i.e.
+     *   the tolerance at which two events are merged, even though they might
+     *   not exactly be adjacent. A default of 10% (relative tolerance) is
+     *   sufficient for most cases, but there might be situation where a larger
+     *   tolerance is reasonable to ensure that some events which are slightly
+     *   disjoint are actually merged, too.
      */
-    std::vector< GridControlEvent > merge( std::vector< GridControlEvent>  events, const double Tolerance = 0.1 );
+    std::vector< GridControlEvent > merge(
+      std::vector< GridControlEvent>  events,
+      const double Tolerance = 0.1
+    );
 
     /**
      * Factory mechanism
@@ -359,22 +366,23 @@ namespace peano4 {
       );
 
       /**
+       * Merge adjacent events
+       *
        * This routine merges adjacent events, i.e. events of the same time which
        * share a common face and can be combined into one larger, rectangular
        * event. The routine does not distinguish refine from coarsen events, i.e.
        * you should only pass in events of the same type.
        *
-       * ## Algorithm
-       *
-       * It is basically a huge while loop. As long as we can merge any two events,
-       * we have to continue to try to merge further. Any merge might produce a new,
-       * larger area which then in turn might be a fit to another refinement area.
-       *
+       * To make this routine faster, we first sort() the events geometrically.
+       * After that, we sweep over them and merge. As we have sorted the elements,
+       * we can "only" consider neighbouring events. Once a sweep has completed,
+       * we have to decide to rerun the whole procedure. This is necessary if
+       * something has changed within the list.
        *
        * @see createBoundingBoxEvent()
        * @see twoEventsAreAdjacent()
        */
-      void mergeAdjacentRefinementEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents );
+      void mergeAdjacentRefinementEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents, int Tolerance );
 
       /**
        * Helper function which helps us throughout the merge.
@@ -392,18 +400,38 @@ namespace peano4 {
       bool refinementEventOverrulesCoarsening( const peano4::grid::GridControlEvent& refineEvent, const peano4::grid::GridControlEvent& eraseEvent );
 
       /**
+       * Are two events adjacent
+       *
        * Two events are adjacent if they have the same h, and if the sum of
        * their bounding box volumes is roughly the same as the bounding box
        * volume of the merger. We notice that the name is slightly wrong:
        * We are not only flagging adjacent events, we are even searching for
        * adjacent events of the same size.
        */
-      bool twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
+      bool twoEventsAreAdjacent(
+        const peano4::grid::GridControlEvent& lhs,
+        const peano4::grid::GridControlEvent& rhs,
+        double Tolerance
+      );
 
       /**
-       * In-situ sort (bubble sort)
+       * Sort grid control events geometrically
+       *
+       * Very simplistic sorting algorithm. The only "interesting" thing
+       * here is the fact that we provide the actual comparison operator. In a
+       * real C++ world, we would define the operator < over GridControlEvent.
+       * This GridControlEvent class however is usually generated, i.e. we
+       * dump it through Python. It would be a little bit of a headache to
+       * add the operator (it would have to be defined in Python, and then
+       * piped into the C++ code), so I decided to wrap one here manually.
+       *
+       * The routine defines a natural order over the individual coordinates.
+       *
+       * Sort has to work purely spatially. Otherwise, we would never be
+       * able to handle strong AMR.
        *
        * @see merge() for a discussion
+       * @param events Input and output set of grid control events
        */
       void sort( std::list< peano4::grid::GridControlEvent >& events );
 

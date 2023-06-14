@@ -162,10 +162,13 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
     _gridControlEvents = merge( observer.getGridControlEvents() );
 
     const int MagicUpperLimitToWhichIDumpEvents = 4;
+    #if PeanoDebug>0
     if ( _gridControlEvents.empty() ) {
       logInfo( "traverse(...)", "got no grid refinement events" );
     }
-    else if (_gridControlEvents.size()<=MagicUpperLimitToWhichIDumpEvents) {
+    else
+    #endif
+    if (not _gridControlEvents.empty() and _gridControlEvents.size()<=MagicUpperLimitToWhichIDumpEvents) {
       std::ostringstream msg;
       for (auto& p: _gridControlEvents) msg << p.toString();
       logInfo( "traverse(...)", "got " << _gridControlEvents.size() << " grid control events: " << msg.str() );
