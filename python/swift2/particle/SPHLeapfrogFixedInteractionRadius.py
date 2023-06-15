@@ -771,9 +771,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         return (
             super(SPHLeapfrogFixedInteractionRadius, self).readme_descriptor
             + """
-    
+
   Time integrator: SPH Leapfrog
-  
+
   - interaction radius:             fixed
   - CFL factor:                     """
             + str(self._cfl_factor)
@@ -781,6 +781,6 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   - dt_initial:                     """
             + str(self._initial_time_step_size)
             + """
-  
+
     """
         )
