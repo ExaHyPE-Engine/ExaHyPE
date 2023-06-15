@@ -39,7 +39,8 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
 
 
     class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
-      SubPatchSize = int( FD4PatchSize*4*4 )
+      #SubPatchSize = int( FD4PatchSize*4*4 )
+      SubPatchSize = int( FD4PatchSize*4 )
         
       def __init__(self,
                    name, 
@@ -50,6 +51,8 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
                                         patch_size         = self.SubPatchSize,
                                         min_volume_h       = min_cell_size/self.SubPatchSize, 
                                         max_volume_h       = max_cell_size/self.SubPatchSize,
+                                        # @todo check here
+                                        use_heap_storage   = False,
                                         )
         self.double_constants[ "BlackHoleFVRegion" ] = 1.0
  
@@ -57,10 +60,6 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Restriction.h"        
 #include "toolbox/blockstructured/Interpolation.h"        
 """        
-        ## Again, this is true by default
-        #self.switch_to_heap_storage(True, True)
-        #Das killt uns. Es ist also doch alles falsch!!!!!
-        self.switch_to_heap_storage(False, False)
 
   
       def _store_cell_data_default_guard(self):
@@ -165,6 +164,7 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
                                                                         rk_order        = 1,
                                                                         min_meshcell_h  = min_cell_size/FD4PatchSize, 
                                                                         max_meshcell_h  = max_cell_size/FD4PatchSize,
+                                                                        use_heap_storage   = False,
                                                                         )
 
         self._user_action_set_includes += """
@@ -173,10 +173,6 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """        
-
-        # hab ich nie ausprobiert, weil es die superklasse macht 
-        #self.switch_to_heap_storage(True, True)
-        self.switch_to_heap_storage(False, False)
 
 
       def create_action_sets(self):
