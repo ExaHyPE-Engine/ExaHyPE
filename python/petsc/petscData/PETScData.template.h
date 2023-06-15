@@ -78,6 +78,12 @@ class {{NAMESPACE | join("::")}}::PetscData{
     */
     void petscSolve();
 
+    /**
+    * method to tidy up _A, _x and _b
+    */
+    void petscDestroy();
+
+
   private:
     int _dofs;
 

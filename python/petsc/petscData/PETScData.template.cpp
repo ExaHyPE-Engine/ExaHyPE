@@ -129,30 +129,17 @@ void {{NAMESPACE | join("::")}}::PetscData::assemble(){
 
 void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
   // for now, we stuff everything into this method
-  // Vec         x, b, u; /* approx solution, RHS, exact solution */
   Vec         u; // exact soln
-  // Mat         A;       /* linear system matrix */
   KSP         ksp;     /* KSP context */
-  KSP        *subksp;  /* array of local KSP contexts on this processor */
   PC          pc;      /* PC context */
-  PC          subpc;   /* PC context for subdomain */
   PetscReal   norm;    /* norm of solution error */
-  // PetscInt    i, j, Ii, J, *blks, m = 4, n;
-  // PetscMPIInt rank, size;
-  // PetscInt    its, nlocal, first, Istart, Iend;
-  // PetscScalar v, one = 1.0, none = -1.0;
-  // PetscBool   isbjacobi;
 
   //don't know what this does
   PetscFunctionBeginUser;
 
   // //do the copy
-  VecDuplicate(_b, &u);
-  VecCopy(_b, u);
-
-  //scale down by the eigenvalue
-  // VecScale(u, oneOver2p2);
-  // VecView(u, PETSC_VIEWER_STDOUT_WORLD);
+  // VecDuplicate(_b, &u);
+  // VecCopy(_b, u);
 
   /*
      Create linear solver context
@@ -190,10 +177,29 @@ void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
 
   PetscInt its;
   KSPGetIterationNumber(ksp, &its);
-  // PetscPrintf(PETSC_COMM_WORLD, "Iterations %" PetscInt_FMT "\n", its);
   logInfo("petscSolve()", "number of iterations was " << (int)its);
 
-
+  //tidy up temp objects
   KSPDestroy(&ksp);
+  // PCDestroy(&pc);
+  // VecDestroy(&u);
+  return;
+}
+
+void {{NAMESPACE | join("::")}}::PetscData::petscDestroy(){
+  logInfo("petscDestroy()", "tidying up petsc objects");
+  //tidy up _A
+  MatDestroy(&_A);
+
+  //tidy up _x and _b
+  VecDestroy(&_x);
+  VecDestroy(&_b);
+
+  /*
+  most petsc scripts call PetscFinalize(), but this
+  may interfere with the way peano handles mpi.
+  for now, it stays commented out.
+  */
+  // PetscFinalize();
   return;
 }

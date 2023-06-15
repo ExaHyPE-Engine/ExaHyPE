@@ -252,6 +252,8 @@ void step() {
         {% endif %}
         
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        
+        repositories::instanceOfPetsc.petscDestroy();
         watch.stop();
         mapSolutionOntoMeshMeasurement.setValue( watch.getCalendarTime() );
       }
