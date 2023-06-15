@@ -57,3 +57,4 @@ std::string exahype2::CellData::toString() const {
   msg << "]";
   return msg.str();
 }
+

@@ -16,6 +16,9 @@ from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking
 
+from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStep
+from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
+
 
 # for the coupling
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
@@ -54,7 +57,10 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Restriction.h"        
 #include "toolbox/blockstructured/Interpolation.h"        
 """        
-        self.switch_to_heap_storage(True, True)
+        ## Again, this is true by default
+        #self.switch_to_heap_storage(True, True)
+        #Das killt uns. Es ist also doch alles falsch!!!!!
+        self.switch_to_heap_storage(False, False)
 
   
       def _store_cell_data_default_guard(self):
@@ -168,7 +174,9 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Copy.h"        
 """        
 
-        self.switch_to_heap_storage(True, True)
+        # hab ich nie ausprobiert, weil es die superklasse macht 
+        #self.switch_to_heap_storage(True, True)
+        self.switch_to_heap_storage(False, False)
 
 
       def create_action_sets(self):
@@ -362,7 +370,8 @@ def construct_FD4_solver(min_cell_size, max_cell_size):
       def __init__(self,
                    name,
                    min_cell_size,
-                   max_cell_size
+                   max_cell_size,
+                   use_heap_storage = False
                    ):
         self._name_without_FD4_extension = name
         
@@ -380,8 +389,6 @@ def construct_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """        
-
-        self.switch_to_heap_storage(True, True)
      
 
       def create_action_sets(self):
