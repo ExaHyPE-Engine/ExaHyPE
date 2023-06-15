@@ -551,7 +551,6 @@ then this message can typically be ignored.
 
     make_command = "make " + self.executable_name()
     command = f'bash -c "{cd_command} && {make_command}"'
-    # raise Exception(command)
     return command
 
   def generate(self,overwrite,directory):
