@@ -12,9 +12,15 @@ class TsunamiModel(umbridge.Model):
     def get_output_sizes(self, config):
         # normally 2x max water height at time t for two DART buoys 21418 and 21419
         # but can in theory be any probe point one is interested in
-        return [config["output_size"]] 
+        self.output_size = self.calculate_output_size(config["probe_coordinates"])
+        return [self.output_size] 
 
     def __call__(self, parameters, config):
+        # if get_output_sizes() has not been called yet
+        if(not hasattr(self, "output_size")):
+            # calculate output size based on number of probes
+            self.output_size = self.calculate_output_size(config["probe_coordinates"])
+
         # check whether this script is being called from the build directory (is there a build folder on the path between peano and cwd)
         # or if build directory exists
         operating_directory = realpath(__file__)
@@ -37,6 +43,8 @@ class TsunamiModel(umbridge.Model):
             print("Checking whether ExaHyPE is already compiled in release mode...")
             if(len(glob(operating_directory+"*release*")) == 0):
                 print("ExaHyPE not compiled in release mode, will now attempt to compile.")
+
+                # TODO: compile exahype
             
             print("Changed into build/applications/exahype2/swe-new/")
             operating_directory = operating_directory + "applications/exahype2/swe-new/"
@@ -44,39 +52,56 @@ class TsunamiModel(umbridge.Model):
             print("Build directory already on path.")
 
         print("Compiling swe.py now.") 
-        run(["python3", 
-            "swe.py", 
-            "-s", 
-            config["solver"], 
-            "-sc", 
-            config["scenario"], 
-            "-amr", str(config["amr"]), 
-            "-et", str(config["end_time"])
-            ])
+
+        flag_map = {
+            "solver": "s",
+            "end_time": "et",
+            "amr": "amr",
+            "scenario": "sc",
+            "patch_size": "ps",
+            "max_cell_size": "maxh",
+            "bathymetry_file_path": "bf",
+            "displacement_file_path": "df",
+            "plot_interval": "pi",
+            "output_path": "o",
+            "rk_order": "rk-order",
+            "dg_order": "dg-order",
+            "probe_coordinates": "probes"
+        }
+
+        compile_instructions = ["python3", "swe.py"]
+        for k in config.keys():
+            compile_instructions.append("-%s" % flag_map[k])
+            compile_instructions.append(str(config[k]))
+        
+        run(compile_instructions)
         # run exe 
         application_name = "swe-application-2d-solver-name-SWESolver%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (config["solver"], config["scenario"], config["patch_size"], config["amr"], config["max_cell_size"], config["end_time"])
         run("./%s" % application_name)
-        #   read out values from csv file
-        #   return output vector
-        output = [config["output_size"]]
-        
+        # read out values from csv file
+
+        # return output vector
+        output = []
         return [output]
 
     def supports_evaluate(self):
         return True
     
+    def calculate_output_size(self, probe_coordinates, number_of_variables=4):
+        return len(probe_coordinates.split(" "))*number_of_variables
+    
 
 model = TsunamiModel()
 config = {
-    "output_size": 4,
     "scenario": "Artificial_Tsunami",
     "bathymetry_file_path": "abc",
     "displacement_file_path": "jkl",
-    "end_time": 3,
+    "end_time": 0.1,
     "amr": 0,
     "solver": "FVRusanovGlobalAdaptive",
     "patch_size": 32,
-    "max_cell_size": 0.1
+    "max_cell_size": 0.1,
+    "probe_coordinates": "[5,5]" # has to be a string because otherwise, python inserts a space. And has to be a string anyways for multiple probes
 }
 model.__call__([],config)
 #umbridge.serve_models([model], 4242)
