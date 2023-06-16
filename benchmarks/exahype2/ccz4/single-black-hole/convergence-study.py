@@ -50,7 +50,7 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
                                         patch_size         = self.SubPatchSize,
                                         min_volume_h       = min_cell_size/self.SubPatchSize, 
                                         max_volume_h       = max_cell_size/self.SubPatchSize,
-                                        use_heap_storage   = True,
+                                        use_heap_storage   = False,
                                         )
         self.double_constants[ "BlackHoleFVRegion" ] = 1.0
  

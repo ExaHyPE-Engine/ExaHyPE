@@ -353,8 +353,26 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
                patch_size,
                min_volume_h,
                max_volume_h,
-               use_heap_storage = True
+               use_heap_storage = False
                ):  
+    """!
+    
+    Construct solver with enclave tasking and adaptive time stepping
+    
+        
+  
+    ## Attributes
+  
+    use_heap_storage: Boolean
+      By default, we place the patches on the heap but administer them through 
+      a smart pointer. You can switch this default and enforce a "proper" 
+      storage of the data on the heap. This usually introduces more memory
+      movements, though you might end up with a better memory alignment, i.e.
+      memory closer to the compute kernels.
+    
+
+    
+    """  
     AbstractCCZ4Solver.__init__(self)
     exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
                                                                     name                 = name,
@@ -608,7 +626,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
                rk_order,
                min_meshcell_h,
                max_meshcell_h,
-               use_heap_storage = True
+               use_heap_storage = False
                ):  
     """!
     
@@ -617,6 +635,17 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
     Calibrate the default time step size calibration with 1/16 to take into 
     account that we have a higher-order numerical scheme.
         
+  
+    ## Attributes
+  
+    use_heap_storage: Boolean
+      By default, we place the patches on the heap but administer them through 
+      a smart pointer. You can switch this default and enforce a "proper" 
+      storage of the data on the heap. This usually introduces more memory
+      movements, though you might end up with a better memory alignment, i.e.
+      memory closer to the compute kernels.
+    
+
     """
     AbstractCCZ4Solver.__init__(self)
     exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
@@ -795,7 +824,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
                min_meshcell_h,
                max_meshcell_h,
                reconstruction_type,
-               use_heap_storage = True
+               use_heap_storage = False
                ):  
     """!
     
@@ -804,6 +833,18 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
     Calibrate the default time step size calibration with 1/16 to take into 
     account that we have a higher-order numerical scheme.
         
+        
+  
+    ## Attributes
+  
+    use_heap_storage: Boolean
+      By default, we place the patches on the heap but administer them through 
+      a smart pointer. You can switch this default and enforce a "proper" 
+      storage of the data on the heap. This usually introduces more memory
+      movements, though you might end up with a better memory alignment, i.e.
+      memory closer to the compute kernels.
+    
+
     """
     AbstractCCZ4Solver.__init__(self)
     exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
@@ -962,8 +1003,26 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
                polynomials,
                min_cell_h,
                max_cell_h,
-               use_heap_storage = True
+               use_heap_storage = False
                ):  
+    """!
+    
+    Construct solver with enclave tasking
+    
+    
+        
+  
+    ## Attributes
+  
+    use_heap_storage: Boolean
+      By default, we place the patches on the heap but administer them through 
+      a smart pointer. You can switch this default and enforce a "proper" 
+      storage of the data on the heap. This usually introduces more memory
+      movements, though you might end up with a better memory alignment, i.e.
+      memory closer to the compute kernels.
+    
+
+    """  
     AbstractCCZ4Solver.__init__(self)
     exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
                                                                                     name                 = name,
