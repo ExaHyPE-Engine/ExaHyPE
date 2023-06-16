@@ -8,6 +8,7 @@ class Oscillating_Lake(scenarios.template_scenario.Template_Scenario):
     """
     def __init__(self):
         super().__init__()
+        super().reflective_boundary_conditions()
 
         self.initial_values[1] = 0.0
         self.initial_values[2] = 0.0
@@ -17,7 +18,3 @@ class Oscillating_Lake(scenarios.template_scenario.Template_Scenario):
             (_h, self.initial_values[3] < _h),
             (0.0, True)
         )
-
-    
-    def implementation_of_boundary_conditions(self):
-        return self.implementation_of_reflective_BC()

@@ -18,9 +18,7 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     @abstractmethod
     def __init__(self):
         super().__init__()
-    
-    def implementation_of_boundary_conditions(self):
-        return self.implementation_of_homogeneous_Neumann_BC()
+        super().outflow_boundary_conditions()
 
     def implementation_of_ncp(self):
         return """
@@ -52,9 +50,9 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
         if (Q[0] > 1e-8 && std::abs(Q[0] + Q[3]) >= 0.05) { 
             result = ::exahype2::RefinementCommand::Refine;
         }
-        else if(Q[0] > 1e-8 && std::abs(Q[0] + Q[3]) <= 0.01) {
-            result = ::exahype2::RefinementCommand::Erase;
-        }
+        //else if(Q[0] > 1e-8 && std::abs(Q[0] + Q[3]) <= 0.01) {
+            //result = ::exahype2::RefinementCommand::Erase;
+        //}
         return result;
         """
     

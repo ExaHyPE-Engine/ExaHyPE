@@ -101,11 +101,11 @@ if args.scenario == "Radial_Bathymetry_Dam_Break":
 
 elif args.scenario == "Artificial_Tsunami":
   from scenarios.artificial_tsunami import Artificial_Tsunami
-  my_pde = Artificial_Tsunami()
+  my_pde = Artificial_Tsunami(width=width)
 
 elif args.scenario == "Sea_At_Rest":
   from scenarios.sea_at_rest import Sea_At_Rest
-  my_pde = Sea_At_Rest()
+  my_pde = Sea_At_Rest(width=width)
 
 elif args.scenario == "Oscillating_Lake":
   width = [4, 4]

@@ -8,6 +8,7 @@ class Three_Mounds_Channel(scenarios.template_scenario.Template_Scenario):
     """
     def __init__(self):
         super().__init__()
+        super().reflective_boundary_conditions()
 
         _m1 = 1.0 - 0.10 * sympy.sqrt((self.x[0] - 30.0)**2 + (self.x[1] - 22.5)**2)
         _m2 = 1.0 - 0.10 * sympy.sqrt((self.x[0] - 30.0)**2 + (self.x[1] - 7.50)**2)
@@ -20,6 +21,3 @@ class Three_Mounds_Channel(scenarios.template_scenario.Template_Scenario):
         self.initial_values[1] = 0.0
         self.initial_values[2] = 0.0
         self.initial_values[3] = sympy.Max(0.0, _m1, _m2, _m3)
-
-    def implementation_of_boundary_conditions(self):
-        return self.implementation_of_reflective_BC()

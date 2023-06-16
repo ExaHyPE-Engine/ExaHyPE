@@ -7,6 +7,8 @@ class Circular_Island(scenarios.template_scenario.Template_Scenario):
     """
     def __init__(self):
         super().__init__()
+        super().reflective_boundary_conditions()
+        
         _h_0 = 0.32
         _A = 0.064
         _x_c = 12.5
@@ -22,6 +24,3 @@ class Circular_Island(scenarios.template_scenario.Template_Scenario):
             (0.93 * (1 - (_r/_r_c)), _r <= _r_c),
             (0.0, True)
         )
-
-    def implementation_of_boundary_conditions(self):
-        return self.implementation_of_reflective_BC()
