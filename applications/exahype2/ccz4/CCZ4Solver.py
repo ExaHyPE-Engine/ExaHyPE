@@ -368,7 +368,9 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver,
     self._add_standard_includes()
 
     if use_heap_storage:
-      self.switch_to_heap_storage(True, True)
+      self.switch_to_heap_storage(exahype2.solvers.fv.Storage.Heap, exahype2.solvers.fv.Storage.Heap)
+    else:
+      self.switch_to_heap_storage(exahype2.solvers.fv.Storage.SmartPointers, exahype2.solvers.fv.Storage.SmartPointers)
 
     self.set_implementation(
           boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
@@ -631,7 +633,9 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solver
     self._add_standard_includes()
 
     if use_heap_storage:
-      self.switch_to_heap_storage(True, True)
+      self.switch_to_heap_storage(exahype2.solvers.rkfd.Storage.Heap, exahype2.solvers.rkfd.Storage.Heap)
+    else:
+      self.switch_to_heap_storage(exahype2.solvers.rkfd.Storage.SmartPointers, exahype2.solvers.rkfd.Storage.SmartPointers)
 
     self.set_implementation(
           boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
@@ -816,7 +820,9 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
     self._add_standard_includes()
 
     if use_heap_storage:
-      self.switch_to_heap_storage(True, True)
+      self.switch_to_heap_storage(Storage.Heap, Storage.Heap)
+    else:
+      self.switch_to_heap_storage(Storage.SmartPointers, Storage.SmartPointers)
 
     self.set_implementation(
           boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
@@ -974,7 +980,9 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(AbstractCCZ4Solve
     self._add_standard_includes()
 
     if use_heap_storage:
-      self.switch_to_heap_storage(True, True)
+      self.switch_to_heap_storage(exahype2.solvers.rkdg.Storage.Heap, exahype2.solvers.rkdg.Storage.Heap)
+    else:
+      self.switch_to_heap_storage(exahype2.solvers.rkdg.Storage.SmartPointers, exahype2.solvers.rkdg.Storage.SmartPointers)
 
     self.set_implementation(
           boundary_conditions  = exahype2.solvers.rkdg.PDETerms.Empty_Implementation,

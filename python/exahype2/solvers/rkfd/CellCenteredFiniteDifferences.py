@@ -12,6 +12,7 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import jinja2
 
 from abc import abstractmethod
+from enum import Enum
 
 import exahype2
 import exahype2.solvers.rkfd.actionsets
@@ -19,6 +20,13 @@ import exahype2.solvers.rkfd.actionsets
 from .PDETerms import PDETerms
 
 from exahype2.solvers.ButcherTableau              import RungeKutta_steps
+
+
+class Storage(Enum):
+    CallStack     = 0
+    Heap          = 1
+    SmartPointers = 2
+    
 
 class CellCenteredFiniteDifferences(object):
   """ 
@@ -62,15 +70,6 @@ class CellCenteredFiniteDifferences(object):
                     0.0,0.0,0.0,0.0,1.0
             };" "" )
 
-    ## Reduce memory movements
-
-    You can switch for individual fields to a heap-based scheme by changing 
-    the generator:
-    
-           self._patch.generator        = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
-           self._patch._patch_estimates = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
-
-    Alternatively, use the switch_to_heap_storage() routine.
 
   """
   
@@ -188,8 +187,8 @@ class CellCenteredFiniteDifferences(object):
     self._interpolation = "#error Not yet defined"
     self._restriction   = "#error Not yet defined"
 
-    self._hold_cell_data_on_heap_with_smart_pointer = False
-    self._hold_face_data_on_heap_with_smart_pointer = False
+    self._cell_data_storage = Storage.CallStack
+    self._face_data_storage = Storage.CallStack
 
     self._baseline_action_set_priority = baseline_action_set_priority
     
@@ -392,13 +391,31 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
 
-    if self._hold_cell_data_on_heap_with_smart_pointer:
+    if self._cell_data_storage==Storage.CallStack:
+      self._patch.generator           = peano4.datamodel.PatchToDoubleArray(self._patch,           "double")
+      self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArray(self._patch_estimates, "double")
+    elif self._cell_data_storage==Storage.Heap:
       self._patch.generator           = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
       self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
-    if self._hold_face_data_on_heap_with_smart_pointer:
+    elif self._cell_data_storage==Storage.SmartPointers:
+      self._patch.generator           = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(self._patch,           "double")
+      self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(self._patch_estimates, "double")
+
+    if self._face_data_storage==Storage.CallStack:
+      self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArray(self._patch_overlap_old,    "double") 
+      self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArray(self._patch_overlap_new,    "double") 
+      self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArray(self._patch_overlap_update, "double") 
+    elif self._face_data_storage==Storage.Heap:
       self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_old,    "double") 
       self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_new,    "double") 
       self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_update, "double") 
+    elif self._face_data_storage==Storage.SmartPointers:
+      self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(self._patch_overlap_old,    "double") 
+      self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(self._patch_overlap_new,    "double") 
+      self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(self._patch_overlap_update, "double") 
+    else:
+      assert False, "storage variant {} not supported".format( self._face_data_storage )
+
     
     self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_old)
     self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_new)
@@ -1138,8 +1155,8 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 
 
   def switch_to_heap_storage(self,
-                             hold_cell_data_on_heap_with_smart_pointer,
-                             hold_face_data_on_heap_with_smart_pointer
+                             cell_data_storage: Storage,
+                             face_data_storage: Storage,
                              ):
     """
     
@@ -1149,8 +1166,8 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     @see create_data_structures()
     
     """
-    self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
-    self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
+    self._cell_data_storage = cell_data_storage
+    self._face_data_storage = face_data_storage
     
     self.create_data_structures()
     self.create_action_sets()

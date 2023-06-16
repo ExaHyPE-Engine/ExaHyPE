@@ -39,8 +39,7 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
 
 
     class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
-      #SubPatchSize = int( FD4PatchSize*4*4 )
-      SubPatchSize = int( FD4PatchSize*4 )
+      SubPatchSize = int( FD4PatchSize*4*4 )
         
       def __init__(self,
                    name, 
@@ -51,8 +50,7 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
                                         patch_size         = self.SubPatchSize,
                                         min_volume_h       = min_cell_size/self.SubPatchSize, 
                                         max_volume_h       = max_cell_size/self.SubPatchSize,
-                                        # @todo check here
-                                        use_heap_storage   = False,
+                                        use_heap_storage   = True,
                                         )
         self.double_constants[ "BlackHoleFVRegion" ] = 1.0
  
@@ -159,12 +157,12 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
         self._name_without_FD4_extension = name
         
         CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(self,
-                                                                        name            = name + "_FD4", 
-                                                                        patch_size      = FD4PatchSize,
-                                                                        rk_order        = 1,
-                                                                        min_meshcell_h  = min_cell_size/FD4PatchSize, 
-                                                                        max_meshcell_h  = max_cell_size/FD4PatchSize,
-                                                                        use_heap_storage   = False,
+                                                                        name             = name + "_FD4", 
+                                                                        patch_size       = FD4PatchSize,
+                                                                        rk_order         = 1,
+                                                                        min_meshcell_h   = min_cell_size/FD4PatchSize, 
+                                                                        max_meshcell_h   = max_cell_size/FD4PatchSize,
+                                                                        use_heap_storage = False,
                                                                         )
 
         self._user_action_set_includes += """
