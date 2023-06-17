@@ -403,7 +403,7 @@ void runStatelessVariantOnDevice(
 #if defined(GPUOffloadingSYCL)
 void submitSYCLKernels(int patches, int device, int thread) {
   tarch::accelerator::getSYCLQueue(thread).submit([&](auto &h) {
-    h.host_task([=]() {/*
+    h.host_task([=]() {
       runStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
@@ -418,7 +418,7 @@ void submitSYCLKernels(int patches, int device, int thread) {
         patches, device,
         ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, task-graph, SoA", thread
-      );*/
+      );
       runStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
@@ -528,6 +528,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     );
   }
 
+  /*
   #pragma omp parallel for
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     runStatelessVariantOnDevice(
@@ -552,6 +553,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
       "omp, patch-wise, SoA, map", thread
     );
   }
+  */
 
   tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
   #pragma omp parallel for
@@ -581,6 +583,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
     );
   }
 
+  /*
   #pragma omp parallel for
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     runStatelessVariantOnDevice(
@@ -605,6 +608,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
       "omp, batched, SoA, map", thread
     );
   }
+  */
 #elif defined(SharedTBB) and defined(GPUOffloadingSYCL)
   ::tbb::task_group taskGroup;
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
@@ -716,7 +720,7 @@ int main(int argc, char** argv) {
   logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
   logInfo("main()", "Dimensions: " << Dimensions);
 
-  int numberOfPatches = 1;
+  int numberOfPatches = 1024;
   if constexpr (WithScaling) {
     numberOfPatches = tarch::multicore::Core::getInstance().getNumberOfThreads();
   }

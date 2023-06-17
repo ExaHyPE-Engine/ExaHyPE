@@ -3,7 +3,7 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
-
+#define NSEC_IN_SEC 1000000000.0 
 
 
 template <
@@ -23,7 +23,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingSYCL)
-  ::sycl::queue queue{::sycl::gpu_selector_v};
+  ::sycl::property_list prop_list{::sycl::property::queue::enable_profiling()};
+  ::sycl::queue queue{::sycl::gpu_selector_v, prop_list};
   //::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   constexpr int solversHaloSize        = 1;
@@ -569,7 +570,16 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
       );
     }
   }
-
+/*
+  ::sycl::event::wait(updateWithFluxEvent);
+  double duration = 0;
+  for (int i = 0; i < numberOfPatches; i++) {
+    auto start = copySolutionEvent[i].get_profiling_info<::sycl::info::event_profiling::command_start>();
+    auto stop = updateWithFluxEvent[i].get_profiling_info<::sycl::info::event_profiling::command_end>();
+    duration += stop - start;
+  }
+  ::std::cout << "Task graph kernel execution time:" << duration / (NSEC_IN_SEC*numberOfPatches) << ::std::endl;
+*/
 
   std::vector< ::sycl::event > updateWithNCPEvent( numberOfPatches );
   std::vector< ::sycl::event > computeNCPXEvent( numberOfPatches );
@@ -813,7 +823,14 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
     }
 
     ::sycl::event::wait( computeMaxEigenvalueAfterTimeStepEvent );
-  }
+    double duration = 0;
+    for (int i = 0; i < numberOfPatches; i++) {
+      auto start = copySolutionEvent[i].get_profiling_info<::sycl::info::event_profiling::command_start>();
+      auto stop = computeMaxEigenvalueAfterTimeStepEvent[i].get_profiling_info<::sycl::info::event_profiling::command_end>();
+      duration += stop - start;
+    }
+    ::std::cout << "Task graph kernel execution time:" << duration / (NSEC_IN_SEC*numberOfPatches) << ::std::endl;
+    }
   else if (evaluateMaximumEigenvalueAfterTimeStep) {
     std::vector< ::sycl::event > computeMaxEigenvalueAfterTimeStepEvent( numberOfPatches );
     for (int patchIndex = 0; patchIndex<numberOfPatches; patchIndex++) {
@@ -855,6 +872,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
     ::sycl::event::wait( updateWithNCPEvent );
     ::sycl::event::wait( updateWithFluxEvent );
   }
+  
 
 
 

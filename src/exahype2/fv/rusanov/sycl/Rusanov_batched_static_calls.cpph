@@ -25,6 +25,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
   #if defined(GPUOffloadingSYCL)
   ::sycl::property_list prop_list{::sycl::property::queue::enable_profiling()};
   ::sycl::queue queue{::sycl::gpu_selector_v, prop_list};
+  //::sycl::ext::oneapi::experimental::command_graph g(queue.get_context(), queue.get_device());
   //::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   constexpr int solversHaloSize        = 1;
@@ -47,7 +48,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
 
   const std::size_t numberOfPatches = hostPatchData.numberOfCells;
   GPUCellData  patchData( hostPatchData, QInEnumerator, QOutEnumerator, queue );
-
   ::sycl::event copySolutionEvent;
   if (Dimensions==2 and evaluateSource) {
     copySolutionEvent = queue.submit(
@@ -222,7 +222,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int y          = i[1];
             int x          = i[2];
 
-            for (int unknown = 0; unknown < unknowns; unknown++) {
+            for (int unknown = 0; unknown < unknowns+auxiliaryVariables; unknown++) {
               internal::updateSolutionWithEigenvalueDamping_LoopBody(
                 patchData.QIn + patchIndex * QInEnumerator.size(),
                 QInEnumerator,
@@ -345,7 +345,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int y          = i[2];
 
             for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-            for (int unknown = 0; unknown < unknowns; unknown++) {
+            for (int unknown = 0; unknown < unknowns+auxiliaryVariables; unknown++) {
               internal::updateSolutionWithEigenvalueDamping_LoopBody(
                 patchData.QIn + patchIndex * QInEnumerator.size(),
                 QInEnumerator,
@@ -440,7 +440,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int patchIndex = i[0];
             int x          = i[1];
             int y          = i[2];
-            for (int unknown=0; unknown<unknowns; unknown++) {
+            for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
               internal::updateSolutionWithFlux_LoopBody(
                 tempFluxX, tempFluxY, tempFluxZ,
                 fluxEnumerator,
@@ -458,6 +458,13 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
         );
       }
     );
+  /*
+  updateWithFlux.wait();
+  auto start = copySolutionEvent.get_profiling_info<::sycl::info::event_profiling::command_start>();
+  auto stop = updateWithFlux.get_profiling_info<::sycl::info::event_profiling::command_end>();
+  auto duration = static_cast<double>(stop - start) / NSEC_IN_SEC;
+  ::std::cout << "Batched kernel execution time:" << duration << ::std::endl;
+  */
   }
   else if (evaluateFlux and Dimensions==3) {
     ::sycl::event computeFluxX = queue.submit(
@@ -562,7 +569,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int y          = i[2];
 
             for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-            for (int unknown=0; unknown<unknowns; unknown++) {
+            for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
               internal::updateSolutionWithFlux_LoopBody(
                 tempFluxX, tempFluxY, tempFluxZ,
                 fluxEnumerator,
@@ -655,7 +662,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int x          = i[1];
             int y          = i[2];
 
-            for (int unknown=0; unknown<unknowns; unknown++) {
+            for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
               internal::updateSolutionWithNonconservativeFlux_LoopBody(
                 tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
                 ncpEnumerator,
@@ -778,7 +785,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             int y          = i[2];
 
             for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-            for (int unknown=0; unknown<unknowns; unknown++) {
+            for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
               internal::updateSolutionWithNonconservativeFlux_LoopBody(
                 tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
                 ncpEnumerator,
@@ -797,6 +804,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
       }
     );
   }
+  
   ::sycl::event evalEigen;
   if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
     evalEigen = queue.submit(
@@ -833,10 +841,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
         );
       }
     );//.wait();
-	evalEigen.wait();
   }
   else if (evaluateMaximumEigenvalueAfterTimeStep) {
-    queue.submit(
+    evalEigen = queue.submit(
       [&](::sycl::handler &handle) {
         handle.depends_on( updateWithEigenvalue );
         handle.depends_on( updateWithFlux );
@@ -869,17 +876,19 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           }
         );
       }
-    ).wait();
+    );//.wait();
   }
   else {
     updateWithEigenvalue.wait();
     updateWithFlux.wait();
     updateWithNCP.wait();
   }
+  evalEigen.wait();
   auto start = copySolutionEvent.get_profiling_info<::sycl::info::event_profiling::command_start>();
   auto stop = evalEigen.get_profiling_info<::sycl::info::event_profiling::command_end>();
   auto duration = static_cast<double>(stop - start) / NSEC_IN_SEC;
-  ::std::cout << "Batched kernel execution time: " << duration << "sec" << ::std::endl;
+  ::std::cout << "Batched kernel execution time:" << duration << ::std::endl;
+  
 
   patchData.destroy(  hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue  );
 

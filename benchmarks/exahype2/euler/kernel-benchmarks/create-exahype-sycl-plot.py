@@ -28,6 +28,8 @@ parser.add_argument("-ts", "--time-steps", dest="time_steps", default=100,
 					help="Specify how many cycles gpu had, default is 100")
 parser.add_argument("-ps", "--patch-size", dest="patch_size", default=[4, 8, 14], nargs='*',
 					help="Specify how many volumes are in patch")
+parser.add_argument("-dn", "--device-name", dest="device_name", default="A100", help="Used which device for the experiment") 
+parser.add_argument("-d", "--dimension", dest="dimension", default="2d", help="Dimension used in experiment")
 args = parser.parse_args()
 
 markers = [
@@ -131,11 +133,11 @@ if args.files:
 					label=f"$p={args.patch_size[file_num]}$, no reduction")
 
 	plt.style.use("ggplot")
-	ax.set_xscale('log', base=2)
+	ax.set_xscale('log', basex=2)
 	ax.set_yscale('log')
 	plt.legend(fancybox=True)
 	plt.xlabel(r"Number of patches, $T$")
 	plt.ylabel("Kernel time per unknown / s")
 	plt.title(f"{args.kernel_variant}, {args.data_structure}")
 	plt.grid(color='grey', alpha=0.5, linestyle='dashed', linewidth=0.5)
-	plt.savefig(args.kernel_variant + ".pdf", bbox_inches='tight')
+	plt.savefig(args.kernel_variant + "-" + args.device_name + ".pdf", bbox_inches='tight')
