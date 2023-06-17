@@ -156,7 +156,8 @@ class FV(object):
     min_volume_h,
     max_volume_h,
     plot_grid_properties,
-    kernel_namespace):
+    kernel_namespace,
+    baseline_action_set_priority=0):
     """!
 
   Create solver    
@@ -259,6 +260,8 @@ class FV(object):
 
     self._hold_cell_data_on_heap_with_smart_pointer = False
     self._hold_face_data_on_heap_with_smart_pointer = False
+    
+    self._baseline_action_set_priority = baseline_action_set_priority
 
     self.create_data_structures()
     self.create_action_sets()
@@ -539,17 +542,17 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
         
     self._action_set_update_cell = None
 
-    self._action_set_initial_conditions.priority = 1
-    self._action_set_initial_conditions_for_grid_construction.priority = 1
-    self._action_set_AMR.priority = 2
-    self._action_set_AMR_commit_without_further_analysis.priority = 2
-    self._action_set_handle_boundary.priority = 1
-    self._action_set_project_patch_onto_faces.priority = 1 # leave cell
-    self._action_set_roll_over_update_of_faces.priority = 1
-    self._action_set_copy_new_faces_onto_old_faces.priority = 1
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = 1
-    self._action_set_postprocess_solution.priority = 3
-    self._action_set_preprocess_solution.priority = -1
+    self._action_set_initial_conditions.priority = self._baseline_action_set_priority+1
+    self._action_set_initial_conditions_for_grid_construction.priority = self._baseline_action_set_priority + 1
+    self._action_set_AMR.priority = self._baseline_action_set_priority + 2
+    self._action_set_AMR_commit_without_further_analysis.priority = self._baseline_action_set_priority + 2
+    self._action_set_handle_boundary.priority = self._baseline_action_set_priority + 1
+    self._action_set_project_patch_onto_faces.priority = self._baseline_action_set_priority + 1 # touch cell last time, i.e. leave cell
+    self._action_set_roll_over_update_of_faces.priority = self._baseline_action_set_priority + 1
+    self._action_set_copy_new_faces_onto_old_faces.priority = self._baseline_action_set_priority
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = self._baseline_action_set_priority + 1
+    self._action_set_postprocess_solution.priority = self._baseline_action_set_priority # touch cell last time, i.e. leave cell
+    self._action_set_preprocess_solution.priority  = self._baseline_action_set_priority
 
 
   def _store_cell_data_default_guard(self):
@@ -681,9 +684,21 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      
      This is what we want to achieve:
      
-     - Roll updates over on the faces onto Q_old and Q_new.
-     - Copy new face data into old face data, as this is the initial sweep, i.e.
-       the old face data otherwise might hold rubbish.
+     - Project solution onto faces. This happens in touchCellLastTime(). See
+       exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces for comments.
+       The project will end up in QUpdate.
+     - Roll updates over on the faces from QUpdate into Q_new. This is done
+       by RollOverUpdateFace, which requires in turn that the getUpdated()
+       flag is set. As the roll-over plugs into touchFaceLastTime(), it will
+       always be called after the projection, since the latter is a cell 
+       operation.
+     - Copy new face data Q_new into old face data Q_old, as this is the 
+       initial sweep, i.e. the old face data otherwise might hold rubbish.
+       This is a backup operation realised through the action set 
+       BackupPatchOverlap. This one plugs into touchFaceLastTime() too. 
+       Therefore, it is important that its priority is smaller than the one
+       of the roll-over, since we invert the call order for the touch-last
+       events.
      - Restrict the data to the coarser level if we are on a hanging face. 
      - The postprocessing is the very last thing. It does not matter if it 
        plugs into touchCellFirstTime() or touchCellLastTime(). As we invert the
@@ -693,6 +708,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      
     
     """
+    assert self._action_set_copy_new_faces_onto_old_faces.priority < self._action_set_roll_over_update_of_faces.priority
+    
     step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
@@ -770,7 +787,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     #step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
 
 # @todo New time stamp choice update in DG and ADER-DG
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
+
+    plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._patch, 
       dataset_name=self._unknown_identifier(), 
@@ -783,10 +801,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       precision="PlotterPrecision",
       time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
       select_dofs = self.select_dofs_to_print
-    ))
+    )
+    plot_patches_action_set.priority = self._baseline_action_set_priority
+    step.add_action_set( plot_patches_action_set )
 
     if self._plot_grid_properties:    
-      step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
+      plot_grid_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
         guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
@@ -794,7 +814,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """
-      ))
+      )
+      plot_grid_action_set.priority = self._baseline_action_set_priority
+      step.add_action_set( plot_grid_action_set )
       
     pass
    
@@ -970,14 +992,14 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self.create_action_sets()
 
 
-  @patch_size.setter
+  @unknowns.setter
   def unknowns(self, value):
     self._unknowns = value
     self.create_data_structures()
     self.create_action_sets()
 
 
-  @patch_size.setter
+  @auxiliary_variables.setter
   def auxiliary_variables(self, value):
     self._auxiliary_variables = value
     self.create_data_structures()

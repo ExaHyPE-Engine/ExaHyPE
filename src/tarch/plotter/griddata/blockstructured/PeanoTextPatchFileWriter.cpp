@@ -169,7 +169,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
       else if (
         tarch::la::smaller(
           timeStamp, getLatestTimeStepInIndexFile(),
-          tarch::la::relativeEps( timeStamp, getLatestTimeStepInIndexFile(), DefaultTimeStampPrecision )
+          tarch::la::relativeEpsNormaledAgainstValueGreaterOne( timeStamp, getLatestTimeStepInIndexFile(), DefaultTimeStampPrecision )
         )
       ) {
         logWarning( "PeanoTextPatchFileWriter(...)", "there is an index file " << _indexFile << " with data for time stamp " << getLatestTimeStepInIndexFile() << ". Will be overwritten as we dump data for time " << timeStamp );

@@ -16,6 +16,9 @@ from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking
 
+from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStep
+from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
+
 
 # for the coupling
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
@@ -54,7 +57,10 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Restriction.h"        
 #include "toolbox/blockstructured/Interpolation.h"        
 """        
-        self.switch_to_heap_storage(True, True)
+        ## Again, this is true by default
+        #self.switch_to_heap_storage(True, True)
+        Das killt uns. Es ist also doch alles falsch!!!!!
+        self.switch_to_heap_storage(False, False)
 
   
       def _store_cell_data_default_guard(self):
@@ -168,7 +174,9 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Copy.h"        
 """        
 
-        self.switch_to_heap_storage(True, True)
+        # hab ich nie ausprobiert, weil es die superklasse macht 
+        #self.switch_to_heap_storage(True, True)
+        self.switch_to_heap_storage(False, False)
 
 
       def create_action_sets(self):
@@ -273,34 +281,6 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
       oldQWithHalo, 
       interpolatedFVDataWithHalo
     );
-    
-//    ## @todo Docu: If we project only QOld, nothing happens, as this one is abackup only
-//    Update will be rolled over after the time step, so it not of use either
-/*
-    ::toolbox::blockstructured::projectPatchHaloOntoFaces(
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-      1,      // int    haloSize,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns,
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables,
-      interpolatedFVDataWithHalo,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(0).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(1).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(2).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(3).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(4).value,
-      fineGridFaces""" + self._name_without_FD4_extension + """_FVQOld(5).value
-    );
-*/
-
-   // @todo Darf ich auch ordentlich dokumenteiren
-    const 
-    double* dummyFace = ::tarch::allocateMemory<double>(
-        (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch+2)
-      * (repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables),
-      ::tarch::MemoryLocation::Heap
-    );
 
     ::toolbox::blockstructured::projectPatchHaloOntoFaces(
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
@@ -315,19 +295,6 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,4) ? dummyFace4 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(4).value,
       repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,5) ? dummyFace5 : fineGridFaces""" + self._name_without_FD4_extension + """_FVQNew(5).value
     );
-    
-    
-    // @todo Doku rein, dass man sowas machen kann wenn man lustig ist
-/*    
-    ::toolbox::blockstructured::copyUnknowns(
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-      interpolatedFVDataWithHalo,
-      1,      // source halo,
-      fineGridCell""" + self._name_without_FD4_extension + """_FVQ.value,
-      0,      // dest halo
-      repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfUnknowns + repositories::InstanceOf""" + self._name_without_FD4_extension + """_FV.NumberOfAuxiliaryVariables
-    );
-*/
 
     ::tarch::freeMemory(interpolatedFVDataWithHalo, tarch::MemoryLocation::Heap );
     ::tarch::freeMemory(dummyFace0, tarch::MemoryLocation::Heap );
@@ -347,8 +314,6 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
                                                       not marker.willBeRefined()
                                                       )""" 
 
-# @todo Hier auch nohc Doku rein, dass wir doch jetzt auf 7 Zellen loesen und net nur auf eriner
-# Das ist anders als im Coupling-Sketch
         self._action_set_postprocess_solution = exahype2.solvers.rkfd.actionsets.PatchWisePostprocessSolution(self,
                                                                                                               """
   if (
@@ -405,7 +370,8 @@ def construct_FD4_solver(min_cell_size, max_cell_size):
       def __init__(self,
                    name,
                    min_cell_size,
-                   max_cell_size
+                   max_cell_size,
+                   use_heap_storage = False
                    ):
         self._name_without_FD4_extension = name
         
@@ -423,8 +389,6 @@ def construct_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """        
-
-        self.switch_to_heap_storage(True, True)
      
 
       def create_action_sets(self):

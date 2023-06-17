@@ -87,9 +87,9 @@ class toolbox::particles::TrajectoryDatabase {
     };
 
     /**
-     * Can't be const as it might augment the database with default entries.
+     * Determine what to do with new entry
      *
-     * <h2> Thread-safety </h2>
+     * Can't be const as it might augment the database with default entries.
      *
      * The routine is not thread-safe, i.e. you have to protect it from outside.
      */
@@ -99,6 +99,15 @@ class toolbox::particles::TrajectoryDatabase {
       double                                      timestamp
     );
 
+    /**
+     * Determine what to do with new entry
+     *
+     * First of all, invoke other getAction() routine. This one will determine
+     * if the entry is new or if the positions have changed significantly or if
+     * the time stamp means that this entry is due to be plotted. If and only
+     * if the other getAction() yields Ignore, then study the data if the data
+     * deltas are big enough.
+     */
     AddSnapshotAction getAction(
       const std::pair<int, int>&                   number,
       const tarch::la::Vector<Dimensions,double>&  x,
