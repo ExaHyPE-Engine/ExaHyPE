@@ -1,7 +1,9 @@
 import umbridge
-from subprocess import run # run subprocesses to compile exahype and start simulation
-from os.path import isdir, realpath
+from subprocess import run
+from os.path import isdir, realpath, basename
 from glob import glob
+import pandas as pd
+
 class TsunamiModel(umbridge.Model):
     def __init__(self):
         super().__init__("forward") # Give a name to the model
@@ -23,7 +25,7 @@ class TsunamiModel(umbridge.Model):
 
         # check whether this script is being called from the build directory (is there a build folder on the path between peano and cwd)
         # or if build directory exists
-        operating_directory = realpath(__file__)
+        operating_directory = realpath(__file__).split(basename(__file__))[0]
         print("Calling script on path: " + operating_directory)
         
         print("Checking whether build directory is on path...")
@@ -44,42 +46,56 @@ class TsunamiModel(umbridge.Model):
             if(len(glob(operating_directory+"*release*")) == 0):
                 print("ExaHyPE not compiled in release mode, will now attempt to compile.")
 
-                # TODO: compile exahype
+                # TODO: compile exahype via cmake
             
-            print("Changed into build/applications/exahype2/swe-new/")
-            operating_directory = operating_directory + "applications/exahype2/swe-new/"
+            print("Changed into swe directory in the build folder.")
+            operating_directory = operating_directory + realpath(__file__).rsplit("Peano/",maxsplit=1)[1].split(basename(__file__))[0]
         else:
             print("Build directory already on path.")
 
         print("Compiling swe.py now.") 
 
         flag_map = {
-            "solver": "s",
-            "end_time": "et",
-            "amr": "amr",
-            "scenario": "sc",
-            "patch_size": "ps",
-            "max_cell_size": "maxh",
-            "bathymetry_file_path": "bf",
-            "displacement_file_path": "df",
-            "plot_interval": "pi",
-            "output_path": "o",
-            "rk_order": "rk-order",
-            "dg_order": "dg-order",
-            "probe_coordinates": "probes"
+            "solver":                   "s",
+            "end_time":                 "et", 
+            "amr":                      "amr",
+            "scenario":                 "sc",
+            "patch_size":               "ps",
+            "max_cell_size":            "maxh",
+            "bathymetry_file_path":     "bf",
+            "displacement_file_path":   "df",
+            "plot_interval":            "pi", # this also defines the schedule for the probes being dumped into the database
+            "output_path":              "o",
+            "rk_order":                 "rk-order",
+            "dg_order":                 "dg-order",
+            "probe_coordinates":        "probes"
         }
 
         compile_instructions = ["python3", "swe.py"]
         for k in config.keys():
             compile_instructions.append("-%s" % flag_map[k])
+            if (k == "probe_coordinates"):
+                for coordinates in config[k]:
+                    compile_instructions.append(coordinates)
+                continue
             compile_instructions.append(str(config[k]))
         
-        run(compile_instructions)
+        #run(compile_instructions, cwd=operating_directory)
         # run exe 
         application_name = "swe-application-2d-solver-name-SWESolver%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (config["solver"], config["scenario"], config["patch_size"], config["amr"], config["max_cell_size"], config["end_time"])
-        run("./%s" % application_name)
-        # read out values from csv file
+        #run("./%s" % application_name, cwd=operating_directory)
 
+        operating_directory = operating_directory + ("output-%s/" % application_name)
+        # read out values from csv file
+        if(not isdir(operating_directory)):
+            print("Output directory not found! Aborting!")
+            return
+
+        print("Now reading in csv files.")
+        csv_frame = pd.concat([pd.read_csv(csv_file, skipinitialspace=True, header=0, names=["n1,", "n2", "t", "x1", "x2", "h", "hu", "hv", "b"]) for csv_file in glob(operating_directory+"*.csv")], ignore_index=True)
+        print(csv_frame.head())
+
+        
         # return output vector
         output = []
         return [output]
@@ -88,7 +104,7 @@ class TsunamiModel(umbridge.Model):
         return True
     
     def calculate_output_size(self, probe_coordinates, number_of_variables=4):
-        return len(probe_coordinates.split(" "))*number_of_variables
+        return len(probe_coordinates)*number_of_variables
     
 
 model = TsunamiModel()
@@ -101,7 +117,7 @@ config = {
     "solver": "FVRusanovGlobalAdaptive",
     "patch_size": 32,
     "max_cell_size": 0.1,
-    "probe_coordinates": "[5,5]" # has to be a string because otherwise, python inserts a space. And has to be a string anyways for multiple probes
+    "probe_coordinates": ["[5,5]", "[7,3]"] # has to be a string because otherwise, python inserts a space. And has to be a string anyways for multiple probes
 }
 model.__call__([],config)
 #umbridge.serve_models([model], 4242)
