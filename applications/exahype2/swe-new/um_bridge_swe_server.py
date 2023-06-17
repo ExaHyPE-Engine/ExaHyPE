@@ -92,18 +92,28 @@ class TsunamiModel(umbridge.Model):
             return
 
         print("Now reading in csv files.")
-        csv_frame = pd.concat([pd.read_csv(csv_file, skipinitialspace=True, header=0, names=["n1,", "n2", "t", "x1", "x2", "h", "hu", "hv", "b"]) for csv_file in glob(operating_directory+"*.csv")], ignore_index=True)
-        print(csv_frame.head())
+        csv_frame = pd.concat([pd.read_csv(csv_file, skipinitialspace=True, header=0, names=["n1", "n2", "t", "x1", "x2", "h", "hu", "hv", "b"]) for csv_file in glob(operating_directory+"*.csv")], ignore_index=True)
 
-        
+        print("Reading finished, now formatting dataframe.")
+        csv_frame['coordinates'] = csv_frame.apply(lambda row: (row['x1'], row['x2']), axis=1)
+        csv_frame = csv_frame.drop(["x1", "x2", "n1", "n2"], axis=1)
+        csv_frame = csv_frame.iloc[csv_frame.groupby(['coordinates'])['h'].idxmax()]
+
+        print("Maximum water height for probes:")
+        print(csv_frame)
+
         # return output vector
         output = []
-        return [output]
+        for _, row in csv_frame.iterrows():
+            output.append(row['t'])
+            output.append(row['h'])
+        print("Output: " + str(output))
+        return [output] 
 
     def supports_evaluate(self):
         return True
     
-    def calculate_output_size(self, probe_coordinates, number_of_variables=4):
+    def calculate_output_size(self, probe_coordinates, number_of_variables=2):
         return len(probe_coordinates)*number_of_variables
     
 
@@ -117,7 +127,7 @@ config = {
     "solver": "FVRusanovGlobalAdaptive",
     "patch_size": 32,
     "max_cell_size": 0.1,
-    "probe_coordinates": ["[5,5]", "[7,3]"] # has to be a string because otherwise, python inserts a space. And has to be a string anyways for multiple probes
+    "probe_coordinates": ["[5,5]", "[7,3]"] # don't question it, has to be this way
 }
 model.__call__([],config)
 #umbridge.serve_models([model], 4242)
