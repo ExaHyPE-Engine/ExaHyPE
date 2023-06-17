@@ -82,7 +82,7 @@ parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       ty
 
 parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)." )
 parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR." )
-
+# TODO ADD ARGUMENT TO MOVE DISPLACEMENT AROUND AND IMPLEMENT INTO READER!!
 args = parser.parse_args()
 
 maximum_cell_size = args.max_cell_size

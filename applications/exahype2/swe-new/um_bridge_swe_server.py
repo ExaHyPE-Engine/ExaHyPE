@@ -18,6 +18,9 @@ class TsunamiModel(umbridge.Model):
         return [self.output_size] 
 
     def __call__(self, parameters, config):
+        # can be adapted for docker image
+        root_directory = "Peano/"
+
         # if get_output_sizes() has not been called yet
         if(not hasattr(self, "output_size")):
             # calculate output size based on number of probes
@@ -29,14 +32,14 @@ class TsunamiModel(umbridge.Model):
         print("Calling script on path: " + operating_directory)
         
         print("Checking whether build directory is on path...")
-        if("build" not in operating_directory.rsplit("Peano/",maxsplit=1)[1]):  
+        if("build" not in operating_directory.rsplit(root_directory,maxsplit=1)[1]):  
             print("Not in build directory.")
-            operating_directory = operating_directory.rsplit("Peano/",maxsplit=1)[0]+"Peano/"
+            operating_directory = operating_directory.rsplit(root_directory,maxsplit=1)[0]+root_directory
 
             print("Checking whether build directory exist...")
             if(not isdir(operating_directory + "build/")):
                 print("Build directory does not exist, attempt to create it.")
-                run(["mkdir", "build"], cwd=operating_directory)
+                run(["mkdir", "build"], cwd=operating_directory).check_returncode()
                 print("Created build directory at " + operating_directory+"build/")
 
             print("Changed into build directory.")
@@ -45,11 +48,13 @@ class TsunamiModel(umbridge.Model):
             print("Checking whether ExaHyPE is already compiled in release mode...")
             if(len(glob(operating_directory+"*release*")) == 0):
                 print("ExaHyPE not compiled in release mode, will now attempt to compile.")
+                cmake_instructions = ["cmake", ".."] # TODO THIS LEADS TO AN ERROR LATER ON, FIX
 
-                # TODO: compile exahype via cmake
+                run(cmake_instructions, cwd=operating_directory).check_returncode()
+                run(["make", "-j", "8"], cwd=operating_directory).check_returncode()
             
             print("Changed into swe directory in the build folder.")
-            operating_directory = operating_directory + realpath(__file__).rsplit("Peano/",maxsplit=1)[1].split(basename(__file__))[0]
+            operating_directory = operating_directory + realpath(__file__).rsplit(root_directory,maxsplit=1)[1].split(basename(__file__))[0]
         else:
             print("Build directory already on path.")
 
@@ -73,6 +78,8 @@ class TsunamiModel(umbridge.Model):
 
         compile_instructions = ["python3", "swe.py"]
         for k in config.keys():
+            if(k not in flag_map):
+                continue
             compile_instructions.append("-%s" % flag_map[k])
             if (k == "probe_coordinates"):
                 for coordinates in config[k]:
@@ -80,10 +87,10 @@ class TsunamiModel(umbridge.Model):
                 continue
             compile_instructions.append(str(config[k]))
         
-        #run(compile_instructions, cwd=operating_directory)
+        run(compile_instructions, cwd=operating_directory).check_returncode()
         # run exe 
         application_name = "swe-application-2d-solver-name-SWESolver%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (config["solver"], config["scenario"], config["patch_size"], config["amr"], config["max_cell_size"], config["end_time"])
-        #run("./%s" % application_name, cwd=operating_directory)
+        run("./%s" % application_name, cwd=operating_directory).check_returncode()
 
         operating_directory = operating_directory + ("output-%s/" % application_name)
         # read out values from csv file
@@ -116,8 +123,7 @@ class TsunamiModel(umbridge.Model):
     def calculate_output_size(self, probe_coordinates, number_of_variables=2):
         return len(probe_coordinates)*number_of_variables
     
-
-model = TsunamiModel()
+# config should only contain options for swe
 config = {
     "scenario": "Artificial_Tsunami",
     "bathymetry_file_path": "abc",
@@ -129,5 +135,6 @@ config = {
     "max_cell_size": 0.1,
     "probe_coordinates": ["[5,5]", "[7,3]"] # don't question it, has to be this way
 }
+model = TsunamiModel()
 model.__call__([],config)
 #umbridge.serve_models([model], 4242)
