@@ -66,10 +66,10 @@ parser.add_argument("-et",      "--end-time",          dest="end_time",       ty
 parser.add_argument("-bf",      "--bathymetry-file",   dest="bathymetry_file", type=str,                  required=False,             help="Path to file containing bathymetry relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_bathymetry)))
 parser.add_argument("-df",      "--displacement-file", dest="displacement_file",type=str,                 required=False,             help="Path to file containing displacement relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_displacement)))
 parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios,          default="Radial_Dam_Break", help="|".join(scenarios))
-parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch")
-parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots")
+parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch.")
+parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
 
-parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. finite volume cell (3 by default)" )
+parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. finite volume cell (3 by default)." )
 parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=False,              help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
 
 parser.add_argument("-maxd",    "--max_dimension_netcdf",dest="max_dimension_netcdf",type=int,            required=False,             help="Use when netCDF4 python package not installed to pass maximum dimension to the program.")
@@ -80,8 +80,8 @@ parser.add_argument("-probes",  nargs='+',             dest="probe_coordinates",
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   required=False,             help="Set order of time discretisation for Runge-Kutta scheme." )
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   required=False,             help="Set order of space discretisation for Discontinuous Galerkin." )
 
-parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)" )
-parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR" )
+parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)." )
+parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR." )
 
 args = parser.parse_args()
 
@@ -300,7 +300,6 @@ if args.probe_coordinates != None:
   for coords in args.probe_coordinates:
     if re.search("^\[[0-9]+\.?[0-9]*\,[0-9]+\.?[0-9]*\]$", coords):
       splits = re.split("[\[ | \] | \( | \) | \,]", coords)
-      print([float(splits[1]), float(splits[2])])
       coordinates.append([float(splits[1]), float(splits[2])])
     else:
       raise ValueError("Could not parse the illegal coordinates: {}! Is there maybe a white space within the brackets?".format(coords)) 
@@ -322,7 +321,6 @@ if args.probe_coordinates != None:
   
   # add fv probe
   if solver_type in fv_rusanov_solvers:
-    # TODO only project h and t onto particle
     my_project.add_action_set_to_timestepping(
       exahype2.tracer.FiniteVolumesTracing(
         probes, 
@@ -333,7 +331,6 @@ if args.probe_coordinates != None:
 
   #add dg probe
   else:
-    # TODO only project h and t onto particle
     my_project.add_action_set_to_timestepping(
       exahype2.tracer.DiscontinuousGalerkinTracing(
         probes, 
@@ -351,10 +348,10 @@ if args.probe_coordinates != None:
       65536,
       1e50,
       1e50,
-      0.001,
+      plot_interval, # TODO is this a good idea?
       8,
       False,
-      0.001,
+      plot_interval, # starting time of 0 leads to gibberish for t=0 in csv
       args.end_time
     )
   )
