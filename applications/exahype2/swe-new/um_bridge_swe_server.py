@@ -19,7 +19,7 @@ class TsunamiModel(umbridge.Model):
 
     def __call__(self, parameters, config):
         # can be adapted for docker image
-        root_directory = "Peano/"
+        root_directory = "work/"
 
         # if get_output_sizes() has not been called yet
         if(not hasattr(self, "output_size")):
@@ -48,7 +48,11 @@ class TsunamiModel(umbridge.Model):
             print("Checking whether ExaHyPE is already compiled in release mode...")
             if(len(glob(operating_directory+"*release*")) == 0):
                 print("ExaHyPE not compiled in release mode, will now attempt to compile.")
-                cmake_instructions = ["cmake", ".."] # TODO THIS LEADS TO AN ERROR LATER ON, FIX
+                cmake_instructions = ["cmake", 
+                                      "..",
+                                      "-DWITH_MPI=OFF",
+                                      "-DWITH_TOOLCHAIN=gnu",
+                                      "-DCMAKE_BUILD_TYPE=Release"] # TODO THIS LEADS TO AN ERROR LATER ON, FIX
 
                 run(cmake_instructions, cwd=operating_directory).check_returncode()
                 run(["make", "-j", "8"], cwd=operating_directory).check_returncode()
