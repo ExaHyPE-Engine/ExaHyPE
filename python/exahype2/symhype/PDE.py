@@ -76,11 +76,11 @@ class PDE(object):
     """
      Q covers both unknowns plus auxiliary variables. They simply are concatenated.
      So if you have 10 unknowns and 2 auxiliary variables, the name you assign the
-     10s Q entry is the one for the first auxiliary variable.
+     10th Q entry is the one for the first auxiliary variable.
      There's also a dedicated routine for auxiliary variables if you prefer this one.
     """
-    self.Q[number+self.auxiliary_variables] = sympy.symbols(name)
-    return self.Q[number+self.auxiliary_variables]
+    self.Q[number+self.unknowns] = sympy.symbols(name)
+    return self.Q[number+self.unknowns]
 
   def name_Q_entries(self,offset_in_Q,cardinality,name):
     new_entry = sympy.symarray(name, cardinality)

@@ -12,7 +12,7 @@ class PDE(exahype2.symhype.FirstOrderConservativePDEFormulation, ABC):
     self.h = self.name_Q_entry(0, "h")
     self.hu = self.name_Q_entry(1, "hu")
     self.hv = self.name_Q_entry(2, "hv")
-    self.b = self.name_Q_entry(3, "b")
+    self.b = self.name_auxiliary_variable(0, "b")
 
     # gravitational constant
     self.g = sympy.symbols('g')

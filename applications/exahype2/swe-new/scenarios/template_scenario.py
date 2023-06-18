@@ -18,26 +18,20 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     @abstractmethod
     def __init__(self):
         super().__init__()
+        self.definition_of_ncp()
         super().outflow_boundary_conditions()
+    
+    def definition_of_ncp(self):
+        grad_b = self.grad(self.b)
 
-    def implementation_of_ncp(self):
-        return """
-        const double g = 9.81;
-        const double h = Q[0];
-        const double b_d = deltaQ[3];
-  
-        switch(normal){
-        case 0: //x
-            BTimesDeltaQ[0] = 0.0;
-            BTimesDeltaQ[1] = g * h * b_d;
-            BTimesDeltaQ[2] = 0.0;
-            break;
-        case 1: //y
-            BTimesDeltaQ[0] = 0.0;
-            BTimesDeltaQ[1] = 0.0;
-            BTimesDeltaQ[2] = g * h * b_d;
-            break;
-        }"""
+        # NCP [unkowns, dimensions]
+        self.ncp[0, 0] = 0.0
+        self.ncp[1, 0] = self.g * self.h * grad_b
+        self.ncp[2, 0] = 0.0
+
+        self.ncp[0, 1] = 0.0
+        self.ncp[1, 1] = 0.0
+        self.ncp[2, 1] = self.g * self.h * grad_b
         
     def implementation_of_refinement_criterion(self):
         # Implementing https://doi.org/10.1007%2Fs00024-016-1412-y could be interesting
