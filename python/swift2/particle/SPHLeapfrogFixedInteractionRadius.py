@@ -215,6 +215,10 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self.data.add_attribute(self.iteration_count)
         self.data.add_attribute(self.has_converged)
 
+        # TODO: temporary
+        self.density_reset = dastgen2.attributes.Integer("densityReset")
+        self.data.add_attribute(self.density_reset)
+
         # Artificial viscosity scheme -------------------------------------------------
         self.balsara = dastgen2.attributes.Double(
             "balsara", valid_mantissa_bits=self._mantissa_size
@@ -295,78 +299,84 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         )
         self.algorithm_steps_dict["FlagBoundaryParticles"] = flagBoundaryParticlesStep
 
-        densityWithConstantSmoothingLengthFirst = AlgorithmStep(
-            name="DensityWithConstantSmoothingLengthFirst",
-            dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""
-                                       ::swift2::kernels::prepareDensityCalculation( localParticles );
-                                       """,
-            cell_kernel="""
-                                       ::swift2::kernels::computeDensity(
-                                         localParticles,
-                                         activeParticles,
-                                         {}
-                                       );
-                                       """.format(
-                self._hydroDimensions
-            ),
-            touch_vertex_last_time_kernel="""
-                                       ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
-                                           localParticles,
-                                           {},
-                                           {},
-                                           {}
-                                           );
-                                       """.format(
-                self._hydroDimensions, self._eta_factor, self._alpha_av
-            ),
-            includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/kernels/ParticleParticleInteraction.h"
-                                       #include "swift2/kernels/ParticleSelfInteraction.h"
-                                       #include "swift2/kernels/kernel_hydro.h"
-                                       #include "swift2/kernels/equation_of_state.h"
-                                       """,
-        )
-        self.algorithm_steps_dict[
-            "DensityWithConstantSmoothingLengthFirst"
-        ] = densityWithConstantSmoothingLengthFirst
+        #  densityWithConstantSmoothingLengthFirst = AlgorithmStep(
+        #      name="DensityWithConstantSmoothingLengthFirst",
+        #      dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
+        #      effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+        #      touch_vertex_first_time_kernel="""
+        #                                 ::swift2::kernels::prepareDensityCalculation( localParticles );
+        #                                 """,
+        #      cell_kernel="""
+        #                                 ::swift2::kernels::computeDensity(
+        #                                   localParticles,
+        #                                   activeParticles,
+        #                                   {}
+        #                                 );
+        #                                 """.format(
+        #          self._hydroDimensions
+        #      ),
+        #      touch_vertex_last_time_kernel="""
+        #                                 ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
+        #                                     localParticles,
+        #                                     {},
+        #                                     {},
+        #                                     {}
+        #                                     );
+        #                                 """.format(
+        #          self._hydroDimensions, self._eta_factor, self._alpha_av
+        #      ),
+        #      includes="""
+        #                                 #include "Constants.h"
+        #                                 #include "swift2/kernels/ParticleParticleInteraction.h"
+        #                                 #include "swift2/kernels/ParticleSelfInteraction.h"
+        #                                 #include "swift2/kernels/kernel_hydro.h"
+        #                                 #include "swift2/kernels/equation_of_state.h"
+        #                                 """,
+        #  )
+        #  self.algorithm_steps_dict[
+        #      "DensityWithConstantSmoothingLengthFirst"
+        #  ] = densityWithConstantSmoothingLengthFirst
 
-        forceFirst = AlgorithmStep(
-            name="ForceLoopInitial",
-            dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""
-                                       ::swift2::kernels::prepareHydroForceCalculation( localParticles );
-                                       """,
-            cell_kernel="""
-                                       ::swift2::kernels::computeHydroForce(
-                                         localParticles,
-                                         activeParticles,
-                                         {},
-                                         {}
-                                       );
-                                       """.format(
-                self._hydroDimensions, self._beta_av
-            ),
-            touch_vertex_last_time_kernel="""
-                                       ::swift2::kernels::endHydroForceCalculation(
-                                           localParticles,
-                                           {}
-                                           );
-                                       """.format(
-                self._hydroDimensions
-            ),
-            includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/kernels/ParticleParticleInteraction.h"
-                                       #include "swift2/kernels/ParticleSelfInteraction.h"
-                                       #include "swift2/kernels/kernel_hydro.h"
-                                       #include "swift2/kernels/equation_of_state.h"
-                                       """,
-        )
-        self.algorithm_steps_dict["ForceFirst"] = forceFirst
+#          forceFirst = AlgorithmStep(
+        #      name="ForceLoopInitial",
+        #      dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
+        #      effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+        #      touch_vertex_first_time_kernel="""
+        #                                 ::swift2::kernels::prepareHydroForceCalculation(
+        #                                     localParticles,
+        #                                     {},
+        #                                     {},
+        #                                     {}
+        #                                     );
+        #                                 """.format(
+        #          self._hydroDimensions, self._eta_factor, self._alpha_av),
+        #      cell_kernel="""
+        #                                 ::swift2::kernels::computeHydroForce(
+        #                                   localParticles,
+        #                                   activeParticles,
+        #                                   {},
+        #                                   {}
+        #                                 );
+        #                                 """.format(
+        #          self._hydroDimensions, self._beta_av
+        #      ),
+        #      touch_vertex_last_time_kernel="""
+        #                                 ::swift2::kernels::endHydroForceCalculation(
+        #                                     localParticles,
+        #                                     {}
+        #                                     );
+        #                                 """.format(
+        #          self._hydroDimensions
+        #      ),
+        #      includes="""
+        #                                 #include "Constants.h"
+        #                                 #include "swift2/kernels/ParticleParticleInteraction.h"
+        #                                 #include "swift2/kernels/ParticleSelfInteraction.h"
+        #                                 #include "swift2/kernels/kernel_hydro.h"
+        #                                 #include "swift2/kernels/equation_of_state.h"
+        #                                 """,
+        #  )
+#          self.algorithm_steps_dict["ForceFirst"] = forceFirst
 
         kick1 = AlgorithmStep(
             name="Kick1",
@@ -491,8 +501,14 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
             touch_vertex_first_time_kernel="""
-                                       ::swift2::kernels::prepareHydroForceCalculation( localParticles );
-                                       """,
+                                       ::swift2::kernels::prepareHydroForceCalculation(
+                                           localParticles,
+                                           {},
+                                           {},
+                                           {}
+                                           );
+                                       """.format(
+                self._hydroDimensions, self._eta_factor, self._alpha_av),
             cell_kernel="""
                                        ::swift2::kernels::computeHydroForce(
                                          localParticles,
@@ -608,8 +624,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
         return [
             self.algorithm_steps_dict["FlagBoundaryParticles"],
-            self.algorithm_steps_dict["DensityWithConstantSmoothingLengthFirst"],
-            self.algorithm_steps_dict["ForceFirst"],
+            #  self.algorithm_steps_dict["DensityWithConstantSmoothingLengthFirst"],
+            #  self.algorithm_steps_dict["ForceFirst"],
             self.algorithm_steps_dict["Kick1"],
             self.algorithm_steps_dict["Kick1Extra"],
             self.algorithm_steps_dict["Drift"],
