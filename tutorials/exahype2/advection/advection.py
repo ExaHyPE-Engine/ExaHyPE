@@ -18,7 +18,7 @@ import peano4
 import exahype2
 
 #
-# We specifiy the space dimensions here.
+# We specify the space dimensions here.
 # We support either 2- or 3-dimensional problems.
 #
 dimensions = 2

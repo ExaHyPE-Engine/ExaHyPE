@@ -18,12 +18,12 @@ import peano4
 import exahype2
 
 #
-# We specifiy the space dimensions here.
+# We specify the space dimensions here.
 # We support either 2- or 3-dimensional problems.
 #
 dimensions            = 2
 #
-# We specifiy the number of AMR levels here.
+# We specify the number of AMR levels here.
 #
 amr_levels            = 3
 
