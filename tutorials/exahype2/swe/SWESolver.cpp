@@ -14,7 +14,6 @@ void tutorials::exahype2::swe::SWESolver::initialCondition(
   Q[1] = 0; // x-momentum (hu)
   Q[2] = 0; // y-momentum (hv)
   Q[3] = (nearCentre ? 0.0 : 0.1); // Bathymetry (b)
-  //Q[3] = 0;
 }
 
 void tutorials::exahype2::swe::SWESolver::boundaryConditions(
