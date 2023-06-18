@@ -2,14 +2,14 @@
 #include <iostream>
 #include <math.h>  
 
-applications::exahype2::swe::parser::TopologyParser::TopologyParser(const char *bathymetry_file_path, const char *displacement_file_path, double i_uq_displacement_origin_x = -1.f, double i_uq_displacement_origin_y = -1.f){
+applications::exahype2::swe::parser::TopologyParser::TopologyParser(const char *bathymetry_file_path, const char *displacement_file_path, double i_uq_displacement_origin_x = 0.f, double i_uq_displacement_origin_y = 0.f){
 
   l_nX = DomainSize(0);
   l_nY = DomainSize(1);
-  this->parse_bathymetry_file(bathymetry_file_path);
-  this->parse_displacement_file(displacement_file_path);
   this->uq_displacement_origin_x = i_uq_displacement_origin_x;
   this->uq_displacement_origin_y = i_uq_displacement_origin_y;
+  this->parse_bathymetry_file(bathymetry_file_path);
+  this->parse_displacement_file(displacement_file_path);
 
 }
 
@@ -115,7 +115,7 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
     min_x_displacement_ = tmp[0];
     max_x_displacement_ = tmp[xDis - 1];
     // Has the origin of the displacement in x-dimension been put elsewhere than specified in the file?
-    if(this->uq_displacement_origin_x > -1)
+    if(uq_displacement_origin_x != 0.f)
     {
       // Move boundaries
       double difference = min_x_displacement_ - uq_displacement_origin_x;
@@ -135,7 +135,7 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
     min_y_displacement_ = tmp[0];
     max_y_displacement_ = tmp[yDis - 1];
     // Has the origin of the displacement in y-dimension been put elsewhere than specified in the file?
-    if(this->uq_displacement_origin_y > -1)
+    if(uq_displacement_origin_y != 0.f)
     {
       // Move boundaries
       double difference = min_y_displacement_ - uq_displacement_origin_y;
