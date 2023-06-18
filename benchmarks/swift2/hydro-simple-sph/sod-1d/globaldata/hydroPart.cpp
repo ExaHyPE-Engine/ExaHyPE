@@ -7,13 +7,13 @@
 
 
 
-benchmarks::swift2::sod::globaldata::hydroPart::hydroPart(tarch::la::Vector<Dimensions,double>  __debugX, tarch::la::Vector<Dimensions,double>  __debugH, tarch::la::Vector<Dimensions,double>  __x, double  __cutOffRadius, ParallelState  __ParallelState, NewParallelState  __NewParallelState, MoveState  __MoveState, bool  __CellHasUpdatedParticle, double  __mass, tarch::la::Vector<Dimensions,double>  __v, tarch::la::Vector<Dimensions,double>  __a, double  __density, double  __pressure, double  __smoothingLength, double  __u, double  __uDot, double  __f, double  __wcount_dh, double  __rho_dh, double  __hLeft, double  __hRight, double  __smoothingLengthPrevious, double  __wcount, double  __hDot, double  __residual, int  __iterCount, bool  __hasConverged, double  __balsara, double  __rot_v, double  __div_v, double  __v_sig_AV, double  __soundSpeed, tarch::la::Vector<Dimensions,double>  __v_full, double  __u_full, bool  __hasNoNeighbours, bool  __isBoundaryParticle, int  __Ncount, int  __partid){
+benchmarks::swift2::sod::globaldata::hydroPart::hydroPart(tarch::la::Vector<Dimensions,double>  __debugX, tarch::la::Vector<Dimensions,double>  __debugH, tarch::la::Vector<Dimensions,double>  __x, double  __cutOffRadius, ParallelState  __ParallelState, NewParallelState  __NewParallelState, MoveState  __MoveState, bool  __CellHasUpdatedParticle, double  __mass, tarch::la::Vector<Dimensions,double>  __v, tarch::la::Vector<Dimensions,double>  __a, double  __density, double  __pressure, double  __smoothingLength, double  __u, double  __uDot, double  __f, double  __wcount_dh, double  __rho_dh, double  __hLeft, double  __hRight, double  __smoothingLengthPrevious, double  __wcount, double  __hDot, double  __residual, int  __iterCount, bool  __hasConverged, int  __densityReset, double  __balsara, double  __rot_v, double  __div_v, double  __v_sig_AV, double  __soundSpeed, tarch::la::Vector<Dimensions,double>  __v_full, double  __u_full, bool  __hasNoNeighbours, bool  __isBoundaryParticle, int  __Ncount, int  __partid){
 #if PeanoDebug>0
 setDebugX( __debugX);
-#endif
+#endif 
 #if PeanoDebug>0
 setDebugH( __debugH);
-#endif
+#endif 
 setX( __x);
 setCutOffRadius( __cutOffRadius);
 setParallelState( __ParallelState);
@@ -39,6 +39,7 @@ setHDot( __hDot);
 setResidual( __residual);
 setIterCount( __iterCount);
 setHasConverged( __hasConverged);
+setDensityReset( __densityReset);
 setBalsara( __balsara);
 setRot_v( __rot_v);
 setDiv_v( __div_v);
@@ -57,10 +58,10 @@ setPartid( __partid);
 benchmarks::swift2::sod::globaldata::hydroPart::hydroPart( const hydroPart& copy ) {
 #if PeanoDebug>0
   setDebugX( copy.getDebugX() );
-#endif
+#endif 
 #if PeanoDebug>0
   setDebugH( copy.getDebugH() );
-#endif
+#endif 
   setX( copy.getX() );
   setCutOffRadius( copy.getCutOffRadius() );
   setParallelState( copy.getParallelState() );
@@ -86,6 +87,7 @@ benchmarks::swift2::sod::globaldata::hydroPart::hydroPart( const hydroPart& copy
   setResidual( copy.getResidual() );
   setIterCount( copy.getIterCount() );
   setHasConverged( copy.getHasConverged() );
+  setDensityReset( copy.getDensityReset() );
   setBalsara( copy.getBalsara() );
   setRot_v( copy.getRot_v() );
   setDiv_v( copy.getDiv_v() );
@@ -106,86 +108,87 @@ benchmarks::swift2::sod::globaldata::hydroPart::hydroPart( const hydroPart& copy
 std::string benchmarks::swift2::sod::globaldata::hydroPart::toString() const {
   std::ostringstream out;
   out << "(";
-  out << "partid=" << _partid;
-  out << ",\n          ";
 #if PeanoDebug>0
-  // out << "debugX=" << _debugX;
-#endif
+  out << "debugX=" << _debugX;
+#endif 
 #if PeanoDebug>0
-  // out << ",\n          ";
-  // out << "debugH=" << _debugH;
-#endif
-  // out << ",\n          ";
+  out << ","; 
+  out << "debugH=" << _debugH;
+#endif 
+  out << ","; 
   out << "x=" << _x;
-  out << ",\n          ";
+  out << ","; 
+  out << "cutOffRadius=" << _cutOffRadius;
+  out << ","; 
+  out << "ParallelState=" << (_ParallelState==ParallelState::Local? "Local" : "")  << (_ParallelState==ParallelState::Virtual? "Virtual" : "") ;
+  out << ","; 
+  out << "NewParallelState=" << (_NewParallelState==NewParallelState::Local? "Local" : "")  << (_NewParallelState==NewParallelState::Virtual? "Virtual" : "") ;
+  out << ","; 
+  out << "MoveState=" << (_MoveState==MoveState::New? "New" : "")  << (_MoveState==MoveState::NotMovedYet? "NotMovedYet" : "")  << (_MoveState==MoveState::Moved? "Moved" : "") ;
+  out << ","; 
+  out << "CellHasUpdatedParticle=" << _CellHasUpdatedParticle;
+  out << ","; 
+  out << "mass=" << _mass;
+  out << ","; 
   out << "v=" << getV();
-  out << ",\n          ";
+  out << ","; 
   out << "a=" << getA();
-  out << ",\n          ";
-  out << "m=" << _mass;
-  out << ",\n          ";
-  out << "h=" << _smoothingLength;
-  out << ",\n          ";
+  out << ","; 
+  out << "density=" << _density;
+  out << ","; 
+  out << "pressure=" << _pressure;
+  out << ","; 
+  out << "smoothingLength=" << _smoothingLength;
+  out << ","; 
   out << "u=" << _u;
-  out << ",\n          ";
-  out << "u_dt=" << _uDot;
-  out << ",\n          ";
-  out << "rho=" << _density;
-  out << ",\n          ";
-  out << "wcount=" << _wcount;
-  out << ",\n          ";
-  out << "wcount_dh=" << _wcount_dh;
-  out << ",\n          ";
-  out << "rho_dh=" << _rho_dh;
-  out << ",\n          ";
-  out << "div_v=" << _div_v;
-  out << ",\n          ";
-  out << "rot_v=" << _rot_v;
-  out << ",\n          ";
+  out << ","; 
+  out << "uDot=" << _uDot;
+  out << ","; 
   out << "f=" << _f;
-  out << ",\n          ";
-  out << "P=" << _pressure;
-  out << ",\n          ";
-  out << "soundSpeed=" << _soundSpeed;
-  out << ",\n          ";
-  out << "v_sig_AV=" << _v_sig_AV;
-  out << ",\n          ";
-  out << "h_dt=" << _hDot;
-  out << ",\n          ";
+  out << ","; 
+  out << "wcount_dh=" << _wcount_dh;
+  out << ","; 
+  out << "rho_dh=" << _rho_dh;
+  out << ","; 
+  out << "hLeft=" << _hLeft;
+  out << ","; 
+  out << "hRight=" << _hRight;
+  out << ","; 
+  out << "smoothingLengthPrevious=" << _smoothingLengthPrevious;
+  out << ","; 
+  out << "wcount=" << _wcount;
+  out << ","; 
+  out << "hDot=" << _hDot;
+  out << ","; 
+  out << "residual=" << _residual;
+  out << ","; 
+  out << "iterCount=" << _iterCount;
+  out << ","; 
+  out << "hasConverged=" << _hasConverged;
+  out << ","; 
+  out << "densityReset=" << _densityReset;
+  out << ","; 
   out << "balsara=" << _balsara;
-  out << ",\n          ";
-
-/*   out << "cutOffRadius=" << _cutOffRadius; */
-  /* out << ",\n          "; */
-  /* out << "ParallelState=" << (_ParallelState==ParallelState::Local? "Local" : "")  << (_ParallelState==ParallelState::Virtual? "Virtual" : "") ; */
-  /* out << ",\n          "; */
-  /* out << "NewParallelState=" << (_NewParallelState==NewParallelState::Local? "Local" : "")  << (_NewParallelState==NewParallelState::Virtual? "Virtual" : "") ; */
-  /* out << ",\n          "; */
-  /* out << "MoveState=" << (_MoveState==MoveState::New? "New" : "")  << (_MoveState==MoveState::NotMovedYet? "NotMovedYet" : "")  << (_MoveState==MoveState::Moved? "Moved" : "") ; */
-  /* out << ",\n          "; */
-  /* out << "CellHasUpdatedParticle=" << _CellHasUpdatedParticle; */
-  /* out << ",\n          "; */
-  /* out << "hLeft=" << _hLeft; */
-  /* out << ",\n          "; */
-  /* out << "hRight=" << _hRight; */
-  /* out << ",\n          "; */
-  /* out << "smoothingLengthPrevious=" << _smoothingLengthPrevious; */
-  /* out << ",\n          "; */
-  /* out << "residual=" << _residual; */
-  /* out << ",\n          "; */
-  /* out << "iterCount=" << _iterCount; */
-  /* out << ",\n          "; */
-  /* out << "hasConverged=" << _hasConverged; */
-  /* out << ",\n          "; */
-  /* out << "v_full=" << getV_full(); */
-  /* out << ",\n          "; */
-  /* out << "u_full=" << _u_full; */
-  /* out << ",\n          "; */
-  /* out << "hasNoNeighbours=" << _hasNoNeighbours; */
-  /* out << ",\n          "; */
-  /* out << "isBoundaryParticle=" << _isBoundaryParticle; */
-  /* out << ",\n          "; */
-  /* out << "Ncount=" << _Ncount; */
+  out << ","; 
+  out << "rot_v=" << _rot_v;
+  out << ","; 
+  out << "div_v=" << _div_v;
+  out << ","; 
+  out << "v_sig_AV=" << _v_sig_AV;
+  out << ","; 
+  out << "soundSpeed=" << _soundSpeed;
+  out << ","; 
+  out << "v_full=" << getV_full();
+  out << ","; 
+  out << "u_full=" << _u_full;
+  out << ","; 
+  out << "hasNoNeighbours=" << _hasNoNeighbours;
+  out << ","; 
+  out << "isBoundaryParticle=" << _isBoundaryParticle;
+  out << ","; 
+  out << "Ncount=" << _Ncount;
+  out << ","; 
+  out << "partid=" << _partid;
   out << ")";
   return out.str();
 }
@@ -215,7 +218,7 @@ void   benchmarks::swift2::sod::globaldata::hydroPart::setDebugX(int index, doub
 }
 
 
-#endif
+#endif 
 
 
 #if PeanoDebug>0
@@ -239,7 +242,7 @@ void   benchmarks::swift2::sod::globaldata::hydroPart::setDebugH(int index, doub
 }
 
 
-#endif
+#endif 
 
 
 tarch::la::Vector<Dimensions,double>   benchmarks::swift2::sod::globaldata::hydroPart::getX() const {
@@ -538,6 +541,16 @@ void   benchmarks::swift2::sod::globaldata::hydroPart::setHasConverged(bool valu
 }
 
 
+int   benchmarks::swift2::sod::globaldata::hydroPart::getDensityReset() const {
+  return _densityReset;
+}
+
+
+void   benchmarks::swift2::sod::globaldata::hydroPart::setDensityReset(int value) {
+  _densityReset = value;
+}
+
+
 double   benchmarks::swift2::sod::globaldata::hydroPart::getBalsara() const {
   return _balsara;
 }
@@ -672,7 +685,7 @@ void   benchmarks::swift2::sod::globaldata::hydroPart::setPartid(int value) {
 
 #ifdef Parallel
 
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype benchmarks::swift2::sod::globaldata::hydroPart::Datatype;
 #endif
 
@@ -719,10 +732,11 @@ void benchmarks::swift2::sod::globaldata::hydroPart::initDatatype() {
   int NumberOfAttributes = 0;
 #if PeanoDebug>0
   NumberOfAttributes++;
-#endif
+#endif 
 #if PeanoDebug>0
   NumberOfAttributes++;
-#endif
+#endif 
+  NumberOfAttributes++;
   NumberOfAttributes++;
   NumberOfAttributes++;
   NumberOfAttributes++;
@@ -761,9 +775,9 @@ void benchmarks::swift2::sod::globaldata::hydroPart::initDatatype() {
   NumberOfAttributes++;
 
   MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
-  int*          blocklen = new int[NumberOfAttributes];
+  int*          blocklen = new int[NumberOfAttributes]; 
   MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
-
+  
   int counter            = 0;
 #if PeanoDebug>0
   subtypes[counter] = MPI_DOUBLE;
@@ -850,6 +864,9 @@ void benchmarks::swift2::sod::globaldata::hydroPart::initDatatype() {
   subtypes[counter] = MPI_BYTE;
   blocklen[counter] = 1;
   counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = 1;
+  counter++;
   subtypes[counter] = MPI_DOUBLE;
   blocklen[counter] = 1;
   counter++;
@@ -883,12 +900,12 @@ void benchmarks::swift2::sod::globaldata::hydroPart::initDatatype() {
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
   counter++;
-
+   
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
   MPI_Get_address( &instances[0], &baseFirstInstance );
   MPI_Get_address( &instances[1], &baseSecondInstance );
-
+  
   counter = 0;
 
 #if PeanoDebug>0
@@ -950,6 +967,8 @@ void benchmarks::swift2::sod::globaldata::hydroPart::initDatatype() {
   counter++;
   MPI_Get_address( &(instances[0]._hasConverged), &disp[counter] );
   counter++;
+  MPI_Get_address( &(instances[0]._densityReset), &disp[counter] );
+  counter++;
   MPI_Get_address( &(instances[0]._balsara), &disp[counter] );
   counter++;
   MPI_Get_address( &(instances[0]._rot_v), &disp[counter] );
@@ -979,8 +998,8 @@ void benchmarks::swift2::sod::globaldata::hydroPart::initDatatype() {
     disp[i] = disp[i] - disp[0];
   }
 
-  int errorCode = 0;
-  MPI_Datatype tmpType;
+  int errorCode = 0; 
+  MPI_Datatype tmpType; 
   errorCode += MPI_Type_create_struct( NumberOfAttributes, blocklen, disp, subtypes, &tmpType );
   errorCode += MPI_Type_create_resized( tmpType, offset, extent, &Datatype );
   errorCode += MPI_Type_commit( &Datatype );
@@ -988,7 +1007,7 @@ void benchmarks::swift2::sod::globaldata::hydroPart::initDatatype() {
   if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
 
   delete[] subtypes;
-  delete[] blocklen;
+  delete[] blocklen; 
   delete[] disp;
 
   #else
@@ -1035,42 +1054,42 @@ void benchmarks::swift2::sod::globaldata::hydroPart::receive(benchmarks::swift2:
 
 
 void benchmarks::swift2::sod::globaldata::hydroPart::send(
-  const benchmarks::swift2::sod::globaldata::hydroPart& buffer,
-  int destination,
-  int tag,
-  std::function<void()> startCommunicationFunctor,
-  std::function<void()> waitFunctor,
-  MPI_Comm communicator
+  const benchmarks::swift2::sod::globaldata::hydroPart& buffer, 
+  int destination, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
 ) {
-  MPI_Request sendRequestHandle;
-  int         flag = 0;
-  MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle );
+  MPI_Request sendRequestHandle; 
+  int         flag = 0; 
+  MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle ); 
   MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
-  startCommunicationFunctor();
-  while (!flag) {
+  startCommunicationFunctor(); 
+  while (!flag) { 
     waitFunctor();
-    MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
+    MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
   }
 }
 
 
 void benchmarks::swift2::sod::globaldata::hydroPart::receive(
-  benchmarks::swift2::sod::globaldata::hydroPart& buffer,
-  int source,
-  int tag,
-  std::function<void()> startCommunicationFunctor,
-  std::function<void()> waitFunctor,
-  MPI_Comm communicator
-) {
+  benchmarks::swift2::sod::globaldata::hydroPart& buffer, 
+  int source, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {   
   MPI_Status  status;
-  MPI_Request receiveRequestHandle;
-  int         flag = 0;
-  MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle );
+  MPI_Request receiveRequestHandle; 
+  int         flag = 0; 
+  MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle ); 
   MPI_Test( &receiveRequestHandle, &flag, &status );
-  startCommunicationFunctor();
-  while (!flag) {
+  startCommunicationFunctor(); 
+  while (!flag) { 
     waitFunctor();
-    MPI_Test( &receiveRequestHandle, &flag, &status );
+    MPI_Test( &receiveRequestHandle, &flag, &status ); 
   }
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
@@ -1110,7 +1129,7 @@ void benchmarks::swift2::sod::globaldata::hydroPart::receiveAndPollDanglingMessa
   );
 }
 #endif
-
+    
 ::swift2::ParticleSpecies& benchmarks::swift2::sod::globaldata::hydroPart::getSpecies() {
   static ::swift2::ParticleSpecies species;
   return species;
