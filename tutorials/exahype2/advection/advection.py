@@ -46,7 +46,7 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 )
 
 #
-# Specifiy which implementation our solvers uses.
+# Specify which implementation our solvers uses.
 # Here we want to use a user-defined C++ implementation.
 # For this, we create a C++ file "AdvectionSolver.cpp" (same as our solver name from above),
 # where we can use ExaHyPE's API to fill out the necessary implementations.
