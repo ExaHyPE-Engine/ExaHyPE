@@ -14,20 +14,22 @@ class applications::exahype2::swe::parser::TopologyParser {
     double* bathymetry = nullptr;
     double* displacement = nullptr;
 
-    size_t xBathy = 0;               /* length of bathymetry in x-dimension */
-    size_t yBathy = 0;               /* length of bathymetry in y-dimension */
-    size_t xDis = 0;                 /* length of displacement in x-dimension */
-    size_t yDis = 0;                 /* length of displacement in y-dimension */
-    double l_nX = -1;                /* length of simulation in x-dimension */
-    double l_nY = -1;                /* length of simulation in y-dimension */
-    double max_x_bathymetry_ = -1;   /* highest x-coordinate in bathymetry */
-    double max_y_bathymetry_ = -1;   /* highest y-coordinate in bathymetry */
-    double min_x_bathymetry_ = 1;    /* lowest x-coordinate in bathymetry */
-    double min_y_bathymetry_ = 1;    /* lowest y-coordinate in bathymetry */
-    double max_x_displacement_ = -1; /* highest x-coordinate in displacement */
-    double max_y_displacement_ = -1; /* highest y-coordinate in displacement */
-    double min_x_displacement_ = 1;  /* lowest x-coordinate in displacement */
-    double min_y_displacement_ = 1;  /* lowest y-coordinate in displacement */
+    size_t xBathy = 0;                      /* length of bathymetry in x-dimension */
+    size_t yBathy = 0;                      /* length of bathymetry in y-dimension */
+    size_t xDis = 0;                        /* length of displacement in x-dimension */
+    size_t yDis = 0;                        /* length of displacement in y-dimension */
+    double l_nX = -1;                       /* length of simulation in x-dimension */
+    double l_nY = -1;                       /* length of simulation in y-dimension */
+    double max_x_bathymetry_ = -1;          /* highest x-coordinate in bathymetry */
+    double max_y_bathymetry_ = -1;          /* highest y-coordinate in bathymetry */
+    double min_x_bathymetry_ = 1;           /* lowest x-coordinate in bathymetry */
+    double min_y_bathymetry_ = 1;           /* lowest y-coordinate in bathymetry */
+    double max_x_displacement_ = -1;        /* highest x-coordinate in displacement */
+    double max_y_displacement_ = -1;        /* highest y-coordinate in displacement */
+    double min_x_displacement_ = 1;         /* lowest x-coordinate in displacement */
+    double min_y_displacement_ = 1;         /* lowest y-coordinate in displacement */
+    double uq_displacement_origin_x = -1;   /* origin for displacment in x-dimension for uq */
+    double uq_displacement_origin_y = -1;   /* origin for displacment in y-dimension for uq */
 
     /**
      * @brief 
@@ -58,7 +60,7 @@ class applications::exahype2::swe::parser::TopologyParser {
 
   public:
   
-    TopologyParser(const char *bathymetry_file_path, const char *displacement_file_path);
+    TopologyParser(const char *bathymetry_file_path, const char *displacement_file_path, double i_uq_displacement_origin_x, double i_uq_displacement_origin_y);
     ~TopologyParser();
 
     void parse_bathymetry_file(const char *bathymetry_file_path);

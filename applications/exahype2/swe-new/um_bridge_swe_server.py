@@ -9,7 +9,8 @@ class TsunamiModel(umbridge.Model):
         super().__init__("forward") # Give a name to the model
 
     def get_input_sizes(self, config):
-        return [2] # coordinates of the earthquake origin
+        # coordinates of the earthquake origin
+        return [2] 
 
     def get_output_sizes(self, config):
         # normally 2x max water height at time t for two DART buoys 21418 and 21419
@@ -19,7 +20,7 @@ class TsunamiModel(umbridge.Model):
 
     def __call__(self, parameters, config):
         # can be adapted for docker image
-        root_directory = "work/"
+        root_directory = "Peano/"
 
         # if get_output_sizes() has not been called yet
         if(not hasattr(self, "output_size")):
@@ -48,11 +49,13 @@ class TsunamiModel(umbridge.Model):
             print("Checking whether ExaHyPE is already compiled in release mode...")
             if(len(glob(operating_directory+"*release*")) == 0):
                 print("ExaHyPE not compiled in release mode, will now attempt to compile.")
+                print("WARNING: The compiled version of ExaHyPE may not feature everything the user might wish for.")
+                print("Therefore, the user is adviced to compile ExaHyPE themselves!")
                 cmake_instructions = ["cmake", 
                                       "..",
                                       "-DWITH_MPI=OFF",
                                       "-DWITH_TOOLCHAIN=gnu",
-                                      "-DCMAKE_BUILD_TYPE=Release"] # TODO THIS LEADS TO AN ERROR LATER ON, FIX
+                                      "-DCMAKE_BUILD_TYPE=Release"] # TODO this seems to work but maybe needs to be specified more
 
                 run(cmake_instructions, cwd=operating_directory).check_returncode()
                 run(["make", "-j", "8"], cwd=operating_directory).check_returncode()
@@ -90,6 +93,9 @@ class TsunamiModel(umbridge.Model):
                     compile_instructions.append(coordinates)
                 continue
             compile_instructions.append(str(config[k]))
+
+        compile_instructions.append("--uq-displacement-origin")
+        compile_instructions.append("[%f,%f]" % (parameters[0][0], parameters[0][1]))
         
         run(compile_instructions, cwd=operating_directory).check_returncode()
         # run exe 
@@ -140,5 +146,5 @@ config = {
     "probe_coordinates": ["[5,5]", "[7,3]"] # don't question it, has to be this way
 }
 model = TsunamiModel()
-model.__call__([],config)
+model.__call__([[0, 0]],config)
 #umbridge.serve_models([model], 4242)

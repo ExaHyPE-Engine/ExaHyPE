@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import re
 
 sys.path.insert(0, os.path.abspath('../../../python'))
 
@@ -56,6 +57,14 @@ scenarios = [
   "Circular_Island"
   ]
 
+def parse_coordinate_pair(coords):
+  if re.search("^\[[0-9]+\.?[0-9]*\,[0-9]+\.?[0-9]*\]$", coords):
+      splits = re.split("[\[ | \] | \( | \) | \,]", coords)
+      return [float(splits[1]), float(splits[2])]
+  else:
+    raise ValueError("Could not parse the illegal coordinates: {}! Is there maybe a white space within the brackets?".format(coords)) 
+
+
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - SWE Application Script')
 
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     required=True,              help="|".join(solvers.keys()) )
@@ -82,7 +91,7 @@ parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       ty
 
 parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)." )
 parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR." )
-# TODO ADD ARGUMENT TO MOVE DISPLACEMENT AROUND AND IMPLEMENT INTO READER!!
+parser.add_argument(            "--uq-displacement-origin",dest="uq_displacement_origin",type=str,        required=False,             help="Move displacement for uncertainty quantification. Expected argument is [x,y] for displacing in x- and y-dimension. The coordinates are not checked against anything, so they might even move the displacment on dry land!")
 args = parser.parse_args()
 
 maximum_cell_size = args.max_cell_size
@@ -255,7 +264,11 @@ if args.scenario == "Artificial_Tsunami" or args.scenario == "Circular_Island":
 
 if args.scenario == "Tsunami":
   my_solver.add_user_solver_includes("#include \"parser/TopologyParser.h\"")
-  my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(\"%s\", \"%s\");" % (args.bathymetry_file, args.displacement_file))
+  displacement_origin_x = -1
+  displacement_origin_y = -1
+  if args.uq_displacement_origin is not None:
+    displacement_origin_x, displacement_origin_y = parse_coordinate_pair(args.uq_displacement_origin)
+  my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(\"%s\", \"%s\", %f, %f);" % (args.bathymetry_file, args.displacement_file, displacement_origin_x, displacement_origin_y))
 
 #########################################
 # Set up solver implementation          #
@@ -292,17 +305,10 @@ if not os.path.exists(output_path):
 
 if args.probe_coordinates != None:
 
-  # import regex for sanitizing coordinates
-  import re 
-
   # sanitize coordinates
   coordinates = []
   for coords in args.probe_coordinates:
-    if re.search("^\[[0-9]+\.?[0-9]*\,[0-9]+\.?[0-9]*\]$", coords):
-      splits = re.split("[\[ | \] | \( | \) | \,]", coords)
-      coordinates.append([float(splits[1]), float(splits[2])])
-    else:
-      raise ValueError("Could not parse the illegal coordinates: {}! Is there maybe a white space within the brackets?".format(coords)) 
+    coordinates.append(parse_coordinate_pair(coords))
     
   # add particles/probes to simulation domain at given coordinates
   probes = my_project.add_tracer(name="Probes",attribute_count=4, plot=False) # maybe add a plot=False here to turn off vtu output
