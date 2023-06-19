@@ -136,5 +136,6 @@ distclean:
 	rm -f README-*
 	rm -f .gitignore
 	rm -f CMakeLists.txt
+	rm -f Makefile
 
 maintainer-clean: distclean

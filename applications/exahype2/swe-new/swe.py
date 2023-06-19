@@ -223,17 +223,6 @@ elif solver_type in rkdg_rusanov_solvers:
   
   from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
 
-  # TODO currently, we have to use different scenarios as the function signatures differ between FV and RKDG
-  if args.scenario == "Artificial_Tsunami":
-    from scenarios.rkdg_test_artificial_tsunami import RKDG_Test_Artificial_Tsunami
-    my_pde = RKDG_Test_Artificial_Tsunami()
-  elif args.scenario == "Radial_Bathymetry_Dam_Break":
-    from scenarios.rkdg_test_radial_bathymetry_dam_break import RKDG_Test_Radial_Bathymetry_Dam_Break
-    my_pde = RKDG_Test_Radial_Bathymetry_Dam_Break()
-  else:
-    from scenarios.rkdg_test_radial_dam_break import RKDG_Test_Radial_Dam_Break
-    my_pde = RKDG_Test_Radial_Dam_Break()
-
 #########################################
 # Set up solver parameters for RKDG     #
 #########################################  

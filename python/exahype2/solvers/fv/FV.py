@@ -211,7 +211,7 @@ class FV(object):
     self._user_solver_includes      = ""
     
     if min_volume_h>max_volume_h:
-       print( "Error: min_volume_h (" + str(min_volume_h) + ") is bigger than max_volume_h (" + str(max_volume_h) + ")" )
+       raise Exception( "Error: min_volume_h (" + str(min_volume_h) + ") is bigger than max_volume_h (" + str(max_volume_h) + ")" )
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
 

@@ -25,29 +25,64 @@ dimensions            = 2
 #
 # We specifiy the number of AMR levels here.
 #
-amr_levels            = 3
+amr_levels            = 0
 
 #
 # We first create a new ExaHyPE2 project.
 # For this, we specify the (nested) namespaces, the name of our main file and our executable name.
 # We amend the executable name by the space dimensions.
 #
-my_project = exahype2.Project( ["tutorials", "exahype2", "acousticwave"], "AcousticWaveTutorial", ".", executable="acoustic-wave-" + str(dimensions) + "d" )
+my_project = exahype2.Project(
+  namespace     =["tutorials", "exahype2", "acousticwave"],
+  project_name  ="AcousticWaveTutorial",
+  directory     =".",
+  executable    ="acoustic-wave-" + str(dimensions) + "d"
+)
 
 #
-# Add the Finite Volumes solver using named arguments.
+# ExaHyPE supports different types of solvers.
+# For the sake of simplicity we create an enum
+# where we define some of the available solver types
+# which allows us to easily switch between different
+# solvers.
+#
+from enum import Enum
+class SolverType(Enum):
+  FV    = 1 # Finite Volumes (FV)
+  RKDG  = 2 # Runge-Kutta (RK) Discontinuous Galerkin (DG)
+
+#
+# Here we choose the type of solver we want to use.
+#
+solver_type = SolverType.RKDG
+
+#
+# Add the solver using named arguments.
 # This is the way you can add further PDE terms.
 # This requires the 'BlockStructured' toolbox and 'ExaHyPE' to be built.
 #
-my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
-  name                  = "AcousticWaveSolver",
-  patch_size            = 17,
-  unknowns              = dimensions + 1,
-  auxiliary_variables   = 0,
-  min_volume_h          = 0.1 * 3.0**(-amr_levels),
-  max_volume_h          = 0.1,
-  time_step_relaxation  = 0.5
-)
+if solver_type == SolverType.FV:
+  my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
+    name                  = "AcousticWaveSolver",
+    unknowns              = dimensions + 1,
+    auxiliary_variables   = 0,
+    patch_size            = 17,
+    min_volume_h          = 0.1 * 3.0**(-amr_levels),
+    max_volume_h          = 0.1,
+    time_step_relaxation  = 0.5
+  )
+elif solver_type == SolverType.RKDG:
+  my_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(
+    name                  = "AcousticWaveSolver",
+    unknowns              = dimensions + 1,
+    auxiliary_variables   = 0,
+    rk_order              = 4,
+    polynomials           = exahype2.solvers.GaussLegendreBasis(polynomial_order=2),
+    face_projections      = exahype2.solvers.rkdg.FaceProjections.Solution,
+    min_cell_h            = 0.1 * 3.0**(-amr_levels),
+    max_cell_h            = 0.1,
+    time_step_relaxation  = 0.5
+  )
 
 #
 # To see which variables (unknowns + auxiliary variables) we can visualise,
