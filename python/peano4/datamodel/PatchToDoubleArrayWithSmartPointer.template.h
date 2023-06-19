@@ -157,7 +157,8 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   /**
    * Clone content. Assume other and present class have their own smart pointer
    *
-   * This routine is used by the deep copies of the stack.
+   * This routine is used by the deep copies of the stack. As we exchange all
+   * boundary data, it can happen that other is empty.
    */
   void clone(const {{CLASSNAME}}& other);
 

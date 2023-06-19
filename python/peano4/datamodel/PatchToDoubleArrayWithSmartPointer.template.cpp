@@ -37,14 +37,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other
   _debugH = other._debugH;
   #endif
 
-  assertion( other.value!=nullptr );
-  assertion( value!=nullptr );
+  assertion(
+    (other.value!=nullptr and value!=nullptr)
+    or
+    (other.value==nullptr and value==nullptr)
+  );
 
-  #if Dimensions==2
-  std::copy_n( other.value, {{CARDINALITY_2D}}, value );
-  #else
-  std::copy_n( other.value, {{CARDINALITY_3D}}, value );
-  #endif
+  if (other.value!=nullptr) {
+    #if Dimensions==2
+    std::copy_n( other.value, {{CARDINALITY_2D}}, value );
+    #else
+    std::copy_n( other.value, {{CARDINALITY_3D}}, value );
+    #endif
+  }
 }
 
 
