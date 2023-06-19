@@ -40,6 +40,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other
   #endif
 
   assertion( other.value!=nullptr );
+  assertion( value!=nullptr );
 
   #if Dimensions==2
   std::copy_n( other.value, {{CARDINALITY_2D}}, value );
