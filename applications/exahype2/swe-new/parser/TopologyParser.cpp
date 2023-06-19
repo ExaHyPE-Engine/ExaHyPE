@@ -215,7 +215,6 @@ double applications::exahype2::swe::parser::TopologyParser::sample_displacement(
   auto y_cdf = transformIndexSimulationToCDFRange(y, l_nY, min_y_bathymetry_, max_y_bathymetry_);
   // Is displacement defined 
   if (x_cdf <= max_x_displacement_ && x_cdf >= min_x_displacement_ && y_cdf <= max_y_displacement_ && y_cdf >= min_y_displacement_)
-    //return 11000.0;
     return displacement[transformIndexCDFRangeToArray(x_cdf, y_cdf, min_x_displacement_, min_y_displacement_, max_x_displacement_, max_y_displacement_, xDis, yDis)];
   return 0.0;
 }
