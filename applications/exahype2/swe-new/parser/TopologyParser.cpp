@@ -2,7 +2,7 @@
 #include <iostream>
 #include <math.h>  
 
-applications::exahype2::swe::parser::TopologyParser::TopologyParser(const char *bathymetry_file_path, const char *displacement_file_path, double i_uq_displacement_origin_x = 0.f, double i_uq_displacement_origin_y = 0.f){
+applications::exahype2::swe::parser::TopologyParser::TopologyParser(const char *bathymetry_file_path, const char *displacement_file_path, double i_uq_displacement_origin_x = INFINITY, double i_uq_displacement_origin_y = INFINITY){
 
   l_nX = DomainSize(0);
   l_nY = DomainSize(1);
@@ -115,12 +115,14 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
     min_x_displacement_ = tmp[0];
     max_x_displacement_ = tmp[xDis - 1];
     // Has the origin of the displacement in x-dimension been put elsewhere than specified in the file?
-    if(uq_displacement_origin_x != 0.f)
+    if(!isinf(uq_displacement_origin_x))
     {
       // Move boundaries
-      double difference = min_x_displacement_ - uq_displacement_origin_x;
-      min_x_displacement_ -= difference;
-      max_x_displacement_ -= difference;
+       std::cout << "Current boundaries in x-dimension: [" << min_x_displacement_ << ", " << max_x_displacement_ << "]." << std::endl;
+      double difference = max_x_displacement_ - min_x_displacement_;
+      min_x_displacement_ = uq_displacement_origin_x - (difference / 2.f);
+      max_x_displacement_ = uq_displacement_origin_x + (difference / 2.f);
+      std::cout << "Moved boundaries in x-dimension to: [" << min_x_displacement_ << ", " << max_x_displacement_ << "]." << std::endl;
     }
   }
 
@@ -135,12 +137,14 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
     min_y_displacement_ = tmp[0];
     max_y_displacement_ = tmp[yDis - 1];
     // Has the origin of the displacement in y-dimension been put elsewhere than specified in the file?
-    if(uq_displacement_origin_y != 0.f)
+    if(!isinf(uq_displacement_origin_y))
     {
       // Move boundaries
-      double difference = min_y_displacement_ - uq_displacement_origin_y;
-      min_y_displacement_ -= difference;
-      max_y_displacement_ -= difference;
+      std::cout << "Current boundaries in y-dimension: [" << min_y_displacement_ << ", " << max_y_displacement_ << "]." << std::endl;
+      double difference = max_y_displacement_ - min_y_displacement_;
+      min_y_displacement_ = uq_displacement_origin_y - (difference / 2.f);
+      max_y_displacement_ = uq_displacement_origin_y + (difference / 2.f);
+      std::cout << "Moved boundaries in y-dimension to: [" << min_y_displacement_ << ", " << max_y_displacement_ << "]." << std::endl;
     }
   }
 
