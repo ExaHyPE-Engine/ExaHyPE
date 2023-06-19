@@ -14,12 +14,20 @@
 }
 
 
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(ObjectConstruction):
+  _dataSmartPointer(nullptr) {
+  value = nullptr;
+}
+
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(const {{CLASSNAME}}& other):
   _dataSmartPointer( other._dataSmartPointer ) {
   #if PeanoDebug>=1
   _debugX = other._debugX;
   _debugH = other._debugH;
   #endif
+
+  assertion( other.value!=nullptr );
 
   value = _dataSmartPointer.get();
 }
@@ -30,6 +38,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other
   _debugX = other._debugX;
   _debugH = other._debugH;
   #endif
+
+  assertion( other.value!=nullptr );
 
   #if Dimensions==2
   std::copy_n( other.value, {{CARDINALITY_2D}}, value );

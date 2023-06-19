@@ -63,6 +63,13 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   public:
     typedef {{FLOAT_TYPE}} DoFType;
 
+    /**
+     * @see peano4::stacks::STDVectorStackOverSmartPointers<T>::pushBlock()
+     */
+    enum ObjectConstruction {
+      NoData
+    };
+
     #if Dimensions==2
     static constexpr int Cardinality = {{CARDINALITY_2D}};
     #else
@@ -116,6 +123,20 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
    */
   {{CLASSNAME}}();
 
+  /**
+   * Constructor that does not allocate the underlying memory
+   *
+   * We need such a variant in stacks to allocate large memory blocks which
+   * are then "overwritten" as we move data from one stack to the other.
+   *
+   * @see peano4::stacks::STDVectorStackOverSmartPointers<T>::pushBlock()
+   */
+  {{CLASSNAME}}( ObjectConstruction );
+
+  /**
+   * Nothing really to be done, as the smart pointer implementation takes
+   * care of the actual destruction.
+   */
   ~{{CLASSNAME}}() = default;
 
   /**
