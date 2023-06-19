@@ -1,7 +1,9 @@
 #include "swift2/kernels/kernel_hydro.h"
 #include "swift2/kernels/equation_of_state.h"
 
-#define HACK_SML 0.002741
+// #define HACK_SML 0.002741
+#define HACK_SML 0.0125
+#define PROBLEMPART 801
 
 
 template <typename ParticleContainer, typename Particle>
@@ -24,8 +26,8 @@ void swift2::kernels::prepareDensityCalculation(
     if (
       not particle->getIsBoundaryParticle()
     ) {
-// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "Prepare Density Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == 800 ){ std::cout << "Prepare Density Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "Prepare Density Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == PROBLEMPART ){ std::cout << "Prepare Density Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
       particle->setDensity (0.0);
       particle->setWcount  (0.0);
       particle->setRho_dh  (0.0);
@@ -37,8 +39,8 @@ particle->setDensityReset(1);
 
       /* Not originally in SWIFT */
       particle->setNcount  (0);
-// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "Prepare Density End\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == 800 ){ std::cout << "Prepare Density End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "Prepare Density End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == PROBLEMPART ){ std::cout << "Prepare Density End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }
@@ -58,8 +60,8 @@ void swift2::kernels::endDensityCalculation(
     if (
       not particle->getIsBoundaryParticle()
     ) {
-// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "End Density (wrong) Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == 800 ){ std::cout << "End Density (wrong) Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "End Density (wrong) Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == PROBLEMPART ){ std::cout << "End Density (wrong) Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
 
       // @TODO add adds/multiplies the cosmological terms if need be.
 particle->setDensityReset(0);
@@ -312,8 +314,8 @@ particle->setDensityReset(0);
 
       } /* End of Newton-Raphson */
 
-// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "End Density (wrong) End\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == 800 ){ std::cout << "End Density (wrong) End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "End Density (wrong) End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == PROBLEMPART ){ std::cout << "End Density (wrong) End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }
@@ -330,8 +332,8 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
     if (
       not particle->getIsBoundaryParticle()
     ) {
-// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "End Density Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == 800 ){ std::cout << "End Density Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "End Density Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == PROBLEMPART ){ std::cout << "End Density Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
       /* Retrieve some properties */
       const double m_a = particle->getMass();
 // TODO MLADEN remove this!!!!
@@ -381,8 +383,8 @@ assertion2(std::isfinite(particle->getDiv_v()), "after update", particle->toStri
 assertion2( std::isfinite(particle->getDensity()), particle->toString(), h_inv_dim);
 assertion2( std::isfinite(h_inv_dim)             , particle->toString(), rho_inv);
 assertion2( std::isfinite(particle->getDiv_v())  , particle->toString(), rho_inv);
-if (particle->getPartid() == 800 ){ std::cout << "End Density End\n" << particle->toString() << std::endl; std::fflush(stdout); }
-// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "End Density End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == PROBLEMPART ){ std::cout << "End Density End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "End Density End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }
@@ -398,8 +400,8 @@ void swift2::kernels::prepareHydroForceCalculation(
   for (auto* particle: localParticles ) {
     if ( not particle->getIsBoundaryParticle())
     {
-// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "Prepare Force Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == 800 ){ std::cout << "Prepare Force Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "Prepare Force Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == PROBLEMPART ){ std::cout << "Prepare Force Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
 
       /* Retrieve basic properties of local and active particles */
       const double rho_a = particle->getDensity();
@@ -450,6 +452,7 @@ assertion5(std::abs(soundspeed) < 1e8, "before update", P_a, rho_a, ua, particle
       //   warning("h ~ h_max for particle with ID %lld (h: %g)", p->id, p->h);
       // } else {
         const double grad_W_term = common_factor * particle->getWcount_dh();
+if (particle->getPartid() == PROBLEMPART) std::cout << "hydro prepare foce grad_W=" << grad_W_term << " common_factor=" << common_factor << " wcount_dh="  << particle->getWcount_dh() << "\n";
         if (grad_W_term < -0.9999) {
           /* if we get here, we either had very small neighbour contributions
              (which should be treated as a no neighbour case in the ghost) or
@@ -460,8 +463,8 @@ assertion5(std::abs(soundspeed) < 1e8, "before update", P_a, rho_a, ua, particle
           grad_h_term = 0.f;
           printf(
               "grad_W_term very small for particle with ID %d (h: %g, wcount: "
-              "%g, wcount_dh: %g gradW=%g).\n",
-              particle->getPartid(), h_a, particle->getWcount(), particle->getWcount_dh(), grad_W_term);
+              "%g, wcount_dh: %g gradW=%g common_factor=%g).\n",
+              particle->getPartid(), h_a, particle->getWcount(), particle->getWcount_dh(), grad_W_term, common_factor);
         } else {
           grad_h_term = common_factor * particle->getRho_dh() / (1.f + grad_W_term);
         }
@@ -497,8 +500,8 @@ assertion3( std::isfinite(P_a), particle->toString(), rho_a, particle->getU() );
       particle->setUDot(0.0);
       particle->setHDot(0.0);
       particle->setV_sig_AV( 2.0 * particle->getSoundSpeed() );
-if (particle->getPartid() == 800 ){ std::cout << "Prepare Force End\n" << particle->toString() << std::endl; std::fflush(stdout); }
-// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "Prepare Force End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == PROBLEMPART ){ std::cout << "Prepare Force End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "Prepare Force End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }
@@ -513,15 +516,15 @@ void swift2::kernels::endHydroForceCalculation(
     if (
     not particle->getIsBoundaryParticle()
     ) {
-// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "End Force Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == 800 ){ std::cout << "End Force Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "End Force Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == PROBLEMPART ){ std::cout << "End Force Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
       particle->setHDot(
        particle->getHDot() * particle->getSmoothingLength() / hydroDimensions );
 
       assertion2( std::isfinite(particle->getHDot()), particle->toString(),
                                                       particle->getSmoothingLength() );
-// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "End Force End\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == 800 ){ std::cout << "End Force End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "End Force End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == PROBLEMPART ){ std::cout << "End Force End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }

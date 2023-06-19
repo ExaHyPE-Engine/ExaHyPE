@@ -134,7 +134,7 @@ particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(
     constant_time_step_size=True,
     swift_project_namespace=project_namespace,
     is_sph=True,
-    particles_per_cell=20,
+    particles_per_cell=100,
     min_h=args.cell_size,
     max_h=args.cell_size,
 )

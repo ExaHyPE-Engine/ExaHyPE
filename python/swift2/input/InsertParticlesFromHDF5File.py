@@ -118,7 +118,7 @@ class InsertParticlesFromHDF5File(ActionSet):
 
       newParticle->setSmoothingLengthPrevious( SmoothingLength );
 
-      newParticle->setCutOffRadius( GridSize_x / 2.0);
+      newParticle->setCutOffRadius( GridSize_x );
       newParticle->setKick1count(0);
       newParticle->setKick2count(0);
       newParticle->setDriftcount(0);

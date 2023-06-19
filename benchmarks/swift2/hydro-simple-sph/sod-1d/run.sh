@@ -10,11 +10,11 @@ IC_FILENAME="sodShock.hdf5"
 
 # Parameters
 N_PART=900          # fixed by IC file
-END_TIME=2e-2
-TIMESTEP_SIZE=2e-4
+END_TIME=2e-1
+TIMESTEP_SIZE=1.953125e-04
 CFL_FACTOR=0.1
-PLOT_DELTA=2e-4
-CELL_SIZE=0.1
+PLOT_DELTA=1.953125e-04
+CELL_SIZE=0.5
 #
 # Generate initial condition file
 if [ ! -e $IC_FILENAME ]
