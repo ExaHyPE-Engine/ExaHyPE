@@ -377,14 +377,14 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
         for(int d = 0; d < {{nDim}}; d++) {
 
           solver.{{solverName}}::nonconservativeProduct(
-            lQi+(i*36+xyz)*12,
+            lQi+(i*{{nDof**nDim}}+xyz)*{{nDataPad}},
             G[d],
             volumeCentre,
             dx,
             timeStamp,
             dt,
             d,
-            &tmpArray[d*9]
+            &tmpArray[d*{{nVarPad}}]
           );
 
           #pragma omp simd aligned(lFi,tmpArray:{{alignmentSize}})
