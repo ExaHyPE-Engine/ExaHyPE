@@ -10,8 +10,8 @@ try:
   import mpmath
   havenumpy=True
 except ImportError:
-  print("Numpy/mpmath is not available, not loading exahype2.solvers.rkdg")
-  print("Numpy/mpmath is not available, not loading exahype2.solvers.aderdg")
+  print("Numpy and mpmath are not available, not loading exahype2.solvers.rkdg")
+  print("Numpy and mpmath are not available, not loading exahype2.solvers.aderdg")
 
 if havenumpy:
   import exahype2.solvers.rkdg
@@ -19,10 +19,11 @@ if havenumpy:
 
 havesympy=False
 try:
+  import numpy
   import sympy
   havesympy=True
 except ImportError:
-  print("Sympy is not available, not loading exahype2.symhype")
+  print("Sympy and numpy are not available, not loading exahype2.symhype")
 
 if havesympy:
   import exahype2.symhype
