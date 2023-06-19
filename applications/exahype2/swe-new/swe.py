@@ -253,11 +253,11 @@ if args.scenario == "Artificial_Tsunami" or args.scenario == "Circular_Island":
 
 if args.scenario == "Tsunami":
   my_solver.add_user_solver_includes("#include \"parser/TopologyParser.h\"")
-  displacement_origin_x = -1
-  displacement_origin_y = -1
   if args.uq_displacement_origin is not None:
     displacement_origin_x, displacement_origin_y = parse_coordinate_pair(args.uq_displacement_origin)
-  my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(\"%s\", \"%s\", %f, %f);" % (args.bathymetry_file, args.displacement_file, displacement_origin_x, displacement_origin_y))
+    my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(\"%s\", \"%s\", %f, %f);" % (args.bathymetry_file, args.displacement_file, displacement_origin_x, displacement_origin_y))
+  else:
+    my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(\"%s\", \"%s\");" % (args.bathymetry_file, args.displacement_file))
 
 #########################################
 # Set up solver implementation          #

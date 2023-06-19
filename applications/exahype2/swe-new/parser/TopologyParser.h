@@ -60,7 +60,7 @@ class applications::exahype2::swe::parser::TopologyParser {
 
   public:
   
-    TopologyParser(const char *bathymetry_file_path, const char *displacement_file_path, double i_uq_displacement_origin_x, double i_uq_displacement_origin_y);
+    TopologyParser(const char *bathymetry_file_path, const char *displacement_file_path, double i_uq_displacement_origin_x=INFINITY, double i_uq_displacement_origin_y=INFINITY);
     ~TopologyParser();
 
     void parse_bathymetry_file(const char *bathymetry_file_path);

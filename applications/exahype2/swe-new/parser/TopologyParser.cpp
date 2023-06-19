@@ -2,7 +2,7 @@
 #include <iostream>
 #include <math.h>  
 
-applications::exahype2::swe::parser::TopologyParser::TopologyParser(const char *bathymetry_file_path, const char *displacement_file_path, double i_uq_displacement_origin_x = INFINITY, double i_uq_displacement_origin_y = INFINITY){
+applications::exahype2::swe::parser::TopologyParser::TopologyParser(const char *bathymetry_file_path, const char *displacement_file_path, double i_uq_displacement_origin_x, double i_uq_displacement_origin_y){
 
   l_nX = DomainSize(0);
   l_nY = DomainSize(1);
