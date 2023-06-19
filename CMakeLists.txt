@@ -56,15 +56,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
-set(OPT_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
-include(FetchContent)
-FetchContent_Declare(
-  _project_options
-  GIT_REPOSITORY https://github.com/aminya/project_options.git
-  GIT_TAG main
-)
-FetchContent_MakeAvailable(_project_options)
-
 set(LANGUAGES C CXX Fortran)
 project(
   ${META_PROJECT_NAME}
@@ -75,11 +66,6 @@ file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
 set(META_COMPILER_VERSION "${CMAKE_SYSTEM_NAME} ${CMAKE_CXX_COMPILER_ID} (${CMAKE_CXX_COMPILER_VERSION})")
 message(STATUS "Compiler is: ${META_COMPILER_VERSION}")
 
-include(${_project_options_SOURCE_DIR}/Index.cmake)
-include(${_project_options_SOURCE_DIR}/src/DynamicProjectOptions.cmake)
-dynamic_project_options()
-target_compile_features(project_options INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
-
 include(GNUInstallDirs)
 set(DEFAULT_CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -89,6 +75,10 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 add_subdirectory(cmake)
 include(MessageUtils)
 include(Clang-Format)
+include(Clang-Tidy)
+include(Cppcheck)
+include(Link-What-You-Use)
+include(Coverage)
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
 include(ProcessorCount)
@@ -96,7 +86,6 @@ ProcessorCount(AVAILABLE_PROCESSOR_COUNT)
 find_package(Slurm)
 find_package(Threads)
 include(CTest)
-# https://stackoverflow.com/questions/31355692/how-do-i-enable-link-time-optimization-lto-with-cmake
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
 if(IPO_SUPPORTED)
@@ -106,11 +95,18 @@ else()
   message(STATUS "IPO/LTO not supported: ${IPO_ERROR}")
 endif()
 
+add_library(project_options INTERFACE)
+target_compile_features(project_options INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
+include(CompilerDefinitions)
+set_project_compiler_definitions(project_options)
+include(CompilerFlags)
+set_project_compiler_flags(project_options)
+include(LinkerFlags)
+set_project_linker_flags(project_options)
+
 include(CheckIncludeFiles)
 check_include_files(dlfcn.h HAVE_DLFCN_H)
 check_include_files(inttypes.h HAVE_INTTYPES_H)
-check_include_files(nvToolsExt.h HAVE_NVTOOLSEXT_H)
-check_include_files(omp.h HAVE_OMP_H)
 check_include_files(stdint.h HAVE_STDINT_H)
 check_include_files(stdio.h HAVE_STDIO_H)
 check_include_files(stdlib.h HAVE_STDLIB_H)
@@ -119,14 +115,6 @@ check_include_files(string.h HAVE_STRING_H)
 check_include_files(sys/stat.h HAVE_SYS_STAT_H)
 check_include_files(sys/types.h HAVE_SYS_TYPES_H)
 check_include_files(unistd.h HAVE_UNISTD_H)
-check_include_files(CL/sycl.hpp HAVE_CL_SYCL_HPP)
-
-# TODO:
-# Additionally check the headers defined above have C90 standards
-# Requires "stddef.h;float.h"
-# We also need free in stdlib, memchr in string
-# An example where how to implement the check is here:
-# https://github.com/LuaDist/libgd/tree/master/cmake/modules
 
 list(APPEND TOOLCHAINS
   " "
@@ -152,6 +140,8 @@ elseif(WITH_TOOLCHAIN STREQUAL "intel")
   target_link_libraries(project_options INTERFACE VT::VT)
   target_include_directories(project_options SYSTEM INTERFACE ${VT_INCLUDE_DIRS})
   target_link_directories(project_options INTERFACE ${VT_LIBRARIES_DIR})
+elseif(WITH_TOOLCHAIN STREQUAL "nvidia")
+  check_include_files(nvToolsExt.h HAVE_NVTOOLSEXT_H)
 endif()
 
 list(APPEND MULTICORES_BACKENDS
@@ -159,6 +149,7 @@ list(APPEND MULTICORES_BACKENDS
   "cpp"
   "omp"
   "tbb"
+  "sycl"
 )
 set(WITH_MULTITHREADING "" CACHE STRING "${MULTICORES_BACKENDS}")
 set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${MULTICORES_BACKENDS})
@@ -169,6 +160,7 @@ if(WITH_MULTITHREADING)
 endif()
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
+  check_include_files(omp.h HAVE_OMP_H)
   target_link_libraries(project_options INTERFACE OpenMP::OpenMP_CXX)
   if(CMAKE_Fortran_COMPILER)
     target_link_libraries(project_options INTERFACE OpenMP::OpenMP_Fortran)
@@ -180,6 +172,8 @@ elseif(WITH_MULTITHREADING STREQUAL "cpp")
   set(THREADS_PREFER_PTHREAD_FLAG ON)
   find_package(Threads REQUIRED)
   target_link_libraries(project_options INTERFACE Threads::Threads)
+elseif(WITH_MULTITHREADING STREQUAL "sycl")
+  check_include_files(CL/sycl.hpp HAVE_CL_SYCL_HPP)
 endif()
 
 list(APPEND ACCELERATOR_BACKENDS
@@ -372,6 +366,46 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DI
 
 add_subdirectory(src)
 
+#file(GLOB_RECURSE UNIT_TEST_SOURCES CONFIGURE_DEPENDS "*/UnitTests/*")
+#foreach(SOURCE_FILE ${UNIT_TEST_SOURCES})
+#    get_filename_component(TEST_NAME ${SOURCE_FILE} NAME_WE)
+#    add_executable(${TEST_NAME} ${SOURCE_FILE})
+#    target_link_libraries(${TEST_NAME} PRIVATE TArch)
+#    set_target_properties(${TEST_NAME} PROPERTIES
+#        DEBUG_POSTFIX "d"
+#        SOVERSION ${TARCH_VERSION_MAJOR}
+#        VERSION ${TARCH_VERSION}
+#        CXX_STANDARD ${CMAKE_CXX_STANDARD}
+#    )
+#    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+#endforeach()
+
+#if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+#    add_coverage(
+#        NAME Coverage
+#        EXECUTABLE ctest -V
+#        EXCLUDE "/usr/*"
+#        GENHTML_ARGS -s --legend
+#    )
+#    add_coverage_cobertura(
+#        NAME CoverageCobertura
+#        EXECUTABLE ctest -V
+#    )
+#    add_coverage_gcovr(
+#        NAME CoverageGcovr
+#        EXECUTABLE ctest -V
+#    )
+#elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+#    add_coverage(
+#        TARGET TestRunnerTest
+#        SOURCES "${CMAKE_CURRENT_SOURCE_DIR}"
+#        CONTINUE_AFTER_CPP_EXCEPTION
+#        REPORT_FOR_PROJECT
+#        REPORT_FOR_TARGET
+#    )
+#endif()
+
+
 display_separator("Project Configuration Summary")
 display_variable(AVAILABLE_PROCESSOR_COUNT)
 display_variable(WITH_TOOLCHAIN)
@@ -424,7 +458,6 @@ display_variable(BUILD_SHARED_LIBS)
 display_variable(CMAKE_CXX_FLAGS_INIT)
 
 if(WITH_GPU STREQUAL "cuda")
-  display_subseparator("Options related to CUDA")
   display_variable(CMAKE_CUDA_FLAGS)
   display_variable(CMAKE_CUDA_FLAGS_RELEASE)
   display_variable(CMAKE_CUDA_FLAGS_DEBUG)

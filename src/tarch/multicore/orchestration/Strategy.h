@@ -17,10 +17,27 @@ namespace tarch {
 
 
 /**
- * Interface for any task orchestration factory
+ * Interface for any task orchestration
  */
 class tarch::multicore::orchestration::Strategy {
   public:
+    /**
+     * Provide hint of execution policy
+     *
+     * @see tarch::multicore::spawnAndWait() for rationale and details.
+     * @see tarch::multicore for general overview and further design rationale.
+     *
+     * @todo I would like to have a flag which tells the actual multicore
+     *   runtime not (!) to continue with further ready tasks. Such a
+     *   feature does not exist in OpenMP, e.g., and therefore we do not
+     *   use such a flag.
+     */
+    enum class ExecutionPolicy {
+      RunSerially,
+      RunParallel,
+      RunParallelAndIgnoreWithholdSubtasks
+    };
+    
     struct FuseInstruction {
       int device;
       int minTasks;
@@ -40,12 +57,12 @@ class tarch::multicore::orchestration::Strategy {
     /**
      * Notifies the strategy that we enter a BSP section
      */
-    virtual void startBSPSection() = 0;
+    virtual void startBSPSection(int nestedParallelismLevel) = 0;
 
     /**
      *
      */
-    virtual void endBSPSection()   = 0;
+    virtual void endBSPSection(int nestedParallelismLevel)   = 0;
 
     /**
      * Tell the runtime system how many tasks to hold back: If there
@@ -87,12 +104,20 @@ class tarch::multicore::orchestration::Strategy {
     virtual bool fuseTasksImmediatelyWhenSpawned() = 0;
 
     /**
+     * Determine how to handle/realise parallelisation within fork/join region
+     *
      * If you want threads to run through the queues and to process tasks,
      * then return true here. If you return true, the default behaviour is
      * that a traversal (grid sweep) task does not terminate when it has
      * completed its traversal, but instead polls the task queue. By
      * default, a task will always first try to process its local tasks.
+     *
+     * @param nestedParallelismLevel Please compare with tarch::multicore::spawnAndWait()
+     *   which ensures that this flag equals 1 on the top level.
+     *
+     * @param taskType We assume that all numberOfTasks tasks are of the same
+     *   type.
      */
-    virtual bool processPendingTasksWhileWaitingInBSPSection() = 0;
+    virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) = 0;
 };
 

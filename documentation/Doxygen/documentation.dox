@@ -2,6 +2,7 @@
 
 \page page_documentation Documentation
 
+
 Peano and its toolboxes and extensions follow some very simplistic documentation paradigms:
 
 - Everything is in the code;
@@ -13,18 +14,19 @@ Peano and its toolboxes and extensions follow some very simplistic documentation
 To generate the documentation, \c cd to your Peano directory, and type:
 
       doxygen documentation/Doxyfile
-     
-To understand the following descriptions, it is reasonable to keep the 
+
+To understand the following descriptions, it is reasonable to keep the
 following terminology in mind:
 
 - A page is the LaTeX equivalent of a chapter.
 - A subpage is the LaTeX equivalent of a section.
-- We typically use the hash signs to substructure information 
-  within a section where two hashes denote sections. 
+- We typically use the hash signs to substructure information
+  within a section where two hashes denote sections.
 
 
 
-## Rationale
+Rationale
+============
 
 We aim for documentation which is always up-to-date.
 The documentation shall be searchable.
@@ -32,41 +34,43 @@ We want to have one medium which integrates top-level and high-level overview in
 with low-level source code documentation (normally stored in ```*.h``` and ```*.py``` files).
 
 
-Peano's documentation can be quite complex with all the toolboxes and 
+Peano's documentation can be quite complex with all the toolboxes and
 extensions being part of the code plus the fact that we combine C/C++
 and Python in numerous ways.
 Therefore, the file structure of the documentation reflects the logical
 structure of the menus.
 
 
-## How to add new files
+How to add new files
+======================
 
-Header files and Python scripts are automatically picked up by the script as 
+Header files and Python scripts are automatically picked up by the script as
 long as they are stored within directories which are subject to search.
 Low-level subpages are automatically generated for them.
-If you want to write stand-alone docu (such as top-level or high-level overview 
-descriptions), the corresponding dox files should go into 
+If you want to write stand-alone docu (such as top-level or high-level overview
+descriptions), the corresponding dox files should go into
 
       documentation/Doxygen/SubDir
 
-Doxygen supports the addition of pages anywhere in the directories that it searches. 
+Doxygen supports the addition of pages anywhere in the directories that it searches.
 These can be written in markdown or html.
-Additionally, files must start with \htmlonly[ /** ]\endhtmlonly and end with 
+Additionally, files must start with \htmlonly[ /** ]\endhtmlonly and end with
 \htmlonly[ */ ]\endhtmlonly, so that Doxygen is alerted to process them.
 
 
-### New (top-level) documentation page
+New (top-level) documentation page
+-------------------------------------
 
-With top-level, we mean something like Peano or ExaHyPE or Swift. 
-Top-level menu entries are reserved for such rubrics and therefore are infrequently introduced. 
-Please consult with  the team if you want to add a new top-level entry. 
+With top-level, we mean something like Peano or ExaHyPE or Swift.
+Top-level menu entries are reserved for such rubrics and therefore are infrequently introduced.
+Please consult with  the team if you want to add a new top-level entry.
 
-If the team agrees that there should be a new top-level entry, please follow 
+If the team agrees that there should be a new top-level entry, please follow
 the following conventions:
 
 - Add a new directory within ```documentation/Doxygen```.
-- Create a new main page within this new directory. Most packages call this 
-  file ```home.dox```. 
+- Create a new main page within this new directory. Most packages call this
+  file ```home.dox```.
 
 The new mainpage typically reads as follows
 
@@ -85,31 +89,32 @@ The new mainpage typically reads as follows
 where \c peano_home and \c Peano are to be replaced with the names of your choice.
 
 
-Next, enumerate all the subpages to be nested within this page below. 
+Next, enumerate all the subpages to be nested within this page below.
 This prevents these subpages from appearing at the top level menu.
 
 
-### New (high-level) subpages
+New (high-level) subpages
+-------------------------------------
 
 Subpages are the Doxygen term for something that we would call a section
 in LaTeX. To create such a section, please follow the following steps:
 
 - Create a new file within the documentation subdirectory of your choice;
 - Begin the new main page as above (with a ```\page```, ```page_ref``` and a page title),
-  i.e. any page to be included should start with    
+  i.e. any page to be included should start with
 
 \verbatim
 /**
 
-       \page page_ref Page Title 
+       \page page_ref Page Title
 \endverbatim
 
   Here, ```page_ref``` will serve as a global unique identifier throughout Doxygen.
   Therefore, we usually use identifiers such as \c peano_mysection where (in this example) \c peano is a generic
   prefix identifying the top-level rubric (page), and \c mysection is the subpage within the rubric.
-- Any page marked with ``` \page``` will appear on the top level menu by 
-  default. New documentation sections should therefore be added to their 
-  corresponding chapter or top-level page (see above) via 
+- Any page marked with ``` \page``` will appear on the top level menu by
+  default. New documentation sections should therefore be added to their
+  corresponding chapter or top-level page (see above) via
 
 \verbatim
            \li \subpage page_ref
@@ -119,19 +124,24 @@ in LaTeX. To create such a section, please follow the following steps:
 
 
 The last item illustrates a fundamental paradigm of Doxygen:
-All the pages are, in the first lace, one large blob. 
+All the pages are, in the first lace, one large blob.
 To introduce parent-child relations, you have to add the child to the parent page.
 The child page itself does not specify its parent.
 Through this, you can duplicate entries in the navigation menu:
 you simply add the subpage to multiple parents.
 
 Don't forget to conclude every dox file with:
- 
+
 \verbatim
 */
 \endverbatim
 
-### Adding (low-level) documentation inside the code
+
+
+
+
+Adding (low-level) documentation inside the code
+----------------------------------------------------
 
 Doxygen recognises comments written following certain rules in C++ and Python source codes.
 As comments are written differently in these languages, these rules are also different.
@@ -159,7 +169,7 @@ and will contain a (multiline) text between them (describing, for example, a fun
  */
 \endverbatim
 
-The documentation of a function, class or namespace has to be put ***before*** the 
+The documentation of a function, class or namespace has to be put ***before*** the
 actual declaration, and it always in the header file in Peano.
 
 
@@ -168,8 +178,8 @@ In Python, a comment section must be wrapped differently, namely,
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 """!
 
-  Comment title 
-  
+  Comment title
+
   This is a Python comment that will make it into the HTML docu
 
 """
@@ -194,7 +204,7 @@ Markdown headlines should work, too.
 
 
 What is a little bit annoying is that Doxygen reads comments within the source code and
-headers as markdown. Consequently, comments that have an indent greater than five are 
+headers as markdown. Consequently, comments that have an indent greater than five are
 rendered once again as source code. You have to remove the indentation sometimes. It seems
 that this mainly affects the Python code, but not the C++ documentation.
 

@@ -23,8 +23,20 @@ namespace grid{
 
 struct peano4::grid::AutomatonState {
   public:
-    AutomatonState() {}
-    AutomatonState(int  __level, tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, bool  __inverted, std::bitset<Dimensions>  __evenFlags, tarch::la::Vector<DimensionsTimesTwo,int>  __accessNumber);
+    AutomatonState() = default;
+    AutomatonState(
+      int __level,
+      tarch::la::Vector<Dimensions, double> __x,
+      tarch::la::Vector<Dimensions, double> __h,
+      bool __inverted,
+      std::bitset<Dimensions> __evenFlags,
+      tarch::la::Vector<DimensionsTimesTwo, int> __accessNumber
+    );
+
+    AutomatonState(const AutomatonState& copy);
+    AutomatonState& operator = (const AutomatonState& assign);
+
+    ~AutomatonState() = default;
 
     int   getLevel() const;
     void   setLevel(int value);
@@ -47,8 +59,6 @@ struct peano4::grid::AutomatonState {
     void   setAccessNumber(const tarch::la::Vector<DimensionsTimesTwo,int>& value);
     int   getAccessNumber(int index) const;
     void   setAccessNumber(int index, int value);
-    AutomatonState(const AutomatonState& copy);
-    AutomatonState& operator = (const AutomatonState& assign);
 
 #ifdef Parallel
     static void sendAndPollDanglingMessages(const peano4::grid::AutomatonState& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());

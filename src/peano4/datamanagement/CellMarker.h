@@ -26,7 +26,21 @@ std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::CellM
 
 
 /**
+ * Cell marker
  *
+ * This object provides information on the cell aka octant within the
+ * spacetree. This includes spatial
+ * information such as size and position. It also comprises mesh topology
+ * properties such as "will this cell be refined" or "is its parent a
+ * local cell".
+ *
+ * It is an object which users are not supposed to manipulate. The mesh
+ * traversal automaton creates it once per octant while it runs through
+ * the mesh and passes in information about adjacent vertices, parent
+ * data, and so forth. The constructor then distills the user
+ * representation from that data and, from hereon, users can use this
+ * distilled information to make logical decisions what to do and how
+ * to do things within the spacetree octant.
  */
 struct peano4::datamanagement::CellMarker {
   private:
@@ -73,7 +87,7 @@ struct peano4::datamanagement::CellMarker {
     bool willBeRefined() const;
 
     /**
-     * @return x coordinate of a cell is its centre.
+     * @return Centre of cell.
      */
     tarch::la::Vector<Dimensions,double>  x() const;
 

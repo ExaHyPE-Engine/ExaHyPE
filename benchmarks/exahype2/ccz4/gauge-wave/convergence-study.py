@@ -65,6 +65,10 @@ if "fd4-rk" in args.solver:
                                                                       min_meshcell_h       = args.cell_size / 3, 
                                                                       max_meshcell_h       = args.cell_size / 3,
                                                                       )
+  my_solver.set_implementation(initial_conditions   = """
+    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+      ::applications::exahype2::ccz4::gaugeWave(Q, meshCellCentre, 0);
+    """)
 
 if "second-order" in args.solver:
   order = 1

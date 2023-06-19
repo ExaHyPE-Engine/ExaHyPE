@@ -181,3 +181,7 @@ after it has called the baseline constructor.
     """
     return [] 
 
+
+  #@property
+  #def readme_descriptor(self):
+  #  return """ ### Particle """ + self.name
