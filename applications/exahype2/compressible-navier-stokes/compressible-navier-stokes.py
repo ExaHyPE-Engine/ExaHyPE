@@ -8,7 +8,7 @@ import exahype2
 
 dimensions                = 2
 unknowns                  = dimensions + 2 # [rho, u, v, (w), e]
-cell_size                 = 0.4
+cell_size                 = 0.1
 amr_levels                = 1 # Set to 1 to disable adaptive mesh refinement (AMR)
 patch_size                = 4
 end_time                  = 5.0
