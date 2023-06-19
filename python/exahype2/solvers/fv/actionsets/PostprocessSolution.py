@@ -61,7 +61,6 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
     AbstractFVActionSet.__init__(self,solver)
     self.guard               = "true"
     self._compute_kernel     = ""
-    self.priority            = 1 
 
 
   def add_postprocessing_kernel(self, operation_per_point):

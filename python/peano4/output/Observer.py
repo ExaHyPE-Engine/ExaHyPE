@@ -341,10 +341,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
 
   TemplateLoadCell_VertexLoad = """
-  // Load vertex {{name}}
-  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
-    tarch::multicore::Task::DontFuse,
-    tarch::multicore::Task::DefaultPriority,
+  // Load vertex {{local_type_name}}
+  std::function<bool ()> loadVertex{{local_type_name}} = 
     [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
@@ -390,7 +388,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       }
     }
     return false;
-  }));
+  };
+  
+  tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    loadVertex{{local_type_name}}
+  ));
+  
 """
 
 
@@ -455,9 +460,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
   TemplateLoadCell_FaceLoad = """
   // Load face {{logical_type_name}}
-  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
-    tarch::multicore::Task::DontFuse,
-    tarch::multicore::Task::DefaultPriority,
+  std::function<bool ()> loadFace{{logical_type_name}} = 
     [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoTimesD );
     for (int i=0; i<TwoTimesD; i++) {
@@ -503,7 +506,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       }
     }
     return false;
-  }));
+  };
+  
+  
+  tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    loadFace{{logical_type_name}}
+  ));
+  
 """
 
 
@@ -574,9 +585,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
   TemplateLoadCell_CellLoad = """
   // Load cell {{logical_type_name}}
-  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
-    tarch::multicore::Task::DontFuse,
-    tarch::multicore::Task::DefaultPriority,
+  std::function<bool ()> loadCell{{logical_type_name}} =  
     [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( 1 );
 
@@ -620,7 +629,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       view.set(0,data);
     }
     return false;
-  }));
+  };
+  
+  tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    loadCell{{logical_type_name}}
+  ));
+  
 """
 
 
@@ -844,9 +860,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
   TemplateStoreCell_CellStore = """
   // Handle cell {{logical_type_name}}
-  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
-    tarch::multicore::Task::DontFuse,
-    tarch::multicore::Task::DefaultPriority,
+  std::function<bool ()> storeCell{{logical_type_name}} = 
     [&]()->bool {
     const int inCellStack   = peano4::grid::PeanoCurve::CallStack;
     const int outCellStack  = event.getCellData();
@@ -882,7 +896,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       );
     }
     return false;
-  }));
+  };
+  
+  tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    storeCell{{logical_type_name}}
+  ));
+  
 """
 
 
@@ -945,9 +966,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
   TemplateStoreCell_FaceStore = """
   // Store face {{logical_type_name}}
-  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
-    tarch::multicore::Task::DontFuse,
-    tarch::multicore::Task::DefaultPriority,
+  std::function<bool ()> storeFace{{logical_type_name}} = 
     [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoTimesD );
     for (int i=0; i<TwoTimesD; i++) {
@@ -982,7 +1001,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       }
     }
     return false;
-  }));
+  };
+  
+  tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    storeFace{{logical_type_name}}
+  ));
+  
 """
 
   TemplateLeaveCell_VertexStore_MappingCall = """
@@ -1040,9 +1066,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
   TemplateStoreCell_VertexStore = """
   // Store vertex {{logical_type_name}}
-  tasks.push_back( new tarch::multicore::TaskWithCopyOfFunctor(
-    tarch::multicore::Task::DontFuse,
-    tarch::multicore::Task::DefaultPriority,
+  std::function<bool ()> storeVertex{{logical_type_name}} = 
     [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
@@ -1074,7 +1098,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       }
     }
     return false;
-  }));
+  };
+  
+  tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
+    tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority,
+    storeVertex{{logical_type_name}}
+  ));
+  
 """
 
 

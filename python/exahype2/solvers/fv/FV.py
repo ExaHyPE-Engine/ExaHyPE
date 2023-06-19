@@ -156,7 +156,8 @@ class FV(object):
     min_volume_h,
     max_volume_h,
     plot_grid_properties,
-    kernel_namespace):
+    kernel_namespace,
+    baseline_action_set_priority=0):
     """!
 
   Create solver    
@@ -259,6 +260,8 @@ class FV(object):
 
     self._hold_cell_data_on_heap_with_smart_pointer = False
     self._hold_face_data_on_heap_with_smart_pointer = False
+    
+    self._baseline_action_set_priority = baseline_action_set_priority
 
     self.create_data_structures()
     self.create_action_sets()
@@ -539,17 +542,17 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
         
     self._action_set_update_cell = None
 
-    self._action_set_initial_conditions.priority = 1
-    self._action_set_initial_conditions_for_grid_construction.priority = 1
-    self._action_set_AMR.priority = 2
-    self._action_set_AMR_commit_without_further_analysis.priority = 2
-    self._action_set_handle_boundary.priority = 1
-    self._action_set_project_patch_onto_faces.priority = 1 # leave cell
-    self._action_set_roll_over_update_of_faces.priority = 1
-    self._action_set_copy_new_faces_onto_old_faces.priority = 1
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = 1
-    self._action_set_postprocess_solution.priority = 3
-    self._action_set_preprocess_solution.priority = -1
+    self._action_set_initial_conditions.priority = self._baseline_action_set_priority+1
+    self._action_set_initial_conditions_for_grid_construction.priority = self._baseline_action_set_priority + 1
+    self._action_set_AMR.priority = self._baseline_action_set_priority + 2
+    self._action_set_AMR_commit_without_further_analysis.priority = self._baseline_action_set_priority + 2
+    self._action_set_handle_boundary.priority = self._baseline_action_set_priority + 1
+    self._action_set_project_patch_onto_faces.priority = self._baseline_action_set_priority + 1 # touch cell last time, i.e. leave cell
+    self._action_set_roll_over_update_of_faces.priority = self._baseline_action_set_priority + 1
+    self._action_set_copy_new_faces_onto_old_faces.priority = self._baseline_action_set_priority + 1
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = self._baseline_action_set_priority + 1
+    self._action_set_postprocess_solution.priority = self._baseline_action_set_priority # touch cell last time, i.e. leave cell
+    self._action_set_preprocess_solution.priority  = self._baseline_action_set_priority
 
 
   def _store_cell_data_default_guard(self):
@@ -970,14 +973,14 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self.create_action_sets()
 
 
-  @patch_size.setter
+  @unknowns.setter
   def unknowns(self, value):
     self._unknowns = value
     self.create_data_structures()
     self.create_action_sets()
 
 
-  @patch_size.setter
+  @auxiliary_variables.setter
   def auxiliary_variables(self, value):
     self._auxiliary_variables = value
     self.create_data_structures()

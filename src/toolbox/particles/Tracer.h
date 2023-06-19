@@ -105,8 +105,7 @@ namespace toolbox {
     template <typename Particle>
     void explicitEuler(
       Particle&                                 particle,
-      double                                    timeStepSize,
-      const ParticleTimeSteppingAccessor auto&  accessor
+      double                                    timeStepSize
     );
   }
 }

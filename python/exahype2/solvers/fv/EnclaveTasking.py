@@ -221,7 +221,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     super( MergeEnclaveTaskOutcome, self ).__init__(solver)
     self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
     self.guard      = "true"
-    self.priority   = -1
+    self.priority   = solver._baseline_action_set_priority
 
 
   def get_body_of_operation(self,operation_name):
@@ -242,6 +242,26 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 
 class EnclaveTasking( FV ):
+  """!
+  
+  Enclave tasking variant of the Finite Volume scheme
+  
+  The concept of (enclave) tasking within ExaHyPE solvers is described in 
+  detail in the @ref page_exahype_solvers_enclave_solvers "generic enclave discussion of ExaHyPE". 
+  This class is a prototype realisation of this concept which other solvers 
+  then specialise for particular numerical schemes.
+  
+  The class basically replaces the standard "update a cell" action set with an 
+  action set that might or might not spawn a task. In return, it adds a further
+  action set which merges the arising task outcomes into the actual mesh 
+  structure. By default, we use peano4::datamanagement::CellMarker::willBeEnclaveCell()
+  and peano4::datamanagement::CellMarker::hasBeenEnclaveCell() to guide the 
+  decision whether to spawn a task or not. You can overwrite this decision
+  by redefining the corresponding entry in the dictionary befilled by 
+  add_entries_to_text_replacement_dictionary().
+  
+  
+  """  
   def __init__(self,
                name,
                patch_size,

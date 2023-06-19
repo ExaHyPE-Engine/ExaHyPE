@@ -101,16 +101,13 @@ bool toolbox::particles::sieveParticle(
   const Particle&                              particle,
   const peano4::datamanagement::VertexMarker&  marker
 ) {
-  const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.h() )     * MultilevelSortingTolerance * AsymmetricSortingDamping >= 2.0 * particle.getCutOffRadius();
-  const bool   fitsIntoNextFinerGridResolution = tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getCutOffRadius();
-
   return
       marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE)
       and
-      fitsIntoThisGridResolution
+      (tarch::la::min( marker.h() )     * MultilevelSortingTolerance * AsymmetricSortingDamping >= 2.0 * particle.getCutOffRadius()) // fitsIntoThisGridResolution
       and
       (
-        not fitsIntoNextFinerGridResolution
+        not (tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getCutOffRadius()) // fitsIntoNextFinerGridResolution
         or
         not marker.hasBeenRefined()
       );
