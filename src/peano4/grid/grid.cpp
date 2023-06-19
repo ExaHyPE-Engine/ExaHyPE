@@ -111,7 +111,7 @@ std::string peano4::grid::toString( const std::list<GridControlEvent>& events ) 
   return msg.str();
 }
 
-std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< GridControlEvent > events, [[maybe_unused]] const double tolerance ) {
+std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< GridControlEvent > events, [[maybe_unused]] const double Tolerance ) {
   logTraceInWith1Argument( "merge(...)", events.size() );
 
   std::list< peano4::grid::GridControlEvent > refineEvents;
