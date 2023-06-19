@@ -570,16 +570,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
       );
     }
   }
-/*
-  ::sycl::event::wait(updateWithFluxEvent);
-  double duration = 0;
-  for (int i = 0; i < numberOfPatches; i++) {
-    auto start = copySolutionEvent[i].get_profiling_info<::sycl::info::event_profiling::command_start>();
-    auto stop = updateWithFluxEvent[i].get_profiling_info<::sycl::info::event_profiling::command_end>();
-    duration += stop - start;
-  }
-  ::std::cout << "Task graph kernel execution time:" << duration / (NSEC_IN_SEC*numberOfPatches) << ::std::endl;
-*/
 
   std::vector< ::sycl::event > updateWithNCPEvent( numberOfPatches );
   std::vector< ::sycl::event > computeNCPXEvent( numberOfPatches );
