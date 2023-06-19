@@ -3,7 +3,6 @@
 #include "swift2/kernels/equation_of_state.h"
 #include "tarch/la/Vector.h"
 
-#define PROBLEMPART 801
 
 
 template <typename ParticleContainer>
@@ -21,8 +20,6 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
       not particle->getIsBoundaryParticle()
     ) {
 
-// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "Drift Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == PROBLEMPART){ std::cout << "Drift Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
 particle->setDriftcount(particle->getDriftcount() + 1);
 
 
@@ -31,8 +28,6 @@ particle->setDriftcount(particle->getDriftcount() + 1);
 
       /* Flag this particle as Moved */
       particle->setMoveState( std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved );
-// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "Drift End\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == PROBLEMPART){ std::cout << "Drift End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }
@@ -56,8 +51,6 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
       if( isSPH ){
         /* @ TODO why do we need the isSPH check here? */
         /* Kick the particle */
-// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "Kick Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == PROBLEMPART){ std::cout << "Kick Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
         particle->setV_full( particle->getV_full() + timeStepSizeKick * particle->getA() );
 
 if (kickNumber == 2) {
@@ -98,8 +91,6 @@ if (kickNumber == 2) {
         particle->setV( particle->getV() + timeStepSizeKick * particle->getA() );
       }
 
-// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "Kick End\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == PROBLEMPART ){ std::cout << "Kick End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }
@@ -119,8 +110,6 @@ void swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
       not particle->getIsBoundaryParticle()
     ) {
 
-// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "Kick Extra Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == PROBLEMPART ){ std::cout << "Kick Extra Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
       /* Integrate the internal energy forward in time */
       const double delta_u = particle->getUDot() * dt_therm;
 assertion2( std::abs(delta_u) < 1e3, particle->toString(), dt_therm);
@@ -137,8 +126,6 @@ assertion2( std::abs(delta_u) < 1e3, particle->toString(), dt_therm);
         particle->setUDot(0.0);
       }
 
-// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "Kick Extra End\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == PROBLEMPART ){ std::cout << "Kick Extra End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }
@@ -164,8 +151,6 @@ void swift2::timestepping::computePredictHydro(
       not particle->getIsBoundaryParticle()
     ) {
 
-// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "Predict Hydro Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == PROBLEMPART ){ std::cout << "Predict Hydro Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
         double u = particle->getU();
 assertion3( u < 1e3, u, "before change", particle->toString());
         /* Predict the internal energy */
@@ -210,9 +195,6 @@ assertion3( u < 1e3, u, "after change", particle->toString());
         particle->setV_sig_AV(
             std::max(particle->getV_sig_AV(), 2.0 * soundspeed)
             );
-
-// if (particle->getPartid() == PROBLEMPART or particle->getPartid() == 797){ std::cout << "Predict Hydro End\n" << particle->toString() << std::endl; std::fflush(stdout); }
-if (particle->getPartid() == PROBLEMPART ){ std::cout << "Predict Hydro End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }

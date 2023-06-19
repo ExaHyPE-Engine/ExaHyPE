@@ -785,13 +785,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
     def initialisation_steps(self):
         return [
-            self.algorithm_steps_dict["FlagBoundaryParticles"],
             self.algorithm_steps_dict["Density"],
-            self.algorithm_steps_dict["Density"],
-            self.algorithm_steps_dict["Force"],
-            self.algorithm_steps_dict["Kick2"],
-            self.algorithm_steps_dict["Kick2Extra"],
-            #  self.algorithm_steps_dict["ReduceGlobalQuantities"]
         ]
 
     @property

@@ -1,7 +1,6 @@
 #include "swift2/kernels/kernel_hydro.h"
 #include "swift2/kernels/equation_of_state.h"
 
-#define PROBLEMPART 801
 
 
 template <typename Particle, typename ParticleContainer>
@@ -47,17 +46,7 @@ assertion2(localParticle->getDensityReset() == 1, "DENSITY NOT RESET PROPERLY", 
         /* Compute the actual interaction radius */
         const double cutoffR = kernel_gamma * h_a;
 
-if (localParticle->getPartid() == PROBLEMPART) {
-  std::cout << "Density iact FIRST CHECK part " << localParticle->getPartid() << " with " << activeParticle->getPartid() << "\n";
-  std::cout << "          hi=" << localParticle->getSmoothingLength() << "\n";
-  std::cout << "          hj=" << activeParticle->getSmoothingLength() << "\n";
-  std::cout << "           r=" << r << "\n";
-  std::cout << "          dx=" << dx << "\n";
-  std::cout << "          ui=" << q_a << "\n";
-  std::cout << "    cutoffR =" << cutoffR << "\n";
-  std::cout << "  cutoffR/r =" << cutoffR / r << "\n";
-  std::cout << "    boundary=" << localParticle->getIsBoundaryParticle() << "\n";
-}        /* Normalized distance to evaluate kernel */
+        /* Normalized distance to evaluate kernel */
         /* Velocity terms for viscosity */
         tarch::la::Vector<Dimensions,double> dv_ab;
         tarch::la::Vector<Dimensions,double> curlvr(0.0);
@@ -78,20 +67,6 @@ if (localParticle->getPartid() == PROBLEMPART) {
           kernel_deval(q_a, w_a, dwa_dx);
           // W_a = w / std::pow( h_a, hydroDimensions );
           dwa_dh = - ( hydroDimensions * w_a + q_a * dwa_dx );
-
-if (localParticle->getPartid() == PROBLEMPART) {
-  std::cout << "Density iact part " << localParticle->getPartid() << " with " << activeParticle->getPartid();
-  std::cout << "          mi=" << localParticle->getMass() << "\n";
-  std::cout << "          mj=" << m_b  << "\n";
-  std::cout << "          hi=" << localParticle->getSmoothingLength() << "\n";
-  std::cout << "          hj=" << activeParticle->getSmoothingLength() << "\n";
-  std::cout << "           r=" << r << "\n";
-  std::cout << "          wi=" << w_a << "\n";
-  std::cout << "       mj*wi=" << m_b * w_a << "\n";
-  std::cout << "          ui=" << q_a << "\n";
-  std::cout << "        dwdr=" << dwa_dx << "\n";
-  std::cout << "        dwdh=" << dwa_dh << "\n";
-}
 
           /* Increment density */
           localParticle->setDensity( localParticle->getDensity() + m_b * w_a );
@@ -229,40 +204,6 @@ void swift2::kernels::computeHydroForce(
         /* Assemble the acceleration */
         const double acc = sph_acc_term + visc_acc_term;
 
-if (localParticle->getPartid() == PROBLEMPART) {
-  std::cout << "Force iact part " << localParticle->getPartid() << " with " << activeParticle->getPartid();
-  std::cout << "          mi=" << localParticle->getMass() << "\n";
-  std::cout << "          mj=" << m_b  << "\n";
-  std::cout << "          hi=" << localParticle->getSmoothingLength() << "\n";
-  std::cout << "          hj=" << activeParticle->getSmoothingLength() << "\n";
-  std::cout << "          Pi=" << localParticle->getPressure() << "\n";
-  std::cout << "          Pj=" << activeParticle->getPressure() << "\n";
-  std::cout << "           r=" << r << "\n";
-  std::cout << "          wi=" << wa << "\n";
-  std::cout << "          wj=" << wb << "\n";
-  std::cout << "       dwidx=" << dw_dqa << "\n";
-  std::cout << "       dwjdx=" << dw_dqb << "\n";
-  std::cout << "       dwidr=" << wa_dr << "\n";
-  std::cout << "       dwjdr=" << wb_dr << "\n";
-  std::cout << "          fi=" << localParticle->getF() << "\n";
-  std::cout << "          fj=" << activeParticle->getF() << "\n";
-  std::cout << "          fij=" << f_ab << "\n";
-  std::cout << "          fji=" << f_ba << "\n";
-  std::cout << "      P/rho2i=" << P_over_rho2_a << "\n";
-  std::cout << "      P/rho2j=" << P_over_rho2_b << "\n";
-  std::cout << "         dvdr=" << dvdr << "\n";
-  std::cout << "     omega_ij=" << omega_ab << "\n";
-  std::cout << "        mu_ij=" << mu_ab << "\n";
-  std::cout << "        v_sig=" << v_sig << "\n";
-  std::cout << "    balsara_i=" << balsara_a << "\n";
-  std::cout << "    balsara_j=" << balsara_b << "\n";
-  std::cout << "       rho_ij=" << rho_ab << "\n";
-  std::cout << "         visc=" << visc << "\n";
-  std::cout << "visc_acc_term=" << visc_acc_term << "\n";
-  std::cout << " sph_acc_term=" << sph_acc_term << "\n";
-  std::cout << "          acc=" << acc << "\n";
-  std::cout << "   adding acc=" << -m_b * acc * dx << "\n";
-}
 assertion9(std::isfinite(visc_acc_term), visc_acc_term, localParticle->toString(), activeParticle->toString(),
     wa_dr, f_ab, wb_dr, f_ba, r_inv, visc
     );
@@ -285,7 +226,6 @@ assertion11( std::abs(udot) < 1e5,
     localParticle->toString(), activeParticle->toString(), du_dt_a, sph_du_term_a, visc_du_term, m_b,
     visc_acc_term, dvdr, P_over_rho2_a, r_inv, wa_dr
     );
-
 
         /* Internal energy time derivative */
         localParticle->setUDot(localParticle->getUDot() + m_b * du_dt_a);
