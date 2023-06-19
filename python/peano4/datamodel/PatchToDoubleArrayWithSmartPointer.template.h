@@ -140,7 +140,17 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   ~{{CLASSNAME}}() = default;
 
   /**
-   * Shallow copy
+   * Copy constructor
+   *
+   * In most cases, this should be a shallow copy. We move data around from
+   * one stack to the other and we do so via the copy constructor. This
+   * moving around equals a shallow copy. The smart pointer behind the scenes
+   * can basically realise the shallow part. We only have to copy this one,
+   * and then set the local value pointer to the smartish memory regions.
+   *
+   * Besides the shallow copies, the copy also is used when we do a resize()
+   * on the underlying stack. In this case, it is unreasonable to copy the
+   * smart pointer. See peano4::stacks::STDVectorStackOverSmartPointers<T>::pushBlock().
    */
   {{CLASSNAME}}(const {{CLASSNAME}}& other);
 

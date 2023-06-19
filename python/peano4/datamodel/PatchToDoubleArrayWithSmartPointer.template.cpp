@@ -21,15 +21,13 @@
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(const {{CLASSNAME}}& other):
-  _dataSmartPointer( other._dataSmartPointer ) {
+  _dataSmartPointer( other.value==nullptr ? nullptr : other._dataSmartPointer ) {
   #if PeanoDebug>=1
   _debugX = other._debugX;
   _debugH = other._debugH;
   #endif
 
-  assertion( other.value!=nullptr );
-
-  value = _dataSmartPointer.get();
+  value = other.value==nullptr ? nullptr : _dataSmartPointer.get();
 }
 
 
