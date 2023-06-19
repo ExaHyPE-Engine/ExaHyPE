@@ -83,65 +83,17 @@ IfMacros:
   - KJ_IF_MAYBE
 IncludeBlocks:   Regroup
 IncludeCategories:
-  - Regex:           '"StdAfx.(h|hpp)"' # 0 /
+  - Regex:           '"StdAfx.(h|hpp)"'
     Priority:        -1
     SortPriority:    -1
     CaseSensitive:   false
-  - Regex:           '<[^/]*>' # 0 /
-    Priority:        1
-    SortPriority:    1
-    CaseSensitive:   false
-  - Regex:           '<[^/]+/[^/]+>' # 1 /
-    Priority:        1
+  - Regex:           '<*>'
+    Priority:        2
     SortPriority:    2
     CaseSensitive:   false
-  - Regex:           '<([^/]+/){2}[^/]+>' # 2 /
-    Priority:        1
+  - Regex:           '"*"'
+    Priority:        3
     SortPriority:    3
-    CaseSensitive:   false
-  - Regex:           '<([^/]+/){3}[^/]+>' # 3 /
-    Priority:        1
-    SortPriority:    4
-    CaseSensitive:   false
-  - Regex:           '<([^/]+/){4}[^/]+>' # 4 /
-    Priority:        1
-    SortPriority:    5
-    CaseSensitive:   false
-  - Regex:           '<([^/]+/){5}[^/]+>' # 5 /
-    Priority:        1
-    SortPriority:    6
-    CaseSensitive:   false
-  - Regex:           '<([^/]+/){6,}[^/]+>' # 6 and up /
-    Priority:        1
-    SortPriority:    7
-    CaseSensitive:   false
-  - Regex:           '"[^/]*"' # 0 /
-    Priority:        2
-    SortPriority:    8
-    CaseSensitive:   false
-  - Regex:           '"[^/]+/[^/]+"' # 1 /
-    Priority:        2
-    SortPriority:    10
-    CaseSensitive:   false
-  - Regex:           '"([^/]+/){2}[^/]+"' # 2 /
-    Priority:        2
-    SortPriority:    11
-    CaseSensitive:   false
-  - Regex:           '"([^/]+/){3}[^/]+"' # 3 /
-    Priority:        2
-    SortPriority:    12
-    CaseSensitive:   false
-  - Regex:           '"([^/]+/){4}[^/]+"' # 4 /
-    Priority:        2
-    SortPriority:    13
-    CaseSensitive:   false
-  - Regex:           '"([^/]+/){5}[^/]+"' # 5 /
-    Priority:        2
-    SortPriority:    14
-    CaseSensitive:   false
-  - Regex:           '"([^/]+/){6,}[^/]+"' # 6 and up /
-    Priority:        2
-    SortPriority:    15
     CaseSensitive:   false
 IncludeIsMainRegex: '(_test)?$'
 IncludeIsMainSourceRegex: ''
