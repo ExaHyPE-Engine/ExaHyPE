@@ -58,7 +58,7 @@ scenarios = [
   ]
 
 def parse_coordinate_pair(coords):
-  if re.search("^\[[0-9]+\.?[0-9]*\,[0-9]+\.?[0-9]*\]$", coords):
+  if re.search("^\[-?[0-9]+\.?[0-9]*\,-?[0-9]+\.?[0-9]*\]$", coords):
       splits = re.split("[\[ | \] | \( | \) | \,]", coords)
       return [float(splits[1]), float(splits[2])]
   else:
