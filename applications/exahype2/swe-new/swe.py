@@ -91,7 +91,7 @@ parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       ty
 
 parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)." )
 parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR." )
-parser.add_argument(            "--uq-displacement-origin",dest="uq_displacement_origin",type=str,        required=False,             help="Move displacement for uncertainty quantification. Expected argument is [x,y] for displacing in x- and y-dimension. The coordinates are not checked against anything, so they might even move the displacment on dry land!")
+parser.add_argument(            "--uq-displacement-origin",dest="uq_displacement_origin",type=str,        required=False,             help="Move displacement for uncertainty quantification. Expected argument [x,y] denoting the center of the displacement file within the coordinate system of the bathymetry file. The coordinates are not checked against anything, so they might even move the displacment on dry land!")
 args = parser.parse_args()
 
 maximum_cell_size = args.max_cell_size
