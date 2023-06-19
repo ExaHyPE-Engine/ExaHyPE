@@ -34,6 +34,16 @@ int tarch::la::isEntryNan(
   return result;
 }
 
+template<int Size, typename Scalar>
+int tarch::la::isEntryFinite(
+  const Vector<Size,Scalar >&  vector
+) {
+  bool result = false;
+  for (int i=0; i<Size; i++) {
+    result |= std::isfinite(vector(i));
+  }
+  return result;
+}
 
 template<int Size, typename Scalar>
 bool tarch::la::contains(

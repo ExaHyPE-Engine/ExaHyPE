@@ -1,5 +1,7 @@
+#include <cstdio>
 #include "swift2/kernels/kernel_hydro.h"
 #include "swift2/kernels/equation_of_state.h"
+#include "tarch/la/Vector.h"
 
 
 
@@ -8,6 +10,7 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
   const ParticleContainer&  localParticles
 ) {
   double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
+
   for (auto* particle: localParticles) {
     if (
       particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
@@ -16,11 +19,19 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
       and
       not particle->getIsBoundaryParticle()
     ) {
+
+// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "Drift Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == 800){ std::cout << "Drift Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+particle->setDriftcount(particle->getDriftcount() + 1);
+
+
       /* Drift the particle (update position for a full time-step) */
       particle->setX( particle->getX() + timeStepSize * particle->getV() );
 
       /* Flag this particle as Moved */
       particle->setMoveState( std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved );
+// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "Drift End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == 800){ std::cout << "Drift End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }
@@ -32,6 +43,7 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
   const bool isSPH
 ) {
   double timeStepSizeKick = 0.5 * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
+  timeStepSizeKick = 0.5 * 2e-4;
   for (auto* particle: localParticles) {
     if (
       particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
@@ -42,7 +54,15 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
       if( isSPH ){
         /* @ TODO why do we need the isSPH check here? */
         /* Kick the particle */
+// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "Kick Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == 800){ std::cout << "Kick Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
         particle->setV_full( particle->getV_full() + timeStepSizeKick * particle->getA() );
+
+if (kickNumber == 2) {
+    particle->setKick2count(particle->getKick2count() + 1);
+} else {
+    particle->setKick1count(particle->getKick1count() + 1);
+}
 
         /* In SWIFT SPH, Kick 1 and Kick 2 are slightly different as Kick 2 does
          * some extra operations. Not relevant for non-hydro systems
@@ -64,7 +84,7 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
             gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
 
           /* Compute the new sound speed */
-          const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
+          const double soundspeed = gas_soundspeed_from_pressure( particle->getDensity(), pressure );
 
           /* Update variables */
           particle->setPressure(pressure);
@@ -76,6 +96,8 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
         particle->setV( particle->getV() + timeStepSizeKick * particle->getA() );
       }
 
+// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "Kick End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == 800 ){ std::cout << "Kick End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }
@@ -95,8 +117,11 @@ void swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
       not particle->getIsBoundaryParticle()
     ) {
 
+// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "Kick Extra Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == 800 ){ std::cout << "Kick Extra Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
       /* Integrate the internal energy forward in time */
       const double delta_u = particle->getUDot() * dt_therm;
+assertion2( std::abs(delta_u) < 1e3, particle->toString(), dt_therm);
 
       /* Do not decrease the energy by more than a factor of 2 */
       particle->setU_full( std::max( particle->getU_full() + delta_u,
@@ -110,6 +135,8 @@ void swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
         particle->setUDot(0.0);
       }
 
+// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "Kick Extra End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == 800 ){ std::cout << "Kick Extra End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }
@@ -135,27 +162,37 @@ void swift2::timestepping::computePredictHydro(
       not particle->getIsBoundaryParticle()
     ) {
 
-        /* Predict velocities for hydro terms */
-        particle->setV( particle->getV() + particle->getA() * dt_kick_hydro );
-
-        /*
-         * Predict additional particle fields forward in time after the Drift step
-         */
-
+// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "Predict Hydro Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == 800 ){ std::cout << "Predict Hydro Start\n" << particle->toString() << std::endl; std::fflush(stdout); }
+        double u = particle->getU();
+assertion3( u < 1e3, u, "before change", particle->toString());
         /* Predict the internal energy */
         particle->setU( particle->getU() + particle->getUDot() * dt_therm );
+        u = particle->getU();
+assertion3( u < 1e3, u, "after change", particle->toString());
+
 
         /* Predict smoothing length */
         const double h_inv = 1.0 / particle->getSmoothingLength();
         const double w1 = particle->getHDot() * h_inv * dt_drift;
+// const double hdot = particle->getHDot();
+// assertion2(std::abs(hdot) < 1e-6, hdot, particle->toString());
         // @TODO Mladen: this is wrong. It should be uncommented.
         // It's ok while debugging sod-1D though as you have hardcoded
         // the smoothing length.
-        particle->setSmoothingLength( particle->getSmoothingLength() * std::exp(w1) );
+        // particle->setSmoothingLength( particle->getSmoothingLength() * std::exp(w1) );
 
         /* Predict density */
         const double w2 = - hydroDimensions * w1;
         particle->setDensity( particle->getDensity() * std::exp(w2) );
+
+        /* Predict velocities for hydro terms */
+        particle->setV( particle->getV() + particle->getA() * dt_kick_hydro );
+
+
+        /*
+         * Predict additional particle fields forward in time after the Drift step
+         */
 
         particle->setU( std::max( particle->getU(), 0.0) );
 
@@ -164,7 +201,6 @@ void swift2::timestepping::computePredictHydro(
           gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
 
         /* Compute the new sound speed */
-        // const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
         const double soundspeed = gas_soundspeed_from_pressure(particle->getDensity(), pressure);
 
         particle->setPressure(pressure);
@@ -172,6 +208,9 @@ void swift2::timestepping::computePredictHydro(
         particle->setV_sig_AV(
             std::max(particle->getV_sig_AV(), 2.0 * soundspeed)
             );
+
+// if (particle->getPartid() == 800 or particle->getPartid() == 797){ std::cout << "Predict Hydro End\n" << particle->toString() << std::endl; std::fflush(stdout); }
+if (particle->getPartid() == 800 ){ std::cout << "Predict Hydro End\n" << particle->toString() << std::endl; std::fflush(stdout); }
     }
   }
 }

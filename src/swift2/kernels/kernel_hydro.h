@@ -1,5 +1,7 @@
 #pragma once
 
+// @TODO: what happened to the license here?
+
 /**
  * @file kernel_hydro.h
  * @brief Kernel functions for SPH.
@@ -30,6 +32,8 @@
 #elif HYDRO_DIMENSION==3
 #define kernel_gamma ((float)(2.018932))
 #define kernel_constant ((float)(15625. * M_1_PI / 512.))
+#else
+#pragma error "Hydro dimension undefined"
 #endif
 
 static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)]

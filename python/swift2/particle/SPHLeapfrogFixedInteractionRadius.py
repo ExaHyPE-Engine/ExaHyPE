@@ -218,6 +218,12 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         # TODO: temporary
         self.density_reset = dastgen2.attributes.Integer("densityReset")
         self.data.add_attribute(self.density_reset)
+        self.kick1count = dastgen2.attributes.Integer("kick1count")
+        self.data.add_attribute(self.kick1count)
+        self.kick2count = dastgen2.attributes.Integer("kick2count")
+        self.data.add_attribute(self.kick2count)
+        self.driftcount = dastgen2.attributes.Integer("driftcount")
+        self.data.add_attribute(self.driftcount)
 
         # Artificial viscosity scheme -------------------------------------------------
         self.balsara = dastgen2.attributes.Double(
@@ -779,7 +785,13 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
     def initialisation_steps(self):
         return [
+            self.algorithm_steps_dict["FlagBoundaryParticles"],
             self.algorithm_steps_dict["Density"],
+            self.algorithm_steps_dict["Density"],
+            self.algorithm_steps_dict["Force"],
+            self.algorithm_steps_dict["Kick2"],
+            self.algorithm_steps_dict["Kick2Extra"],
+            #  self.algorithm_steps_dict["ReduceGlobalQuantities"]
         ]
 
     @property

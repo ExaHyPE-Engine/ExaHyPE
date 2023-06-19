@@ -13,7 +13,7 @@ namespace swift2 {
      * Generic particle self-interaction kernel accepting a functor
      *
      * The generic implementation realises a single loop: We call a self interaction
-     * per particle that has no dependence over neighbours. The functor hence modifies the particle. 
+     * per particle that has no dependence over neighbours. The functor hence modifies the particle.
      *
      * We distinguish two use cases for the particle self-interactions:
      *
@@ -26,11 +26,11 @@ namespace swift2 {
      * In order to ensure the self-interaction kernels execute consistently during the mesh
      * traversals for these type of operations, the user should bear in mind the difference between these two cases:
      *
-     *  - The 'prepare' case should be mapped into touchVertexFirstTime. Peano internally ensures 
+     *  - The 'prepare' case should be mapped into touchVertexFirstTime. Peano internally ensures
      *  that CellHasUpdatedParticle is false in this situation.
-     *  - The 'end' case should be mapped into touchVertexLastTime. Peano internally ensures 
+     *  - The 'end' case should be mapped into touchVertexLastTime. Peano internally ensures
      *  that CellHasUpdatedParticle is true in this situation.
-     * 
+     *
      *
      * @param ParticleContainer Typicaly either
      *         std::list<Particle *>
@@ -46,7 +46,7 @@ namespace swift2 {
     );
 
     /**
-     * @brief Prepares a particle for the density calculation  
+     * @brief Prepares a particle for the density calculation
      *
      * Zeroes all the relevant arrays in perparation for the sums taking place
      * in the loop over neighbours (local-active set)
@@ -65,7 +65,7 @@ namespace swift2 {
       const ParticleContainer& localParticles
     );
 
-    /** 
+    /**
      * @brief Finishes the calculations from the density loop
      *
      * Multiplies the denstiy and number of neighbours by the appropiate
@@ -97,7 +97,7 @@ namespace swift2 {
     );
 
     /**
-     * Same as above, but with constant h, i.e. no Newton-Raphson 
+     * Same as above, but with constant h, i.e. no Newton-Raphson
      *
      * @param ParticleContainer Typicaly either
      *         std::list<Particle *>
@@ -127,7 +127,10 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void prepareHydroForceCalculation(
-      const ParticleContainer& localParticles
+      const ParticleContainer& localParticles,
+      const int hydroDimensions,
+      const double etaFactor,
+      const double alphaAV
     );
 
     /**

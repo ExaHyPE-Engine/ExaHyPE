@@ -29,10 +29,12 @@ void swift2::kernels::computeDensity(
     if ( not localParticle->getCellHasUpdatedParticle() ) {
       for (auto* activeParticle: activeParticles ) {
 
+assertion2(localParticle->getDensityReset() == 1, "DENSITY NOT RESET PROPERLY", localParticle->toString());
+
         /* Retrieve basic properties of local and active particles */
         const double h_a = localParticle->getSmoothingLength();
-        const double m_a = localParticle ->getMass();  
-        const double m_b = activeParticle->getMass();  
+        const double m_a = localParticle ->getMass();
+        const double m_b = activeParticle->getMass();
 
         /* Distance between the particles */
         tarch::la::Vector<Dimensions,double> dx = localParticle->getX() - activeParticle->getX();
@@ -40,7 +42,7 @@ void swift2::kernels::computeDensity(
 
         /* Normalized distance to evaluate kernel */
         const double q_a = r / h_a;
-        
+
         /* Compute the actual interaction radius */
         const double cutoffR = kernel_gamma * h_a;
 
@@ -49,50 +51,66 @@ void swift2::kernels::computeDensity(
         tarch::la::Vector<Dimensions,double> curlvr(0.0);
 
         if(
-          tarch::la::smaller( r, cutoffR ) 
-          and 
-          tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */  
-          and 
-          not localParticle->getIsBoundaryParticle() 
-          ) 
-          {  
+          tarch::la::smaller( r, cutoffR )
+          and
+          tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */
+          and
+          not localParticle->getIsBoundaryParticle()
+          )
+          {
 
           // Evaluate kernel and its derivative
 
           /* SWIFT KERNEL */
-          double W_a, dW_a_dh, w, dw_dx;
-          kernel_deval(q_a, w, dw_dx);
-          W_a = w / std::pow( h_a, hydroDimensions );
-          dW_a_dh = - ( hydroDimensions * w + q_a * dw_dx ) / std::pow( h_a, hydroDimensions + 1 );
+          double w_a, dwa_dx, dwa_dh;
+          kernel_deval(q_a, w_a, dwa_dx);
+          // W_a = w / std::pow( h_a, hydroDimensions );
+          dwa_dh = - ( hydroDimensions * w_a + q_a * dwa_dx );
+
+if (localParticle->getPartid() == 800) {
+  std::cout << "Density iact part " << localParticle->getPartid() << " with " << activeParticle->getPartid();
+  std::cout << "          mi=" << localParticle->getMass() << "\n";
+  std::cout << "          mj=" << m_b  << "\n";
+  std::cout << "          hi=" << localParticle->getSmoothingLength() << "\n";
+  std::cout << "          hj=" << activeParticle->getSmoothingLength() << "\n";
+  std::cout << "           r=" << r << "\n";
+  std::cout << "          wi=" << w_a << "\n";
+  std::cout << "       mj*wi=" << m_b * w_a << "\n";
+  std::cout << "          ui=" << q_a << "\n";
+  std::cout << "        dwdr=" << dwa_dx << "\n";
+  std::cout << "        dwdh=" << dwa_dh << "\n";
+}
 
           /* Increment density */
-          localParticle->setDensity( localParticle-> getDensity() + m_b * W_a ); 
-
-          /* Increment fractional number density */
-          localParticle->setWcount ( localParticle-> getWcount () +       W_a );
-          
-          /* Debug: Increment number of detected neighbours */
-          localParticle->setNcount ( localParticle-> getNcount () + 1 ); 
+          localParticle->setDensity( localParticle->getDensity() + m_b * w_a );
 
           /* Increment drho/dh */
-          localParticle->setRho_dh   ( localParticle->getRho_dh()    + m_b*dW_a_dh ); 
+          localParticle->setRho_dh   ( localParticle->getRho_dh()    + m_b*dwa_dh );
+
+          /* Increment fractional number density */
+          localParticle->setWcount ( localParticle->getWcount () +       w_a );
 
           /* Increment dWcount/dh */
-          localParticle->setWcount_dh( localParticle->getWcount_dh() +     dW_a_dh ); 
+          localParticle->setWcount_dh( localParticle->getWcount_dh() + dwa_dh );
 
           /* Now we need to compute the div terms */
-          const double r_inv = r ? 1.0 / r : 0.0;     
-          const double fac_a = m_b * dw_dx * r_inv;
+          const double r_inv = r ? 1.0 / r : 0.0;
+          const double fac_a = m_b * dwa_dx * r_inv;
 
           /* Compute dv dot r */
           dv_ab = localParticle->getV() - activeParticle->getV();
           const double dvdr = tarch::la::dot( dv_ab , dx );
           localParticle->setDiv_v( localParticle->getDiv_v() - fac_a * dvdr );
-          
+
           /* Compute dv cross r */
           /* 2D Term only has 1 component (z) */
           const double curlvr2D = dv_ab[0]*dx[1] - dv_ab[1]*dx[0];
           localParticle->setRot_v( localParticle->getRot_v() + fac_a * curlvr2D );
+          // @TODO Mladen: Implement 3D curl
+          if (hydroDimensions == 3) assertionMsg(false, "3D not implemented");
+
+          /* Debug: Increment number of detected neighbours */
+          localParticle->setNcount ( localParticle->getNcount () + 1 );
 
         } /* End if r<cutoffR */
       } /* End for active particles */
@@ -116,12 +134,12 @@ void swift2::kernels::computeHydroForce(
       // Retrieve basic properties of local and active particles
       const double rho_a = localParticle ->getDensity();
       const double rho_b = activeParticle->getDensity();
-      
+
       const double P_a = localParticle ->getPressure();
-      const double P_b = activeParticle->getPressure(); 
-      
-      const double m_a = localParticle ->getMass();  
-      const double m_b = activeParticle->getMass();  
+      const double P_b = activeParticle->getPressure();
+
+      const double m_a = localParticle ->getMass();
+      const double m_b = activeParticle->getMass();
 
       const double h_a = localParticle ->getSmoothingLength();
       const double h_b = activeParticle->getSmoothingLength();
@@ -131,20 +149,22 @@ void swift2::kernels::computeHydroForce(
       const double r = tarch::la::norm2(dx);
       const double r_inv = r ? 1.0 / r : 0.0;
 
-      // Dimensionless distance to evaluate kernel
-      const double q_a = r / h_a;
-      const double q_b = r / h_b;
-      
       // Get actual interaction radius
       const double cutoffR = kernel_gamma * h_a;
-     
-      if( 
-        tarch::la::smaller( r,cutoffR ) 
+
+      if(
+        tarch::la::smaller( r,cutoffR )
         and
-        tarch::la::greater( r,0.0 ) 
-        and 
-        not localParticle->getIsBoundaryParticle() 
+        tarch::la::greater( r,0.0 )
+        and
+        not localParticle->getIsBoundaryParticle()
         ){
+
+        // Dimensionless distance to evaluate kernel
+        const double h_a_inv = 1. / h_a;
+        const double h_b_inv = 1. / h_b;
+        const double q_a = r * h_a_inv;
+        const double q_b = r * h_b_inv;
 
         double wa, wb;
         double wa_dr, wb_dr;
@@ -156,8 +176,8 @@ void swift2::kernels::computeHydroForce(
         // Evaluate kernel and its derivative for particle b
         kernel_deval(q_b, wb, dw_dqb);
 
-        wa_dr = dw_dqa / std::pow( h_a, hydroDimensions + 1 );
-        wb_dr = dw_dqb / std::pow( h_b, hydroDimensions + 1 );
+        wa_dr = dw_dqa * std::pow(h_a_inv, (hydroDimensions + 1));
+        wb_dr = dw_dqb * std::pow(h_b_inv, (hydroDimensions + 1));
 
         /* Variable smoothing length term */
 
@@ -175,15 +195,15 @@ void swift2::kernels::computeHydroForce(
         /* Are the particles moving towards each others ? */
         const double omega_ab = std::min(dvdr, 0.0);
         const double mu_ab = r_inv * omega_ab; /* This is 0 or negative */
-      
+
         /* Compute sound speeds and signal velocity */
         const double v_sig = localParticle->getSoundSpeed() + activeParticle->getSoundSpeed() -
                              betaAV * mu_ab;
-      
+
         /* Balsara term */
         const double balsara_a = localParticle ->getBalsara();
         const double balsara_b = activeParticle->getBalsara();
-      
+
         /* Construct the full viscosity term */
         const double rho_ab = 0.5 * (rho_a + rho_b);
         const double visc = -0.25 * v_sig * mu_ab * (balsara_a + balsara_b) / rho_ab;
@@ -193,10 +213,49 @@ void swift2::kernels::computeHydroForce(
 
         /* SPH acceleration term */
         const double sph_acc_term = (P_over_rho2_a * wa_dr + P_over_rho2_b * wb_dr) * r_inv;
-        
+
         /* Assemble the acceleration */
         const double acc = sph_acc_term + visc_acc_term;
-              
+
+if (localParticle->getPartid() == 800) {
+  std::cout << "Force iact part " << localParticle->getPartid() << " with " << activeParticle->getPartid();
+  std::cout << "          mi=" << localParticle->getMass() << "\n";
+  std::cout << "          mj=" << m_b  << "\n";
+  std::cout << "          hi=" << localParticle->getSmoothingLength() << "\n";
+  std::cout << "          hj=" << activeParticle->getSmoothingLength() << "\n";
+  std::cout << "          Pi=" << localParticle->getPressure() << "\n";
+  std::cout << "          Pj=" << activeParticle->getPressure() << "\n";
+  std::cout << "           r=" << r << "\n";
+  std::cout << "          wi=" << wa << "\n";
+  std::cout << "          wj=" << wb << "\n";
+  std::cout << "       dwidx=" << dw_dqa << "\n";
+  std::cout << "       dwjdx=" << dw_dqb << "\n";
+  std::cout << "       dwidr=" << wa_dr << "\n";
+  std::cout << "       dwjdr=" << wb_dr << "\n";
+  std::cout << "          fi=" << localParticle->getF() << "\n";
+  std::cout << "          fj=" << activeParticle->getF() << "\n";
+  std::cout << "          fij=" << f_ab << "\n";
+  std::cout << "          fji=" << f_ba << "\n";
+  std::cout << "      P/rho2i=" << P_over_rho2_a << "\n";
+  std::cout << "      P/rho2j=" << P_over_rho2_b << "\n";
+  std::cout << "         dvdr=" << dvdr << "\n";
+  std::cout << "     omega_ij=" << omega_ab << "\n";
+  std::cout << "        mu_ij=" << mu_ab << "\n";
+  std::cout << "        v_sig=" << v_sig << "\n";
+  std::cout << "    balsara_i=" << balsara_a << "\n";
+  std::cout << "    balsara_j=" << balsara_b << "\n";
+  std::cout << "       rho_ij=" << rho_ab << "\n";
+  std::cout << "         visc=" << visc << "\n";
+  std::cout << "visc_acc_term=" << visc_acc_term << "\n";
+  std::cout << " sph_acc_term=" << sph_acc_term << "\n";
+  std::cout << "          acc=" << acc << "\n";
+  std::cout << "   adding acc=" << -m_b * acc * dx << "\n";
+}
+assertion9(std::isfinite(visc_acc_term), visc_acc_term, localParticle->toString(), activeParticle->toString(),
+    wa_dr, f_ab, wb_dr, f_ba, r_inv, visc
+    );
+assertion3(std::isfinite(sph_acc_term), sph_acc_term, localParticle->toString(), activeParticle->toString());
+
         /* Use the force */
         localParticle->setA( localParticle->getA() - m_b * acc * dx );
 
@@ -208,6 +267,13 @@ void swift2::kernels::computeHydroForce(
 
         /* Assemble the energy equation term */
         const double du_dt_a = sph_du_term_a + visc_du_term;
+
+        const double udot = localParticle->getUDot();
+assertion11( std::abs(udot) < 1e5,
+    localParticle->toString(), activeParticle->toString(), du_dt_a, sph_du_term_a, visc_du_term, m_b,
+    visc_acc_term, dvdr, P_over_rho2_a, r_inv, wa_dr
+    );
+
 
         /* Internal energy time derivative */
         localParticle->setUDot(localParticle->getUDot() + m_b * du_dt_a);

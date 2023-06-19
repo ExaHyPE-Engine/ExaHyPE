@@ -64,7 +64,7 @@ density = mesh.point_data["density"][:,0]
 pressure= mesh.point_data["pressure"][:,0]
 mass    = mesh.point_data["mass"][:,0]
 energy  = mesh.point_data["u"][:,0]
-Omega   = mesh.point_data["Omega"][:,0]
+#  Omega   = mesh.point_data["Omega"][:,0]
 
 print("Measure energy conservation:")
 E_ini = 1.0
@@ -89,7 +89,7 @@ density_x = density[pos_mask]
 pressure_x= pressure[pos_mask]
 energy_x  = energy[pos_mask]
 vel_x_line = vel_x[pos_mask]
-Omega_line = Omega[pos_mask]
+#  Omega_line = Omega[pos_mask]
 
 print('** ' + str(len(x_line)) + ' ** particles found with this filter.')
 

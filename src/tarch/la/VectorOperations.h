@@ -179,6 +179,11 @@ namespace tarch {
     int isEntryNan(
       const Vector<Size,Scalar >&  vector
     );
+
+    template<int Size, typename Scalar>
+    int isEntryFinite(
+      const Vector<Size,Scalar >&  vector
+    );
   }
 }
 
