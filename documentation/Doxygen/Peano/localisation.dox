@@ -1,0 +1,55 @@
+/**
+
+  @page page_peano_localisation Localisation of a solver
+
+Peano allows you to attach data to faces, cells and vertices. It stores these
+data everywhere within the domain on each and every resolution level.
+
+
+
+
+## Alter the storage logic
+
+Typically, each data structure has a generator object attached to it which defines how
+to translate the logical data model into C++ data structures. These generators
+further add MPI logic and so forth, and they create a predicate (guard) if to 
+load and store data or not. 
+By default, these predicates return true, which means that you hold the data 
+everywhere and on each and every resolution level.
+
+
+A typical code snippet to only store data on the finest grid level then reads
+for example
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+self._patch.generator.store_persistent_condition = "not marker.willBeRefined()"
+self._patch.generator.load_persistent_condition  = "not marker.hasBeenRefined()"
+self._patch.generator.provide_compute_data       = "not marker.hasBeenRefined()"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which means that the generator makes the marker decide whether to store
+data in a cell or not. It is interesting to see that we have three values:
+We can decide if we store or load data, but we also can indicate if the 
+steps in-between shall provide any compute data. It is important to recognise
+that there are 
+
+
+## Parallelisation
+
+Peano automatically masks out the data outside of the local subdomain of a 
+thread or rank.
+However, that only works properly with smart pointers.
+
+
+
+## Further spatial multiresolution localisation in storage classes using smart pointers
+
+
+ 
+
+
+
+
+
+ */
+ 
