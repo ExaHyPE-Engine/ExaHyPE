@@ -3,7 +3,6 @@
 // @TODO Mladen: Check how to deal with licenses. This needs a license and credit.
 // @TODO Mladen: Why doubles instead of doubles?
 
-
 /* Powers of the adiabatic index */
 #if defined(HYDRO_GAMMA_5_3)
 
@@ -71,9 +70,6 @@
 
 #endif
 
-
-
-
 /**
  * @brief Returns the argument to the power given by the adiabatic index
  *
@@ -83,8 +79,8 @@ __attribute__((always_inline, const)) inline static double pow_gamma(double x) {
 
 #if defined(HYDRO_GAMMA_5_3)
 
-  const double cbrt = std::cbrt(x);            /* x^(1/3) */
-  return cbrt * cbrt * x;                      /* x^(5/3) */
+  const double cbrt = std::cbrt(x); /* x^(1/3) */
+  return cbrt * cbrt * x;           /* x^(5/3) */
 
 #elif defined(HYDRO_GAMMA_7_5)
 
@@ -92,7 +88,7 @@ __attribute__((always_inline, const)) inline static double pow_gamma(double x) {
 
 #elif defined(HYDRO_GAMMA_4_3)
 
-  return std::cbrt(x) * x;                   /* x^(4/3) */
+  return std::cbrt(x) * x; /* x^(4/3) */
 
 #elif defined(HYDRO_GAMMA_2_1)
 
@@ -106,21 +102,18 @@ __attribute__((always_inline, const)) inline static double pow_gamma(double x) {
 #endif
 }
 
-
-
 /**
  * @brief Returns the argument to the power given by the adiabatic index minus
  * one
  *
  * Computes \f$x^{(\gamma-1)}\f$.
  */
-__attribute__((always_inline, const)) inline static double pow_gamma_minus_one(
-    double x) {
+__attribute__((always_inline, const)) inline static double pow_gamma_minus_one(double x) {
 
 #if defined(HYDRO_GAMMA_5_3)
 
-  const double cbrt = std::cbrt(x);                 /* x^(1/3) */
-  return cbrt * cbrt;                          /* x^(2/3) */
+  const double cbrt = std::cbrt(x); /* x^(1/3) */
+  return cbrt * cbrt;               /* x^(2/3) */
 
 #elif defined(HYDRO_GAMMA_7_5)
 
@@ -128,7 +121,7 @@ __attribute__((always_inline, const)) inline static double pow_gamma_minus_one(
 
 #elif defined(HYDRO_GAMMA_4_3)
 
-  return std::cbrt(x);                       /* x^(1/3) */
+  return std::cbrt(x); /* x^(1/3) */
 
 #elif defined(HYDRO_GAMMA_2_1)
 
@@ -148,13 +141,12 @@ __attribute__((always_inline, const)) inline static double pow_gamma_minus_one(
  *
  * Computes \f$x^{-(\gamma-1)}\f$.
  */
-__attribute__((always_inline, const)) inline static double
-pow_minus_gamma_minus_one(double x) {
+__attribute__((always_inline, const)) inline static double pow_minus_gamma_minus_one(double x) {
 
 #if defined(HYDRO_GAMMA_5_3)
 
-  const double cbrt_inv = 1. / std::cbrt(x);  /* x^(-1/3) */
-  return cbrt_inv * cbrt_inv;                  /* x^(-2/3) */
+  const double cbrt_inv = 1. / std::cbrt(x); /* x^(-1/3) */
+  return cbrt_inv * cbrt_inv;                /* x^(-2/3) */
 
 #elif defined(HYDRO_GAMMA_7_5)
 
@@ -162,7 +154,7 @@ pow_minus_gamma_minus_one(double x) {
 
 #elif defined(HYDRO_GAMMA_4_3)
 
-  return 1.f / std::cbrt(x);                 /* x^(-1/3) */
+  return 1.f / std::cbrt(x); /* x^(-1/3) */
 
 #elif defined(HYDRO_GAMMA_2_1)
 
@@ -185,12 +177,11 @@ pow_minus_gamma_minus_one(double x) {
  * @param x Argument
  * @return One over the argument to the power given by the adiabatic index
  */
-__attribute__((always_inline, const)) inline static double pow_minus_gamma(
-    double x) {
+__attribute__((always_inline, const)) inline static double pow_minus_gamma(double x) {
 
 #if defined(HYDRO_GAMMA_5_3)
 
-  const double cbrt_inv = 1.f / std::cbrt(x);   /* x^(-1/3) */
+  const double cbrt_inv  = 1.f / std::cbrt(x);  /* x^(-1/3) */
   const double cbrt_inv2 = cbrt_inv * cbrt_inv; /* x^(-2/3) */
   return cbrt_inv * cbrt_inv2 * cbrt_inv2;      /* x^(-5/3) */
 
@@ -200,9 +191,9 @@ __attribute__((always_inline, const)) inline static double pow_minus_gamma(
 
 #elif defined(HYDRO_GAMMA_4_3)
 
-  const double cbrt_inv = 1.f / std::cbrt(x); /* x^(-1/3) */
+  const double cbrt_inv  = 1.f / std::cbrt(x);  /* x^(-1/3) */
   const double cbrt_inv2 = cbrt_inv * cbrt_inv; /* x^(-2/3) */
-  return cbrt_inv2 * cbrt_inv2;                /* x^(-4/3) */
+  return cbrt_inv2 * cbrt_inv2;                 /* x^(-4/3) */
 
 #elif defined(HYDRO_GAMMA_2_1)
 
@@ -226,8 +217,7 @@ __attribute__((always_inline, const)) inline static double pow_minus_gamma(
  * @param x Argument
  * @return Argument to the power two divided by the adiabatic index minus one
  */
-__attribute__((always_inline, const)) inline static double
-pow_two_over_gamma_minus_one(double x) {
+__attribute__((always_inline, const)) inline static double pow_two_over_gamma_minus_one(double x) {
 
 #if defined(HYDRO_GAMMA_5_3)
 
@@ -242,7 +232,7 @@ pow_two_over_gamma_minus_one(double x) {
 #elif defined(HYDRO_GAMMA_4_3)
 
   const double x3 = x * x * x; /* x^3 */
-  return x3 * x3;             /* x^6 */
+  return x3 * x3;              /* x^6 */
 
 #elif defined(HYDRO_GAMMA_2_1)
 
@@ -266,8 +256,7 @@ pow_two_over_gamma_minus_one(double x) {
  * @return Argument to the power two times the adiabatic index divided by the
  * adiabatic index minus one
  */
-__attribute__((always_inline, const)) inline static double
-pow_two_gamma_over_gamma_minus_one(double x) {
+__attribute__((always_inline, const)) inline static double pow_two_gamma_over_gamma_minus_one(double x) {
 
 #if defined(HYDRO_GAMMA_5_3)
 
@@ -310,8 +299,7 @@ pow_two_gamma_over_gamma_minus_one(double x) {
  * @return Argument to the power the adiabatic index minus one divided by two
  * times the adiabatic index
  */
-__attribute__((always_inline, const)) inline static double
-pow_gamma_minus_one_over_two_gamma(double x) {
+__attribute__((always_inline, const)) inline static double pow_gamma_minus_one_over_two_gamma(double x) {
 
 #if defined(HYDRO_GAMMA_5_3)
 
@@ -347,8 +335,7 @@ pow_gamma_minus_one_over_two_gamma(double x) {
  * @return Inverse argument to the power the adiabatic index plus one divided by
  * two times the adiabatic index
  */
-__attribute__((always_inline, const)) inline static double
-pow_minus_gamma_plus_one_over_two_gamma(double x) {
+__attribute__((always_inline, const)) inline static double pow_minus_gamma_plus_one_over_two_gamma(double x) {
 
 #if defined(HYDRO_GAMMA_5_3)
 
@@ -382,8 +369,7 @@ pow_minus_gamma_plus_one_over_two_gamma(double x) {
  * @param x Argument
  * @return Argument to the power one over the adiabatic index
  */
-__attribute__((always_inline, const)) inline static double pow_one_over_gamma(
-    double x) {
+__attribute__((always_inline, const)) inline static double pow_one_over_gamma(double x) {
 
 #if defined(HYDRO_GAMMA_5_3)
 
@@ -416,8 +402,7 @@ __attribute__((always_inline, const)) inline static double pow_one_over_gamma(
  *
  * @param x Argument
  */
-__attribute__((always_inline, const)) inline static double
-pow_three_gamma_minus_two(double x) {
+__attribute__((always_inline, const)) inline static double pow_three_gamma_minus_two(double x) {
 
 #if defined(HYDRO_GAMMA_5_3)
 
@@ -451,8 +436,7 @@ pow_three_gamma_minus_two(double x) {
  *
  * @param x Argument
  */
-__attribute__((always_inline, const)) inline static double
-pow_three_gamma_minus_five_over_two(double x) {
+__attribute__((always_inline, const)) inline static double pow_three_gamma_minus_five_over_two(double x) {
 
 #if defined(HYDRO_GAMMA_5_3)
 
@@ -485,8 +469,7 @@ pow_three_gamma_minus_five_over_two(double x) {
  *
  * @param x Argument
  */
-__attribute__((always_inline, const)) inline static double
-pow_three_gamma_minus_one(double x) {
+__attribute__((always_inline, const)) inline static double pow_three_gamma_minus_one(double x) {
 
 #if defined(HYDRO_GAMMA_5_3)
 
@@ -511,5 +494,3 @@ pow_three_gamma_minus_one(double x) {
 
 #endif
 }
-
-

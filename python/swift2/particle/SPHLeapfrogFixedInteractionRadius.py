@@ -343,7 +343,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         #      "DensityWithConstantSmoothingLengthFirst"
         #  ] = densityWithConstantSmoothingLengthFirst
 
-#          forceFirst = AlgorithmStep(
+        #          forceFirst = AlgorithmStep(
         #      name="ForceLoopInitial",
         #      dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
         #      effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
@@ -382,7 +382,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         #                                 #include "swift2/kernels/equation_of_state.h"
         #                                 """,
         #  )
-#          self.algorithm_steps_dict["ForceFirst"] = forceFirst
+        #          self.algorithm_steps_dict["ForceFirst"] = forceFirst
 
         kick1 = AlgorithmStep(
             name="Kick1",
@@ -514,7 +514,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                            {}
                                            );
                                        """.format(
-                self._hydroDimensions, self._eta_factor, self._alpha_av),
+                self._hydroDimensions, self._eta_factor, self._alpha_av
+            ),
             cell_kernel="""
                                        ::swift2::kernels::computeHydroForce(
                                          localParticles,

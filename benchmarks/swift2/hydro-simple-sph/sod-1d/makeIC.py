@@ -98,10 +98,10 @@ from matplotlib import pyplot as plt
 
 plt.figure()
 plt.subplot()
-plt.plot(coords[:,0], u, label="u")
+plt.plot(coords[:, 0], u, label="u")
 plt.legend()
 plt.subplot()
-plt.plot(coords[:,0], m, label="m")
+plt.plot(coords[:, 0], m, label="m")
 plt.legend()
 plt.show()
 

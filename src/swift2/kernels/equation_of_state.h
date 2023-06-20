@@ -5,7 +5,6 @@
 
 // @TODO we need to make this modular. This is only valid for ideal gases. It needs to be exchangeable.
 
-
 /**
  * @brief Returns the internal energy given density and entropy
  *
@@ -14,11 +13,11 @@
  * @param density The density \f$\rho\f$.
  * @param entropy The entropy \f$A\f$.
  */
-__attribute__((always_inline, const)) inline static double
-gas_internal_energy_from_entropy(double density, double entropy) {
+__attribute__((always_inline, const)) inline static double gas_internal_energy_from_entropy(
+  double density, double entropy
+) {
 
-  return entropy * pow_gamma_minus_one(density) *
-         hydro_one_over_gamma_minus_one;
+  return entropy * pow_gamma_minus_one(density) * hydro_one_over_gamma_minus_one;
 }
 
 /**
@@ -29,8 +28,7 @@ gas_internal_energy_from_entropy(double density, double entropy) {
  * @param density The density \f$\rho\f$.
  * @param entropy The entropy \f$A\f$.
  */
-__attribute__((always_inline, const)) inline static double
-gas_pressure_from_entropy(double density, double entropy) {
+__attribute__((always_inline, const)) inline static double gas_pressure_from_entropy(double density, double entropy) {
 
   return entropy * pow_gamma(density);
 }
@@ -44,8 +42,7 @@ gas_pressure_from_entropy(double density, double entropy) {
  * @param pressure The pressure \f$P\f$.
  * @return The entropy \f$A\f$.
  */
-__attribute__((always_inline, const)) inline static double
-gas_entropy_from_pressure(double density, double pressure) {
+__attribute__((always_inline, const)) inline static double gas_entropy_from_pressure(double density, double pressure) {
 
   return pressure * pow_minus_gamma(density);
 }
@@ -58,8 +55,7 @@ gas_entropy_from_pressure(double density, double pressure) {
  * @param density The density \f$\rho\f$.
  * @param entropy The entropy \f$A\f$.
  */
-__attribute__((always_inline, const)) inline static double
-gas_soundspeed_from_entropy(double density, double entropy) {
+__attribute__((always_inline, const)) inline static double gas_soundspeed_from_entropy(double density, double entropy) {
 
   return std::sqrt(hydro_gamma * pow_gamma_minus_one(density) * entropy);
 }
@@ -72,8 +68,7 @@ gas_soundspeed_from_entropy(double density, double entropy) {
  * @param density The density \f$\rho\f$
  * @param u The internal energy \f$u\f$
  */
-__attribute__((always_inline, const)) inline static double
-gas_entropy_from_internal_energy(double density, double u) {
+__attribute__((always_inline, const)) inline static double gas_entropy_from_internal_energy(double density, double u) {
 
   return hydro_gamma_minus_one * u * pow_minus_gamma_minus_one(density);
 }
@@ -86,8 +81,7 @@ gas_entropy_from_internal_energy(double density, double u) {
  * @param density The density \f$\rho\f$
  * @param u The internal energy \f$u\f$
  */
-__attribute__((always_inline, const)) inline static double
-gas_pressure_from_internal_energy(double density, double u) {
+__attribute__((always_inline, const)) inline static double gas_pressure_from_internal_energy(double density, double u) {
 
   return hydro_gamma_minus_one * u * density;
 }
@@ -101,8 +95,9 @@ gas_pressure_from_internal_energy(double density, double u) {
  * @param pressure The pressure \f$P\f$.
  * @return The internal energy \f$u\f$.
  */
-__attribute__((always_inline, const)) inline static double
-gas_internal_energy_from_pressure(double density, double pressure) {
+__attribute__((always_inline, const)) inline static double gas_internal_energy_from_pressure(
+  double density, double pressure
+) {
 
   return hydro_one_over_gamma_minus_one * pressure / density;
 }
@@ -114,8 +109,7 @@ gas_internal_energy_from_pressure(double density, double pressure) {
  *
  * @param u The internal energy \f$u\f$
  */
-__attribute__((always_inline, const)) inline static double
-gas_soundspeed_from_internal_energy(double u) {
+__attribute__((always_inline, const)) inline static double gas_soundspeed_from_internal_energy(double u) {
 
   return std::sqrt(u * hydro_gamma * hydro_gamma_minus_one);
 }
@@ -128,10 +122,7 @@ gas_soundspeed_from_internal_energy(double u) {
  * @param density The density \f$\rho\f$
  * @param P The pressure \f$P\f$
  */
-__attribute__((always_inline, const)) inline static double
-gas_soundspeed_from_pressure(double density, double P) {
+__attribute__((always_inline, const)) inline static double gas_soundspeed_from_pressure(double density, double P) {
 
   return std::sqrt(hydro_gamma * P / density);
 }
-
-
