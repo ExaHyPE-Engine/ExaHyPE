@@ -32,11 +32,11 @@ namespace tarch::accelerator::info
 #if defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
     tarch::accelerator::info::cuda::queryDeviceInformation(devInfo);
 #elif defined(GPUOffloadingSYCL)
-    return tarch::accelerator::info::sycl::queryDeviceInformation();
+    tarch::accelerator::info::sycl::queryDeviceInformation(devInfo);
 #elif defined(GPUOffloadingOMP)
-    return tarch::accelerator::info::omp::queryDeviceInformation();
+    tarch::accelerator::info::omp::queryDeviceInformation(devInfo);
 #elif defined(GPUOffloadingCPP)
-    return tarch::accelerator::info::cpp::queryDeviceInformation();
+    tarch::accelerator::info::cpp::queryDeviceInformation(devInfo);
 #else
     return devInfo;
 #endif
@@ -205,7 +205,7 @@ namespace tarch::accelerator::info
     }
     else
     {
-      throw std::runtime_error("Peano 4 was configured to run on accelerators, but no offloading capable GPU was found.");
+      throw std::runtime_error("Peano 4 was configured to run on accelerators, but no offloading capable GPU were found.");
     }
   }
 

@@ -22,7 +22,7 @@ namespace tarch::accelerator::info::sycl
   {
     constexpr unsigned int kb = 1024;
     constexpr unsigned int mb = kb * kb;
-    std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
+    std::vector<::sycl::device> devices = ::sycl::device::get_devices();
 
     unsigned int propertyCount = tarch::accelerator::info::properties.size();
     std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(devices.size(), "X"));
@@ -76,12 +76,10 @@ namespace tarch::accelerator::info::sycl
 
       devId += 1;
     }
-    return propertyMatrix;
   }
 
   void printDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix)
   {
-    auto propertyMatrix = queryDeviceInformation();
     int numberOfDevices = ::sycl::device::get_devices(::sycl::info::device_type::gpu).size();
     std::string deviceInfoStr = "";
     if (numberOfDevices == 0)
@@ -114,16 +112,16 @@ namespace tarch::accelerator::info::sycl
                    {
         ::sycl::stream out(1024, 256, cgh);
         ::sycl::accessor a_acc = a_sycl.get_access<::sycl::access::mode::read_write>(cgh);
-        //::sycl::accessor a_acc{a_sycl, cgh, ::sycl::read_write};
+        //same as ::sycl::accessor a_acc{a_sycl, cgh, ::sycl::read_write};
 
         cgh.parallel_for(1, [=] (::sycl::id<1> idx) {
           a_acc[0] = true;
         }); });
 
+      queue.wait();
+
       offloadResults[i] = a;
       a = false;
-
-      queue.wait();
     }
 
     return offloadResults;
