@@ -19,6 +19,7 @@
 \li \subpage page_exahype_performance_optimisation
 \li \subpage page_exahype_parallelisation
 \li \subpage page_exahype_coupling
+\li \subpage page_exahype_faq
 \li \subpage page_exahype_gpu
 \li \subpage page_exahype_boundary_conditions
 \li \subpage page_exahype_amr

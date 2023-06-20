@@ -4,6 +4,7 @@ import os
 import jinja2
 
 from abc import abstractmethod
+from enum import Enum
 
 import peano4.datamodel
 import peano4.output.TemplatedHeaderFile
@@ -14,6 +15,13 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import exahype2.solvers.fv.actionsets
 
 from .PDETerms import PDETerms
+
+
+class Storage(Enum):
+    CallStack     = 0
+    Heap          = 1
+    SmartPointers = 2
+    
 
 class FV(object):
   """ !
@@ -258,8 +266,8 @@ class FV(object):
 
     self._kernel_namespace = kernel_namespace
 
-    self._hold_cell_data_on_heap_with_smart_pointer = False
-    self._hold_face_data_on_heap_with_smart_pointer = False
+    self._cell_data_storage = Storage.CallStack
+    self._face_data_storage = Storage.CallStack
     
     self._baseline_action_set_priority = baseline_action_set_priority
 
@@ -422,12 +430,30 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
 
-    if self._hold_cell_data_on_heap_with_smart_pointer:
+    if self._cell_data_storage==Storage.CallStack:
+      self._patch.generator           = peano4.datamodel.PatchToDoubleArray(self._patch,           "double")
+    elif self._cell_data_storage==Storage.Heap:
       self._patch.generator           = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
-    if self._hold_face_data_on_heap_with_smart_pointer:
+    elif self._cell_data_storage==Storage.SmartPointers:
+      self._patch.generator           = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(self._patch,           "double")
+    else:
+      assert False, "storage variant {} not supported".format( self._cell_data_storage )
+
+    if self._face_data_storage==Storage.CallStack:
+      self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArray(self._patch_overlap_old,    "double") 
+      self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArray(self._patch_overlap_new,    "double") 
+      self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArray(self._patch_overlap_update, "double") 
+    elif self._face_data_storage==Storage.Heap:
       self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_old,    "double") 
       self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_new,    "double") 
       self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_update, "double") 
+    elif self._face_data_storage==Storage.SmartPointers:
+      self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(self._patch_overlap_old,    "double") 
+      self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(self._patch_overlap_new,    "double") 
+      self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(self._patch_overlap_update, "double") 
+    else:
+      assert False, "storage variant {} not supported".format( self._face_data_storage )
+  
     
     self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_old)
     self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_new)
@@ -549,7 +575,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._action_set_handle_boundary.priority = self._baseline_action_set_priority + 1
     self._action_set_project_patch_onto_faces.priority = self._baseline_action_set_priority + 1 # touch cell last time, i.e. leave cell
     self._action_set_roll_over_update_of_faces.priority = self._baseline_action_set_priority + 1
-    self._action_set_copy_new_faces_onto_old_faces.priority = self._baseline_action_set_priority + 1
+    self._action_set_copy_new_faces_onto_old_faces.priority = self._baseline_action_set_priority
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = self._baseline_action_set_priority + 1
     self._action_set_postprocess_solution.priority = self._baseline_action_set_priority # touch cell last time, i.e. leave cell
     self._action_set_preprocess_solution.priority  = self._baseline_action_set_priority
@@ -684,9 +710,21 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      
      This is what we want to achieve:
      
-     - Roll updates over on the faces onto Q_old and Q_new.
-     - Copy new face data into old face data, as this is the initial sweep, i.e.
-       the old face data otherwise might hold rubbish.
+     - Project solution onto faces. This happens in touchCellLastTime(). See
+       exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces for comments.
+       The project will end up in QUpdate.
+     - Roll updates over on the faces from QUpdate into Q_new. This is done
+       by RollOverUpdateFace, which requires in turn that the getUpdated()
+       flag is set. As the roll-over plugs into touchFaceLastTime(), it will
+       always be called after the projection, since the latter is a cell 
+       operation.
+     - Copy new face data Q_new into old face data Q_old, as this is the 
+       initial sweep, i.e. the old face data otherwise might hold rubbish.
+       This is a backup operation realised through the action set 
+       BackupPatchOverlap. This one plugs into touchFaceLastTime() too. 
+       Therefore, it is important that its priority is smaller than the one
+       of the roll-over, since we invert the call order for the touch-last
+       events.
      - Restrict the data to the coarser level if we are on a hanging face. 
      - The postprocessing is the very last thing. It does not matter if it 
        plugs into touchCellFirstTime() or touchCellLastTime(). As we invert the
@@ -696,6 +734,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      
     
     """
+    assert self._action_set_copy_new_faces_onto_old_faces.priority < self._action_set_roll_over_update_of_faces.priority
+    
     step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
@@ -731,7 +771,10 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
   @plot_description.setter
   def plot_description(self,description):
-    """
+    """!
+    
+     Add a proper description to the plots
+     
      Use this one to set a description within the output patch file that tells
      the solver what the semantics of the entries are. Typically, I use 
      a comma-separated list here.
@@ -772,8 +815,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_project_patch_onto_faces )
     #step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
 
-# @todo New time stamp choice update in DG and ADER-DG
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
+    plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._patch, 
       dataset_name=self._unknown_identifier(), 
@@ -786,10 +828,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       precision="PlotterPrecision",
       time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
       select_dofs = self.select_dofs_to_print
-    ))
+    )
+    plot_patches_action_set.priority = self._baseline_action_set_priority
+    step.add_action_set( plot_patches_action_set )
 
     if self._plot_grid_properties:    
-      step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
+      plot_grid_properties_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
         guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
@@ -797,7 +841,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """
-      ))
+      )
+      plot_grid_properties_action_set.priority = self._baseline_action_set_priority
+      step.add_action_set( plot_grid_properties_action_set )
       
     pass
    
@@ -1156,8 +1202,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
 
   def switch_to_heap_storage(self,
-                             hold_cell_data_on_heap_with_smart_pointer,
-                             hold_face_data_on_heap_with_smart_pointer
+                             cell_data_storage: Storage,
+                             face_data_storage: Storage,
                              ):
     """
     
@@ -1167,8 +1213,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     @see create_data_structures()
     
     """
-    self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
-    self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
+    self._cell_data_storage = cell_data_storage
+    self._face_data_storage = face_data_storage
     
     self.create_data_structures()
     self.create_action_sets()

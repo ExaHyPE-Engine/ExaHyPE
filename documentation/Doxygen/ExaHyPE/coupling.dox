@@ -192,30 +192,35 @@ which furthermore will be moved/accessed in each and every grid sweep, as the
 mesh management of Peano so far does not know that ExaHyPE might not need the 
 data. ExaHyPE has to let Peano know.
 
+
+The principles behind such a localisation @ref page_peano_localisation "are discussed on a generic Peano page of its own".
 Every solver in ExaHyPE has a routine create_data_structures(). Depending on 
 the type of your solver, you might have a pretty deep inheritance hierarchy
 where every subclass specialises and augments the basic numerical scheme. It
-is the base class usually however which defines all the data structures over 
-the mesh which are used by the solver. This happens in its create_data_structures()
-operation. 
+is the base class' create_data_structures() usually which defines all the data structures over 
+the mesh which are used by the different solver (sub-)flavours. 
+Therefore, it is this class, where you decide if and how you localise the 
+data stored.
 
-Each data structure has a generator object attached to it which defines how
-to translate the logical data model onto C++ data structures. These generators
-further add MPI logic and so forth, and they create a predicate (guard) if to 
-load and store data or not. A typical code snippet in a solver reads as
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
 self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-self._patch.generator.compute_condition          = self._patch.generator.store_persistent_condition + " or " + self._patch.generator.load_persistent_condition
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-which means that the generator queries the underlying class whether to store
-data in a cell or not. By default, most solvers only store data for unrefined 
-cells. Subclasses such as enclave tasking variations then augment the guards
+
+By default, most solvers only store data for unrefined 
+cells. They mask coarser levels with in the tree out.    
+Subclasses such as enclave tasking variations augment the guards
 further. Therefore, it makes sense to plug into _store_cell_data_default_guard()
 and _load_cell_data_default_guard() if we want to restrict our solver spatially.
+Just take the existing logic, and add another and correlation.
 
+
+If you work with data (patches) which are administered via smart pointers, it 
+makes a lot of sense to ensure that these smart pointers are allocated if and 
+only if you actually need them in your code. Study the respective subsection
+@ref page_peano_localisation "within the generic localisation discussion".
 
 
 ### The actual solution coupling

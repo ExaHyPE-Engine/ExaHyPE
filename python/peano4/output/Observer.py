@@ -341,8 +341,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
 
   TemplateLoadCell_VertexLoad = """
-  // Load vertex {{local_type_name}}
-  std::function<bool ()> loadVertex{{local_type_name}} = 
+  // Load vertex {{logical_type_name}}
+  std::function<bool ()> loadVertex{{logical_type_name}} = 
     [&]()->bool {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
@@ -352,17 +352,20 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
       peano4::datamanagement::VertexMarker  marker(event,outVertexStackPosition);
 
-      if (
+      const bool gridTopologyImpliesVertexHoldsData = 
         inVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
         inVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         and
-        inVertexStack!=peano4::grid::TraversalObserver::NoData
-        and
-        (not peano4::grid::PeanoCurve::isInOutStack(inVertexStack) or {{full_qualified_type}}::loadPersistently(
+        inVertexStack!=peano4::grid::TraversalObserver::NoData;
+      const bool userImpliesVertexHoldsData = {{full_qualified_type}}::loadPersistently(
           marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-        ))
+        );
+      if (
+        gridTopologyImpliesVertexHoldsData
+        and
+        (not peano4::grid::PeanoCurve::isInOutStack(inVertexStack) or userImpliesVertexHoldsData)
       ) {
         assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->empty(), event.toString(), peano4::datamanagement::VertexMarker(event).toString(), _spacetreeId, inVertexStack);
         {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->pop() );
@@ -374,7 +377,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         #endif
         view.set(outVertexStackPosition,data);
       }
-      else {
+      else if ( gridTopologyImpliesVertexHoldsData ) {
         {{full_qualified_type}} data;
         #if PeanoDebug>0
         logDebug( "loadCell(...)", "initialise meta data of vertex {{name}} with " << marker.x(outVertexStackPosition) << " x " << marker.h() << ": load persistent data=" << {{full_qualified_type}}::loadPersistently(
@@ -386,6 +389,16 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         #endif
         view.set(outVertexStackPosition,data);
       }
+      else {
+        #if PeanoDebug>0
+        logDebug( "loadCell(...)", "initialise meta data of vertex {{name}} with " << marker.x(outVertexStackPosition) << " x " << marker.h() << ": load persistent data=" << {{full_qualified_type}}::loadPersistently(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ) << " (" << marker.toString() << ")" );
+        view.get(outVertexStackPosition).setDebugX( marker.x(outVertexStackPosition) );
+        view.get(outVertexStackPosition).setDebugH( marker.h() );
+        #endif
+      }
     }
     return false;
   };
@@ -393,7 +406,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   tasks.push_back( new tarch::multicore::TaskWithoutCopyOfFunctor(
     tarch::multicore::Task::DontFuse,
     tarch::multicore::Task::DefaultPriority,
-    loadVertex{{local_type_name}}
+    loadVertex{{logical_type_name}}
   ));
   
 """
@@ -470,17 +483,20 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
       peano4::datamanagement::FaceMarker  marker(event,outFaceStackPosition);
 
-      if (
+      const bool gridTopologyImpliesFaceHoldsData = 
         inFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
         inFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         and
-        inFaceStack!=peano4::grid::TraversalObserver::NoData
-        and
-        (not peano4::grid::PeanoCurve::isInOutStack(inFaceStack) or {{full_qualified_type}}::loadPersistently(
+        inFaceStack!=peano4::grid::TraversalObserver::NoData;
+      const bool userImpliesFaceHoldsData = {{full_qualified_type}}::loadPersistently(
           marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-        ))
+        );
+      if (
+        gridTopologyImpliesFaceHoldsData
+        and
+        (not peano4::grid::PeanoCurve::isInOutStack(inFaceStack) or userImpliesFaceHoldsData)
       ) {
         assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), event.toString(), peano4::datamanagement::FaceMarker(event).toString(), _spacetreeId,inFaceStack );
         {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->pop() );
@@ -492,7 +508,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         #endif
         view.set(outFaceStackPosition,data);
       }
-      else {
+      else if ( gridTopologyImpliesFaceHoldsData ) {
         {{full_qualified_type}} data;
         #if PeanoDebug>0
         logDebug( "loadCell(...)", "initialise meta data of face {{name}} with " << marker.x(outFaceStackPosition) << " x " << marker.h() << ": load persistent data=" << {{full_qualified_type}}::loadPersistently(
@@ -503,6 +519,16 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         data.setDebugH( marker.h() );
         #endif
         view.set(outFaceStackPosition,data);
+      }
+      else {
+        #if PeanoDebug>0
+        logDebug( "loadCell(...)", "initialise meta data of face {{name}} with " << marker.x(outFaceStackPosition) << " x " << marker.h() << ": load persistent data=" << {{full_qualified_type}}::loadPersistently(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        )  << " (" << marker.toString() << ")" );
+        view.get(outFaceStackPosition).setDebugX( marker.x(outFaceStackPosition) );
+        view.get(outFaceStackPosition).setDebugH( marker.h() );
+        #endif
       }
     }
     return false;
@@ -598,15 +624,18 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
     ) << ")" );
 
-    if (
+    const bool gridTopologyImpliesCellHoldsData = 
       inCellStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
       and
-      inCellStack!=peano4::grid::TraversalObserver::NoData
-      and
-      (not peano4::grid::PeanoCurve::isInOutStack(inCellStack) or {{full_qualified_type}}::loadPersistently(
+      inCellStack!=peano4::grid::TraversalObserver::NoData;
+    const bool userImpliesCellHoldsData = {{full_qualified_type}}::loadPersistently(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-      ))
+      );
+    if (
+      gridTopologyImpliesCellHoldsData
+      and
+      (not peano4::grid::PeanoCurve::isInOutStack(inCellStack) or userImpliesCellHoldsData)
     ) {
       assertion3( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
       {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop() );
@@ -618,7 +647,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
       view.set(0,data);
     }
-    else {
+    else if ( gridTopologyImpliesCellHoldsData ) {
       {{full_qualified_type}} data;
 
       #if PeanoDebug>0
@@ -627,6 +656,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       data.setDebugH( marker.h() );
       #endif
       view.set(0,data);
+    }
+    else {
+      #if PeanoDebug>0
+      logDebug( "loadCell(...)", "initialise meta data of cell {{name}} with " << marker.x() << " x " << marker.h()  << " (" << marker.toString() << ")");
+      view.get(0).setDebugX( marker.x() );
+      view.get(0).setDebugH( marker.h() );
+      #endif
     }
     return false;
   };

@@ -4,3 +4,4 @@ from exahype2.solvers.rkfd.PDETerms    import PDETerms
 
 import exahype2.solvers.rkfd.fd4
 
+from .CellCenteredFiniteDifferences import Storage
