@@ -53,8 +53,6 @@ class TsunamiModel(umbridge.Model):
                 print("Therefore, the user is adviced to compile ExaHyPE themselves!")
                 cmake_instructions = ["cmake", 
                                       "..",
-                                      "-DWITH_MPI=OFF",
-                                      "-DWITH_TOOLCHAIN=gnu",
                                       "-DCMAKE_BUILD_TYPE=Release"] # TODO this seems to work but maybe needs to be specified more
 
                 run(cmake_instructions, cwd=operating_directory).check_returncode()
