@@ -134,7 +134,7 @@ particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(
     constant_time_step_size=True,
     swift_project_namespace=project_namespace,
     is_sph=True,
-    particles_per_cell=100,
+    particles_per_cell=20,
     min_h=args.cell_size,
     max_h=args.cell_size,
 )
@@ -228,10 +228,10 @@ project.set_global_simulation_parameters(
 )
 
 project.set_Peano4_installation(args.peanodir, build_mode)
-#  project.set_load_balancing(
-#      "toolbox::loadbalancing::RecursiveBipartition",
-#      "new toolbox::loadbalancing::DefaultConfiguration()",
-#  )
+project.set_load_balancing(
+    "toolbox::loadbalancing::RecursiveBipartition",
+    "new toolbox::loadbalancing::DefaultConfiguration()",
+)
 
 
 ###############################################################################

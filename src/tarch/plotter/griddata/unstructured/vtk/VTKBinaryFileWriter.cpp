@@ -5,9 +5,11 @@
 #include <iomanip>
 #include <stdio.h>
 
-tarch::logging::Log tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::_log("tarch::plotter::griddata::"
-                                                                                           "unstructured::vtk::"
-                                                                                           "VTKBinaryFileWriter");
+tarch::logging::Log tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::_log(
+  "tarch::plotter::griddata::"
+  "unstructured::vtk::"
+  "VTKBinaryFileWriter"
+);
 
 const std::string tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::HEADER
   = "# vtk DataFile Version 2.0\n "

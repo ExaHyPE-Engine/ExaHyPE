@@ -7,8 +7,10 @@
 
 tarch::logging::Log exahype2::RefinementControlService::_log("exahype2::RefinementControlService");
 
-int exahype2::RefinementControlService::_reductionTag(tarch::mpi::Rank::reserveFreeTag("exahype2::"
-                                                                                       "RefinementControlService"));
+int exahype2::RefinementControlService::_reductionTag(tarch::mpi::Rank::reserveFreeTag(
+  "exahype2::"
+  "RefinementControlService"
+));
 
 tarch::multicore::BooleanSemaphore exahype2::RefinementControlService::_semaphore;
 

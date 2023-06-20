@@ -9,9 +9,3 @@ from .ExplicitEulerDynamicInteractionRadius import ExplicitEulerDynamicInteracti
 from .ExplicitEulerFixedInteractionRadius import ExplicitEulerFixedInteractionRadius
 from .LeapfrogFixedInteractionRadius import LeapfrogFixedInteractionRadius
 from .SPHLeapfrogFixedInteractionRadius import SPHLeapfrogFixedInteractionRadius
-from .SPHVelocityVerletFixedInteractionRadius import (
-    SPHVelocityVerletFixedInteractionRadius,
-)
-from .SPHExplicitEulerFixedInteractionRadius import (
-    SPHExplicitEulerFixedInteractionRadius,
-)

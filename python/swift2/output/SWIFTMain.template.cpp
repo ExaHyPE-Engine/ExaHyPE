@@ -401,38 +401,37 @@ int main(int argc, char** argv) {
   }
 
   #if PeanoDebug>=2
-/*   tarch::tests::TestCase* peanoCoreTests = peano4::getUnitTests(); */
-  /* peanoCoreTests->run(); */
-  /* if (peanoCoreTests->getNumberOfErrors() != 0) { */
-  /*   logError("main()", "Peano4 core unit tests failed. Quit."); */
-  /*   exit(ExitCodeUnitTestsFailed); */
-  /* } */
-  /* delete peanoCoreTests; */
-  /*  */
-  /* tarch::tests::TestCase* tarchTests = tarch::getUnitTests(); */
-  /* tarchTests->run(); */
-  /* if (tarchTests->getNumberOfErrors() != 0) { */
-  /*   logError("main()", "technical architecture (tarch) unit tests failed. Quit."); */
-  /*   exit(ExitCodeUnitTestsFailed); */
-  /* } */
-  /* delete tarchTests; */
-  /*  */
-  /* tarch::tests::TestCase* swiftTests = swift2::getUnitTests(); */
-  /* swiftTests->run(); */
-  /* if (swiftTests->getNumberOfErrors() != 0) { */
-  /*   logError("main()", "Swift unit tests failed. Quit."); */
-  /*   exit(ExitCodeUnitTestsFailed); */
-  /* } */
-  /* delete swiftTests; */
-  /*  */
-  /* tarch::tests::TestCase* particlesTests = toolbox::particles::getUnitTests(); */
-  /* particlesTests->run(); */
-  /* if (particlesTests->getNumberOfErrors() != 0) { */
-  /*   logError("main()", "toolbox particles unit tests failed. Quit."); */
-  /*   exit(ExitCodeUnitTestsFailed); */
-  /* } */
-  // delete particlesTests;
-  // @TODO MLADEN: Don't let this get into the MR/ main branch
+  tarch::tests::TestCase* peanoCoreTests = peano4::getUnitTests();
+  peanoCoreTests->run();
+  if (peanoCoreTests->getNumberOfErrors() != 0) {
+    logError("main()", "Peano4 core unit tests failed. Quit.");
+    exit(ExitCodeUnitTestsFailed);
+  }
+  delete peanoCoreTests;
+
+  tarch::tests::TestCase* tarchTests = tarch::getUnitTests();
+  tarchTests->run();
+  if (tarchTests->getNumberOfErrors() != 0) {
+    logError("main()", "technical architecture (tarch) unit tests failed. Quit.");
+    exit(ExitCodeUnitTestsFailed);
+  }
+  delete tarchTests;
+
+  tarch::tests::TestCase* swiftTests = swift2::getUnitTests();
+  swiftTests->run();
+  if (swiftTests->getNumberOfErrors() != 0) {
+    logError("main()", "Swift unit tests failed. Quit.");
+    exit(ExitCodeUnitTestsFailed);
+  }
+  delete swiftTests;
+
+  tarch::tests::TestCase* particlesTests = toolbox::particles::getUnitTests();
+  particlesTests->run();
+  if (particlesTests->getNumberOfErrors() != 0) {
+    logError("main()", "toolbox particles unit tests failed. Quit.");
+    exit(ExitCodeUnitTestsFailed);
+  }
+  delete particlesTests;
   #endif
 
   tarch::logging::Statistics::getInstance().clear();

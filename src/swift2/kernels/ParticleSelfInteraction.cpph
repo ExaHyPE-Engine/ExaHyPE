@@ -76,84 +76,11 @@ void swift2::kernels::endDensityCalculation(
       assertion1(particle->getNcount() > 1, particle->toString());
 
       //
-      // =====================
-      // prepare forces
-      // =====================
-      //
-      //@ TODO this shouldn't be in here...????????
-      {
-        /* Retrieve basic properties of local and active particles */
-        const double rho_a = particle->getDensity();
-        const double m_a   = particle->getMass();
-        const double h_a   = particle->getSmoothingLength();
-
-        const double h_inv = 1.0 / h_a;
-
-        /* Compute the norm of the curl */
-        double curl_v = 0;
-
-        if (hydroDimensions == 2) { /* in 2D sims Rot_v is a scalar */
-          curl_v = std::sqrt(particle->getRot_v() * particle->getRot_v());
-        } else {
-          assertionMsg(false, "3D curl_v term to be implemented (straightforward, but have only run 2D so far...)");
-        }
-
-        /* Compute the norm of div v */
-        const double abs_div_v = tarch::la::abs(particle->getDiv_v());
-
-        /* Compute the sound speed */
-        const double soundspeed = gas_soundspeed_from_internal_energy(particle->getU());
-
-        /* Construct the final expression of the grad-h-term.
-         * Swift use "f" (see also Springel and Hernquist).
-         */
-
-        const double dh_drho_a     = -h_a / rho_a / hydroDimensions;
-        const double common_factor = h_a / hydroDimensions / particle->getWcount();
-
-        double       grad_h_term;
-        const double grad_W_term = common_factor * particle->getWcount_dh();
-
-        // Avoid problematic particles
-        if (grad_W_term < -0.9999) {
-          /* if we get here, we either had very small neighbour contributions
-            (which should be treated as a no neighbour case in the ghost) or
-            a very weird particle distribution (e.g. particles sitting on
-            top of each other). Either way, we cannot use the normal
-            expression, since that would lead to overflow or excessive round
-            off and cause excessively high accelerations in the force loop */
-          grad_h_term = 0;
-
-          /* Verbose */
-          //          logInfo( "touchVertexLastTime()", "Setting grad_h_term=0 for part:  " << particle->toString() );
-
-        } else {
-          grad_h_term = common_factor * particle->getRho_dh() / (1.0 + grad_W_term);
-        }
-
-        /* Compute the Balsara Switch */
-        const double balsara = alphaAV * abs_div_v / (abs_div_v + curl_v + 0.0001 * soundspeed * h_inv);
-
-        assertion6(std::isfinite(balsara), particle->toString(), balsara, abs_div_v, curl_v, soundspeed, alphaAV);
-
-        /* Update variables */
-        const double P_a = gas_pressure_from_internal_energy(rho_a, particle->getU());
-
-        /* SWIFT */
-        particle->setF(grad_h_term);
-
-        particle->setPressure(P_a);
-        particle->setSoundSpeed(soundspeed);
-        particle->setBalsara(balsara);
-
-      } /* End hydro_prepare_force */
-
-      //
       // =============================
       // Newton's Apples
       // =============================
       //
-      // @TODO Mladen: What is this monstrosity...?
+      // @TODO Mladen: Why is this here???
       {
         //        const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
         const double hydro_eta_dim = std::pow(etaFactor, hydroDimensions);
@@ -286,6 +213,7 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
 ) {
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
+
       /* Retrieve some properties */
       const double m_a = particle->getMass();
       const double h_a = particle->getSmoothingLength();
@@ -315,9 +243,9 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
       particle->setDiv_v(particle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
 
       assertion1(std::isfinite(particle->getDensity()), particle->toString());
-      assertion1(particle->getDensity() > 0., particle->toString());
+      assertion1(particle->getDensity() >= 0., particle->toString());
       assertion1(std::isfinite(particle->getWcount()), particle->toString());
-      assertion1(particle->getWcount() > 0., particle->toString());
+      assertion1(particle->getWcount() >= 0., particle->toString());
       assertion1(std::isfinite(particle->getRho_dh()), particle->toString());
       assertion1(std::isfinite(particle->getWcount_dh()), particle->toString());
     }
