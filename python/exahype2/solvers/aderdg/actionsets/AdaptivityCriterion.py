@@ -196,3 +196,8 @@ class AdaptivityCriterion(AbstractAderDGActionSet):
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+
+  def get_includes(self):
+    return super(AdaptivityCriterion,self).get_includes() + """
+#include "exahype2/RefinementControlService.h"
+      """

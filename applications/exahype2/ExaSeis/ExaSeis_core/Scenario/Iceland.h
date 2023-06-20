@@ -11,7 +11,7 @@ class TPV5 : public Scenario<Shortcuts, basisSize>{
 
 
   void initUnknownsPointwise(const double* const x,
-			     const tarch::la::Vector<DIMENSIONS,double>& center,
+			     const tarch::la::Vector<Dimensions,double>& center,
 			     const double t,
 			     const double dt, 
 			     double* Q){
@@ -29,7 +29,7 @@ class TPV5 : public Scenario<Shortcuts, basisSize>{
 
   }
 
-  void refinementCriteria(exahype::solvers::Solver* solver,
+  void refinementCriteria(exahype2::solvers::aderdg::Solver* solver,
                           std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria) override{
     //    criteria.push_back(new Refinement::StaticAMR<Shortcuts>);
     double left_edge[3];  left_edge[0]  = 19.9; left_edge[1]  = 7.4; left_edge[2]  = 19.9;

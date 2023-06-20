@@ -1,3 +1,6 @@
+/**
+
+ @page page_exahype_amr Adaptive mesh refinement 
 
 ### Adding adaptive mesh refinement (AMR)
 
@@ -108,3 +111,7 @@ For the interpolation, we offer the following routines:
   `linear_with_linear_extrapolation`                                     Interpolate linear (2d) or bi-linear (3d) along faces and use constant extrapolation along diagonals and patch boundaries.
   `linear_with_constant_extrapolation_and_linear_normal_interpolation`   Variation of `constant_with_constant_extrapolation` where we interplate linearly between restricted (coarsened) voxel data and the adjacent real coarse grid values.
   `linear_with_linear_extrapolation_and_linear_normal_interpolation`     Variation of `linear_with_constant_extrapolation`
+
+  
+   */
+   

@@ -2,8 +2,9 @@
 #define EXASEIS_SCENARIO_HEADER
 
 #include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
+// #include "kernels/GaussLegendreBasis.h"
 
+// #include "exahype/solvers/Solver.h"
 #include "exahype2/aderdg/solvers/Solver.h"
 
 #include "../Refinement/refinement.h"

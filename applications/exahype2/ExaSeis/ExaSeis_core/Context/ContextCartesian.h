@@ -3,8 +3,8 @@
 
 
 #include "Context.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+#include "../../../ExaHyPE/kernels/GaussLegendreBasis.h"
+#include "../../../../ExaHyPE/kernels/KernelUtils.h"
 
 template<class Shortcuts, int basisSize>
 class ContextCartesian : public Context<Shortcuts,basisSize>{
@@ -21,8 +21,8 @@ public:
   };
   
   virtual void initUnknownsPatch(double *luh, 
-				 const tarch::la::Vector<DIMENSIONS,double>& center,
-				 const tarch::la::Vector<DIMENSIONS,double>& dx,
+				 const tarch::la::Vector<Dimensions,double>& center,
+				 const tarch::la::Vector<Dimensions,double>& dx,
 				 double t,double dt){
     
     Shortcuts s;

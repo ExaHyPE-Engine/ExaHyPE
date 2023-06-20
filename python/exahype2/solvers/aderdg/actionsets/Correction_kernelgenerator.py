@@ -16,44 +16,79 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
   
   
   """
-  
-  TemplateProject = """
+
+  Template_TouchFaceFirstTime = """
+
   if ({{PREDICATE}}) {
   
-    const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+    const double timeStamp = coarseGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
   
     // needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
-    
     
     const int Order = {{ORDER}};
     const int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
     const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     
     #if Dimensions==2
-    constexpr int spaceBasisSize     = (Order+1)*(Order+1);
     constexpr int spaceFaceSize      = (Order+1);
     #else
-    constexpr int spaceBasisSize     = (Order+1)*(Order+1)*(Order+1);
     constexpr int spaceFaceSize      = (Order+1)*(Order+1);
     #endif
-    
+
+    const int basisElementsPerFace  = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
+    const int fluxElementsPerFace   = spaceFaceSize*NumberOfVariables;
+
+    /*
+    2d: 0,1,2,3 -> 0,2,1,3
+    3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
+    */
+
+    {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
+    repositories::{{SOLVER_INSTANCE}}.riemannSolver(
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value,                        //FL
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+fluxElementsPerFace,    //FR
+      fineGridFace{{SOLVER_NAME}}QEstimates.value,                          //QL
+      fineGridFace{{SOLVER_NAME}}QEstimates.value+basisElementsPerFace,     //QR
+      timeStamp,
+      timeStepSize,
+      marker.x(),
+      marker.h(),
+      marker.getSelectedFaceNumber()%Dimensions, //direction
+      fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary(),
+      marker.getSelectedFaceNumber()
+    );
+    {% else %}
+    generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+      repositories::{{SOLVER_INSTANCE}},
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value,                        //FL
+      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+fluxElementsPerFace,    //FR
+      fineGridFace{{SOLVER_NAME}}QEstimates.value,                          //QL
+      fineGridFace{{SOLVER_NAME}}QEstimates.value+basisElementsPerFace,     //QR
+      timeStamp,
+      timeStepSize,
+      marker.x(),
+      marker.h(),
+      marker.getSelectedFaceNumber()%Dimensions //direction
+    );
+    {% endif %}
+
+  }  
+
+"""  
+  
+  Template_TouchCellFirstTime = """
+  if ({{PREDICATE}}) {
+  
+    const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  
+    // needs to declare and define timeStepSize
+    {{COMPUTE_TIME_STEP_SIZE}}
+        
     {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     {{CORRECTOR_COMPUTATION_PRECISION}} lduh[generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize()]{0.0};
 
-    const int basisElementsByFace = generated::kernels::AderDG::{{LINEARITY}}::getBndFaceSize();
-    const int fluxElementsByFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
-    
-    {{CORRECTOR_COMPUTATION_PRECISION}} FL[fluxElementsByFace];
-    {{CORRECTOR_COMPUTATION_PRECISION}} FR[fluxElementsByFace];
-    
-#if Dimensions==2
-    double cellCentre[Dimensions] = {marker.x()[0], marker.x()[1]};
-    double cellSize[Dimensions]   = {marker.h()[0], marker.h()[1]};
-#else
-    double cellCentre[Dimensions] = {marker.x()[0], marker.x()[1], marker.x()[2]};  
-    double cellSize[Dimensions]   = {marker.h()[0], marker.h()[1], marker.h()[2]};
-#endif
+    const int fluxElementsPerFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
     
     /*
     2d: 0,1,2,3 -> 0,2,1,3
@@ -62,84 +97,34 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     
     for(int d=0; d<Dimensions; d++){
     
-      //negative face
-      {{PREDICTOR_STORAGE_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
-      {{PREDICTOR_STORAGE_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsByFace;
-
-      /*
-      **  Data from the face is copied into a buffer because operations are directly performed on this
-      **  by the kernels and we want the faces to remain unmodified for the neighbour.
-      **  The solution elements are only accessed but not used as buffers and therefore no copying is needed.
-      */
-      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value, fluxElementsByFace, FL);
-      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value +fluxElementsByFace, fluxElementsByFace, FR);
+      const double inverseDxDirection = 1/marker.h()[d];
       
-      const double inverseDxDirection = 1/marker.h()[d];      
-      tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
-      faceCentre[d] -= 0.5*marker.h()[d];
-
-      generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
-        repositories::{{SOLVER_INSTANCE}},
-        FL,
-        FR,
-        QL,
-        QR,
-        timeStamp,
-        timeStepSize,
-        faceCentre,
-        marker.h(),
-        d //direction
-      );
-
+      //negative face
       generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
         lduh,
-        FR,
+        fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace,
         d, //direction
         0, //orientation
         inverseDxDirection
       );
 
-
-      //positive face
-      QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value;
-      QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value+basisElementsByFace;
-      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value, fluxElementsByFace, FL);
-      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value +fluxElementsByFace, fluxElementsByFace, FR);
-
-      faceCentre[d] += marker.h()[d];
-      
-      generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
-        repositories::{{SOLVER_INSTANCE}},
-        FL,
-        FR,
-        QL,
-        QR,
-        timeStamp,
-        timeStepSize,
-        faceCentre,
-        marker.h(),
-        d //direction
-      );
-
+      //positive face      
       generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
         lduh,
-        FL,
+        fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value,
         d, //direction
         1, //orientation
         inverseDxDirection
       );
 
-      
     }// for d    
     
-
     generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate( 
       luh,
       luh, 
       lduh, 
       timeStepSize
     );
-
 
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
   
@@ -169,12 +154,15 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
 
   def get_body_of_operation(self,operation_name):
     result = ""
+    d = {}
+    self._solver._init_dictionary_with_default_parameters(d)
+    self._solver.add_entries_to_text_replacement_dictionary(d)
+    d[ "PREDICATE" ] = self.guard
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      result = jinja2.Template(self.Template_TouchFaceFirstTime).render(**d)
+      pass
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]                 = self.guard
-      result = jinja2.Template(self.TemplateProject).render(**d)
+      result = jinja2.Template(self.Template_TouchCellFirstTime).render(**d)
       pass 
     return result
 

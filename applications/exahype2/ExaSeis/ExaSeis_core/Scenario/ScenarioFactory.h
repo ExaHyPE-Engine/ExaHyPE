@@ -5,12 +5,12 @@
 #include "Apatite.h"
 #include "Easi.h"
 #include "GaussianWave.h"
-#include "GaussianHill.h"
+// #include "GaussianHill.h"
 #include "Hsp1.h"
 #include "Hhs1.h"
-#include "Hhs1_Transposed.h"
+// #include "Hhs1_Transposed.h"
 #include "Loh1.h"
-#include "Loh1_Transposed.h"
+// #include "Loh1_Transposed.h"
 #include "Sinusodial.h"
 #include "TPV5.h"
 #include "WholeSpaceProblem.h"
@@ -34,12 +34,12 @@ class ScenarioFactory{
       {"Apatite", &create<Apatite, VariableShortcuts, basisSize>},
       {"Easi", &create<EasiScen, VariableShortcuts, basisSize>},
       {"GaussianWave", &create<GaussianWave, VariableShortcuts, basisSize>},
-      {"GaussianHill", &create<GaussianHill, VariableShortcuts, basisSize>},
+      // {"GaussianHill", &create<GaussianHill, VariableShortcuts, basisSize>},
       {"Hsp1", &create<Hsp1, VariableShortcuts, basisSize>},
       {"Hhs1", &create<Hhs1, VariableShortcuts, basisSize>},
-      {"Hhs1_Transposed", &create<Hhs1_Transposed, VariableShortcuts, basisSize>},
+      // {"Hhs1_Transposed", &create<Hhs1_Transposed, VariableShortcuts, basisSize>},
       {"Loh1", &create<Loh1, VariableShortcuts, basisSize>},  
-      {"Loh1_Transposed", &create<Loh1_Transposed, VariableShortcuts, basisSize>},
+      // {"Loh1_Transposed", &create<Loh1_Transposed, VariableShortcuts, basisSize>},
       {"Sinusodial", &create<Sinusodial, VariableShortcuts, basisSize>},
       {"TPV5", &create<TPV5, VariableShortcuts, basisSize>},
       {"WholeSpaceProblem", &create<WholeSpaceProblem, VariableShortcuts, basisSize>},

@@ -45,7 +45,7 @@ def generate_aderdg_kernels(
     useCERKGuess=False,
     useSplitCK=False,
     predictorRecompute=False,
-    predictorComputePrecision="double",
+    predictorComputePrecisions=["double"],
     predictorStoragePrecision="double",
     correctorComputePrecision="double",
     correctorStoragePrecision="double" 
@@ -87,7 +87,7 @@ def generate_aderdg_kernels(
     "useVectPDE"            : useVectPDE,
     "predictorRecompute"    : predictorRecompute,
     "initialGuess"          : "mixedPicard",
-    "predictorComputePrecision": predictorComputePrecision,
+    "predictorComputePrecisions": predictorComputePrecisions,
     "predictorStoragePrecision": predictorStoragePrecision,
     "correctorComputePrecision": correctorComputePrecision,
     "correctorStoragePrecision": correctorStoragePrecision
