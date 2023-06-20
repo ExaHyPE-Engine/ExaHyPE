@@ -1,12 +1,23 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.fv.PDETerms  import PDETerms
+from exahype2.solvers.fv.PDETerms import PDETerms
 
 import jinja2
 
 
-def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, is_linear, computation_precisions, pde_terms_without_state):
-  Template = jinja2.Template( """
+def create_abstract_solver_declarations(
+    flux_implementation,
+    ncp_implementation,
+    eigenvalues_implementation,
+    source_term_implementation,
+    material_param_implementation,
+    point_source_implementation,
+    is_linear,
+    computation_precisions,
+    pde_terms_without_state,
+):
+    Template = jinja2.Template(
+        """
   public:
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
@@ -84,23 +95,36 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
 {% endif %}
 
 
-""", undefined=jinja2.DebugUndefined)
+""",
+        undefined=jinja2.DebugUndefined,
+    )
 
-  d= {}
-  d[ "FLUX_IMPLEMENTATION" ]                = flux_implementation
-  d[ "NCP_IMPLEMENTATION" ]                 = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION" ]         = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION" ]         = source_term_implementation
-  d["MATERIAL_PARAMETER_IMPLEMENTATION"]    = material_param_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION" ]        = point_source_implementation
-  d[ "IS_LINEAR" ]                          = is_linear
-  d[ "COMPUTATION_PRECISIONS" ]             = computation_precisions
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
-  return Template.render(**d)
+    d = {}
+    d["FLUX_IMPLEMENTATION"] = flux_implementation
+    d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
+    d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
+    d["MATERIAL_PARAMETER_IMPLEMENTATION"] = material_param_implementation
+    d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
+    d["IS_LINEAR"] = is_linear
+    d["COMPUTATION_PRECISIONS"] = computation_precisions
+    d["STATELESS_PDE_TERMS"] = pde_terms_without_state
+    return Template.render(**d)
 
 
-def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, is_linear, computation_precisions, pde_terms_without_state):
-  Template = jinja2.Template( """
+def create_abstract_solver_definitions(
+    flux_implementation,
+    ncp_implementation,
+    eigenvalues_implementation,
+    source_term_implementation,
+    material_param_implementation,
+    point_source_implementation,
+    is_linear,
+    computation_precisions,
+    pde_terms_without_state,
+):
+    Template = jinja2.Template(
+        """
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 
 {% if EIGENVALUES_IMPLEMENTATION!="<empty>" and EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
@@ -172,25 +196,37 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatri
 {% endif %}
 
 {% endfor %}
-""", undefined=jinja2.DebugUndefined)
+""",
+        undefined=jinja2.DebugUndefined,
+    )
 
-  Exception("finish")
-  d= {}
-  d[ "FLUX_IMPLEMENTATION" ]            = flux_implementation
-  d[ "NCP_IMPLEMENTATION" ]             = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION" ]     = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION" ]     = source_term_implementation
-  d[ "MATERIAL_PARAM_IMPLEMENTATION" ]  = material_param_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION" ]    = point_source_implementation
-  d[ "IS_LINEAR" ]                      = is_linear  
-  d[ "COMPUTATION_PRECISIONS" ]         = computation_precisions
-  d[ "STATELESS_PDE_TERMS"]             = pde_terms_without_state
-  return Template.render(**d)
+    Exception("finish")
+    d = {}
+    d["FLUX_IMPLEMENTATION"] = flux_implementation
+    d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
+    d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
+    d["MATERIAL_PARAM_IMPLEMENTATION"] = material_param_implementation
+    d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
+    d["IS_LINEAR"] = is_linear
+    d["COMPUTATION_PRECISIONS"] = computation_precisions
+    d["STATELESS_PDE_TERMS"] = pde_terms_without_state
+    return Template.render(**d)
 
 
-def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, is_linear, computation_precisions, pde_terms_without_state):
-  
-  TemplateSinglePrecisions = jinja2.Template( """
+def create_solver_declarations(
+    flux_implementation,
+    ncp_implementation,
+    eigenvalues_implementation,
+    source_term_implementation,
+    material_param_implementation,
+    point_source_implementation,
+    is_linear,
+    computation_precisions,
+    pde_terms_without_state,
+):
+    TemplateSinglePrecisions = jinja2.Template(
+        """
 
   {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
   virtual double maxEigenvalue(
@@ -243,9 +279,12 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
 {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
     void initPointSourceLocations(double sourceLocation[NumberOfPointSources][Dimensions]) override;
 {% endif %}
-  """, undefined=jinja2.DebugUndefined) 
-  
-  TemplateMultiplePrecisions = jinja2.Template( """
+  """,
+        undefined=jinja2.DebugUndefined,
+    )
+
+    TemplateMultiplePrecisions = jinja2.Template(
+        """
   public:
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     template<typename T>
@@ -377,27 +416,39 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
 {% endif %}
   
 {% endfor %}
-""", undefined=jinja2.DebugUndefined) 
-  d= {}
-  d[ "FLUX_IMPLEMENTATION" ]            = flux_implementation
-  d[ "NCP_IMPLEMENTATION" ]             = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION" ]     = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION" ]     = source_term_implementation
-  d[ "MATERIAL_PARAM_IMPLEMENTATION" ]  = material_param_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION" ]    = point_source_implementation
-  d[ "IS_LINEAR" ]                      = is_linear  
-  d[ "COMPUTATION_PRECISIONS" ]         = computation_precisions
-  d[ "STATELESS_PDE_TERMS"]             = pde_terms_without_state
+""",
+        undefined=jinja2.DebugUndefined,
+    )
+    d = {}
+    d["FLUX_IMPLEMENTATION"] = flux_implementation
+    d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
+    d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
+    d["MATERIAL_PARAM_IMPLEMENTATION"] = material_param_implementation
+    d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
+    d["IS_LINEAR"] = is_linear
+    d["COMPUTATION_PRECISIONS"] = computation_precisions
+    d["STATELESS_PDE_TERMS"] = pde_terms_without_state
 
-  if(len(computation_precisions)>1):
-    return TemplateMultiplePrecisions.render(**d)
-  else:
-    return TemplateSinglePrecisions.render(**d)
+    if len(computation_precisions) > 1:
+        return TemplateMultiplePrecisions.render(**d)
+    else:
+        return TemplateSinglePrecisions.render(**d)
 
 
-def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, is_linear, computation_precisions, pde_terms_without_state):
-  
-  TemplateSinglePrecisions = jinja2.Template( """
+def create_solver_definitions(
+    flux_implementation,
+    ncp_implementation,
+    eigenvalues_implementation,
+    source_term_implementation,
+    material_param_implementation,
+    point_source_implementation,
+    is_linear,
+    computation_precisions,
+    pde_terms_without_state,
+):
+    TemplateSinglePrecisions = jinja2.Template(
+        """
   
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 
@@ -500,9 +551,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 }
 {% endif %}
 
-""", undefined=jinja2.DebugUndefined)
-  
-  TemplateMultiplePrecisions = jinja2.Template( """
+""",
+        undefined=jinja2.DebugUndefined,
+    )
+
+    TemplateMultiplePrecisions = jinja2.Template(
+        """
   
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 template<typename T>
@@ -661,57 +715,67 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(const {{C
 {% endif %}
 
 
-""", undefined=jinja2.DebugUndefined)
-  d= {}
-  d[ "FLUX_IMPLEMENTATION" ]            = flux_implementation
-  d[ "NCP_IMPLEMENTATION" ]             = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION" ]     = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION" ]     = source_term_implementation
-  d[ "MATERIAL_PARAM_IMPLEMENTATION" ]  = material_param_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION" ]    = point_source_implementation
-  d[ "IS_LINEAR" ]                      = is_linear  
-  d[ "COMPUTATION_PRECISIONS" ]         = computation_precisions
-  d[ "STATELESS_PDE_TERMS"]             = pde_terms_without_state
-  
-  if(len(computation_precisions)>1):
-    return TemplateMultiplePrecisions.render(**d)
-  else:
-    return TemplateSinglePrecisions.render(**d)
-    
+""",
+        undefined=jinja2.DebugUndefined,
+    )
+    d = {}
+    d["FLUX_IMPLEMENTATION"] = flux_implementation
+    d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
+    d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
+    d["MATERIAL_PARAM_IMPLEMENTATION"] = material_param_implementation
+    d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
+    d["IS_LINEAR"] = is_linear
+    d["COMPUTATION_PRECISIONS"] = computation_precisions
+    d["STATELESS_PDE_TERMS"] = pde_terms_without_state
+
+    if len(computation_precisions) > 1:
+        return TemplateMultiplePrecisions.render(**d)
+    else:
+        return TemplateSinglePrecisions.render(**d)
+
 
 def create_compute_time_step_size_for_fixed_time_stepping():
-  """
-  
-  If you work with fixed time stepping, the computation of the next
-  time step size per cell or patch is trivial: You simply read out 
-  the solver. Therefore, this computation can trivially be a generic
-  one which is the same for all solver flavours.
-  
-  """
-  return """
+    """
+
+    If you work with fixed time stepping, the computation of the next
+    time step size per cell or patch is trivial: You simply read out
+    the solver. Therefore, this computation can trivially be a generic
+    one which is the same for all solver flavours.
+
+    """
+    return """
     const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
 """
 
-def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
-  return """
+
+def create_finish_time_step_implementation_for_fixed_time_stepping(
+    normalised_time_step_size,
+):
+    return (
+        """
   assertion( _minCellH >= 0.0 );
   assertion( MaxAdmissibleCellH > 0.0 );
   if (_minCellH <= MaxAdmissibleCellH) {
-    _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minCellH;
+    _timeStepSize  = """
+        + str(normalised_time_step_size)
+        + """ * _minCellH;
   }
   else {
     _timeStepSize = 0.0;
   }
 """
+    )
+
 
 def create_start_time_step_implementation_for_fixed_time_stepping():
-  """
-  
-  The outcome is used before we actually roll over the accumulation variables
-  and other stuff.
-  
-  """
-  return """
+    """
+
+    The outcome is used before we actually roll over the accumulation variables
+    and other stuff.
+
+    """
+    return """
   if (
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
     and
@@ -727,17 +791,22 @@ def create_start_time_step_implementation_for_fixed_time_stepping():
   }
 """
 
+
 def create_abstract_solver_user_declarations_for_fixed_time_stepping(timeStep):
-  return """
+    return (
+        """
 private:
-  double _timeStepSize =""" + str(timeStep) + """;
+  double _timeStepSize ="""
+        + str(timeStep)
+        + """;
 public:
   double getTimeStepSize() const;  
-    """  
+    """
+    )
 
 
 def create_abstract_solver_user_definitions_for_fixed_time_stepping():
-  return """
+    return """
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
   return _timeStepSize;
 }
@@ -745,12 +814,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
 
 
 def get_face_overlap_merge_implementation(patch_overlap):
-  d = {
-    "OVERLAP": patch_overlap.dim[0]/2, #assumed to always be two, but present here anyway
-    "DOFS_PER_AXIS": patch_overlap.dim[1],
-    "UNKNOWNS": patch_overlap.no_of_unknowns
+    d = {
+        "OVERLAP": patch_overlap.dim[0]
+        / 2,  # assumed to always be two, but present here anyway
+        "DOFS_PER_AXIS": patch_overlap.dim[1],
+        "UNKNOWNS": patch_overlap.no_of_unknowns,
     }
-  template = """
+    template = """
   
   #if Dimensions==2
   constexpr int spaceFaceSize = {DOFS_PER_AXIS}*{UNKNOWNS}; //Order+1
@@ -771,27 +841,52 @@ def get_face_overlap_merge_implementation(patch_overlap):
   
 """
 
-  return template.format(**d)
+    return template.format(**d)
 
-# function which fills an array of one type with elements of a different array, converting them via explicit conversion 
+
+# function which fills an array of one type with elements of a different array, converting them via explicit conversion
 def convert_array_from_type(from_name, to_name, type_to, array_size):
-  
-  template = """  
-      for(int i=0; i<""" + array_size + """; i++){
-      """ + to_name + """[i] = ( """ + type_to + """ ) """ + from_name + """[i];
+    template = (
+        """  
+      for(int i=0; i<"""
+        + array_size
+        + """; i++){
+      """
+        + to_name
+        + """[i] = ( """
+        + type_to
+        + """ ) """
+        + from_name
+        + """[i];
       }  
   """
-  return template
+    )
+    return template
 
-#creates an array toName with array_size elements of type typeTo, then fills then with values from array fromName
+
+# creates an array toName with array_size elements of type typeTo, then fills then with values from array fromName
 def create_array_and_convert_from_type(from_name, to_name, type_to, array_size):
-  
-  template = """
-      """ + type_to + " " + to_name + "[" + array_size + "];" + """
-      for(int i=0; i<""" + array_size + """; i++){
-        """ + to_name + """[i] = ( """ + type_to + """ ) """ + from_name + """[i];
+    template = (
+        """
+      """
+        + type_to
+        + " "
+        + to_name
+        + "["
+        + array_size
+        + "];"
+        + """
+      for(int i=0; i<"""
+        + array_size
+        + """; i++){
+        """
+        + to_name
+        + """[i] = ( """
+        + type_to
+        + """ ) """
+        + from_name
+        + """[i];
       }  
   """
-  return template
-
-
+    )
+    return template

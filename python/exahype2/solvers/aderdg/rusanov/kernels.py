@@ -1,12 +1,20 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.aderdg.PDETerms  import PDETerms
+from exahype2.solvers.aderdg.PDETerms import PDETerms
 
 import jinja2
 
 
-def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, pde_terms_without_state):
-  Template = jinja2.Template( """
+def create_abstract_solver_declarations(
+    flux_implementation,
+    ncp_implementation,
+    eigenvalues_implementation,
+    source_term_implementation,
+    point_source_implementation,
+    pde_terms_without_state,
+):
+    Template = jinja2.Template(
+        """
   public:
     {% if EIGENVALUES_IMPLEMENTATION=="<none>" %}
     #error eigenvalue implementation cannot be none
@@ -181,20 +189,30 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__ S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
-    """, undefined=jinja2.DebugUndefined)
+    """,
+        undefined=jinja2.DebugUndefined,
+    )
 
-  d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
-  return Template.render(**d)
+    d = {}
+    d["FLUX_IMPLEMENTATION"] = flux_implementation
+    d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
+    d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
+    d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
+    d["STATELESS_PDE_TERMS"] = pde_terms_without_state
+    return Template.render(**d)
 
 
-def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, pde_terms_without_state):
-  Template = jinja2.Template( """
+def create_abstract_solver_definitions(
+    flux_implementation,
+    ncp_implementation,
+    eigenvalues_implementation,
+    source_term_implementation,
+    point_source_implementation,
+    pde_terms_without_state,
+):
+    Template = jinja2.Template(
+        """
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -384,20 +402,30 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #pragma omp end declare target
 #endif
 {% endif %}
-""", undefined=jinja2.DebugUndefined)
+""",
+        undefined=jinja2.DebugUndefined,
+    )
 
-  d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                             = pde_terms_without_state  
-  return Template.render(**d)
+    d = {}
+    d["FLUX_IMPLEMENTATION"] = flux_implementation
+    d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
+    d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
+    d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
+    d["STATELESS_PDE_TERMS"] = pde_terms_without_state
+    return Template.render(**d)
 
 
-def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, pde_terms_without_state):
-  Template = jinja2.Template( """
+def create_solver_declarations(
+    flux_implementation,
+    ncp_implementation,
+    eigenvalues_implementation,
+    source_term_implementation,
+    point_source_implementation,
+    pde_terms_without_state,
+):
+    Template = jinja2.Template(
+        """
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     void sourceTerm(
@@ -621,19 +649,29 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #endif
     {% endif %}    
     
-""", undefined=jinja2.DebugUndefined)
-  d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state  
-  return Template.render(**d)
+""",
+        undefined=jinja2.DebugUndefined,
+    )
+    d = {}
+    d["FLUX_IMPLEMENTATION"] = flux_implementation
+    d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
+    d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
+    d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
+    d["STATELESS_PDE_TERMS"] = pde_terms_without_state
+    return Template.render(**d)
 
 
-def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, pde_terms_without_state):
-  Template = jinja2.Template( """
+def create_solver_definitions(
+    flux_implementation,
+    ncp_implementation,
+    eigenvalues_implementation,
+    source_term_implementation,
+    point_source_implementation,
+    pde_terms_without_state,
+):
+    Template = jinja2.Template(
+        """
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -798,56 +836,64 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 {% endif %}
 
 
-""", undefined=jinja2.DebugUndefined)
-  d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state  
-  return Template.render(**d)
+""",
+        undefined=jinja2.DebugUndefined,
+    )
+    d = {}
+    d["FLUX_IMPLEMENTATION"] = flux_implementation
+    d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
+    d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
+    d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
+    d["STATELESS_PDE_TERMS"] = pde_terms_without_state
+    return Template.render(**d)
 
 
 def create_abstract_solver_user_declarations_for_fixed_time_stepping():
-  return """
+    return """
 private:
   double _timeStepSize;
 public:
   double getTimeStepSize() const;  
-    """  
+    """
 
 
 def create_abstract_solver_user_definitions_for_fixed_time_stepping():
-  return """
+    return """
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
   return _timeStepSize;
 }
-    """  
+    """
 
 
 def create_compute_time_step_size_for_fixed_time_stepping(_time_step_size):
-  return """
-  const double timeStepSize = """ +str(_time_step_size)
+    return """
+  const double timeStepSize = """ + str(
+        _time_step_size
+    )
+
 
 def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_tasking):
-  """
-  
-  The outcome is used before we actually roll over the accumulation variables
-  and other stuff.
-  
-  """
-  predicate = """
+    """
+
+    The outcome is used before we actually roll over the accumulation variables
+    and other stuff.
+
+    """
+    predicate = """
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
     and
     _maxCellH>0.0
   """
-  
-  if use_enclave_tasking:
-    predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
-      
-  return """
-  if (""" + predicate + """) {
+
+    if use_enclave_tasking:
+        predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
+
+    return (
+        """
+  if ("""
+        + predicate
+        + """) {
     logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
     logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
     logInfo( "step()", "dt      = " << getTimeStepSize() );
@@ -855,22 +901,30 @@ def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_ta
     logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep<< " (volume size)" );
   }
 """
+    )
 
-def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
-  return """
+
+def create_finish_time_step_implementation_for_fixed_time_stepping(
+    normalised_time_step_size,
+):
+    return (
+        """
   assertion( _minCellH >= 0.0 );
   assertion( MaxAdmissibleCellH > 0.0 );
   if (_minCellH <= MaxAdmissibleCellH) {
-    _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minCellH / MaxAdmissibleCellH;
+    _timeStepSize  = """
+        + str(normalised_time_step_size)
+        + """ * _minCellH / MaxAdmissibleCellH;
   }
   else {
     _timeStepSize = 0.0;
   }
 """
+    )
 
 
 def create_abstract_solver_user_declarations_for_adaptive_time_stepping():
-  return """
+    return """
 private:
   double _maxEigenvalue;
   double _admissibleTimeStepSize;
@@ -888,7 +942,7 @@ public:
 
 
 def create_abstract_solver_user_definitions_for_adaptive_time_stepping():
-  return """
+    return """
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigenvalue ) {
   if ( tarch::la::greater( eigenvalue, 0.0 ) ) {
     tarch::multicore::Lock lock(_semaphore);
@@ -902,13 +956,15 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
 }
 """
 
+
 def create_compute_time_step_size_for_adaptive_time_stepping():
-  return """
+    return """
     double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
+
 def create_compute_new_time_step_size_for_adaptive_time_stepping():
-  return """
+    return """
   
     double maxEigenvalue = kernels::aderdg::generic::c::maxScaledEigenvalue<
       {{SOLVER_NAME}}
@@ -932,15 +988,19 @@ def create_compute_new_time_step_size_for_adaptive_time_stepping():
 
 """
 
+
 def create_start_time_step_implementation_for_adaptive_time_stepping():
-  predicate = """
+    predicate = """
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
     and
     _maxCellH>0.0
   """
-        
-  statistics = """
-  if (""" + predicate + """) {
+
+    statistics = (
+        """
+  if ("""
+        + predicate
+        + """) {
     logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
     logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
     logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
@@ -949,12 +1009,13 @@ def create_start_time_step_implementation_for_adaptive_time_stepping():
     logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
   }
 """
-    
-  clear_max_eigenvalue = """if (_solverState == SolverState::Correction) {
+    )
+
+    clear_max_eigenvalue = """if (_solverState == SolverState::Correction) {
   _maxEigenvalue = 0.0;
 }"""
 
-  compute_new_timestep = """
+    compute_new_timestep = """
   if ( isFirstGridSweepOfTimeStep() ) {
     #ifdef Parallel
     double newMaxEigenvalue = _maxEigenvalue;
@@ -992,16 +1053,18 @@ def create_start_time_step_implementation_for_adaptive_time_stepping():
 
 """
 
-  return statistics + clear_max_eigenvalue + compute_new_timestep
+    return statistics + clear_max_eigenvalue + compute_new_timestep
+
 
 def create_finish_time_step_implementation_for_adaptive_time_stepping():
-  """
-  
-  This routine is inserted after we have reduced all global quantities. These
-  are the quantities with the postfix ThisTimeStep.
-  
-  """ 
-  return ""
+    """
+
+    This routine is inserted after we have reduced all global quantities. These
+    are the quantities with the postfix ThisTimeStep.
+
+    """
+    return ""
+
 
 def create_constructor_implementation_for_adaptive_time_stepping():
-  return "_admissibleTimeStepSize = 0.0;"
+    return "_admissibleTimeStepSize = 0.0;"
