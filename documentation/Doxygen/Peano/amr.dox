@@ -94,4 +94,7 @@ by `beginIteration()` if and only if the boolean is set.
     means that you still keep the fine data somewhere. In contrast, 's
     erase means that the grid is really thrown away.
 
+Consult @ref page_peano_performance_optimisation "the generic optimisation remarks" for 
+some details around performance flaws tied to dynamic mesh refinement.
+
 */

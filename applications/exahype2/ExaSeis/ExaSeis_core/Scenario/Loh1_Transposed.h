@@ -84,7 +84,7 @@ class Loh1_Transposed : public Scenario<Shortcuts, basisSize>{
                          solver->getMaximumAdaptiveMeshLevel(),
                          m_pointSourceLocation,
                          0,
-                         static_cast<exahype2::solvers::aderdg::ADERDGSolver*>(solver)->FCoeff[basisSize-1][0]));
+                         static_cast<exahype::solvers::ADERDGSolver*>(solver)->FCoeff[basisSize-1][0]));
 
 #else
       double left[3];

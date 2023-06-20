@@ -9,7 +9,7 @@ tarch::logging::Log   examples::exahype2::heat::SWE::_log( "examples::exahype2::
  */
 examples::exahype2::heat::VariableShortcuts s;
 
-
+static constexpr double grav = 9.81;
 
 ::exahype2::RefinementCommand examples::exahype2::heat::SWE::refinementCriterion(
   const double * __restrict__ Q,               // Q[4+0]
@@ -66,6 +66,7 @@ void examples::exahype2::heat::SWE::boundaryConditions(
   Qoutside[s.v+0] = Qinside[s.v+0];
   Qoutside[s.v+1] = Qinside[s.v+1];
   Qoutside[s.b]   = Qinside[s.b];
+
 }
 
 
@@ -84,7 +85,7 @@ double ::examples::exahype2::heat::SWE::maxEigenvalue(
 ){
 
   double u = Q[s.v+normal]/Q[s.h];
-  double c = std::sqrt(Q[s.h]);
+  double c = std::sqrt(grav*(Q[s.h]+Q[s.b]));
 
   return std::max(std::abs(u+c), std::abs(u-c));
 }
@@ -123,8 +124,6 @@ void ::examples::exahype2::heat::SWE::nonconservativeProduct(
   int normal,
   double *__restrict__ BgradQ //BgradQ[4]
 ){
-
-  static constexpr double grav = 9.81;
   
   BgradQ[s.h]   = 0.0;
   switch(normal){

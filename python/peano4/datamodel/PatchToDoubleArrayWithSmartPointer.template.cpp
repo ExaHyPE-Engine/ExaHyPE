@@ -37,15 +37,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other
   _debugH = other._debugH;
   #endif
 
-  assertion( value!=nullptr );
-
-/*
-  assertion(
-    (other.value!=nullptr and value!=nullptr)
-    or
-    (other.value==nullptr and value==nullptr)
-  );
-*/
+  assertion2( value==nullptr, toString(), other.toString() );
 
   if (other.value!=nullptr) {
     _dataSmartPointer = other._dataSmartPointer;
@@ -83,7 +75,14 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   result << "x=" << _debugX;
   result << ",";
   result << "h=" << _debugH;
+  result << ",";
   #endif
+  if ( value==nullptr ) {
+    result << "no-data";
+  }
+  else {
+    result << "smart-pointer";
+  }
   result << ")";
   return result.str();
 }

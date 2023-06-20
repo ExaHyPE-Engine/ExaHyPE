@@ -1,7 +1,7 @@
 #ifndef EXASEIS_CONTEXT_CURVILINEAR_HEADER
 #define EXASEIS_CONTEXT_CURVILINEAR_HEADER
 
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
+// #include "kernels/GaussLegendreBasis.h"
 #include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
 
 #include "Context.h"
@@ -79,12 +79,11 @@ public:
                           /dx[1]);
       int ex = std::round((center[0]-domain_info->domainOffset[0]-dx[0]/2.0)
                           /dx[0]);
-
+      
 #ifndef QUICK_IDENTITY
-
       Block element = interface->getElement(solver_info->nodes, ez, ey, ex);
       int index_offset[3]; element.getIndexOffset(index_offset);
-
+            
       for (int k=0; k< basisSize; k++){
         int e_k = index_offset[Coordinate::Z] + k;
         for (int j=0; j< basisSize; j++){
@@ -106,7 +105,6 @@ public:
       }
 
 #else
-
       for (int k=0; k< basisSize; k++){
         for (int j=0; j< basisSize; j++){
           for (int i=0; i< basisSize; i++){
@@ -118,7 +116,7 @@ public:
       }
 #endif            
       
-
+      
       double derivatives[basisSize*basisSize*basisSize*10];
       std::fill_n(derivatives,basisSize*basisSize*basisSize*10,0.0);
       kernels::idx4 id_der(basisSize,basisSize,basisSize,10);
@@ -137,14 +135,13 @@ public:
         }
       }
 #else      
-
       ExaSeis::Derivatives<Shortcuts,basisSize>::metricDerivatives(solver_info->dudx,
                                                                    luh,
                                                                    &dx[0],
                                                                    derivatives);      
 #endif      
       
-
+      
       for (int k=0; k< basisSize; k++){
         for (int j=0; j< basisSize; j++){
           for (int i=0; i< basisSize; i++){
@@ -153,7 +150,7 @@ public:
         }
       }
       
-
+      
       tarch::la::Vector<Dimensions,double> curv_center;
       getElementCenter(luh,curv_center);
       for (int k=0; k< basisSize; k++){
@@ -166,7 +163,7 @@ public:
           }
         }
       }
-
+      
       for (int k=0; k< basisSize; k++){
         for (int j=0; j< basisSize; j++){
           for (int i=0; i< basisSize; i++){
@@ -176,7 +173,6 @@ public:
           }
         }
       }
-
     }
   }
 

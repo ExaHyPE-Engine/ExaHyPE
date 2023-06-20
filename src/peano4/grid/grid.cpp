@@ -11,6 +11,52 @@ namespace {
 }
 
 
+
+peano4::DataStorageScheme peano4::dataStorageScheme(bool predicateForLoad, bool predicateForStore) {
+  return dataStorageScheme(true, predicateForLoad, predicateForStore);
+}
+
+/**
+ * Constructs a data storage scheme
+ *
+ * Same as the other constructor, assuming that its predicateToUseData
+ * holds all the time.
+ *
+ * predicateToUseData | predicateForLoad | predicateForStore |  Result        | Description
+ * -------------------|------------------|-------------------|----------------|-------------
+ * False              | False            | False             | NoData         | Just ignore the data, as it is not used
+ * False              | True             | False             | LoadFromInputStream_ProvideToCalculations_Discard | Load it (and keep it as you've loaded it anyway) but then throw it away, as it is not used
+ * False              | False            | True              | CreateDummy_ProvideToCalculations_StoreToOutputStream | It will not be used, but create a dummy, as it has to be stored eventually
+ * False              | True             | True              | assertion      | Makes no sense
+ * True               | False            | False             | CreateDummy_ProvideToCalculations_Discard | Data is required temporarily throughout calculations but not persistent in-between two grid sweeps
+ * True               | True             | False             | LoadFromInputStream_ProvideToCalculations_Discard | Data flow-wisely the same as False, True, False
+ * True               | False            | True              | CreateDummy_ProvideToCalculations_StoreToOutputStream | Introduce a new piece of data into the data flow. Same as false, false, true
+ * True               | True             | True              | LoadFromInputStream_ProvideToCalculations_StoreToOutputStream | Proper piece of data that's held persistently in-between two mesh sweeps
+ *
+ */
+peano4::DataStorageScheme peano4::dataStorageScheme(bool predicateToUseData, bool predicateForLoad, bool predicateForStore) {
+ if (not predicateToUseData and not predicateForLoad and not predicateForStore )
+   return DataStorageScheme::NoData;
+ if (not predicateToUseData and     predicateForLoad and not predicateForStore )
+   return DataStorageScheme::LoadFromInputStream_ProvideToCalculations_Discard;
+ if (not predicateToUseData and not predicateForLoad and     predicateForStore )
+   return DataStorageScheme::CreateDummy_ProvideToCalculations_StoreToOutputStream;
+ if (not predicateToUseData and     predicateForLoad and     predicateForStore )
+   assertion(false);
+ if (    predicateToUseData and not predicateForLoad and not predicateForStore )
+   return DataStorageScheme::CreateDummy_ProvideToCalculations_Discard;
+ if (    predicateToUseData and     predicateForLoad and not predicateForStore )
+   return DataStorageScheme::LoadFromInputStream_ProvideToCalculations_Discard;
+ if (    predicateToUseData and not predicateForLoad and     predicateForStore )
+   return DataStorageScheme::CreateDummy_ProvideToCalculations_StoreToOutputStream;
+ if (    predicateToUseData and     predicateForLoad and     predicateForStore )
+   return DataStorageScheme::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream;
+
+ assertion(false);
+ return DataStorageScheme::NoData;
+}
+
+
 std::string peano4::SplitInstruction::toString(peano4::SplitInstruction::Mode mode) {
   switch (mode) {
     case SplitInstruction::Mode::AggressiveTopDown:
