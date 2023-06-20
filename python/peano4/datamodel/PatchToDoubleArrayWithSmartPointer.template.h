@@ -155,10 +155,16 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   {{CLASSNAME}}(const {{CLASSNAME}}& other);
 
   /**
-   * Clone content. Assume other and present class have their own smart pointer
+   * Clone content.
    *
-   * This routine is used by the deep copies of the stack. As we exchange all
-   * boundary data, it can happen that other is empty.
+   * This routine is exclusively used by the boundary data exchange to copy
+   * data from an outgoing buffer into an incoming or an MPI buffer. Therefore,
+   * the destination should always be empty. We however do not know if the
+   * input data other is actually empty: We always exchange all boundary
+   * unknown types, but if a solver is localised, it might actually never
+   * write into an outgoing buffer. Therefore, other might be empty or not.
+   *
+   * If it is not empty, we have to perform a deep copy however.
    */
   void clone(const {{CLASSNAME}}& other);
 

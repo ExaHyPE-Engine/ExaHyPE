@@ -37,18 +37,28 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other
   _debugH = other._debugH;
   #endif
 
+  assertion( value!=nullptr );
+
+/*
   assertion(
     (other.value!=nullptr and value!=nullptr)
     or
     (other.value==nullptr and value==nullptr)
   );
+*/
 
   if (other.value!=nullptr) {
+    _dataSmartPointer = other._dataSmartPointer;
+    value = _dataSmartPointer.get();
+
     #if Dimensions==2
     std::copy_n( other.value, {{CARDINALITY_2D}}, value );
     #else
     std::copy_n( other.value, {{CARDINALITY_3D}}, value );
     #endif
+  }
+  else {
+    value = nullptr;
   }
 }
 
