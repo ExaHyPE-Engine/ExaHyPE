@@ -646,15 +646,15 @@ void applications::exahype2::ccz4::ncp(
 
   const double PP[3]     = {Q[55], Q[56], Q[57]};
   double       dPP[3][3] = {
-          {gradQin[55][0], gradQin[56][0], gradQin[57][0]},
-          {gradQin[55][1], gradQin[56][1], gradQin[57][1]},
-          {gradQin[55][2], gradQin[56][2], gradQin[57][2]}};
+    {gradQin[55][0], gradQin[56][0], gradQin[57][0]},
+    {gradQin[55][1], gradQin[56][1], gradQin[57][1]},
+    {gradQin[55][2], gradQin[56][2], gradQin[57][2]}};
 
   const double AA[3]     = {Q[23], Q[24], Q[25]};
   double       dAA[3][3] = {
-          {gradQin[23][0], gradQin[24][0], gradQin[25][0]},
-          {gradQin[23][1], gradQin[24][1], gradQin[25][1]},
-          {gradQin[23][2], gradQin[24][2], gradQin[25][2]}};
+    {gradQin[23][0], gradQin[24][0], gradQin[25][0]},
+    {gradQin[23][1], gradQin[24][1], gradQin[25][1]},
+    {gradQin[23][2], gradQin[24][2], gradQin[25][2]}};
 
   double Christoffel[3][3][3]       = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   double Christoffel_tilde[3][3][3] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -1708,15 +1708,15 @@ void applications::exahype2::ccz4::ncpSecondOrderFormulation(
 
   const double PP[3]     = {Q[55], Q[56], Q[57]};
   double       dPP[3][3] = {
-          {gradQin[55][0], gradQin[56][0], gradQin[57][0]},
-          {gradQin[55][1], gradQin[56][1], gradQin[57][1]},
-          {gradQin[55][2], gradQin[56][2], gradQin[57][2]}};
+    {gradQin[55][0], gradQin[56][0], gradQin[57][0]},
+    {gradQin[55][1], gradQin[56][1], gradQin[57][1]},
+    {gradQin[55][2], gradQin[56][2], gradQin[57][2]}};
 
   const double AA[3]     = {Q[23], Q[24], Q[25]};
   double       dAA[3][3] = {
-          {gradQin[23][0], gradQin[24][0], gradQin[25][0]},
-          {gradQin[23][1], gradQin[24][1], gradQin[25][1]},
-          {gradQin[23][2], gradQin[24][2], gradQin[25][2]}};
+    {gradQin[23][0], gradQin[24][0], gradQin[25][0]},
+    {gradQin[23][1], gradQin[24][1], gradQin[25][1]},
+    {gradQin[23][2], gradQin[24][2], gradQin[25][2]}};
 
   double Christoffel[3][3][3]       = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   double Christoffel_tilde[3][3][3] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};

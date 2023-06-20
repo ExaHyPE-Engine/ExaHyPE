@@ -5,7 +5,7 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/utils/Globals.h"
 
-//#include <concepts>
+// #include <concepts>
 
 namespace toolbox {
   namespace particles {
@@ -23,9 +23,7 @@ namespace toolbox {
      *
      */
     template <typename ParticleAccessor>
-    concept ParticleTimeSteppingAccessor = requires {
-      typename ParticleAccessor::Particle;
-    };
+    concept ParticleTimeSteppingAccessor = requires { typename ParticleAccessor::Particle; };
 
     /*
 
@@ -87,4 +85,4 @@ namespace toolbox {
   } // namespace particles
 } // namespace toolbox
 
-//#include "Tracer.cpph"
+// #include "Tracer.cpph"

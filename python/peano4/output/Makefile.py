@@ -15,16 +15,19 @@ from .Overwrite import Overwrite
 
 from .CompileMode import CompileMode
 
+
 class Makefile(object):
-  """ Represents the created makefile of a Peano4 project """
-  default_overwrite = True
+    """Represents the created makefile of a Peano4 project"""
 
-  def __init__(self):
-    self.clear()
+    default_overwrite = True
 
-  @property
-  def readme_entry(self):
-    result_template = jinja2.Template( """
+    def __init__(self):
+        self.clear()
+
+    @property
+    def readme_entry(self):
+        result_template = jinja2.Template(
+            """
 ## Makefile settings
 
 CXX             = {{CXX}}
@@ -44,18 +47,23 @@ MODE            = {{MODE}}
 
 {{VERSION}}
 
-""")
-    try:
-      version_string = subprocess.run([self.d["CXX"], '--version'], stdout=subprocess.PIPE)
-    except Exception:
-      version_string = subprocess.run(['echo', 'Unknown'], shell=True, stdout=subprocess.PIPE)
-    self.d["VERSION"] = version_string.stdout.decode('utf-8')
-    return result_template.render(**self.d) + self.configure_call  
+"""
+        )
+        try:
+            version_string = subprocess.run(
+                [self.d["CXX"], "--version"], stdout=subprocess.PIPE
+            )
+        except Exception:
+            version_string = subprocess.run(
+                ["echo", "Unknown"], shell=True, stdout=subprocess.PIPE
+            )
+        self.d["VERSION"] = version_string.stdout.decode("utf-8")
+        return result_template.render(**self.d) + self.configure_call
 
-
-  @property
-  def readme_package_descriptor(self):
-    return jinja2.Template( """
+    @property
+    def readme_package_descriptor(self):
+        return jinja2.Template(
+            """
 {% if Parallel %}
 
 ### MPI parallelisation
@@ -122,481 +130,550 @@ the SISC paper
 
 {% endif %}
 
-""").render(**self.d)
+"""
+        ).render(**self.d)
 
-  def executable_name(self):
-    return self.d["EXECUTABLENAME"]
+    def executable_name(self):
+        return self.d["EXECUTABLENAME"]
 
-  def clear(self):
-    self.configure_call = ""
-    self.d = {}
-    self.d["CXX"]              = ""
-    self.d["CXXFLAGS"]         = ""
-    self.d["FC"]               = ""
-    self.d["FCFLAGS"]          = ""
-    self.d["LDFLAGS"]          = ""
-    self.d["GPUOBJS"]          = ""
-    self.d["LIBS"]             = ""
-    self.d["DIM"]              = "2"
-    self.d["CONFIGUREPATH"]    = "."
-    self.d["EXECUTABLENAME"]   = ""
-    self.d["FORTRAN_MODULES"]  = []
-    self.d["GENERATED_INCLUDE_DIRS"] = set()
-    self.d["CMAKE_CORE_LIBS"] = ["Peano4Core"]
-    self.d["CMAKE_LIBS"] = []
-    self.set_mode( CompileMode.Debug )
-    self.clear_files()
+    def clear(self):
+        self.configure_call = ""
+        self.d = {}
+        self.d["CXX"] = ""
+        self.d["CXXFLAGS"] = ""
+        self.d["FC"] = ""
+        self.d["FCFLAGS"] = ""
+        self.d["LDFLAGS"] = ""
+        self.d["GPUOBJS"] = ""
+        self.d["LIBS"] = ""
+        self.d["DIM"] = "2"
+        self.d["CONFIGUREPATH"] = "."
+        self.d["EXECUTABLENAME"] = ""
+        self.d["FORTRAN_MODULES"] = []
+        self.d["GENERATED_INCLUDE_DIRS"] = set()
+        self.d["CMAKE_CORE_LIBS"] = ["Peano4Core"]
+        self.d["CMAKE_LIBS"] = []
+        self.set_mode(CompileMode.Debug)
+        self.clear_files()
 
-  def add_cmake_core_library(self, name):
-    self.d["CMAKE_CORE_LIBS"].append(name)
+    def add_cmake_core_library(self, name):
+        self.d["CMAKE_CORE_LIBS"].append(name)
 
-  def set_executable_name(self, fname):
-      self.d["EXECUTABLENAME"] = fname
+    def set_executable_name(self, fname):
+        self.d["EXECUTABLENAME"] = fname
 
-  def clear_files(self):
-    self.hfiles                     = []
-    self.cppfiles                   = []
-    self.cufiles                    = []
-    self.fortranfiles               = []
-    self.generated_hfiles           = []
-    self.generated_cppfiles         = []
-    self.generated_cufiles          = []
-    self.generated_fortranfiles     = []
+    def clear_files(self):
+        self.hfiles = []
+        self.cppfiles = []
+        self.cufiles = []
+        self.fortranfiles = []
+        self.generated_hfiles = []
+        self.generated_cppfiles = []
+        self.generated_cufiles = []
+        self.generated_fortranfiles = []
 
-  def set_dimension(self,dimension):
-    self.d["DIM"] = str(dimension)
+    def set_dimension(self, dimension):
+        self.d["DIM"] = str(dimension)
 
-  def get_configure_path(self):
-    """
-    Returns the directory where the ./configure script is located
-    """
-    return self.d["CONFIGUREPATH"]
+    def get_configure_path(self):
+        """
+        Returns the directory where the ./configure script is located
+        """
+        return self.d["CONFIGUREPATH"]
 
-  def get_source_path(self):
-    """
-    Returns the directory where the ./configure script is located
-    """
-    return self.get_configure_path() + "/src"
+    def get_source_path(self):
+        """
+        Returns the directory where the ./configure script is located
+        """
+        return self.get_configure_path() + "/src"
 
-  def add_header_search_path(self, path ):
-    """
-     Add the header search path to both the C++ and the Fortran
-     call command.
-    """
-    self.d["CXXFLAGS"] += " -I" + path
-    self.d["FCFLAGS"]  += " -I" + path
-    self.d["GENERATED_INCLUDE_DIRS"].add(path)
+    def add_header_search_path(self, path):
+        """
+        Add the header search path to both the C++ and the Fortran
+        call command.
+        """
+        self.d["CXXFLAGS"] += " -I" + path
+        self.d["FCFLAGS"] += " -I" + path
+        self.d["GENERATED_INCLUDE_DIRS"].add(path)
 
-  def add_gpu_object(self, object_path):
-    """
-    This is a temporary fix for GPU offloading with OpenMP and LLVM and will
-    be required ntil linking to static libraries is supported. We need to
-    collect all object files that contain offload instructions and later
-    add them to the linker command. NOTE: the order matters i.e. the
-    objects must be left of the static libs later.
-    """
-    self.d["GPUOBJS"] += " {}".format(object_path)
+    def add_gpu_object(self, object_path):
+        """
+        This is a temporary fix for GPU offloading with OpenMP and LLVM and will
+        be required ntil linking to static libraries is supported. We need to
+        collect all object files that contain offload instructions and later
+        add them to the linker command. NOTE: the order matters i.e. the
+        objects must be left of the static libs later.
+        """
+        self.d["GPUOBJS"] += " {}".format(object_path)
 
-  def add_library(self, library_name, library_path="" ):
-    """
-    If you want to link against a library from Peano, feel free to use
-    get_Peano4_source_directory() and hand in a concatenation of this
-    path plus a subpath. Otherwise, specify the absolute path where to
-    search for. By default, Peano's src directory is in the search
-    path.
+    def add_library(self, library_name, library_path=""):
+        """
+        If you want to link against a library from Peano, feel free to use
+        get_Peano4_source_directory() and hand in a concatenation of this
+        path plus a subpath. Otherwise, specify the absolute path where to
+        search for. By default, Peano's src directory is in the search
+        path.
 
-    A popular invocation including one of Peano's toolboxes is
+        A popular invocation including one of Peano's toolboxes is
 
-    project.output.makefile.add_library( "ToolboxFiniteElements2d_trace", project.output.makefile.get_source_path() + "/toolbox/finiteelements" )
-    """
-    if library_path!="":
-      self.d["LIBS"] = "-L" + library_path + " " + self.d["LIBS"]
-#    self.d["LIBS"] += " -l" + library_name + " "
-    self.d["LIBS"] += library_name + " "
+        project.output.makefile.add_library( "ToolboxFiniteElements2d_trace", project.output.makefile.get_source_path() + "/toolbox/finiteelements" )
+        """
+        if library_path != "":
+            self.d["LIBS"] = "-L" + library_path + " " + self.d["LIBS"]
+        #    self.d["LIBS"] += " -l" + library_name + " "
+        self.d["LIBS"] += library_name + " "
 
-    if self.d['MODE'].lower() == "release":
-      self.d["CMAKE_LIBS"].append(f"{library_name}{self.d['DIM']}d")
-    else:
-      self.d["CMAKE_LIBS"].append(f"{library_name}{self.d['DIM']}d_{self.d['MODE'].lower()}")
+        if self.d["MODE"].lower() == "release":
+            self.d["CMAKE_LIBS"].append(f"{library_name}{self.d['DIM']}d")
+        else:
+            self.d["CMAKE_LIBS"].append(
+                f"{library_name}{self.d['DIM']}d_{self.d['MODE'].lower()}"
+            )
 
-  def set_mode( self, mode ):
-    """
-      mode should be of type CompileMode. Pass in
+    def set_mode(self, mode):
+        """
+        mode should be of type CompileMode. Pass in
 
-      peano4.output.CompileMode.Debug
+        peano4.output.CompileMode.Debug
 
-      for example. Debug is the default.
-    """
-    if mode==CompileMode.Debug:
-      self.d["MODE"]  = "DEBUG"
-    elif mode==CompileMode.Asserts:
-      self.d["MODE"]  = "ASSERTS"
-    elif mode==CompileMode.Stats:
-      self.d["MODE"]  = "STATS"
-    elif mode==CompileMode.Trace:
-      self.d["MODE"]  = "TRACE"
-    elif mode==CompileMode.Release:
-      self.d["MODE"]  = "RELEASE"
-    else:
-      assert(False)
+        for example. Debug is the default.
+        """
+        if mode == CompileMode.Debug:
+            self.d["MODE"] = "DEBUG"
+        elif mode == CompileMode.Asserts:
+            self.d["MODE"] = "ASSERTS"
+        elif mode == CompileMode.Stats:
+            self.d["MODE"] = "STATS"
+        elif mode == CompileMode.Trace:
+            self.d["MODE"] = "TRACE"
+        elif mode == CompileMode.Release:
+            self.d["MODE"] = "RELEASE"
+        else:
+            assert False
 
-  def set_CXX_compiler(self,value):
-    self.d["CXX"]           = value
+    def set_CXX_compiler(self, value):
+        self.d["CXX"] = value
 
-  def set_CXX_flags(self,value):
-    self.d["CXXFLAGS"]      = value
+    def set_CXX_flags(self, value):
+        self.d["CXXFLAGS"] = value
 
-  def add_CXX_flag(self,value,force=False):
-    if value in self.d["CXXFLAGS"] and not force:
-      print( "CXXFLAG " + value + " is already in list of flags. Ignored as force attribute is not set" )
-    else:
-      self.d["CXXFLAGS"]     += " " + value
+    def add_CXX_flag(self, value, force=False):
+        if value in self.d["CXXFLAGS"] and not force:
+            print(
+                "CXXFLAG "
+                + value
+                + " is already in list of flags. Ignored as force attribute is not set"
+            )
+        else:
+            self.d["CXXFLAGS"] += " " + value
 
-  def set_Fortran_compiler(self,value):
-    self.d["FC"]           = value
+    def set_Fortran_compiler(self, value):
+        self.d["FC"] = value
 
-  def set_Fortran_flags(self,value):
-    self.d["FCFLAGS"]       = value
+    def set_Fortran_flags(self, value):
+        self.d["FCFLAGS"] = value
 
-  def add_Fortran_flag(self,value,force=False):
-    if value in self.d["FCFLAGS"] and not force:
-      print( "FCFLAGS " + value + " is already in list of flags. Ignored as force attribute is not set" )
-    else:
-      self.d["FCFLAGS"]      += " " + value
+    def add_Fortran_flag(self, value, force=False):
+        if value in self.d["FCFLAGS"] and not force:
+            print(
+                "FCFLAGS "
+                + value
+                + " is already in list of flags. Ignored as force attribute is not set"
+            )
+        else:
+            self.d["FCFLAGS"] += " " + value
 
-  def add_linker_flag(self,value):
-    self.d["LDFLAGS"]      += " " + value
+    def add_linker_flag(self, value):
+        self.d["LDFLAGS"] += " " + value
 
-  def set_linker_flags(self,value):
-    self.d["LDFLAGS"]       = value + " "
+    def set_linker_flags(self, value):
+        self.d["LDFLAGS"] = value + " "
 
-  def parse_configure_script_outcome(self,directory):
-    """
-    directory should point to the directory which holds the ./configure script.
-    It furthermore has to be invoked after configure has passed successfully.
-    This script does not accept relative paths. I then search for the subdirector
-    src and parse the Makefile there.
-    """
-    self.d[ "CONFIGUREPATH" ] = directory
-    cmake_path = find_cmake_build_dir()
-    if cmake_path != "": return
+    def parse_configure_script_outcome(self, directory):
+        """
+        directory should point to the directory which holds the ./configure script.
+        It furthermore has to be invoked after configure has passed successfully.
+        This script does not accept relative paths. I then search for the subdirector
+        src and parse the Makefile there.
+        """
+        self.d["CONFIGUREPATH"] = directory
+        cmake_path = find_cmake_build_dir()
+        if cmake_path != "":
+            return
 
-    MakefileDefined = [
-        "Parallel",
-        "SharedOMP",
-        "SharedSYCL",
-        "SharedCPP",
-    ]
+        MakefileDefined = [
+            "Parallel",
+            "SharedOMP",
+            "SharedSYCL",
+            "SharedCPP",
+        ]
 
-    input_file = directory + "/config.log"
-    try:
-      input = open( input_file, "r" )
-      self.configure_call = ""
-      print( "parse configure outcome " + input_file + " to extract configure settings" )
-      for line in input:
-        if "./configure" in line and self.configure_call == "":
-          print( "found the configure call info " + line )
-          self.configure_call = line.strip()
-        for define in MakefileDefined: 
-          if re.search( "#define " + define, line ):
-              self.d[define] = "1"
-    except IOError:
-      print( """
+        input_file = directory + "/config.log"
+        try:
+            input = open(input_file, "r")
+            self.configure_call = ""
+            print(
+                "parse configure outcome "
+                + input_file
+                + " to extract configure settings"
+            )
+            for line in input:
+                if "./configure" in line and self.configure_call == "":
+                    print("found the configure call info " + line)
+                    self.configure_call = line.strip()
+                for define in MakefileDefined:
+                    if re.search("#define " + define, line):
+                        self.d[define] = "1"
+        except IOError:
+            print(
+                """
 Error: if you call parse_configure_script_outcome(), please hand over directory where
-./configure had been called. You passed """ + directory + """ and the script therefore
-did search for a file """ + input_file )
+./configure had been called. You passed """
+                + directory
+                + """ and the script therefore
+did search for a file """
+                + input_file
+            )
 
-    input_file = directory + "/src/Makefile"
-    try:
-      input = open( input_file, "r" )
-      print( "parse configure outcome " + input_file + " to extract compile settings" )
+        input_file = directory + "/src/Makefile"
+        try:
+            input = open(input_file, "r")
+            print(
+                "parse configure outcome " + input_file + " to extract compile settings"
+            )
 
-      MakefileConstants = [
-        "CXXFLAGS_PEANO_2D_RELEASE",
-        "CXXFLAGS_PEANO_2D_STATS",
-        "CXXFLAGS_PEANO_2D_ASSERTS",
-        "CXXFLAGS_PEANO_2D_TRACE",
-        "CXXFLAGS_PEANO_2D_DEBUG",
-        "CXXFLAGS_PEANO_3D_RELEASE",
-        "CXXFLAGS_PEANO_3D_STATS",
-        "CXXFLAGS_PEANO_3D_ASSERTS",
-        "CXXFLAGS_PEANO_3D_TRACE",
-        "CXXFLAGS_PEANO_3D_DEBUG",
-        "LDFLAGS_PEANO_RELEASE",
-        "LDFLAGS_PEANO_STATS",
-        "LDFLAGS_PEANO_ASSERTS",
-        "LDFLAGS_PEANO_TRACE",
-        "LDFLAGS_PEANO_DEBUG",
-        "LDADD_PEANO_2D_RELEASE",
-        "LDADD_PEANO_2D_STATS",
-        "LDADD_PEANO_2D_ASSERTS",
-        "LDADD_PEANO_2D_TRACE",
-        "LDADD_PEANO_2D_DEBUG",
-        "LDADD_PEANO_3D_RELEASE",
-        "LDADD_PEANO_3D_STATS",
-        "LDADD_PEANO_3D_ASSERTS",
-        "LDADD_PEANO_3D_TRACE",
-        "LDADD_PEANO_3D_DEBUG",
-        "CXX",
-        "FC",
-        "CXXFLAGS",
-        "LDFLAGS",
-        "LIBS"
-      ]
+            MakefileConstants = [
+                "CXXFLAGS_PEANO_2D_RELEASE",
+                "CXXFLAGS_PEANO_2D_STATS",
+                "CXXFLAGS_PEANO_2D_ASSERTS",
+                "CXXFLAGS_PEANO_2D_TRACE",
+                "CXXFLAGS_PEANO_2D_DEBUG",
+                "CXXFLAGS_PEANO_3D_RELEASE",
+                "CXXFLAGS_PEANO_3D_STATS",
+                "CXXFLAGS_PEANO_3D_ASSERTS",
+                "CXXFLAGS_PEANO_3D_TRACE",
+                "CXXFLAGS_PEANO_3D_DEBUG",
+                "LDFLAGS_PEANO_RELEASE",
+                "LDFLAGS_PEANO_STATS",
+                "LDFLAGS_PEANO_ASSERTS",
+                "LDFLAGS_PEANO_TRACE",
+                "LDFLAGS_PEANO_DEBUG",
+                "LDADD_PEANO_2D_RELEASE",
+                "LDADD_PEANO_2D_STATS",
+                "LDADD_PEANO_2D_ASSERTS",
+                "LDADD_PEANO_2D_TRACE",
+                "LDADD_PEANO_2D_DEBUG",
+                "LDADD_PEANO_3D_RELEASE",
+                "LDADD_PEANO_3D_STATS",
+                "LDADD_PEANO_3D_ASSERTS",
+                "LDADD_PEANO_3D_TRACE",
+                "LDADD_PEANO_3D_DEBUG",
+                "CXX",
+                "FC",
+                "CXXFLAGS",
+                "LDFLAGS",
+                "LIBS",
+            ]
 
-      for line in input:
-        for constant in MakefileConstants: 
-          if re.search( constant + " *=", line) and line.startswith( constant ): 
+            for line in input:
+                for constant in MakefileConstants:
+                    if re.search(constant + " *=", line) and line.startswith(constant):
+                        try:
+                            flags = line.split("=", 1)[1].strip()
+                            print("add " + constant + "=" + flags)
+                            self.d[constant] = flags
+                        except:
+                            print("Error in " + line + " for token " + constant)
+
+            # A posteriori fix for openmp flag propagation
+            if "-fopenmp-targets" in self.d["CXXFLAGS"]:
+                val = self.d["CXXFLAGS"].split("-fopenmp-targets=")[-1].split()[0]
+                new_entry = " -fopenmp -fopenmp-targets={} ".format(val)
+                print("used OpenMP GPU offloading. Augment linker with " + new_entry)
+                self.d["LDFLAGS"] += new_entry
+            elif "-fopenmp" in self.d["CXXFLAGS"]:
+                # val = self.d["CXXFLAGS"].split("-fopenmp")[-1].split()[0]
+                new_entry = " -fopenmp "
+                print("used OpenMP tasking backend. Augment linker with " + new_entry)
+                self.d["LDFLAGS"] += " -fopenmp "
+                # self.d["LDFLAGS"] += " -fopenmp ".format(val)
+
+        except IOError:
+            print(
+                """
+Error: if you call parse_configure_script_outcome(), please hand over directory where
+./configure had been called. You passed """
+                + directory
+                + """ and the script therefore
+did search for a file """
+                + input_file
+            )
+
+    def add_h_file(self, filename, generated=False):
+        """
+        Add a new header filename.
+        This is actually not needed for compilation,
+        but is useful to have for IDEs where the header files can be displayed
+        in the project.
+
+        filename: String
+           Filename of a C/C++ header file. They usually should have the .h/.hpp extension.
+        generated: Bool
+           Use this flag for generated files which can be tracked
+           by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
+        """
+        if generated:
+            if (
+                self.generated_hfiles.count(filename) == 0
+                and self.hfiles.count(filename) == 0
+            ):
+                self.generated_hfiles.append(filename)
+        else:
+            if self.hfiles.count(filename) == 0:
+                self.hfiles.append(filename)
+                if self.generated_hfiles.count(filename) > 0:
+                    self.generated_hfiles.remove(filename)
+
+    def remove_h_file(self, filename):
+        if filename in self.generated_hfiles:
+            self.generated_hfiles.remove(filename)
+        if filename in self.hfiles:
+            self.hfiles.remove(filename)
+
+    def add_cu_file(self, filename, generated=False):
+        if generated:
+            if (
+                self.generated_cufiles.count(filename) == 0
+                and self.cufiles.count(filename) == 0
+            ):
+                self.generated_cufiles.append(filename)
+        else:
+            if self.cufiles.count(filename) == 0:
+                self.cufiles.append(filename)
+                if self.generated_cufiles.count(filename) > 0:
+                    self.generated_cufiles.remove(filename)
+
+    def remove_cu_file(self, filename):
+        if filename in self.generated_cufiles:
+            self.generated_cufiles.remove(filename)
+        if filename in self.cufiles:
+            self.cufiles.remove(filename)
+
+    def add_cpp_file(self, filename, generated=False):
+        """
+        Add a new cpp filename. This is basically a set implementation, i.e., you can
+        add files multiple times, but they are not inserted multiple times. This
+        is important, as the steps add the cpp files. Multiple steps can hold the
+        same action, so this action would be created multiple times.
+
+        All the standard Peano 4 routines rely on this function to add their
+        generated files to the build environment. Nothing stops you however to
+        add more files yourself.
+
+        filename: String
+           Filename of a C++ file. They usually should have the .cpp/.cxx extension.
+        generated: Bool
+           Use this flag for generated files which can be tracked
+           by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
+        """
+        if using_cuda_backend():
+            old_filename = filename
+            filename = filename.replace(".cpp", ".cu")
             try:
-              flags = line.split("=",1)[1].strip()
-              print( "add " + constant + "=" + flags )
-              self.d[constant] = flags
+                shutil.copy(old_filename, filename)
             except:
-              print( "Error in " + line + " for token " + constant )
+                pass
+            self.add_cu_file(filename=filename, generated=True)
+        else:
+            if generated:
+                # Non-generated file takes precedence over generated files.
+                # We only add a generated file if has not been added yet as a non-generated file instead.
+                if (
+                    self.generated_cppfiles.count(filename) == 0
+                    and self.cppfiles.count(filename) == 0
+                ):
+                    self.generated_cppfiles.append(filename)
+            else:
+                # If a file is a non-generated file we definitely want to add it.
+                if self.cppfiles.count(filename) == 0:
+                    self.cppfiles.append(filename)
+                    # We ensure that we only add a .cpp file once.
+                    # Otherwise we would get duplicated symbols errors.
+                    # But we never delete a non-generated file.
+                    if self.generated_cppfiles.count(filename) > 0:
+                        self.generated_cppfiles.remove(filename)
 
-      # A posteriori fix for openmp flag propagation
-      if "-fopenmp-targets" in self.d["CXXFLAGS"]:
-          val = self.d["CXXFLAGS"].split("-fopenmp-targets=")[-1].split()[0]
-          new_entry = " -fopenmp -fopenmp-targets={} ".format(val)
-          print( "used OpenMP GPU offloading. Augment linker with " + new_entry )
-          self.d["LDFLAGS"] += new_entry
-      elif "-fopenmp" in self.d["CXXFLAGS"]:
-          #val = self.d["CXXFLAGS"].split("-fopenmp")[-1].split()[0]
-          new_entry = " -fopenmp "
-          print( "used OpenMP tasking backend. Augment linker with " + new_entry )
-          self.d["LDFLAGS"] += " -fopenmp "
-          #self.d["LDFLAGS"] += " -fopenmp ".format(val)
-
-    except IOError:
-      print( """
-Error: if you call parse_configure_script_outcome(), please hand over directory where
-./configure had been called. You passed """ + directory + """ and the script therefore
-did search for a file """ + input_file )
-
-  def add_h_file(self,filename,generated=False):
-    """
-     Add a new header filename.
-     This is actually not needed for compilation,
-     but is useful to have for IDEs where the header files can be displayed
-     in the project.
-
-     filename: String
-        Filename of a C/C++ header file. They usually should have the .h/.hpp extension.
-     generated: Bool
-        Use this flag for generated files which can be tracked
-        by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
-    """
-    if generated:
-      if self.generated_hfiles.count(filename)==0 and self.hfiles.count(filename)==0:
-        self.generated_hfiles.append( filename )
-    else:
-      if self.hfiles.count(filename)==0:
-        self.hfiles.append( filename )
-        if self.generated_hfiles.count(filename) > 0:
-          self.generated_hfiles.remove(filename)
-
-  def remove_h_file(self,filename):
-    if filename in self.generated_hfiles:
-      self.generated_hfiles.remove(filename)
-    if filename in self.hfiles:
-      self.hfiles.remove(filename)
-
-  def add_cu_file(self,filename,generated=False):
-    if generated:
-      if self.generated_cufiles.count(filename)==0 and self.cufiles.count(filename)==0:
-        self.generated_cufiles.append(filename)
-    else:
-      if self.cufiles.count(filename)==0:
-        self.cufiles.append(filename)
-        if self.generated_cufiles.count(filename) > 0:
-          self.generated_cufiles.remove(filename)
-
-  def remove_cu_file(self,filename):
-    if filename in self.generated_cufiles:
-      self.generated_cufiles.remove(filename)
-    if filename in self.cufiles:
-      self.cufiles.remove(filename)
-
-  def add_cpp_file(self,filename,generated=False):
-    """
-     Add a new cpp filename. This is basically a set implementation, i.e., you can
-     add files multiple times, but they are not inserted multiple times. This
-     is important, as the steps add the cpp files. Multiple steps can hold the
-     same action, so this action would be created multiple times.
-
-     All the standard Peano 4 routines rely on this function to add their
-     generated files to the build environment. Nothing stops you however to
-     add more files yourself.
-
-     filename: String
-        Filename of a C++ file. They usually should have the .cpp/.cxx extension.
-     generated: Bool
-        Use this flag for generated files which can be tracked
-        by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
-    """
-    if using_cuda_backend():
-      old_filename = filename
-      filename = filename.replace(".cpp", ".cu")
-      try:
-        shutil.copy(old_filename, filename)
-      except:
-        pass
-      self.add_cu_file(filename=filename,generated=True)
-    else:
-      if generated:
-        # Non-generated file takes precedence over generated files.
-        # We only add a generated file if has not been added yet as a non-generated file instead.
-        if self.generated_cppfiles.count(filename)==0 and self.cppfiles.count(filename)==0:
-          self.generated_cppfiles.append(filename)
-      else:
-        # If a file is a non-generated file we definitely want to add it.
-        if self.cppfiles.count(filename)==0:
-          self.cppfiles.append(filename)
-          # We ensure that we only add a .cpp file once.
-          # Otherwise we would get duplicated symbols errors.
-          # But we never delete a non-generated file.
-          if self.generated_cppfiles.count(filename) > 0:
+    def remove_cpp_file(self, filename):
+        if filename in self.generated_cppfiles:
             self.generated_cppfiles.remove(filename)
+        if filename in self.cppfiles:
+            self.cppfiles.remove(filename)
 
-  def remove_cpp_file(self,filename):
-    if filename in self.generated_cppfiles:
-      self.generated_cppfiles.remove(filename)
-    if filename in self.cppfiles:
-      self.cppfiles.remove(filename)
+    def add_Fortran_file(self, filename, generated=False):
+        """
+        Add a new Fortran file.
 
-  def add_Fortran_file(self,filename,generated=False):
-    """
-     Add a new Fortran file.
+        All the standard Peano 4 routines rely on this function to add their
+        generated files to the build environment. Nothing stops you however to
+        add more files yourself. Don't add a file multiple times. This might
+        break the compiler.
 
-     All the standard Peano 4 routines rely on this function to add their
-     generated files to the build environment. Nothing stops you however to
-     add more files yourself. Don't add a file multiple times. This might
-     break the compiler.
+        Fortran is really picky about the translation order. So you have to add
+        the stuff in the right order. Otherwise, Fortran might complain. This is
+        your responsibility.
 
-     Fortran is really picky about the translation order. So you have to add
-     the stuff in the right order. Otherwise, Fortran might complain. This is
-     your responsibility.
+        If your file defines a module, please do not use this routine, but use
+        add_Fortran_module() instead.
 
-     If your file defines a module, please do not use this routine, but use
-     add_Fortran_module() instead.
+        filename: String
+           Filename of a Fortran file. They usually should have the .f90 extension.
+        generated: Bool
+           Use this flag for generated files which can be tracked
+           by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
+        """
+        if generated:
+            if (
+                self.generated_fortranfiles.count(filename) == 0
+                and self.fortranfiles.count(filename) == 0
+            ):
+                self.generated_fortranfiles.append(filename)
+        else:
+            if self.fortranfiles.count(filename) == 0:
+                self.fortranfiles.append(filename)
+                if self.generated_fortranfiles.count(filename) > 0:
+                    self.generated_fortranfiles.remove(filename)
 
-     filename: String
-        Filename of a Fortran file. They usually should have the .f90 extension.
-     generated: Bool
-        Use this flag for generated files which can be tracked
-        by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
-    """
-    if generated:
-      if self.generated_fortranfiles.count(filename)==0 and self.fortranfiles.count(filename)==0:
-        self.generated_fortranfiles.append( filename )
-    else:
-      if self.fortranfiles.count(filename)==0:
-        self.fortranfiles.append( filename )
-        if self.generated_fortranfiles.count(filename) > 0:
-          self.generated_fortranfiles.remove(filename)
+    def remove_Fortran_file(self, filename):
+        if filename in self.generated_fortranfiles:
+            self.generated_fortranfiles.remove(filename)
+        if filename in self.fortranfiles:
+            self.fortranfiles.remove(filename)
 
-  def remove_Fortran_file(self,filename):
-    if filename in self.generated_fortranfiles:
-      self.generated_fortranfiles.remove(filename)
-    if filename in self.fortranfiles:
-      self.fortranfiles.remove(filename)
+    def add_Fortran_module(self, module_file, force=False):
+        """
+        Add a Fortran module
 
-  def add_Fortran_module(self,module_file,force=False):
-    """
-     Add a Fortran module
+        module_file: String
+          Filename of a Fortran source code file which hosts a module. It should
+          have the extension .f90 or similar.
 
-     module_file: String
-       Filename of a Fortran source code file which hosts a module. It should
-       have the extension .f90 or similar.
-
-     force: Boolean
-       Enforce that Fortran module is added even though it might already be in
-       the list.
-    """
-    if not module_file.endswith( ".f90" ):
-      print( "Warning: Fortran module file does not have extension .f90 (" + module_file + ") and translation thus might fail" )
-    if module_file in self.d["FORTRAN_MODULES"] and not force:
-      print( """Fortran module file 
-""" + module_file + """
+        force: Boolean
+          Enforce that Fortran module is added even though it might already be in
+          the list.
+        """
+        if not module_file.endswith(".f90"):
+            print(
+                "Warning: Fortran module file does not have extension .f90 ("
+                + module_file
+                + ") and translation thus might fail"
+            )
+        if module_file in self.d["FORTRAN_MODULES"] and not force:
+            print(
+                """Fortran module file 
+"""
+                + module_file
+                + """
 is already in module file list. Did not add it once more. You can overwrite 
 this default behaviour via the force attribute in add_Fortran_module(). If 
 you create multiple Peano 4 makefiles in a row (as you change parameters, e.g.)
 then this message can typically be ignored.
-""" )
-    elif module_file in self.d["FORTRAN_MODULES"] and force:
-      print( "Fortran module file " + module_file + " is already in module file list but force flag is set. Add it" )
-      self.d["FORTRAN_MODULES"].append( module_file )
-    else:
-      self.d["FORTRAN_MODULES"].append( module_file )
+"""
+            )
+        elif module_file in self.d["FORTRAN_MODULES"] and force:
+            print(
+                "Fortran module file "
+                + module_file
+                + " is already in module file list but force flag is set. Add it"
+            )
+            self.d["FORTRAN_MODULES"].append(module_file)
+        else:
+            self.d["FORTRAN_MODULES"].append(module_file)
 
-  def add_Fortran_modules(self,module_files):
-    for i in module_files:
-      self.add_Fortran_module( i )
+    def add_Fortran_modules(self, module_files):
+        for i in module_files:
+            self.add_Fortran_module(i)
 
-  def generate(self,overwrite,directory):
-    cmake_build_dir = find_cmake_build_dir()
-    self.d[ "CMAKE_BUILD_DIR" ]               = cmake_build_dir
-    self.d[ 'H_HEADERS' ]                     = self.hfiles
-    self.d[ 'CXX_SOURCES' ]                   = self.cppfiles
-    self.d[ 'CU_SOURCES' ]                    = self.cufiles
-    self.d[ 'FORTRAN_SOURCES' ]               = self.fortranfiles
-    self.d[ 'GENERATED_H_HEADERS' ]           = self.generated_hfiles
-    self.d[ 'GENERATED_CXX_SOURCES' ]         = self.generated_cppfiles
-    self.d[ 'GENERATED_CU_SOURCES' ]          = self.generated_cufiles
-    self.d[ 'GENERATED_FORTRAN_SOURCES' ]     = self.generated_fortranfiles
-    self.d[ 'GENERATOR' ]                     = sys.argv[0]
+    def generate(self, overwrite, directory):
+        cmake_build_dir = find_cmake_build_dir()
+        self.d["CMAKE_BUILD_DIR"] = cmake_build_dir
+        self.d["H_HEADERS"] = self.hfiles
+        self.d["CXX_SOURCES"] = self.cppfiles
+        self.d["CU_SOURCES"] = self.cufiles
+        self.d["FORTRAN_SOURCES"] = self.fortranfiles
+        self.d["GENERATED_H_HEADERS"] = self.generated_hfiles
+        self.d["GENERATED_CXX_SOURCES"] = self.generated_cppfiles
+        self.d["GENERATED_CU_SOURCES"] = self.generated_cufiles
+        self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
+        self.d["GENERATOR"] = sys.argv[0]
 
-    # Anonymous function that generates the output_file_path from input_file_path template
-    def generate_build_file(input_file_path, output_file_path):
-      if write_file(overwrite, self.default_overwrite, output_file_path):
-        print( "write " + output_file_path )
+        # Anonymous function that generates the output_file_path from input_file_path template
+        def generate_build_file(input_file_path, output_file_path):
+            if write_file(overwrite, self.default_overwrite, output_file_path):
+                print("write " + output_file_path)
 
-        # Encapsulate file generation as a function
+                # Encapsulate file generation as a function
 
-        template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(input_file_path)[0])
-        templateEnv     = jinja2.Environment(loader=template_loader)
-        template        = templateEnv.get_template( os.path.split(input_file_path)[1] )
+                template_loader = jinja2.FileSystemLoader(
+                    searchpath=os.path.split(input_file_path)[0]
+                )
+                templateEnv = jinja2.Environment(loader=template_loader)
+                template = templateEnv.get_template(os.path.split(input_file_path)[1])
 
-        try:
-          # We first eliminate the precompiled variant, and then we get rid of the
-          # postfix in the case where it is a source file
-          with open( output_file_path, "w" ) as output:
-            output.write( template.render(self.d) )
-        except Exception as e:
-          print( "ERROR: have not been able to write main file {} from template {}".format(output_file_path, input_file_path) )
-          print( str(e) )
+                try:
+                    # We first eliminate the precompiled variant, and then we get rid of the
+                    # postfix in the case where it is a source file
+                    with open(output_file_path, "w") as output:
+                        output.write(template.render(self.d))
+                except Exception as e:
+                    print(
+                        "ERROR: have not been able to write main file {} from template {}".format(
+                            output_file_path, input_file_path
+                        )
+                    )
+                    print(str(e))
 
-    file_dir  = os.path.dirname(os.path.realpath(__file__))
+        file_dir = os.path.dirname(os.path.realpath(__file__))
 
-    template_output_pairs = list()
+        template_output_pairs = list()
 
-    template_output_pairs.append(
-      (os.path.join(file_dir, "Makefile.template"), os.path.join(directory, "Makefile"))
-    )
-    template_output_pairs.append(
-      (os.path.join(file_dir, "CMakeLists.txt.template"), os.path.join(directory, "CMakeLists.txt"))
-    )
-    template_output_pairs.append(
-      (os.path.join(file_dir, "Gitignore.template"), os.path.join(directory, ".gitignore"))
-    )
+        template_output_pairs.append(
+            (
+                os.path.join(file_dir, "Makefile.template"),
+                os.path.join(directory, "Makefile"),
+            )
+        )
+        template_output_pairs.append(
+            (
+                os.path.join(file_dir, "CMakeLists.txt.template"),
+                os.path.join(directory, "CMakeLists.txt"),
+            )
+        )
+        template_output_pairs.append(
+            (
+                os.path.join(file_dir, "Gitignore.template"),
+                os.path.join(directory, ".gitignore"),
+            )
+        )
 
-    # We do not want the same line multiple times as it creates build problems, so we read it into a set
-    # and do not write if the new executable entry is already inside.
-    generated_paths_filepath = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectories.cmake")
-    print("generated_paths_filepath " + self.d["CMAKE_BUILD_DIR"])
-    generated_paths_before = os.path.exists(generated_paths_filepath)
-    generated_path_entries = set()
+        # We do not want the same line multiple times as it creates build problems, so we read it into a set
+        # and do not write if the new executable entry is already inside.
+        generated_paths_filepath = os.path.join(
+            self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectories.cmake"
+        )
+        print("generated_paths_filepath " + self.d["CMAKE_BUILD_DIR"])
+        generated_paths_before = os.path.exists(generated_paths_filepath)
+        generated_path_entries = set()
 
-    if generated_paths_before:
-      with open(generated_paths_filepath, "r") as generated_paths_file:
-        for line in generated_paths_file.readlines():
-          generated_path_entries.add(line)
+        if generated_paths_before:
+            with open(generated_paths_filepath, "r") as generated_paths_file:
+                for line in generated_paths_file.readlines():
+                    generated_path_entries.add(line)
 
-    # Only append to the file only if doesnt exist before
-    generated_entry = f"add_subdirectory({os.path.abspath(directory)})\n"
-    if not generated_entry in generated_path_entries:
-      with open(generated_paths_filepath, "a") as subdir_cmake:
-        subdir_cmake.write(f"add_subdirectory({os.path.abspath(directory)})\n")
+        # Only append to the file only if doesnt exist before
+        generated_entry = f"add_subdirectory({os.path.abspath(directory)})\n"
+        if not generated_entry in generated_path_entries:
+            with open(generated_paths_filepath, "a") as subdir_cmake:
+                subdir_cmake.write(f"add_subdirectory({os.path.abspath(directory)})\n")
 
-    for (template, output_file) in template_output_pairs:
-      generate_build_file(template, output_file)
+        for template, output_file in template_output_pairs:
+            generate_build_file(template, output_file)

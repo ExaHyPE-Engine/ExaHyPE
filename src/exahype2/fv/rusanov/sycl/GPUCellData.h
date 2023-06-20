@@ -5,12 +5,10 @@
 #if !defined(_EXAHYPE2_FV_RUSANOV_SYCL_GPUCELLDATA_H_) and defined(GPUOffloadingSYCL)
 #define _EXAHYPE2_FV_RUSANOV_SYCL_GPUCELLDATA_H_
 
-
-#include "tarch/la/Vector.h"
-#include "tarch/accelerator/accelerator.h"
-#include "peano4/utils/Globals.h"
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-
+#include "peano4/utils/Globals.h"
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/la/Vector.h"
 
 namespace exahype2 {
   /**
@@ -24,7 +22,7 @@ namespace exahype2 {
        * Forward declaration
        */
       class AoSLexicographicVolumeEnumerator;
-    }
+    } // namespace enumerator
 
     namespace rusanov {
       namespace sycl {
@@ -76,14 +74,14 @@ namespace exahype2 {
          *
          */
         struct GPUCellData {
-          double**   QIn;
-          tarch::la::Vector<Dimensions,double>*   cellCentre;
-          tarch::la::Vector<Dimensions,double>*   cellSize;
-          double*    t;
-          double*    dt;
-          int        numberOfCells;
-          double**   QOut;
-          double*    maxEigenvalue;
+          double**                               QIn;
+          tarch::la::Vector<Dimensions, double>* cellCentre;
+          tarch::la::Vector<Dimensions, double>* cellSize;
+          double*                                t;
+          double*                                dt;
+          int                                    numberOfCells;
+          double**                               QOut;
+          double*                                maxEigenvalue;
 
           /**
            * We never create a GPU wrapper object directly
@@ -92,7 +90,7 @@ namespace exahype2 {
            * existing ::exahype::CellData object, or it is instantiated
            * as copy of an existing object on the accelerator.
            */
-          GPUCellData()  = delete;
+          GPUCellData() = delete;
 
           /**
            * This operation is required to support the migration
@@ -127,23 +125,22 @@ namespace exahype2 {
            * @see destroy()
            */
           GPUCellData(
-            const ::exahype2::CellData& hostObject,
+            const ::exahype2::CellData&                               hostObject,
             const ::exahype2::enumerator::AoSLexicographicEnumerator& inEnumerator,
             const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
-            ::sycl::queue& queue
+            ::sycl::queue&                                            queue
           );
 
           void destroy(
-            ::exahype2::CellData& hostObject,
+            ::exahype2::CellData&                                     hostObject,
             const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
-            bool copyEigenvaluesBack,
-            ::sycl::queue& queue
+            bool                                                      copyEigenvaluesBack,
+            ::sycl::queue&                                            queue
           );
         };
-      }
-    }
-  }
-}
-
+      } // namespace sycl
+    }   // namespace rusanov
+  }     // namespace fv
+} // namespace exahype2
 
 #endif
