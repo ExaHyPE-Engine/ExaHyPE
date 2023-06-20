@@ -241,8 +241,6 @@ class SingleSweep( FV ):
     if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
     if use_split_loop                  :  self._use_split_loop                            = use_split_loop
 
-    if boundary_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
-      assert False, "boundary conditions cannot be none"
     if refinement_criterion==exahype2.solvers.fv.PDETerms.None_Implementation:
       assert False, "refinement criterion cannot be none"
     if initial_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:

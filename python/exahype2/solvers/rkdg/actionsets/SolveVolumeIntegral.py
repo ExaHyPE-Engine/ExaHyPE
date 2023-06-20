@@ -53,7 +53,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
     
     {% if SPAWN_VOLUME_KERNEL_AS_TASK %}
-    if (marker.willBeSkeletonCell()) {
+    if ( marker.willBeSkeletonCell() ) {
       #if Dimensions==2
       double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
       #elif Dimensions==3

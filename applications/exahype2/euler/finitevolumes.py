@@ -130,7 +130,7 @@ elif args.type=="global-adaptive":
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    time_step_relaxation = 0.01
+    time_step_relaxation = 0.5
   )
 elif args.type=="global-fixed-enclave":
   thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking(
@@ -152,7 +152,7 @@ elif args.type=="global-adaptive-enclave":
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
 #    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    time_step_relaxation = 0.05,
+    time_step_relaxation = 0.5,
     pde_terms_without_state = args.gpu
   )
 elif args.type=="subcycling-fixed-linear-interpolation":
@@ -195,7 +195,7 @@ elif args.type=="subcycling-adaptive-linear-interpolation-enclave":
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
-    time_step_relaxation = 0.01,
+    time_step_relaxation = 0.5,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     interpolate_linearly_in_time=True,
@@ -207,7 +207,7 @@ elif args.type=="local-linear-interpolation-enclave":
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
-    time_step_relaxation = 0.01,
+    time_step_relaxation = 0.5,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     interpolate_linearly_in_time=True,

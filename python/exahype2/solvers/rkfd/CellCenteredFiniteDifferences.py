@@ -75,7 +75,19 @@ class CellCenteredFiniteDifferences(object):
   """
   
       
-  def __init__(self, name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace):
+  def __init__(self, 
+               name, 
+               patch_size, 
+               overlap, 
+               rk_order, 
+               unknowns, 
+               auxiliary_variables, 
+               min_meshcell_h, 
+               max_meshcell_h, 
+               plot_grid_properties, 
+               kernel_namespace,
+               baseline_action_set_priority = 0,
+               ):
     """
   name: string
      A unique name for the solver. This one will be used for all generated 
@@ -150,6 +162,7 @@ class CellCenteredFiniteDifferences(object):
     self._action_set_copy_new_faces_onto_old_faces            = None
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = None
     self._action_set_postprocess_solution                     = None
+    self._action_set_preprocess_solution                      = None
 
     self._compute_time_step_size                         = "#error Not yet defined"
     self._compute_new_time_step_size                     = "#error Not yet defined"
@@ -178,6 +191,8 @@ class CellCenteredFiniteDifferences(object):
     self._hold_cell_data_on_heap_with_smart_pointer = False
     self._hold_face_data_on_heap_with_smart_pointer = False
 
+    self._baseline_action_set_priority = baseline_action_set_priority
+    
     self.create_data_structures()
     self.create_action_sets()
 
@@ -506,31 +521,71 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     # only once if it does not exist
     if self._action_set_postprocess_solution == None:
       self._action_set_postprocess_solution                   = exahype2.solvers.rkfd.actionsets.EmptyPostprocessSolution( self )
+    if self._action_set_preprocess_solution == None:
+      self._action_set_preprocess_solution                    = exahype2.solvers.rkfd.actionsets.EmptyPreprocessSolution( self )
     
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
+
+    self._action_set_initial_conditions.priority                       = self._baseline_action_set_priority+1
+    self._action_set_initial_conditions_for_grid_construction.priority = self._baseline_action_set_priority+1
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = self._baseline_action_set_priority
+    self._action_set_roll_over_update_of_faces.priority                                        = self._baseline_action_set_priority + 1
+    self._action_set_update_face_label.priority                                                = self._baseline_action_set_priority + 2
+    self._action_set_update_cell_label.priority                                                = self._baseline_action_set_priority + 2
+    self._action_set_handle_boundary.priority                                                  = self._baseline_action_set_priority + 3
+    #self._action_set_update_cell                                                      = self._baseline_action_set_priority + 4
+    self._action_set_project_patch_onto_faces.priority                                         = self._baseline_action_set_priority + 5
+    self._action_set_compute_final_linear_combination.priority                                 = self._baseline_action_set_priority + 5
+    self._action_set_AMR.priority                                                              = self._baseline_action_set_priority + 6
+    self._action_set_postprocess_solution.priority                     = self._baseline_action_set_priority # will be in touch last
+    self._action_set_preprocess_solution.priority                      = self._baseline_action_set_priority
         
     self._action_set_update_cell = None
 
 
 
   def _store_cell_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
   def _load_cell_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
 
   def _store_face_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
   def _load_face_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
@@ -627,6 +682,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
      
     
     """
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
@@ -751,6 +807,7 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_update_face_label )
@@ -814,8 +871,8 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
 
     output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
-    output.makefile.add_cpp_file( self._name + ".cpp" )
+    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
 
   def set_solver_constants(self, datastring): self._solver_constants = datastring
 
@@ -908,14 +965,14 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
     self.create_action_sets()
 
 
-  @patch_size.setter
+  @unknowns.setter
   def unknowns(self, value):
     self._unknowns = value
     self.create_data_structures()
     self.create_action_sets()
 
 
-  @patch_size.setter
+  @auxiliary_variables.setter
   def auxiliary_variables(self, value):
     self._auxiliary_variables = value
     self.create_data_structures()
@@ -929,8 +986,10 @@ The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain
  
   @preprocess_reconstructed_patch.setter
   def preprocess_reconstructed_patch(self, kernel):
-    """
-  
+    """!
+        
+    Please consult exahype2.solvers.fv.FV.preprocess_reconstructed_patch() for 
+    a documentation on this routine.
 
     """
     self._preprocess_reconstructed_patch  = kernel

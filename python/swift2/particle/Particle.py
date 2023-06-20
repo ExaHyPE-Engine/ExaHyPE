@@ -3,10 +3,10 @@
 import peano4.toolbox.particles
 
 import dastgen2
-
+from abc import abstractmethod
 
 class Particle(peano4.toolbox.particles.Particle):
-  """
+  """!
   
   Base class for any particle in the project
   
@@ -75,7 +75,7 @@ class Particle(peano4.toolbox.particles.Particle):
                min_h,
                max_h,
                ):
-    """
+    """!
     
     Initialise the particle
     
@@ -118,11 +118,47 @@ class Particle(peano4.toolbox.particles.Particle):
     pass
 
 
+  @abstractmethod
   def algorithm_steps(self):
-    """
+    """!
     
-    Return sequence of algorithm steps
+    Return sequence of algorithm steps that have to be called per time step
     
     """
     assert False, "Should be overwritten by subclass"
     return []
+
+
+  @abstractmethod
+  def initialisation_steps(self):
+    """!
+    
+    Return sequence of algorithm steps that have to be performed throughout initialisation
+    
+    """
+    assert False, "Should be overwritten by subclass"
+    return []
+
+
+  @property
+  def readme_descriptor(self):
+    """!
+    
+    Create default readme descriptor
+    
+    You might want to overwrite this for your particular particle 
+    species to get more detailed info the the README.md file generated
+    by Peano.
+    
+    """
+    return """### Particle """ + self.name + """
+    
+  Mesh properties:
+  
+  - particles per cell:         """ + str(self.particles_per_cell) + """
+  - h_min:                      """ + str(self.min_h) + """
+  - h_max:                      """ + str(self.max_h) + """
+  
+  Attributes: """ + str(len(self.data._attributes)) + """
+
+    """

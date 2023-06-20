@@ -148,6 +148,7 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     self._action_set_solve_volume_integral.spawn_volume_kernel_as_task = True
 
     self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
+    self._action_set_merge_enclave_task_outcome.priority = self._baseline_action_set_priority + 1
 
     
   def add_implementation_files_to_project(self, namespace, output, dimensions):
@@ -178,7 +179,7 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
       True)
 
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
+    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp", generated=True )
 
     if self._pde_terms_without_state:
         # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
@@ -206,7 +207,7 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
        
     """
     super(SeparateSweepsWithEnclaveTasking, self).add_actions_to_perform_time_step(step)
-    step.add_action_set( self._action_set_merge_enclave_task_outcome, False )
+    step.add_action_set( self._action_set_merge_enclave_task_outcome )
 
 
   def add_entries_to_text_replacement_dictionary(self,d):

@@ -1,6 +1,6 @@
 /**
 
-@page exahype_visualisation Visualisation and output
+@page page_exahype_visualisation Visualisation and output
 
 ExaHyPE 2  relies on Peano's standard output routines to write file dumps,
 and it employs Peano's standard terminal routines to dump runtime information.
@@ -14,8 +14,8 @@ As the files can be rather large, the simulation configuration allows you to
 specify exactly how often you want to see file dumps, and you can also add
 spatial filters.
 The latter help you to visualise only subdomains.
-As we rely on Peano's infrastructure, you can use the ```render.py``` script in
-python/peano4/visualisation to convert the output files into vtu files.
+As we rely on Peano's infrastructure, you can use the script
+python/peano4/visualisation/render.py to convert the output files into vtu files.
 
 
 Consult @ref tarch_patch_files "Peano's generic discussion" of various
@@ -27,11 +27,19 @@ Therefore, one of the first postprocessing steps usually is to remove all data
 from the output data set besides the fine grid level.
 
 
+### Plot descriptive variable names
+
+You can add a plot description to each solver which allows us to render
+more descriptive variable names:
+~~~~~~~~~~~~~~~~~
+my_solver.plot_description = "density, velocity_x, velocity_y, energy"
+~~~~~~~~~~~~~~~~~
+
 
 ### Output filters
 
 By default, ExaHyPE maps each Finite Volume and each DG quadrature point onto
-a vertex in the output file, i.e. it maps the compute mesh onto an unstructured
+a vertex in the output file, i.e., it maps the compute mesh onto an unstructured
 (visualisation) mesh.
 This can result in large data dumps.
 
@@ -152,20 +160,6 @@ by default are
 The syntax of log filter files is discussed in the
 @ref tarch_logging "generic logging documentation of Peano".
 
-
-## Tracers
-
-ExaHyPE's tracers rely on Peano's particle and particle-in-dual-tree
-mechanism.
-They are not genuine ExaHyPE plugin, but rather connect to a completely
-different toolbox of Peano, which has nothing to do with the core ExaHyPE.
-
-
-Peano's particle handling comes along with a set of standard postprocessing
-scripts.
-As we rely on this toolbox, you can use those scripts straightaway.
-They can be found in
-python/peano4/toolbox/particles/postprocessing.
 
 
 */

@@ -28,14 +28,14 @@ class tarch::multicore::orchestration::AllOnGPU: public tarch::multicore::orches
   public:
     AllOnGPU(int device);
 
-    void startBSPSection() override;
-    void endBSPSection()   override;
+    virtual void startBSPSection(int nestedParallelismLevel) override;
+    virtual void endBSPSection(int nestedParallelismLevel)   override;
 
     /**
      * Within a BSP section, I hold all tasks back. Afterwards, I release all
      * of them.
      */
-    int getNumberOfTasksToHoldBack() override;
+    virtual int getNumberOfTasksToHoldBack() override;
 
     /**
      * Return how many tasks to fuse at least, at most and to which device
@@ -45,17 +45,17 @@ class tarch::multicore::orchestration::AllOnGPU: public tarch::multicore::orches
      *   such that the lower limit is never exceeded. Return the device
      *   otherwise with a min size of 1.
      */
-    FuseInstruction getNumberOfTasksToFuseAndTargetDevice() override;
+    virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice() override;
 
     /**
      * No
      */
-    bool fuseTasksImmediatelyWhenSpawned() override;
+    virtual bool fuseTasksImmediatelyWhenSpawned() override;
 
     /**
-     * No
+     * No if we encounter nested parallelism.
      */
-    bool processPendingTasksWhileWaitingInBSPSection() override;
+    virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType) override;
 
 };
 

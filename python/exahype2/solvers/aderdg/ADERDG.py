@@ -571,19 +571,19 @@ class ADERDG( object ):
       file.close()
 
     
-    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/Quadrature.cpp")
-    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/DGMatrices.cpp")
-    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/fusedSpaceTimePredictorVolumeIntegral.cpp")
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/Quadrature.cpp", generated=True)
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/DGMatrices.cpp", generated=True)
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/fusedSpaceTimePredictorVolumeIntegral.cpp", generated=True)
     if self._point_sources_implementation!=PDETerms.None_Implementation:
-        output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/fusedSpaceTimePredictorVolumeIntegral_WithoutPS.cpp")
-        output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/deltaDistribution.cpp")
-    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/riemannSolver.cpp")
-    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/faceIntegral.cpp")
-    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/solutionUpdate.cpp")
-    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/boundaryConditions.cpp")
+        output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/fusedSpaceTimePredictorVolumeIntegral_WithoutPS.cpp", generated=True)
+        output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/deltaDistribution.cpp", generated=True)
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/riemannSolver.cpp", generated=True)
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/faceIntegral.cpp", generated=True)
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/solutionUpdate.cpp", generated=True)
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/boundaryConditions.cpp", generated=True)
 
     if self._use_libxsmm:
-      output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/gemmsCPP.cpp")
+      output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/gemmsCPP.cpp", generated=True)
 
   """
   This tells peano to add the solver files to the project. It generates any files that are not
@@ -643,8 +643,8 @@ class ADERDG( object ):
 
     output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
-    output.makefile.add_cpp_file( self._name + ".cpp" )
+    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
     
     if self._use_var_shortcut:
       generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(

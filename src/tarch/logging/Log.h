@@ -403,8 +403,8 @@ namespace tarch {
  *
  * !!! Hint
  *
- * Never use the + operator to concatenate data as this error is error-prone.
- * If you use always the << operator, you are on the save side, as the +
+ * Never use the + operator to concatenate data as this is error-prone.
+ * If you use always the << operator, you are on the safe side, as the +
  * operator works only for strings properly. If you use it with a string and
  * another data type, it might be that the string is assigned an invalid length.
  */

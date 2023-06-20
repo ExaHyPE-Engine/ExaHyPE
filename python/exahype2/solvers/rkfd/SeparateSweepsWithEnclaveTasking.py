@@ -17,9 +17,9 @@ from exahype2.solvers.ButcherTableau                import ButcherTableau
 
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
-  """
+  """!
   
-  Update one cell, i.e. compute Runge-Kutta step on it
+  Update one cell that is compute Runge-Kutta step on it
   
   This routine is significantly simpler than its counterpart in SeparateSweeps,
   as we basically check if a cell is an enclave cell or not. If it is one, we
@@ -70,7 +70,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // previous time step has to be valid
   
-      if (marker.willBeSkeletonCell()) {
+      if ( marker.willBeSkeletonCell() ) {
         tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
           marker,
           timeStamp,
@@ -128,7 +128,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 
   def _add_action_set_entries_to_dictionary(self,d):
-    """
+    """!
     
     This is our plug-in point to alter the underlying dictionary
     
@@ -145,6 +145,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     # Has to come after we've set the predicates, as we use these
     # fields in here already
     d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.SolveRiemannProblemsOverPatch.render(**d)
+
 
   
   def get_includes(self):
@@ -193,6 +194,7 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
 """
   def __init__(self,solver):
     super( MergeEnclaveTaskOutcome, self ).__init__(solver)
+    self.priority   = -1
     self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
 
 
@@ -221,13 +223,25 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
 
 
 class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
-  """
+  """!
   
-    A straightforward extension of the approach where we run through the
-    mesh 
-    
+  Enclave variant of the solver where we still run through mesh once per Runge-Kutta sweep
+  
+  The concept of (enclave) tasking within ExaHyPE solvers is described in 
+  detail in the @ref page_exahype_solvers_enclave_solvers "generic enclave discussion of ExaHyPE". 
+  This class is a prototype realisation of this concept which other solvers 
+  then specialise for particular numerical schemes.
+  
+  The class basically replaces the standard "update a cell" action set with an 
+  action set that might or might not spawn a task. In return, it adds a further
+  action set which merges the arising task outcomes into the actual mesh 
+  structure. By default, we use peano4::datamanagement::CellMarker::willBeEnclaveCell()
+  and peano4::datamanagement::CellMarker::hasBeenEnclaveCell() to guide the 
+  decision whether to spawn a task or not. You can overwrite this decision
+  by redefining the corresponding entry in the dictionary befilled by 
+  add_entries_to_text_replacement_dictionary().
+  
   """
-
 
   def __init__(self, 
                name, 
@@ -423,7 +437,9 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
 
     self._action_set_merge_enclave_task_outcome             = MergeEnclaveTaskOutcome(self)                                                                                 
     self._action_set_update_cell                            = UpdateCell(self)
-    
+
+    self._action_set_update_cell.priority                = self._baseline_action_set_priority + 4
+    self._action_set_merge_enclave_task_outcome.priority = self._baseline_action_set_priority + 4
     #
     # have a single guard (technically)
     #
@@ -476,7 +492,7 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
       True)
 
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
+    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp", generated=True )
 
     if self._pde_terms_without_state:
         # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
@@ -487,7 +503,9 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
 
 
   def add_actions_to_perform_time_step(self, step):
-    """
+    """!
+    
+      Add enclave aspect
     
       Add enclave aspect to time stepping. If you study the superclass'
       routine add_actions_to_perform_time_step() and consider that this action
@@ -500,7 +518,7 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
        
     """
     super(SeparateSweepsWithEnclaveTasking, self).add_actions_to_perform_time_step(step)
-    step.add_action_set( self._action_set_merge_enclave_task_outcome, False )
+    step.add_action_set( self._action_set_merge_enclave_task_outcome )
 
 
   def add_entries_to_text_replacement_dictionary(self,d):

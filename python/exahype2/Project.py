@@ -11,8 +11,12 @@ import sys
 import exahype2.grid
 import exahype2.solvers
 
+
 class Project(object):
-  """
+  """!"
+      
+  ExaHyPE 2 project
+  
   Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4
   project with a particular set of actions (algorithmic phases)
   that you can choose from and with particular solver types. It
@@ -147,9 +151,11 @@ class Project(object):
       size_string   += str(self._domain_size[i])
     offset_string += "}"
     size_string   += "}"
-    self._project.constants.add_include( """#include <bitset>""") 
-    self._project.constants.export_const_with_type( "DomainOffset", offset_string, "std::initializer_list<double>" )
-    self._project.constants.export_const_with_type( "DomainSize", size_string, "std::initializer_list<double>" )
+    self._project.constants.add_include( """#include <bitset>""")
+    self._project.constants.add_include( """#include "tarch/la/Vector.h" """)
+    self._project.constants.add_include( """#include "peano4/utils/Globals.h" """)
+    self._project.constants.export_const_with_type( "DomainOffset", offset_string, "tarch::la::Vector<Dimensions,double>" )
+    self._project.constants.export_const_with_type( "DomainSize", size_string, "tarch::la::Vector<Dimensions,double>" )
     self._project.constants.export( "MinTerminalTime", str(self._min_terminal_time) )
     if self._max_terminal_time>=self._min_terminal_time:
       self._project.constants.export( "MaxTerminalTime", str(self._max_terminal_time) )
@@ -280,11 +286,18 @@ thus appreciate any citation of the original release paper
       True)
 
     self._project.output.add( generated_solver_files )
-    self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
+    self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp", generated=True )
 
-  def add_tracer(self,name,attribute_count=0,plot=True):
-    """
-    ## Particle properties
+
+  def add_tracer(self,
+                 name,
+                 attribute_count=0,
+                 plot=True,
+                 priority_within_action_sets=-1
+                 ):
+    """!
+    
+    Add a tracer to the project
 
     We rely on the particle toolbox. Therefore, our particles have
     already a position x, a cut off radius (which we don't usually 
@@ -322,6 +335,11 @@ thus appreciate any citation of the original release paper
 
     @see peano4.toolbox.particles.PlotParticlesInVTKFormat.add_attribute_to_plot()
 
+    ## Action set order
+    
+    We add the particle ordering with priority -1. This should do the job
+    for most setups, but we might be wrong.
+    
     ## Arguments
 
     name: String
@@ -339,6 +357,13 @@ thus appreciate any citation of the original release paper
       it writes patch files. You can switch this behaviour off. A lot of codes
       do so if they dump the tracer data independently into another database
       anyway.
+      
+    priority_within_action_sets: Integer
+      You have to clarify what the priority of the tracer is within the 
+      action sets. By default, all ExaHyPE solvers start with priority 
+      0 and then up to n. So you are fine with using the default of -1
+      which means that the tracer precedes any solver. However, there 
+      might be cases where you wanna move the priorities manually.
 
     Returns the particle set that you can use to modify further 
     """
@@ -368,12 +393,21 @@ thus appreciate any citation of the original release paper
     #
     # Initialisation
     #
-    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
+    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles))
+
+    update_particle_association_action_set = peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles)
+    update_particle_association_action_set.priority = priority_within_action_sets
+    update_particle_association_action_set.parallel = True
+
+    update_particle_parallel_state_action_set = peano4.toolbox.particles.UpdateParallelState(particles)
+    update_particle_parallel_state_action_set.priority = priority_within_action_sets
+    update_particle_parallel_state_action_set.parallel = True
         
     #
     # Move particles
     #
-    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
+    self.perform_time_step.add_action_set(update_particle_association_action_set)
+    self.perform_time_step.add_action_set(update_particle_parallel_state_action_set)
     
     #
     # Plotter: The timestamp here is slightly wrong, as I use the min time stamp. It 
@@ -399,17 +433,31 @@ thus appreciate any citation of the original release paper
       
       self.plot_solution.add_action_set( particle_plotter ) 
       
-    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
+    self.plot_solution.add_action_set(update_particle_association_action_set)
+    self.plot_solution.add_action_set(update_particle_parallel_state_action_set)
     
     self._tracer_particles.append(particles)
 
     return particles
 
+
   def add_action_set_to_timestepping(self, action_set):
+    """!
+    
+    Add a new action set to the time stepping
+    
+    You have to be careful with the priorities, i.e. you might want to 
+    use myproject.perform_time_step.max_priority() or myproject.perform_time_step.min_priority()
+    to find out which 
+    priority you should assign to action_set.
+    
+    """
     self.perform_time_step.add_action_set( action_set )
+
 
   def add_action_set_to_initialisation(self, action_set):
     self.init_grid.add_action_set( action_set )
+
 
   def generate_Peano4_project(self, verbose=False):
     """

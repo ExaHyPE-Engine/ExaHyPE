@@ -26,7 +26,21 @@ std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::CellM
 
 
 /**
+ * Cell marker
  *
+ * This object provides information on the cell aka octant within the
+ * spacetree. This includes spatial
+ * information such as size and position. It also comprises mesh topology
+ * properties such as "will this cell be refined" or "is its parent a
+ * local cell".
+ *
+ * It is an object which users are not supposed to manipulate. The mesh
+ * traversal automaton creates it once per octant while it runs through
+ * the mesh and passes in information about adjacent vertices, parent
+ * data, and so forth. The constructor then distills the user
+ * representation from that data and, from hereon, users can use this
+ * distilled information to make logical decisions what to do and how
+ * to do things within the spacetree octant.
  */
 struct peano4::datamanagement::CellMarker {
   private:
@@ -73,7 +87,7 @@ struct peano4::datamanagement::CellMarker {
     bool willBeRefined() const;
 
     /**
-     * @return x coordinate of a cell is its centre.
+     * @return Centre of cell.
      */
     tarch::la::Vector<Dimensions,double>  x() const;
 
@@ -141,6 +155,8 @@ struct peano4::datamanagement::CellMarker {
     bool isParentLocal() const;
 
     /**
+     * Define enclave cell
+     *
      * A enclave cell in the definition of Charrier, Hazelwood, Weinzierl is a
      * cell that is not a skeleton cell. A skeleton cell is cell which either
      *
@@ -152,21 +168,33 @@ struct peano4::datamanagement::CellMarker {
      * have to do is to ensure that it is passed all data via firstprivate copy
      * and that you never refine an enclave cell.
      *
-     * <h2> Dynamic load balancing </h2>
+     * ## Dynamic load balancing
      *
      * In line with the above definition, we may label a cell as enclave cell
      * if some dynamic load balancing is triggered or actually running. In
      * this case, any enclave cell might be subject of a domain transfer. If
      * we deployed its computation to the background, we could move around a
      * cell whose computations is done by a thread currently.
+     *
+     * @see page_exahype_solvers_enclave_solvers for a high-level description
      */
     bool hasBeenEnclaveCell() const;
+
+    /**
+     * @see hasBeenEnclaveCell()
+     */
     bool willBeEnclaveCell() const;
 
     /**
      * A skeleton cell is a not-enclave cell
+     *
+     * @see hasBeenEnclaveCell()
      */
     bool hasBeenSkeletonCell() const;
+
+    /**
+     * @see hasBeenEnclaveCell()
+     */
     bool willBeSkeletonCell() const;
 
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;

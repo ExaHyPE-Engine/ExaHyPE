@@ -95,14 +95,14 @@ class exahype2::RefinementControlService: public tarch::services::Service {
      * side in case someone wants to call this receiveDanglingMessages()
      * version explicitly.
      */
-    void receiveDanglingMessages() override;
+    virtual void receiveDanglingMessages() override;
 
     /**
      * @see RefinementControl::clear()
      */
     std::vector< peano4::grid::GridControlEvent >  getGridControlEvents() const;
 
-    void shutdown() override;
+    virtual void shutdown() override;
 
     /**
      * Should be called after each traversal per rank.
@@ -128,6 +128,10 @@ class exahype2::RefinementControlService: public tarch::services::Service {
      * This has to happen after the actual MPI exchange, so we can be sure
      * that remote events are not immediately sent back again.
      *
+     * I found it to be very important to merge the committed events immediately:
+     * Peano's spacetrees will merge, too, but if we work with 100 trees per node,
+     * each and every one will merge locally. This is time we better spend on
+     * something else.
      */
     void finishStep();
 

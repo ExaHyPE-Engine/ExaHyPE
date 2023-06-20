@@ -134,6 +134,34 @@ namespace toolbox {
 
 
     /**
+     * This routine should be used if a cell hosts two sets of unknowns
+     *
+     * Frequently used if your code hosts two PDE solvers. This routine
+     * runs over all the dofs in destinationValues, computes their
+     * position, rounds it to the closest dof within sourceValues, and
+     * then copies the data over. This is, we assume that both the source
+     * and destination field represent voxels (similar to a Finite Volume)
+     * scheme or data which is hold within the centre of a subgrid
+     * (totally staggered dof layout).
+     *
+     * The description above assumes that numberOfDoFsPerAxisInDestinationPatch<=numberOfDoFsPerAxisInSourcePatch.
+     * While the routine also works if this is not the case, injecting
+     * from a coarser mesh into a finer one introduces a huge numerical
+     * inaccuracy (it is basically piece-wise constant) and you hence
+     * might be better off with a linear restriction. If the inequality
+     * is "violated", I'd however call this rather a projection and therefore
+     * you have to search through the provided projection routines to find
+     * such a linear scheme.
+     */
+    void restrictCellIntoOverlappingCell_inject(
+      int                                       numberOfDoFsPerAxisInSourcePatch,
+      int                                       numberOfDoFsPerAxisInDestinationPatch,
+      int                                       unknowns,
+      double*                                   sourceValues,
+      double*                                   destinationValues
+    );
+
+    /**
      * This routine is used when we delete a cell due to dynamic AMR
      */
     void restrictCell_AoS_averaging(

@@ -122,7 +122,7 @@ peano4_project.constants.export_constexpr_with_type( "Accuracy", str(accuracy), 
 peano4_project.constants.export_constexpr_with_type( "MaxPatches", str(args.max_patches), "int" )
 peano4_project.constants.export_constexpr_with_type( "TimeSteps", str(args.timesteps), "int" )
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/euler" )
-peano4_project.output.makefile.add_cpp_file( "KernelBenchmarksFVRusanov-main.cpp", generated=False )
+peano4_project.output.makefile.add_cpp_file( "KernelBenchmarksFVRusanov-main.cpp" )
 peano4_project.generate()
 if(args.compile):
   peano4_project.build( make_clean_first=True, throw_away_data_after_build=True)

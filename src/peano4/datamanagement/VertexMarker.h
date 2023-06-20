@@ -15,13 +15,12 @@ namespace peano4 {
 }
 
 
-/**
- * Forward declarations for test purposes
- */
-
 namespace toolbox {
   namespace particles {
     namespace tests {
+      /**
+       * Forward declarations for test purposes
+       */
       class MultiscaleTransitionsTest;
     }
   }
@@ -32,6 +31,41 @@ namespace toolbox {
 std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::VertexMarker& marker );
 
 
+/**
+ * Vertex marker to provide information about selected vertex
+ *
+ * A vertex marker is handed into each and every observer/action set routine
+ * which is vertex-based. That is routines such as touchVertexFirstTime().
+ * The marker provides information about the underlying vertex.
+ *
+ * Notably, we can provide
+ *
+ * - geometric information such as the position of a vertex or the size of
+ *   the adjacent cells.
+ * - status information such as whether a vertex is hanging.
+ * - grid layout information such as the vertex's position within the
+ *   parent cell.
+ *
+ * ## Rationale
+ *
+ * Peano's events (observer and action set routines) are internally all
+ * implemented on a per cell basis. So we invoke touchVertexFirstTime()
+ * from the cell when the first adjacent cell of a vertex is entered.
+ * Therefore, we know the selected vertex.
+ *
+ * Peano runs through the mesh with a tree automaton. A lot of information
+ * about vertices thus is recomputed on-the-fly all the time, as it is easy
+ * to derive it from the context. We know, for example, from the state of the
+ * traversal automaton if a vertex is hanging or not or which position in
+ * space it has. Therefore, such information is not stored within the vertex
+ * (unless for debugging purposes). Not only would the information be redundant,
+ * it would also be very inefficient: If you work with k data records per
+ * vertex, each one would hold the same information about the underlying
+ * vertex's position. So it makes more sense to encode such information with
+ * a separate object.
+ *
+ * @see FaceMarker for the analogous information for faces.
+ */
 struct peano4::datamanagement::VertexMarker {
   private:
     /**
@@ -75,9 +109,32 @@ struct peano4::datamanagement::VertexMarker {
 
     /**
      * Picks a vertex within a cell. After that, the routine returns.
+     *
+     * This routine is only called by Peano's internal observer, i.e. the
+     * class constructing VertexMarker objects. Users never call this routine.
      */
     VertexMarker& select(int number);
 
+    /**
+     * Information about selected vertex
+     *
+     * Even though you are given a vertex marker for a vertex routine such as
+     * touchVertexFirstTime(), Peano behind the scenes invokes this routine
+     * from a cell. That is, it enters a cell, then runs over all @f$ 2^d @f$
+     * adjacent vertex and puzzles out for each vertex if it has to call
+     * touchVertexFirstTime() or not.
+     *
+     * getSelectedVertexNumber() tells you which logical number a vertex has
+     * within the underlying cell behind the scenes.
+     *
+     * @image html VertexEnumerator.png
+     *
+     * The routine is barely used
+     * by user codes. Some technical helper routines use the selected number
+     * for some arithmetics, but the code indeed might be cleaner if we did
+     * hide this routine from the user altogether and make the routine
+     * explicitly available only to friends.
+     */
     int getSelectedVertexNumber() const;
 
     /**
@@ -122,6 +179,7 @@ struct peano4::datamanagement::VertexMarker {
 
     bool isHanging(int i) const;
 
+
     /**
      * Whenever we touch a vertex the first or the last time, we touch
      * it from a cell: If we touch a vertex the first time, the traversal
@@ -147,6 +205,7 @@ struct peano4::datamanagement::VertexMarker {
      */
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell(int i) const;
+
 
     /**
      * The vertex (0,0,0) coincides with a coarse grid vertex, the (3,0,0) does
@@ -187,19 +246,19 @@ struct peano4::datamanagement::VertexMarker {
       double                                       tolerance          = tarch::la::NUMERICAL_ZERO_DIFFERENCE
     ) const;
 
+
     /**
      * Each vertex is surrounded by @f$ 2^d @f$ cells. In reality,
      * it might be fewer of them, as we might have to deal with a hanging vertex,
      * but logically we can always assume that there were @f$ 2^d @f$.
      * Let's assume that they are grouped lexicographically around the vertex,
      * i.e. we have
-     * <pre>
-
-2 | 3
---+--
-0 | 1
-
-       </pre>
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * 2 | 3
+     * --+--
+     * 0 | 1
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * cells centred around a central vertex denoted by the plus in this fancy
      * ASCII art. If x falls into the cell 1, this routine would return (1,0).
@@ -207,7 +266,6 @@ struct peano4::datamanagement::VertexMarker {
      *
      */
     tarch::la::Vector<Dimensions,int> getRelativeAdjacentCell( const tarch::la::Vector<Dimensions,double>& x ) const;
-
 };
 
 

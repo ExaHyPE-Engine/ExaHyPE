@@ -16,9 +16,9 @@ import exahype2.solvers.fv.actionsets
 from .PDETerms import PDETerms
 
 class FV(object):
-  """ 
-    An abstract finite volume solver step sizes that works on patch-based
-    AMR with a halo layer of one.
+  """ !
+  
+    Abstract finite volume solver step sizes that works on patch-based AMR with a halo layer of one.
 
     FV is the base class of all FV solvers. It defines what kind of action sets do 
     exist, i.e. what in principle can be done while we run through the grid. It also
@@ -142,6 +142,8 @@ class FV(object):
          _action_set_postprocess_solution
 
     You can use this attribute to add postprocessing routines to the code.
+    
+    
   """
 
   def __init__(
@@ -154,8 +156,12 @@ class FV(object):
     min_volume_h,
     max_volume_h,
     plot_grid_properties,
-    kernel_namespace):
-    """
+    kernel_namespace,
+    baseline_action_set_priority=0):
+    """!
+
+  Create solver    
+    
   name: string
      A unique name for the solver. This one will be used for all generated 
      classes. Also the C++ object instance later on will incorporate this 
@@ -224,6 +230,7 @@ class FV(object):
     self._action_set_copy_new_faces_onto_old_faces            = None
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = None
     self._action_set_postprocess_solution                     = None
+    self._action_set_preprocess_solution                      = None
 
     self._compute_time_step_size                    = "#error Not yet defined"
     self._compute_new_time_step_size                = "#error Not yet defined"
@@ -253,6 +260,8 @@ class FV(object):
 
     self._hold_cell_data_on_heap_with_smart_pointer = False
     self._hold_face_data_on_heap_with_smart_pointer = False
+    
+    self._baseline_action_set_priority = baseline_action_set_priority
 
     self.create_data_structures()
     self.create_action_sets()
@@ -364,7 +373,10 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
   @abstractmethod
   def create_data_structures(self):
-    """
+    """!
+    
+     Create data structures required by all Finite Volume solvers
+    
      Recall in subclasses if you wanna change the number of unknowns
      or auxiliary variables. See class description's subsection on 
      data flow.
@@ -469,12 +481,14 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
   @abstractmethod
   def create_action_sets(self):
-    """
+    """!
+    
+     Create all the action sets
     
      Overwrite in subclasses if you wanna create different
-     action sets.
+     action sets. Subclasses also might redefine the invocation order.
      
-     :: Call order and ownership
+     ## Call order and ownership
      
      This operation can be called multiple times. However, only the very
      last call matters. All previous calls are wiped out.
@@ -486,7 +500,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      specialised) run through all create_data_structure() variants 
      within the inheritance tree.
      
-     :: Recreation vs backup (state discussion)
+     ## Recreation vs backup (state discussion)
      
      We faced some issues with action sets that should not be 
      overwritten. For example, the postprocessing should not be overwritten
@@ -520,31 +534,68 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     # only once if it does not exist
     if self._action_set_postprocess_solution == None:
       self._action_set_postprocess_solution                   = exahype2.solvers.fv.actionsets.EmptyPostprocessSolution( self )
+    if self._action_set_preprocess_solution == None:
+      self._action_set_preprocess_solution                    = exahype2.solvers.fv.actionsets.EmptyPreprocessSolution( self )
     
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
         
     self._action_set_update_cell = None
 
+    self._action_set_initial_conditions.priority = self._baseline_action_set_priority+1
+    self._action_set_initial_conditions_for_grid_construction.priority = self._baseline_action_set_priority + 1
+    self._action_set_AMR.priority = self._baseline_action_set_priority + 2
+    self._action_set_AMR_commit_without_further_analysis.priority = self._baseline_action_set_priority + 2
+    self._action_set_handle_boundary.priority = self._baseline_action_set_priority + 1
+    self._action_set_project_patch_onto_faces.priority = self._baseline_action_set_priority + 1 # touch cell last time, i.e. leave cell
+    self._action_set_roll_over_update_of_faces.priority = self._baseline_action_set_priority + 1
+    self._action_set_copy_new_faces_onto_old_faces.priority = self._baseline_action_set_priority + 1
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = self._baseline_action_set_priority + 1
+    self._action_set_postprocess_solution.priority = self._baseline_action_set_priority # touch cell last time, i.e. leave cell
+    self._action_set_preprocess_solution.priority  = self._baseline_action_set_priority
 
 
   def _store_cell_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
   def _load_cell_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
 
   def _store_face_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
   def _load_face_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
@@ -615,7 +666,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
 
   def add_actions_to_init_grid(self, step):
-    """
+    """!
+    
+     Add all the action sets to init grid
     
      The AMR stuff has to be the very first thing. Actually, the AMR routines' 
      interpolation doesn't play any role here. But the restriction indeed is
@@ -624,7 +677,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      add the AMR action set first which means it will be called last when we go
      from fine to coarse levels within the tree.
      
-     :: Ordering ::
+     ## Ordering
      
      The order of the action sets is preserved throughout the steps down within
      the tree hierarchy. It is inverted throughout the backrolling. 
@@ -635,9 +688,15 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      - Copy new face data into old face data, as this is the initial sweep, i.e.
        the old face data otherwise might hold rubbish.
      - Restrict the data to the coarser level if we are on a hanging face. 
+     - The postprocessing is the very last thing. It does not matter if it 
+       plugs into touchCellFirstTime() or touchCellLastTime(). As we invert the
+       order when we backtrace, the postprocessing will have completed before
+       we invoke _action_set_project_patch_onto_faces, i.e. any update will 
+       be projected onto the faces.
      
     
     """
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
@@ -664,9 +723,11 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     else:
       step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
 
+
   @property
   def plot_description(self,):
     return self._plot_description
+
 
   @plot_description.setter
   def plot_description(self,description):
@@ -677,8 +738,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     """
     self._plot_description = description
 
+
   def add_actions_to_plot_solution(self, step, output_path):
-    """
+    """!
+    
+    Add action sets to plot solution step
+    
     
      Consult the discussion in add_actions_to_init_grid() around the order
      of the individual action sets.
@@ -738,9 +803,14 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
    
  
   def add_actions_to_perform_time_step(self, step):
-    """
+    """!
     
-    AMR
+    Add action sets to time step 
+    
+    See exahype2.solvers.fv.FV.add_actions_to_init_grid() for details on the 
+    ordering of the action sets.
+      
+    ## AMR
     
     It is important that we do the inter-grid transfer operators before we 
     apply the boundary conditions.
@@ -750,6 +820,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_update_face_label )
@@ -812,10 +883,10 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
-    output.makefile.add_h_file( "Abstract" + self._name + ".h" )
-    output.makefile.add_h_file( self._name + ".h" )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
-    output.makefile.add_cpp_file( self._name + ".cpp" )
+    output.makefile.add_h_file( "Abstract" + self._name + ".h", generated=True )
+    output.makefile.add_h_file( self._name + ".h", generated=True )
+    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
 
   def set_solver_constants(self, datastring): self._solver_constants = datastring
 
@@ -902,14 +973,14 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self.create_action_sets()
 
 
-  @patch_size.setter
+  @unknowns.setter
   def unknowns(self, value):
     self._unknowns = value
     self.create_data_structures()
     self.create_action_sets()
 
 
-  @patch_size.setter
+  @auxiliary_variables.setter
   def auxiliary_variables(self, value):
     self._auxiliary_variables = value
     self.create_data_structures()
@@ -923,8 +994,51 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
  
   @preprocess_reconstructed_patch.setter
   def preprocess_reconstructed_patch(self, kernel):
-    """
+    """!
   
+    Set a new processing kernel
+    
+    Before the actual update, the numerical solver takes the actual solution 
+    including all auxiliary variables and copies it into another array which
+    is calls reconstructedPatch (in FD4, this field is called oldQWithHalo).
+    This array is bigger than the actual patch data, as it also holds the 
+    halo. One the solution is copied over, the kernel writes in the halo 
+    data using data from the faces. This reconstructed object is now passed
+    into the compute kernel, which derives new values for all evolution 
+    variables. That is, the compute kernels' output does not hold the auxiliary
+    variables anymore, as they are not subject to the PDE. The new variables
+    are eventually written back into the real data, where they replace the
+    old quantities (the auxiliary variables in there remain untouched).
+    After the compute kernel has terminated, the reconstructed data including
+    the halo is thrown away.
+    
+    ## Auxiliary variables
+    
+    If you alter the auxiliary variables (material parameters) in the patch
+    preparation, this is absolutely fine, but the change will not be committed
+    into the real data. It is only there temporarily while the actual patch 
+    will continue to hold the original material parameters.
+    
+    You can alter the actual patch data Q in the preprocessing. If this 
+    actual data are evolution (PDE) parameters, these changes however will
+    be overwritten by the compute kernel. If you alter auxiliary variables
+    within the preprocessing within the patch (Q), then this is fine, but the
+    changes will not be visible to the reconstructed patch immediately. They
+    will be visible there in the next time step. So you might be well-advised
+    to alter the auxiliary variables in both the patch data and the 
+    reconstructed data. 
+    
+    ## Access
+    
+    We recommend that you use the AoS enumerator exahype2::enumerator::AoSLexicographicEnumerator.
+    This one has to be given 1 as number of cells/patches, it requires the size
+    of the patch, its halo size, you have to pass it the unkowns and the correct 
+    number of auxiliary parameters. If you want the preprocessing also to alter
+    the actual input, you need a second enumerator. In this second one, all 
+    parameters are the same besides the halo size, which you have to set to 0:
+    The input patch has no halo. This halo is only added temporarily in the 
+    reconstruction step.
+    
 
     """
     self._preprocess_reconstructed_patch  = kernel

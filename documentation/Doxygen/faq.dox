@@ -1,12 +1,15 @@
 /**
 
-@page faq FAQs and troubleshooting (user perspective)
+@page page_faq FAQs and troubleshooting (user perspective)
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
 
 
 Some frequently asked questions and problems are discussed below.
 
 
-## Autotools
+# Autotools
 
 - ***configure fails with ...*** Before you start
   any further investigation, update to the latest version of the autotools,
@@ -16,9 +19,9 @@ Some frequently asked questions and problems are discussed below.
   autoreconf --install
   libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
   ~~~~~~~~~~~~~~~~~~~
-  
+
 - ***checking host system type... Invalid configuration `./configure': machine `./configure-unknown' not recognized*** We got this
-  recently on a number of new Linux installations. In this case, adding 
+  recently on a number of new Linux installations. In this case, adding
   ~~~~~~~~~~~~~~~~~~~
   --build=x86_64 --host=x86_64
   ~~~~~~~~~~~~~~~~~~~
@@ -26,7 +29,7 @@ Some frequently asked questions and problems are discussed below.
 
 
 
-## Compilation
+# Compilation
 
 - ***My compiler yields warnings of the type***
   ~~~~~~~~~~~~~~~~~~~
@@ -37,7 +40,7 @@ Some frequently asked questions and problems are discussed below.
   ```-Wno-unknown-attributes``` eliminates the warnings.
 
 - ***My C++ version is too old***
-  Try to rerun configure with 
+  Try to rerun configure with
   ~~~~~~~~~~~~~~~~~~~
 CXXFLAGS=-std=c++0x
   ~~~~~~~~~~~~~~~~~~~
@@ -45,26 +48,26 @@ CXXFLAGS=-std=c++0x
   ~~~~~~~~~~~~~~~~~~~
 CXXFLAGS=--std=c++0x
   ~~~~~~~~~~~~~~~~~~~
-  Some compilers want you to use two hyphens, others expect one. Please note 
+  Some compilers want you to use two hyphens, others expect one. Please note
   that most Clang-based compiler installations do not bring their own C++ standard
-  library to the table. They use the pre-existing GCC STL. Now, if your 
-  Clang-based compiler - that includes NVIDIA and Intel - is built against a 
+  library to the table. They use the pre-existing GCC STL. Now, if your
+  Clang-based compiler - that includes NVIDIA and Intel - is built against a
   version of GNU whose STL is too old, you will get errors despite the std
-  flag. In this case, you have to load a newer GCC module *after* you have 
+  flag. In this case, you have to load a newer GCC module *after* you have
   loaded your Intel, NVIDIA or Clang module. You basically load the Clang-based
   compiler which will introduce a GNU STL, i.e. set the corresponding environment
-  variables. After that, you manually load a newer GCC which redirects all of 
-  these variables. 
+  variables. After that, you manually load a newer GCC which redirects all of
+  these variables.
 
   If there are multiple `gcc` versions present, it is possible for CLANG to
   automatically select an outdated version thus creates problem when
   compiling. You can check what is the selection version with `clang++ -v`.
-  Use this to select the other listed options: 
+  Use this to select the other listed options:
   `--gcc-install-dir=/path/to/new/gcc`.
 
 - ***My compiler reports***
   ~~~~~~~~~~~~~~~~~~~
-tarch/multicore/multicore.cpp:13:19: error: `align_val_t` is not a member of `std` 
+tarch/multicore/multicore.cpp:13:19: error: `align_val_t` is not a member of `std`
   13 |  return new (std::align_val_t(Alignment)) double[size];
   ~~~~~~~~~~~~~~~~~~~
   We have seen this error with GCC if the supported C++ generation is too old.
@@ -72,7 +75,7 @@ tarch/multicore/multicore.cpp:13:19: error: `align_val_t` is not a member of `st
 
 - ***My compiler yields errors like***
   ~~~~~~~~~~~~~~~~~~~
-`warning \#3191: scoped enumeration types are a C++11 feature` 
+`warning \#3191: scoped enumeration types are a C++11 feature`
   ~~~~~~~~~~~~~~~~~~~
   Your compiler seems not to have
   C++11 (or, newer) enabled by default. See remarks above.
@@ -84,7 +87,7 @@ tarch/multicore/multicore.cpp:13:19: error: `align_val_t` is not a member of `st
   ~~~~~~~~~~~~~~~~~~~
   We have seen this error with GCC if the supported C++ generation is too old.
   See remarks above.
-  
+
 - ***My compiler terminates with***
   ~~~~~~~~~~~~~~~~~~~
 `error: unknown attribute 'optimize' ignored*`
@@ -92,20 +95,20 @@ tarch/multicore/multicore.cpp:13:19: error: `align_val_t` is not a member of `st
    We have seen this issue notably on macOS
    with CLANG replacing GCC. Unfortunately, CLANG seems to pretend to be GNU on
    some systems and then the wrong header is included. Consult the remarks on
-   @ref compiler_specific_settings "compiler-specific settings". Ensure that 
-   the flag ```CompilerCLANG``` is enabled and used. 
-   
+   @ref compiler_specific_settings "compiler-specific settings". Ensure that
+   the flag ```CompilerCLANG``` is enabled and used.
+
 - ***My compiler terminates with errors when I enable OpenMP multithreading***
   Make sure that you are using a compiler with OpenMP 5.0 support, such as GCC 9.x.
-  
+
 - ***I configured Peano with HDF5, but my application (experiment or benchmark) will not compile***
   The application will parse the configure call used by Peano to feed its
   Makefile. To get
   the correct flags for HDF5 support for your experiment, you might want to add
   the following or similar flags to your Peano configuration call:
-  ~~~~~~~~~~~~~~~~~~~  
+  ~~~~~~~~~~~~~~~~~~~
 LDFLAGS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"
-  ~~~~~~~~~~~~~~~~~~~  
+  ~~~~~~~~~~~~~~~~~~~
   This list is not comprehense and might differ on each system. The safest way
   to find these flags is to run the HDF5 compiler with verbose. It is actually
   only a wrapper around your real compiler which sets some variables, i.e. the
@@ -118,39 +121,39 @@ LDFLAGS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"
   and CC point to the C++ compiler, as both are passed the same
   arguments by configure, which are actually only understood by the C++ version.
   So please ensure that both flags delegate to nvc++.
-  ~~~~~~~~~~~~~~~~~~~  
+  ~~~~~~~~~~~~~~~~~~~
 export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
 ./configure CXX=$NVCPP CC=$NVCPP ...
-  ~~~~~~~~~~~~~~~~~~~  
+  ~~~~~~~~~~~~~~~~~~~
   Furthermore, some compute kernels are not available with the NVIDIA tools, as the compiler is
   pretty picky when it decides which temporary variables it might place on the
   call stack. This should not affect Peano 4's core, but it can affect some
   extensions such as ExaHyPE.
 
-  
-  
-## Linking
+
+
+# Linking
 
 - ***My linker complains about a missing tbb, even though I do not use Intel's TBB***
   Intel has donated TBB to the open source community and Clang, for example, uses
-  it internally to realise its OpenMP scheduler. Unfortunately, the integration 
-  is sometimes not mature, i.e. the compiler then does not automatically add 
-  the library to its settings. Reconfigure with 
-  ~~~~~~~~~~~~~~~~~~~  
+  it internally to realise its OpenMP scheduler. Unfortunately, the integration
+  is sometimes not mature, i.e. the compiler then does not automatically add
+  the library to its settings. Reconfigure with
+  ~~~~~~~~~~~~~~~~~~~
 LDFLAGS="-ltbb"
-  ~~~~~~~~~~~~~~~~~~~  
+  ~~~~~~~~~~~~~~~~~~~
   and you should be fine.
-  
+
 - ***If I use Fortran as well, I get errors alike***
-  ~~~~~~~~~~~~~~~~~~~  
-undefined reference to for_stop_core 
+  ~~~~~~~~~~~~~~~~~~~
+undefined reference to for_stop_core
 undefined reference to for_write_seq_list
-  ~~~~~~~~~~~~~~~~~~~  
+  ~~~~~~~~~~~~~~~~~~~
   This tells you
   that the linker failed to find the Fortran standard libraries. For the GNU
   compilers, you need for example the flag -lgfortran while Intel requires
   -lifcore within the LDFLAGS.
-  You can add these flags manually via your Python script to the code, but 
+  You can add these flags manually via your Python script to the code, but
   I think this is a flaw. They belong into the configuration not into your
   Python script.
 
@@ -167,8 +170,8 @@ undefined reference to for_write_seq_list
   The Makefile which is generated by the Python API should follow this convention.
 
 
-## Runtime
-   
+# Runtime
+
   - ***My unit tests fail in the NodeTest***. We have found that GCC's
     STL is buggy (confirmed in version 9.3.0), although we do not know if this bug
     is found within the unordered_set, the bitset or the
@@ -179,46 +182,46 @@ undefined reference to for_write_seq_list
 
 
 
-## Python API
+# Python API
 
 -   ***`import peano4` yields not found error***. You haven't set your
     `PYTHONPATH` properly. Ensure that it points to Peano's python
     subdirectory. So use something similar to
-    
+
              export PYTHONPATH=~/git/Peano/python
 
--   My installation or paraview complains about ***ModuleNotFoundError: No module named 'numpy'***. 
+-   My installation or paraview complains about ***ModuleNotFoundError: No module named 'numpy'***.
     For some parts of Peano and its extensions, you need the package
     numpy. If you don't
     have numpy on your system install it with either of the following
     commands:
-    
-             pip3 install --user numpy 
-    
-    Similar arguments hold for jinja2. Please note that Peano's API 
+
+             pip3 install --user numpy
+
+    Similar arguments hold for jinja2. Please note that Peano's API
     and all extensions are written in a way that they can work without
     numpy in principle. However, not all features (solvers in ExaHyPE, e.g.)
-    might be available if you have no numpy. 
+    might be available if you have no numpy.
 
 
 
-## Performance analysis
+# Performance analysis
 
-- ***The Intel/NVIDIA tools do not provide meaningful insight*** Read through 
+- ***The Intel/NVIDIA tools do not provide meaningful insight*** Read through
   the vendor-specific \ref compiler_specific_settings "supercomputer/tool remarks"
-  and pick the vendor-specific built toolchain. After that, ensure that you 
+  and pick the vendor-specific built toolchain. After that, ensure that you
   profile the code in the profile version and not only in the release version.
   The release builds of the libraries do not yield much additional information
   that can be used to spot runtime flaws, e.g.
-- ***The Intel/NVIDIA tools yield too much data*** First, pick the  
+- ***The Intel/NVIDIA tools yield too much data*** First, pick the
   \ref compiler_specific_settings "vendor-specific toolchain" fitting to your system/compiler. After that,
   amend your log filter. See \ref tarch_logging for more info.
 
 
-## External tools
+# External tools
 
-- ***The Intel performance and correctness tools yield invalid or messed-up results*** Ensure 
-  you have built your code with -DTBB_USE_ASSERT -DTBB_USE_THREADING_TOOLS. 
+- ***The Intel performance and correctness tools yield invalid or messed-up results*** Ensure
+  you have built your code with -DTBB_USE_ASSERT -DTBB_USE_THREADING_TOOLS.
   Please consult the vendor-specific \ref compiler_specific_settings "supercomputer/tool remarks"
 - ***I struggle to configure Peano 4 with Otter*** First, ensure you
   add --with-otter to your configure call. If the configure fails,
@@ -244,14 +247,12 @@ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:your-path/otter/build/lib:/opt/otf2/lib
     as the checks otherwise will fail.
 
 
-## Debugging
+# Debugging
 
-Debugging
----------
 
 - ***I can't see my log/trace statements.*** There's a whole set of
   things that can go wrong.
-  -   Check that your log filter specifies the class name. For efficiency 
+  -   Check that your log filter specifies the class name. For efficiency
       reasons, you can only filter per class. Ensure you don't specify
       methods. If you do so, Peano 4 thinks your method name is a
       (sub)class name and won't apply your filter.
@@ -273,14 +274,14 @@ Debugging
                       tarch::logging::LogFilter::FilterListEntry::TargetInfo,
                       tarch::logging::LogFilter::FilterListEntry::AnyRank,
                       "examples::algebraicmg",
-                      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry 
-                    ) 
+                      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry
+                    )
                   );
 
   -   If you are still unsure which log filters are active, insert
 
                    tarch::logging::LogFilter::getInstance().printFilterListToCout();
-                   
+
       into your code and see which entries it does enlist.
 
 - ***gdb says "not in executable format: file format not recognized"***.
@@ -292,8 +293,8 @@ Debugging
   library path should point to that subdirectory.
 
 
-## MPI troubleshooting
-  
+# MPI troubleshooting
+
 - ***My code crashes unexpectedly with malloc/free errors***. Please
   rerun your code with Intel MPI and the flag `-check_mpi`. You should
   not get any error reports. If you do, we have had serious problems
@@ -410,6 +411,6 @@ Parallelisation
     tarch::la::greaterEquals(p,0.0), Q\[0\], Q\[1\], Q\[2\], Q\[3\],
     Q\[4\], x, t, normal, p ); const double c = std::sqrt(
     std::max(0.0,gamma \* p \* irho) );
-  
+
  */
- 
+

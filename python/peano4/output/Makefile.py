@@ -2,8 +2,8 @@
 # use, please see the copyright notice at www.peano-framework.org
 import os
 import re
-import shutil
 import sys
+import shutil
 import subprocess
 import jinja2
 
@@ -19,7 +19,6 @@ from .CompileMode import CompileMode
 class Makefile(object):
   """ Represents the created makefile of a Peano4 project """
   default_overwrite = True
-  cuda = using_cuda_backend()
 
   def __init__(self):
     self.clear()
@@ -216,11 +215,6 @@ the SISC paper
 #    self.d["LIBS"] += " -l" + library_name + " "
     self.d["LIBS"] += library_name + " "
 
-    if self.d['MODE'].lower() == "release":
-      self.d["CMAKE_LIBS"].append(f"{library_name}{self.d['DIM']}d")
-    else:
-      self.d["CMAKE_LIBS"].append(f"{library_name}{self.d['DIM']}d_{self.d['MODE'].lower()}")
-
   def set_mode( self, mode ):
     """
       mode should be of type CompileMode. Pass in
@@ -375,7 +369,7 @@ Error: if you call parse_configure_script_outcome(), please hand over directory 
 ./configure had been called. You passed """ + directory + """ and the script therefore
 did search for a file """ + input_file )
 
-  def add_h_file(self,filename,generated=True):
+  def add_h_file(self,filename,generated=False):
     """
      Add a new header filename.
      This is actually not needed for compilation,
@@ -388,33 +382,38 @@ did search for a file """ + input_file )
         Use this flag for generated files which can be tracked
         by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
     """
-    if self.generated_hfiles.count(filename)==0 and self.hfiles.count(filename)==0:
-      if generated:
-        self.generated_hfiles.append( filename )
-      else:
-        self.hfiles.append( filename )
-
-  def remove_h_file(self,filename,generated=True):
     if generated:
-      if filename in self.generated_hfiles: self.generated_hfiles.remove(filename)
+      if self.generated_hfiles.count(filename)==0 and self.hfiles.count(filename)==0:
+        self.generated_hfiles.append( filename )
     else:
-      if filename in self.hfiles: self.hfiles.remove(filename)
+      if self.hfiles.count(filename)==0:
+        self.hfiles.append( filename )
+        if self.generated_hfiles.count(filename) > 0:
+          self.generated_hfiles.remove(filename)
 
-  def add_cu_file(self, filename,generated=True):
-    if not using_cuda_backend():
-      print("You have called the function add_cu_file but the build system could not detect CUDA during configuration,",
-            " this might result with the build failing!")
+  def remove_h_file(self,filename):
+    if filename in self.generated_hfiles:
+      self.generated_hfiles.remove(filename)
+    if filename in self.hfiles:
+      self.hfiles.remove(filename)
 
+  def add_cu_file(self,filename,generated=False):
     if generated:
       if self.generated_cufiles.count(filename)==0 and self.cufiles.count(filename)==0:
         self.generated_cufiles.append(filename)
-      else:
-        print(f"The file {filename} has been already added, therefore skipping")
     else:
-      if self.cufiles.count(filename)==0 and self.generated_cufiles.count(filename)==0:
+      if self.cufiles.count(filename)==0:
         self.cufiles.append(filename)
+        if self.generated_cufiles.count(filename) > 0:
+          self.generated_cufiles.remove(filename)
 
-  def add_cpp_file(self,filename,generated=True):
+  def remove_cu_file(self,filename):
+    if filename in self.generated_cufiles:
+      self.generated_cufiles.remove(filename)
+    if filename in self.cufiles:
+      self.cufiles.remove(filename)
+
+  def add_cpp_file(self,filename,generated=False):
     """
      Add a new cpp filename. This is basically a set implementation, i.e., you can
      add files multiple times, but they are not inserted multiple times. This
@@ -434,46 +433,34 @@ did search for a file """ + input_file )
     if using_cuda_backend():
       old_filename = filename
       filename = filename.replace(".cpp", ".cu")
-      print(f"The file {old_filename} has prefix .cpp, but using cuda backend. It will be generated as a cuda file with .cu prefix as {filename}" )
       try:
         shutil.copy(old_filename, filename)
       except:
         pass
-
-      self.add_cu_file(filename=filename, generated=True)
+      self.add_cu_file(filename=filename,generated=True)
     else:
       if generated:
+        # Non-generated file takes precedence over generated files.
+        # We only add a generated file if has not been added yet as a non-generated file instead.
         if self.generated_cppfiles.count(filename)==0 and self.cppfiles.count(filename)==0:
           self.generated_cppfiles.append(filename)
       else:
-        if self.cppfiles.count(filename)==0 and self.generated_cppfiles.count(filename)==0:
+        # If a file is a non-generated file we definitely want to add it.
+        if self.cppfiles.count(filename)==0:
           self.cppfiles.append(filename)
+          # We ensure that we only add a .cpp file once.
+          # Otherwise we would get duplicated symbols errors.
+          # But we never delete a non-generated file.
+          if self.generated_cppfiles.count(filename) > 0:
+            self.generated_cppfiles.remove(filename)
 
-  def remove_cu_file(self,filename,generated=True):
-    if not using_cuda_backend():
-      print("You have called the function remove_cu_file but the build system could not detect CUDA during configuration,",
-            " this might result with the build failing!")
+  def remove_cpp_file(self,filename):
+    if filename in self.generated_cppfiles:
+      self.generated_cppfiles.remove(filename)
+    if filename in self.cppfiles:
+      self.cppfiles.remove(filename)
 
-    filename = filename.replace(".cpp", ".cu")
-    if generated:
-      if filename in self.generated_cufiles: self.generated_cupfiles.remove(filename)
-    else:
-      if filename in self.cufiles: self.cufiles.remove(filename)
-
-  def remove_cpp_file(self,filename,generated=True):
-    if not using_cuda_backend():
-      if generated:
-        if filename in self.generated_cppfiles: self.generated_cppfiles.remove(filename)
-      else:
-        if filename in self.cppfiles: self.cppfiles.remove(filename)
-    else:
-      filename = filename.replace(".cpp", ".cu")
-      if generated:
-        if filename in self.generated_cufiles: self.generated_cupfiles.remove(filename)
-      else:
-        if filename in self.cufiles: self.cufiles.remove(filename)
-
-  def add_Fortran_file(self,filename,generated=True):
+  def add_Fortran_file(self,filename,generated=False):
     """
      Add a new Fortran file.
 
@@ -495,17 +482,20 @@ did search for a file """ + input_file )
         Use this flag for generated files which can be tracked
         by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
     """
-    if self.generated_fortranfiles.count(filename)==0 and self.fortranfiles.count(filename)==0:
-      if generated:
-        self.generated_fortranfiles.append( filename )
-      else:
-        self.fortranfiles.append( filename )
-
-  def remove_Fortran_file(self,filename,generated=True):
     if generated:
-      if filename in self.generated_fortranfiles: self.generated_fortranfiles.remove(filename)
+      if self.generated_fortranfiles.count(filename)==0 and self.fortranfiles.count(filename)==0:
+        self.generated_fortranfiles.append( filename )
     else:
-      if filename in self.fortranfiles: self.fortranfiles.remove(filename)
+      if self.fortranfiles.count(filename)==0:
+        self.fortranfiles.append( filename )
+        if self.generated_fortranfiles.count(filename) > 0:
+          self.generated_fortranfiles.remove(filename)
+
+  def remove_Fortran_file(self,filename):
+    if filename in self.generated_fortranfiles:
+      self.generated_fortranfiles.remove(filename)
+    if filename in self.fortranfiles:
+      self.fortranfiles.remove(filename)
 
   def add_Fortran_module(self,module_file,force=False):
     """

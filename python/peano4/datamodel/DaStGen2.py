@@ -39,10 +39,10 @@ class DaStGen2Generator(object):
     self._data.data.write_header_file( self._data.namespace[-1] + "/" + self._data.name + ".h" )
     if using_cuda_backend():
       self._data.data.write_implementation_file(  self._data.namespace[-1] + "/" + self._data.name + ".cu" )
-      output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cu" )
+      output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cu", generated=True )
     else:
       self._data.data.write_implementation_file(  self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
-      output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
+      output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True )
 
 
 

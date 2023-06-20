@@ -274,6 +274,27 @@ namespace toolbox {
      * This threshold is hard. However, we can sieve into a coarser
      * level obviously to ensure that we don't violate it.
      *
+     * ## Optimisation
+     *
+     * I started off with this nice simple code
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *  const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.h() )     * MultilevelSortingTolerance * AsymmetricSortingDamping >= 2.0 * particle.getCutOffRadius();
+     *  const bool   fitsIntoNextFinerGridResolution = tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getCutOffRadius();
+     *
+     *  return marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE)
+     *     and fitsIntoThisGridResolution
+     *     and (
+     *       not fitsIntoNextFinerGridResolution
+     *       or
+     *       not marker.hasBeenRefined()
+     *     );
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * However, it turns out a lot of runtime is spent in getCutOffRadius(). It
+     * is not clear if the compiler manages to exploit the non-strict evaluation
+     * if we first define the two const bools. So I moved them now into the
+     * boolean expression, i.e. work without the explicit temporary variables.
      *
      * @see sieveParticle()
      */

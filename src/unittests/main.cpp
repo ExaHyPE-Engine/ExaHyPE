@@ -21,6 +21,23 @@
 #include "swift2/UnitTests.h"
 #endif
 
+#ifdef UseToolboxBlockstructured
+#include "toolbox/blockstructured/UnitTests.h"
+#endif
+
+#ifdef UseToolboxFiniteElements
+#include "toolbox/finiteelements/UnitTests.h"
+#endif
+
+#ifdef UseToolboxMultiprecision
+#include "toolbox/multiprecision/UnitTests.h"
+#endif
+
+#ifdef UseToolboxParticles
+#include "toolbox/particles/UnitTests.h"
+#endif
+
+
 tarch::logging::Log _log("examples::unittests");
 
 void runTests() {
@@ -50,6 +67,35 @@ void runTests() {
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
   #endif
+
+  #ifdef UseToolboxBlockstructured
+  tests = toolbox::blockstructured::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+  #endif
+
+  #ifdef UseToolboxFiniteElements
+  tests = toolbox::finiteelements::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+  #endif
+
+  #ifdef UseToolboxMultiprecision
+  tests = toolbox::multiprecision::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+  #endif
+
+  #ifdef UseToolboxParticles
+  tests = toolbox::particles::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+  #endif
+
 
   if (unitTestsErrors != 0) {
     logError("main()", "unit tests failed. Quit.");

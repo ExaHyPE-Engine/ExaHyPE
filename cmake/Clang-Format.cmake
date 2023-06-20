@@ -11,9 +11,11 @@ if(CLANGFORMAT)
   if(CLANGFORMATRESULT EQUAL 0)
     message(STATUS "Found ${CLANGFORMATVERSION}: " ${CLANGFORMAT})
 
-    file(GLOB_RECURSE ALL_CXX_SOURCE_FILES
+    file(GLOB_RECURSE ALL_SOURCE_FILES
       ${CMAKE_SOURCE_DIR}/src/*.[ch]pp
       ${CMAKE_SOURCE_DIR}/src/*.cpph
+      ${CMAKE_SOURCE_DIR}/src/*.cu
+      ${CMAKE_SOURCE_DIR}/src/*.cuh
     )
 
     if(NOT TARGET clang-format)
@@ -23,7 +25,7 @@ if(CLANGFORMAT)
           -style=file
           -fallback-style=none
           -verbose
-          ${ALL_CXX_SOURCE_FILES}
+          ${ALL_SOURCE_FILES}
           SOURCES "${CMAKE_SOURCE_DIR}/.clang-format"
           COMMENT "Format all source files. This may take a while..."
       )
@@ -38,7 +40,7 @@ if(CLANGFORMAT)
                     -output-replacements-xml
                     -fallback-style=none
                     -verbose
-                    ${ALL_CXX_SOURCE_FILES}
+                    ${ALL_SOURCE_FILES}
                     | grep -q "Replacement offset"
                 SOURCES "${CMAKE_SOURCE_DIR}/.clang-format"
                 COMMENT "Checking clang-format changes."
@@ -51,7 +53,7 @@ if(CLANGFORMAT)
                     -style=file
                     -dry-run
                     -fallback-style=none
-                    ${ALL_CXX_SOURCE_FILES}
+                    ${ALL_SOURCE_FILES}
                 SOURCES "${CMAKE_SOURCE_DIR}/.clang-format"
                 COMMENT "Running clang-format in dry mode."
             )

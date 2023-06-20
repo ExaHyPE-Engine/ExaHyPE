@@ -185,7 +185,12 @@ SHORT_NAMES            = NO
 # description.)
 # The default value is: NO.
 
-JAVADOC_AUTOBRIEF      = NO
+#
+# This is important, as Peano documentation usually all have a single header
+# line 
+#
+
+JAVADOC_AUTOBRIEF      = YeS
 
 # If the JAVADOC_BANNER tag is set to YES then doxygen will interpret a line
 # such as
@@ -448,7 +453,7 @@ TYPEDEF_HIDES_STRUCT   = NO
 # the optimal cache size from a speed point of view.
 # Minimum value: 0, maximum value: 9, default value: 0.
 
-LOOKUP_CACHE_SIZE      = 0
+LOOKUP_CACHE_SIZE      = 9
 
 # The NUM_PROC_THREADS specifies the number threads doxygen is allowed to use
 # during processing. When set to 0 doxygen will based this on the number of
@@ -855,11 +860,11 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = src \
-                         benchmarks \
                          python \
-                         documentation/Doxygen \
+                         tutorials \
+                         benchmarks \
                          applications \
-                         benchmarks
+                         documentation/Doxygen \
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -925,7 +930,24 @@ EXCLUDE_SYMLINKS       = NO
 # Note that the wildcards are matched against the file with absolute path, so to
 # exclude all test directories for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       =
+EXCLUDE_PATTERNS       = */benchmarks/*/celldata \
+                         */benchmarks/*/globaldata \
+                         */benchmarks/*/observers \
+                         */benchmarks/*/repositories \
+                         */benchmarks/*/vertexdata \
+                         */benchmarks/*/Constants.h \
+                         */applications/*/celldata \
+                         */applications/*/globaldata \
+                         */applications/*/observers \
+                         */applications/*/repositories \
+                         */applications/*/vertexdata \
+                         */applications/*/Constants.h \
+                         */tutorials/*/celldata \
+                         */tutorials/*/globaldata \
+                         */tutorials/*/observers \
+                         */tutorials/*/repositories \
+                         */tutorials/*/vertexdata \
+                         */tutorials/*/Constants.h
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
@@ -1240,7 +1262,7 @@ HTML_STYLESHEET        =
 # list). For an example see the documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_STYLESHEET  =
+HTML_EXTRA_STYLESHEET  = documentation/styleSheet.css
 
 # The HTML_EXTRA_FILES tag can be used to specify one or more extra images or
 # other source files which should be copied to the HTML output directory. Note
@@ -2201,7 +2223,7 @@ INCLUDE_PATH           =
 # used.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-INCLUDE_FILE_PATTERNS  =
+INCLUDE_FILE_PATTERNS   = *.h *.hpp *.cpph
 
 # The PREDEFINED tag can be used to specify one or more macro names that are
 # defined before the preprocessor is started (similar to the -D option of e.g.

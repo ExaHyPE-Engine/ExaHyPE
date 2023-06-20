@@ -111,7 +111,6 @@ class peano4::grid::PeanoCurve {
      * with the integer counter and this result makes the iterate a cell-local
      * traversal. So a typical loop over all vertices of a cell along the Peano
      * SFC reads as
-     *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      * const std::bitset<Dimensions> coordinates = PeanoCurve::getFirstVertexIndex(state);
      * for (int i=0; i<TwoPowerD; i++) {

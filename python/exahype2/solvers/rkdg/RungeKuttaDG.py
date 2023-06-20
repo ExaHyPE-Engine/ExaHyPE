@@ -163,7 +163,8 @@ class RungeKuttaDG(object):
                rk_order, 
                polynomial_basis, 
                face_projections: FaceProjections, 
-               unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
+               unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties,
+               baseline_action_set_priority = 0):
     """
     
   Constructor of the Runge-Kutta Discontinuous Galerkin solver
@@ -269,6 +270,7 @@ class RungeKuttaDG(object):
     self.select_dofs_to_print             = None
     
     self._action_set_postprocess_solution = None   
+    self._action_set_preprocess_solution  = None   
 
     self._compute_eigenvalue        = False
     
@@ -303,6 +305,8 @@ class RungeKuttaDG(object):
 
     self._hold_cell_data_on_heap_with_smart_pointer = False
     self._hold_face_data_on_heap_with_smart_pointer = False
+    
+    self._baseline_action_set_priority = baseline_action_set_priority
     
     self.create_data_structures()
     self.create_action_sets()
@@ -644,28 +648,73 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     
     if self._action_set_postprocess_solution==None:
       self._action_set_postprocess_solution                                             = exahype2.solvers.rkdg.actionsets.EmptyPostprocessSolution(solver=self)
+    if self._action_set_preprocess_solution==None:
+      self._action_set_preprocess_solution                                              = exahype2.solvers.rkdg.actionsets.EmptyPreprocessSolution(solver=self)
 
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
+
+    self._action_set_update_face_label.priority                                       = self._baseline_action_set_priority + 1  
+    self._action_set_update_cell_label.priority                                       = self._baseline_action_set_priority + 1
+    self._action_set_linear_combination_of_estimates.priority                         = self._baseline_action_set_priority + 2
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = self._baseline_action_set_priority + 2
+    self._action_set_project_linear_combination_onto_faces.priority                   = self._baseline_action_set_priority + 3 # depends on lienar combination of estimates
+    self._action_set_solve_volume_integral.priority                                   = self._baseline_action_set_priority + 3 # the two 3s could run in parallel
+    self._action_set_handle_boundary.priority                                         = self._baseline_action_set_priority + 2
+    self._action_set_solve_Riemann_problem.priority                                   = self._baseline_action_set_priority + 3 # boundary has to be known
+    self._action_set_add_volume_and_face_solution.priority                            = self._baseline_action_set_priority + 3 # can also run in parallel, as it never occurs at same time
+    self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.priority = self._baseline_action_set_priority + 4 # depends on other guys
+    self._action_set_AMR.priority                                                     = self._baseline_action_set_priority + 5
+    self._action_set_AMR_commit_without_further_analysis.priority                     = self._baseline_action_set_priority + 5
+    
+    self._action_set_initial_conditions.priority                                      = self._baseline_action_set_priority + 1
+    self._action_set_initial_conditions_for_grid_construction.priority                = self._baseline_action_set_priority + 1
+    
+    self._action_set_preprocess_solution.priority                                     = self._baseline_action_set_priority # touch cell first time, i.e. enter cell
+    self._action_set_postprocess_solution.priority                                    = self._baseline_action_set_priority # touch cell last time, i.e. leave cell
         
 
   def _store_cell_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
   def _load_cell_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
 
   def _store_face_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
   def _load_face_data_default_guard(self):
+    """!
+    
+    Extend the guard via ands only. Never use an or, as subclasses might 
+    extend it as well, and they will append further ends.
+    
+    """
     return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
@@ -762,6 +811,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      
     
     """
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_initial_conditions ) 
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
@@ -903,6 +953,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
+    step.add_action_set( self._action_set_preprocess_solution )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_linear_combination_of_estimates )
@@ -968,8 +1019,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
-    output.makefile.add_cpp_file( self._name + ".cpp" )
+    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
 
   def set_solver_constants(self, datastring): self._solver_constants = datastring
 
@@ -1078,14 +1129,14 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self.create_action_sets()
 
 
-  @patch_size.setter
+  @unknowns.setter
   def unknowns(self, value):
     self._unknowns = value
     self.create_data_structures()
     self.create_action_sets()
 
 
-  @patch_size.setter
+  @auxiliary_variables.setter
   def auxiliary_variables(self, value):
     self._auxiliary_variables = value
     self.create_data_structures()
@@ -1119,8 +1170,6 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
 
-    if boundary_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
-      assert False, "boundary conditions cannot be none"
     if refinement_criterion==exahype2.solvers.fv.PDETerms.None_Implementation:
       assert False, "refinement criterion cannot be none"
     if initial_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
@@ -1141,12 +1190,12 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
   
   @property
   def postprocess_updated_cell_after_Runge_Kutta_step(self):
-    return self._postprocess_updated_cell
+    return self._postprocess_updated_cell_after_Runge_Kutta_step
 
 
   @property
   def postprocess_updated_cell_after_final_linear_combination(self):
-    return self._postprocess_updated_cell
+    return self._postprocess_updated_cell_after_final_linear_combination
 
 
   @postprocess_updated_cell_after_Runge_Kutta_step.setter

@@ -138,7 +138,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     """
     super(GlobalFixedTimeStep,self).add_implementation_files_to_project(namespace,output, dimensions)
     for f in self._Riemann_solver_implementation_files:
-      output.makefile.add_Fortran_file(f)
+      output.makefile.add_Fortran_file(f, generated=True)
 
 
   def set_pointwise_constraint(self, kernel):

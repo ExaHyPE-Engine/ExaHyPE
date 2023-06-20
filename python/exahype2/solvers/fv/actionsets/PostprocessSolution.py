@@ -33,7 +33,9 @@ class EmptyPostprocessSolution(AbstractFVActionSet):
 
 
 class VolumeWisePostprocessSolution(AbstractFVActionSet):
-  """
+  """!
+  
+  Run over solution volume by volume
   
   PostprocessSolution differs from other action sets, as I only create it once. See 
   FV.create_action_sets(). Once the instance does exist, you can tailor it. But you

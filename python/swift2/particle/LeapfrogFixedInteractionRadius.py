@@ -7,6 +7,9 @@ import peano4
 import dastgen2
 import peano4.dastgen2
 
+from abc import ABC
+
+
 class LeapfrogFixedInteractionRadius(Particle):
   """
   
@@ -232,3 +235,17 @@ class LeapfrogFixedInteractionRadius(Particle):
       ),
     ]
 
+
+  def initialisation_steps(self):
+    """!
+    
+    No particular initialisation required
+    
+    """
+    return [] 
+
+
+  #@property
+  #def readme_descriptor(self):
+  #  assert False, "not yet written"
+  #  return """ I will au aufgerufen werden"""

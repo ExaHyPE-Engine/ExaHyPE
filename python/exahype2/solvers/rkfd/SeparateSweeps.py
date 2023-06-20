@@ -14,7 +14,7 @@ from exahype2.solvers.ButcherTableau                import ButcherTableau
 
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
-  """
+  """!
   
   Update one cell, i.e. compute Runge-Kutta step on it
   
@@ -315,6 +315,7 @@ class SeparateSweeps( CellCenteredFiniteDifferences ):
     """
     super(SeparateSweeps, self).create_action_sets()
     self._action_set_update_cell = UpdateCell(self)
+    self._action_set_update_cell.priority = self._baseline_action_set_priority + 4
     self._action_set_compute_final_linear_combination.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)
     self._action_set_project_patch_onto_faces.guards        = [
       "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
@@ -347,8 +348,6 @@ class SeparateSweeps( CellCenteredFiniteDifferences ):
     if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
     if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
     
-    if boundary_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
-      assert False, "boundary conditions cannot be none"
     if refinement_criterion==exahype2.solvers.fv.PDETerms.None_Implementation:
       assert False, "refinement criterion cannot be none"
     if initial_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
