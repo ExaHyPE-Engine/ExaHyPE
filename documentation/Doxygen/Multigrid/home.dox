@@ -5,6 +5,7 @@
 \li \subpage multigrid_petsc
 \li \subpage multigrid_tutorials
 \li \subpage benchmark_multigrid_petsc_poisson
+\li \subpage multigrid_enumeration
 
 Peano's multigrid extension provides stand-alone multigrid solers. However, the
 solver ingredients are designed in a way that they can be used by other codes, 
