@@ -30,8 +30,6 @@ void swift2::kernels::computeDensity(
     if ( not localParticle->getCellHasUpdatedParticle() ) {
       for (auto* activeParticle: activeParticles ) {
 
-assertion2(localParticle->getDensityReset() == 1, "DENSITY NOT RESET PROPERLY", localParticle->toString());
-
         /* Retrieve basic properties of local and active particles */
         const double h_a = localParticle->getSmoothingLength();
         const double m_a = localParticle ->getMass();
@@ -65,7 +63,6 @@ assertion2(localParticle->getDensityReset() == 1, "DENSITY NOT RESET PROPERLY", 
           /* SWIFT KERNEL */
           double w_a, dwa_dx, dwa_dh;
           kernel_deval(q_a, w_a, dwa_dx);
-          // W_a = w / std::pow( h_a, hydroDimensions );
           dwa_dh = - ( hydroDimensions * w_a + q_a * dwa_dx );
 
           /* Increment density */
@@ -204,10 +201,10 @@ void swift2::kernels::computeHydroForce(
         /* Assemble the acceleration */
         const double acc = sph_acc_term + visc_acc_term;
 
-assertion9(std::isfinite(visc_acc_term), visc_acc_term, localParticle->toString(), activeParticle->toString(),
-    wa_dr, f_ab, wb_dr, f_ba, r_inv, visc
-    );
-assertion3(std::isfinite(sph_acc_term), sph_acc_term, localParticle->toString(), activeParticle->toString());
+        assertion9(std::isfinite(visc_acc_term), visc_acc_term, localParticle->toString(), activeParticle->toString(),
+            wa_dr, f_ab, wb_dr, f_ba, r_inv, visc
+            );
+        assertion3(std::isfinite(sph_acc_term), sph_acc_term, localParticle->toString(), activeParticle->toString());
 
         /* Use the force */
         localParticle->setA( localParticle->getA() - m_b * acc * dx );
@@ -222,10 +219,6 @@ assertion3(std::isfinite(sph_acc_term), sph_acc_term, localParticle->toString(),
         const double du_dt_a = sph_du_term_a + visc_du_term;
 
         const double udot = localParticle->getUDot();
-assertion11( std::abs(udot) < 1e5,
-    localParticle->toString(), activeParticle->toString(), du_dt_a, sph_du_term_a, visc_du_term, m_b,
-    visc_acc_term, dvdr, P_over_rho2_a, r_inv, wa_dr
-    );
 
         /* Internal energy time derivative */
         localParticle->setUDot(localParticle->getUDot() + m_b * du_dt_a);
@@ -246,6 +239,5 @@ assertion11( std::abs(udot) < 1e5,
     }
   }
 }
-
 
 

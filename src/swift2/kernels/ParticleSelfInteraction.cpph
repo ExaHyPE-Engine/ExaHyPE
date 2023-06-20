@@ -1,8 +1,6 @@
 #include "swift2/kernels/kernel_hydro.h"
 #include "swift2/kernels/equation_of_state.h"
 
-#define HACK_SML 0.0125
-
 
 template <typename ParticleContainer, typename Particle>
 void swift2::kernels::genericSelfInteraction(
@@ -31,8 +29,6 @@ void swift2::kernels::prepareDensityCalculation(
       particle->setDiv_v   (0.0);
       particle->setRot_v   (0.0);
 
-particle->setDensityReset(1);
-
       /* Not originally in SWIFT */
       particle->setNcount  (0);
     }
@@ -56,7 +52,6 @@ void swift2::kernels::endDensityCalculation(
     ) {
 
       // @TODO add adds/multiplies the cosmological terms if need be.
-particle->setDensityReset(0);
 
       /* Retrieve some properties */
       const double m_a = particle->getMass();
@@ -103,8 +98,6 @@ particle->setDensityReset(0);
         const double rho_a = particle->getDensity();
         const double m_a = particle->getMass();
         const double h_a = particle->getSmoothingLength();
-// TODO MLADEN remove this!!!!
-        particle->setSmoothingLength( HACK_SML );
 
         const double h_inv = 1.0 / h_a;
 
@@ -282,8 +275,6 @@ particle->setDensityReset(0);
 
           /* Ok, correct then */
           particle->setSmoothingLength( h_new );
-// TODO MLADEN remove this!!!!
-          particle->setSmoothingLength( HACK_SML );
 
           /* Increase the iteration counter */
           particle->setIterCount( particle->getIterCount() + 1 );
@@ -295,8 +286,6 @@ particle->setDensityReset(0);
           /* However, if this is iter 0, we still update */
           if (particle->getIterCount() == 0) {
             particle->setSmoothingLength( h_new );
-// TODO MLADEN remove this!!!!
-            particle->setSmoothingLength( HACK_SML );
           }
 
           /* Flag that particle has already converged */
@@ -324,8 +313,6 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
     ) {
       /* Retrieve some properties */
       const double m_a = particle->getMass();
-// TODO MLADEN remove this!!!!
-      particle->setSmoothingLength( HACK_SML );
       const double h_a = particle->getSmoothingLength();
 
       /* Some smoothing length multiples */
@@ -333,21 +320,11 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
       const double h_inv_dim = std::pow( h_inv, hydroDimensions );
       const double h_inv_dim_plus_one = h_inv_dim * h_inv;
 
-assertion2(std::isfinite(particle->getDensity()), "before update", particle->toString());
-assertion2(std::isfinite(particle->getWcount()), "before update", particle->toString());
-assertion2(std::isfinite(particle->getRho_dh()), "before update", particle->toString());
-assertion2(std::isfinite(particle->getWcount_dh()), "before update", particle->toString());
-
       /* Final operation. Add the self-contributions (i.e. at q=0) */
       particle->setDensity  ( (particle->getDensity()   + m_a * kernel_root ) * h_inv_dim );
       particle->setWcount   ( (particle->getWcount()    +       kernel_root ) * h_inv_dim );
       particle->setRho_dh   ( (particle->getRho_dh()    + m_a * (-hydroDimensions * kernel_root)) * h_inv_dim_plus_one );
       particle->setWcount_dh( (particle->getWcount_dh() +       (-hydroDimensions * kernel_root)) * h_inv_dim_plus_one );
-
-assertion2(std::isfinite(particle->getDensity()), "after update", particle->toString());
-assertion2(std::isfinite(particle->getWcount()), "after update", particle->toString());
-assertion2(std::isfinite(particle->getRho_dh()), "after update", particle->toString());
-assertion2(std::isfinite(particle->getWcount_dh()), "after update", particle->toString());
 
       /* Not needed in SWIFT */
       particle->setNcount   ( particle->getNcount()    + 1 );
@@ -356,21 +333,18 @@ assertion2(std::isfinite(particle->getWcount_dh()), "after update", particle->to
       // @TODO: implement cosmological factors
       const double a_inv2 = 1.0;
 
-assertion2(std::isfinite(particle->getRot_v()), "before update", particle->toString());
-assertion2(std::isfinite(particle->getDiv_v()), "before update", particle->toString());
-
       /* Finish calculation of the velocity curl components */
       particle->setRot_v( particle->getRot_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
 
       /* Finish calculation of the velocity divergence */
       particle->setDiv_v( particle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
 
-assertion2(std::isfinite(particle->getRot_v()), "after update", particle->toString());
-assertion2(std::isfinite(particle->getDiv_v()), "after update", particle->toString());
-
-assertion2( std::isfinite(particle->getDensity()), particle->toString(), h_inv_dim);
-assertion2( std::isfinite(h_inv_dim)             , particle->toString(), rho_inv);
-assertion2( std::isfinite(particle->getDiv_v())  , particle->toString(), rho_inv);
+      assertion1( std::isfinite(particle->getDensity()), particle->toString());
+      assertion1( particle->getDensity() > 0., particle->toString());
+      assertion1( std::isfinite(particle->getWcount()), particle->toString());
+      assertion1( particle->getWcount() > 0., particle->toString());
+      assertion1( std::isfinite(particle->getRho_dh()), particle->toString());
+      assertion1( std::isfinite(particle->getWcount_dh()), particle->toString());
     }
   }
 }
@@ -391,6 +365,7 @@ void swift2::kernels::prepareHydroForceCalculation(
       const double rho_a = particle->getDensity();
       const double m_a = particle->getMass();
       const double h_a = particle->getSmoothingLength();
+      const double u_a = particle->getU();
 
       const double h_inv = 1.0 / h_a;
 
@@ -406,20 +381,14 @@ void swift2::kernels::prepareHydroForceCalculation(
       /* Compute the norm of div v */
       const double abs_div_v = tarch::la::abs( particle->getDiv_v() );
 
-const double Pinit = particle->getPressure();
-const double ua = particle->getU();
-assertion5(std::abs(Pinit) < 1e8, "before update", Pinit, rho_a, ua, particle->toString());
-assertion5(std::abs(rho_a) < 1e8, "before update", Pinit, rho_a, ua, particle->toString());
-assertion5(std::abs(ua) < 1e8, "before update", Pinit, rho_a, ua, particle->toString());
-
       /* Compute the pressure */
-      const double P_a = gas_pressure_from_internal_energy( rho_a, ua);
-assertion5(std::abs(P_a) < 1e8, "before update", Pinit, rho_a, ua, particle->toString());
+      const double P_a = gas_pressure_from_internal_energy( rho_a, u_a);
+      assertion1( std::isfinite(P_a), particle->toString());
+      assertion1( P_a > 0., particle->toString());
 
       /* Compute the sound speed */
       const double soundspeed = gas_soundspeed_from_pressure( rho_a, P_a );
-
-assertion5(std::abs(soundspeed) < 1e8, "before update", P_a, rho_a, ua, particle->toString());
+      assertion1( std::isfinite(soundspeed), particle->toString());
 
       /* Compute the "grad h" term  - Note here that we have \tilde{x}
        * as 1 as we use the local number density to find neighbours. This
@@ -431,6 +400,7 @@ assertion5(std::abs(soundspeed) < 1e8, "before update", P_a, rho_a, ua, particle
 
       float grad_h_term;
       /* Ignore changing-kernel effects when h ~= h_max */
+      // @TODO: add a global h_max
       // if (p->h > 0.9999f * hydro_props->h_max) {
       //   grad_h_term = 0.f;
       //   warning("h ~ h_max for particle with ID %lld (h: %g)", p->id, p->h);
@@ -452,29 +422,20 @@ assertion5(std::abs(soundspeed) < 1e8, "before update", P_a, rho_a, ua, particle
           grad_h_term = common_factor * particle->getRho_dh() / (1.f + grad_W_term);
         }
 
-      particle->setF(grad_h_term);
+        particle->setF(grad_h_term);
       // }
 
       /* Compute the Balsara Switch */
       const double balsara = alphaAV * abs_div_v /
                              (abs_div_v + curl_v + 0.0001 * soundspeed * h_inv);
 
-assertion5(std::abs(balsara) < 1e20, "before update", P_a, rho_a, ua, particle->toString());
-
-      // @TODO Mladen: grad_h_term is missing here. Potentially a problem for later,
-      // but now you are hardcoding h.
-
       assertion6( std::isfinite(balsara), particle->toString(), balsara, abs_div_v,
                                           curl_v, soundspeed, alphaAV );
 
       /* Update variables */
-
       particle->setPressure( P_a );
       particle->setSoundSpeed( soundspeed );
       particle->setBalsara( balsara );
-
-assertion4( std::isfinite(soundspeed), particle->toString(), rho_a, P_a, particle->getU() );
-assertion3( std::isfinite(P_a), particle->toString(), rho_a, particle->getU() );
 
       /* Reset the acceleration*/
       particle->setA   (0.0);
@@ -529,9 +490,6 @@ void swift2::kernels::flagBoundaryParticles(
         tarch::la::oneSmaller( particle->getX(), domainOffset + max_dist_boundary)
         or tarch::la::oneGreater( particle->getX(), domainOffset + domainSize - max_dist_boundary);
       particle->setIsBoundaryParticle(isBoundaryParticle);
-
-/* TODO: temporary */
-particle->setDensityReset(1);
 
     }
   }
