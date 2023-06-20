@@ -1,7 +1,5 @@
 #pragma once
 
-// @TODO: what happened to the license here?
-
 /**
  * @file kernel_hydro.h
  * @brief Kernel functions for SPH.

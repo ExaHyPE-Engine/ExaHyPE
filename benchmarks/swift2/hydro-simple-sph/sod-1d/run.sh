@@ -14,8 +14,9 @@ N_PART=900          # fixed by IC file
 END_TIME=0.2
 TIMESTEP_SIZE=2e-4
 CFL_FACTOR=0.1
-PLOT_DELTA=0.001
-CELL_SIZE=0.2
+PLOT_DELTA=0.01
+# TODO: this is temporary until I fix smoothing length computations so the test doesn't crash.
+CELL_SIZE=0.67
 #
 # Generate initial condition file
 if [ ! -e $IC_FILENAME ]

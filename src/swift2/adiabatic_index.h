@@ -1,8 +1,5 @@
 #pragma once
 
-// @TODO Mladen: Check how to deal with licenses. This needs a license and credit.
-// @TODO Mladen: Why doubles instead of doubles?
-
 /* Powers of the adiabatic index */
 #if defined(HYDRO_GAMMA_5_3)
 
