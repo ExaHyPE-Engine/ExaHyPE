@@ -1,5 +1,6 @@
 #ifndef EXASEIS_TEMPLATE_CURVILINEAR_DERIVATIVES
 #define EXASEIS_TEMPLATE_CURVILINEAR_DERIVATIVES
+// #include "kernels/KernelUtils.h"
 #include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
 
 namespace ExaSeis{

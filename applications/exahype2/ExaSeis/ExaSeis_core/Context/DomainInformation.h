@@ -2,6 +2,7 @@
 #define EXASEIS_DOMAIN_INFORMATION_HEADER
 
 #include <algorithm>
+// #include "exahype/solvers/Solver.h"
 #include "exahype2/aderdg/solvers/Solver.h"
 
 class DomainInformation{
