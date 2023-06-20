@@ -16,23 +16,23 @@
 #pragma pop_macro("Dimensions")
 #pragma pop_macro("assertion")
 
-
 namespace tarch::accelerator::info::sycl
 {
-  std::vector<std::vector<std::string>> queryDeviceInformation()
+  void queryDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix)
   {
-    constexpr unsigned int        kb      = 1024;
-    constexpr unsigned int        mb      = kb * kb;
+    constexpr unsigned int kb = 1024;
+    constexpr unsigned int mb = kb * kb;
     std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
 
-    unsigned int                          propertyCount =  tarch::accelerator::info::properties.size();
-    std::vector<std::vector<std::string>> propertyMatrix(propertyCount, std::vector<std::string>(devices.size(), "X"));
+    unsigned int propertyCount = tarch::accelerator::info::properties.size();
+    std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(devices.size(), "X"));
+    propertyMatrix = std::move(_propertyMatrix);
 
     unsigned int devId = 0;
-    for (const auto& dev : devices)
+    for (const auto &dev : devices)
     {
       auto work_item_sizes = dev.get_info<::sycl::info::device::max_work_item_sizes<3>>();
-      auto subgroup_sizes  = dev.get_info<::sycl::info::device::sub_group_sizes>();
+      auto subgroup_sizes = dev.get_info<::sycl::info::device::sub_group_sizes>();
 
       std::stringstream ss;
       if (subgroup_sizes.size() > 1)
@@ -69,33 +69,32 @@ namespace tarch::accelerator::info::sycl
       ss.str("");
 
       propertyMatrix[tarch::accelerator::info::getPropertyOffset("Device Name")][devId] = dev.get_info<
-        ::sycl::info::device::name>();
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Global Memory")][devId]
-        = std::to_string(dev.get_info<::sycl::info::device::global_mem_size>() / mb) + " mb";
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Clock Frequency")][devId]
-        = std::to_string(dev.get_info<::sycl::info::device::max_clock_frequency>()) + " mHz";
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Compute Units"
-      )][devId]
-        = std::to_string(dev.get_info<::sycl::info::device::max_compute_units>());
+          ::sycl::info::device::name>();
+      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Global Memory")][devId] = std::to_string(dev.get_info<::sycl::info::device::global_mem_size>() / mb) + " mb";
+      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Clock Frequency")][devId] = std::to_string(dev.get_info<::sycl::info::device::max_clock_frequency>()) + " mHz";
+      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Compute Units")][devId] = std::to_string(dev.get_info<::sycl::info::device::max_compute_units>());
 
       devId += 1;
     }
     return propertyMatrix;
   }
 
-  void printDeviceInformation()
+  void printDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix)
   {
-    auto        propertyMatrix  = queryDeviceInformation();
-    int         numberOfDevices = ::sycl::device::get_devices(::sycl::info::device_type::gpu).size();
-    std::string deviceInfoStr   = "";
-    if (numberOfDevices == 0){
-      deviceInfoStr   = "No offloading capable GPUs were found";
-    }else{
-      deviceInfoStr   = tarch::accelerator::info::parseMatrix(
-        propertyMatrix, numberOfDevices
-      );
+    auto propertyMatrix = queryDeviceInformation();
+    int numberOfDevices = ::sycl::device::get_devices(::sycl::info::device_type::gpu).size();
+    std::string deviceInfoStr = "";
+    if (numberOfDevices == 0)
+    {
+      deviceInfoStr = "No offloading capable GPUs were found";
+      logInfo("printDeviceInformation()", "" << deviceInfoStr);
     }
-    std::cout << deviceInfoStr << std::endl;
+    else
+    {
+      deviceInfoStr = tarch::accelerator::info::parseMatrix(
+          propertyMatrix, numberOfDevices);
+      logInfo("printDeviceInformation()", "\n" << deviceInfoStr);
+    }
   }
 
   std::vector<bool> testKernelLaunch()
@@ -106,20 +105,20 @@ namespace tarch::accelerator::info::sycl
 
     for (unsigned int i = 0; i < devices.size(); i++)
     {
-      ::sycl::device& device = devices[i];
+      ::sycl::device &device = devices[i];
       ::sycl::queue queue(device);
       ::sycl::buffer<bool, 1> a_sycl(&a, ::sycl::range<1>(1));
       std::cout << device.get_info<::sycl::info::device::name>() << std::endl;
 
-      queue.submit([&](::sycl::handler& cgh) {
+      queue.submit([&](::sycl::handler &cgh)
+                   {
         ::sycl::stream out(1024, 256, cgh);
         ::sycl::accessor a_acc = a_sycl.get_access<::sycl::access::mode::read_write>(cgh);
         //::sycl::accessor a_acc{a_sycl, cgh, ::sycl::read_write};
 
         cgh.parallel_for(1, [=] (::sycl::id<1> idx) {
           a_acc[0] = true;
-        });
-      });
+        }); });
 
       offloadResults[i] = a;
       a = false;
@@ -130,7 +129,8 @@ namespace tarch::accelerator::info::sycl
     return offloadResults;
   }
 
-  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks() {
+  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks()
+  {
     return std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds>();
   }
 } // namespace tarch::accelerator::info::sycl

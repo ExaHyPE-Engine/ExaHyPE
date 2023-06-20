@@ -3,15 +3,20 @@
 #include <string>
 #include <vector>
 
-namespace tarch::accelerator::info {
+#include "tarch/logging/Log.h"
+
+namespace tarch::accelerator::info
+{
   struct BenchmarkResultInNanoSeconds;
 }
 
-
 namespace tarch::accelerator::info::cuda
 {
-  std::vector<std::vector<std::string>>     queryDeviceInformation();
-  void                                      printDeviceInformation();
-  std::vector<bool>                         testKernelLaunch();
-  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks(uint threadsPerBlock);
+  static tarch::logging::Log _log("tarch::accelerator::info::cuda");
+
+  void queryDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix);
+  void printDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix);
+  std::vector<bool> testKernelLaunch();
+  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks();
+  size_t allocableSize(size_t base);
 } // namespace tarch::accelerator::info::cuda

@@ -7,32 +7,30 @@
 
 namespace tarch::accelerator::info::cpp
 {
-  std::vector<std::vector<std::string>> queryDeviceInformation()
+  void queryDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix)
   {
-    unsigned int                          propertyCount = tarch::accelerator::info::properties.size();
-    std::vector<std::vector<std::string>> propertyMatrix(propertyCount, std::vector<std::string>(0, "X"));
-    return propertyMatrix;
+    unsigned int propertyCount = tarch::accelerator::info::properties.size();
+    std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(0, "X"));
+    propertyMatrix = std::move(_propertyMatrix);
   }
 
-  void printDeviceInformation()
+  void printDeviceInformation([[maybe_unused]] std::vector<std::vector<std::string>> &propertyMatrix)
   {
-    auto        propertyMatrix    = queryDeviceInformation();
-    std::string cppBackendWarning = "Iso cpp accelerator back-end has no means to query the number of accelerators or "
-                                    "properties\n"
-                                    "For best results enable the CUDA or Sycl Backends/API.\n";
-    std::cout << cppBackendWarning << std::endl;
+    logInfo("printDeviceInformation()", "Iso cpp accelerator back-end has no means to query the number of accelerators' properties and run benchmarks");
   }
 
-  std::vector<bool> testKernelLaunch() {
-    #if !defined(_NVHPC_STDPAR_GPU)
+  std::vector<bool> testKernelLaunch()
+  {
+#if !defined(_NVHPC_STDPAR_GPU)
     return std::vector<bool>(1, false);
-    #else
+#else
     std::vector<bool> v;
     return v;
-    #endif
+#endif
   }
 
-  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks() {
+  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks()
+  {
     return std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds>();
   }
 } // namespace tarch::accelerator::info::cpp

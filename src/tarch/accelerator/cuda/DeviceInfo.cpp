@@ -10,19 +10,19 @@
 #include "tarch/Assertions.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-
 #if defined(GPUOffloadingCUDA)
 std::vector<bool> testKernelLauncher();
-void copyKernelLauncher(const float* a, float* b, size_t N, uint threadsPerBlock);
+void copyKernelLauncher(const float *a, float *b, size_t N);
 
-#define CHECK_CUDA_ERROR() { check_error(__FILE__, __LINE__); }
-void check_error(const char *file, int line) {
-  cudaError_t code = cudaGetLastError();
-  if (code != cudaSuccess) {
-    fprintf(stderr,"CUDA assertion: %s %s %d\n", cudaGetErrorString(code), file, line);
+#define CHECK_CUDA_ERROR()           \
+  {                                  \
+    check_error(__FILE__, __LINE__); \
   }
-
-  if (code != cudaSuccess) {
+void check_error(const char *file, int line)
+{
+  cudaError_t code = cudaGetLastError();
+  if (code != cudaSuccess)
+  {
     throw std::runtime_error("CUDA Benchmarks failed with a CUDA error and could not be completed");
   }
 }
@@ -30,14 +30,14 @@ void check_error(const char *file, int line) {
 
 namespace tarch::accelerator::info::cuda
 {
-
-  std::vector<std::vector<std::string>> queryDeviceInformation()
+  void queryDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix)
   {
     std::stringstream ss;
-    int               numberOfDevices;
+    int numberOfDevices;
     cudaGetDeviceCount(&numberOfDevices);
-    unsigned int                          propertyCount = tarch::accelerator::info::properties.size();
-    std::vector<std::vector<std::string>> propertyMatrix(propertyCount, std::vector<std::string>(numberOfDevices, "X"));
+    unsigned int propertyCount = tarch::accelerator::info::properties.size();
+    std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(numberOfDevices, "X"));
+    propertyMatrix = std::move(_propertyMatrix);
 
     int defaultDevice;
     cudaGetDevice(&defaultDevice);
@@ -48,52 +48,49 @@ namespace tarch::accelerator::info::cuda
       cudaGetDeviceProperties(&props, i);
       size_t free, total;
       cudaMemGetInfo(&free, &total);
-      constexpr unsigned int kb                                                              = 1024;
-      constexpr unsigned int mb                                                              = kb * kb;
+      constexpr unsigned int kb = 1024;
+      constexpr unsigned int mb = kb * kb;
       propertyMatrix[tarch::accelerator::info::getPropertyOffset("Device Name")][i] = props.name;
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Global Memory")][i]
-        = std::to_string(props.totalGlobalMem / mb) + " mb";
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Free Memory")][i] = std::to_string(free / mb)
-                                                                                               + " mb";
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Clock Frequency")][i]
-        = std::to_string(props.clockRate / 1000) + " mHz";
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Compute Units"
-      )][i]
-        = std::to_string(props.multiProcessorCount);
+      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Global Memory")][i] = std::to_string(props.totalGlobalMem / mb) + " mb";
+      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Free Memory")][i] = std::to_string(free / mb) + " mb";
+      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Clock Frequency")][i] = std::to_string(props.clockRate / 1000) + " mHz";
+      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Compute Units")][i] = std::to_string(props.multiProcessorCount);
     }
     cudaSetDevice(defaultDevice);
-    return propertyMatrix;
   }
 
-  void printDeviceInformation()
+  void printDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix)
   {
-    auto propertyMatrix = queryDeviceInformation();
-    int  numberOfDevices;
+    int numberOfDevices;
     cudaGetDeviceCount(&numberOfDevices);
-    std::string deviceInfoStr   = "";
-    if (numberOfDevices == 0){
-      deviceInfoStr   = "No offloading capable GPUs were found";
-    }else{
-      deviceInfoStr   = tarch::accelerator::info::parseMatrix(
-        propertyMatrix, numberOfDevices
-      );
+    if (numberOfDevices == 0)
+    {
+      std::string deviceInfoStr = "No offloading capable GPUs were found";
+      logInfo("printDeviceInformation()", "" << deviceInfoStr);
     }
-    std::cout << deviceInfoStr << std::endl;
+    else
+    {
+      std::string deviceInfoStr = tarch::accelerator::info::parseMatrix(
+          propertyMatrix, numberOfDevices);
+      logInfo("printDeviceInformation()", "\n" << deviceInfoStr);
+    }
   }
 
-  std::vector<bool> testKernelLaunch() {
-    #if defined(GPUOffloadingCUDA)
-      return testKernelLauncher();
-    #else
-      int  numberOfDevices;
-      cudaGetDeviceCount(&numberOfDevices);
-      return std::vector<bool>(numberOfDevices, false);
-    #endif
+  std::vector<bool> testKernelLaunch()
+  {
+#if defined(GPUOffloadingCUDA)
+    return testKernelLauncher();
+#else
+    int numberOfDevices;
+    cudaGetDeviceCount(&numberOfDevices);
+    return std::vector<bool>(numberOfDevices, false);
+#endif
   }
 
 #if defined(GPUOffloadingCUDA)
-  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks(uint threadsPerBlock) {
-    int  numberOfDevices;
+  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks()
+  {
+    int numberOfDevices;
     cudaGetDeviceCount(&numberOfDevices);
     std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});
 
@@ -101,7 +98,7 @@ namespace tarch::accelerator::info::cuda
 
     for (int deviceId = 0; deviceId < numberOfDevices; deviceId++)
     {
-      tarch::accelerator::info::BenchmarkResultInNanoSeconds& benchmarkResult = benchmarkResults[deviceId];
+      tarch::accelerator::info::BenchmarkResultInNanoSeconds &benchmarkResult = benchmarkResults[deviceId];
       benchmarkResult.repeats = repeats;
       for (uint i = 0; i < repeats + 1; i++)
       {
@@ -116,7 +113,7 @@ namespace tarch::accelerator::info::cuda
         // size_t alloc_size = ((free / 2) / (1024*sizeof(float))) * (1024*sizeof(float));
         size_t alloc_size = static_cast<size_t>(1e9);
         size_t N = alloc_size / sizeof(float);
-        benchmarkResult.copiedDataSize = alloc_size;
+        benchmarkResult.readWriteSize = alloc_size * 2;
         benchmarkResult.allocatedDataSize = alloc_size * 2;
 
         // One can reuse them
@@ -126,8 +123,8 @@ namespace tarch::accelerator::info::cuda
         float executionTime;
 
         // Malloc memory in CPU
-        float* a = new float[N];
-        float* b = new float[N];
+        float *a = new float[N];
+        float *b = new float[N];
         std::fill(a, a + N, 0.0f);
         std::fill(b, b + N, 0.0f);
         assert(alloc_size == N * sizeof(float));
@@ -135,15 +132,18 @@ namespace tarch::accelerator::info::cuda
 
         // Malloc memory in GPU
         cudaEventRecord(start, 0);
-        float* a_dev;
-        float* b_dev;
-        cudaMalloc((void**)&a_dev, alloc_size);
-        cudaMalloc((void**)&b_dev, alloc_size);
+        float *a_dev;
+        float *b_dev;
+        cudaMalloc((void **)&a_dev, alloc_size);
+        cudaMalloc((void **)&b_dev, alloc_size);
         CHECK_CUDA_ERROR();
         cudaEventRecord(stop, 0);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&executionTime, start, stop);
-        if (i > 0) { benchmarkResult.GPUMalloc += static_cast<uint64_t>(executionTime * 1e6); }
+        if (i > 0)
+        {
+          benchmarkResult.GPUMalloc += static_cast<uint64_t>(executionTime * 1e6);
+        }
         CHECK_CUDA_ERROR();
 
         // Copy from CPU to GPU
@@ -153,17 +153,23 @@ namespace tarch::accelerator::info::cuda
         cudaEventRecord(stop, 0);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&executionTime, start, stop);
-        if (i > 0) { benchmarkResult.CPUtoGPUCopy += static_cast<uint64_t>(executionTime * 1e6); }
+        if (i > 0)
+        {
+          benchmarkResult.CPUtoGPUCopy += static_cast<uint64_t>(executionTime * 1e6);
+        }
         CHECK_CUDA_ERROR();
 
         // Copy Kernel inside GPU
         cudaEventRecord(start, 0);
-        copyKernelLauncher(a_dev, b_dev, N, threadsPerBlock);
+        copyKernelLauncher(a_dev, b_dev, N);
         cudaDeviceSynchronize();
         cudaEventRecord(stop, 0);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&executionTime, start, stop);
-        if (i > 0) { benchmarkResult.GPUtoGPUCopy += static_cast<uint64_t>(executionTime * 1e6); }
+        if (i > 0)
+        {
+          benchmarkResult.GPUtoGPUCopy += static_cast<uint64_t>(executionTime * 1e6);
+        }
         CHECK_CUDA_ERROR();
 
         // Copy from GPU to CPU
@@ -173,7 +179,10 @@ namespace tarch::accelerator::info::cuda
         cudaEventRecord(stop, 0);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&executionTime, start, stop);
-        if (i > 0) { benchmarkResult.GPUtoCPUCopy += static_cast<uint64_t>(executionTime * 1e6); }
+        if (i > 0)
+        {
+          benchmarkResult.GPUtoCPUCopy += static_cast<uint64_t>(executionTime * 1e6);
+        }
         CHECK_CUDA_ERROR();
 
         cudaFree(a_dev);
