@@ -7,7 +7,7 @@ import subprocess
 # python3 .continuous_integration/configure.py --exahype --multithreading=omp --gpu=cpp -t=nvidia --arch=cc86
 # python3 .continuous_integration/configure.py --exahype --multithreading=omp --gpu=omp -t=amd --arch=gfx90a
 parser = argparse.ArgumentParser(description='Call GNU Autools ./configure script.')
-parser.add_argument('-t', choices=['gcc', 'llvm', 'nvidia', 'amd', 'intel'], help='Select toolchain')
+parser.add_argument('-t', '--toolchain', choices=['gcc', 'llvm', 'nvidia', 'amd', 'intel'], help='Select toolchain')
 parser.add_argument('-cc', type=str, default=os.environ.get('CC'), help='C compiler to use')
 parser.add_argument('-cxx', type=str, default=os.environ.get('CXX'), help='C++ compiler to use')
 parser.add_argument('-fc', type=str, default=os.environ.get('FC'), help='Fortran compiler to use')

@@ -8,12 +8,13 @@ import exahype2
 
 dimensions                = 2
 unknowns                  = dimensions + 2 # [rho, u, v, (w), e]
-cell_size                 = 0.1
-amr_levels                = 1 # Set to 1 to disable adaptive mesh refinement (AMR)
-patch_size                = 4
-end_time                  = 5.0
+cell_size                 = 0.05
+amr_levels                = 0 # Set to 0 to disable adaptive mesh refinement (AMR)
+patch_size                = 17
+end_time                  = 3.0
 plot_interval             = 0.05 # Set to 0 to disable I/O
 mode                      = peano4.output.CompileMode.Release # Switch here between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'
+use_gpu                   = False # Requires a GPU enabled build
 
 if dimensions == 2:
   size                    = [1.0, 1.0]
@@ -33,14 +34,15 @@ my_project = exahype2.Project(
   executable="compressible-navier-stokes-" + str(dimensions) + "d"
 )
 
-my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
-  name                  = "NavierStokesSolver",
-  patch_size            = patch_size,
-  unknowns              = unknowns,
-  auxiliary_variables   = 0,
-  max_volume_h          = cell_size,
-  min_volume_h          = cell_size * 3.0**(-amr_levels),
-  time_step_relaxation  = 0.5,
+my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
+  name                    = "NavierStokesSolver",
+  patch_size              = patch_size,
+  unknowns                = unknowns,
+  auxiliary_variables     = 0,
+  max_volume_h            = cell_size,
+  min_volume_h            = cell_size * 3.0**(-amr_levels),
+  time_step_relaxation    = 0.5,
+  pde_terms_without_state = use_gpu
 )
 
 if dimensions == 2:
@@ -63,7 +65,7 @@ my_solver.add_solver_constants("static constexpr double LidDrivenCavityVelocity 
 my_solver.add_solver_constants("static constexpr double DomainSize[] = {%s};" % str(size).strip('[]'))
 my_solver.add_solver_constants("static constexpr double DomainOffset[] = {%s};" % str(offset).strip('[]'))
 
-my_project.add_solver( my_solver )
+my_project.add_solver(my_solver)
 
 my_project.set_global_simulation_parameters(
   dimensions            = dimensions,
@@ -83,6 +85,7 @@ if not os.path.exists("solution"):
 my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 my_project.set_Peano4_installation("../../../", mode )
 my_project = my_project.generate_Peano4_project(verbose=True)
+my_project.output.makefile.add_h_file( "NavierStokesSolver.h", generated=False )
 my_project.output.makefile.add_cpp_file( "NavierStokesSolver.cpp", generated=False )
 my_project.build(make_clean_first=True, throw_away_data_after_build=True)
 

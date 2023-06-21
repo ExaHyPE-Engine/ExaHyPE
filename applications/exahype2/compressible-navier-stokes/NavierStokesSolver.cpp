@@ -6,59 +6,11 @@ tarch::logging::Log applications::exahype2::CompressibleNavierStokes::NavierStok
   "es::NavierStokesSolver"
 );
 
-enum Coordinates
-{
-  x = 0,
-  y,
-#if Dimensions == 3
-  z
-#endif
-};
-
-enum Variables
-{
-  rho = 0,
-  u,
-  v,
-#if Dimensions == 3
-  w,
-#endif
-  e
-};
-
-enum Derivatives
-{
-  drhodx = 0,
-  drhody,
-#if Dimensions == 3
-  drhodz,
-#endif
-  dudx,
-  dudy,
-#if Dimensions == 3
-  dudz,
-#endif
-  dvdx,
-  dvdy,
-#if Dimensions == 3
-  dvdz,
-  dwdx,
-  dwdy,
-  dwdz,
-#endif
-  dedx,
-  dedy,
-#if Dimensions == 3
-  dedz
-#endif
-};
-
 enum class Scenario
 {
   LidDrivenCavity,
   ChannelFlow,
-  ChannelFlowWithObstacle, // "Karman Vortex Street" -> Obstacles can be easily added by adding an input reader for
-                           // meshes (.stl) files.
+  ChannelFlowWithObstacle,
   ShockTube,
   Bubbles,
   RayleighTaylorInstability,
@@ -69,10 +21,10 @@ Scenario scenario = Scenario::LidDrivenCavity;
 // Scenario scenario = Scenario::PointExplosion;
 
 void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::initialCondition(
-  [[maybe_unused]] double* __restrict__ Q,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-  [[maybe_unused]] bool                                         gridIsConstructred
+  double* __restrict__ Q,
+  const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  const tarch::la::Vector<Dimensions, double>& volumeH,
+  bool                                         gridIsConstructred
 )
 {
   assertion(!std::isnan(Q[rho]));
@@ -100,12 +52,12 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::initi
 }
 
 void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::boundaryConditions(
-  [[maybe_unused]] const double* __restrict__ Qinside,
-  [[maybe_unused]] double* __restrict__ Qoutside,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-  [[maybe_unused]] double                                       t,
-  [[maybe_unused]] int                                          normal
+  const double* __restrict__ Qinside,
+  double* __restrict__ Qoutside,
+  const tarch::la::Vector<Dimensions, double>& faceCentre,
+  const tarch::la::Vector<Dimensions, double>& volumeH,
+  double                                       t,
+  int                                          normal
 )
 {
   assertion(!std::isnan(Qinside[rho]));
@@ -135,122 +87,49 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::bound
 }
 
 double applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::maxEigenvalue(
-  [[maybe_unused]] const double* __restrict__ Q,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-  [[maybe_unused]] double                                       t,
-  [[maybe_unused]] double                                       dt,
-  [[maybe_unused]] int                                          normal
+  const double* __restrict__ Q,
+  const tarch::la::Vector<Dimensions, double>& faceCentre,
+  const tarch::la::Vector<Dimensions, double>& volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
 )
 {
-  assertion(Q[rho] > 0);
-  assertion(Q[e] > 0);
-  assertion((v + normal) < (NumberOfUnknowns + NumberOfAuxiliaryVariables));
-  assertion(!std::isnan(Q[rho]));
-  assertion(!std::isnan(Q[u]));
-  assertion(!std::isnan(Q[v]));
-  assertion(!std::isnan(Q[e]));
-
-  const double pressure = (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v]) / Q[rho]);
-  assertion(pressure > 0);
-
-  const double c_speedOfSound = std::sqrt(Gamma * pressure / Q[rho]);
-
-  const double max_lambda_convective = std::abs(Q[u + normal]) / Q[rho] + c_speedOfSound;
-  const double max_lambda_viscous    = std::max(
-    4.0 / 3.0 * Viscosity / Q[rho], Gamma * Viscosity / (PrandtlNumber * Q[rho])
-  );
-
-  return std::max(max_lambda_convective, max_lambda_viscous);
+  return maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, Offloadable::Yes);
 }
 
 void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::flux(
-  [[maybe_unused]] const double* __restrict__ Q,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-  [[maybe_unused]] double                                       t,
-  [[maybe_unused]] double                                       dt,
-  [[maybe_unused]] int                                          normal,
-  [[maybe_unused]] double* __restrict__ F
+  const double* __restrict__ Q,
+  const tarch::la::Vector<Dimensions, double>& faceCentre,
+  const tarch::la::Vector<Dimensions, double>& volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  double* __restrict__ F
 )
 {
-  assertion(Q[rho] > 0);
-  assertion(Q[e] > 0);
-  assertion((v + normal) < (NumberOfUnknowns + NumberOfAuxiliaryVariables));
-  assertion(!std::isnan(Q[rho]));
-  assertion(!std::isnan(Q[u]));
-  assertion(!std::isnan(Q[v]));
-  assertion(!std::isnan(Q[e]));
-
-  const double pressure = (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v]) / Q[rho]);
-  assertion(pressure > 0);
-
-  F[rho] = Q[u + normal];
-  F[e]   = Q[u + normal] * (Q[e] + pressure) / Q[rho];
-
-  if (normal == 0)
-  {
-    F[u] = Q[u] * Q[u] / Q[rho] + pressure;
-    F[v] = Q[u] * Q[v] / Q[rho];
-  }
-  else
-  {
-    F[u] = Q[u] * Q[v] / Q[rho];
-    F[v] = Q[v] * Q[v] / Q[rho] + pressure;
-  }
+  flux(Q, faceCentre, volumeH, t, dt, normal, F, Offloadable::Yes);
 }
 
 void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::nonconservativeProduct(
-  [[maybe_unused]] const double* __restrict__ Q,
-  [[maybe_unused]] const double* __restrict__ deltaQ,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-  [[maybe_unused]] double                                       t,
-  [[maybe_unused]] double                                       dt,
-  [[maybe_unused]] int                                          normal,
-  [[maybe_unused]] double* __restrict__ BTimesDeltaQ
+  const double* __restrict__ Q,
+  const double* __restrict__ deltaQ,
+  const tarch::la::Vector<Dimensions, double>& faceCentre,
+  const tarch::la::Vector<Dimensions, double>& volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  double* __restrict__ BTimesDeltaQ
 )
 {
-  assertion(Q[rho] > 0);
-  assertion(!std::isnan(Q[rho]));
-  assertion(!std::isnan(Q[u]));
-  assertion(!std::isnan(Q[v]));
-  assertion(!std::isnan(Q[e]));
-  assertion(!std::isnan(deltaQ[drhodx]));
-  assertion(!std::isnan(deltaQ[drhody]));
-  assertion(!std::isnan(deltaQ[dudx]));
-  assertion(!std::isnan(deltaQ[dudy]));
-  assertion(!std::isnan(deltaQ[dvdx]));
-  assertion(!std::isnan(deltaQ[dvdy]));
-  assertion(!std::isnan(deltaQ[dedx]));
-  assertion(!std::isnan(deltaQ[dedy]));
-
-  if (normal == 0)
-  {
-    // -mu{2(du/dx) - 2/3 (du/dx + dv/dy)}
-    BTimesDeltaQ[u] = -Viscosity * (2.0 * deltaQ[dudx] - 2.0 / 3.0 * (deltaQ[dudx] + deltaQ[dvdy])) / Q[rho];
-
-    // -mu{dv/dx + du/dy}
-    BTimesDeltaQ[v] = -Viscosity * (deltaQ[dvdx] + deltaQ[dudy]) / Q[rho];
-  }
-  else
-  {
-    // -mu{dv/dx + du/dy}
-    BTimesDeltaQ[u] = -Viscosity * (deltaQ[dvdx] + deltaQ[dudy]) / Q[rho];
-
-    // -mu{2(dv/dy) - 2/3 (du/dx + dv/dy)}
-    BTimesDeltaQ[v] = -Viscosity * (2.0 * deltaQ[dvdy] - 2.0 / 3.0 * (deltaQ[dudx] + deltaQ[dvdy])) / Q[rho];
-  }
-
-  BTimesDeltaQ[rho] = 0;
-  BTimesDeltaQ[e]   = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v]) / Q[rho];
+  nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, dt, normal, BTimesDeltaQ, Offloadable::Yes);
 }
 
 ::exahype2::RefinementCommand applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::refinementCriterion(
-  [[maybe_unused]] const double* __restrict__ Q,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-  [[maybe_unused]] double                                       t
+  const double* __restrict__ Q,
+  const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  const tarch::la::Vector<Dimensions, double>& volumeH,
+  double                                       t
 )
 {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
