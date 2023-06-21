@@ -81,6 +81,7 @@ class HdgFirstDiscretisation(Solver):
     self._face_unknowns = face_dofs
     self._faceDof = peano4.datamodel.DaStGen2( name )
     self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(face_dofs) ) )
+    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs"  ,  str(face_dofs) ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     

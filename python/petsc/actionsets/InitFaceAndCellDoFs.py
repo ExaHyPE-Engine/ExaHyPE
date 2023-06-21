@@ -50,7 +50,7 @@ degrees of freedom and the global mapping for indices on faces and cells
       fineGridFace{{SOLVER_NAME}}.setType(facedata::{{SOLVER_NAME}}::Type::Interior);
     }
 
-    // place some values in the mesh for the face
+    //init vectors for value and rhs. modify them in faceInit()
     tarch::la::Vector<{{FACE_CARDINALITY}}, double>   value;
     tarch::la::Vector<{{FACE_CARDINALITY}}, double>   rhs;
 
@@ -61,9 +61,10 @@ degrees of freedom and the global mapping for indices on faces and cells
       rhs
     );
 
-    /*
-    * todo place these values into the mesh
-    */
+    //place these values into the mesh
+    fineGridFace{{SOLVER_NAME}}.setValue( value );
+    fineGridFace{{SOLVER_NAME}}.setRhs( rhs );
+
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
 
   }

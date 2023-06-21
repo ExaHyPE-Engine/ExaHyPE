@@ -59,6 +59,9 @@ class {{NAMESPACE | join("::")}}::PetscData{
     * \param indices - the indices of the DoFs in question
     * \param values  - logically 2d array of doubles
               the length of values should be equal to indices.size() * indices.size()
+              intention is to call this function with tarch::la::Matrix::data(), which
+              will return a pointer to the first value in this matrix. Ideally this matrix
+              will be the intended stencil for this cell/face/vertex
     */
     void insertLocalMatrix( const std::vector< int >& indices, const double* values );
 
