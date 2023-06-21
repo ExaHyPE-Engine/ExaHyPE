@@ -85,7 +85,7 @@ from swift2.actionsets.DynamicMeshRefinementTrigger  import DynamicMeshRefinemen
 
 
 """
-def add_mesh_management_optimise_mesh(steps,
+def add_dynamic_mesh_refinement_and_particle_resorting(steps,
                                       alter_position,
                                       species_sets,
                                       verbose ):
@@ -189,7 +189,7 @@ def add_mesh_management_optimise_mesh(steps,
   for i in range(0,len(steps)):
     if alter_position[i]:
       if verbose:
-        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: {}th step alters the particle positions".format(i) )
+        print( "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: {}th step alters the particle positions".format(i) )
 
       #
       #   AMR
@@ -197,7 +197,7 @@ def add_mesh_management_optimise_mesh(steps,
       #
       steps_to_evaluate_amr = { (i+1) % len(steps) }
       if verbose:
-        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.ParticleTreeAnalysis and swift2.actionsets.DynamicMeshRefinementAnalysis to steps {}".format(steps_to_evaluate_amr) )
+        print( "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.ParticleTreeAnalysis and swift2.actionsets.DynamicMeshRefinementAnalysis to steps {}".format(steps_to_evaluate_amr) )
       for j in steps_to_evaluate_amr:
         for current_species_set in species_sets:
           action_set_AMR_analysis = DynamicMeshRefinementAnalysis(current_species_set,
@@ -219,7 +219,7 @@ def add_mesh_management_optimise_mesh(steps,
                                                    (i+3) % len(steps),
                                                    (i+4) % len(steps) }
       if verbose:
-        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.UpdateParticleGridAssociation_Reassign to steps {}".format(steps_to_update_particle_grid_assocation) )
+        print( "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.UpdateParticleGridAssociation_Reassign to steps {}".format(steps_to_update_particle_grid_assocation) )
       for j in steps_to_update_particle_grid_assocation:
         for current_species_set in species_sets:
           action_set_update_particle_grid_association = peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set)
@@ -234,7 +234,7 @@ def add_mesh_management_optimise_mesh(steps,
       steps_to_update_parallel_state = { (i+1) % len(steps),
                                          (i+4) % len(steps) }
       if verbose:
-        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.UpdateParallelState to steps {}".format(steps_to_update_parallel_state) )
+        print( "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.UpdateParallelState to steps {}".format(steps_to_update_parallel_state) )
       for j in steps_to_update_parallel_state:
         for current_species_set in species_sets:
           action_set_update_parallel_state = peano4.toolbox.particles.UpdateParallelState(current_species_set)
@@ -249,7 +249,7 @@ def add_mesh_management_optimise_mesh(steps,
       #
       steps_to_realise_amr = { (i+2) % len(steps) }
       if verbose:
-        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: swift2.actionsets.DynamicMeshRefinementTrigger to steps {}".format(steps_to_realise_amr) )
+        print( "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: swift2.actionsets.DynamicMeshRefinementTrigger to steps {}".format(steps_to_realise_amr) )
       for j in steps_to_realise_amr:
         for current_species_set in species_sets:
           action_set_dynamic_AMR = DynamicMeshRefinementTrigger() 
@@ -260,20 +260,26 @@ def add_mesh_management_optimise_mesh(steps,
 
 
 
-def add_mesh_management_minimise_resorting(steps,
+def add_particle_resorting_into_global_AoS(steps,
                                            alter_position,
                                            species_sets,
-                                           verbose):
+                                           verbose ):
+  """!
+  
+  
+  Hier an irgendeiner Stelle das Umsortieren der Datenstrukturen einfuehren.
+  Eigentlich geht das an jeder Stelle, wenngleich es ja eigentlich nur Sinn macht, wenn isch was veraender that
+  
   """
-
-  steps: [peano4.solversteps.Step]
-
-  alter_position: [{True,False}]
-
-  """
-  if len(steps) != len(alter_position):
-    raise Exception( "number of steps does not equal number of alter_position flags: {} vs {}".format(steps,alter_position) )
-
-  for i in range(0,len(steps)):
-    pass
-
+  pass
+  
+  
+  
+def add_particle_resorting_into_vertex_AoS(steps,
+                                           alter_position,
+                                           species_sets,
+                                           verbose ):
+  pass
+  
+  
+  

@@ -7,7 +7,7 @@ import peano4
 import swift2
 
 
-from swift2.actionsets.AMRLogic import add_mesh_management_optimise_mesh
+from swift2.actionsets.AMRLogic import add_dynamic_mesh_refinement_and_particle_resorting
 
 
 
@@ -18,6 +18,27 @@ def translate_one_step_of_species_into_mesh_traversal(step,
                                                       preamble = "Step",
                                                       verbose = False
                                                       ):
+      """!
+      
+      Translate one step of species into mesh traversal
+      
+      Takes one step of the species and adds it to the list of steps. That is,
+      you get one more entry within mesh_traversals. Further to that, the 
+      routine also appends a boolean arker to alter_particle_position. It 
+      shows if the mesh will change the particle position (or cut-off radius)
+      or not.
+      
+      This routine is a helper routine of serialise_initialisation_steps_and_map_onto_separate_mesh_traversals()
+      for example. Note that the returned steps are not fully functionally.
+      If a step alters the particles within the mesh, you still have to resort
+      the particles. That's not done in the step added by this routine, i.e. 
+      these steps lack the actual particle sorting. Any sorting has to spread
+      over two steps, so it makes no sense to add it here. Instead, we befill
+      the alter_particle_position, and we expect the calling routine to 
+      supplement the actual particle sorting later on in a postprocessing
+      step once all steps are assembled.
+            
+      """
       priority = 0
         
       new_step                = peano4.solversteps.Step( "{}{}{}_sweep{}".format(preamble,current_species_set.particle_model.name,step.name,len(mesh_traversals)), add_user_defined_actions=False ) 
@@ -142,7 +163,7 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
                                                         verbose
                                                         )
           
-  add_mesh_management_optimise_mesh( mesh_traversals, 
+  add_dynamic_mesh_refinement_and_particle_resorting( mesh_traversals, 
                                      alter_particle_position, 
                                      species_sets,
                                      verbose )
@@ -192,7 +213,7 @@ def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species
   if verbose:
     print( "GRAPH COMPILER DEBUG [serialise_initialisation_steps_and_map_onto_separate_mesh_traversals]: initial graph built with {} steps".format(len(mesh_traversals)) )
           
-  add_mesh_management_optimise_mesh( mesh_traversals, 
+  add_dynamic_mesh_refinement_and_particle_resorting( mesh_traversals, 
                                      alter_particle_position, 
                                      species_sets,
                                      verbose )
