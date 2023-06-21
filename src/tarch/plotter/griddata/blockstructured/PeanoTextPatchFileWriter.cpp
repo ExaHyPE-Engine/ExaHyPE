@@ -8,11 +8,10 @@
 #include "tarch/mpi/Lock.h"
 #include "tarch/mpi/Rank.h"
 
-tarch::logging::Log tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::_log(
-  "tarch::plotter::"
-  "griddata::"
-  "blockstructured::"
-  "PeanoTextPatchFileWriter"
+tarch::logging::Log tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::_log("tarch::plotter::"
+                                                                                              "griddata::"
+                                                                                              "blockstructured::"
+                                                                                              "PeanoTextPatchFileWriter"
 );
 
 const std::string tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::HEADER

@@ -14,10 +14,8 @@
 TP::TwoPunctures* _tp = new TP::TwoPunctures();
 #endif
 
-tarch::logging::Log applications::exahype2::ccz4::FiniteVolumeCCZ4::_log(
-  "applications::exahype2::ccz4::"
-  "FiniteVolumeCCZ4"
-);
+tarch::logging::Log applications::exahype2::ccz4::FiniteVolumeCCZ4::_log("applications::exahype2::ccz4::"
+                                                                         "FiniteVolumeCCZ4");
 
 #ifdef IncludeTwoPunctures
 // pre-process, solve the puncture equations
