@@ -292,8 +292,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
 
-
-
+	if ( _solverState==SolverState::GridInitialisation ) {
+    {{FINISH_TIME_STEP_IMPLEMENTATION}}
+  }
 }
 
 
