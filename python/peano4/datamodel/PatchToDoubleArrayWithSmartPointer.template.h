@@ -63,6 +63,13 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   public:
     typedef {{FLOAT_TYPE}} DoFType;
 
+    /**
+     * @see peano4::stacks::STDVectorStackOverSmartPointers<T>::pushBlock()
+     */
+    enum ObjectConstruction {
+      NoData
+    };
+
     #if Dimensions==2
     static constexpr int Cardinality = {{CARDINALITY_2D}};
     #else
@@ -116,17 +123,48 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
    */
   {{CLASSNAME}}();
 
+  /**
+   * Constructor that does not allocate the underlying memory
+   *
+   * We need such a variant in stacks to allocate large memory blocks which
+   * are then "overwritten" as we move data from one stack to the other.
+   *
+   * @see peano4::stacks::STDVectorStackOverSmartPointers<T>::pushBlock()
+   */
+  {{CLASSNAME}}( ObjectConstruction );
+
+  /**
+   * Nothing really to be done, as the smart pointer implementation takes
+   * care of the actual destruction.
+   */
   ~{{CLASSNAME}}() = default;
 
   /**
-   * Shallow copy
+   * Copy constructor
+   *
+   * In most cases, this should be a shallow copy. We move data around from
+   * one stack to the other and we do so via the copy constructor. This
+   * moving around equals a shallow copy. The smart pointer behind the scenes
+   * can basically realise the shallow part. We only have to copy this one,
+   * and then set the local value pointer to the smartish memory regions.
+   *
+   * Besides the shallow copies, the copy also is used when we do a resize()
+   * on the underlying stack. In this case, it is unreasonable to copy the
+   * smart pointer. See peano4::stacks::STDVectorStackOverSmartPointers<T>::pushBlock().
    */
   {{CLASSNAME}}(const {{CLASSNAME}}& other);
 
   /**
-   * Clone content. Assume other and present class have their own smart pointer
+   * Clone content.
    *
-   * This routine is used by the deep copies of the stack.
+   * This routine is exclusively used by the boundary data exchange to copy
+   * data from an outgoing buffer into an incoming or an MPI buffer. Therefore,
+   * the destination should always be empty. We however do not know if the
+   * input data other is actually empty: We always exchange all boundary
+   * unknown types, but if a solver is localised, it might actually never
+   * write into an outgoing buffer. Therefore, other might be empty or not.
+   *
+   * If it is not empty, we have to perform a deep copy however.
    */
   void clone(const {{CLASSNAME}}& other);
 

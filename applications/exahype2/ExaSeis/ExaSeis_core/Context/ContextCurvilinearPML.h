@@ -1,7 +1,7 @@
 #ifndef EXASEIS_CONTEXT_CURVILINEAR_PML_HEADER
 #define EXASEIS_CONTEXT_CURVILINEAR_PML_HEADER
 
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
+// #include "kernels/GaussLegendreBasis.h"
 #include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
 #include "ContextCurvilinear.h"
 

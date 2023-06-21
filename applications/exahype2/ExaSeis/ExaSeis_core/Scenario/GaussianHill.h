@@ -2,7 +2,6 @@
 #define EXASEIS_GAUSSIANHILL_HEADER
 
 #include "Scenario.h"
-#include "exahype2/aderdg/solvers/ADERDGSolver.h"
 
 template <class Variables,int basisSize>
   class GaussianHill : public Scenario<Variables, basisSize>{
@@ -55,8 +54,8 @@ template <class Variables,int basisSize>
                           std::vector<Refinement::RefinementCriterion<Variables>*>& criteria) override{
     criteria.push_back(new Refinement::RefinePositionCustomCoordinates<Variables>(m_pointSourceLocation,
 							   basisSize,
-							   static_cast<exahype2::solvers::aderdg::ADERDGSolver*>(solver)->FCoeff[basisSize-1][0],
-							   static_cast<exahype2::solvers::aderdg::ADERDGSolver*>(solver)->FCoeff[basisSize-1][1]));
+							   static_cast<exahype::solvers::ADERDGSolver*>(solver)->FCoeff[basisSize-1][0],
+							   static_cast<exahype::solvers::ADERDGSolver*>(solver)->FCoeff[basisSize-1][1]));
 		       
   };
 };

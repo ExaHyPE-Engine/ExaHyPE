@@ -100,7 +100,7 @@ class Controller:
                 "predictorRecompute"    : args["predictorRecompute"],
                 "initialGuess"          : "mixedPicard", #TODO JMG put as proper toolkit arg
                 #"initialGuess"          : "default" #TODO JMG put as proper toolkit arg
-                "predictorComputePrecision": args["predictorComputePrecision"] if "predictorComputePrecision" in args else "double",
+                "predictorComputePrecisions": args["predictorComputePrecisions"] if "predictorComputePrecisions" in args else "double",
                 "predictorStoragePrecision": args["predictorStoragePrecision"] if "predictorStoragePrecision" in args else "double",
                 "correctorComputePrecision": args["correctorComputePrecision"] if "correctorComputePrecision" in args else "double",
                 "correctorStoragePrecision": args["correctorStoragePrecision"] if "correctorStoragePrecision" in args else "double",
@@ -161,9 +161,13 @@ class Controller:
                raise ValueError("Number of dimensions must be 2 or 3")
             if self.config["nDof"] < 1 or self.config["nDof"] > 15+1: #nDof = order+1
                raise ValueError("Order has to be between 0 and 15 (inclusive)")
-            for key in ["predictorComputePrecision", "predictorStoragePrecision", "correctorComputePrecision", "correctorStoragePrecision"]:
+            for key in ["predictorStoragePrecision", "correctorComputePrecision", "correctorStoragePrecision"]:
                 if self.config[key] not in Configuration.validPrecisions:
-                    raise ValueError("One of the chosen precisions for storage or calculation was not a valid choise")
+                    raise ValueError("One of the chosen precisions for storage or calculation was not a valid choice")
+            for key in ["predictorComputePrecisions"]:
+              for precision in self.config[key]:
+                if precision not in Configuration.validPrecisions:
+                    raise ValueError("Precision " + precision + " of the chosen precisions for prediction calculation was not a valid choice")
         if self.config["kernelType"] == "fv":
             if self.config["finiteVolumesType"] != "musclhancock":
                raise ValueError("Only musclhancock scheme is supported")
@@ -274,8 +278,9 @@ class Controller:
     def generateGemms(self, outputFileName, matmulConfigList):
         """Generate the gemms with the given config list using LIBXSMM"""
         for matmul in matmulConfigList:
+          for current_precision in matmul.precision:
             # add the gemm name to the list of generated gemm
-            self.gemmList.append((matmul.baseroutinename, matmul.precision))
+            self.gemmList.append((matmul.baseroutinename, current_precision))
             # for plain assembly code (rather than inline assembly) choose dense_asm
             commandLineArguments = " " + "dense"  + \
                 " " + os.path.join(self.config["pathToOutputDirectory"], outputFileName) + \
@@ -292,6 +297,6 @@ class Controller:
                 " " + str(matmul.alignment_C) + \
                 " " + self.config["architecture"] + \
                 " " + matmul.prefetchStrategy + \
-                " " + matmul.precision #SP (single-precision), DP (double-precision) or l16 (only dense)
+                " " + current_precision #SP (single-precision), DP (double-precision) or l16 (only dense)
             bashCommand = self.config["pathToLibxsmmGemmGenerator"] + commandLineArguments
             subprocess.call(bashCommand.split())

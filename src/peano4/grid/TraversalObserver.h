@@ -43,8 +43,14 @@ class peano4::grid::TraversalObserver {
     static constexpr int NoRebalancing                       = -1;
 
     /**
-     * I use this one to indicate that no data is associated with a grid entity,
-     * as the grid entity is outside of the domain.
+     * Can this grid entity hold data
+     *
+     * I use this one to indicate that no data is associated with a grid
+     * entity, as the grid entity is outside of the local computational
+     * domain. The term refers explicitly to the domain decomposition,
+     * i.e. this value is used to flag grid entities which are there in
+     * the tree, as we always have to work with full trees, but that
+     * cannot really hold any data as the user never sees them.
      */
     static constexpr int NoData                              = -1;
 

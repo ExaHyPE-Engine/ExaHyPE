@@ -2,7 +2,7 @@
 #define EXASEIS_SOLVERFV_INFORMATION_HEADER
 
 #include <algorithm>
-#include "exahype2/aderdg/solvers/FiniteVolumesSolver.h"
+#include "exahype/solvers/FiniteVolumesSolver.h"
 #include "SolverInformation.h"
 
 template<int patchSize>

@@ -60,7 +60,7 @@ namespace Numerics{
 
   inline void create_local_basis(double* n, double * m, double* l){
 
-#if DIMENSIONS == 2
+#if Dimensions == 2
     l[0] = 0.;
     l[1] = 0.;
     l[2] = 1.0;
@@ -68,7 +68,7 @@ namespace Numerics{
     m[0] = n[1]*l[2]-n[2]*l[1];
     m[1] = -(n[0]*l[2]-n[2]*l[0]);
     m[2] = n[0]*l[1]-n[1]*l[0];
-#elif DIMENSIONS == 3
+#elif Dimensions == 3
 
     double tol, diff_norm1, diff_norm2;
     tol = 1e-12;

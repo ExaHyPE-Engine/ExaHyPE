@@ -89,7 +89,7 @@ namespace exahype2 {
       * @return index that is descalar account to the strides
       *
       * @note index[0] (time index) is -1 if strides[0]=0. The latter implies that we work with a time-invariant field.
-      * @seee getStrides(nodesPerAxis,strides4SpaceTimeQuantity)
+      * @see getStrides(nodesPerAxis,strides4SpaceTimeQuantity)
       */
      #if defined(GPUOffloadingOMP)
      #pragma omp declare target

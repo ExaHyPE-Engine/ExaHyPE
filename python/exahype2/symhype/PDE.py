@@ -1,16 +1,18 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 import sympy
+import numpy
 
 class PDE(object):
   def __init__(self, unknowns, auxiliary_variables, dimensions):
     self.unknowns               = unknowns
     self.auxiliary_variables    = auxiliary_variables
     self.dimensions             = dimensions
-    self.Q                      = sympy.symarray("Q",   (unknowns+auxiliary_variables))
-    self.initial_values         = sympy.symarray("Q0",  (unknowns+auxiliary_variables))
-    self.boundary_values        = sympy.symarray("Qb",  (unknowns+auxiliary_variables))
-    self.x                      = sympy.symarray("x",   (dimensions))
+    self.Q                      = sympy.symarray("Q",       (unknowns+auxiliary_variables))
+    self.delta_Q                = sympy.symarray("deltaQ",  (unknowns+auxiliary_variables))
+    self.initial_values         = sympy.symarray("Q0",      (unknowns+auxiliary_variables))
+    self.boundary_values        = sympy.symarray("Qb",      (unknowns+auxiliary_variables))
+    self.x                      = sympy.symarray("x",       (dimensions))
     pass
 
   def unknown_identifier_for_plotter(self):
@@ -25,7 +27,7 @@ class PDE(object):
       result += str( self.Q[i] )
     return result
 
-  def _implementation_of_mapping_onto_named_quantities(self, is_cell_mapping=True, is_boundary=False):
+  def _implementation_of_mapping_onto_named_quantities(self, is_cell_mapping=True, is_boundary=False, has_delta=False):
     """
       Return the C code that maps the quantities from Q onto
       properly labelled quantities
@@ -40,6 +42,13 @@ class PDE(object):
       else:
         result += " = Q[" + str(i) + "];\n"
 
+    if has_delta:
+      for i in range(0,self.unknowns+self.auxiliary_variables):
+        result += "[[maybe_unused]] const "
+        result += "double "
+        result += sympy.printing.cxxcode( self.delta_Q[i] )
+        result += " = deltaQ[" + str(i) + "];\n"
+
     for i in range(0,self.dimensions):
       result += "const double x_"
       result += str(i)
@@ -50,6 +59,7 @@ class PDE(object):
         result += "faceCentre"
       result += "(" + str(i) + ");\n"
       result += ";\n"
+
     return result
 
   def name_Q_entry(self,offset_in_Q,name):
@@ -69,7 +79,7 @@ class PDE(object):
      10s Q entry is the one for the first auxiliary variable.
      There's also a dedicated routine for auxiliary variables if you prefer this one.
     """
-    self.Q[number+self.auxiliary_variables] = sympy.symbols( name )
+    self.Q[number+self.auxiliary_variables] = sympy.symbols(name)
     return self.Q[number+self.auxiliary_variables]
 
   def name_Q_entries(self,offset_in_Q,cardinality,name):
@@ -77,6 +87,22 @@ class PDE(object):
     for i in range(0,cardinality):
       self.Q[offset_in_Q+i] = new_entry[i]
     return new_entry
+
+  def grad(self, Q):
+    if isinstance(Q, numpy.ndarray): # Q is vector
+      offset_in_delta_Q = numpy.where(self.Q == Q[0])[0][0]
+      cardinality = len(Q)
+      name = Q[0].name.split('_')[0]
+      new_entry = sympy.symarray("delta_" + name, cardinality)
+      for i in range(0, cardinality):
+        self.delta_Q[offset_in_delta_Q + i] = new_entry[i]
+      return new_entry
+    else: # Q is scalar
+      offset_in_delta_Q = numpy.where(self.Q == Q)[0][0]
+      cardinality = 1
+      name = Q.name
+      self.delta_Q[offset_in_delta_Q] = sympy.symbols( "delta_" + name )
+      return self.delta_Q[offset_in_delta_Q]
 
   def implementation_of_homogeneous_Neumann_BC(self):
     result = ""

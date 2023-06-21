@@ -1,5 +1,8 @@
-Boundary conditions
--------------------
+/**
+
+ @page page_exahype_boundary_conditions Boundary conditions
+ 
+ 
 
 Boundary conditions often are tricky to implement and solely up to the
 user. In , Dirichlet and Neumann boundary conditions on Cartesian meshes
@@ -198,3 +201,6 @@ this case, an attribute with an underscore make sense.
 What is available in which content depends strongly on the solver type
 used. Consult the documentation of the `HandleBoundary.h` file of your
 solver type.
+
+
+*/
