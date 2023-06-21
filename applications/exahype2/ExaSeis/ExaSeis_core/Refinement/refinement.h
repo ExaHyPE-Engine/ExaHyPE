@@ -1,13 +1,8 @@
 #ifndef EXASEIS_REFINEMENT_HEADER
 #define EXASEIS_REFINEMENT_HEADER
 
+// #include "kernels/GaussLegendreBasis.h"
 #include "exahype2/RefinementControl.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
-
-/*
-::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-  Keep, Refine, Erase
-*/
 
 namespace Refinement {
   template <class Shortcuts>

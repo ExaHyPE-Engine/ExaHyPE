@@ -18,8 +18,11 @@ def merge_partial_files(partial_files, merged_file_path):
                 else:
                     merged_patch_file.write(line)
 
+        count = 0
         for infile in partial_files:
             reading_patches = False  # allows us to skip headers
+            count += 1
+            # print(str(count)+"/"+str(len(partial_files)))
             with open(infile, "r") as patch_file:
                 for line in patch_file:
                     if "begin patch" in line and not reading_patches:
@@ -36,9 +39,14 @@ def read_meta_file(path_to_metafile):
     # into the same file
     timestamps = []
     merged_file_number = 0
+    target = 0
     with open(path_to_metafile, "r") as metafile:
         for line in metafile.readlines():
-            if "end dataset" in line:
+            if "end dataset" in line and merged_file_number < target:
+                partial_files.clear()
+                print("jump snapshot", merged_file_number)
+                merged_file_number += 1
+            elif "end dataset" in line:
                 # merged files will be put in the same dir as the original meta-file
                 merged_file_name = (
                     "merged_patch_file_" + str(merged_file_number) + ".peano-patch-file"
@@ -55,8 +63,9 @@ def read_meta_file(path_to_metafile):
                 partial_files.clear()
                 merged_file_number += 1
 
-            if "timestamp" in line:
+            if "timestamp" in line and merged_file_number >= target:
                 timestamps.append(line)
+                print(line)
 
             words = line.split()
 

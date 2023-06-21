@@ -91,6 +91,9 @@ class SingleSweep(ADERDG):
             + "::SolverState::Correction"
         )
 
+    #    self._riemann_estimates.generator.send_condition                        = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
+    #    self._riemann_estimates.generator.receive_and_merge_condition           = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
+
     def create_action_sets(self):
         super(SingleSweep, self).create_action_sets()
 
@@ -126,6 +129,13 @@ class SingleSweep(ADERDG):
         return super(
             SingleSweep, self
         )._restrict_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Prediction".format(
+            self.get_name_of_global_instance(), self._name
+        )
+
+    def _interpolate_face_data_default_guard(self):
+        return super(
+            SingleSweep, self
+        )._interpolate_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
             self.get_name_of_global_instance(), self._name
         )
 

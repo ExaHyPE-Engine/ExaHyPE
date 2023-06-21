@@ -13,8 +13,7 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::
     not marker.isContained(particle.getX(), relativeSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE)
     or
     particle.getParallelState()!=Particle::ParallelState::Local
-  )
-  {
+  ) {
     return ParticleReassociationInstruction_Keep;
   } else {
     std::bitset<Dimensions> currentAssociation = numberOfVertexWithinCell;
@@ -66,8 +65,7 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftPar
     tarch::la::min(marker.h()) * MultilevelSortingTolerance >= 2.0 * particle.getCutOffRadius()
     and
     marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE)
-  )
-  {
+  ) {
     return ParticleReassociationInstruction_Keep;
   } else if (not marker.isParentCellLocal()) {
     return ParticleReassociationInstruction_SieveGlobally;
@@ -141,8 +139,7 @@ std::tuple<int, int> toolbox::particles::eliminateSpatialDuplicates(ParticleCont
         (*p)->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
         and
         (*pp)->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-      )
-      {
+      ) {
         logDebug("eliminateSpatialDuplicates()", "particle " << (*pp)->toString() << " found twice as local in domain");
 
         delete *p;

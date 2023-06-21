@@ -18,6 +18,9 @@ from CCZ4Solver import (
     CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking,
 )
 
+from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStep
+from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
+
 
 # for the coupling
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
@@ -49,6 +52,7 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
                 patch_size=self.SubPatchSize,
                 min_volume_h=min_cell_size / self.SubPatchSize,
                 max_volume_h=max_cell_size / self.SubPatchSize,
+                use_heap_storage=False,
             )
             self.double_constants["BlackHoleFVRegion"] = 1.0
 
@@ -56,7 +60,6 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Restriction.h"        
 #include "toolbox/blockstructured/Interpolation.h"        
 """
-            self.switch_to_heap_storage(True, True)
 
         def _store_cell_data_default_guard(self):
             """!
@@ -182,6 +185,7 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
                 rk_order=1,
                 min_meshcell_h=min_cell_size / FD4PatchSize,
                 max_meshcell_h=max_cell_size / FD4PatchSize,
+                use_heap_storage=False,
             )
 
             self._user_action_set_includes += """
@@ -190,8 +194,6 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """
-
-            self.switch_to_heap_storage(True, True)
 
         def create_action_sets(self):
             """!
@@ -470,7 +472,7 @@ def construct_FD4_solver(min_cell_size, max_cell_size):
 
         """
 
-        def __init__(self, name, min_cell_size, max_cell_size):
+        def __init__(self, name, min_cell_size, max_cell_size, use_heap_storage=False):
             self._name_without_FD4_extension = name
 
             CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(
@@ -488,8 +490,6 @@ def construct_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """
-
-            self.switch_to_heap_storage(True, True)
 
         def create_action_sets(self):
             """!
@@ -761,7 +761,7 @@ if __name__ == "__main__":
     # project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
     project.set_load_balancing(
         "toolbox::loadbalancing::SpreadOutHierarchically",
-        "(new ::exahype2::LoadBalancingConfiguration(0.98))",
+        "(new ::exahype2::LoadBalancingConfiguration(0.98, 100, 8))",
     )
 
     peano4_project = project.generate_Peano4_project(verbose=args.verbose)

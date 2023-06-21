@@ -153,7 +153,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "flux_x_sck_vect",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                             self.context["matmulConfigs"][
                                 "flux_y_or_z_sck_vect"
@@ -171,7 +171,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "flux_y_or_z_sck_vect",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                         else:
                             self.context["matmulConfigs"][
@@ -190,7 +190,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "flux_x_sck_vect",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                             self.context["matmulConfigs"][
                                 "flux_y_sck_vect"
@@ -208,7 +208,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "flux_y_sck_vect",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                             if self.context["nDim"] >= 3:
                                 self.context["matmulConfigs"][
@@ -227,11 +227,11 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                     "flux_z_sck_vect",
                                     "nopf",
                                     "gemm",
-                                    self.context["predictorComputePrecision"],
+                                    self.context["predictorComputePrecisions"],
                                 )
                     self.context["matmulConfigs"]["gradQ_x_sck_vect"] = MatmulConfig(
                         nDofPad,
-                        nVar * nDof * nDof3D,
+                        nData * nDof * nDof3D,
                         nDof,
                         nDofPad,
                         nDofPad,
@@ -243,7 +243,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "gradQ_x_sck_vect",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )  # beta, 0 => overwrite C
                     self.context["matmulConfigs"]["gradQ_y_sck_vect"] = MatmulConfig(
                         nDofPad * nVar,
@@ -259,7 +259,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "gradQ_y_sck_vect",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )  # beta, 0 => overwrite C
                     if self.context["nDim"] >= 3:
                         self.context["matmulConfigs"][
@@ -278,7 +278,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "gradQ_z_sck_vect",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )  # beta, 0 => overwrite C
                 else:  # split_ck scalar
                     if self.context["useFlux"]:
@@ -296,7 +296,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "flux_x_sck",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         self.context["matmulConfigs"]["flux_y_sck"] = MatmulConfig(
                             nVarPad,
@@ -312,7 +312,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "flux_y_sck",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         if self.context["nDim"] >= 3:
                             self.context["matmulConfigs"]["flux_z_sck"] = MatmulConfig(
@@ -329,10 +329,10 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "flux_z_sck",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                     self.context["matmulConfigs"]["gradQ_x_sck"] = MatmulConfig(
-                        nVarPad,
+                        nDataPad,
                         nDof,
                         nDof,
                         nVarPad,
@@ -345,10 +345,10 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "gradQ_x_sck",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )  # beta, 0 => overwrite C
                     self.context["matmulConfigs"]["gradQ_y_sck"] = MatmulConfig(
-                        nVarPad,
+                        nDataPad,
                         nDof,
                         nDof,
                         nVarPad * nDof,
@@ -361,16 +361,16 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "gradQ_y_sck",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )  # beta, 0 => overwrite C
                     if self.context["nDim"] >= 3:
                         self.context["matmulConfigs"]["gradQ_z_sck"] = MatmulConfig(
-                            nVarPad,
+                            nDataPad,
                             nDof,
                             nDof,
-                            nVarPad * nDof2,
+                            nDataPad * nDof2,
                             nDofPad,
-                            nVarPad * nDof2,
+                            nDataPad * nDof2,
                             1,
                             0,
                             1,
@@ -378,7 +378,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "gradQ_z_sck",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )  # beta, 0 => overwrite C
             else:  # default linear
                 if self.context["useFlux"]:
@@ -396,7 +396,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "flux_x",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )  # beta, 0 => overwrite C
                     self.context["matmulConfigs"]["flux_y"] = MatmulConfig(
                         nVarPad,
@@ -412,7 +412,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "flux_y",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )  # beta, 0 => overwrite C
                     if self.context["nDim"] >= 3:
                         self.context["matmulConfigs"]["flux_z"] = MatmulConfig(
@@ -429,16 +429,16 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "flux_z",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )  # beta, 0 => overwrite C
                 if self.context["useNCP"]:
                     self.context["matmulConfigs"]["gradQ_x"] = MatmulConfig(
-                        nVar,
+                        nData,
                         nDof,
                         nDof,
                         nDataPad,
                         nDofPad,
-                        nVarPad,
+                        nDataPad,
                         1,
                         1,
                         1,
@@ -446,15 +446,15 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "gradQ_x",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )
                     self.context["matmulConfigs"]["gradQ_y"] = MatmulConfig(
-                        nVar,
+                        nData,
                         nDof,
                         nDof,
                         nDataPad * nDof,
                         nDofPad,
-                        nVarPad * nDof,
+                        nDataPad * nDof,
                         1,
                         1,
                         1,
@@ -462,16 +462,16 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "gradQ_y",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )
                     if self.context["nDim"] >= 3:
                         self.context["matmulConfigs"]["gradQ_z"] = MatmulConfig(
-                            nVar,
+                            nData,
                             nDof,
                             nDof,
                             nDataPad * nDof2,
                             nDofPad,
-                            nVarPad * nDof2,
+                            nDataPad * nDof2,
                             1,
                             1,
                             1,
@@ -479,7 +479,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "gradQ_z",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
         else:  # NonLinear
             if self.context[
@@ -501,7 +501,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "rhs_x",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         self.context["matmulConfigs"]["rhs_y"] = MatmulConfig(
                             nDofPad * nVar,
@@ -517,7 +517,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "rhs_y",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         if self.context["nDim"] >= 3:
                             self.context["matmulConfigs"]["rhs_z"] = MatmulConfig(
@@ -534,7 +534,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "rhs_z",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                         self.context["matmulConfigs"]["lduh_x"] = MatmulConfig(
                             nDofPad,
@@ -550,7 +550,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "lduh_x",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         self.context["matmulConfigs"]["lduh_y"] = MatmulConfig(
                             nDofPad * nVar,
@@ -566,7 +566,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "lduh_y",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         if self.context["nDim"] >= 3:
                             self.context["matmulConfigs"]["lduh_z"] = MatmulConfig(
@@ -583,12 +583,12 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "lduh_z",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                     if self.context["useNCP"] or self.context["useViscousFlux"]:
                         self.context["matmulConfigs"]["gradQ_x"] = MatmulConfig(
                             nDofPad,
-                            nVar,
+                            nData,
                             nDof,
                             nDofPad,
                             nDofPad,
@@ -600,15 +600,15 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "gradQ_x",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         self.context["matmulConfigs"]["gradQ_y"] = MatmulConfig(
-                            nDofPad * nVar,
+                            nDofPad * nData,
                             nDof,
                             nDof,
-                            nDofPad * nVar,
+                            nDofPad * nData,
                             nDofPad,
-                            nDofPad * nVar,
+                            nDofPad * nData,
                             1,
                             1,
                             1,
@@ -616,16 +616,16 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "gradQ_y",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         if self.context["nDim"] >= 3:
                             self.context["matmulConfigs"]["gradQ_z"] = MatmulConfig(
-                                nDofPad * nVar * nDof,
+                                nDofPad * nData * nDof,
                                 nDof,
                                 nDof,
-                                nDofPad * nVar * nDof,
+                                nDofPad * nData * nDof,
                                 nDofPad,
-                                nDofPad * nVar * nDof,
+                                nDofPad * nData * nDof,
                                 1,
                                 1,
                                 1,
@@ -633,7 +633,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "gradQ_z",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                     self.context["matmulConfigs"]["lqi"] = MatmulConfig(
                         nDofPad * nVar,
@@ -649,7 +649,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "lqi",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )  # beta, 0 => overwrite C
                 else:  # scalar predictor recompute
                     if self.context["useFlux"]:
@@ -667,7 +667,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "rhs_x",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         self.context["matmulConfigs"]["rhs_y"] = MatmulConfig(
                             nVarPad,
@@ -683,7 +683,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "rhs_y",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         if self.context["nDim"] >= 3:
                             self.context["matmulConfigs"]["rhs_z"] = MatmulConfig(
@@ -700,7 +700,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "rhs_z",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                         self.context["matmulConfigs"]["lduh_x"] = MatmulConfig(
                             nVarPad,
@@ -716,7 +716,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "lduh_x",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         self.context["matmulConfigs"]["lduh_y"] = MatmulConfig(
                             nVarPad,
@@ -732,7 +732,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "lduh_y",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         if self.context["nDim"] >= 3:
                             self.context["matmulConfigs"]["lduh_z"] = MatmulConfig(
@@ -749,16 +749,16 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "lduh_z",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                     if self.context["useNCP"] or self.context["useViscousFlux"]:
                         self.context["matmulConfigs"]["gradQ_x"] = MatmulConfig(
-                            nVarPad,
+                            nDataPad,
                             nDof,
                             nDof,
-                            nVarPad,
+                            nDataPad,
                             nDofPad,
-                            nVarPad,
+                            nDataPad,
                             1,
                             1,
                             1,
@@ -766,15 +766,15 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "gradQ_x",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         self.context["matmulConfigs"]["gradQ_y"] = MatmulConfig(
-                            nVarPad,
+                            nDataPad,
                             nDof,
                             nDof,
-                            nVarPad * nDof,
+                            nDataPad * nDof,
                             nDofPad,
-                            nVarPad * nDof,
+                            nDataPad * nDof,
                             1,
                             1,
                             1,
@@ -782,16 +782,16 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "gradQ_y",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         if self.context["nDim"] >= 3:
                             self.context["matmulConfigs"]["gradQ_z"] = MatmulConfig(
-                                nVarPad,
+                                nDataPad,
                                 nDof,
                                 nDof,
-                                nVarPad * nDof2,
+                                nDataPad * nDof2,
                                 nDofPad,
-                                nVarPad * nDof2,
+                                nDataPad * nDof2,
                                 1,
                                 1,
                                 1,
@@ -799,7 +799,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "gradQ_z",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                     self.context["matmulConfigs"]["lqi"] = MatmulConfig(
                         nVarPad,
@@ -815,7 +815,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "lqi",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )  # beta, 0 => overwrite C
             else:  # default nonlinear
                 if self.context["useFlux"]:
@@ -833,7 +833,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "rhs_x",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )
                     self.context["matmulConfigs"]["rhs_y"] = MatmulConfig(
                         nVarPad,
@@ -849,7 +849,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "rhs_y",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )
                     if self.context["nDim"] >= 3:
                         self.context["matmulConfigs"]["rhs_z"] = MatmulConfig(
@@ -866,7 +866,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "rhs_z",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
 
                     self.context["matmulConfigs"]["lduh_x"] = MatmulConfig(
@@ -883,7 +883,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "lduh_x",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )
                     self.context["matmulConfigs"]["lduh_y"] = MatmulConfig(
                         nVarPad,
@@ -899,7 +899,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "lduh_y",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )
                     if self.context["nDim"] >= 3:
                         self.context["matmulConfigs"]["lduh_z"] = MatmulConfig(
@@ -916,7 +916,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "lduh_z",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                     if self.context["useCERKGuess"]:
                         self.context["matmulConfigs"]["gradF_x_RKLoop"] = MatmulConfig(
@@ -933,7 +933,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "gradF_x_RKLoop",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         self.context["matmulConfigs"]["gradF_y_RKLoop"] = MatmulConfig(
                             nVar,
@@ -949,7 +949,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "gradF_y_RKLoop",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         if self.context["nDim"] >= 3:
                             self.context["matmulConfigs"][
@@ -968,16 +968,16 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "gradF_z_RKLoop",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                 if self.context["useNCP"] or self.context["useViscousFlux"]:
                     self.context["matmulConfigs"]["gradQ_x"] = MatmulConfig(
-                        nVar,
+                        nData,
                         nDof,
                         nDof,
                         nDataPad,
                         nDofPad,
-                        nVarPad,
+                        nDataPad,
                         1,
                         1,
                         1,
@@ -985,15 +985,15 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "gradQ_x",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )
                     self.context["matmulConfigs"]["gradQ_y"] = MatmulConfig(
-                        nVar,
+                        nData,
                         nDof,
                         nDof,
                         nDataPad * nDof,
                         nDofPad,
-                        nVarPad * nDof,
+                        nDataPad * nDof,
                         1,
                         1,
                         1,
@@ -1001,16 +1001,16 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         "gradQ_y",
                         "nopf",
                         "gemm",
-                        self.context["predictorComputePrecision"],
+                        self.context["predictorComputePrecisions"],
                     )
                     if self.context["nDim"] >= 3:
                         self.context["matmulConfigs"]["gradQ_z"] = MatmulConfig(
-                            nVar,
+                            nData,
                             nDof,
                             nDof,
                             nDataPad * nDof2,
                             nDofPad,
-                            nVarPad * nDof2,
+                            nDataPad * nDof2,
                             1,
                             1,
                             1,
@@ -1018,16 +1018,16 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "gradQ_z",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                     if self.context["useCERKGuess"]:
                         self.context["matmulConfigs"]["gradQ_x_RKLoop"] = MatmulConfig(
-                            nVar,
+                            nData,
                             nDof,
                             nDof,
                             nData,
                             nDofPad,
-                            nVarPad,
+                            nDataPad,
                             1,
                             1,
                             0,
@@ -1035,15 +1035,15 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "gradQ_x_RKLoop",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         self.context["matmulConfigs"]["gradQ_y_RKLoop"] = MatmulConfig(
-                            nVar,
+                            nData,
                             nDof,
                             nDof,
                             nData * nDof,
                             nDofPad,
-                            nVarPad * nDof,
+                            nDataPad * nDof,
                             1,
                             1,
                             0,
@@ -1051,18 +1051,18 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             "gradQ_y_RKLoop",
                             "nopf",
                             "gemm",
-                            self.context["predictorComputePrecision"],
+                            self.context["predictorComputePrecisions"],
                         )
                         if self.context["nDim"] >= 3:
                             self.context["matmulConfigs"][
                                 "gradQ_z_RKLoop"
                             ] = MatmulConfig(
-                                nVar,
+                                nData,
                                 nDof,
                                 nDof,
                                 nData * nDof2,
                                 nDofPad,
-                                nVarPad * nDof2,
+                                nDataPad * nDof2,
                                 1,
                                 1,
                                 0,
@@ -1070,7 +1070,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                                 "gradQ_z_RKLoop",
                                 "nopf",
                                 "gemm",
-                                self.context["predictorComputePrecision"],
+                                self.context["predictorComputePrecisions"],
                             )
                 self.context["matmulConfigs"]["lqi"] = MatmulConfig(
                     nVarPad,
@@ -1086,5 +1086,5 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                     "lqi",
                     "nopf",
                     "gemm",
-                    self.context["predictorComputePrecision"],
+                    self.context["predictorComputePrecisions"],
                 )  # beta, 0 => overwrite C

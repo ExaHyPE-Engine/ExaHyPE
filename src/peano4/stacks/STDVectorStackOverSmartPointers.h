@@ -56,6 +56,29 @@ namespace peano4 {
  * The present container works with the "native" STL container.
  *
  *
+ * ## Signature of hosted objects
+ *
+ * In principle, all we assume is that the hosted objects work internally with
+ * smart pointers. However, we expect them to provide one more constructor,
+ * which looks similar to
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~
+ * class MyClass {
+ *   public:
+ *     enum ObjectConstruction {
+ *       NoData
+ *     };
+ *
+ *     MyClass( ObjectConstruction );
+ * };
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * The enum here has no semantics of its own. It is simply there to allow us
+ * to specify a special constructor which should not allocate any data. A
+ * similar pattern is used within Intel's TBB to define special-semantics
+ * constructor.
+ *
+ *
  * @param T Hosts usually pointer which is backed up by a smart pointer, i.e.
  *   deleted as soon as noone needs it anymore. T has to provide a clone()
  *   operation.
@@ -141,6 +164,10 @@ public:
    * Read the class documentation why I think that the clone() on the
    * subvectors should create a deep copy. It is the section on
    * intra-node parallelisation.
+   *
+   * This operation has to use the default constructor of T to resize,
+   * as we want the destination data structure to be able to host the
+   * target data. So it has to issue all the news if required.
    */
   void clone(const STDVectorStackOverSmartPointers<T>& data);
 
@@ -205,13 +232,13 @@ public:
 
     /**
      * Constructor
+     *
+     * We add a whole set of elements to the container
      */
     PushBlockStackView(int numberOfElements, peano4::stacks::STDVectorStackOverSmartPointers<T>* parentStack):
       _parentStack(parentStack),
       _size(numberOfElements),
-      _baseElement(parentStack->_data.size()) {
-      parentStack->_data.resize(parentStack->_data.size() + numberOfElements);
-    }
+      _baseElement(parentStack->_data.size()) {}
 
   public:
     int size() const { return _size; }
@@ -255,6 +282,9 @@ public:
   /**
    * Pops element from a stack.
    *
+   * I have to be careful how and why I use std::move here, as we employ
+   * smart pointers. I found that a move after the return confuses the
+   * reference counting, and eventually leads to memory leaks.
    */
   T pop();
 
@@ -274,8 +304,6 @@ public:
 
   /**
    * Pushes element to a stack.
-   *
-   * _currentElement always points to the next free element on the stack.
    */
   void push(const T& element);
 
@@ -338,6 +366,9 @@ public:
    * We have to prepare the en bloc, raw data buffers for both the data and
    * the meta data (if required). After that, we can trigger the two
    * non-blocking receives.
+   *
+   * See clone() for a description why we have to use resize() with the
+   * standard constructor here.
    *
    * @see startSend()
    */

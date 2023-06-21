@@ -1,8 +1,8 @@
 #ifndef TEMPLATE_DIFFUSEINTERFACE_HEADER
 #define TEMPLATE_DIFFUSEINTERFACE_HEADER
 
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+#include "../../../../ExaHyPE/kernels/GaussLegendreBasis.h"
+#include "../../../../ExaHyPE/kernels/KernelUtils.h"
 
 enum Position { above, at, below };
 
@@ -64,7 +64,7 @@ public:
 
   void getAlphaPatch(const double* const x, double* alpha) {
     kernels::idx2 idx_cells(domain_cells, domain_cells);
-    kernels::idx4 idx(basisSize, basisSize, basisSize, DIMENSIONS);
+    kernels::idx4 idx(basisSize, basisSize, basisSize, Dimensions);
 
     constexpr int center = basisSize / 2;
 
@@ -138,7 +138,7 @@ public:
     std::vector<double>& patch_x, std::vector<double>& patch_z, double center_x, double center_z, double patch_radius
   ) {
 
-    kernels::idx4 idx(basisSize, basisSize, basisSize, DIMENSIONS);
+    kernels::idx4 idx(basisSize, basisSize, basisSize, Dimensions);
     kernels::idx3 idx_node(basisSize, basisSize, basisSize);
 
     constexpr int center = basisSize / 2;
@@ -219,7 +219,7 @@ public:
     std::vector<double> patch_x;
     std::vector<double> patch_z;
 
-    kernels::idx4 idx(basisSize, basisSize, basisSize, DIMENSIONS);
+    kernels::idx4 idx(basisSize, basisSize, basisSize, Dimensions);
     kernels::idx3 idx_node(basisSize, basisSize, basisSize);
 
     double center_x = (x[idx(0, 0, basisSize - 1, 0)] + x[idx(0, 0, 0, 0)]) / 2.0;

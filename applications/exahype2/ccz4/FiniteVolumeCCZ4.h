@@ -193,23 +193,18 @@ public:
   ) {
 #if defined(CCZ4EINSTEIN)
     const double qmin  = std::min({Q[0], Q[3], Q[5]});
-    const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, Q[54]}) / std::sqrt(qmin);
+    const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, pow(Q[54], 1.0)}) / std::sqrt(qmin);
 #else
     const double alpha = 1.0;
 #endif
 
     constexpr double sqrtwo = 1.4142135623730951;
-    // NOTE parameters are stored in Constants.h
+    // NOTE parameters are stored in abstract superclass
     const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc / alpha, CCZ4GLMd / alpha});
     const double tempB = Q[17 + normal]; // DOT_PRODUCT(Q(18:20),nv(:))
     double       tem   = std::max({1.0, std::abs(-tempA - tempB), std::abs(tempA - tempB)});
     bool         flag  = false;
-    // for(int i=0; i<(NumberOfUnknowns-1); i++){
-    //   if ( std::abs(Q[i]) > 2.0) { flag = true; break; }
-    // }
-    // return flag? 2*tem: tem;
     return tem;
-    // return examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(Q, faceCentre, volumeH, t , normal);
   }
 
 #if defined(GPUOffloadingOMP)

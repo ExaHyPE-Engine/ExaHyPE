@@ -1,7 +1,7 @@
 #ifndef EXASEIS_SCENARIOHHSONE_TRANSPOSED_HEADER
 #define EXASEIS_SCENARIOHHSONE_TRANSPOSED_HEADER
 #include "Scenario.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
+#include "kernels/GaussLegendreBasis.h"
 
 template <class Shortcuts, int basisSize>
 class Hhs1_Transposed: public Scenario<Shortcuts, basisSize> {
@@ -60,7 +60,7 @@ public:
 
 #if defined _EXASEIS_DYNAMIC
   void refinementCriteria(
-    exahypew::solvers::aderdg::Solver* solver, std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria
+    exahype2::solvers::aderdg::Solver* solver, std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria
   ) override {
     Shortcuts s;
 
@@ -101,7 +101,7 @@ public:
       solver->getMaximumAdaptiveMeshLevel(),
       m_pointSourceLocation,
       0,
-      static_cast<exahype2::solvers::aderdg::ADERDGSolver*>(solver)->FCoeff[basisSize - 1][0]
+      static_cast<exahype::solvers::ADERDGSolver*>(solver)->FCoeff[basisSize - 1][0]
     ));
 
 #else

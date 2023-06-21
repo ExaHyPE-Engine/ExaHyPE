@@ -124,7 +124,9 @@ namespace exahype2 {
      * input data and maps it onto the particle attributes. After that, it assumes
      * that the indices indicies[0], indicies[1] and indicies[2] actually denote
      * the particle's velocities and it updates the velocity according to an
-     * explicit Euler.
+     * explicit Euler. We also provide a set of scale factor for velocity in case the
+     * user would like to tune the velocity accordingly. e.g. if the velocity is the
+     * inverse of the indiced quantities, enter {-1,-1,-1}.
      *
      * To use this extended mapping, you have to use the Python API similar to the
      * following snippet:
@@ -140,6 +142,7 @@ namespace exahype2 {
      *     fineGridCell{{SOLVER_NAME}}Q.value,
      *     fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
      *     {16,17,18},
+     *     {1,1,1},
      *     *p
      *   """
      *   )
@@ -157,6 +160,7 @@ namespace exahype2 {
       const double* __restrict__ Q,
       double                             timeStepSize,
       tarch::la::Vector<Dimensions, int> indices,
+      tarch::la::Vector<Dimensions, int> factors,
       Particle&                          particle
     );
 

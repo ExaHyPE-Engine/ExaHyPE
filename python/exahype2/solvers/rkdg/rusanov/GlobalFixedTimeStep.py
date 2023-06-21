@@ -34,7 +34,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
         max_cell_h,
         time_step_size,
         flux=PDETerms.User_Defined_Implementation,
-        eigenvalues=PDETerms.None_Implementation,
+        eigenvalues=PDETerms.User_Defined_Implementation,
         ncp=PDETerms.None_Implementation,
         point_source=PDETerms.None_Implementation,
         boundary_conditions=PDETerms.User_Defined_Implementation,

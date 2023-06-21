@@ -107,14 +107,9 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             point_source=point_source,
         )
 
-        compute_precisions = list(
-            set(
-                [
-                    self._predictor_computation_precision,
-                    self._corrector_computation_precision,
-                ]
-            )
-        )
+        computation_precisions = self._predictor_computation_precisions
+        if self._corrector_computation_precision not in computation_precisions:
+            computation_precisions.append(self._corrector_computation_precision)
         self._abstract_solver_user_declarations = create_abstract_solver_declarations(
             self._flux_implementation,
             self._ncp_implementation,
@@ -123,7 +118,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             self._material_param_implementation,
             self._point_sources_implementation,
             self._is_linear,
-            compute_precisions,
+            computation_precisions,
             False,
         )
         self._abstract_solver_user_declarations += (
@@ -137,7 +132,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             self._material_param_implementation,
             self._point_sources_implementation,
             self._is_linear,
-            compute_precisions,
+            computation_precisions,
             False,
         )
         self._abstract_solver_user_definitions += (
@@ -152,7 +147,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             self._material_param_implementation,
             self._point_sources_implementation,
             self._is_linear,
-            compute_precisions,
+            computation_precisions,
             False,
         )
         self._solver_user_definitions = create_solver_definitions(
@@ -163,7 +158,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             self._material_param_implementation,
             self._point_sources_implementation,
             self._is_linear,
-            compute_precisions,
+            computation_precisions,
             False,
         )
 

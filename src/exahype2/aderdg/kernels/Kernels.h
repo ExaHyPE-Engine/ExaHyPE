@@ -274,10 +274,10 @@ namespace kernels {
           const int                                    direction
         );
 
-        template <typename SolverType>
+        template <typename SolverType, typename T>
         double maxScaledEigenvalue(
           SolverType&                                  solver,
-          const double* const                          luh,
+          const T* const                               luh,
           const tarch::la::Vector<Dimensions, double>& cellCentre,
           const tarch::la::Vector<Dimensions, double>& dx,
           const double                                 t,

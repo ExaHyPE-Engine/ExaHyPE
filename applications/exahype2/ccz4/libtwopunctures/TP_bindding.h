@@ -42,7 +42,7 @@ namespace TP_bindding {
 
     // Q[53]=traceK; Q[54]=std::log(phi); Q[16]=std::log(Q[16]);
     Q[53] = traceK;
-    Q[54] = phi; // Q[16]=phi;
+    Q[54] = std::pow(phi, 1.0); // Q[16]=phi;
   }
 
   // use this to calculate the gradient

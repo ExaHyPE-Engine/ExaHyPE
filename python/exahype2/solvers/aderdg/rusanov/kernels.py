@@ -959,7 +959,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
 
 def create_compute_time_step_size_for_adaptive_time_stepping():
     return """
-  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
+    double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
 
@@ -1015,17 +1015,8 @@ def create_start_time_step_implementation_for_adaptive_time_stepping():
   _maxEigenvalue = 0.0;
 }"""
 
-    return statistics + clear_max_eigenvalue
-
-
-def create_finish_time_step_implementation_for_adaptive_time_stepping():
-    """
-
-    This routine is inserted after we have reduced all global quantities. These
-    are the quantities with the postfix ThisTimeStep.
-
-    """
-    return """
+    compute_new_timestep = """
+  if ( isFirstGridSweepOfTimeStep() ) {
     #ifdef Parallel
     double newMaxEigenvalue = _maxEigenvalue;
     tarch::mpi::Rank::getInstance().allReduce(
@@ -1058,8 +1049,21 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping():
         logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")" );
       }
     }
+  }
 
 """
+
+    return statistics + clear_max_eigenvalue + compute_new_timestep
+
+
+def create_finish_time_step_implementation_for_adaptive_time_stepping():
+    """
+
+    This routine is inserted after we have reduced all global quantities. These
+    are the quantities with the postfix ThisTimeStep.
+
+    """
+    return ""
 
 
 def create_constructor_implementation_for_adaptive_time_stepping():

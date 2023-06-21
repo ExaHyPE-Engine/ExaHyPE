@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include "SolverInformation.h"
-#include "exahype2/aderdg/solvers/FiniteVolumesSolver.h"
+#include "exahype/solvers/FiniteVolumesSolver.h"
 
 template <int patchSize>
 class SolverInformationFV: public SolverInformation {

@@ -1,7 +1,7 @@
 #include <algorithm>
 
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+#include "kernels/GaussLegendreBasis.h"
+#include "kernels/KernelUtils.h"
 
 namespace Numerics {
   template <class Shortcuts>
@@ -250,7 +250,7 @@ namespace Numerics {
   template <class Shortcuts>
   void computeAbsA(const double* const Q_L, const double* const Q_R, double absA[], int direction) {
     Shortcuts     s;
-    kernels::idx2 idx2(DIMENSIONS, s.SizeVariables);
+    kernels::idx2 idx2(Dimensions, s.SizeVariables);
     kernels::idx2 idxA(s.SizeVariables + s.SizeParameters, s.SizeVariables + s.SizeParameters);
     std::fill_n(absA, (s.SizeVariables + s.SizeParameters) * (s.SizeVariables + s.SizeParameters), 0.0);
 
@@ -345,8 +345,8 @@ namespace Numerics {
     Shortcuts s;
 
     // approximate graidient
-    double gradQ[(s.SizeVariables + s.SizeParameters) * (DIMENSIONS)];
-    std::fill_n(gradQ, ((s.SizeVariables + s.SizeParameters) * DIMENSIONS), 0.0);
+    double gradQ[(s.SizeVariables + s.SizeParameters) * (Dimensions)];
+    std::fill_n(gradQ, ((s.SizeVariables + s.SizeParameters) * Dimensions), 0.0);
 
     // average state
     double ncp[s.SizeVariables + s.SizeParameters];
@@ -356,7 +356,7 @@ namespace Numerics {
     double Qavg[s.SizeVariables + s.SizeParameters];
     std::fill_n(Qavg, (s.SizeVariables + s.SizeParameters), 0.0);
 
-    kernels::idx2 idx2(DIMENSIONS, s.SizeVariables + s.SizeParameters);
+    kernels::idx2 idx2(Dimensions, s.SizeVariables + s.SizeParameters);
     kernels::idx2 idxA(s.SizeVariables + s.SizeParameters, s.SizeVariables + s.SizeParameters);
 
     // HLLEM diffusion matrices;

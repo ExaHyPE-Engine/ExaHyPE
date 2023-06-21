@@ -18,7 +18,7 @@ import peano4
 import exahype2
 
 #
-# We specifiy the space dimensions here.
+# We specify the space dimensions here.
 # We support either 2- or 3-dimensional problems.
 #
 dimensions = 2
@@ -51,7 +51,7 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 )
 
 #
-# Specifiy which implementation our solvers uses.
+# Specify which implementation our solvers uses.
 # Here we want to use a user-defined C++ implementation.
 # For this, we create a C++ file "AdvectionSolver.cpp" (same as our solver name from above),
 # where we can use ExaHyPE's API to fill out the necessary implementations.

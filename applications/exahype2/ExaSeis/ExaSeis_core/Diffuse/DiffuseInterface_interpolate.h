@@ -1,8 +1,8 @@
 #ifndef TEMPLATE_DIFFUSEINTERFACE_HEADER
 #define TEMPLATE_DIFFUSEINTERFACE_HEADER
 
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+#include "../../../../ExaHyPE/kernels/GaussLegendreBasis.h"
+#include "../../../../ExaHyPE/kernels/KernelUtils.h"
 
 template <class Shortcuts, int basisSize>
 class DiffuseInterface {
@@ -48,7 +48,7 @@ public:
     int           j = static_cast<int>(std::floor((x[2] - info->domainOffset[2]) / dx));
     int           i = static_cast<int>(std::floor((x[0] - info->domainOffset[0]) / dx));
 
-    kernels::idx4 id_xyzn(basisSize, basisSize, basisSize, DIMENSIONS);
+    kernels::idx4 id_xyzn(basisSize, basisSize, basisSize, Dimensions);
 
     double min_dist_limit = topography_limits_min[idx2(cell_j, cell_i)] - x[id_xyzn(0, basisSize - 1, 0, 1)];
     if (min_dist_limit > max_patch_size) {

@@ -11,7 +11,7 @@ public:
 
   void initUnknownsPointwise(
     const double* const                          x,
-    const tarch::la::Vector<DIMENSIONS, double>& center,
+    const tarch::la::Vector<Dimensions, double>& center,
     const double                                 t,
     const double                                 dt,
     double*                                      Q
@@ -30,7 +30,7 @@ public:
   }
 
   void refinementCriteria(
-    exahype::solvers::Solver* solver, std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria
+    exahype2::solvers::aderdg::Solver* solver, std::vector<Refinement::RefinementCriterion<Shortcuts>*>& criteria
   ) override {
     //    criteria.push_back(new Refinement::StaticAMR<Shortcuts>);
     double left_edge[3];

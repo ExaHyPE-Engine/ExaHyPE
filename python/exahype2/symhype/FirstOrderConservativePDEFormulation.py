@@ -14,11 +14,11 @@ class FirstOrderConservativePDEFormulation(PDE):
     To model your PDE, you typically run through a couple of single steps.
     First, include this package plus sympy. Next, create a new instance
     of this class to which you pass the number of equations in your PDE
-    system, i.e. the number of unknowns you want to develop, plus the
+    system, i.e., the number of unknowns you want to develop, plus the
     dimension.
 
     As a consequence, the solver holds an equation pde which describes the
-    pde's right-hand side in the representation
+    PDE's right-hand side in the representation
 
     \partial Q(t) + div_x F(Q)
 
@@ -26,7 +26,7 @@ class FirstOrderConservativePDEFormulation(PDE):
     names. Feel free to derive them from Q via constructs similar to
 
     rho = euler.Q[0]
-    j = sympy.Array( euler.Q[1:4] )
+    j = sympy.Array(euler.Q[1:4])
     E = euler.Q[4]
     """
 
@@ -34,15 +34,18 @@ class FirstOrderConservativePDEFormulation(PDE):
         PDE.__init__(self, unknowns, auxiliary_variables, dimensions)
 
         self.F = sympy.symarray("F", (unknowns, dimensions))
+        self.ncp = sympy.symarray("ncp", (unknowns, dimensions))
         self.eigenvalues = sympy.symarray("alpha", (unknowns, dimensions))
         self.sources = sympy.symarray("S", (unknowns))
 
     def __str__(self):
         result = ""
         for i in range(0, self.unknowns):
-            result += "d_t " + str(self.Q[i]) + "(x) + div_x( "
+            result += "d_t(" + str(self.Q[i]) + "(x)) + div("
             result += str(self.F[i])
-            result += " ) = "
+            result += " + "
+            result += str(self.ncp[i])
+            result += ") = "
             result += str(self.sources[i]) + "\n"
         for i in range(0, self.unknowns):
             result += "\lambda_{max," + str(i) + "}(x) = "
@@ -53,12 +56,14 @@ class FirstOrderConservativePDEFormulation(PDE):
     def LaTeX(self):
         result = "\\begin{eqnarray*}"
         for i in range(0, self.unknowns):
-            result += "\partial _t " + str(self.Q[i]) + "(x) + div( "
+            result += "\partial _t " + str(self.Q[i]) + "(x) + div("
             for j in range(0, len(self.F[i])):
                 if j != 0:
-                    result += ","
+                    result += ", "
                 result += str(self.F[i][j])
-            result += " ) & = & "
+                result += " + "
+                result += str(self.ncp[i][j])
+            result += ") & = & "
             result += str(self.sources[i]) + " \\\\"
         for i in range(0, self.unknowns):
             result += "\\lambda _{max," + str(i) + "}(x) & = & ["
@@ -84,6 +89,8 @@ class FirstOrderConservativePDEFormulation(PDE):
             for d in range(0, self.dimensions):
                 if not isinstance(self.F[i, d], numbers.Number):
                     self.F[i, d] = self.F[i, d].subs(expression, new_expression)
+                if not isinstance(self.ncp[i, d], numbers.Number):
+                    self.ncp[i, d] = self.ncp[i, d].subs(expression, new_expression)
                 if not isinstance(self.eigenvalues[i, d], numbers.Number):
                     self.eigenvalues[i, d] = self.eigenvalues[i, d].subs(
                         expression, new_expression
@@ -114,6 +121,38 @@ class FirstOrderConservativePDEFormulation(PDE):
                         + str(i)
                         + "] = "
                         + sympy.printing.cxxcode(self.F[i, d])
+                        + ";"
+                    )
+                result += "\n"
+            result += "  break;\n"
+        result += "}\n"
+        return result
+
+    def implementation_of_ncp(self, invoke_evalf_before_output=False):
+        """
+        Return implementation for nonconservative product (ncp) along one coordinate axis (d) as C code.
+        invoke_evalf_before_output: boolean
+          If your expression is a symbolic expression (default) then we use evalf
+          before we pipe it into the output. If your expression is something numeric,
+          then evalf will fail (as it is not defined for scalar quantities).
+        """
+        result = self._implementation_of_mapping_onto_named_quantities(
+            is_cell_mapping=False, has_delta=True
+        )
+        result += "switch( normal ) {\n"
+        for d in range(0, self.dimensions):
+            result += "  case " + str(d) + ":\n"
+            for i in range(0, self.unknowns):
+                if invoke_evalf_before_output:
+                    result += sympy.printing.cxxcode(
+                        self.ncp[i, d].evalf(), assign_to="BTimesDeltaQ[" + str(i) + "]"
+                    )
+                else:
+                    result += (
+                        "BTimesDeltaQ["
+                        + str(i)
+                        + "] = "
+                        + sympy.printing.cxxcode(self.ncp[i, d])
                         + ";"
                     )
                 result += "\n"

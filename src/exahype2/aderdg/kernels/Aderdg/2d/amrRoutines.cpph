@@ -24,6 +24,8 @@ void kernels::aderdg::generic::c::singleLevelFaceUnknownsProlongation(
 ) {
   kernels::idx2 idx(basisSize, numberOfVariables);
 
+  std::fill_n(lQhbndFine, basisSize * numberOfVariables, 0.0);
+
   for (int m1 = 0; m1 < basisSize; ++m1) {
     for (int ivar = 0; ivar < numberOfVariables; ++ivar) {
       for (int n1 = 0; n1 < basisSize; ++n1) {

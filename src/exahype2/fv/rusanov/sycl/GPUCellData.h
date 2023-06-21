@@ -74,13 +74,13 @@ namespace exahype2 {
          *
          */
         struct GPUCellData {
-          double**                               QIn;
+          double*                                QIn;
           tarch::la::Vector<Dimensions, double>* cellCentre;
           tarch::la::Vector<Dimensions, double>* cellSize;
           double*                                t;
           double*                                dt;
           int                                    numberOfCells;
-          double**                               QOut;
+          double*                                QOut;
           double*                                maxEigenvalue;
 
           /**

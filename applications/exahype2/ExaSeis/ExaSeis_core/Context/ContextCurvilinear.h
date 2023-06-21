@@ -1,6 +1,7 @@
 #ifndef EXASEIS_CONTEXT_CURVILINEAR_HEADER
 #define EXASEIS_CONTEXT_CURVILINEAR_HEADER
 
+// #include "kernels/GaussLegendreBasis.h"
 #include "Context.h"
 #include "SolverInformationADERDG.h"
 #include "curvi/coordinate.h"
@@ -8,7 +9,6 @@
 #include "curvi/geometry/block.h"
 #include "curvi/interface/interface.h"
 #include "curvi/kdTree/root.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
 #include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
 
 template <class Shortcuts, int basisSize>
@@ -77,7 +77,6 @@ public:
       int ex = std::round((center[0] - domain_info->domainOffset[0] - dx[0] / 2.0) / dx[0]);
 
 #ifndef QUICK_IDENTITY
-
       Block element = interface->getElement(solver_info->nodes, ez, ey, ex);
       int   index_offset[3];
       element.getIndexOffset(index_offset);
@@ -103,7 +102,6 @@ public:
       }
 
 #else
-
       for (int k = 0; k < basisSize; k++) {
         for (int j = 0; j < basisSize; j++) {
           for (int i = 0; i < basisSize; i++) {
@@ -133,7 +131,6 @@ public:
         }
       }
 #else
-
       ExaSeis::Derivatives<Shortcuts, basisSize>::metricDerivatives(solver_info->dudx, luh, &dx[0], derivatives);
 #endif
 

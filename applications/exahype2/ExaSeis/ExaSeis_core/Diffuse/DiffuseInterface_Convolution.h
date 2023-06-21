@@ -1,8 +1,8 @@
 #ifndef TEMPLATE_DIFFUSEINTERFACE_HEADER
 #define TEMPLATE_DIFFUSEINTERFACE_HEADER
 
-#include "exahype2/aderdg/kernels/UtilsKernelUtils.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
+#include "../../../../ExaHyPE/kernels/GaussLegendreBasis.h"
+#include "../../../../ExaHyPE/kernels/KernelUtils.h"
 
 template <class Shortcuts, int basisSize>
 class DiffuseInterface {

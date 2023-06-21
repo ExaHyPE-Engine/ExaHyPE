@@ -9,10 +9,18 @@ from .PatchToDoubleArray import PatchToDoubleArray
 
 
 class PatchToDoubleArrayOnHeap(PatchToDoubleArray):
-    """
+    """!
+
+    Realise patch via smart pointers
 
     Converter which maps the patch 1:1 onto a double array administered
-    through a smart pointer.
+    through a smart pointer. This is an alternative to the patch realisation
+    on the call stack, which can become really costly and lead to call stack
+    overflows.
+
+    Even though the name of the class does not highlight this, we use smart
+    pointers here, i.e. we do not only store data on the heap. This means
+
 
     """
 

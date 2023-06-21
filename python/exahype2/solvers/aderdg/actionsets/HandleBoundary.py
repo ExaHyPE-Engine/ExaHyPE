@@ -43,10 +43,10 @@ class Handle_boundary(AbstractAderDGActionSet):
     const int normal = marker.getSelectedFaceNumber()%Dimensions;
     const bool isLeftFace = marker.getSelectedFaceNumber()<Dimensions;
 
-    {{PREDICTOR_STORAGE_PRECISION}}* FIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? 0 : fluxElementsByFace);
-    {{PREDICTOR_STORAGE_PRECISION}}* FOut = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? fluxElementsByFace : 0);
-    {{PREDICTOR_STORAGE_PRECISION}}* QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? 0 : basisElementsByFace);
-    {{PREDICTOR_STORAGE_PRECISION}}* QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? basisElementsByFace : 0);    
+    {{CORRECTOR_COMPUTATION_PRECISION}}* FIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? 0 : fluxElementsByFace);
+    {{CORRECTOR_COMPUTATION_PRECISION}}* FOut = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? fluxElementsByFace : 0);
+    {{CORRECTOR_COMPUTATION_PRECISION}}* QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? 0 : basisElementsByFace);
+    {{CORRECTOR_COMPUTATION_PRECISION}}* QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? basisElementsByFace : 0);    
 
     tarch::la::Vector<Dimensions,double> bottomLeftPosition = marker.x()-marker.h();
     bottomLeftPosition[normal] += marker.h()[normal];

@@ -3,6 +3,7 @@
 #include "Scenario.h"
 #include "easi/ResultAdapter.h"
 #include "easi/YAMLParser.h"
+// #include "../include/easi/reader/asagi_reader.h"
 #include "../easi/reader/asagi_reader.h"
 
 struct ElasticMaterial {

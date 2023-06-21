@@ -1,4 +1,4 @@
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+#include "../../../ExaHyPE/kernels/KernelUtils.h"
 
 namespace Numerics {
   // Getter routines

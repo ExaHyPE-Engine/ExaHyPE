@@ -14,7 +14,6 @@ void tutorials::exahype2::swe::SWESolver::initialCondition(
   Q[1] = 0;                        // x-momentum (hu)
   Q[2] = 0;                        // y-momentum (hv)
   Q[3] = (nearCentre ? 0.0 : 0.1); // Bathymetry (b)
-  // Q[3] = 0;
 }
 
 void tutorials::exahype2::swe::SWESolver::boundaryConditions(
@@ -27,8 +26,8 @@ void tutorials::exahype2::swe::SWESolver::boundaryConditions(
 ) {
   // Reflecting boundary conditions
   Qoutside[0] = Qinside[0];
-  Qoutside[1] = Qinside[1];
-  Qoutside[2] = Qinside[2];
+  Qoutside[1] = -Qinside[1];
+  Qoutside[2] = -Qinside[2];
   Qoutside[3] = Qinside[3];
 }
 
@@ -43,12 +42,8 @@ double tutorials::exahype2::swe::SWESolver::maxEigenvalue(
   assertion(Q[0] > 0);
   double       result = 1.0;
   const double ih     = 1.0 / Q[0]; // Inverse water height
-  // We need to ensure that h+b is not negative.
-  // This can happen if a negative bathymetry is chosen.
-  // This should be avoided!
-  assertion((Q[0] + Q[3]) >= 0.0);
-  const double c = std::sqrt(Gravity * (Q[0] + Q[3]));
-  double       u = 0.0;
+  const double c      = std::sqrt(Gravity * Q[0]);
+  double       u      = 0.0;
 
   switch (normal) {
   case 0: // x
@@ -104,13 +99,13 @@ void tutorials::exahype2::swe::SWESolver::nonconservativeProduct(
   switch (normal) {
   case 0: // x
     BTimesDeltaQ[0] = 0.0;
-    BTimesDeltaQ[1] = Gravity * Q[0] * (deltaQ[0] + deltaQ[3]);
+    BTimesDeltaQ[1] = Gravity * Q[0] * deltaQ[3];
     BTimesDeltaQ[2] = 0.0;
     break;
   case 1: // y
     BTimesDeltaQ[0] = 0.0;
     BTimesDeltaQ[1] = 0.0;
-    BTimesDeltaQ[2] = Gravity * Q[0] * (deltaQ[0] + deltaQ[3]);
+    BTimesDeltaQ[2] = Gravity * Q[0] * deltaQ[3];
     break;
   }
 }

@@ -5,11 +5,9 @@
 #include <iomanip>
 #include <stdio.h>
 
-tarch::logging::Log tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::_log(
-  "tarch::plotter::griddata::"
-  "unstructured::vtk::"
-  "VTKTextFileWriter"
-);
+tarch::logging::Log tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::_log("tarch::plotter::griddata::"
+                                                                                         "unstructured::vtk::"
+                                                                                         "VTKTextFileWriter");
 
 const std::string tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::HEADER
   = "# vtk DataFile Version 2.0\n "

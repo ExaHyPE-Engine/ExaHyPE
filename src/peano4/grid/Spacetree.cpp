@@ -428,8 +428,7 @@ void peano4::grid::Spacetree::updateVertexAfterLoad(
       not vertex.getHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep()
       and
       vertex.getState()==GridVertex::State::Refined
-    )
-    {
+    ) {
       logDebug(
         "updateVertexAfterLoad(GridVertex&)", "would like to erase " << vertex.toString() << " in spacetree " << _id
       );
@@ -487,8 +486,7 @@ void peano4::grid::Spacetree::updateVertexBeforeStore(
       vertex.getNumberOfAdjacentRefinedLocalCells()==TwoPowerD
       and
       vertex.getState()==GridVertex::State::Unrefined
-    )
-    {
+    ) {
       vertex.setState(GridVertex::State::RefinementTriggered);
       logDebug(
         "updateVertexBeforeStore(...)",
@@ -1159,8 +1157,7 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
           p.getRefinementControl()==GridControlEvent::RefinementControl::Refine
           and
           tarch::la::allGreaterEquals( state.getH(), p.getH() )
-        )
-        {
+        ) {
           refine = true;
         }
 
@@ -1170,8 +1167,7 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
           p.getRefinementControl()==GridControlEvent::RefinementControl::Erase
           and
           tarch::la::allSmaller( state.getH(), p.getH() )
-        )
-        {
+        ) {
           erase = true;
         }
       }
@@ -1712,8 +1708,7 @@ void peano4::grid::Spacetree::splitOrJoinCellBottomUp(
     _splitTriggered.begin()->second.mode == peano4::SplitInstruction::Mode::AggressiveTopDown
     and
     not _splittedCells.empty()
-  )
-  {
+  ) {
     int targetSpacetreeId = _splittedCells.back();
     _splittedCells.pop_back();
     logDebug(

@@ -11,3 +11,4 @@ from .Model import Model
 from .Patch import Patch
 from .PatchToDoubleArray import PatchToDoubleArray
 from .PatchToDoubleArrayOnHeap import PatchToDoubleArrayOnHeap
+from .PatchToDoubleArrayWithSmartPointer import PatchToDoubleArrayWithSmartPointer

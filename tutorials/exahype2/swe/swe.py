@@ -47,7 +47,7 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 my_solver.plot_description = "h, hu, hv, b"
 
 #
-# Specifiy which implementation our solvers uses.
+# Specify which implementation our solvers uses.
 # Here we want to use a user-defined C++ implementation.
 # For this, we create a C++ file "SWESolver.cpp" (same as our solver name from above),
 # where we can use ExaHyPE's API to fill out the necessary implementations.

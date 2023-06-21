@@ -109,7 +109,7 @@ public:
     virtual void assignRemainingVerticesDefaultValues() = 0;
 
     /**
-     * @seee plotVertex()
+     * @see plotVertex()
      */
     virtual int getFirstVertexWithinPatch(int patchIndex) const = 0;
   };

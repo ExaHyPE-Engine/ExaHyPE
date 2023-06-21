@@ -6,8 +6,8 @@
 #include "../Context/SolverInformationFV.h"
 #include "../Diffuse/DiffuseInterface.h"
 #include "../Topography/TopographyFactory.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+#include "../../../ExaHyPE/kernels/GaussLegendreBasis.h"
+#include "../../../../ExaHyPE/kernels/KernelUtils.h"
 
 template <class Shortcuts, int basisSize>
 class ContextDiffuse: public Context<Shortcuts, basisSize> {
@@ -38,8 +38,8 @@ public:
 
   virtual void initUnknownsPatch(
     double*                                      luh,
-    const tarch::la::Vector<DIMENSIONS, double>& center,
-    const tarch::la::Vector<DIMENSIONS, double>& dx,
+    const tarch::la::Vector<Dimensions, double>& center,
+    const tarch::la::Vector<Dimensions, double>& dx,
     double                                       t,
     double                                       dt
   ) override {
@@ -47,7 +47,7 @@ public:
     int       numberOfData = s.SizeVariables + s.SizeParameters;
 
     kernels::idx3 id_xyz(basisSize, basisSize, basisSize);
-    kernels::idx4 id_xyzn(basisSize, basisSize, basisSize, DIMENSIONS);
+    kernels::idx4 id_xyzn(basisSize, basisSize, basisSize, Dimensions);
     kernels::idx4 id_xyzf(basisSize, basisSize, basisSize, numberOfData);
 
     double offset_x = center[0] - 0.5 * dx[0];
@@ -58,7 +58,7 @@ public:
     double width_y = dx[1];
     double width_z = dx[2];
 
-    double nodes[basisSize * basisSize * basisSize * DIMENSIONS];
+    double nodes[basisSize * basisSize * basisSize * Dimensions];
     double alpha[basisSize * basisSize * basisSize];
     double quad_nodes[basisSize];
 
@@ -112,7 +112,7 @@ public:
     Shortcuts s;
     const int numberOfData = s.SizeVariables + s.SizeParameters;
     Q[s.alpha]             = interface->getAlpha(x);
-    tarch::la::Vector<DIMENSIONS, double> center;
+    tarch::la::Vector<Dimensions, double> center;
     center[0] = x[0];
     center[1] = x[1];
     center[2] = x[2];

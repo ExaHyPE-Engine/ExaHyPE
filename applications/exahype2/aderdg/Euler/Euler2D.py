@@ -128,7 +128,7 @@ project.set_global_simulation_parameters(
 # prototype we did start off with.
 #
 project.set_load_balancing(
-    "toolbox::loadbalancing::RecursiveSubdivision",
+    "toolbox::loadbalancing::RecursiveBipartition",
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 project.set_Peano4_installation("../../../../", build_mode)

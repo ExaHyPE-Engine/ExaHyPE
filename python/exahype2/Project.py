@@ -13,7 +13,7 @@ import exahype2.solvers
 
 
 class Project(object):
-    """!"
+    """!
 
     ExaHyPE 2 project
 
@@ -327,7 +327,12 @@ thus appreciate any citation of the original release paper
         )
 
     def add_tracer(
-        self, name, attribute_count=0, plot=True, priority_within_action_sets=-1
+        self,
+        name,
+        attribute_count=0,
+        plot=True,
+        sort_priority_within_action_sets=-1,
+        plot_priority_within_action_sets=65536,
     ):
         """!
 
@@ -353,7 +358,9 @@ thus appreciate any citation of the original release paper
         constraint, we do not need a velocity vector. However, we need an
         additional enumeration which clarifies if a
         particle has moved already or not. This enumeration is needed by the
-        particle update routines.
+        particle update routines. Obviously, nothing stops you from adding
+        a separate velocity field to the tracer object and thus to redefine
+        this behaviour.
 
         Finally, we add each
         particle a number which is a tuple consisting of the tree number
@@ -372,7 +379,16 @@ thus appreciate any citation of the original release paper
         ## Action set order
 
         We add the particle ordering with priority -1. This should do the job
-        for most setups, but we might be wrong.
+        for most setups, but we might be wrong. The following action sets are
+        automatically added:
+
+        - UpdateParallelState is added to each and every time step and plotting
+          sweep. As we also add
+        - UpdateParticleGridAssociation_LiftDrop to each and every time step,
+          particles can move at any point. We always resort them immediately.
+
+        Both action sets are assigned the standard priority of sort_priority_within_action_sets.
+
 
         ## Arguments
 
@@ -392,7 +408,7 @@ thus appreciate any citation of the original release paper
           do so if they dump the tracer data independently into another database
           anyway.
 
-        priority_within_action_sets: Integer
+        sort_priority_within_action_sets: Integer
           You have to clarify what the priority of the tracer is within the
           action sets. By default, all ExaHyPE solvers start with priority
           0 and then up to n. So you are fine with using the default of -1
@@ -438,13 +454,17 @@ thus appreciate any citation of the original release paper
         update_particle_association_action_set = (
             peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles)
         )
-        update_particle_association_action_set.priority = priority_within_action_sets
+        update_particle_association_action_set.priority = (
+            sort_priority_within_action_sets
+        )
         update_particle_association_action_set.parallel = True
 
         update_particle_parallel_state_action_set = (
             peano4.toolbox.particles.UpdateParallelState(particles)
         )
-        update_particle_parallel_state_action_set.priority = priority_within_action_sets
+        update_particle_parallel_state_action_set.priority = (
+            sort_priority_within_action_sets
+        )
         update_particle_parallel_state_action_set.parallel = True
 
         #
@@ -474,7 +494,7 @@ thus appreciate any citation of the original release paper
             particle_plotter.add_attribute_to_plot(
                 particle_number, 2, "tarch::la::convertScalar<double>(p->getNumber())"
             )
-
+            particle_plotter.priority = plot_priority_within_action_sets
             self.plot_solution.add_action_set(particle_plotter)
 
         self.plot_solution.add_action_set(update_particle_association_action_set)
@@ -496,6 +516,14 @@ thus appreciate any citation of the original release paper
 
         """
         self.perform_time_step.add_action_set(action_set)
+
+    def add_action_set_to_plot_solution(self, action_set):
+        """!
+
+        Add a new action set to the plotting
+
+        """
+        self.plot_solution.add_action_set(action_set)
 
     def add_action_set_to_initialisation(self, action_set):
         self.init_grid.add_action_set(action_set)

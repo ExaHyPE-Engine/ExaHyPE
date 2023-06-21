@@ -1,11 +1,13 @@
 #ifndef EXASEIS_SCENARIO_HEADER
 #define EXASEIS_SCENARIO_HEADER
 
+#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+// #include "kernels/GaussLegendreBasis.h"
+
+// #include "exahype/solvers/Solver.h"
 #include "../Context/DomainInformation.h"
 #include "../Refinement/refinement.h"
 #include "exahype2/aderdg/solvers/Solver.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
 
 template <class Shortcuts, int basisSize>
 class Scenario {

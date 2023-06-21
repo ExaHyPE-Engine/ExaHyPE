@@ -45,7 +45,7 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::clone(const STDVectorSt
   assertion1(_data.empty(), toString());
 
   _data.clear();
-  _data.resize(data._data.size());
+  _data.resize(data._data.size(), T(T::ObjectConstruction::NoData));
 
   logDebug("clone()", "copy over stack of size " << data.size());
 
@@ -306,7 +306,7 @@ T peano4::stacks::STDVectorStackOverSmartPointers<T>::pop() {
   assertion(not empty());
   T result = std::move(_data.back());
   _data.pop_back();
-  return std::move(result);
+  return result;
 }
 
 template <class T>
@@ -335,5 +335,9 @@ typename peano4::stacks::STDVectorStackOverSmartPointers<T>::PopBlockStackView p
 template <class T>
 typename peano4::stacks::STDVectorStackOverSmartPointers<T>::PushBlockStackView peano4::stacks::
   STDVectorStackOverSmartPointers<T>::pushBlock(int numberOfElements) {
-  return PushBlockStackView(numberOfElements, this);
+  typename peano4::stacks::STDVectorStackOverSmartPointers<T>::PushBlockStackView result(numberOfElements, this);
+
+  _data.resize(_data.size() + numberOfElements, T(T::ObjectConstruction::NoData));
+
+  return result;
 }

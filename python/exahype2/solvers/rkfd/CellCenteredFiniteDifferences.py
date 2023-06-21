@@ -12,6 +12,7 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import jinja2
 
 from abc import abstractmethod
+from enum import Enum
 
 import exahype2
 import exahype2.solvers.rkfd.actionsets
@@ -19,6 +20,12 @@ import exahype2.solvers.rkfd.actionsets
 from .PDETerms import PDETerms
 
 from exahype2.solvers.ButcherTableau import RungeKutta_steps
+
+
+class Storage(Enum):
+    CallStack = 0
+    Heap = 1
+    SmartPointers = 2
 
 
 class CellCenteredFiniteDifferences(object):
@@ -63,15 +70,6 @@ class CellCenteredFiniteDifferences(object):
                     0.0,0.0,0.0,0.0,1.0
             };" "" )
 
-    ## Reduce memory movements
-
-    You can switch for individual fields to a heap-based scheme by changing
-    the generator:
-
-           self._patch.generator        = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
-           self._patch._patch_estimates = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
-
-    Alternatively, use the switch_to_heap_storage() routine.
 
     """
 
@@ -199,8 +197,8 @@ class CellCenteredFiniteDifferences(object):
         self._interpolation = "#error Not yet defined"
         self._restriction = "#error Not yet defined"
 
-        self._hold_cell_data_on_heap_with_smart_pointer = False
-        self._hold_face_data_on_heap_with_smart_pointer = False
+        self._cell_data_storage = Storage.CallStack
+        self._face_data_storage = Storage.CallStack
 
         self._baseline_action_set_priority = baseline_action_set_priority
 
@@ -468,14 +466,41 @@ The finest mesh width of """
             self._unknown_identifier() + "Update",
         )
 
-        if self._hold_cell_data_on_heap_with_smart_pointer:
+        if self._cell_data_storage == Storage.CallStack:
+            self._patch.generator = peano4.datamodel.PatchToDoubleArray(
+                self._patch, "double"
+            )
+            self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArray(
+                self._patch_estimates, "double"
+            )
+        elif self._cell_data_storage == Storage.Heap:
             self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
                 self._patch, "double"
             )
             self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
                 self._patch_estimates, "double"
             )
-        if self._hold_face_data_on_heap_with_smart_pointer:
+        elif self._cell_data_storage == Storage.SmartPointers:
+            self._patch.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                self._patch, "double"
+            )
+            self._patch_estimates.generator = (
+                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                    self._patch_estimates, "double"
+                )
+            )
+
+        if self._face_data_storage == Storage.CallStack:
+            self._patch_overlap_old.generator = peano4.datamodel.PatchToDoubleArray(
+                self._patch_overlap_old, "double"
+            )
+            self._patch_overlap_new.generator = peano4.datamodel.PatchToDoubleArray(
+                self._patch_overlap_new, "double"
+            )
+            self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArray(
+                self._patch_overlap_update, "double"
+            )
+        elif self._face_data_storage == Storage.Heap:
             self._patch_overlap_old.generator = (
                 peano4.datamodel.PatchToDoubleArrayOnHeap(
                     self._patch_overlap_old, "double"
@@ -490,6 +515,26 @@ The finest mesh width of """
                 peano4.datamodel.PatchToDoubleArrayOnHeap(
                     self._patch_overlap_update, "double"
                 )
+            )
+        elif self._face_data_storage == Storage.SmartPointers:
+            self._patch_overlap_old.generator = (
+                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                    self._patch_overlap_old, "double"
+                )
+            )
+            self._patch_overlap_new.generator = (
+                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                    self._patch_overlap_new, "double"
+                )
+            )
+            self._patch_overlap_update.generator = (
+                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                    self._patch_overlap_update, "double"
+                )
+            )
+        else:
+            assert False, "storage variant {} not supported".format(
+                self._face_data_storage
             )
 
         self._patch_overlap_old.generator.merge_method_definition = (
@@ -576,12 +621,14 @@ The finest mesh width of """
 
     @abstractmethod
     def create_action_sets(self):
-        """
+        """!
+
+        Create required action sets
 
         Overwrite in subclasses if you wanna create different
         action sets.
 
-        :: Call order and ownership
+        ## Call order and ownership
 
         This operation can be called multiple times. However, only the very
         last call matters. All previous calls are wiped out.
@@ -612,7 +659,7 @@ The finest mesh width of """
         scheme. Therefore, I have to hold the interpolation and restriction
         scheme seperatae.
 
-        :: Injecting your own guards
+        ## Injecting your own guards
 
         If you inject your own guards, you should combine them with a storage
         predicate, i.e. _store_cell_data_default_guard() and
@@ -620,6 +667,14 @@ The finest mesh width of """
         combine the guard with further boolean expressions. Also, you have to
         study carefully if a predicate accepts a unique guard or a set of
         guards.
+
+
+        ## Priorities
+
+        All action sets are given the right (default) priorities in this step.
+        You can alter them in subclasses, but it might be more appropriate to
+        set the priorities of your own action sets relative to the existing
+        ones using self._baseline_action_set_priority.
 
         """
         self._action_set_initial_conditions = (
@@ -701,6 +756,9 @@ The finest mesh width of """
             self._baseline_action_set_priority + 1
         )
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = (
+            self._baseline_action_set_priority
+        )
+        self._action_set_copy_new_faces_onto_old_faces.priority = (
             self._baseline_action_set_priority
         )
         self._action_set_roll_over_update_of_faces.priority = (
@@ -813,7 +871,7 @@ The finest mesh width of """
         return "InstanceOf" + self._name
 
     def add_to_Peano4_datamodel(self, datamodel, verbose):
-        """
+        """!
 
         Add all required data to the Peano4 project's datamodel
         so it is properly built up
@@ -865,7 +923,9 @@ The finest mesh width of """
 """
 
     def add_actions_to_init_grid(self, step):
-        """
+        """!
+
+        Add your actions to init grid
 
         The AMR stuff has to be the very first thing. Actually, the AMR routines'
         interpolation doesn't play any role here. But the restriction indeed is
@@ -878,20 +938,37 @@ The finest mesh width of """
         to DG, where we need face data for the current time step's solution. Here,
         we ensure that all halos are valid for the subsequent time step again.
 
-        :: Ordering ::
+        ## Ordering
 
         The order of the action sets is preserved throughout the steps down within
         the tree hierarchy. It is inverted throughout the backrolling.
 
         This is what we want to achieve:
 
-        - Roll updates over on the faces onto Q_old and Q_new.
-        - Copy new face data into old face data, as this is the initial sweep, i.e.
-          the old face data otherwise might hold rubbish.
+        - Project solution onto faces. This happens in touchCellLastTime(). See
+          exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces for comments.
+          The project will end up in QUpdate.
+        - Roll updates over on the faces from QUpdate into Q_new. This is done
+          by RollOverUpdateFace, which requires in turn that the getUpdated()
+          flag is set. As the roll-over plugs into touchFaceLastTime(), it will
+          always be called after the projection, since the latter is a cell
+          operation.
+        - Copy new face data Q_new into old face data Q_old, as this is the
+          initial sweep, i.e. the old face data otherwise might hold rubbish.
+          This is a backup operation realised through the action set
+          BackupPatchOverlap. This one plugs into touchFaceLastTime() too.
+          Therefore, it is important that its priority is smaller than the one
+          of the roll-over, since we invert the call order for the touch-last
+          events.
         - Restrict the data to the coarser level if we are on a hanging face.
 
 
         """
+        assert (
+            self._action_set_copy_new_faces_onto_old_faces.priority
+            < self._action_set_roll_over_update_of_faces.priority
+        )
+
         step.add_action_set(self._action_set_preprocess_solution)
         step.add_action_set(
             self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
@@ -938,7 +1015,9 @@ The finest mesh width of """
         self._plot_description = description
 
     def add_actions_to_plot_solution(self, step, output_path):
-        """
+        """!
+
+        Add action sets to plotting grid sweep
 
         Consult the discussion in add_actions_to_init_grid() around the order
         of the individual action sets.
@@ -977,37 +1056,37 @@ The finest mesh width of """
         step.add_action_set(self._action_set_update_cell_label)
         #    step.add_action_set( self._action_set_project_patch_onto_faces )
 
-        step.add_action_set(
-            peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
-                filename=output_path + "solution-" + self._name,
-                patch=self._patch,
-                dataset_name=self._unknown_identifier(),
-                description=self._plot_description,
+        plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
+            filename=output_path + "solution-" + self._name,
+            patch=self._patch,
+            dataset_name=self._unknown_identifier(),
+            description=self._plot_description,
+            guard="repositories::plotFilter.plotPatch(marker) and "
+            + self._load_cell_data_default_guard(),
+            additional_includes="""
+#include "exahype2/PlotFilter.h"
+#include "../repositories/SolverRepository.h"
+""",
+            precision="PlotterPrecision",
+            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+            select_dofs=self.select_dofs_to_print,
+        )
+        plot_patches_action_set.priority = self._baseline_action_set_priority
+        step.add_action_set(plot_patches_action_set)
+
+        if self._plot_grid_properties:
+            plot_grid_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat(
+                filename=output_path + "grid-" + self._name,
+                cell_unknown=None,
                 guard="repositories::plotFilter.plotPatch(marker) and "
                 + self._load_cell_data_default_guard(),
                 additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """,
-                precision="PlotterPrecision",
-                time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-                select_dofs=self.select_dofs_to_print,
             )
-        )
-
-        if self._plot_grid_properties:
-            step.add_action_set(
-                peano4.toolbox.PlotGridInPeanoBlockFormat(
-                    filename=output_path + "grid-" + self._name,
-                    cell_unknown=None,
-                    guard="repositories::plotFilter.plotPatch(marker) and "
-                    + self._load_cell_data_default_guard(),
-                    additional_includes="""
-#include "exahype2/PlotFilter.h"
-#include "../repositories/SolverRepository.h"
-""",
-                )
-            )
+            plot_grid_action_set.priority = self._baseline_action_set_priority
+            step.add_action_set(plot_grid_action_set)
 
         pass
 
@@ -1345,8 +1424,8 @@ The finest mesh width of """
 
     def switch_to_heap_storage(
         self,
-        hold_cell_data_on_heap_with_smart_pointer,
-        hold_face_data_on_heap_with_smart_pointer,
+        cell_data_storage: Storage,
+        face_data_storage: Storage,
     ):
         """
 
@@ -1356,12 +1435,8 @@ The finest mesh width of """
         @see create_data_structures()
 
         """
-        self._hold_cell_data_on_heap_with_smart_pointer = (
-            hold_cell_data_on_heap_with_smart_pointer
-        )
-        self._hold_face_data_on_heap_with_smart_pointer = (
-            hold_face_data_on_heap_with_smart_pointer
-        )
+        self._cell_data_storage = cell_data_storage
+        self._face_data_storage = face_data_storage
 
         self.create_data_structures()
         self.create_action_sets()

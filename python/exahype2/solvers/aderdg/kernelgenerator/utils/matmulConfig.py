@@ -98,11 +98,14 @@ class MatmulConfig:
         name,
         prefetchStrategy,
         operationType="gemm",
-        precision="DP",
+        precision=["DP"],
     ):
-        if precision not in precisionTranslate.keys():
-            print("MatmulConfig: Unknown precision")
-            exit()
+        if type(precision) is not list:
+            precision = [precision]
+        for key in precision:
+            if key not in precisionTranslate.keys():
+                print("MatmulConfig: Unknown precision")
+                exit()
         if (M > LDC) or (K > LDB) or (M > LDA):
             print("MatmulConfig: Incompatible matrix sizes and leading dimensions")
             exit()
@@ -132,7 +135,7 @@ class MatmulConfig:
         self.baseroutinename = (
             operationType + "_" + str(M) + "_" + str(N) + "_" + str(K) + "_" + name
         )
-        self.precision = precisionTranslate[precision]
+        self.precision = [precisionTranslate[key] for key in precision]
 
     def __repr__(self):
         return (

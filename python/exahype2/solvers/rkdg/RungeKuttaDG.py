@@ -20,6 +20,7 @@ import jinja2
 import math
 
 from abc import abstractmethod
+from enum import Enum
 
 import exahype2
 import exahype2.solvers.rkdg.actionsets
@@ -32,8 +33,14 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
 )
 
 
+class Storage(Enum):
+    CallStack = 0
+    Heap = 1
+    SmartPointers = 2
+
+
 class RungeKuttaDG(object):
-    """
+    """!
 
     An abstract class for any RKDG solver of any order
 
@@ -320,8 +327,8 @@ class RungeKuttaDG(object):
 
         self._constructor_implementation = ""
 
-        self._hold_cell_data_on_heap_with_smart_pointer = False
-        self._hold_face_data_on_heap_with_smart_pointer = False
+        self._cell_data_storage = Storage.CallStack
+        self._face_data_storage = Storage.CallStack
 
         self._baseline_action_set_priority = baseline_action_set_priority
 
@@ -587,7 +594,19 @@ We use RK("""
             self._unknown_identifier() + "RiemannSolution",
         )
 
-        if self._hold_cell_data_on_heap_with_smart_pointer:
+        if self._cell_data_storage == Storage.CallStack:
+            self._current_time_step.generator = peano4.datamodel.PatchToDoubleArray(
+                self._current_time_step, "double"
+            )
+            self._rhs_estimates.generator = peano4.datamodel.PatchToDoubleArray(
+                self._rhs_estimates, "double"
+            )
+            self._linear_combination_of_estimates.generator = (
+                peano4.datamodel.PatchToDoubleArray(
+                    self._linear_combination_of_estimates, "double"
+                )
+            )
+        elif self._cell_data_storage == Storage.Heap:
             self._current_time_step.generator = (
                 peano4.datamodel.PatchToDoubleArrayOnHeap(
                     self._current_time_step, "double"
@@ -601,8 +620,36 @@ We use RK("""
                     self._linear_combination_of_estimates, "double"
                 )
             )
+        elif self._cell_data_storage == Storage.SmartPointers:
+            self._current_time_step.generator = (
+                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                    self._current_time_step, "double"
+                )
+            )
+            self._rhs_estimates.generator = (
+                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                    self._rhs_estimates, "double"
+                )
+            )
+            self._linear_combination_of_estimates.generator = (
+                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                    self._linear_combination_of_estimates, "double"
+                )
+            )
 
-        if self._hold_face_data_on_heap_with_smart_pointer:
+        if self._face_data_storage == Storage.CallStack:
+            self._estimate_projection.generator = peano4.datamodel.PatchToDoubleArray(
+                self._estimate_projection, "double"
+            )
+            self._old_solution_projection.generator = (
+                peano4.datamodel.PatchToDoubleArray(
+                    self._old_solution_projection, "double"
+                )
+            )
+            self._Riemann_solution.generator = peano4.datamodel.PatchToDoubleArray(
+                self._Riemann_solution, "double"
+            )
+        elif self._face_data_storage == Storage.Heap:
             self._estimate_projection.generator = (
                 peano4.datamodel.PatchToDoubleArrayOnHeap(
                     self._estimate_projection, "double"
@@ -617,6 +664,26 @@ We use RK("""
                 peano4.datamodel.PatchToDoubleArrayOnHeap(
                     self._Riemann_solution, "double"
                 )
+            )
+        elif self._face_data_storage == Storage.SmartPointers:
+            self._estimate_projection.generator = (
+                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                    self._estimate_projection, "double"
+                )
+            )
+            self._old_solution_projection.generator = (
+                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                    self._old_solution_projection, "double"
+                )
+            )
+            self._Riemann_solution.generator = (
+                peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+                    self._Riemann_solution, "double"
+                )
+            )
+        else:
+            assert False, "storage variant {} not supported".format(
+                self._face_data_storage
             )
 
         self._estimate_projection.generator.store_persistent_condition = (
@@ -1004,28 +1071,25 @@ We use RK("""
 """
 
     def add_actions_to_init_grid(self, step):
-        """
+        """!
 
-        @todo
+        Add the action sets to the grid initialisation
 
-         The AMR stuff has to be the very first thing. Actually, the AMR routines'
-         interpolation doesn't play any role here. But the restriction indeed is
-         very important, as we have to get the face data for BCs et al. The action
-         set order is inverted while we ascend within the tree again. Therefore, we
-         add the AMR action set first which means it will be called last when we go
-         from fine to coarse levels within the tree.
+        The AMR stuff has to be the very first thing. Actually, the AMR routines'
+        interpolation doesn't play any role here. But the restriction indeed is
+        very important, as we have to get the face data for BCs et al. The action
+        set order is inverted while we ascend within the tree again. Therefore, we
+        add the AMR action set first which means it will be called last when we go
+        from fine to coarse levels within the tree.
 
-         :: Ordering ::
+        ## Ordering
 
-         The order of the action sets is preserved throughout the steps down within
-         the tree hierarchy. It is inverted throughout the backrolling.
+        The order of the action sets is preserved throughout the steps down within
+        the tree hierarchy. It is inverted throughout the backrolling.
 
-         This is what we want to achieve:
+        This is what we want to achieve:
 
-         - Roll updates over on the faces onto Q_old and Q_new.
-         - Copy new face data into old face data, as this is the initial sweep, i.e.
-           the old face data otherwise might hold rubbish.
-         - Restrict the data to the coarser level if we are on a hanging face.
+        - Restrict the data to the coarser level if we are on a hanging face.
 
 
         """
@@ -1064,9 +1128,9 @@ We use RK("""
         self.plot_description = description
 
     def add_actions_to_plot_solution(self, step, output_path):
-        """
+        """!
 
-        @todo
+        Dump snapshot of solution
 
         Consult the discussion in add_actions_to_init_grid() around the order
         of the individual action sets.
@@ -1099,40 +1163,42 @@ We use RK("""
                 for x in self._basis.quadrature_points:
                     mapping.append((x, y, z))
 
-        step.add_action_set(
-            peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
-                filename=output_path + "solution-" + self._name,
-                patch=self._current_time_step,
-                dataset_name=self._unknown_identifier(),
-                description=self.plot_description,
-                mapping=mapping,
+        plot_patches_action_set = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat(
+            filename=output_path + "solution-" + self._name,
+            patch=self._current_time_step,
+            dataset_name=self._unknown_identifier(),
+            description=self.plot_description,
+            mapping=mapping,
+            guard="repositories::plotFilter.plotPatch(marker) and "
+            + self._load_cell_data_default_guard(),
+            additional_includes="""
+#include "exahype2/PlotFilter.h"
+#include "../repositories/SolverRepository.h"
+""",
+            precision="PlotterPrecision",
+            time_stamp_evaluation="repositories::getMinTimeStamp()",
+            plot_cell_data=False,
+            select_dofs=self.select_dofs_to_print,
+        )
+        plot_patches_action_set.priority = self._baseline_action_set_priority
+        step.add_action_set(plot_patches_action_set)
+
+        if self._plot_grid_properties:
+            plot_grid_properties_action_set = peano4.toolbox.PlotGridInPeanoBlockFormat(
+                filename=output_path + "grid-" + self._name,
+                cell_unknown=None,
                 guard="repositories::plotFilter.plotPatch(marker) and "
                 + self._load_cell_data_default_guard(),
                 additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """,
-                precision="PlotterPrecision",
-                time_stamp_evaluation="repositories::getMinTimeStamp()",
                 plot_cell_data=False,
-                select_dofs=self.select_dofs_to_print,
             )
-        )
-
-        if self._plot_grid_properties:
-            step.add_action_set(
-                peano4.toolbox.PlotGridInPeanoBlockFormat(
-                    filename=output_path + "grid-" + self._name,
-                    cell_unknown=None,
-                    guard="repositories::plotFilter.plotPatch(marker) and "
-                    + self._load_cell_data_default_guard(),
-                    additional_includes="""
-#include "exahype2/PlotFilter.h"
-#include "../repositories/SolverRepository.h"
-""",
-                    plot_cell_data=False,
-                )
+            plot_grid_properties_action_set.priority = (
+                self._baseline_action_set_priority
             )
+            step.add_action_set(plot_grid_properties_action_set)
 
         pass
 
@@ -1572,8 +1638,8 @@ We use RK("""
 
     def switch_to_heap_storage(
         self,
-        hold_cell_data_on_heap_with_smart_pointer,
-        hold_face_data_on_heap_with_smart_pointer,
+        cell_data_storage: Storage,
+        face_data_storage: Storage,
     ):
         """
 
@@ -1583,12 +1649,8 @@ We use RK("""
         @see create_data_structures()
 
         """
-        self._hold_cell_data_on_heap_with_smart_pointer = (
-            hold_cell_data_on_heap_with_smart_pointer
-        )
-        self._hold_face_data_on_heap_with_smart_pointer = (
-            hold_face_data_on_heap_with_smart_pointer
-        )
+        self._cell_data_storage = cell_data_storage
+        self._face_data_storage = face_data_storage
 
         self.create_data_structures()
         self.create_action_sets()

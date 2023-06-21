@@ -100,7 +100,7 @@ class ConfigurationParametersModel(AbstractModelBaseClass):
                         self.context["lSiSize"] = nVarPad * (nDof ** (nDim + 1))
                         self.context["lShiSize"] = nVarPad * (nDof**nDim)
                     if self.context["useNCP"]:
-                        self.context["gradQSize"] = nVarPad * (nDof**nDim) * nDim
+                        self.context["gradQSize"] = nDataPad * (nDof**nDim) * nDim
                     if self.context["usePointSources"]:
                         self.context["PSiSize"] = (nDof + 1) * (nDof**nDim) * nVarPad
                         self.context["PSiDerivativeSize"] = self.context["PSiSize"]
@@ -143,7 +143,7 @@ class ConfigurationParametersModel(AbstractModelBaseClass):
                         self.context["lSiSize"] = nVarPad * (nDof ** (nDim + 1))
                         self.context["lShiSize"] = nVarPad * (nDof**nDim)
                     if self.context["useNCP"] or self.context["useViscousFlux"]:
-                        self.context["gradQSize"] = nVarPad * (nDof**nDim) * nDim
+                        self.context["gradQSize"] = nDataPad * (nDof**nDim) * nDim
 
             # Face buffer size (Riemann)
             self.context["BndFaceSize"] = nDataPad * (nDof * nDof3D)

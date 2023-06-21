@@ -37,10 +37,8 @@ std::string tarch::multicore::orchestration::GeneticOptimisation::Key::toString(
 tarch::multicore::orchestration::GeneticOptimisation::Value::Value(double probability_):
   probability(probability_) {}
 
-tarch::logging::Log tarch::multicore::orchestration::GeneticOptimisation::_log(
-  "tarch::multicore::orchestration::"
-  "GeneticOptimisation"
-);
+tarch::logging::Log tarch::multicore::orchestration::GeneticOptimisation::_log("tarch::multicore::orchestration::"
+                                                                               "GeneticOptimisation");
 
 tarch::multicore::orchestration::GeneticOptimisation::GeneticOptimisation():
   _activeKey(0, FuseInstruction(-1, std::numeric_limits<int>::max(), 0), false, false),
