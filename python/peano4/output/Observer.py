@@ -12,104 +12,199 @@ from .Overwrite import Overwrite
 
 from .Jinja2TemplatedHeaderFile import Jinja2TemplatedHeaderFile
 
+
 class Observer(object):
-  default_overwrite = True
+    default_overwrite = True
 
-  def __init__(self,classname,namespace,subdirectory,included_actions,vertices,faces,cells):
-    """
-      Included actions is a list of qualified actions which are used
-    """
-    self.classname    = classname
-    self.namespace    = namespace
-    self.subdirectory = subdirectory
+    def __init__(
+        self,
+        classname,
+        namespace,
+        subdirectory,
+        included_actions,
+        vertices,
+        faces,
+        cells,
+    ):
+        """
+        Included actions is a list of qualified actions which are used
+        """
+        self.classname = classname
+        self.namespace = namespace
+        self.subdirectory = subdirectory
 
-    self.included_actions = included_actions
-    self.vertices          = vertices
-    self.faces             = faces
-    self.cells             = cells
+        self.included_actions = included_actions
+        self.vertices = vertices
+        self.faces = faces
+        self.cells = cells
 
-    self.d = {}
-    self.d[ "OPEN_NAMESPACE" ]           = ""
-    self.d[ "CLOSE_NAMESPACE" ]          = ""
-    self.d[ "FULL_QUALIFIED_CLASSNAME" ] = ""
-    for i in namespace:
-      self.d[ "OPEN_NAMESPACE" ]           += "namespace " + i + "{\n"
-      self.d[ "CLOSE_NAMESPACE" ]          += "}\n"
-      self.d[ "FULL_QUALIFIED_CLASSNAME" ] += i + "::"
-    self.d[ "CLASSNAME" ]                 = classname
-    self.d[ "FULL_QUALIFIED_CLASSNAME" ] += classname
-    self.d[ "INCLUDE_GUARD" ]             = "_" + self.d[ "FULL_QUALIFIED_CLASSNAME" ].replace( "::", "_" ).upper() + "_H_"
-    self.d[ "INCLUDES" ]                  = ""
-    self.d[ "ATTRIBUTES" ]                = ""
+        self.d = {}
+        self.d["OPEN_NAMESPACE"] = ""
+        self.d["CLOSE_NAMESPACE"] = ""
+        self.d["FULL_QUALIFIED_CLASSNAME"] = ""
+        for i in namespace:
+            self.d["OPEN_NAMESPACE"] += "namespace " + i + "{\n"
+            self.d["CLOSE_NAMESPACE"] += "}\n"
+            self.d["FULL_QUALIFIED_CLASSNAME"] += i + "::"
+        self.d["CLASSNAME"] = classname
+        self.d["FULL_QUALIFIED_CLASSNAME"] += classname
+        self.d["INCLUDE_GUARD"] = (
+            "_" + self.d["FULL_QUALIFIED_CLASSNAME"].replace("::", "_").upper() + "_H_"
+        )
+        self.d["INCLUDES"] = ""
+        self.d["ATTRIBUTES"] = ""
 
-    for action in self.included_actions:
-      self.d[ "INCLUDES" ] += "#include \""
-      self.d[ "INCLUDES" ] += action.replace( "::", "/" )
-      self.d[ "INCLUDES" ] += ".h\"\n"
-      self.d[ "ATTRIBUTES" ] += "    "
-      self.d[ "ATTRIBUTES" ] += action
-      self.d[ "ATTRIBUTES" ] += "   _actionSet"
-      self.d[ "ATTRIBUTES" ] += str( self.included_actions.index(action) )
-      self.d[ "ATTRIBUTES" ] += "; \n"
+        for action in self.included_actions:
+            self.d["INCLUDES"] += '#include "'
+            self.d["INCLUDES"] += action.replace("::", "/")
+            self.d["INCLUDES"] += '.h"\n'
+            self.d["ATTRIBUTES"] += "    "
+            self.d["ATTRIBUTES"] += action
+            self.d["ATTRIBUTES"] += "   _actionSet"
+            self.d["ATTRIBUTES"] += str(self.included_actions.index(action))
+            self.d["ATTRIBUTES"] += "; \n"
 
-    self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS" ]       = ""
-    self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS" ]     = ""
-    self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY" ]       = ""
-    self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_PICK_ENTRY" ]     = ""
-    for cell in cells:
-      if cells.index(cell)!=0:
-        self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS" ]   += ",";
-        self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS" ] += ",";
-        self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY" ]   += ",";
-        self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_PICK_ENTRY" ] += ",";
-      self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS" ]     += "repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(0)";
-      self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS" ]   += "repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(1)";
-      self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY" ]     += "repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(0)";
-      self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_PICK_ENTRY" ]   += "repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(1)";
+        self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS"] = ""
+        self.d["MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"] = ""
+        self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY"] = ""
+        self.d["MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_PICK_ENTRY"] = ""
+        for cell in cells:
+            if cells.index(cell) != 0:
+                self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS"] += ","
+                self.d["MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"] += ","
+                self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY"] += ","
+                self.d["MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_PICK_ENTRY"] += ","
+            self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS"] += (
+                "repositories::DataRepository::_"
+                + cell.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(0)"
+            )
+            self.d["MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"] += (
+                "repositories::DataRepository::_"
+                + cell.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(1)"
+            )
+            self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY"] += (
+                "repositories::DataRepository::_"
+                + cell.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(0)"
+            )
+            self.d["MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_PICK_ENTRY"] += (
+                "repositories::DataRepository::_"
+                + cell.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(1)"
+            )
 
-    self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT" ]       = self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS" ]
-    self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT" ]     = self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS" ]
+        self.d["MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT"] = self.d[
+            "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS"
+        ]
+        self.d["MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT"] = self.d[
+            "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"
+        ]
 
-    self.d[ "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS" ]      = ""
-    self.d[ "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS" ]    = ""
-    self.d[ "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY" ]      = ""
-    self.d[ "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_PICK_ENTRY" ]    = ""
-    for face in faces:
-      if faces.index(face)!=0:
-        self.d[ "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS" ]   += ","
-        self.d[ "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS" ] += ","
-        self.d[ "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY" ]   += ","
-        self.d[ "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_PICK_ENTRY" ] += ","
-      self.d[ "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS" ]     += "peano4::datamanagement::FaceEnumerator<" + face.get_full_qualified_type() + ">( &repositories::DataRepository::_" + face.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD-1) )";
-      self.d[ "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS" ]   += "peano4::datamanagement::FaceEnumerator<" + face.get_full_qualified_type() + ">( &repositories::DataRepository::_" + face.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD*2-1) )";
-      self.d[ "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY" ]     += "peano4::datamanagement::FaceEnumerator<" + face.get_full_qualified_type() + ">( &repositories::DataRepository::_" + face.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD-1) )(pick)";
-      self.d[ "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_PICK_ENTRY" ]   += "peano4::datamanagement::FaceEnumerator<" + face.get_full_qualified_type() + ">( &repositories::DataRepository::_" + face.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD*2-1) )(pick)";
+        self.d["MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS"] = ""
+        self.d["MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS"] = ""
+        self.d["MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY"] = ""
+        self.d["MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_PICK_ENTRY"] = ""
+        for face in faces:
+            if faces.index(face) != 0:
+                self.d["MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS"] += ","
+                self.d["MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS"] += ","
+                self.d["MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY"] += ","
+                self.d[
+                    "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_PICK_ENTRY"
+                ] += ","
+            self.d["MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS"] += (
+                "peano4::datamanagement::FaceEnumerator<"
+                + face.get_full_qualified_type()
+                + ">( &repositories::DataRepository::_"
+                + face.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD-1) )"
+            )
+            self.d["MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS"] += (
+                "peano4::datamanagement::FaceEnumerator<"
+                + face.get_full_qualified_type()
+                + ">( &repositories::DataRepository::_"
+                + face.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD*2-1) )"
+            )
+            self.d["MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY"] += (
+                "peano4::datamanagement::FaceEnumerator<"
+                + face.get_full_qualified_type()
+                + ">( &repositories::DataRepository::_"
+                + face.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD-1) )(pick)"
+            )
+            self.d["MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_PICK_ENTRY"] += (
+                "peano4::datamanagement::FaceEnumerator<"
+                + face.get_full_qualified_type()
+                + ">( &repositories::DataRepository::_"
+                + face.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD*2-1) )(pick)"
+            )
 
-    self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS" ]   = ""
-    self.d[ "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS" ] = ""
-    self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]   = ""
-    self.d[ "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ] = ""
-    for vertex in vertices:
-      if vertices.index(vertex)!=0:
-        self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS" ]   += ","
-        self.d[ "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS" ] += ","
-        self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]   += ","
-        self.d[ "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ] += ","
-      self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS" ]     += "peano4::datamanagement::VertexEnumerator<" + vertex.get_full_qualified_type() + ">( &repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD-1) )";
-      self.d[ "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS" ]   += "peano4::datamanagement::VertexEnumerator<" + vertex.get_full_qualified_type() + ">( &repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD*2-1) )";
-      self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]     += "peano4::datamanagement::VertexEnumerator<" + vertex.get_full_qualified_type() + ">( &repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD-1) )(pick)";
-      self.d[ "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]   += "peano4::datamanagement::VertexEnumerator<" + vertex.get_full_qualified_type() + ">( &repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD*2-1) )(pick)";
+        self.d["MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS"] = ""
+        self.d["MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS"] = ""
+        self.d["MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY"] = ""
+        self.d["MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY"] = ""
+        for vertex in vertices:
+            if vertices.index(vertex) != 0:
+                self.d["MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS"] += ","
+                self.d["MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS"] += ","
+                self.d[
+                    "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY"
+                ] += ","
+                self.d[
+                    "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY"
+                ] += ","
+            self.d["MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS"] += (
+                "peano4::datamanagement::VertexEnumerator<"
+                + vertex.get_full_qualified_type()
+                + ">( &repositories::DataRepository::_"
+                + vertex.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD-1) )"
+            )
+            self.d["MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS"] += (
+                "peano4::datamanagement::VertexEnumerator<"
+                + vertex.get_full_qualified_type()
+                + ">( &repositories::DataRepository::_"
+                + vertex.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD*2-1) )"
+            )
+            self.d["MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY"] += (
+                "peano4::datamanagement::VertexEnumerator<"
+                + vertex.get_full_qualified_type()
+                + ">( &repositories::DataRepository::_"
+                + vertex.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD-1) )(pick)"
+            )
+            self.d["MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY"] += (
+                "peano4::datamanagement::VertexEnumerator<"
+                + vertex.get_full_qualified_type()
+                + ">( &repositories::DataRepository::_"
+                + vertex.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD*2-1) )(pick)"
+            )
 
+    def __generate_header(self, overwrite, directory):
+        headerfile_template = (
+            os.path.realpath(__file__)
+            .replace(".pyc", ".template.h")
+            .replace(".py", ".template.h")
+        )
+        md = self.mkSubDict(["ATTRIBUTES", "INCLUDES"])
+        header = Jinja2TemplatedHeaderFile(
+            headerfile_template,
+            self.classname,
+            self.namespace,
+            self.subdirectory,
+            md,
+            self.default_overwrite,
+        )
+        header.generate(overwrite, directory)
+        del header
 
-  def __generate_header(self,overwrite,directory):
-    headerfile_template = os.path.realpath(__file__).replace( ".pyc", ".template.h" ).replace( ".py", ".template.h" )
-    md = self.mkSubDict(["ATTRIBUTES", "INCLUDES"])
-    header = Jinja2TemplatedHeaderFile(headerfile_template,self.classname,self.namespace,self.subdirectory, md,self.default_overwrite)
-    header.generate(overwrite,directory)
-    del header
-
-
-  TemplateConstructor = """
+    TemplateConstructor = """
 
 {{FULL_QUALIFIED_CLASSNAME}}::{{CLASSNAME}}(int spacetreeId):
   _spacetreeId( spacetreeId ) {{MAPPING_INITIALISATION_LIST}}
@@ -118,20 +213,20 @@ class Observer(object):
 
   """
 
+    def __generate_constructor(self, output_file):
+        #
+        # Constructor
+        #
+        self.d["MAPPING_INITIALISATION_LIST"] = ""
+        for actions in self.included_actions:
+            self.d["MAPPING_INITIALISATION_LIST"] += ", _actionSet"
+            self.d["MAPPING_INITIALISATION_LIST"] += str(
+                self.included_actions.index(actions)
+            )
+            self.d["MAPPING_INITIALISATION_LIST"] += "(spacetreeId)"
+        output_file.write(jinja2.Template(self.TemplateConstructor).render(**self.d))
 
-  def __generate_constructor(self,output_file):
-    #
-    # Constructor
-    #
-    self.d[ "MAPPING_INITIALISATION_LIST" ]                = ""
-    for actions in self.included_actions:
-      self.d[ "MAPPING_INITIALISATION_LIST" ]  += ", _actionSet"
-      self.d[ "MAPPING_INITIALISATION_LIST" ]  += str( self.included_actions.index(actions) )
-      self.d[ "MAPPING_INITIALISATION_LIST" ]  += "(spacetreeId)"
-    output_file.write( jinja2.Template( self.TemplateConstructor ).render(**self.d) )
-
-
-  TemplateClone = """
+    TemplateClone = """
 
 peano4::grid::TraversalObserver* {{FULL_QUALIFIED_CLASSNAME}}::clone(int spacetreeId) {
   return new {{CLASSNAME}}(spacetreeId);
@@ -139,8 +234,7 @@ peano4::grid::TraversalObserver* {{FULL_QUALIFIED_CLASSNAME}}::clone(int spacetr
 
   """
 
-
-  TemplateBeginTraversal = """
+    TemplateBeginTraversal = """
 
 void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal( const tarch::la::Vector<Dimensions,double>&  x, const tarch::la::Vector<Dimensions,double>&  h ) {
   logTraceInWith2Arguments( "beginTraversal(...)", x, h );
@@ -160,35 +254,57 @@ void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal( const tarch::la::Vector<Dimen
 
   """
 
+    def __generate_beginTraversal(self, output_file):
+        self.d["MAPPING_BEGIN_TRAVERSAL_CALLS"] = ""
+        for action in self.included_actions:
+            self.d["MAPPING_BEGIN_TRAVERSAL_CALLS"] += "  _actionSet"
+            self.d["MAPPING_BEGIN_TRAVERSAL_CALLS"] += str(
+                self.included_actions.index(action)
+            )
+            self.d["MAPPING_BEGIN_TRAVERSAL_CALLS"] += ".beginTraversal();\n"
 
-  def __generate_beginTraversal(self,output_file):
-    self.d[ "MAPPING_BEGIN_TRAVERSAL_CALLS" ]     = ""
-    for action in self.included_actions:
-      self.d[ "MAPPING_BEGIN_TRAVERSAL_CALLS" ]  += "  _actionSet"
-      self.d[ "MAPPING_BEGIN_TRAVERSAL_CALLS" ]  += str( self.included_actions.index(action) )
-      self.d[ "MAPPING_BEGIN_TRAVERSAL_CALLS" ]  += ".beginTraversal();\n"
+        self.d["INITIAL_PUSH_TO_OUTPUT_STREAMS"] = ""
+        for cell in self.cells:
+            self.d["INITIAL_PUSH_TO_OUTPUT_STREAMS"] += (
+                "  repositories::DataRepository::_"
+                + cell.get_logical_type_name()
+                + "Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( "
+                + cell.get_full_qualified_type()
+                + "() );\n"
+            )
+            pass
 
-    self.d[ "INITIAL_PUSH_TO_OUTPUT_STREAMS" ]    = ""
-    for cell in self.cells:
-      self.d[ "INITIAL_PUSH_TO_OUTPUT_STREAMS" ]    += "  repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( " + cell.get_full_qualified_type() + "() );\n"
-      pass
+        for face in self.faces:
+            self.d[
+                "INITIAL_PUSH_TO_OUTPUT_STREAMS"
+            ] += "  for (int i=0; i<TwoTimesD; i++) {\n"
+            self.d["INITIAL_PUSH_TO_OUTPUT_STREAMS"] += (
+                "    repositories::DataRepository::_"
+                + face.get_logical_type_name()
+                + "Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( "
+                + face.get_full_qualified_type()
+                + "() );\n"
+            )
+            self.d["INITIAL_PUSH_TO_OUTPUT_STREAMS"] += "  }\n"
+            pass
 
-    for face in self.faces:
-      self.d[ "INITIAL_PUSH_TO_OUTPUT_STREAMS" ]    += "  for (int i=0; i<TwoTimesD; i++) {\n"
-      self.d[ "INITIAL_PUSH_TO_OUTPUT_STREAMS" ]    += "    repositories::DataRepository::_" + face.get_logical_type_name() + "Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( " + face.get_full_qualified_type() + "() );\n"
-      self.d[ "INITIAL_PUSH_TO_OUTPUT_STREAMS" ]    += "  }\n"
-      pass
+        for vertex in self.vertices:
+            self.d[
+                "INITIAL_PUSH_TO_OUTPUT_STREAMS"
+            ] += "  for (int i=0; i<TwoPowerD; i++) {\n"
+            self.d["INITIAL_PUSH_TO_OUTPUT_STREAMS"] += (
+                "    repositories::DataRepository::_"
+                + vertex.get_logical_type_name()
+                + "Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( "
+                + vertex.get_full_qualified_type()
+                + "() );\n"
+            )
+            self.d["INITIAL_PUSH_TO_OUTPUT_STREAMS"] += "  }\n"
+            pass
 
-    for vertex in self.vertices:
-      self.d[ "INITIAL_PUSH_TO_OUTPUT_STREAMS" ]    += "  for (int i=0; i<TwoPowerD; i++) {\n"
-      self.d[ "INITIAL_PUSH_TO_OUTPUT_STREAMS" ]    += "    repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( " + vertex.get_full_qualified_type() + "() );\n"
-      self.d[ "INITIAL_PUSH_TO_OUTPUT_STREAMS" ]    += "  }\n"
-      pass
+        output_file.write(jinja2.Template(self.TemplateBeginTraversal).render(**self.d))
 
-    output_file.write( jinja2.Template( self.TemplateBeginTraversal ).render(**self.d) )
-
-
-  TemplateEndTraversal = """
+    TemplateEndTraversal = """
 
 void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal( const tarch::la::Vector<Dimensions,double>&  x, const tarch::la::Vector<Dimensions,double>&  h ) {
   logTraceInWith2Arguments( "endTraversal(...)", x, h );
@@ -199,36 +315,51 @@ void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal( const tarch::la::Vector<Dimensi
 
   """
 
+    def __generate_endTraversal(self, output_file):
+        self.d["MAPPING_END_TRAVERSAL_CALLS"] = ""
+        for action in self.included_actions:
+            self.d["MAPPING_END_TRAVERSAL_CALLS"] += "  _actionSet"
+            self.d["MAPPING_END_TRAVERSAL_CALLS"] += str(
+                self.included_actions.index(action)
+            )
+            self.d["MAPPING_END_TRAVERSAL_CALLS"] += ".endTraversal();\n"
 
-  def __generate_endTraversal(self,output_file):
-    self.d[ "MAPPING_END_TRAVERSAL_CALLS" ]                = ""
-    for action in self.included_actions:
-      self.d[ "MAPPING_END_TRAVERSAL_CALLS" ]  += "  _actionSet"
-      self.d[ "MAPPING_END_TRAVERSAL_CALLS" ]  += str( self.included_actions.index(action) )
-      self.d[ "MAPPING_END_TRAVERSAL_CALLS" ]  += ".endTraversal();\n"
+        self.d["FINAL_POP_FROM_INPUT_STREAMS"] = ""
+        for cell in self.cells:
+            self.d["FINAL_POP_FROM_INPUT_STREAMS"] += (
+                "  repositories::DataRepository::_"
+                + cell.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pop();\n"
+            )
+            pass
 
-    self.d[ "FINAL_POP_FROM_INPUT_STREAMS" ]    = ""
-    for cell in self.cells:
-      self.d[ "FINAL_POP_FROM_INPUT_STREAMS" ]    += "  repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pop();\n"
-      pass
+        for face in self.faces:
+            self.d[
+                "FINAL_POP_FROM_INPUT_STREAMS"
+            ] += "  for (int i=0; i<TwoTimesD; i++) {\n"
+            self.d["FINAL_POP_FROM_INPUT_STREAMS"] += (
+                "    repositories::DataRepository::_"
+                + face.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pop();\n"
+            )
+            self.d["FINAL_POP_FROM_INPUT_STREAMS"] += "  }\n"
+            pass
 
-    for face in self.faces:
-      self.d[ "FINAL_POP_FROM_INPUT_STREAMS" ]    += "  for (int i=0; i<TwoTimesD; i++) {\n"
-      self.d[ "FINAL_POP_FROM_INPUT_STREAMS" ]    += "    repositories::DataRepository::_" + face.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pop();\n"
-      self.d[ "FINAL_POP_FROM_INPUT_STREAMS" ]    += "  }\n"
-      pass
+        for vertex in self.vertices:
+            self.d[
+                "FINAL_POP_FROM_INPUT_STREAMS"
+            ] += "  for (int i=0; i<TwoPowerD; i++) {\n"
+            self.d["FINAL_POP_FROM_INPUT_STREAMS"] += (
+                "    repositories::DataRepository::_"
+                + vertex.get_logical_type_name()
+                + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pop();\n"
+            )
+            self.d["FINAL_POP_FROM_INPUT_STREAMS"] += "  }\n"
+            pass
 
-    for vertex in self.vertices:
-      self.d[ "FINAL_POP_FROM_INPUT_STREAMS" ]    += "  for (int i=0; i<TwoPowerD; i++) {\n"
-      self.d[ "FINAL_POP_FROM_INPUT_STREAMS" ]    += "    repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pop();\n"
-      self.d[ "FINAL_POP_FROM_INPUT_STREAMS" ]    += "  }\n"
-      pass
+        output_file.write(jinja2.Template(self.TemplateEndTraversal).render(**self.d))
 
-
-    output_file.write( jinja2.Template( self.TemplateEndTraversal ).render(**self.d) )
-
-
-  TemplatePrepareTraversal = """
+    TemplatePrepareTraversal = """
 
 void {{FULL_QUALIFIED_CLASSNAME}}::prepareTraversal() {
   logTraceIn( "prepareTraversal(...)" );
@@ -238,17 +369,17 @@ void {{FULL_QUALIFIED_CLASSNAME}}::prepareTraversal() {
 
   """
 
+    def __generate_prepareTraversal(self, output_file):
+        self.d["MAPPING_PREPARE_TRAVERSAL_CALLS"] = ""
+        for action in self.included_actions:
+            self.d["MAPPING_PREPARE_TRAVERSAL_CALLS"] += "  "
+            self.d["MAPPING_PREPARE_TRAVERSAL_CALLS"] += action
+            self.d["MAPPING_PREPARE_TRAVERSAL_CALLS"] += "::prepareTraversal();\n"
+        output_file.write(
+            jinja2.Template(self.TemplatePrepareTraversal).render(**self.d)
+        )
 
-  def __generate_prepareTraversal(self,output_file):
-    self.d[ "MAPPING_PREPARE_TRAVERSAL_CALLS" ]     = ""
-    for action in self.included_actions:
-      self.d[ "MAPPING_PREPARE_TRAVERSAL_CALLS" ]  += "  "
-      self.d[ "MAPPING_PREPARE_TRAVERSAL_CALLS" ]  += action
-      self.d[ "MAPPING_PREPARE_TRAVERSAL_CALLS" ]  += "::prepareTraversal();\n"
-    output_file.write( jinja2.Template( self.TemplatePrepareTraversal ).render(**self.d) )
-
-
-  TemplateUnprepareTraversal = """
+    TemplateUnprepareTraversal = """
 
 void {{FULL_QUALIFIED_CLASSNAME}}::unprepareTraversal() {
   logTraceIn( "unprepareTraversal(...)" );
@@ -258,89 +389,96 @@ void {{FULL_QUALIFIED_CLASSNAME}}::unprepareTraversal() {
 
   """
 
+    def __generate_unprepareTraversal(self, output_file):
+        self.d["MAPPING_UNPREPARE_TRAVERSAL_CALLS"] = ""
+        for action in self.included_actions:
+            self.d["MAPPING_UNPREPARE_TRAVERSAL_CALLS"] += "  "
+            self.d["MAPPING_UNPREPARE_TRAVERSAL_CALLS"] += action
+            self.d["MAPPING_UNPREPARE_TRAVERSAL_CALLS"] += "::unprepareTraversal();\n"
+        output_file.write(
+            jinja2.Template(self.TemplateUnprepareTraversal).render(**self.d)
+        )
 
-  def __generate_unprepareTraversal(self,output_file):
-    self.d[ "MAPPING_UNPREPARE_TRAVERSAL_CALLS" ]     = ""
-    for action in self.included_actions:
-      self.d[ "MAPPING_UNPREPARE_TRAVERSAL_CALLS" ]  += "  "
-      self.d[ "MAPPING_UNPREPARE_TRAVERSAL_CALLS" ]  += action
-      self.d[ "MAPPING_UNPREPARE_TRAVERSAL_CALLS" ]  += "::unprepareTraversal();\n"
-    output_file.write( jinja2.Template( self.TemplateUnprepareTraversal ).render(**self.d) )
+    def __format_template_per_action(
+        self, output_file, template, reverse_order=False, manual_dict=None
+    ):
+        """
 
-
-  def __format_template_per_action(self,output_file,template,reverse_order=False, manual_dict=None):
-    """
-
-     Takes the specified template file, iterates over actions and pastes
-     the template into the output file once per action. Per action, the dictionary's
-     entries are updated. Otherwise, the dictionary remains unchanged.
-
-
-     output_file:
-       Handle on output file
-
-    """
-    local_actions = [x for x in self.included_actions]
-    if reverse_order:
-      local_actions.reverse()
-
-    for action in local_actions:
-      if manual_dict is None:
-          self.d[ "ACTIVE_ACTION_SET" ]  = "_actionSet" + str( self.included_actions.index(action) )
-          self.d[ "ACTIVE_ACTION_SET_FULL_QUALIFIED_NAME" ]  = action
-          if output_file is not None:
-            output_file.write( jinja2.Template( template ).render(**self.d) )
-          else:
-            return jinja2.Template( template ).render(**self.d)
-      else:
-
-          manual_dict[ "ACTIVE_ACTION_SET" ]  = "_actionSet" + str( self.included_actions.index(action) )
-          manual_dict[ "ACTIVE_ACTION_SET_FULL_QUALIFIED_NAME" ]  = action
-          if output_file is not None:
-            output_file.write( jinja2.Template( template ).render(**manual_dict) )
-          else:
-            return jinja2.Template( template ).render(**manual_dict)
+        Takes the specified template file, iterates over actions and pastes
+        the template into the output file once per action. Per action, the dictionary's
+        entries are updated. Otherwise, the dictionary remains unchanged.
 
 
-  TemplateGetGridControlEvents_Prologue = """
+        output_file:
+          Handle on output file
+
+        """
+        local_actions = [x for x in self.included_actions]
+        if reverse_order:
+            local_actions.reverse()
+
+        for action in local_actions:
+            if manual_dict is None:
+                self.d["ACTIVE_ACTION_SET"] = "_actionSet" + str(
+                    self.included_actions.index(action)
+                )
+                self.d["ACTIVE_ACTION_SET_FULL_QUALIFIED_NAME"] = action
+                if output_file is not None:
+                    output_file.write(jinja2.Template(template).render(**self.d))
+                else:
+                    return jinja2.Template(template).render(**self.d)
+            else:
+                manual_dict["ACTIVE_ACTION_SET"] = "_actionSet" + str(
+                    self.included_actions.index(action)
+                )
+                manual_dict["ACTIVE_ACTION_SET_FULL_QUALIFIED_NAME"] = action
+                if output_file is not None:
+                    output_file.write(jinja2.Template(template).render(**manual_dict))
+                else:
+                    return jinja2.Template(template).render(**manual_dict)
+
+    TemplateGetGridControlEvents_Prologue = """
 
 std::vector< peano4::grid::GridControlEvent > {{FULL_QUALIFIED_CLASSNAME}}::getGridControlEvents() const {
   std::vector< peano4::grid::GridControlEvent > result;
 """
 
-  TemplateGetGridControlEvents_MappingCall = """
+    TemplateGetGridControlEvents_MappingCall = """
   {
     const std::vector< peano4::grid::GridControlEvent > actionResult = {{ACTIVE_ACTION_SET}}.getGridControlEvents();
     result.insert(result.begin(),actionResult.begin(),actionResult.end());
   }
 """
 
-
-  TemplateGetGridControlEvents_Epilogue = """
+    TemplateGetGridControlEvents_Epilogue = """
   return result;
 }
 
 
 """
 
+    def __generate_getGridControlEvents(self, output_file):
+        output_file.write(
+            jinja2.Template(self.TemplateGetGridControlEvents_Prologue).render(
+                **{"FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"]}
+            )
+        )
+        self.__format_template_per_action(
+            output_file, self.TemplateGetGridControlEvents_MappingCall, manual_dict={}
+        )
+        output_file.write(
+            jinja2.Template(self.TemplateGetGridControlEvents_Epilogue).render(**{})
+        )
 
-  def __generate_getGridControlEvents(self,output_file):
-    output_file.write( jinja2.Template( self.TemplateGetGridControlEvents_Prologue ).render(**{"FULL_QUALIFIED_CLASSNAME":self.d["FULL_QUALIFIED_CLASSNAME"]}) )
-    self.__format_template_per_action(output_file,self.TemplateGetGridControlEvents_MappingCall, manual_dict={})
-    output_file.write( jinja2.Template( self.TemplateGetGridControlEvents_Epilogue ).render(**{}) )
+    def __generate_clone(self, output_file):
+        output_file.write(jinja2.Template(self.TemplateClone).render(**self.d))
 
-
-  def __generate_clone(self,output_file):
-    output_file.write( jinja2.Template( self.TemplateClone ).render(**self.d) )
-
-
-  TemplateEnterCell_Prologue = """
+    TemplateEnterCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "enterCell(...)", _spacetreeId, event.toString() );
 """
 
-
-  TemplateLoadCell_VertexLoad = """
+    TemplateLoadCell_VertexLoad = """
   // Load vertex {{logical_type_name}}
   std::function<bool ()> loadVertex{{logical_type_name}} = 
     [&]()->bool {
@@ -411,8 +549,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   
 """
 
-
-  TemplateEnterCell_VertexMappingCall = """
+    TemplateEnterCell_VertexMappingCall = """
   // Handle vertex {{logical_type_name}}
   {
     peano4::datamanagement::VertexMarker  marker(event);
@@ -470,8 +607,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   }
 """
 
-
-  TemplateLoadCell_FaceLoad = """
+    TemplateLoadCell_FaceLoad = """
   // Load face {{logical_type_name}}
   std::function<bool ()> loadFace{{logical_type_name}} = 
     [&]()->bool {
@@ -543,8 +679,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   
 """
 
-
-  TemplateEnterCell_FaceMappingCall = """
+    TemplateEnterCell_FaceMappingCall = """
   // Handle face {{logical_type_name}}
   {
     peano4::datamanagement::FaceMarker marker( event );
@@ -608,8 +743,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   }
 """
 
-
-  TemplateLoadCell_CellLoad = """
+    TemplateLoadCell_CellLoad = """
   // Load cell {{logical_type_name}}
   std::function<bool ()> loadCell{{logical_type_name}} =  
     [&]()->bool {
@@ -675,8 +809,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   
 """
 
-
-  TemplateEnterCell_CellMappingCall = """
+    TemplateEnterCell_CellMappingCall = """
   // Invoke creational events on cell {{logical_type_name}}
   {
     peano4::datamanagement::CellMarker marker( event );
@@ -698,8 +831,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   }
 """
 
-
-  TemplateEnterCell_MappingCall = """
+    TemplateEnterCell_MappingCall = """
   {
     peano4::datamanagement::CellMarker marker( event );
     if (marker.isLocal()) {
@@ -712,156 +844,188 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   }
 """
 
-
-  TemplateEnterCell_Epilogue = """
+    TemplateEnterCell_Epilogue = """
   logTraceOut( "enterCell(...)" );
 }
 
 
 """
 
-  def generateDictEntry(self, key):
-      """
-      Some logic to produce new dictionary entries from existing ones.
-      This deals mainly with having to avoid C++ code with consequtive commata
-      as some dict entries can be an empty string.
-      """
+    def generateDictEntry(self, key):
+        """
+        Some logic to produce new dictionary entries from existing ones.
+        This deals mainly with having to avoid C++ code with consequtive commata
+        as some dict entries can be an empty string.
+        """
 
-      fields = key.split(",")
-      nonempty = [self.d[f] for f in fields if not f=="" and not self.d[f]==""]
-      if len(nonempty)>0:
-          s = ",".join(nonempty)
-          if key.startswith(",") and not s.startswith(","): s = "," + s
-          if key.endswith(",") and not s.endswith(","): s+=","
-      else:
-          s=""
+        fields = key.split(",")
+        nonempty = [self.d[f] for f in fields if not f == "" and not self.d[f] == ""]
+        if len(nonempty) > 0:
+            s = ",".join(nonempty)
+            if key.startswith(",") and not s.startswith(","):
+                s = "," + s
+            if key.endswith(",") and not s.endswith(","):
+                s += ","
+        else:
+            s = ""
 
-      return s
+        return s
 
+    def mkSubDict(self, keys):
+        """
 
-  def mkSubDict(self, keys):
-      """
+        Create the particular subdictionary that's used for an expression.
 
-      Create the particular subdictionary that's used for an expression.
+        """
+        temp = {}
+        for k in keys:
+            if not k in self.d:
+                temp[k] = self.generateDictEntry(k)
+            else:
+                temp[k] = self.d[k]
+        result = {}
+        for k in temp:
+            result[k.replace(",", "_COMMA_").strip()] = temp[k]
+        return result
 
-      """
-      temp = {}
-      for k in keys:
-          if not k in self.d:
-              temp[k] = self.generateDictEntry(k)
-          else:
-              temp[k] = self.d[k]
-      result = {}
-      for k in temp:
-        result[ k.replace(",", "_COMMA_").strip() ] = temp[k]
-      return result
+    def __generate_loadCell(self, output_file):
+        output_file.write(
+            jinja2.Template(self.TemplateLoadCell_Prologue).render(**self.d)
+        )
 
+        for vertex in self.vertices:
+            temp = {
+                "name": vertex.name,
+                "enumeration_type": vertex.get_enumeration_type(),
+                "logical_type_name": vertex.get_logical_type_name(),
+                "full_qualified_type": vertex.get_full_qualified_type(),
+                "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments,
+            }
+            self.d["name"] = vertex.name
+            output_file.write(
+                jinja2.Template(self.TemplateLoadCell_VertexLoad).render(**temp)
+            )
 
-  def __generate_loadCell(self,output_file):
-    output_file.write( jinja2.Template( self.TemplateLoadCell_Prologue ).render(**self.d) )
+        for face in self.faces:
+            temp = {
+                "name": face.name,
+                "enumeration_type": face.get_enumeration_type(),
+                "logical_type_name": face.get_logical_type_name(),
+                "full_qualified_type": face.get_full_qualified_type(),
+                "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments,
+            }
+            self.d["name"] = face.name
+            output_file.write(
+                jinja2.Template(self.TemplateLoadCell_FaceLoad).render(**temp)
+            )
 
-    for vertex in self.vertices:
-      temp = {
-        "name": vertex.name,
-        "enumeration_type":vertex.get_enumeration_type(),
-        "logical_type_name":vertex.get_logical_type_name(),
-        "full_qualified_type": vertex.get_full_qualified_type(),
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments
-      }
-      self.d[ "name" ]                 = vertex.name
-      output_file.write( jinja2.Template( self.TemplateLoadCell_VertexLoad ).render(**temp) )
+        for cell in self.cells:
+            temp = {
+                "name": cell.name,
+                "logical_type_name": cell.get_logical_type_name(),
+                "full_qualified_type": cell.get_full_qualified_type(),
+                "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments,
+            }
+            self.d["name"] = cell.name
+            output_file.write(
+                jinja2.Template(self.TemplateLoadCell_CellLoad).render(**temp)
+            )
 
-    for face in self.faces:
-      temp = {
-        "name": face.name,
-        "enumeration_type":face.get_enumeration_type(),
-        "logical_type_name":face.get_logical_type_name(),
-        "full_qualified_type": face.get_full_qualified_type(),
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments
-       }
-      self.d[ "name" ]                 = face.name
-      output_file.write( jinja2.Template( self.TemplateLoadCell_FaceLoad ).render(**temp) )
+        output_file.write(jinja2.Template(self.TemplateLoadCell_Epilogue).render({}))
 
-    for cell in self.cells:
-      temp = {
-        "name": cell.name,
-        "logical_type_name":cell.get_logical_type_name(),
-        "full_qualified_type": cell.get_full_qualified_type(),
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments
-       }
-      self.d[ "name" ]                 = cell.name
-      output_file.write( jinja2.Template( self.TemplateLoadCell_CellLoad ).render(**temp) )
+    def __generate_enterCell(self, output_file):
+        """
+        Generates enter cell
+        """
+        output_file.write(
+            jinja2.Template(self.TemplateEnterCell_Prologue).render(**self.d)
+        )
 
-    output_file.write( jinja2.Template( self.TemplateLoadCell_Epilogue ).render({}) )
+        if len(self.vertices) > 0:
+            md = self.mkSubDict(
+                [
+                    "name",
+                    "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
+                    ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
+                ]
+            )
+            self.__format_template_per_action(
+                output_file,
+                self.TemplateEnterCell_VertexMappingCall,
+                False,
+                manual_dict=md,
+            )
 
+        if len(self.faces) > 0:
+            md = self.mkSubDict(
+                [
+                    "name",
+                    "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
+                    "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY",
+                    "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS",
+                    "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS",
+                    "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+                    ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
+                    ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
+                ]
+            )
+            self.__format_template_per_action(
+                output_file,
+                self.TemplateEnterCell_FaceMappingCall,
+                False,
+                manual_dict=md,
+            )
 
-  def __generate_enterCell(self,output_file):
-    """
-      Generates enter cell
-    """
-    output_file.write( jinja2.Template( self.TemplateEnterCell_Prologue ).render(**self.d) )
+        if len(self.cells) > 0:
+            md = self.mkSubDict(
+                [
+                    "name",
+                    "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,",
+                    "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,",
+                    "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY",
+                    ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS",
+                    ",MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS",
+                    ",MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
+                ]
+            )
+            self.__format_template_per_action(
+                output_file,
+                self.TemplateEnterCell_CellMappingCall,
+                False,
+                manual_dict=md,
+            )
 
-    if len(self.vertices)>0:
-      md = self.mkSubDict(["name",
-        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
-        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
-        ])
-      self.__format_template_per_action(output_file, self.TemplateEnterCell_VertexMappingCall, False, manual_dict=md)
+        md = self.mkSubDict(
+            [
+                ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT",
+                ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT",
+            ]
+        )
 
-    if len(self.faces)>0:
-      md = self.mkSubDict(["name",
-        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
-        "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY",
-        "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS",
-        "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS",
-        "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
-        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
-        ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS"
-        ])
-      self.__format_template_per_action(output_file, self.TemplateEnterCell_FaceMappingCall, False, manual_dict=md)
+        self.__format_template_per_action(
+            output_file, self.TemplateEnterCell_MappingCall, False, manual_dict=md
+        )
+        output_file.write(jinja2.Template(self.TemplateEnterCell_Epilogue).render({}))
 
-    if len(self.cells)>0:
-      md = self.mkSubDict(["name",
-        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,",
-        "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,",
-        "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY",
-        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS",
-        ",MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS",
-        ",MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"
-        ])
-      self.__format_template_per_action(output_file, self.TemplateEnterCell_CellMappingCall, False, manual_dict=md)
-
-
-    md = self.mkSubDict([
-      ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT",
-      ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT"])
-
-    self.__format_template_per_action(output_file, self.TemplateEnterCell_MappingCall, False, manual_dict=md)
-    output_file.write( jinja2.Template( self.TemplateEnterCell_Epilogue ).render({}) )
-
-
-  TemplateLoadCell_Prologue = """
+    TemplateLoadCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::loadCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "loadCell(...)", _spacetreeId, event.toString() );
   
   std::vector< tarch::multicore::Task* >  tasks;
 """
 
-
-  TemplateStoreCell_Prologue = """
+    TemplateStoreCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::storeCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "storeCell(...)", _spacetreeId, event.toString() );
   std::vector< tarch::multicore::Task* >  tasks;
 """
 
-
-  TemplateLeaveCell_Prologue = """
+    TemplateLeaveCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalEvent&  event ) {
   logTraceInWith2Arguments( "leaveCell(...)", _spacetreeId, event.toString() );
 """
 
-
-  TemplateLeaveCell_MappingCall = """
+    TemplateLeaveCell_MappingCall = """
   {
     peano4::datamanagement::CellMarker marker( event );
     if (marker.isLocal()) {
@@ -874,8 +1038,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   }
 """
 
-
-  TemplateLeaveCell_CellStore_MappingCall = """
+    TemplateLeaveCell_CellStore_MappingCall = """
   {
     peano4::datamanagement::CellMarker marker( event );
     if (
@@ -893,8 +1056,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   }
 """
 
-
-  TemplateStoreCell_CellStore = """
+    TemplateStoreCell_CellStore = """
   // Handle cell {{logical_type_name}}
   std::function<bool ()> storeCell{{logical_type_name}} = 
     [&]()->bool {
@@ -942,8 +1104,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   
 """
 
-
-  TemplateLeaveCell_FaceStore_MappingCall = """
+    TemplateLeaveCell_FaceStore_MappingCall = """
   // Handle face {{logical_type_name}}
   {
     peano4::datamanagement::FaceMarker  marker(event);
@@ -1000,7 +1161,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   }
 """
 
-  TemplateStoreCell_FaceStore = """
+    TemplateStoreCell_FaceStore = """
   // Store face {{logical_type_name}}
   std::function<bool ()> storeFace{{logical_type_name}} = 
     [&]()->bool {
@@ -1047,7 +1208,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   
 """
 
-  TemplateLeaveCell_VertexStore_MappingCall = """
+    TemplateLeaveCell_VertexStore_MappingCall = """
   // Handle vertex {{logical_type_name}}
   {
     peano4::datamanagement::VertexMarker  marker(event);
@@ -1100,7 +1261,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   }
 """
 
-  TemplateStoreCell_VertexStore = """
+    TemplateStoreCell_VertexStore = """
   // Store vertex {{logical_type_name}}
   std::function<bool ()> storeVertex{{logical_type_name}} = 
     [&]()->bool {
@@ -1144,16 +1305,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   
 """
 
-
-  TemplateLeaveCell_Epilogue = """
+    TemplateLeaveCell_Epilogue = """
   logTraceOutWith1Argument( "leaveCell(...)", _spacetreeId );
 }
 
 
 """
 
-
-  TemplateLoadCell_Epilogue = """
+    TemplateLoadCell_Epilogue = """
   tarch::multicore::spawnAndWait(tasks);
   logTraceOutWith1Argument( "loadCell(...)", _spacetreeId );
 }
@@ -1161,8 +1320,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
 """
 
-
-  TemplateStoreCell_Epilogue = """
+    TemplateStoreCell_Epilogue = """
   tarch::multicore::spawnAndWait( tasks );
   logTraceOutWith1Argument( "storeCell(...)", _spacetreeId );
 }
@@ -1170,104 +1328,138 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
 """
 
+    def __generate_leaveCell(self, output_file):
+        """
+        Generates enter cell
+        """
+        output_file.write(
+            jinja2.Template(self.TemplateLeaveCell_Prologue).render(
+                **self.mkSubDict(["FULL_QUALIFIED_CLASSNAME"])
+            )
+        )
 
-  def __generate_leaveCell(self,output_file):
-    """
-      Generates enter cell
-    """
-    output_file.write( jinja2.Template( self.TemplateLeaveCell_Prologue ).render(**self.mkSubDict(["FULL_QUALIFIED_CLASSNAME"])) )
+        md = self.mkSubDict(
+            [
+                ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT",
+                ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT",
+            ]
+        )
+        self.__format_template_per_action(
+            output_file, self.TemplateLeaveCell_MappingCall, True, manual_dict=md
+        )
 
-    md = self.mkSubDict([
-      ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT",
-      ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT"
-      ])
-    self.__format_template_per_action(output_file, self.TemplateLeaveCell_MappingCall, True, manual_dict=md)
+        if len(self.cells) > 0:
+            md = self.mkSubDict(
+                [
+                    ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS",
+                    "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY",
+                    ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
+                ]
+            )
+            self.__format_template_per_action(
+                output_file,
+                self.TemplateLeaveCell_CellStore_MappingCall,
+                True,
+                manual_dict=md,
+            )
 
-    if len(self.cells)>0:
-      md = self.mkSubDict([
-        ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS",
-        "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY",
-        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"
-        ])
-      self.__format_template_per_action(output_file, self.TemplateLeaveCell_CellStore_MappingCall, True, manual_dict=md)
+        if len(self.faces) > 0:
+            md = self.mkSubDict(
+                [
+                    "name",
+                    ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
+                    "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY",
+                    ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
+                    ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
+                    "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY",
+                    ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
+                ]
+            )
+            self.__format_template_per_action(
+                output_file,
+                self.TemplateLeaveCell_FaceStore_MappingCall,
+                True,
+                manual_dict=md,
+            )
 
-    if len(self.faces)>0:
-      md = self.mkSubDict([
-        "name",
-        ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
-        "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY",
-        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
-        ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
-        "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY",
-        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
-        ])
-      self.__format_template_per_action(output_file, self.TemplateLeaveCell_FaceStore_MappingCall, True, manual_dict=md)
+        if len(self.vertices) > 0:
+            md = self.mkSubDict(
+                [
+                    "name",
+                    "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
+                    ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+                    ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
+                    "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
+                ]
+            )
+            self.__format_template_per_action(
+                output_file,
+                self.TemplateLeaveCell_VertexStore_MappingCall,
+                True,
+                manual_dict=md,
+            )
 
-    if len(self.vertices)>0:
-      md = self.mkSubDict([
-        "name",
-        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
-        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
-        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
-        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
-        ])
-      self.__format_template_per_action(output_file, self.TemplateLeaveCell_VertexStore_MappingCall, True, manual_dict=md)
+        output_file.write(jinja2.Template(self.TemplateLeaveCell_Epilogue).render({}))
 
-    output_file.write( jinja2.Template( self.TemplateLeaveCell_Epilogue ).render({}))
+    def __generate_storeCell(self, output_file):
+        output_file.write(
+            jinja2.Template(self.TemplateStoreCell_Prologue).render(**self.d)
+        )
 
+        cells_inverted = [x for x in self.cells]
+        faces_inverted = [x for x in self.faces]
+        vertices_inverted = [x for x in self.vertices]
 
-  def __generate_storeCell(self,output_file):
-    output_file.write( jinja2.Template( self.TemplateStoreCell_Prologue ).render(**self.d) )
+        cells_inverted.reverse()
+        faces_inverted.reverse()
+        vertices_inverted.reverse()
 
-    cells_inverted    = [x for x in self.cells]
-    faces_inverted    = [x for x in self.faces]
-    vertices_inverted = [x for x in self.vertices]
+        for cell in cells_inverted:
+            temp = {
+                "name": cell.name,
+                "logical_type_name": cell.get_logical_type_name(),
+                "full_qualified_type": cell.get_full_qualified_type(),
+                "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments,
+            }
+            self.d["name"] = cell.name
+            output_file.write(
+                jinja2.Template(self.TemplateStoreCell_CellStore).render(**temp)
+            )
 
-    cells_inverted.reverse()
-    faces_inverted.reverse()
-    vertices_inverted.reverse()
+        for face in faces_inverted:
+            temp = {
+                "name": face.name,
+                "enumeration_type": face.get_enumeration_type(),
+                "logical_type_name": face.get_logical_type_name(),
+                "full_qualified_type": face.get_full_qualified_type(),
+                "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments,
+            }
+            self.d["name"] = face.name
+            output_file.write(
+                jinja2.Template(self.TemplateStoreCell_FaceStore).render(**temp)
+            )
 
-    for cell in cells_inverted:
-      temp = {
-        "name" : cell.name,
-        "logical_type_name" : cell.get_logical_type_name(),
-        "full_qualified_type" : cell.get_full_qualified_type(),
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments
-      }
-      self.d[ "name" ]                 = cell.name
-      output_file.write( jinja2.Template( self.TemplateStoreCell_CellStore ).render(**temp) )
+        for vertex in vertices_inverted:
+            temp = {
+                "name": vertex.name,
+                "enumeration_type": vertex.get_enumeration_type(),
+                "logical_type_name": vertex.get_logical_type_name(),
+                "full_qualified_type": vertex.get_full_qualified_type(),
+                "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments,
+            }
+            self.d["name"] = vertex.name
+            output_file.write(
+                jinja2.Template(self.TemplateStoreCell_VertexStore).render(**temp)
+            )
 
-    for face in faces_inverted:
-      temp = {
-        "name" : face.name,
-        "enumeration_type":face.get_enumeration_type(),
-        "logical_type_name":face.get_logical_type_name(),
-        "full_qualified_type":face.get_full_qualified_type(),
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments
-      }
-      self.d[ "name" ]                 = face.name
-      output_file.write( jinja2.Template( self.TemplateStoreCell_FaceStore ).render(**temp) )
+        output_file.write(jinja2.Template(self.TemplateStoreCell_Epilogue).render({}))
 
-    for vertex in vertices_inverted:
-      temp = {
-        "name":vertex.name,
-        "enumeration_type": vertex.get_enumeration_type(),
-        "logical_type_name":vertex.get_logical_type_name(),
-        "full_qualified_type":vertex.get_full_qualified_type(),
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments
-      }
-      self.d[ "name" ]                 = vertex.name
-      output_file.write( jinja2.Template( self.TemplateStoreCell_VertexStore ).render(**temp) )
-
-    output_file.write( jinja2.Template( self.TemplateStoreCell_Epilogue ).render({}) )
-
-
-  TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Prologue = """
+    TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllVerticalDataExchangeStacks( int masterId ) {
   logTraceInWith2Arguments( "exchangeAllVerticalDataExchangeStacks(...)", masterId, _spacetreeId  );
 """
 
-  TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange = """
+    TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange = """
   peano4::parallel::SpacetreeSet::exchangeAllVerticalDataExchangeStacks(
     {{DATASET}},
     _spacetreeId,
@@ -1275,22 +1467,19 @@ void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllVerticalDataExchangeStacks( int ma
   );
 """
 
-  TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Epilogue = """
+    TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Epilogue = """
   logTraceOut( "exchangeAllVerticalDataExchangeStacks(...)" );
 }
 
 
 """
 
-
-
-
-  TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Prologue = """
+    TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllHorizontalDataExchangeStacks( bool symmetricDataCardinality ) {
   logTraceInWith2Arguments( "exchangeAllHorizontalDataExchangeStacks(...)", symmetricDataCardinality, _spacetreeId  );
 """
 
-  TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange = """
+    TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange = """
   peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
     {{DATASET}},
     _spacetreeId,
@@ -1298,44 +1487,38 @@ void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllHorizontalDataExchangeStacks( bool
   );
 """
 
-  TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Epilogue = """
+    TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Epilogue = """
   logTraceOut( "exchangeAllHorizontalDataExchangeStacks(...)" );
 }
 
 
 """
 
-
-
-
-  TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Prologue = """
+    TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllPeriodicBoundaryDataStacks() {
   logTraceInWith1Argument( "exchangeAllPeriodicBoundaryDataStacks()", _spacetreeId  );
 """
 
-  TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange = """
+    TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange = """
   peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(
     {{DATASET}},
     _spacetreeId
   );
 """
 
-  TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Epilogue = """
+    TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Epilogue = """
   logTraceOut( "exchangeAllPeriodicBoundaryDataStacks()" );
 }
 
 
 """
 
-
-
-
-  TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Prologue = """
+    TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromSplittingTreeToNewTree(int newWorker) {
   logTraceInWith2Arguments( "streamDataFromSplittingTreeToNewTree(int)", _spacetreeId, newWorker );
 """
 
-  TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange = """
+    TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange = """
   peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
     {{DATASET}},
     _spacetreeId,
@@ -1343,20 +1526,19 @@ void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromSplittingTreeToNewTree(int newW
   );
 """
 
-  TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Epilogue = """
+    TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Epilogue = """
   logTraceOut( "streamDataFromSplittingTreeToNewTree(int)");
 }
 
 
 """
 
-
-  TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Prologue = """
+    TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromJoiningTreeToMasterTree(int master) {
   logTraceInWith2Arguments( "streamDataFromJoiningTreeToMasterTree(int)", _spacetreeId, master );
 """
 
-  TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange = """
+    TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange = """
   peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(
     {{DATASET}},
     _spacetreeId,
@@ -1364,41 +1546,39 @@ void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromJoiningTreeToMasterTree(int mas
   );
 """
 
-  TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Epilogue = """
+    TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Epilogue = """
   logTraceOut( "streamDataFromJoiningTreeToMasterTree(int)");
 }
 
 
 """
 
-
-  TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Prologue = """
+    TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::finishAllOutstandingSendsAndReceives() {
   logTraceInWith1Argument( "finishAllOutstandingSendsAndReceives()", _spacetreeId );
 """
 
-  TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange = """
+    TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange = """
   peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(
     {{DATASET}},
     _spacetreeId
   );
 """
 
-  TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Epilogue = """
+    TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Epilogue = """
   logTraceOut( "finishAllOutstandingSendsAndReceives()");
 }
 
 
 """
 
-
-  TemplateSendVertex_Prologue = """
+    TemplateSendVertex_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {
   logTraceInWith4Arguments( "sendVertex(int,int,int)", position, toStack, event.toString(), _spacetreeId );
 
 """
 
-  TemplateSendVertex_SendCall = """
+    TemplateSendVertex_SendCall = """
   {
     peano4::datamanagement::VertexMarker  marker(event,position);
 
@@ -1422,21 +1602,20 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano
   }
 """
 
-  TemplateSendVertex_Epilogue = """
+    TemplateSendVertex_Epilogue = """
   logTraceOut( "sendVertex(int,int,int)");
 }
 
 
 """
 
-
-  TemplateSendFace_Prologue = """
+    TemplateSendFace_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {
   logTraceInWith4Arguments( "sendFace(int,int,int)", position, toStack, event.toString(), _spacetreeId );
 
 """
 
-  TemplateSendFace_SendCall = """
+    TemplateSendFace_SendCall = """
   {
     peano4::datamanagement::FaceMarker  marker(event,position);
     const {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
@@ -1459,22 +1638,20 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4:
   }
 """
 
-
-  TemplateSendFace_Epilogue = """
+    TemplateSendFace_Epilogue = """
   logTraceOut( "sendFace(int,int,int)");
 }
 
 
 """
 
-
-  TemplateSendCell_Prologue = """
+    TemplateSendCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {
   logTraceInWith3Arguments( "sendCell(int,int,int)", toStack, event.toString(), _spacetreeId );
 
 """
 
-  TemplateSendCell_SendCall = """
+    TemplateSendCell_SendCall = """
   {
     peano4::datamanagement::CellMarker  marker(event);
     const {{full_qualified_type}}&  data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top();
@@ -1499,58 +1676,50 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::Travers
   }
 """
 
-
-  TemplateSendCell_Epilogue = """
+    TemplateSendCell_Epilogue = """
   logTraceOut( "sendCell(int,int,int)");
 }
 
 
 """
 
-
-  TemplateReceiveAndMergeCell_Prologue = """
+    TemplateReceiveAndMergeCell_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeCell(int fromStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event ) {
   logTraceInWith3Arguments( "receiveAndMergeCell(...)", fromStack, event.toString(), _spacetreeId );
 """
 
-
-  TemplateReceiveAndMergeCell_Epilogue = """
+    TemplateReceiveAndMergeCell_Epilogue = """
   logTraceOut( "receiveAndMergeCell(...)");
 }
 
 
 """
 
-
-  TemplateReceiveAndMergeVertex_Prologue = """
+    TemplateReceiveAndMergeVertex_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeVertex(int position, int fromStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) {
   logTraceInWith4Arguments( "receiveAndMergeVertex(...)", position, fromStack, event.toString(), _spacetreeId );
 """
 
-
-  TemplateReceiveAndMergeVertex_Epilogue = """
+    TemplateReceiveAndMergeVertex_Epilogue = """
   logTraceOut( "receiveAndMergeVertex(...)");
 }
 
 
 """
 
-
-  TemplateReceiveAndMergeFace_Epilogue = """
+    TemplateReceiveAndMergeFace_Epilogue = """
   logTraceOut( "receiveAndMergeFace(...)");
 }
 
 
 """
 
-
-  TemplateReceiveAndMergeFace_Prologue = """
+    TemplateReceiveAndMergeFace_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) {
   logTraceInWith4Arguments( "receiveAndMergeFace(...)", position, fromStack, event.toString(), _spacetreeId );
 """
 
-
-  TemplateReceiveAndMergeVertex_ReceiveAndMergeCalls = """
+    TemplateReceiveAndMergeVertex_ReceiveAndMergeCalls = """
   {
     peano4::datamanagement::VertexMarker  marker(event,position);
     {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
@@ -1605,9 +1774,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
   }
 """
 
-
-
-  TemplateReceiveAndMergeFace_ReceiveAndMergeCalls = """
+    TemplateReceiveAndMergeFace_ReceiveAndMergeCalls = """
   {
     peano4::datamanagement::FaceMarker  marker(event,position);
     {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
@@ -1655,8 +1822,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
   }
 """
 
-
-  TemplateReceiveAndMergeCell_ReceiveAndMergeCalls = """
+    TemplateReceiveAndMergeCell_ReceiveAndMergeCalls = """
   {
     peano4::datamanagement::CellMarker  marker(event);
 
@@ -1705,175 +1871,400 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
   }
 """
 
-
-  TemplateExchangeRoutines_deleteAllStacks_Prologue = """
+    TemplateExchangeRoutines_deleteAllStacks_Prologue = """
 void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
   logTraceInWith1Argument( "deleteAllStacks()", _spacetreeId );
 """
 
-  TemplateExchangeRoutines_deleteAllStacks_Exchange = """
+    TemplateExchangeRoutines_deleteAllStacks_Exchange = """
   peano4::parallel::SpacetreeSet::deleteAllStacks(
     {{DATASET}},
     _spacetreeId
   );
 """
 
-
-  TemplateExchangeRoutines_deleteAllStacks_Epilogue = """
+    TemplateExchangeRoutines_deleteAllStacks_Epilogue = """
   logTraceOut( "deleteAllStacks()");
 }
 
 
 """
 
-  def __generate_exchange_routines(self,output_file):
-    s=""
+    def __generate_exchange_routines(self, output_file):
+        s = ""
 
-    generic_dict_for_prologue_and_epilogue = {"FULL_QUALIFIED_CLASSNAME":self.d["FULL_QUALIFIED_CLASSNAME"]}
+        generic_dict_for_prologue_and_epilogue = {
+            "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"]
+        }
 
-    s+=  jinja2.Template( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
-    for cell in self.cells:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack"})
-    for face in self.faces:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + face.get_logical_type_name() + "Stack"})
-    for vertex in self.vertices:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
-    s+=  jinja2.Template( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Epilogue).render({})
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Prologue
+        ).render(**generic_dict_for_prologue_and_epilogue)
+        for cell in self.cells:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + cell.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for face in self.faces:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + face.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for vertex in self.vertices:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + vertex.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Epilogue
+        ).render({})
 
-    s+= jinja2.Template( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Prologue).render(**generic_dict_for_prologue_and_epilogue)
-    for cell in self.cells:
-      s+= jinja2.Template( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack"})
-    for face in self.faces:
-      s+= jinja2.Template( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + face.get_logical_type_name() + "Stack"})
-    for vertex in self.vertices:
-      s+= jinja2.Template( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
-    s+= jinja2.Template( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Epilogue).render({})
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Prologue
+        ).render(**generic_dict_for_prologue_and_epilogue)
+        for cell in self.cells:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + cell.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for face in self.faces:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + face.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for vertex in self.vertices:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + vertex.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Epilogue
+        ).render({})
 
-    s+= jinja2.Template( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Prologue).render(**generic_dict_for_prologue_and_epilogue)
-    for cell in self.cells:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack"})
-    for face in self.faces:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + face.get_logical_type_name() + "Stack"})
-    for vertex in self.vertices:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
-    s+=  jinja2.Template( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Epilogue).render({})
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Prologue
+        ).render(**generic_dict_for_prologue_and_epilogue)
+        for cell in self.cells:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + cell.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for face in self.faces:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + face.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for vertex in self.vertices:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + vertex.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Epilogue
+        ).render({})
 
-    s+=  jinja2.Template( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Prologue).render(**generic_dict_for_prologue_and_epilogue)
-    for cell in self.cells:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack"})
-    for face in self.faces:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + face.get_logical_type_name() + "Stack"})
-    for vertex in self.vertices:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
-    s+=  jinja2.Template( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Epilogue).render({})
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Prologue
+        ).render(**generic_dict_for_prologue_and_epilogue)
+        for cell in self.cells:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + cell.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for face in self.faces:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + face.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for vertex in self.vertices:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + vertex.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Epilogue
+        ).render({})
 
-    s+=  jinja2.Template( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Prologue).render(**generic_dict_for_prologue_and_epilogue)
-    for cell in self.cells:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack"})
-    for face in self.faces:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + face.get_logical_type_name() + "Stack"})
-    for vertex in self.vertices:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
-    s+=  jinja2.Template( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Epilogue).render({})
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Prologue
+        ).render(**generic_dict_for_prologue_and_epilogue)
+        for cell in self.cells:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + cell.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for face in self.faces:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + face.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for vertex in self.vertices:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + vertex.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Epilogue
+        ).render({})
 
-    s+=  jinja2.Template( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Prologue).render(**generic_dict_for_prologue_and_epilogue)
-    for cell in self.cells:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack"})
-    for face in self.faces:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + face.get_logical_type_name() + "Stack"})
-    for vertex in self.vertices:
-      s+=  jinja2.Template( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange).render(**{"DATASET":"repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
-    s+=  jinja2.Template( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Epilogue ).render({})
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Prologue
+        ).render(**generic_dict_for_prologue_and_epilogue)
+        for cell in self.cells:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + cell.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for face in self.faces:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + face.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for vertex in self.vertices:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + vertex.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Epilogue
+        ).render({})
 
-    s+=  jinja2.Template( self.TemplateSendVertex_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
-    for vertex in self.vertices:
-      temp = {
-        "name" : vertex.name,
-        "enumeration_type":vertex.get_enumeration_type(),
-        "logical_type_name":vertex.get_logical_type_name(),
-        "full_qualified_type":vertex.get_full_qualified_type(),
-        "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments
-      }
-      s+=  jinja2.Template( self.TemplateSendVertex_SendCall ).render(**temp)
-    s+=  jinja2.Template( self.TemplateSendVertex_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
+        s += jinja2.Template(self.TemplateSendVertex_Prologue).render(
+            **generic_dict_for_prologue_and_epilogue
+        )
+        for vertex in self.vertices:
+            temp = {
+                "name": vertex.name,
+                "enumeration_type": vertex.get_enumeration_type(),
+                "logical_type_name": vertex.get_logical_type_name(),
+                "full_qualified_type": vertex.get_full_qualified_type(),
+                "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
+                "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments,
+            }
+            s += jinja2.Template(self.TemplateSendVertex_SendCall).render(**temp)
+        s += jinja2.Template(self.TemplateSendVertex_Epilogue).render(
+            **generic_dict_for_prologue_and_epilogue
+        )
 
-    s+=  jinja2.Template( self.TemplateSendFace_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
-    for face in self.faces:
-      temp = {
-        "name" : face.name,
-        "enumeration_type":face.get_enumeration_type(),
-        "logical_type_name":face.get_logical_type_name(),
-        "full_qualified_type":face.get_full_qualified_type(),
-        "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments
-      }
-      s+=  jinja2.Template( self.TemplateSendFace_SendCall ).render(**temp)
-    s+=  jinja2.Template( self.TemplateSendFace_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
+        s += jinja2.Template(self.TemplateSendFace_Prologue).render(
+            **generic_dict_for_prologue_and_epilogue
+        )
+        for face in self.faces:
+            temp = {
+                "name": face.name,
+                "enumeration_type": face.get_enumeration_type(),
+                "logical_type_name": face.get_logical_type_name(),
+                "full_qualified_type": face.get_full_qualified_type(),
+                "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
+                "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments,
+            }
+            s += jinja2.Template(self.TemplateSendFace_SendCall).render(**temp)
+        s += jinja2.Template(self.TemplateSendFace_Epilogue).render(
+            **generic_dict_for_prologue_and_epilogue
+        )
 
-    s+=  jinja2.Template( self.TemplateSendCell_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
-    for cell in self.cells:
-      temp = {
-        "name" : cell.name,
-        "logical_type_name":cell.get_logical_type_name(),
-        "full_qualified_type":cell.get_full_qualified_type(),
-        "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments
-      }
-      s+=  jinja2.Template( self.TemplateSendCell_SendCall ).render(**temp)
-    s+=  jinja2.Template( self.TemplateSendCell_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
+        s += jinja2.Template(self.TemplateSendCell_Prologue).render(
+            **generic_dict_for_prologue_and_epilogue
+        )
+        for cell in self.cells:
+            temp = {
+                "name": cell.name,
+                "logical_type_name": cell.get_logical_type_name(),
+                "full_qualified_type": cell.get_full_qualified_type(),
+                "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
+                "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments,
+            }
+            s += jinja2.Template(self.TemplateSendCell_SendCall).render(**temp)
+        s += jinja2.Template(self.TemplateSendCell_Epilogue).render(
+            **generic_dict_for_prologue_and_epilogue
+        )
 
-    s+=  jinja2.Template( self.TemplateReceiveAndMergeCell_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
-    for cell in self.cells:
-      temp = {
-        "name" : cell.name,
-        "logical_type_name":cell.get_logical_type_name(),
-        "full_qualified_type":cell.get_full_qualified_type(),
-        "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments
-      }
-      s+=  jinja2.Template( self.TemplateReceiveAndMergeCell_ReceiveAndMergeCalls ).render(**temp)
-    s+=  jinja2.Template( self.TemplateReceiveAndMergeCell_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
+        s += jinja2.Template(self.TemplateReceiveAndMergeCell_Prologue).render(
+            **generic_dict_for_prologue_and_epilogue
+        )
+        for cell in self.cells:
+            temp = {
+                "name": cell.name,
+                "logical_type_name": cell.get_logical_type_name(),
+                "full_qualified_type": cell.get_full_qualified_type(),
+                "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
+                "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments,
+            }
+            s += jinja2.Template(
+                self.TemplateReceiveAndMergeCell_ReceiveAndMergeCalls
+            ).render(**temp)
+        s += jinja2.Template(self.TemplateReceiveAndMergeCell_Epilogue).render(
+            **generic_dict_for_prologue_and_epilogue
+        )
 
-    s+=  jinja2.Template( self.TemplateReceiveAndMergeFace_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
-    for face in self.faces:
-      temp = {
-        "name" : face.name,
-        "enumeration_type":face.get_enumeration_type(),
-        "logical_type_name":face.get_logical_type_name(),
-        "full_qualified_type":face.get_full_qualified_type(),
-        "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments
-      }
-      s+=  jinja2.Template( self.TemplateReceiveAndMergeFace_ReceiveAndMergeCalls ).render(**temp)
-    s+=  jinja2.Template( self.TemplateReceiveAndMergeFace_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
+        s += jinja2.Template(self.TemplateReceiveAndMergeFace_Prologue).render(
+            **generic_dict_for_prologue_and_epilogue
+        )
+        for face in self.faces:
+            temp = {
+                "name": face.name,
+                "enumeration_type": face.get_enumeration_type(),
+                "logical_type_name": face.get_logical_type_name(),
+                "full_qualified_type": face.get_full_qualified_type(),
+                "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
+                "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments,
+            }
+            s += jinja2.Template(
+                self.TemplateReceiveAndMergeFace_ReceiveAndMergeCalls
+            ).render(**temp)
+        s += jinja2.Template(self.TemplateReceiveAndMergeFace_Epilogue).render(
+            **generic_dict_for_prologue_and_epilogue
+        )
 
-    s+=  jinja2.Template( self.TemplateReceiveAndMergeVertex_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
-    for vertex in self.vertices:
-      temp = {
-        "name" : vertex.name,
-        "enumeration_type":vertex.get_enumeration_type(),
-        "logical_type_name":vertex.get_logical_type_name(),
-        "full_qualified_type":vertex.get_full_qualified_type(),
-        "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments
-      }
-      s+=  jinja2.Template( self.TemplateReceiveAndMergeVertex_ReceiveAndMergeCalls ).render(**temp)
-    s+=  jinja2.Template( self.TemplateReceiveAndMergeVertex_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
+        s += jinja2.Template(self.TemplateReceiveAndMergeVertex_Prologue).render(
+            **generic_dict_for_prologue_and_epilogue
+        )
+        for vertex in self.vertices:
+            temp = {
+                "name": vertex.name,
+                "enumeration_type": vertex.get_enumeration_type(),
+                "logical_type_name": vertex.get_logical_type_name(),
+                "full_qualified_type": vertex.get_full_qualified_type(),
+                "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
+                "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments,
+            }
+            s += jinja2.Template(
+                self.TemplateReceiveAndMergeVertex_ReceiveAndMergeCalls
+            ).render(**temp)
+        s += jinja2.Template(self.TemplateReceiveAndMergeVertex_Epilogue).render(
+            **generic_dict_for_prologue_and_epilogue
+        )
 
-    s+=  jinja2.Template( self.TemplateExchangeRoutines_deleteAllStacks_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
-    for cell in self.cells:
-      s+=  jinja2.Template(self.TemplateExchangeRoutines_deleteAllStacks_Exchange ).render(**{"DATASET":"repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack"})
-    for face in self.faces:
-      s+=  jinja2.Template(self.TemplateExchangeRoutines_deleteAllStacks_Exchange ).render(**{"DATASET":"repositories::DataRepository::_" + face.get_logical_type_name() + "Stack"})
-    for vertex in self.vertices:
-      s+=  jinja2.Template(self.TemplateExchangeRoutines_deleteAllStacks_Exchange ).render(**{"DATASET":"repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
-    s+=  jinja2.Template(self.TemplateExchangeRoutines_deleteAllStacks_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_deleteAllStacks_Prologue
+        ).render(**generic_dict_for_prologue_and_epilogue)
+        for cell in self.cells:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_deleteAllStacks_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + cell.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for face in self.faces:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_deleteAllStacks_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + face.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        for vertex in self.vertices:
+            s += jinja2.Template(
+                self.TemplateExchangeRoutines_deleteAllStacks_Exchange
+            ).render(
+                **{
+                    "DATASET": "repositories::DataRepository::_"
+                    + vertex.get_logical_type_name()
+                    + "Stack"
+                }
+            )
+        s += jinja2.Template(
+            self.TemplateExchangeRoutines_deleteAllStacks_Epilogue
+        ).render(**generic_dict_for_prologue_and_epilogue)
 
+        output_file.write(s)
 
-    output_file.write( s)
-
-  TemplateImplementationFilePrologue = """
+    TemplateImplementationFilePrologue = """
 #include "{{CLASSNAME}}.h"
 #include "repositories/DataRepository.h"
 
@@ -1892,42 +2283,52 @@ tarch::logging::Log {{FULL_QUALIFIED_CLASSNAME}}::_log( "{{FULL_QUALIFIED_CLASSN
 
 """
 
-  def __generate_implementation(self,overwrite,full_qualified_filename):
-    if write_file(overwrite,self.default_overwrite,full_qualified_filename):
-      import inspect, os
-      cuda = using_cuda_backend()
-      if cuda:
-        full_qualified_filename = full_qualified_filename.replace(".cpp", ".cu")
+    def __generate_implementation(self, overwrite, full_qualified_filename):
+        if write_file(overwrite, self.default_overwrite, full_qualified_filename):
+            import inspect, os
 
-      print( "{} written by {}".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__))))
+            cuda = using_cuda_backend()
+            if cuda:
+                full_qualified_filename = full_qualified_filename.replace(".cpp", ".cu")
 
-      output_file = open( full_qualified_filename, "w" )
-      output_file.write( jinja2.Template( self.TemplateImplementationFilePrologue ).render(**self.d) )
+            print(
+                "{} written by {}".format(
+                    full_qualified_filename,
+                    os.path.basename(inspect.getfile(self.__class__)),
+                )
+            )
 
-      self.__generate_constructor(output_file)
-      self.__generate_clone(output_file)
-      self.__generate_getGridControlEvents(output_file)
-      self.__generate_beginTraversal(output_file)
-      self.__generate_endTraversal(output_file)
-      self.__generate_prepareTraversal(output_file)
-      self.__generate_unprepareTraversal(output_file)
-      self.__generate_loadCell(output_file)
-      self.__generate_enterCell(output_file)
-      self.__generate_leaveCell(output_file)
-      self.__generate_storeCell(output_file)
-      self.__generate_exchange_routines(output_file)
+            output_file = open(full_qualified_filename, "w")
+            output_file.write(
+                jinja2.Template(self.TemplateImplementationFilePrologue).render(
+                    **self.d
+                )
+            )
 
-  #
-  # @todo Sollte man mit Jinja 2 nicht mehr brauchen
-  #
-  def get_cpp_file_name(self):
-    return self.subdirectory + "/" + self.classname + ".cpp"
+            self.__generate_constructor(output_file)
+            self.__generate_clone(output_file)
+            self.__generate_getGridControlEvents(output_file)
+            self.__generate_beginTraversal(output_file)
+            self.__generate_endTraversal(output_file)
+            self.__generate_prepareTraversal(output_file)
+            self.__generate_unprepareTraversal(output_file)
+            self.__generate_loadCell(output_file)
+            self.__generate_enterCell(output_file)
+            self.__generate_leaveCell(output_file)
+            self.__generate_storeCell(output_file)
+            self.__generate_exchange_routines(output_file)
 
-  def generate(self,overwrite,directory):
-    if not os.path.exists( directory + "/" + self.subdirectory ):
-      os.mkdir(directory + "/" + self.subdirectory)
+    #
+    # @todo Sollte man mit Jinja 2 nicht mehr brauchen
+    #
+    def get_cpp_file_name(self):
+        return self.subdirectory + "/" + self.classname + ".cpp"
 
-    cpp_filename    = directory + "/" + self.get_cpp_file_name()
+    def generate(self, overwrite, directory):
+        if not os.path.exists(directory + "/" + self.subdirectory):
+            os.mkdir(directory + "/" + self.subdirectory)
 
-    self.__generate_header(overwrite,directory)
-    self.__generate_implementation(overwrite,cpp_filename)
+        cpp_filename = directory + "/" + self.get_cpp_file_name()
+
+        self.__generate_header(overwrite, directory)
+        self.__generate_implementation(overwrite, cpp_filename)

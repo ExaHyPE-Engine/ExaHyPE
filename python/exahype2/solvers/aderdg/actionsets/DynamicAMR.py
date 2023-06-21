@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import peano4
 import exahype2
@@ -8,27 +8,27 @@ from peano4.solversteps.ActionSet import ActionSet
 from .AbstractAderDGActionSet import AbstractAderDGActionSet
 
 
-class DynamicAMR( AbstractAderDGActionSet ):  
-  """
-  
-   The ExaHyPE 2 AderDG handling of adaptive meshes.
-   Despite the name this currently only handles static AMR, so this probably desperately needs to be renamed.
-   
-  """
+class DynamicAMR(AbstractAderDGActionSet):
+    """
 
-  def __init__( self, 
-                solver, 
-                clear_guard       = "true", 
-                interpolate_guard = "true", 
-                restrict_guard    = "true"
-              ):
+    The ExaHyPE 2 AderDG handling of adaptive meshes.
+    Despite the name this currently only handles static AMR, so this probably desperately needs to be renamed.
 
-    super(DynamicAMR,self).__init__(solver)
-    self._clear_guard =       clear_guard
-    self._interpolate_guard = interpolate_guard
-    self._restrict_guard =    restrict_guard
+    """
 
-    self._Template_TouchFaceFirstTime = """
+    def __init__(
+        self,
+        solver,
+        clear_guard="true",
+        interpolate_guard="true",
+        restrict_guard="true",
+    ):
+        super(DynamicAMR, self).__init__(solver)
+        self._clear_guard = clear_guard
+        self._interpolate_guard = interpolate_guard
+        self._restrict_guard = restrict_guard
+
+        self._Template_TouchFaceFirstTime = """
 
     if ( {{CLEAR_GUARD}} ) {
 
@@ -51,9 +51,9 @@ class DynamicAMR( AbstractAderDGActionSet ):
 
     }
 
-    """  
+    """
 
-    self._Template_CreateHangingFace = """
+        self._Template_CreateHangingFace = """
 
   if ( {{INTERPOLATE_GUARD}} ) {
   
@@ -84,9 +84,9 @@ class DynamicAMR( AbstractAderDGActionSet ):
 
   }
 
-    """  
+    """
 
-    self._Template_DestroyHangingFace = """
+        self._Template_DestroyHangingFace = """
 
   if({{RESTRICT_GUARD}}){
 
@@ -131,33 +131,33 @@ class DynamicAMR( AbstractAderDGActionSet ):
   }
 
     """
-    
-      
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
 
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")
 
-  def get_body_of_operation(self, operation_name):
-    result = "\n"
-    d = {}
-    self._solver._init_dictionary_with_default_parameters(d)
-    self._solver.add_entries_to_text_replacement_dictionary(d)    
-    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      d[ "CLEAR_GUARD" ] = self._clear_guard
-      result = jinja2.Template(self._Template_TouchFaceFirstTime).render(**d)
-      pass
-    if operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
-      d[ "INTERPOLATE_GUARD" ] = self._interpolate_guard
-      result =  jinja2.Template(self._Template_CreateHangingFace).render(**d)
-      pass
-    if operation_name==ActionSet.OPERATION_DESTROY_HANGING_FACE:
-      d[ "RESTRICT_GUARD" ] = self._restrict_guard
-      result  = jinja2.Template(self._Template_DestroyHangingFace).render(**d)
-      pass
-    return result
+    def get_body_of_operation(self, operation_name):
+        result = "\n"
+        d = {}
+        self._solver._init_dictionary_with_default_parameters(d)
+        self._solver.add_entries_to_text_replacement_dictionary(d)
+        if operation_name == ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+            d["CLEAR_GUARD"] = self._clear_guard
+            result = jinja2.Template(self._Template_TouchFaceFirstTime).render(**d)
+            pass
+        if operation_name == ActionSet.OPERATION_CREATE_HANGING_FACE:
+            d["INTERPOLATE_GUARD"] = self._interpolate_guard
+            result = jinja2.Template(self._Template_CreateHangingFace).render(**d)
+            pass
+        if operation_name == ActionSet.OPERATION_DESTROY_HANGING_FACE:
+            d["RESTRICT_GUARD"] = self._restrict_guard
+            result = jinja2.Template(self._Template_DestroyHangingFace).render(**d)
+            pass
+        return result
 
-
-  def get_includes(self):
-    return super(DynamicAMR,self).get_includes() + """
+    def get_includes(self):
+        return (
+            super(DynamicAMR, self).get_includes()
+            + """
 #include <cstring>
 """
+        )

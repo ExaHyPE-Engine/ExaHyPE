@@ -2,10 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <tuple>
-#include "peano4/datamanagement/VertexMarker.h"
 
+#include "peano4/datamanagement/VertexMarker.h"
 
 namespace toolbox {
   namespace particles {
@@ -74,12 +73,12 @@ namespace toolbox {
      * @see AsymmetricSortingDamping
      * @see getParticleReassociationInstructionWithinCellWithIntraCellReassignment()
      */
-    constexpr double SpatialSortingTolerance       = 1.01;
+    constexpr double SpatialSortingTolerance = 1.01;
 
     /**
      * @see SpatialReassignmentTolerance
      */
-    constexpr double MultilevelSortingTolerance    = 1.01;
+    constexpr double MultilevelSortingTolerance = 1.01;
 
     /**
      * We try to pick the damping such that the two halo layers from the
@@ -94,8 +93,7 @@ namespace toolbox {
      * @see MultilevelSortingTolerance
      * @see SpatialSortingTolerance
      */
-    constexpr double AsymmetricSortingDamping              = 0.5 / SpatialSortingTolerance + 0.5;
-
+    constexpr double AsymmetricSortingDamping = 0.5 / SpatialSortingTolerance + 0.5;
 
     /**
      * Default tolerance to decide when two particles are the same.
@@ -135,11 +133,8 @@ namespace toolbox {
      */
     template <typename Particle>
     ParticleReassociationInstruction getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
-      const Particle&                            p,
-      const peano4::datamanagement::CellMarker&  marker,
-      int                                        numberOfVertexWithinCell
+      const Particle& p, const peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
     );
-
 
     /**
      * Take particle from current vertex and lift and further
@@ -189,10 +184,8 @@ namespace toolbox {
      */
     template <typename Particle>
     ParticleReassociationInstruction liftParticleAssociatedWithVertex(
-      const Particle&                             p,
-      const peano4::datamanagement::VertexMarker  marker
+      const Particle& p, const peano4::datamanagement::VertexMarker marker
     );
-
 
     /**
      * Find out which vertex should hold a particle.
@@ -208,11 +201,9 @@ namespace toolbox {
      *                 one, and so forth.
      */
     template <typename Particle>
-    std::bitset<Dimensions>  getParticleAssociationWithinCell(
-      const Particle&                           particle,
-      const peano4::datamanagement::CellMarker  marker
+    std::bitset<Dimensions> getParticleAssociationWithinCell(
+      const Particle& particle, const peano4::datamanagement::CellMarker marker
     );
-
 
     /**
      * A particle is to be sieved into a vertex if
@@ -279,15 +270,13 @@ namespace toolbox {
      * I started off with this nice simple code
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *  const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.h() )     * MultilevelSortingTolerance * AsymmetricSortingDamping >= 2.0 * particle.getCutOffRadius();
-     *  const bool   fitsIntoNextFinerGridResolution = tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getCutOffRadius();
+     *  const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.h() )     * MultilevelSortingTolerance *
+     * AsymmetricSortingDamping >= 2.0 * particle.getCutOffRadius(); const bool   fitsIntoNextFinerGridResolution =
+     * tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getCutOffRadius();
      *
-     *  return marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE)
-     *     and fitsIntoThisGridResolution
-     *     and (
-     *       not fitsIntoNextFinerGridResolution
-     *       or
-     *       not marker.hasBeenRefined()
+     *  return marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) *
+     * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE) and fitsIntoThisGridResolution and ( not
+     * fitsIntoNextFinerGridResolution or not marker.hasBeenRefined()
      *     );
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
@@ -299,18 +288,10 @@ namespace toolbox {
      * @see sieveParticle()
      */
     template <typename Particle>
-    bool sieveParticle(
-      const Particle&                              particle,
-      const peano4::datamanagement::VertexMarker&  marker
-    );
-
+    bool sieveParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
 
     template <typename Particle>
-    bool dropParticle(
-      const Particle&                              particle,
-      const peano4::datamanagement::VertexMarker&  marker
-    );
-
+    bool dropParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
 
     /**
      * Eliminate spatial duplicates
@@ -327,28 +308,17 @@ namespace toolbox {
      *   object where the pointer points to and afterwards remove the pointer from
      *   the container.
      *
-     * @return [int,int] representing [numberOfLocalEliminatedSpatialDuplicates,numberOfVirtualEliminatedSpatialDuplicates]
+     * @return [int,int] representing
+     * [numberOfLocalEliminatedSpatialDuplicates,numberOfVirtualEliminatedSpatialDuplicates]
      */
     template <typename ParticleContainer>
-    std::tuple<int, int> eliminateSpatialDuplicates(
-      ParticleContainer&   particleSet
-    );
+    std::tuple<int, int> eliminateSpatialDuplicates(ParticleContainer& particleSet);
 
-
-    double relativeSpatialSortingTolerance(
-      const peano4::datamanagement::VertexMarker&  marker
-    );
-    double relativeSpatialSortingTolerance(
-      const peano4::datamanagement::CellMarker&  marker
-    );
-    double relativeMultilevelSortingTolerance(
-      const peano4::datamanagement::VertexMarker&  marker
-    );
-    double relativeMultilevelSortingTolerance(
-      const peano4::datamanagement::CellMarker&  marker
-    );
-  }
-}
-
+    double relativeSpatialSortingTolerance(const peano4::datamanagement::VertexMarker& marker);
+    double relativeSpatialSortingTolerance(const peano4::datamanagement::CellMarker& marker);
+    double relativeMultilevelSortingTolerance(const peano4::datamanagement::VertexMarker& marker);
+    double relativeMultilevelSortingTolerance(const peano4::datamanagement::CellMarker& marker);
+  } // namespace particles
+} // namespace toolbox
 
 #include "MultiscaleTransitions.cpph"

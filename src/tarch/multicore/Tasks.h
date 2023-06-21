@@ -2,21 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include <functional>
+#include <limits>
+#include <list>
+#include <string>
+#include <vector>
 
 #include "multicore.h"
 #include "tarch/multicore/orchestration/Strategy.h"
 
-
-#include <functional>
-#include <vector>
-#include <list>
-#include <string>
-#include <limits>
-
-
 namespace tarch {
   namespace multicore {
-    void setOrchestration( tarch::multicore::orchestration::Strategy* realisation );
+    void setOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
     /**
      * Swap the active orchestration
@@ -25,7 +22,8 @@ namespace tarch {
      * the current orchestration. It swaps them, so you can use setOrchestration()
      * with the result afterwards and re-obtain the original strategy.
      */
-    tarch::multicore::orchestration::Strategy* swapOrchestration( tarch::multicore::orchestration::Strategy* realisation );
+    tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation
+    );
 
     /**
      * Usually called directly by EnclaveTask.
@@ -56,87 +54,87 @@ namespace tarch {
      * Abstract super class for a job.
      */
     class Task {
-      protected:
-        const int   _taskType;
-        int         _priority;
-      public:
-        static constexpr int DefaultPriority = 0;
-        static constexpr int Host            = -1;
-        static constexpr int DontFuse        = -1;
+    protected:
+      const int _taskType;
+      int       _priority;
 
-        /**
-         * @param taskType Unique task (type) number for this task. All tasks that do 
-         *        the same, i.e. are of the same type, should have the same task type
-         *        integer marker. Peano's tarch can use multiple tasks of the same
-         *        type and fuse/batch them into one task call. However, if you don't
-         *        want Peano to even thing about task fusion, pass in DontFuse as
-         *        argument.
-         * @param priority Integer value that indicates what priority you want to
-         *        assign a task. Not all tasking backends support priorities.
-         */
-        Task( int taskType, int priority );
+    public:
+      static constexpr int DefaultPriority = 0;
+      static constexpr int Host            = -1;
+      static constexpr int DontFuse        = -1;
 
-        virtual ~Task() {}
+      /**
+       * @param taskType Unique task (type) number for this task. All tasks that do
+       *        the same, i.e. are of the same type, should have the same task type
+       *        integer marker. Peano's tarch can use multiple tasks of the same
+       *        type and fuse/batch them into one task call. However, if you don't
+       *        want Peano to even thing about task fusion, pass in DontFuse as
+       *        argument.
+       * @param priority Integer value that indicates what priority you want to
+       *        assign a task. Not all tasking backends support priorities.
+       */
+      Task(int taskType, int priority);
 
-        int getTaskType() const;
-        int getPriority() const;
-        void setPriority( int priority );
+      virtual ~Task() {}
 
-        /**
-         * @return true if the taskType is not DontFuse.
-         */
-        virtual bool canFuse() const;
+      int  getTaskType() const;
+      int  getPriority() const;
+      void setPriority(int priority);
 
-        virtual bool run() = 0;
+      /**
+       * @return true if the taskType is not DontFuse.
+       */
+      virtual bool canFuse() const;
 
-        /**
-         * Fuse multiple tasks
-         *
-         * Fuse the task with a list of further tasks. The routine is guaranteed to 
-         * be called only for tasks with the same taskType. So if you carefully 
-         * distinguish your tasks, you can downcast all the arguments, as you might
-         * know the real type.
-         *
-         * This operation is invoked on a task. However, it is also given N=otherTasks.size
-         * further tasks of the same type. You have two options now:
-         *
-         * - You can process the N tasks in one rush. In this case, the original
-         *   task, i.e. the object on which fuse() is called, remains intact and
-         *   has not been processed yet. You have to return true.
-         * - You can process the N+1 tasks in one rush, i.e. all tasks from
-         *   otherTasks and the task represented by the actual object on which
-         *   fuse is called. In this case, you return false, as the task on which
-         *   fuse has been called can be destroyed straightaway by the runtime.
-         *
-         * No matter which route you follow, you always have to delete all the tasks
-         * stores within otherTasks, as these have to be processed by fuse().
-         *
-         * <h2> Default implementation </h2>
-         * 
-         * My default implementation executes all the passed tasks and then returns 
-         * the original task back, i.e. this one is not executed. This is the first
-         * execution pattern described above.
-         *
-         * <h2> Memory ownership </h2>
-         * 
-         * See above: fuse() has to delete all the instances within otherTasks.
-         * The calling routine does not have to delete anything there anymore.
-         * But it has to destroy the owning object, i.e. the object on which is
-         * has called fuse(), manually no matter whether we return true or false.
-         *
-         * @return Is the present task still to be executed or can the runtime 
-         *         destroy it straightaway?
-         * @param otherTasks List of tasks to fuse and process. Will all have the
-         *         same type as the present object. It is the tasks responsibility
-         *         to get these tasks done. So either span some new tasks or handle
-         *         them straightaway.
-         * @param targetDevice On which device should the task be processed? A
-         *         negative number means local host anything greater or equal to
-         *         zero denotes an accelerator.
-         */
-        virtual bool fuse( const std::list<Task*>& otherTasks, int targetDevice=Host );
+      virtual bool run() = 0;
+
+      /**
+       * Fuse multiple tasks
+       *
+       * Fuse the task with a list of further tasks. The routine is guaranteed to
+       * be called only for tasks with the same taskType. So if you carefully
+       * distinguish your tasks, you can downcast all the arguments, as you might
+       * know the real type.
+       *
+       * This operation is invoked on a task. However, it is also given N=otherTasks.size
+       * further tasks of the same type. You have two options now:
+       *
+       * - You can process the N tasks in one rush. In this case, the original
+       *   task, i.e. the object on which fuse() is called, remains intact and
+       *   has not been processed yet. You have to return true.
+       * - You can process the N+1 tasks in one rush, i.e. all tasks from
+       *   otherTasks and the task represented by the actual object on which
+       *   fuse is called. In this case, you return false, as the task on which
+       *   fuse has been called can be destroyed straightaway by the runtime.
+       *
+       * No matter which route you follow, you always have to delete all the tasks
+       * stores within otherTasks, as these have to be processed by fuse().
+       *
+       * <h2> Default implementation </h2>
+       *
+       * My default implementation executes all the passed tasks and then returns
+       * the original task back, i.e. this one is not executed. This is the first
+       * execution pattern described above.
+       *
+       * <h2> Memory ownership </h2>
+       *
+       * See above: fuse() has to delete all the instances within otherTasks.
+       * The calling routine does not have to delete anything there anymore.
+       * But it has to destroy the owning object, i.e. the object on which is
+       * has called fuse(), manually no matter whether we return true or false.
+       *
+       * @return Is the present task still to be executed or can the runtime
+       *         destroy it straightaway?
+       * @param otherTasks List of tasks to fuse and process. Will all have the
+       *         same type as the present object. It is the tasks responsibility
+       *         to get these tasks done. So either span some new tasks or handle
+       *         them straightaway.
+       * @param targetDevice On which device should the task be processed? A
+       *         negative number means local host anything greater or equal to
+       *         zero denotes an accelerator.
+       */
+      virtual bool fuse(const std::list<Task*>& otherTasks, int targetDevice = Host);
     };
-
 
     /**
      * Helper class if you wanna administer tasks with in a queue
@@ -145,49 +143,49 @@ namespace tarch {
      * with pointers.
      */
     class TaskComparison {
-      public:
-        bool operator() (const Task& lhs, const Task& rhs) const;
-        bool operator() (Task* lhs, Task* rhs) const;
+    public:
+      bool operator()(const Task& lhs, const Task& rhs) const;
+      bool operator()(Task* lhs, Task* rhs) const;
     };
 
     /**
      * Frequently used implementation for job with a functor.
      */
     class TaskWithCopyOfFunctor: public Task {
-      private:
-  	   /**
-           * See the outer class description for an explanation why this is an
-           * attribute, i.e. why we copy the functor here always.
-           */
-        std::function<bool()>   _taskFunctor;
-      public:
-        TaskWithCopyOfFunctor() = delete;
-        TaskWithCopyOfFunctor( const TaskWithCopyOfFunctor& ) = delete;
-        TaskWithCopyOfFunctor( int taskType, int priority, const std::function<bool()>& taskFunctor );
+    private:
+      /**
+       * See the outer class description for an explanation why this is an
+       * attribute, i.e. why we copy the functor here always.
+       */
+      std::function<bool()> _taskFunctor;
 
-        virtual bool run() override;
+    public:
+      TaskWithCopyOfFunctor()                             = delete;
+      TaskWithCopyOfFunctor(const TaskWithCopyOfFunctor&) = delete;
+      TaskWithCopyOfFunctor(int taskType, int priority, const std::function<bool()>& taskFunctor);
+
+      virtual bool run() override;
     };
-
 
     /**
      * Frequently used implementation for job with a functor.
      */
     class TaskWithoutCopyOfFunctor: public Task {
-      private:
-        /**
-         * See the outer class description for an explanation why this is an
-         * attribute, i.e. why we copy the functor here always.
-         */
-        std::function<bool()>&   _taskFunctor;
-      public:
-        TaskWithoutCopyOfFunctor() = delete;
-        TaskWithoutCopyOfFunctor( const TaskWithoutCopyOfFunctor& ) = delete;
+    private:
+      /**
+       * See the outer class description for an explanation why this is an
+       * attribute, i.e. why we copy the functor here always.
+       */
+      std::function<bool()>& _taskFunctor;
 
-        TaskWithoutCopyOfFunctor( int taskType, int priority, std::function<bool()>& taskFunctor );
+    public:
+      TaskWithoutCopyOfFunctor()                                = delete;
+      TaskWithoutCopyOfFunctor(const TaskWithoutCopyOfFunctor&) = delete;
 
-        virtual bool run() override;
+      TaskWithoutCopyOfFunctor(int taskType, int priority, std::function<bool()>& taskFunctor);
+
+      virtual bool run() override;
     };
-
 
     /**
      * Process a few tasks from my backlog of tasks
@@ -216,8 +214,7 @@ namespace tarch {
      *
      * @return There have been tasks
      */
-    bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max(), bool fifo=true);
-
+    bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max(), bool fifo = true);
 
     /**
      * Spawns a single task in a non-blocking fashion
@@ -245,8 +242,7 @@ namespace tarch {
      * @see processPendingTasks(int)
      *
      */
-    void spawnTask(Task*  job);
-
+    void spawnTask(Task* job);
 
     /**
      * Run a bunch of tasks
@@ -290,11 +286,11 @@ namespace tarch {
      *    deadlocks if the taskwait is realised via busy polling. See the bug
      *    description below.
      *
-     * 3. The parallel variant tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndIgnoreWithholdSubtasks runs
-     *    through all the tasks in parallel. Different to tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel,
-     *    it does not try to commit any further subtasks or to fuse them. This
-     *    variant allows the scheduler to run task sets in parallel but to
-     *    avoid the overhead introduced by the postprocessing.
+     * 3. The parallel variant
+     * tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndIgnoreWithholdSubtasks runs through all
+     * the tasks in parallel. Different to tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel, it
+     * does not try to commit any further subtasks or to fuse them. This variant allows the scheduler to run task sets
+     * in parallel but to avoid the overhead introduced by the postprocessing.
      *
      * I would appreciate if we could distinguish busy polling from task
      * scheduling in the taskwait, but such a feature is not available within
@@ -317,7 +313,8 @@ namespace tarch {
      * reported that the taskwait does not continue with other tasks. See in
      * particular
      *
-     * Jones, Christopher Duncan (Fermilab): Using OpenMP for HEP Framework Algorithm Scheduling. http://cds.cern.ch/record/2712271
+     * Jones, Christopher Duncan (Fermilab): Using OpenMP for HEP Framework Algorithm Scheduling.
+     * http://cds.cern.ch/record/2712271
      *
      * Their presentation slides can be found at https://zenodo.org/record/3598796#.X6eVv8fgqV4.
      *
@@ -353,17 +350,13 @@ namespace tarch {
      *   continue with a sibling. This is important for producer-consumer
      *   patterns.
      */
-    void spawnAndWait(
-      const std::vector< Task* >&  tasks
-    );
-
+    void spawnAndWait(const std::vector<Task*>& tasks);
 
     namespace native {
       /**
        * Spawn a ready task into the runtime system of choice.
        */
       void spawnTask(Task* task);
-
 
       /**
        * Map onto native tasking
@@ -378,10 +371,7 @@ namespace tarch {
        *
        * @param tasks Set of tasks. Is guaranteed to be non-empty.
        */
-      void spawnAndWaitAsTaskLoop(
-        const std::vector< tarch::multicore::Task* >&  tasks
-      );
-
+      void spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks);
 
       /**
        * Process a fused task
@@ -400,27 +390,24 @@ namespace tarch {
        * @param device Target device on which the fused tasks should be executed. Can
        *   be host if the tasks should end up on the host.
        */
-      void processFusedTask(Task*  firstTask, const std::list< tarch::multicore::Task* >& otherTasks, int device);
+      void processFusedTask(Task* firstTask, const std::list<tarch::multicore::Task*>& otherTasks, int device);
 
       /**
        * Drain all task queues
        */
       void drainTaskQueues();
 
-
       /**
        * These are the non-blocking (ready) tasks submitted via spawnTask()
        */
       int getNumberOfPendingTasks();
-    }
-
+    } // namespace native
 
     namespace internal {
       /**
        * @return Global number of pending tasks in the pipeline
        */
       int getNumberOfWithholdPendingTasks();
-
 
       /**
        * Take up to maxTasks tasks that are internally buffered and throw them
@@ -434,7 +421,7 @@ namespace tarch {
        * to the task submission order unless there are dependencies between the
        * tasks.
        */
-      int  mapPendingTasksOntoNativeTasks(int maxTasks);
+      int mapPendingTasksOntoNativeTasks(int maxTasks);
 
       /**
        *
@@ -450,7 +437,7 @@ namespace tarch {
        * The method locks and unlocks the queue. So don't lock it yourself.
        *
        */
-      bool fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction);
+      bool fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction& fuseInstruction);
 
       /**
        * Set up internal queues
@@ -482,12 +469,8 @@ namespace tarch {
       void copyInternalTaskQueuesOverIntoGlobalQueue();
 
       void copyInternalTaskQueueOverIntoGlobalQueue(int threadNumber);
-    }
-  }
-}
+    } // namespace internal
+  }   // namespace multicore
+} // namespace tarch
 
-
-bool operator<( const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs );
-
-
-
+bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs);

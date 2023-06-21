@@ -10,32 +10,34 @@ import dastgen2.attributes.Integer
 
 import numpy as np
 
+
 class InsertParticlesFromHDF5File(ActionSet):
-  def __init__(self, particle_set, filename):
-    """!
-    
-Read position from HDF5 and insert particles
+    def __init__(self, particle_set, filename):
+        """!
 
-    
-    Read an HDF5 file and insert particles into the simulation box. This is
-    typically used to read an Initial Condition file.
+        Read position from HDF5 and insert particles
 
-    particle_set: ParticleSet
- 
-    filename: String
-      Name of the HDF5 file that we want to read.
 
-    @TODO implement some bool checks, e.g. is this a cosmological simulation?
-    hydro scheme?
+            Read an HDF5 file and insert particles into the simulation box. This is
+            typically used to read an Initial Condition file.
 
-    """
+            particle_set: ParticleSet
 
-    self.d = {}
-    self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
-    self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
-    self._filename                       = filename
+            filename: String
+              Name of the HDF5 file that we want to read.
 
-  __Template_TouchCellFirstTime = jinja2.Template("""
+            @TODO implement some bool checks, e.g. is this a cosmological simulation?
+            hydro scheme?
+
+        """
+
+        self.d = {}
+        self.d["PARTICLE"] = particle_set.particle_model.name
+        self.d["PARTICLES_CONTAINER"] = particle_set.name
+        self._filename = filename
+
+    __Template_TouchCellFirstTime = jinja2.Template(
+        """
   if ( not marker.hasBeenRefined() and not marker.willBeRefined() ) {
     tarch::multicore::Lock lock( _semaphore );
   
@@ -177,40 +179,37 @@ Read position from HDF5 and insert particles
                                                        << marker.toString() << " on tree " << _spacetreeId );
 
   }
-""")
+"""
+    )
 
-
-  __Template_EndTraversal = jinja2.Template("""
+    __Template_EndTraversal = jinja2.Template(
+        """
   logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " 
                                          << _spacetreeId 
                                          << " (boundary vertices might host redundant particle data)" );
-""")
+"""
+    )
 
+    def get_body_of_operation(self, operation_name):
+        result = "\n"
+        if operation_name == ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+            result = self.__Template_TouchCellFirstTime.render(**self.d)
+        if operation_name == ActionSet.OPERATION_END_TRAVERSAL:
+            result = self.__Template_EndTraversal.render(**self.d)
+        return result
 
+    def get_body_of_getGridControlEvents(self):
+        return "  return std::vector< peano4::grid::GridControlEvent >();\n"
 
-  def get_body_of_operation(self,operation_name):
-    result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = self.__Template_TouchCellFirstTime.render(**self.d)
-    if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
-      result = self.__Template_EndTraversal.render(**self.d)
-    return result
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")
 
+    def user_should_modify_template(self):
+        return False
 
-  def get_body_of_getGridControlEvents(self):
-    return "  return std::vector< peano4::grid::GridControlEvent >();\n"
-
-
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
-    
-
-  def user_should_modify_template(self):
-    return False
-
-
-  def get_includes(self):
-    result = jinja2.Template( """
+    def get_includes(self):
+        result = jinja2.Template(
+            """
 #include "tarch/multicore/Lock.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
@@ -226,40 +225,46 @@ Read position from HDF5 and insert particles
 #include <fstream>
 #include <string>
 #include <vector>
-""" )
-    return result.render(**self.d)
-
-
-  def get_static_initialisations(self,full_qualified_classname):
-    return """
-tarch::multicore::BooleanSemaphore """ + full_qualified_classname + """::_semaphore;
-toolbox::particles::FileReaderHDF5 """ + full_qualified_classname + """::_fileReaderHDF5;
 """
+        )
+        return result.render(**self.d)
 
+    def get_static_initialisations(self, full_qualified_classname):
+        return (
+            """
+tarch::multicore::BooleanSemaphore """
+            + full_qualified_classname
+            + """::_semaphore;
+toolbox::particles::FileReaderHDF5 """
+            + full_qualified_classname
+            + """::_fileReaderHDF5;
+"""
+        )
 
-  def get_constructor_body(self):
-    return """
+    def get_constructor_body(self):
+        return (
+            """
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
   
   tarch::multicore::Lock lock( _semaphore );
 
   if ( _fileReaderHDF5.empty() ) 
-    _fileReaderHDF5.readHDF5File( \"""" + self._filename + """\" );
+    _fileReaderHDF5.readHDF5File( \""""
+            + self._filename
+            + """\" );
 """
+        )
 
+    # def get_destructor_body(self):
+    #  return """
+    # """
 
-  #def get_destructor_body(self):
-  #  return """
-  #"""
-
-
-  def get_attributes(self):
-     return """
+    def get_attributes(self):
+        return """
   static tarch::multicore::BooleanSemaphore _semaphore;
      
   int                                        _particleNumberOnThisTree;
   int                                        _spacetreeId;
   static toolbox::particles::FileReaderHDF5  _fileReaderHDF5;
 """
-
