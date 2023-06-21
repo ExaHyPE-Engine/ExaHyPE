@@ -550,15 +550,15 @@ if __name__ == "__main__":
         fin << std::setprecision (17) << coor1[0] << " " << coor1[1];
         fin << " " << coor1[2] << " " << timeStamp << " " << result[3] << std::endl;
         fin.close();
-        fin.open((tem+att),std::ios::app);
-        fin << "for cellindex" << IndexOfCell(0) << " " << IndexOfCell(1) << " " << IndexOfCell(2) << " " << IndexOfCell(3) << " " << IndexOfCell(4) << " " << IndexOfCell(5) << std::endl;
-        for (int i=0;i<8;i++){
-        fin << IndexForInterpolate[i](0) << " " << IndexForInterpolate[i](1) << " " << IndexForInterpolate[i](2) << std::endl;
-        fin << raw[i*inter_number+0] << " " << raw[i*inter_number+1] << " " << raw[i*inter_number+2] << " " << raw[i*inter_number+3] << std::endl;
-        }
+        //fin.open((tem+att),std::ios::app);
+        //fin << "for cellindex" << IndexOfCell(0) << " " << IndexOfCell(1) << " " << IndexOfCell(2) << " " << IndexOfCell(3) << " " << IndexOfCell(4) << " " << IndexOfCell(5) << std::endl;
+        //for (int i=0;i<8;i++){
+        //fin << IndexForInterpolate[i](0) << " " << IndexForInterpolate[i](1) << " " << IndexForInterpolate[i](2) << std::endl;
+        //fin << raw[i*inter_number+0] << " " << raw[i*inter_number+1] << " " << raw[i*inter_number+2] << " " << raw[i*inter_number+3] << std::endl;
+        //}
 
-        fin << "after inter" << result[0] << " " << result[1] << " " << result[2] << " " << result[3] << " " << timeStamp << std::endl;
-        fin.close();
+        //fin << "after inter" << result[0] << " " << result[1] << " " << result[2] << " " << result[3] << " " << timeStamp << std::endl;
+        //fin.close();
       }
       if (marker.isContained(coor2)){//do the same for the second puncutre
         tarch::la::Vector<Dimensions*2,int> IndexOfCell=FindCellIndex(coor2,marker.getOffset(),volumeH,patchSize);
@@ -928,10 +928,10 @@ if __name__ == "__main__":
 #Tracer setting 
 ########################################################################################
     if args.add_tracer==1:
-        tracer_particles = project.add_tracer( name="Tracer",attribute_count=66 )
+        tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
         init_action_set =  exahype2.tracer.InsertParticlesByCoordinates( 
-            #particle_set=tracer_particles, coordinates=[[0,0,8.0],[0,0,-8.0],[8.0,8.0,0]]))
-            particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]])
+            particle_set=tracer_particles, coordinates=[[0,0,8.0],[0,0,-8.0],[8.0,8.0,0],[-8.0,-8.0,0]])
+            #particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]])
         #init_action_set = exahype2.tracer.InsertParticlesFromFile( 
         #                            particle_set=tracer_particles, filename="test-design.dat", scale_factor=abs(offset[0])*0.8)
         #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
@@ -964,13 +964,13 @@ if __name__ == "__main__":
           output_precision=8,
           data_delta_between_two_snapsots=1e16,
           position_delta_between_two_snapsots=1e16,
-          time_delta_between_two_snapsots=0.05
+          time_delta_between_two_snapsots=0.02
           )
         dump_action_set.priority = my_solver._action_set_update_cell.priority+2
         project.add_action_set_to_timestepping(dump_action_set)
 
     if args.add_tracer==2:
-        tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
+        tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
         init_action_set = exahype2.tracer.InsertParticlesByCoordinates( 
             particle_set=tracer_particles, coordinates=[[2.0,0,0],[-2.0,0,0]])
         init_action_set.priority = 0
@@ -1007,11 +1007,11 @@ if __name__ == "__main__":
           particle_set=tracer_particles,
           solver=my_solver,
           filename=args.path+"Tracer-test",
-          number_of_entries_between_two_db_flushes=1000,
+          number_of_entries_between_two_db_flushes=500,
           output_precision=8,
           data_delta_between_two_snapsots=1e16,
           position_delta_between_two_snapsots=1e16,
-          time_delta_between_two_snapsots=0.05
+          time_delta_between_two_snapsots=0.02
           )
         dump_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+2
         project.add_action_set_to_timestepping(dump_action_set)

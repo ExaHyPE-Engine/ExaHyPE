@@ -212,9 +212,10 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
       int                                          normal,
       ::exahype2::Solver::Offloadable
     ) {
+      const double np = 1.0;
       #if defined(CCZ4EINSTEIN)
       const double qmin = std::min({Q[0],Q[3],Q[5]});
-      const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, pow(Q[54],1.0)}) / std::sqrt(qmin);
+      const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, pow(Q[54],1.0/np)}) / std::sqrt(qmin);
       #else
       const double alpha = 1.0;
       #endif

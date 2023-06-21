@@ -9,8 +9,9 @@ double applications::exahype2::ccz4::maxEigenvalue(
         const double        CCZ4GLMc,
         const double        CCZ4GLMd
 ) {
+  const double np = 1.0;
   const double qmin = std::min({Q[0],Q[3],Q[5]});
-  const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, pow(Q[54],1.0)}) / std::sqrt(qmin);
+  const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, std::pow(Q[54],1.0/np)}) / std::sqrt(qmin);
 
   constexpr double sqrtwo = 1.4142135623730951;
   const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
@@ -202,9 +203,9 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int l = 0; l < 3; l++)
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++) Gtilde[i] += g_contr[j][l] * Christoffel_tilde[j][l][i];
-//
+  
     const double Ghat[3] = {Q[13], Q[14], Q[15]};
-//
+  
     double Z[3] = {0,0,0}; // Matrix vector multiplications
     for (int i=0;i<3;i++)
     for (int j=0;j<3;j++) Z[i] += 0.5*CCZ4ds*( g_cov[i][j]* (Ghat[j] - Gtilde[j]));
@@ -241,7 +242,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
 
     double RPlusTwoNablaZSrc = 0;
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) RPlusTwoNablaZSrc += g_contr[i][j]*RicciPlusNablaZSrc[i][j]; // TODO fuse these steps
+    for (int j = 0; j < 3; j++) RPlusTwoNablaZSrc += g_contr[i][j]*RicciPlusNablaZSrc[i][j]; 
     RPlusTwoNablaZSrc*=phi2;
 
     const double AA[3] = {Q[23], Q[24], Q[25]};
@@ -260,7 +261,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
           nablaijalphaSrc[i][j] -= Christoffel_tilde[i][j][k]*AA[k];
           for (int l = 0; l < 3; l++)
           {
-             nablaijalphaSrc[i][j] -= g_cov[i][j]*g_contr[k][l]*PP[k]*AA[l]/(np*phi);	// Baojiu-13-06-23: changed to chi=phi^n
+             nablaijalphaSrc[i][j] -= g_cov[i][j]*g_contr[k][l]*PP[k]*AA[l]/(np*chi);	// Baojiu-13-06-23: changed to chi=phi^n
           }
        }
        // --------------------------------
@@ -876,8 +877,8 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     for (int k = 0; k < 3; k++)
     for (int j = 0; j < 3; j++)
     {
-        dtB[k][i] += CCZ4mu*alpha2 * g_contr[i][j]*( dPP[k][j] - dPP[j][k]); 		// Baojiu-13-06-23: here there is only one alpha as in the Dumbser paper
-//      dtB[k][i] += CCZ4mu*alpha2 * g_contr[i][j]*( dPP[k][j] - dPP[j][k])/(np*chi); 	// Baojiu-13-06-23: here there is only one alpha as in the Dumbser paper
+        dtB[k][i] += CCZ4mu*alpha2 * g_contr[i][j]*( dPP[k][j] - dPP[j][k]); 		// Baojiu-13-06-23: Option 1 - similar form as in the Dumbser paper
+//      dtB[k][i] += CCZ4mu*alpha2 * g_contr[i][j]*( dPP[k][j] - dPP[j][k])/(np*chi); 	// Baojiu-13-06-23: Option 2 - same values as in the Dumbser paper
         for (int n = 0; n < 3; n++)
         for (int l = 0; l < 3; l++) dtB[k][i] -= CCZ4mu*alpha2 * g_contr[i][j]*g_contr[n][l]*(dDD[k][l][j][n] - dDD[l][k][j][n]);
     } 
