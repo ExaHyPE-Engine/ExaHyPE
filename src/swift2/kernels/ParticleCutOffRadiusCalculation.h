@@ -2,9 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <list>
-
 
 namespace swift2 {
   namespace kernels {
@@ -50,15 +48,13 @@ namespace swift2 {
      */
     template <typename Particle>
     void adoptInteractionRadiusAndTriggerRerun(
-      const std::list<Particle *>&  localParticles,
-      const std::list<Particle *>&  activeParticles,
-      int                           targetNumberOfNeighbourParticles,
-      double                        maxGrowthPerSweep = 2.0,
-      double                        shrinkingFactor   = 0.8
+      const std::list<Particle*>& localParticles,
+      const std::list<Particle*>& activeParticles,
+      int                         targetNumberOfNeighbourParticles,
+      double                      maxGrowthPerSweep = 2.0,
+      double                      shrinkingFactor   = 0.8
     );
-  }
-}
-
+  } // namespace kernels
+} // namespace swift2
 
 #include "ParticleCutOffRadiusCalculation.cpph"
-

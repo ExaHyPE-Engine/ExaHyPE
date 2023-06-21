@@ -1,57 +1,69 @@
 #include "ParticleCutOffRadiusCalculation.h"
 #include "tarch/logging/Log.h"
 
-
 template <typename Particle>
 void swift2::kernels::adoptInteractionRadiusAndTriggerRerun(
-  const std::list<Particle *>&  localParticles,
-  const std::list<Particle *>&  activeParticles,
-  int                           targetNumberOfNeighbourParticles,
-  double                        maxGrowthPerSweep,
-  double                        shrinkingFactor
+  const std::list<Particle*>& localParticles,
+  const std::list<Particle*>& activeParticles,
+  int                         targetNumberOfNeighbourParticles,
+  double                      maxGrowthPerSweep,
+  double                      shrinkingFactor
 ) {
-  assertion(shrinkingFactor<1.0);
-  assertion(maxGrowthPerSweep>1.0);
+  assertion(shrinkingFactor < 1.0);
+  assertion(maxGrowthPerSweep > 1.0);
 
-  static tarch::logging::Log  _log( "swift2::kernels" );
+  static tarch::logging::Log _log("swift2::kernels");
 
-  auto countParticlesWithinCutOffRadius = [&]( Particle* localParticle ) -> int {
+  auto countParticlesWithinCutOffRadius = [&](Particle* localParticle) -> int {
     int interactingParticles = -1; // self-interaction will reset to 0
-    for (auto* activeParticle: activeParticles ) {
-      double distanceSquared = tarch::la::norm2Squared( activeParticle->getX() - localParticle->getX() );
-      if ( distanceSquared <= localParticle->getCutOffRadius() * localParticle->getCutOffRadius() ) {
+    for (auto* activeParticle : activeParticles) {
+      double distanceSquared = tarch::la::norm2Squared(activeParticle->getX() - localParticle->getX());
+      if (distanceSquared <= localParticle->getCutOffRadius() * localParticle->getCutOffRadius()) {
         interactingParticles++;
       }
-      assertion(interactingParticles>=0);
+      assertion(interactingParticles >= 0);
       return interactingParticles;
     }
   };
 
-  for (auto* localParticle: localParticles ) {
+  for (auto* localParticle : localParticles) {
     int interactingParticles = countParticlesWithinCutOffRadius(localParticle);
-    logDebug( "adoptInteractionRadiusAndTriggerRerun(...)", "particle " << localParticle->toString() << " has " << interactingParticles << " interacting neighbours" );
-    if (interactingParticles<targetNumberOfNeighbourParticles) {
+    logDebug(
+      "adoptInteractionRadiusAndTriggerRerun(...)",
+      "particle " << localParticle->toString() << " has " << interactingParticles << " interacting neighbours"
+    );
+    if (interactingParticles < targetNumberOfNeighbourParticles) {
       const double oldCutOff = localParticle->getCutOffRadius();
-      localParticle->setCutOffRadius(oldCutOff*maxGrowthPerSweep);
+      localParticle->setCutOffRadius(oldCutOff * maxGrowthPerSweep);
       int newNumberOfInteractingParticles = countParticlesWithinCutOffRadius(localParticle);
-      if ( newNumberOfInteractingParticles>interactingParticles and newNumberOfInteractingParticles<targetNumberOfNeighbourParticles ) {
-        logDebug( "adoptInteractionRadiusAndTriggerRerun(...)", "increasing the cut off of particle " << localParticle->toString() << " did pay off, but there are still to few neighbours. Trigger re-analysis" );
+      if (newNumberOfInteractingParticles > interactingParticles and newNumberOfInteractingParticles < targetNumberOfNeighbourParticles) {
+        logDebug(
+          "adoptInteractionRadiusAndTriggerRerun(...)",
+          "increasing the cut off of particle " << localParticle->toString(
+          ) << " did pay off, but there are still to few neighbours. Trigger re-analysis"
+        );
         localParticle->getSpecies().setRerunPreviousGridSweep();
-      }
-      else if ( newNumberOfInteractingParticles>interactingParticles ) {
-        logDebug( "adoptInteractionRadiusAndTriggerRerun(...)", "increasing the cut off of particle " << localParticle->toString() << " did pay off" );
-      }
-      else {
-        logDebug( "adoptInteractionRadiusAndTriggerRerun(...)", "increasing the cut off of particle " << localParticle->toString() << " was useless, so keep old cut-off" );
+      } else if (newNumberOfInteractingParticles > interactingParticles) {
+        logDebug(
+          "adoptInteractionRadiusAndTriggerRerun(...)",
+          "increasing the cut off of particle " << localParticle->toString() << " did pay off"
+        );
+      } else {
+        logDebug(
+          "adoptInteractionRadiusAndTriggerRerun(...)",
+          "increasing the cut off of particle " << localParticle->toString() << " was useless, so keep old cut-off"
+        );
         localParticle->setCutOffRadius(oldCutOff);
       }
-    }
-    else if (interactingParticles>targetNumberOfNeighbourParticles) {
+    } else if (interactingParticles > targetNumberOfNeighbourParticles) {
       const double oldCutOff = localParticle->getCutOffRadius();
-      localParticle->setCutOffRadius(oldCutOff*shrinkingFactor);
+      localParticle->setCutOffRadius(oldCutOff * shrinkingFactor);
       int newNumberOfInteractingParticles = countParticlesWithinCutOffRadius(localParticle);
-      if ( newNumberOfInteractingParticles<targetNumberOfNeighbourParticles ) {
-        logDebug( "adoptInteractionRadiusAndTriggerRerun(...)", "increasing the cut off of particle " << localParticle->toString() << " was too aggressive, so roll back" );
+      if (newNumberOfInteractingParticles < targetNumberOfNeighbourParticles) {
+        logDebug(
+          "adoptInteractionRadiusAndTriggerRerun(...)",
+          "increasing the cut off of particle " << localParticle->toString() << " was too aggressive, so roll back"
+        );
         localParticle->setCutOffRadius(oldCutOff);
       }
     }
