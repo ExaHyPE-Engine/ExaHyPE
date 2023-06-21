@@ -84,7 +84,7 @@ We then repeat the same procedure for each of the faces, keeping the enumeration
  
 @image html faceEnum.png
 
-##Cell Dof Enumeration
+##Degree of freedom enumeration on cells
 
 Here we once again have a similar pattern. 
 
