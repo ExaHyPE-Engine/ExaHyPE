@@ -1,26 +1,44 @@
 from math import sqrt
 import numpy as np
-from scenarios import scenario
 from typing import List
 from math import floor
 import netCDF4
 
 class SWE_Adjoint_Solver():
 
-    def __init__(self, width:List[float], cell_size:float, end_time:float, checkpoints:int = 0):
+    def __init__(self, bathymetry_file_path:str, displacement_file_path:str, width:List[float], cell_size:float, end_time:float, checkpoints:int = 0):
 
         self.cell_size = cell_size
         self.end_time = end_time
         self.number_of_checkpoints = checkpoints
 
+        # dimensions of simulation plane without ghost cells
         self.nx = floor(width[0] / cell_size)
         self.ny = floor(width[1] / cell_size)
 
+        # initialize arrays
         self.h = np.zeros((self.nx+2, self.ny+2))
         self.hu = np.zeros((self.nx+2, self.ny+2))
         self.hv = np.zeros((self.nx+2, self.ny+2))
-        self.b = np.zeros((self.nx+2, self.ny+2)) # TODO initialize all variables from nc files!
+        self.b = np.zeros((self.nx+2, self.ny+2)) 
 
+        bathymetry_nc = netCDF4.Dataset(bathymetry_file_path, "r")
+        print(bathymetry_nc)
+        #displacement_nc = netCDF4.Dataset(displacement_file_path, "r")
+        index_list_bathymetry_x = np.linspace(0, len(bathymetry_nc['z']), num=self.nx, endpoint=False, dtype=int)
+        index_list_bathymetry_y = np.linspace(0, len(bathymetry_nc['z'][0]), num=self.ny, endpoint=False, dtype=int)
+        print(index_list_bathymetry_x, index_list_bathymetry_y)
+        self.b[1:self.nx+1][1:self.ny+1] = bathymetry_nc['z'][index_list_bathymetry_x][index_list_bathymetry_y]
+        self.h[1:self.nx+1][1:self.ny+1] = -self.b[1:self.nx+1][1:self.ny+1]
+        # TODO do displacement
+
+        # initialize ghost layer for bathymetry
+        self.b[0] = self.b[1]
+        self.b[-1] = self.b[-2]
+        self.b.T[0] = self.b.T[1]
+        self.b.T[-1] = self.b.T[-2]
+
+        # initialize update arrays
         self.h_net_updates_left = np.zeros((self.nx+2, self.ny+2))
         self.h_net_updates_right = np.zeros((self.nx+2, self.ny+2))
         self.h_net_updates_above = np.zeros((self.nx+2, self.ny+2))
@@ -32,35 +50,39 @@ class SWE_Adjoint_Solver():
         self.hv_net_updates_below = np.zeros((self.nx+2, self.ny+2))
         self.hv_net_updates_above = np.zeros((self.nx+2, self.ny+2))
 
-        self.checkpoints = [0]
+        # generate checkpoints
+        self.checkpoints = [] # unlimited checkpoints
         if checkpoints > 0:
-            self.checkpoints = np.linspace(0, end_time, num=checkpoints, endpoint=False)
+            self.checkpoints = np.linspace(0, end_time, num=checkpoints+2)
             self.number_of_checkpoints = self.number_of_checkpoints + 2 # for netcdf file (one output at t=0 and one at t=end_time)
 
+        # set up netCDF file for output
         self.set_up_netcdf("test.nc")
         
     def time_loop(self):
+        # run simulation from t=0 to t=end_time
         t = 0.0
-        checkpoint = 1
-        self.write_arrays_to_file(0)
+        checkpoint = 0
+        # write initial state to file
+        self.write_arrays_to_file(checkpoint, t)
+        return
+        checkpoint = checkpoint + 1
+        # simulation loop
         while t < self.end_time:
-
             self.set_ghost_layer()
             t = t + self.compute_numerical_fluxes()
+            # checkpointing
+            if len(self.checkpoints) == 0 or self.checkpoints[checkpoint] <= t:
+                self.write_arrays_to_file(checkpoint, t)
+                checkpoint = checkpoint + 1
 
-            if self.checkpoints[checkpoint] < t:
-                self.write_arrays_to_file(checkpoint)
-                if checkpoint < len(self.checkpoints) - 1:
-                    checkpoint = checkpoint + 1
-
-        self.write_arrays_to_file(checkpoint+1)
+        # close netCDF file after simulation
         self.close_netcdf()
 
     def compute_numerical_fluxes(self) -> float:
         max_wave_speed = 0.0
 
         max_wave_speed_x = 0.0
-
         for i in range(1, self.nx+2):
             for j in range(0, self.ny+2):
                 max_edge_speed = 0.0
@@ -71,7 +93,6 @@ class SWE_Adjoint_Solver():
             self.update_unknowns_x_sweep(0.9 * self.cell_size / max_wave_speed_x)
         
         max_wave_speed_y = 0.0
-
         for j in range(1, self.ny+2):
             for i in range(1, self.nx+2):
                 max_edge_speed = 0.0
@@ -79,31 +100,46 @@ class SWE_Adjoint_Solver():
                 max_wave_speed_y = max(max_edge_speed, max_wave_speed_y)
 
         max_wave_speed = max(max_wave_speed_x, max_wave_speed_y)
+        # by here, we kind of assume a wave_speed greater 0
         max_time_step = 0.9 * self.cell_size / max_wave_speed
-        
         self.update_unknowns_y_sweep(max_time_step)
         return max_time_step
 
 
     def update_unknowns_x_sweep(self, dt):
+        # update unknowns in x-dimension
         for i in range(1, self.nx+1):
             for j in range(0, self.ny+2):
                 self.h[i][j] = self.h[i][j] - (dt / self.cell_size * (self.h_net_updates_right[i-1][j] + self.h_net_updates_left[i][j]))
                 self.hu[i][j] = self.hu[i][j] - (dt / self.cell_size * (self.hu_net_updates_right[i-1][j] + self.hu_net_updates_left[i][j]))
 
     def update_unknowns_y_sweep(self, dt):
+        # update unknowns in y-dimension
         for j in range(1, self.ny+1):
             for i in range(1, self.ny+1):
                 self.h[i][j] = self.h[i][j] - (dt / self.cell_size * (self.h_net_updates_above[i][j-1] + self.h_net_updates_below[i][j]))
                 self.hv[i][j] = self.hv[i][j] - (dt / self.cell_size * (self.hv_net_updates_above[i][j-1] + self.hv_net_updates_below[i][j]))
 
     def set_ghost_layer(self):
-        # TODO set ghost layer
-        pass
+        # set ghost layer to boundary conditions (outflow)
+        self.h[0] = self.h[1]
+        self.h[-1] = self.h[-2]
+        self.h.T[0] = self.h.T[1]
+        self.h.T[-1] = self.h.T[-2]
 
-    def write_arrays_to_file(self, checkpoint):
-        # TODO is this smart? Or use t instead of the current checkpoint
-        self.nc_eta[checkpoint, :, :] = self.h[1:self.nx+1, 1:self.ny+1] + self.b[1:self.nx+1, 1:self.ny+1]
+        self.hu[0] = self.hu[1]
+        self.hu[-1] = self.hu[-2]
+        self.hu.T[0] = self.hu.T[1]
+        self.hu.T[-1] = self.hu.T[-2]
+
+        self.hv[0] = self.hv[1]
+        self.hv[-1] = self.hv[-2]
+        self.hv.T[0] = self.hv.T[1]
+        self.hv.T[-1] = self.hv.T[-2]
+
+    def write_arrays_to_file(self, checkpoint, t):
+        self.nc_var_time[checkpoint] = t
+        self.nc_var_eta[checkpoint, :, :] = self.h[1:self.nx+1, 1:self.ny+1] + self.b[1:self.nx+1, 1:self.ny+1]
 
     def set_up_netcdf(self, filename:str):
         self.nc_file = netCDF4.Dataset(filename, "w")
@@ -141,7 +177,7 @@ class SWE_Adjoint_Solver():
             return (0, 0, 0, 0, 0)
 
         #############################################################################################
-        # The following code is taken from:                                                         #
+        # The following code is translated from:                                                         #
         # https://github.com/BrisaDavis/adjoint/releases/tag/paper1_aspublished                     #
         # file rp1_geoclaw_adjoint.f                                                                #
         # or                                                                                        #
@@ -196,3 +232,5 @@ class SWE_Adjoint_Solver():
         #########################################################################
         
         return (amdq[0], amdq[1], apdq[0], apdq[1], max(abs(sw)))
+    
+SWE_Adjoint_Solver(bathymetry_file_path="./netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_bath.nc", displacement_file_path="", width=[10,10], cell_size=0.1, end_time=0.01)
