@@ -189,7 +189,8 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
 
     createBackupOfMetaFile();
     if (tarch::la::smaller(getLatestTimeStepInIndexFile(), timeStamp, DefaultTimeStampPrecision)) {
-      logDebug(
+        // @todo Debug
+      logInfo(
         "PeanoTextPatchFileWriter(...)",
         "create new dataset for time stamp "
           << timeStamp << " as last time stamp had been " << getLatestTimeStepInIndexFile()

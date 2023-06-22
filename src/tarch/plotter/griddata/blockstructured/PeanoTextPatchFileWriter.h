@@ -22,6 +22,15 @@ namespace tarch {
 }
 
 
+/**
+ * Plot Peano's mesh data in Peano's text file format
+ *
+ *
+ * Consult the @ref tarch_plotting "general plotting" remarks on rationale and
+ * patterns behind the realisation of this class. This is a technical view. If
+ * you are interested in the file format that is written, you have to read the
+ * @ref tarch_patch_files "documentation of the Peano patch file format".
+ */
 class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: public tarch::plotter::griddata::blockstructured::PatchWriter {
   protected:
     static tarch::logging::Log _log;
@@ -46,6 +55,19 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
     void createEmptyIndexFile();
     void addNewDatasetToIndexFile(double timestamp);
     void addNewFileToCurrentDataSetInIndexFile( const std::string&  filename );
+
+    /**
+     * Find latest time step in index file
+     *
+     * This routine runs through the index file and searches for the latest
+     * entry in there which looks similar to
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * timestamp  0.000000000000000000000000e+00
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * It will then return the value of this time stamp.
+     */
     double getLatestTimeStepInIndexFile() const;
 
   public:
@@ -165,12 +187,29 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
     };
 
     /**
+     * Create a new Peano text file output
+     *
+     * An instance of this class has to be owned by each action set that wants
+     * to dump data.
+     *
+     * @param dimension     I make this a free parameter, even though most
+     *   codes will pass in the compile time parameter Dimensions. However,
+     *   there are codes which plot submanifolds for example or want to write
+     *   3d data within a 2d code, as they implement a 2.5d model.
      * @param fileName      Name of the file to write. Has to be unique per
-     *                      dump.
+     *   dump.
      * @param indexFileName Name of the index file. Can we empty if you select
-     *                      NoIndexFile.
+     *   NoIndexFile.
      */
     PeanoTextPatchFileWriter(int dimension, const std::string&  fileName, const std::string&  indexFileName, IndexFileMode appendToIndexFile, double timeStamp);
+
+    /**
+     * Destructor
+     *
+     * The destructor is empty, i.e. if you destroy this object, your data are
+     * lost. You have to dump the data beforehand manually by calling
+     * writeToFile().
+     */
     virtual ~PeanoTextPatchFileWriter();
 
     /**
@@ -208,9 +247,13 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
     virtual bool isOpen() override;
 
     /**
+     * Clear local data
+     *
      * Clear the writer, i.e. erase all the data. However, as the writer does
      * not track how many vertex and cell writers you've created, it's up to
-     * you to ensure that none of these instances is left.
+     * you to ensure that none of these instances is left. So we clear the core
+     * data, but we do not clear the data within any data writer which you have
+     * created by calling routines such as createCellDataWriter().
      */
     virtual void clear() override;
 };
