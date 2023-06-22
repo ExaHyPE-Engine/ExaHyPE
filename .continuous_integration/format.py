@@ -5,11 +5,22 @@ import sys
 import argparse
 import subprocess
 
-
-verbose = True  # will be overwritten by arg parser
+# Some repository setup.
 peano_repo_rootdir_name = "Peano"
+python_venv_dir = ".formatting_python_env"
+
+# These can be overwritten by optional cmdline arg
 default_clang_format_file_name = ".clang-format"
 target_branch = "p4"
+
+# Formatting tools versions
+black_version = "23.3.0"
+clang_version = "16.0.5"
+
+# Global variables for easy access
+verbose = True  # will be overwritten by arg parser
+black_checked = False
+clang_checked = False
 
 
 def find_peano_root_dir():
@@ -53,38 +64,182 @@ def get_default_clang_format(peano_root):
     return clang_format_style_file
 
 
+def get_venv_path(peano_root):
+    return os.path.join(peano_root, python_venv_dir)
+
+
+def check_black(black_cmd):
+    """
+    Check that the black executable runs, and is the correct version.
+    The subprocess call crashes if there is an error with black.
+    """
+    global black_checked
+    if not black_checked:
+        # Does it run?
+        run = subprocess.run(
+            black_cmd + " --version",
+            shell=True,
+            stdout=None,
+            check=True,
+            capture_output=True,
+        )
+
+        # Now check the version
+        stdout = run.stdout.decode("UTF-8")
+        stdout = stdout.strip()
+        stdout_split = stdout.split()
+
+        if stdout_split[0] != "black,":
+            raise ValueError("black --version output was:", stdout, " ???")
+
+        installed_version = stdout_split[1]
+        if installed_version != black_version:
+            raise ValueError(
+                (
+                    "black formatter executable has version {0} but I require {1}.\n"
+                    + "Please remove all contents from the directory '{2}' and re-run this script."
+                ).format(installed_version, black_version, python_venv_dir)
+            )
+
+        black_checked = True
+
+    return
+
+
+def check_clang(clang_cmd):
+    """
+    Check that the clang-format executable runs, and is the correct version.
+    The subprocess call crashes if there is an error with clang-format.
+    """
+    global clang_checked
+    if not clang_checked:
+        # Does it run?
+        run = subprocess.run(
+            clang_cmd + " --version",
+            shell=True,
+            stdout=None,
+            check=True,
+            capture_output=True,
+        )
+
+        # Now check the version
+        stdout = run.stdout.decode("UTF-8")
+        stdout = stdout.strip()
+        stdout_split = stdout.split()
+
+        if stdout_split[0] != "clang-format":
+            raise ValueError("clang-format --version output was:", stdout, " ???")
+
+        installed_version = stdout_split[2]
+        if installed_version != clang_version:
+            raise ValueError(
+                (
+                    "clang-format executable has version {0} but I require {1}.\n"
+                    + "Please remove all contents from the directory '{2}' and re-run this script."
+                ).format(installed_version, clang_version, python_venv_dir)
+            )
+
+        clang_checked = True
+
+    return
+
+
+def install_black_formatting_tool():
+    """
+    Installs a specific version of `black`
+    """
+    venv_path = get_venv_path(peano_root)
+
+    # basically Peano/.formatting_python_venv/bin/python3
+    bfepython = os.path.join(venv_path, "bin", "python3")
+
+    if not os.path.exists(bfepython):
+        raise FileNotFoundError(
+            "Something went horribly wrong when setting up the venv."
+        )
+
+    # The actual install
+    run = subprocess.run(
+        bfepython + " -m pip install click==8.1.3 black==" + black_version,
+        shell=True,
+        check=True,
+    )
+
+    # Check we succeeded
+    black_path = os.path.join(venv_path, "bin", "black")
+    check_black(black_path)
+
+    return
+
+
+def install_clang_formatting_tool():
+    """
+    Installs a specific version of `clang-format`
+    """
+    venv_path = get_venv_path(peano_root)
+
+    # basically Peano/.formatting_python_venv/bin/python3
+    clangpython = os.path.join(venv_path, "bin", "python3")
+
+    if not os.path.exists(clangpython):
+        raise FileNotFoundError(
+            "Something went horribly wrong when setting up the venv."
+        )
+
+    # The actual install
+    run = subprocess.run(
+        clangpython + " -m pip install clang-format==" + clang_version,
+        shell=True,
+        check=True,
+    )
+
+    # Check we succeeded
+    clang_path = os.path.join(venv_path, "bin", "clang-format")
+    check_clang(clang_path)
+
+    return
+
+
+def setup_venv(peano_root):
+    """
+    Set up a virtual env for the formatting tools, if it doesn't exist yet.
+    """
+
+    venv_path = get_venv_path(peano_root)
+
+    if not os.path.exists(venv_path):
+        print("Python formatting env not found, installing it")
+        os.mkdir(venv_path)
+        run = subprocess.run("python3 -m venv " + venv_path, shell=True, check=True)
+
+        if not os.path.exists(venv_path):
+            raise FileNotFoundError("Something went horribly wrong when creating venv.")
+
+        # if the venv didn't exist, neither do the formatting tools. Install them.
+        install_black_formatting_tool()
+        install_clang_formatting_tool()
+
+
 def get_black_command(peano_root):
     """
     Get the full command used to invoke the python formatter 'black'.
     First get the path to the 'black' executable. It should be in the
-    $PEANO_REPOSITORY_ROOT/.black_formatting_env/bin/ directory.
+    $PEANO_REPOSITORY_ROOT/$PYTHON_VENV_DIR/bin/ directory.
 
-    If that directory doesn't exist, we first need to set up a virtualenv
+    If that directory doesn't exist, we first need to set up a venv
     there and install a specific version of 'black'.
     """
 
-    bfe_path = os.path.join(peano_root, ".black_formatting_env")
+    # check if venv exists, and create it if it doesn't
+    setup_venv(peano_root)
 
-    if not os.path.exists(bfe_path):
-        print("Python formatting env not found, installing it")
-        os.mkdir(bfe_path)
-        run = subprocess.run("python3 -m venv " + bfe_path, shell=True, check=True)
-        # basically Peano/.black_formatting_env/bin/python3
-        bfepython = os.path.join(bfe_path, "bin", "python3")
-        run = subprocess.run(
-            bfepython + " -m pip install click==8.1.3 black==23.3.0",
-            shell=True,
-            check=True,
-        )
+    venv_path = get_venv_path(peano_root)
+    black_path = os.path.join(venv_path, "bin", "black")
 
-    black_path = bfe_path = os.path.join(
-        peano_root, ".black_formatting_env", "bin", "black"
-    )
+    if not os.path.exists(black_path):
+        install_black_formatting_tool()
 
-    # check that the executable runs
-    run = subprocess.run(
-        black_path + " --version", shell=True, stdout=subprocess.DEVNULL, check=True
-    )
+    check_black(black_path)
 
     black_cmd = black_path
     black_cmd += " --quiet "
@@ -95,15 +250,26 @@ def get_black_command(peano_root):
 def get_clang_command(clang_format_file):
     """
     Get the full command used to invoke the clang-format tool.
+    First get the path to the 'clang-format' executable. It should be in the
+    $PEANO_REPOSITORY_ROOT/$PYTHON_VENV_DIR/bin/ directory.
+
+    If that directory doesn't exist, or if the executable doesn't exist, we
+    first need to set up a venv there and install a specific version of
+    'clang-format'.
     """
 
-    clang_cmd = "clang-format-14"
+    # check if venv exists, and create it if it doesn't
+    setup_venv(peano_root)
 
-    # check that the executable runs
-    run = subprocess.run(
-        clang_cmd + " --version", shell=True, stdout=subprocess.DEVNULL, check=True
-    )
+    venv_path = get_venv_path(peano_root)
+    clang_path = os.path.join(venv_path, "bin", "clang-format")
 
+    if not os.path.exists(clang_path):
+        install_clang_formatting_tool()
+
+    check_clang(clang_path)
+
+    clang_cmd = clang_path
     # format files in-place
     clang_cmd += " -i"
     # change warnings to errors so I can work with the error code as
@@ -193,16 +359,19 @@ def is_cppfile(filename):
     Does this look like a cpp file?
     """
 
-    if (
-        filename.endswith(".h")
-        or filename.endswith(".hpp")
-        or filename.endswith(".cpph")
-        or filename.endswith(".c")
-        or filename.endswith(".cpp")
-        or filename.endswith(".cu")
-        or filename.endswith(".cuh")
-    ):
-        return True
+    suffixes = [".h", ".hpp", ".cpph", ".c", ".cpp", ".cu", ".cuh"]
+
+    for suf in suffixes:
+        if filename.endswith(suf):
+            # Don't format jinja template files. clang-format can't handle those.
+            if filename.endswith(".template" + suf):
+                if verbose:
+                    print(
+                        "file", filename, "looks like a jinja template file. Skipping"
+                    )
+                return False
+            else:
+                return True
 
     return False
 

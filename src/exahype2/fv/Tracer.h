@@ -2,10 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include "peano4/utils/Globals.h"
 #include "peano4/datamanagement/CellMarker.h"
-
+#include "peano4/utils/Globals.h"
 
 namespace exahype2 {
   namespace fv {
@@ -42,13 +40,12 @@ namespace exahype2 {
      */
     template <int SourceIndex, int DestIndex, typename Particle>
     void projectValueOntoParticle_piecewiseConstant(
-      const peano4::datamanagement::CellMarker&    marker,
-      int                                          voxelsPerAxis,
-      int                                          unknownsPerVoxel,
-      const double* __restrict__                   Q,
-      Particle&                                    particle
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       voxelsPerAxis,
+      int                                       unknownsPerVoxel,
+      const double* __restrict__ Q,
+      Particle& particle
     );
-
 
     /**
      * Project all values from solution onto particle
@@ -87,23 +84,21 @@ namespace exahype2 {
      */
     template <typename Particle>
     void projectAllValuesOntoParticle_piecewiseConstant(
-      const peano4::datamanagement::CellMarker&    marker,
-      int                                          voxelsPerAxis,
-      int                                          unknownsPerVoxel,
-      const double* __restrict__                   Q,
-      Particle&                                    particle
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       voxelsPerAxis,
+      int                                       unknownsPerVoxel,
+      const double* __restrict__ Q,
+      Particle& particle
     );
-
 
     template <int SourceIndex, int DestIndex, typename Particle>
     void projectValueOntoParticle_piecewiseLinear(
-      const peano4::datamanagement::CellMarker&    marker,
-      int                                          voxelsPerAxis,
-      int                                          unknownsPerVoxel,
-      const double* __restrict__                   Q,
-      Particle&                                    particle
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       voxelsPerAxis,
+      int                                       unknownsPerVoxel,
+      const double* __restrict__ Q,
+      Particle& particle
     );
-
 
     /**
      * Project all values from solution onto particle and use a piecewise linear interpolation
@@ -112,16 +107,16 @@ namespace exahype2 {
      */
     template <typename Particle>
     void projectAllValuesOntoParticle_piecewiseLinear(
-      const peano4::datamanagement::CellMarker&    marker,
-      int                                          voxelsPerAxis,
-      int                                          unknownsPerVoxel,
-      const double* __restrict__                   Q,
-      Particle&                                    particle
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       voxelsPerAxis,
+      int                                       unknownsPerVoxel,
+      const double* __restrict__ Q,
+      Particle& particle
     );
 
-
     /**
-     * Project all values from solution onto particle and use a piecewise linear interpolation and advance particle along an explicit Euler
+     * Project all values from solution onto particle and use a piecewise linear interpolation and advance particle
+     * along an explicit Euler
      *
      * This is a natural extension of projectAllValuesOntoParticle_piecewiseLinear()
      * which accepts two additional arguments. The first one is the time step size,
@@ -129,8 +124,8 @@ namespace exahype2 {
      * input data and maps it onto the particle attributes. After that, it assumes
      * that the indices indicies[0], indicies[1] and indicies[2] actually denote
      * the particle's velocities and it updates the velocity according to an
-     * explicit Euler. We also provide a set of scale factor for velocity in case the 
-     * user would like to tune the velocity accordingly. e.g. if the velocity is the 
+     * explicit Euler. We also provide a set of scale factor for velocity in case the
+     * user would like to tune the velocity accordingly. e.g. if the velocity is the
      * inverse of the indiced quantities, enter {-1,-1,-1}.
      *
      * To use this extended mapping, you have to use the Python API similar to the
@@ -159,16 +154,15 @@ namespace exahype2 {
      */
     template <typename Particle>
     void projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
-      const peano4::datamanagement::CellMarker&    marker,
-      int                                          voxelsPerAxis,
-      int                                          unknownsPerVoxel,
-      const double* __restrict__                   Q,
-      double                                       timeStepSize,
-      tarch::la::Vector<Dimensions,int>            indices,
-      tarch::la::Vector<Dimensions,int>            factors,
-      Particle&                                    particle
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       voxelsPerAxis,
+      int                                       unknownsPerVoxel,
+      const double* __restrict__ Q,
+      double                             timeStepSize,
+      tarch::la::Vector<Dimensions, int> indices,
+      tarch::la::Vector<Dimensions, int> factors,
+      Particle&                          particle
     );
-
 
     /**
      * Map multiple variables from input field onto particle
@@ -187,23 +181,21 @@ namespace exahype2 {
      */
     template <int SourceIndex, int... SourceIndices, typename Particle>
     void projectValuesOntoParticle_piecewiseConstant(
-      const peano4::datamanagement::CellMarker&    marker,
-      int                                          voxelsPerAxis,
-      int                                          unknownsPerVoxel,
-      const double* __restrict__                   Q,
-      Particle&                                    particle
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       voxelsPerAxis,
+      int                                       unknownsPerVoxel,
+      const double* __restrict__ Q,
+      Particle& particle
     );
-
 
     template <int SourceIndex, int... SourceIndices, typename Particle>
     void projectValuesOntoParticle_piecewiseLinear(
-      const peano4::datamanagement::CellMarker&    marker,
-      int                                          voxelsPerAxis,
-      int                                          unknownsPerVoxel,
-      const double* __restrict__                   Q,
-      Particle&                                    particle
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       voxelsPerAxis,
+      int                                       unknownsPerVoxel,
+      const double* __restrict__ Q,
+      Particle& particle
     );
-
 
     namespace internal {
       /**
@@ -218,24 +210,22 @@ namespace exahype2 {
        * Q is not surrounded by a halo layer. If you have a halo layer, you have
        * to add (1,1,1) to the result and then increment voxelsPerAxis by two.
        */
-      tarch::la::Vector<Dimensions,int> mapParticleOntoVoxel(
+      tarch::la::Vector<Dimensions, int> mapParticleOntoVoxel(
         const peano4::datamanagement::CellMarker&    marker,
         int                                          voxelsPerAxis,
-        const tarch::la::Vector<Dimensions,double>&  particleX
+        const tarch::la::Vector<Dimensions, double>& particleX
       );
-
 
       /**
        * Similar to mapParticleOntoVoxel() but this time, we always take the
        * biased voxel to the left, i.e. we always use the floor and look
        * left.
        */
-      tarch::la::Vector<Dimensions,int> mapBiasedParticleOntoVoxel(
+      tarch::la::Vector<Dimensions, int> mapBiasedParticleOntoVoxel(
         const peano4::datamanagement::CellMarker&    marker,
         int                                          voxelsPerAxis,
-        const tarch::la::Vector<Dimensions,double>&  particleX
+        const tarch::la::Vector<Dimensions, double>& particleX
       );
-
 
       /**
        * Project one quantity from the patch data onto the particle
@@ -251,24 +241,22 @@ namespace exahype2 {
        * @param unknown       Which unknown from data field to pick.
        */
       double projectValueOntoParticle_piecewiseConstant(
-        const peano4::datamanagement::CellMarker&    marker,
-        int                                          voxelsPerAxis,
-        int                                          unknownsPerVoxel,
-        const double* __restrict__                   Q,
-        const tarch::la::Vector<Dimensions,double>&  particleX,
+        const peano4::datamanagement::CellMarker& marker,
+        int                                       voxelsPerAxis,
+        int                                       unknownsPerVoxel,
+        const double* __restrict__ Q,
+        const tarch::la::Vector<Dimensions, double>& particleX,
         int                                          unknown
       );
-
 
       double projectValueOntoParticle_piecewiseLinear(
-        const peano4::datamanagement::CellMarker&    marker,
-        int                                          voxelsPerAxis,
-        int                                          unknownsPerVoxel,
-        const double* __restrict__                   Q,
-        const tarch::la::Vector<Dimensions,double>&  particleX,
+        const peano4::datamanagement::CellMarker& marker,
+        int                                       voxelsPerAxis,
+        int                                       unknownsPerVoxel,
+        const double* __restrict__ Q,
+        const tarch::la::Vector<Dimensions, double>& particleX,
         int                                          unknown
       );
-
 
       /**
        * Actual realisation of the projection routine. Has to be in a
@@ -278,23 +266,22 @@ namespace exahype2 {
        */
       template <typename Particle, int SourceIndex, int... SourceIndices>
       void projectValuesOntoParticle_piecewiseConstant(
-        const peano4::datamanagement::CellMarker&    marker,
-        int                                          voxelsPerAxis,
-        int                                          unknownsPerVoxel,
-        const double* __restrict__                   Q,
-        Particle&                                    particle,
-        int                                          destinationIndex
+        const peano4::datamanagement::CellMarker& marker,
+        int                                       voxelsPerAxis,
+        int                                       unknownsPerVoxel,
+        const double* __restrict__ Q,
+        Particle& particle,
+        int       destinationIndex
       );
-
 
       template <typename Particle, int SourceIndex, int... SourceIndices>
       void projectValuesOntoParticle_piecewiseLinear(
-        const peano4::datamanagement::CellMarker&    marker,
-        int                                          voxelsPerAxis,
-        int                                          unknownsPerVoxel,
-        const double* __restrict__                   Q,
-        Particle&                                    particle,
-        int                                          destinationIndex
+        const peano4::datamanagement::CellMarker& marker,
+        int                                       voxelsPerAxis,
+        int                                       unknownsPerVoxel,
+        const double* __restrict__ Q,
+        Particle& particle,
+        int       destinationIndex
       );
 
       /**
@@ -302,31 +289,28 @@ namespace exahype2 {
        */
       template <typename Particle>
       void projectValuesOntoParticle_piecewiseConstant(
-        const peano4::datamanagement::CellMarker&    marker,
-        int                                          voxelsPerAxis,
-        int                                          unknownsPerVoxel,
-        const double* __restrict__                   Q,
-        Particle&                                    particle,
-        int                                          destinationIndex
+        const peano4::datamanagement::CellMarker& marker,
+        int                                       voxelsPerAxis,
+        int                                       unknownsPerVoxel,
+        const double* __restrict__ Q,
+        Particle& particle,
+        int       destinationIndex
       );
-
 
       /**
        * End-point of variadic templates and therefore nop.
        */
       template <typename Particle>
       void projectValuesOntoParticle_piecewiseLinear(
-        const peano4::datamanagement::CellMarker&    marker,
-        int                                          voxelsPerAxis,
-        int                                          unknownsPerVoxel,
-        const double* __restrict__                   Q,
-        Particle&                                    particle,
-        int                                          destinationIndex
+        const peano4::datamanagement::CellMarker& marker,
+        int                                       voxelsPerAxis,
+        int                                       unknownsPerVoxel,
+        const double* __restrict__ Q,
+        Particle& particle,
+        int       destinationIndex
       );
-    }
-  }
-}
-
+    } // namespace internal
+  }   // namespace fv
+} // namespace exahype2
 
 #include "Tracer.cpph"
-
