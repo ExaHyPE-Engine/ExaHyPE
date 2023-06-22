@@ -20,7 +20,7 @@ namespace toolbox {
      * one can think of. The minimal data we need per particle is
      *
      * - a position x which defines where the particle is located,
-     * - a cut-off radius which defines on which resolution level to hold the
+     * - a search radius which defines on which resolution level to hold the
      *   particle.
      *
      * The further attribute that are set are
@@ -67,7 +67,11 @@ namespace toolbox {
      * when we leave a cell.
      */
     template <class T>
-    void init(T& particle, const tarch::la::Vector<Dimensions, double>& x, double cutOffRadius);
+    void init(
+      T&                                          particle,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      searchRadius
+    );
 
 
     /**

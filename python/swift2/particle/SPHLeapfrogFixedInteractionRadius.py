@@ -365,8 +365,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         )
         self.algorithm_steps_dict["PredictHydro"] = predictHydro
 
-        densityWithConstantSmoothingLength = AlgorithmStep(
-            name="DensityLoopWithConstantSmoothingLength",
+        densityWithConstantSearchRadius = AlgorithmStep(
+            name="DensityLoopWithConstantSearchRadius",
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
             touch_vertex_first_time_kernel="""
@@ -382,7 +382,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                 self._hydroDimensions
             ),
             touch_vertex_last_time_kernel="""
-                                       ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
+                                       ::swift2::kernels::endDensityCalculationWithConstantSearchRadius(
                                            localParticles,
                                            {},
                                            {},
@@ -399,7 +399,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                        #include "swift2/kernels/equation_of_state.h"
                                        """,
         )
-        self.algorithm_steps_dict["Density"] = densityWithConstantSmoothingLength
+        self.algorithm_steps_dict["Density"] = densityWithConstantSearchRadius
 
         force = AlgorithmStep(
             name="ForceLoop",
@@ -485,16 +485,16 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
             name="ReduceGlobalQuantities",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-            cell_kernel="""::swift2::statistics::reduceVelocityAndCutOffRadius( localParticles );""",
+            cell_kernel="""::swift2::statistics::reduceVelocityAndSearchRadius( localParticles );""",
             prepare_traversal_kernel="""
-                                       globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
+                                       globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                        globaldata::{PARTICLE}::getSpecies().clearVelocity();
                                        """.replace(
                 "{PARTICLE}", self.name
             ),
             unprepare_traversal_kernel="""
                                        globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
-                                       ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
+                                       ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
                                        """.replace(
                 "{PARTICLE}", self.name
             ),
@@ -594,7 +594,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         """
 
         Set the limits allowed for the SPH smoothing length. Notice that the max value
-        is bounded by Peano's cutoff radius as h_max = R_cutoff_max = max_grid_size /
+        is bounded by Peano's search radius as h_max = R_search_max = max_grid_size /
         gamma_k, where gamma_k is the SPH kernel factor that relates h and H.
         Typically gamma_k = 2, so h_max = max_grid_size / 2.
 

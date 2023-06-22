@@ -25,7 +25,7 @@ class toolbox::particles::tests::TestParticle {
     TestParticle( const tarch::la::Vector<Dimensions, double>& x, double h );
 
     tarch::la::Vector<Dimensions, double> getX() const;
-    double                                getCutOffRadius() const;
+    double                                getSearchRadius() const;
 
     tarch::la::Vector<Dimensions, double> _x;
     double                                _h;

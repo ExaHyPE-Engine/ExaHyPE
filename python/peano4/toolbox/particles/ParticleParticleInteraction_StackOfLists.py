@@ -14,23 +14,23 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
   """!
 
 Tree walker to realise particle-particle interactions with particles held by different adjacent cells or on different mesh levels.
-    
+
  This code snippet creates a tree walker, i.e. an action set that runs
- through the underlying spacetree top down. It builds up two sets: The 
- active set and the local set. Both are of the same type if you stick 
+ through the underlying spacetree top down. It builds up two sets: The
+ active set and the local set. Both are of the same type if you stick
  to the default value of None for active_particle_set. But you can also
- let particles of different type interact by selecting a local particle 
- set that is different to the active one. Users can inject code to modify 
+ let particles of different type interact by selecting a local particle
+ set that is different to the active one. Users can inject code to modify
  the local set per cell and hence to alter particle states.
 
 
  ## Set definitions
- 
+
  image:: dependency_sets.png
 
  Per tree node there are two different sets. We explain it by means of
  the light blue cell in the cartoon. Cells of this level hold particles
- whose cut-off radius is stricly smaller or equal to the mesh size.
+ whose search radius is stricly smaller or equal to the mesh size.
 
  The set of local particles of a cell are all of these particles whose
  centre is contained within the cell plus a halo of h/2. This is the
@@ -63,30 +63,30 @@ Tree walker to realise particle-particle interactions with particles held by dif
 
 
  ## Realisation
- 
- This tree walker realises the two sets via two lists: Per cell, we 
+
+ This tree walker realises the two sets via two lists: Per cell, we
  append the local set to the active set and memorise on a stack how
- many of these particles have been added. When we backtrace, i.e. 
- ascend within the tree again, this memorised size is used to remove 
+ many of these particles have been added. When we backtrace, i.e.
+ ascend within the tree again, this memorised size is used to remove
  the last n elements from the active set.
- 
- So the active set grows while we descend in the tree, and it is 
+
+ So the active set grows while we descend in the tree, and it is
  truncated when we ascend again.
- 
+
  This is a very efficient implementation yet fails if particles move
  up and down within the tree while we walk. It should work perfectly
- fine if particles do not move. If particles move up and down, the 
+ fine if particles do not move. If particles move up and down, the
  present algorithms might have redundant pointers within the active set.
  I am also not 100% sure if we might run into memory issues if particles
  suddenly leave cells and hence "disappear" from the active sets.
- 
- In the case of a dynamic setup, i.e. in combinatino with the action 
+
+ In the case of a dynamic setup, i.e. in combinatino with the action
  set UpdateParticleGridAssociation, you might be better of with using
  the set-based implementation of the particle-particle interaction.
- 
+
 
  ## Further plug-in points
- 
+
  Besides the cell kernel which is there to realise particle-to-particle
  interactions, we also have a vertex kernel which we call whenever a
  vertex is loaded for the first time. That is, you can assume that the
@@ -106,8 +106,8 @@ Tree walker to realise particle-particle interactions with particles held by dif
  In \Peano's \emph{dual tree} storage scheme, we always hold the
  complete spacetree with all tree (grid) levels. Particles are always stored on
  the finest mesh (tree) level where the mesh size is bigger than the particle's
- cut-off radius. 
- Different particles with different cut-off radii might thus be stored on
+ search radius.
+ Different particles with different search radii might thus be stored on
  different tree levels.
 \end{definition}
 
@@ -119,18 +119,18 @@ in a depth-first fashion.
 With the definition above, we can realise particle-particle interactions as
 follows:
 
-Per cell, the code assembles a \texttt{local set}. 
+Per cell, the code assembles a \texttt{local set}.
 This is a list of pointers to those particles that are associated to a cell's
 $2^d$ vertices.
 With the local set, you can make particles held on one resolution level
 interact with each other.
 You get an cubic area of $2h$ side-lenght per cell:
-As a particle is always associated to its closest vertex, the local set holds all particles whose cut-off radius overlap with the cell. 
+As a particle is always associated to its closest vertex, the local set holds all particles whose search radius overlap with the cell.
 
 
-Adaptivity and particles with different cut-off are not yet captured through the
+Adaptivity and particles with different search radii are not yet captured through the
 local set notion.
-There's thus a second set that I call active set. 
+There's thus a second set that I call active set.
 The active set is the local set plus all local sets that have been active on
 coarser levels within the tree.
 
@@ -194,7 +194,7 @@ can update the particle state.
  Study the sort algorithms that we use if you
  update the vertex (cmp.~Section \ref{section:pidt:move-particles}). Once you
  alter a particle position, particles might not be tied to their closest vertex
- anymore. 
+ anymore.
  Neighbourhood searches thus might yield invalid results.
 \end{remark}
 
@@ -203,21 +203,21 @@ can update the particle state.
 """
 
 
-  def __init__(self, 
-               particle_set, 
-               particle_particle_interaction_kernel, 
-               touch_vertex_first_time_compute_particle_update_kernel=None, 
+  def __init__(self,
+               particle_set,
+               particle_particle_interaction_kernel,
+               touch_vertex_first_time_compute_particle_update_kernel=None,
                touch_vertex_last_time_compute_particle_update_kernel=None,
                prepare_traversal_kernel="",
-               unprepare_traversal_kernel="", 
-               additional_includes="", 
+               unprepare_traversal_kernel="",
+               additional_includes="",
                active_particle_set=None ):
     """!
 
  Initialise object
- 
+
  ## Arguments
- 
+
  particle_set: ParticleSet
 
  particle_particle_interaction_kernel: String holding C++ code
@@ -230,35 +230,35 @@ can update the particle state.
        for (auto* activeParticle: activeParticles ) {
          localParticle->doSomethingFancy( activeParticle );
        }
-   
+
  active_particle_set: ParticleSet or None
    You can compare different particles species with this argument. It
    allows you to make the active particles stem from another species than
    the local ones that you actually update. Pick None if both sets are of
    the same type.
-   
+
  touch_vertex_first_time_compute_particle_update_kernel: String or None
    Can be empty, but if you wanna move particles, then a minimal example
    string passed equals
-     
+
        for (auto* localParticle: localParticles ) {
          localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
        }
 
    i.e. you will have a variable localParticle available in this kernel
    and it is a pointer.
-   
+
  use_biased_locality_check: Boolean
-   When we hit a cell, we have to decide what defines the active set within 
+   When we hit a cell, we have to decide what defines the active set within
    this cell. For this, we can either use peano4::datamanagement::CellMarker::isContained()
-   or peano4::datamanagement::CellMarker::isContainedWithBias(). The the 
+   or peano4::datamanagement::CellMarker::isContainedWithBias(). The the
    documentation of these routines for further details.
-    
-      
+
+
 
     """
     super(ParticleParticleInteraction_StackOfLists,self).__init__(priority=1,parallel=False)
-    
+
     self._particle_set = particle_set
     self.d = {}
     self.d[ "LOCAL_PARTICLE" ]                    = particle_set.particle_model.name
@@ -275,7 +275,7 @@ can update the particle state.
     self.d[ "ADDITIONAL_INCLUDES" ]               = additional_includes
     self.d[ "PREPARE_TRAVERSAL_KERNEL" ]          = prepare_traversal_kernel
     self.d[ "UNPREPARE_TRAVERSAL_KERNEL" ]        = unprepare_traversal_kernel
-    
+
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}

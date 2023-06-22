@@ -138,7 +138,7 @@ void swift2::kernels::endDensityCalculation(
 
           /* Skip if h is already h_max and we don't have enough neighbours */
           /* Same if we are below h_min */
-          /* Same if we have hit the Peano cutoff radius
+          /* Same if we have hit the Peano search radius
            */
 
           //          tarch::la::Vector<Dimensions,double> GridSize = marker.h();
@@ -146,9 +146,9 @@ void swift2::kernels::endDensityCalculation(
 
           /* TODO MLADEN: What exactly is going on here?? */
           const double GridSizeHalf    = 0.5 * 0.3;
-          const double CutoffParticleH = kernel_gamma * particle->getSmoothingLength();
+          const double IactParticleH = kernel_gamma * particle->getSmoothingLength();
 
-          if (((particle->getSmoothingLength() >= hHydroMax) && (f < 0.0)) || ((particle->getSmoothingLength() <= hHydroMin) && (f > 0.0)) || tarch::la::greaterEquals(CutoffParticleH, GridSizeHalf)) {
+          if (((particle->getSmoothingLength() >= hHydroMax) && (f < 0.0)) || ((particle->getSmoothingLength() <= hHydroMin) && (f > 0.0)) || tarch::la::greaterEquals(IactParticleH, GridSizeHalf)) {
 
             /* We have a particle whose smoothing length is already set (wants
              * to be larger but has already hit the maximum OR wants to be

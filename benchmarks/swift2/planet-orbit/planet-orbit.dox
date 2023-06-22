@@ -4,10 +4,10 @@
 
 
 
-This standard test case is used to assess the adaptive mesh refinement and to 
+This standard test case is used to assess the adaptive mesh refinement and to
 illustrate the importance of a symplectic time integrator. The setup simulates
-the Earth rotating around the Sun. So we actually have only one (free) 
-particle with a hard-coded force function. 
+the Earth rotating around the Sun. So we actually have only one (free)
+particle with a hard-coded force function.
 
 
 @image html two-particles-00.png
@@ -22,10 +22,10 @@ details such as the parsing of command line arguments.
 
 ## Import core packages
 
-We need Peano's core Python package, the Swift 2 package, and then we employ 
+We need Peano's core Python package, the Swift 2 package, and then we employ
 DaStGen 2 which is basically a tool to write plain C++ classes which hold our
-particle data but also provide some other features such as support for MPI 
-data exchange: 
+particle data but also provide some other features such as support for MPI
+data exchange:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,13 +37,13 @@ import dastgen2
 
 ## Set up a project
 
-The project is our wrapper of the whole SPH code (which is not really SPH 
+The project is our wrapper of the whole SPH code (which is not really SPH
 but simply a simple Lagrangian model for an object subject to an ODE):
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"], 
-                          project_name="planetorbit", 
+project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"],
+                          project_name="planetorbit",
                           executable="orbit" )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -52,18 +52,18 @@ project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"],
 
 A particle in Swift is defined by its numerics. In this simple example,
 we don't really have an interaction radius, so we can take the simplest
-particle with a fixed interaction radius. 
+particle with a fixed interaction radius.
 
 However, we need leapfrog rather than an
-explicit Euler to maintain a stable radius. Besides the time stepping 
+explicit Euler to maintain a stable radius. Besides the time stepping
 scheme (which implicitly defines the steps any particle completes per
 time step), each particle guides the size of the underlying adaptive mesh.
-We therefore specify min_h and max_h. 
+We therefore specify min_h and max_h.
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-particle   = swift2.particle.LeapfrogFixedInteractionRadius( name                   = "Planet", 
-                                                             cfl_factor             = 0.2, 
+particle   = swift2.particle.LeapfrogFixedInteractionRadius( name                   = "Planet",
+                                                             cfl_factor             = 0.2,
                                                              initial_time_step_size = args.timestep_size,
                                                              particles_per_cell = 0,
                                                              min_h = 0.0011,
@@ -72,23 +72,23 @@ particle   = swift2.particle.LeapfrogFixedInteractionRadius( name               
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As we set the interaction radius to
-zero later on, and as we set the particles_per_cell to zero, the code will run 
+zero later on, and as we set the particles_per_cell to zero, the code will run
 into a dilemma:
-There will always be one cell in the mesh which hosts one particle which 
+There will always be one cell in the mesh which hosts one particle which
 violates the zero threshold.
 So the code will aggressively refine until the mesh is smaller than min_h.
-That stops the refinement no matter of the violated particles_pre_cell 
+That stops the refinement no matter of the violated particles_pre_cell
 constraint.
 
 
 ## Adding additional attributes
 
-So far, our particles are primitive. They will hold a position and a maximum 
-cut-off radius, as any particle within Peano's particle toolbox owns these
+So far, our particles are primitive. They will hold a position and a maximum
+search radius, as any particle within Peano's particle toolbox owns these
 properties.
 The integration of choice will add further attributes.
 In the present case, that's speed and acceleration.
-But other than that, the particle so far has no properties. 
+But other than that, the particle so far has no properties.
 We add a few ones:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -103,33 +103,33 @@ particle.data.add_attribute(energy_tot_attr)
 The package dastgen2.attributes hosts also arrays of doubles and integers and
 booleans. Please note that there is an opportunity to specify accuracies (valid
 bits) for floating point values and upper and lower bounds for integers. Such
-additional information allows Peano in combination with our LLVM modifications 
+additional information allows Peano in combination with our LLVM modifications
 to produce particularly memory-efficient code.
 
 
 ## Configure the overall simulation
 
-Peano will need to know the value of some general properties. 
+Peano will need to know the value of some general properties.
 For more information, consult the documentation of swift2.Project
-and also the @ref page_architecture "remarks on build variants": 
+and also the @ref page_architecture "remarks on build variants":
 
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 build_mode = peano4.output.CompileMode.Asserts
-    
-offset      = [ 0, 0, 0 ] 
+
+offset      = [ 0, 0, 0 ]
 domain_size = [ 1, 1, 1 ]
 periodic_boundary_conditions = [False,False,False]          # Periodic BC
 
 project.set_global_simulation_parameters(
   dimensions            = dimensions,
-  offset                = offset,  
+  offset                = offset,
   domain_size           = domain_size,
   min_end_time          = args.end_time,
   max_end_time          = 0.0,
-  first_plot_time_stamp = 0.0, 
-  time_in_between_plots = args.end_time/200, 
+  first_plot_time_stamp = 0.0,
+  time_in_between_plots = args.end_time/200,
   periodic_BC           = periodic_boundary_conditions,
   plotter_precision     =8  # plotter precision
 )
@@ -138,7 +138,7 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 project.set_Peano4_installation(args.peanodir, build_mode)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The call of swift2.Project.set_load_balancing() activates one of Peano's 
+The call of swift2.Project.set_load_balancing() activates one of Peano's
 generic load balancing strategies. The last line is notably interesting:
 It instructs the Python API to parse the settings of your configure (autotools)
 or CMake run. That is, all the flags that you specified throughout
@@ -150,8 +150,8 @@ up by the code that the Python script will ultimately produce.
 ## Injecting the physics
 
 We start with the definition of some constants. All of these could be computed
-within the C++ code, too, but it is often more convenient to compute them in 
-the Python code (where we also would have access to all kinds of Python 
+within the C++ code, too, but it is often more convenient to compute them in
+the Python code (where we also would have access to all kinds of Python
 tools) and then to export into the C++ code.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -165,10 +165,10 @@ tools) and then to export into the C++ code.
 # Orbital parameters
 N_orbits= 8;          # Number of orbits
 G_NEWTON= 6.67384e-11; # Newton's constant  [m^3/kg/s^2]
-M_SUN   = 1.9885e30;   # Sun mass [kg] 
+M_SUN   = 1.9885e30;   # Sun mass [kg]
 M_EARTH = 5.97219e24;  # Earth mass [kg]
-R_MAX = 152097701000.; # [m] 
-R_MIN = 147098074000.; # [m] 
+R_MAX = 152097701000.; # [m]
+R_MIN = 147098074000.; # [m]
 V_MAX = 30287.0;       # [m/s]
 
 # Initial positions in internal units
@@ -178,7 +178,7 @@ SUN_Y_COORD = str(0.5)
 EARTH_X_INI = str( float(SUN_X_COORD) + R_MAX / LENGTH_UNIT )
 EARTH_Y_INI = SUN_Y_COORD
 
-# Derived quantities 
+# Derived quantities
 e = (R_MAX - R_MIN) / (R_MAX + R_MIN);   # Eccentricity [dimensionless]
 b = np.sqrt(R_MAX * R_MIN);              # Semi-minor axis [m]
 p = b * np.sqrt(1.0 - e * e);            # Semi-lactus rectum [m]
@@ -186,7 +186,7 @@ a = p / (1.0 - e * e);                   # Semi-major axis [m]
 T = np.sqrt( 4.0 * np.pi * np.pi * a * a * a /
                   (G_NEWTON * (M_SUN + M_EARTH)) ); # Period [s] */
 
-# Time-step size 
+# Time-step size
 dt = 1e-3 * T; # [s]
 dt/= T;
 N = N_orbits / dt;
@@ -202,9 +202,9 @@ The actual export happens later.
 
 ## Add the forces
 
-To add the forces, we have attach a C/C++ code snippet to the particle. In our 
+To add the forces, we have attach a C/C++ code snippet to the particle. In our
 present case, the force is hard-coded, i.e. does not depend on other particles.
-It uses some constants that we have previously defined in the Python script. 
+It uses some constants that we have previously defined in the Python script.
 Here, we have now two options:
 
 - We can take the C++ code snippet in Python and replace the constant strings
@@ -212,11 +212,11 @@ Here, we have now two options:
   constants as hard-coded values.
 - We can use some constants like SUN_X_COORD in the C++ code and define these
   as proper constants in the generated C++ code.
-  
+
 In the example below, we go down the second rule. That means, the code as it
-stands will contain some constants like SUN_X_COORD. We have to ensure that 
+stands will contain some constants like SUN_X_COORD. We have to ensure that
 these constants are properly exported into the Peano project. Both approaches
-(replacing literals before we dump the code snippet into the Python API and 
+(replacing literals before we dump the code snippet into the Python API and
 defining C++ constants) are fine and work. It is all a matter of taste.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -236,7 +236,7 @@ particle_force = """
   tarch::la::Vector<Dimensions,double> earthSunDistance = localParticle->getX() - pos_sun;
   const double r = tarch::la::norm2(earthSunDistance);
   if (tarch::la::greater(r,0.0)) {
-    const double r_inv =  1.0 / r;     
+    const double r_inv =  1.0 / r;
     localParticle->setA( - GN * earthSunDistance * (r_inv * r_inv * r_inv) );
 
     /* Update Energy */
@@ -258,19 +258,19 @@ particle.particle_particle_interaction_over_particle_sets_kernel = particle_forc
 particle_set = project.add_particle_species( particle )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The code now is fully functional, but will not produced any output, as we 
+The code now is fully functional, but will not produced any output, as we
 haven't inserted any particle into our computational domain yet. Even if we
 do so, we will only see the particles and not their properties, as the code
 knows nothing about these properties. Please study the script
-benchmarks/swift2/planet-orbit/planet-orbit.py for more documentation how 
+benchmarks/swift2/planet-orbit/planet-orbit.py for more documentation how
 these two missing steps are to be realised.
 
 
 ## Generate the Peano project and build code
 
 We close the discussion with the actual generation of the Peano project that
-has been built up by our Swift Python API. We grab the Peano project from 
-swift2.Project.generate_Peano4_project(). The resulting object then is 
+has been built up by our Swift Python API. We grab the Peano project from
+swift2.Project.generate_Peano4_project(). The resulting object then is
 added the constants that we want to use in our C++ code, before we invoke
 swift2.Project.generate() and swift2.Project.build().
 
@@ -294,7 +294,7 @@ peano4_project.build( make_clean_first = True, number_of_parallel_builds=8 )
 
 You might want to cancel the final build call. Once generate has teminated,
 you will get a plain Makefile in your project directory and you can call
-make outside of the Python script. 
+make outside of the Python script.
 
 
 
@@ -304,8 +304,8 @@ make outside of the Python script.
 # Script to run experiment
 
 # Parameters
-END_TIME=0.5 
-CELL_SIZE=0.4 
+END_TIME=0.5
+CELL_SIZE=0.4
 PLOT_DELTA=0.1
 
 # Run python script to generate the experiment
@@ -350,7 +350,7 @@ echo 'Done. Bye!'
 ## Clean up
 
 The instruction snippets below clean up the majority of the file spilled out
-by this benchmark. All files that are essential to rerun the benchmark and 
+by this benchmark. All files that are essential to rerun the benchmark and
 are stored in the repo are kept:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -360,4 +360,4 @@ rm Constants.h planetorbit-main* Makefile *.md
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
  */
- 
+

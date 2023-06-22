@@ -37,8 +37,8 @@ class swift2::ParticleSpecies {
     double _minTimeStamp;
     double _maxTimeStamp;
 
-    double _minCutOffRadius;
-    double _maxCutOffRadius;
+    double _minSearchRadius;
+    double _maxSearchRadius;
 
     double _minVelocity;
     double _maxVelocity;
@@ -62,15 +62,15 @@ class swift2::ParticleSpecies {
     double getMinTimeStamp() const;
     double getMaxTimeStamp() const;
 
-    double getMinCutOffRadius() const;
-    double getMaxCutOffRadius() const;
+    double getMinSearchRadius() const;
+    double getMaxSearchRadius() const;
 
     double getMinVelocity() const;
     double getMaxVelocity() const;
 
     /**
      * Query species whether the last grid sweep/update sweep has to be
-     * repeated. This happens if the cut-off radius changes for example.
+     * repeated. This happens if the search radius changes for example.
      */
     bool rerunPreviousGridSweep() const;
 
@@ -114,7 +114,7 @@ class swift2::ParticleSpecies {
      */
     void finishTimeStep();
 
-    void clearCutOffRadius();
+    void clearSearchRadius();
     void clearVelocity();
     void clearTimeStampAndTimeStepSize();
 

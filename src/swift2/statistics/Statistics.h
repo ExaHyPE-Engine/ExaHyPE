@@ -15,7 +15,7 @@ namespace swift2 {
      * overwite the .
      */
     template <typename Particle>
-    void reduceVelocityAndCutOffRadius(
+    void reduceVelocityAndSearchRadius(
       const std::list< Particle* >&  localParticles
     );
   }

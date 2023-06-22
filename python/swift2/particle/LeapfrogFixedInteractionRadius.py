@@ -226,16 +226,16 @@ class LeapfrogFixedInteractionRadius(Particle):
                 name="ReduceGlobalQuantities",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-                cell_kernel="""::swift2::statistics::reduceVelocityAndCutOffRadius( localParticles );""",
+                cell_kernel="""::swift2::statistics::reduceVelocityAndSearchRadius( localParticles );""",
                 prepare_traversal_kernel="""
-                                         globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
+                                         globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                          globaldata::{PARTICLE}::getSpecies().clearVelocity();
                                          """.replace(
                     "{PARTICLE}", self.name
                 ),
                 unprepare_traversal_kernel="""
                                          globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
-                                         ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
+                                         ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
                                          """.replace(
                     "{PARTICLE}", self.name
                 ),

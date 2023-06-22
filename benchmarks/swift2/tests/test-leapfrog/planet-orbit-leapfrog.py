@@ -33,14 +33,14 @@ args = parser.parse_args()
 
 dimensions  = args.dimensions
 
-project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"], 
-                          project_name="planetorbit", 
+project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"],
+                          project_name="planetorbit",
                           executable="orbit-" + str(args.cell_size) )
 
 
 # Declare the particle type
-particle = swift2.particle.tests.testLeapfrogFixedTimeStepSize( name                   = "Planet", 
-                                                                cfl_factor             = 0.2, 
+particle = swift2.particle.tests.testLeapfrogFixedTimeStepSize( name                   = "Planet",
+                                                                cfl_factor             = 0.2,
                                                                 constant_time_step_size= True,
                                                                 initial_time_step_size = args.timestep_size )
 
@@ -57,19 +57,19 @@ if args.asserts:
   build_mode = peano4.output.CompileMode.Asserts
 else:
   build_mode = peano4.output.CompileMode.Release
-    
-offset      = [ 0, 0, 0 ] 
+
+offset      = [ 0, 0, 0 ]
 domain_size = [ 1, 1, 1 ]
 periodic_boundary_conditions = [False,False,False]          # Periodic BC
 
 project.set_global_simulation_parameters(
   dimensions            = dimensions,
-  offset                = offset,  
+  offset                = offset,
   domain_size           = domain_size,
   min_end_time          = args.end_time,
   max_end_time          = 0.0,
-  first_plot_time_stamp = 0.0, 
-  time_in_between_plots = args.end_time/200, 
+  first_plot_time_stamp = 0.0,
+  time_in_between_plots = args.end_time/200,
   periodic_BC           = periodic_boundary_conditions,
   plotter_precision     = 8
 )
@@ -84,10 +84,10 @@ project.set_global_simulation_parameters(
 # Orbital parameters
 N_orbits= 8;          # Number of orbits
 G_NEWTON= 6.67384e-11; # Newton's constant  [m^3/kg/s^2]
-M_SUN   = 1.9885e30;   # Sun mass [kg] 
+M_SUN   = 1.9885e30;   # Sun mass [kg]
 M_EARTH = 5.97219e24;  # Earth mass [kg]
-R_MAX = 152097701000.; # [m] 
-R_MIN = 147098074000.; # [m] 
+R_MAX = 152097701000.; # [m]
+R_MIN = 147098074000.; # [m]
 V_MAX = 30287.0;       # [m/s]
 
 # Initial positions in internal units
@@ -97,7 +97,7 @@ SUN_Y_COORD = str(0.5)
 EARTH_X_INI = str( float(SUN_X_COORD) + R_MAX / LENGTH_UNIT )
 EARTH_Y_INI = SUN_Y_COORD
 
-# Derived quantities 
+# Derived quantities
 e = (R_MAX - R_MIN) / (R_MAX + R_MIN);   # Eccentricity [dimensionless]
 b = np.sqrt(R_MAX * R_MIN);              # Semi-minor axis [m]
 p = b * np.sqrt(1.0 - e * e);            # Semi-lactus rectum [m]
@@ -105,7 +105,7 @@ a = p / (1.0 - e * e);                   # Semi-major axis [m]
 T = np.sqrt( 4.0 * np.pi * np.pi * a * a * a /
                   (G_NEWTON * (M_SUN + M_EARTH)) ); # Period [s] */
 
-# Time-step size 
+# Time-step size
 dt = 1e-3 * T; # [s]
 dt/= T;
 N = N_orbits / dt;
@@ -126,13 +126,13 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 # Declare the force acting on the particle
 ###############################################################################
 #
-# We effectively solve a 2d setup even in 3d. Peano's vector classes can be 
-# used over the compiler symbol Dimensions, but then we have to use different 
-# initialisation lists - one with two entries and one if three - and 
-# distinguish them via an ifdef. If we compile without assertions, an 
-# additional entry in the initialisation list will simply be ignored. If we 
+# We effectively solve a 2d setup even in 3d. Peano's vector classes can be
+# used over the compiler symbol Dimensions, but then we have to use different
+# initialisation lists - one with two entries and one if three - and
+# distinguish them via an ifdef. If we compile without assertions, an
+# additional entry in the initialisation list will simply be ignored. If we
 # compile with assertions however the code will complain, as initialisation
-# lists with "too many" entries are a hint that something in the code is 
+# lists with "too many" entries are a hint that something in the code is
 # wrong.
 #
 # We have two variants covered by this script: Either we work with only one
@@ -140,21 +140,21 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 # particle, then we have to be careful not to update it.
 #
 # The code snippets here rely on some global constants that we compute here
-# in the Python code base. We have various ways how to deal with such 
+# in the Python code base. We have various ways how to deal with such
 # constants:
 #
 # - We can calculate them within Python and then export them into the Peano
 #   project. This is the strategy implemented here: The statements
-#          
+#
 #            peano4_project.constants.export_const_with_type
 #
-#   below make the constants known to the build environment. Consequently, we 
+#   below make the constants known to the build environment. Consequently, we
 #   can use them within our C code snippets, as they will be well-defined by
 #   the time we compile.
-# - We can construct the string in Python and replace the constants 
-#   straightaway. In this case, we don't have to add the constants to the 
-#   makefile, as they are not required throughout the compile. In return, we 
-#   have to ensure that the constants within the code snippet here are 
+# - We can construct the string in Python and replace the constants
+#   straightaway. In this case, we don't have to add the constants to the
+#   makefile, as they are not required throughout the compile. In return, we
+#   have to ensure that the constants within the code snippet here are
 #   replaced with their actual value before we hand the kernel particle_force
 #   over.
 #
@@ -175,7 +175,7 @@ particle_force = """
   tarch::la::Vector<Dimensions,double> earthSunDistance = localParticle->getX() - pos_sun;
   const double r = tarch::la::norm2(earthSunDistance);
   if (tarch::la::greater(r,0.0)) {
-    const double r_inv =  1.0 / r;     
+    const double r_inv =  1.0 / r;
     localParticle->setA( - GN * earthSunDistance * (r_inv * r_inv * r_inv) );
 
     /* Update Energy */
@@ -205,23 +205,23 @@ particle_set = project.add_particle_species( particle )
 # Initialisation snippet for the particle
 ###############################################################################
 #
-# If we work with only one particle, then we can simply set its velocity. 
+# If we work with only one particle, then we can simply set its velocity.
 # However, our script works both if we only module the earth but also when we
-# model earth and sun explicitly. In the latter case, we have to ensure that 
+# model earth and sun explicitly. In the latter case, we have to ensure that
 # only the earth is given an initial velocity.
 #
 ###############################################################################
-cut_off_radius = 0.1
+search_radius = 0.1
 initialisation_snippet = """
   /*
    * In this problem we will initialize just a single particle (Earth)
    * This will orbit around a point where the hypothetical Sun is (no particle needed here)
    */
 
-  /* Internal cutoff radious used by Peano. 
-   * Should always be larger than actual SPH cutoff radious (2h). 
+  /* Internal search radius used by Peano.
+   * Should always be larger than actual SPH interaction radious (~2h).
    * But no really used here. */
-  particle->setCutOffRadius(""" + str(cut_off_radius) + """);
+  particle->setSearchRadius(""" + str(search_radius) + """);
   particle->setV( {0, 0, 0} );
   particle->setA( {0, 0, 0} );
 
@@ -230,9 +230,9 @@ initialisation_snippet = """
   if( particle->getX(0) == EARTH_X_INI ){
     particle->setV(0, EARTH_V_INI_X) ;
     particle->setV(1, EARTH_V_INI_Y) ;
-  } 
+  }
 
-  /* 
+  /*
    * Set initial energy
    */
 
@@ -243,7 +243,7 @@ initialisation_snippet = """
 
   /* Sun-Earth initial distance */
   const double r_ini = particle->getX()(0) - SUN_X_COORD;
-  const double r_inv = r_ini ? 1.0 / r_ini : 0.0;     
+  const double r_inv = r_ini ? 1.0 / r_ini : 0.0;
   const double vel = tarch::la::norm2( particle->getV() );
 
   const double E_kin = 0.5 * vel * vel;
@@ -251,7 +251,7 @@ initialisation_snippet = """
 
   particle->setEnergyKin( E_kin );
   particle->setEnergyPot(-E_pot );
-  
+
   /* Overall minus sign for plotting */
   particle->setEnergyTot( -( E_kin + E_pot ) );
 
@@ -281,26 +281,26 @@ project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParti
 #
 # A plotter has to be told explicitly which data to visualisation. We visualise
 # the velocity here as scalar attribute. To some degree, this is redundant info
-# as we implicitly have the position of the particle and can "see" its 
+# as we implicitly have the position of the particle and can "see" its
 # velocity when we play through a movie. But the explicit visualisation shows
 # how to handle attributes per particle.
 #
-# When we create the plotter, we have to inform it how to enumerate the 
+# When we create the plotter, we have to inform it how to enumerate the
 # individual snapshots. Obviously, we can just count through the snapshots.
 # In this case, you have to pass the constant peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps
 # into the field time_stamp_evaluation. You can also define your own time
-# stamp. For this, it is useful to know that each particle definition in the 
-# Python script will yield a particle class with the same name in the 
+# stamp. For this, it is useful to know that each particle definition in the
+# Python script will yield a particle class with the same name in the
 # subnamespace globaldata. Every particle class in return has a class attribute
-#      
+#
 #            getSpecies()
 #
-# which returns an object that holds global information about this particle 
-# type. 
+# which returns an object that holds global information about this particle
+# type.
 ###############################################################################
 #particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particle_set, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
-particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", 
-                                                                      particle_set, 
+particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles",
+                                                                      particle_set,
                                                                       "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name) )
 particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
 particle_plotter.add_attribute_to_plot(energy_kin_attr  , 1)
@@ -313,7 +313,7 @@ project.algorithm_step_plot.add_action_set( particle_plotter )
 # Generate plain Peano 4 project
 ###############################################################################
 #
-# See commments above (for the force interaction kernel) why we might want to 
+# See commments above (for the force interaction kernel) why we might want to
 # have some of the constants from the Python script within the C++ code base
 # that's generated.
 #

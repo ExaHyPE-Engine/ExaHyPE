@@ -37,14 +37,14 @@ void swift2::kernels::computeDensity(
         const double q_a = r / h_a;
 
         /* Compute the actual interaction radius */
-        const double cutoffR = kernel_gamma * h_a;
+        const double iactR = kernel_gamma * h_a;
 
         /* Velocity terms for viscosity */
         tarch::la::Vector<Dimensions, double> dv_ab;
         tarch::la::Vector<Dimensions, double> curlvr(0.0);
 
         if(
-          tarch::la::smaller( r, cutoffR )
+          tarch::la::smaller( r, iactR )
           and
           tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */
           and
@@ -91,7 +91,7 @@ void swift2::kernels::computeDensity(
           /* Debug: Increment number of detected neighbours */
           localParticle->setNcount(localParticle->getNcount() + 1);
 
-        } /* End if r<cutoffR */
+        } /* End if r<iactR */
       }   /* End for active particles */
 
     } /* End Cell has not updated local particle */
@@ -128,9 +128,9 @@ void swift2::kernels::computeHydroForce(
         const double                          r_inv = r ? 1.0 / r : 0.0;
 
         // Get actual interaction radius
-        const double cutoffR = kernel_gamma * h_a;
+        const double iactR = kernel_gamma * h_a;
 
-        if (tarch::la::smaller(r, cutoffR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle()) {
+        if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle()) {
 
           // Dimensionless distance to evaluate kernel
           const double h_a_inv = 1. / h_a;

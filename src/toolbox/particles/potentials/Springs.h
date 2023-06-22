@@ -18,7 +18,7 @@ namespace toolbox {
        * potential for the attraction, i.e. if two particles are slightly
        * too far away from each other, they attract each other. When they
        * are further away, this attraction also fades away. This way, we
-       * can work with local support (cut-off radii) and we can handle
+       * can work with local support (search radii) and we can handle
        * huge domains. In return, two particles repulse each other if they
        * are too close. However, I do truncate this repulsion, as I want
        * to ensure that these spring forces do not explode. So I kind of

@@ -1,4 +1,4 @@
-# This file is part of the SWIFT2 project. For conditions of distribution and 
+# This file is part of the SWIFT2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from swift2.particle.Particle      import Particle
 from swift2.particle.AlgorithmStep import AlgorithmStep
@@ -10,14 +10,14 @@ import peano4.dastgen2
 class testDensityCalculation(Particle):
   """
   Test only the density calculation algorithmic step
-  
+
   """
-  def __init__(self, 
-               name, 
+  def __init__(self,
+               name,
                dimensions_hydro,
-               cfl_factor, 
+               cfl_factor,
                initial_time_step_size,
-               particles_per_cell = 5, 
+               particles_per_cell = 5,
                min_h = 0.6,
                max_h = 0.5,
                ):
@@ -47,20 +47,20 @@ class testDensityCalculation(Particle):
 
   def algorithm_steps(self):
     """
-    
+
     Test only the density calculation
     """
-    return [ 
+    return [
       AlgorithmStep(
-        name                           = "DensityLoopWithConstantSmoothingLength",          
-        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
-        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+        name                           = "DensityLoopWithConstantSmoothingLength",
+        dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
+        effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """
                                          ::swift2::kernels::prepareDensityCalculation( localParticles );
                                          """,
         cell_kernel                    = """
-                                         ::swift2::kernels::computeDensity( 
-                                           localParticles, 
+                                         ::swift2::kernels::computeDensity(
+                                           localParticles,
                                            activeParticles,
                                            {}
                                          );
@@ -76,7 +76,7 @@ class testDensityCalculation(Particle):
                                          """.format(self.hydroDimensions,
                                                     self.etaFactor,
                                                     self.alphaAV),
- 
+
         includes                       = """
                                          #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"
@@ -85,18 +85,18 @@ class testDensityCalculation(Particle):
                                          #include "swift2/kernels/equation_of_state.h"
                                          """,
       ),
-      AlgorithmStep( 
-        name                           = "ReduceGlobalQuantities", 
-        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+      AlgorithmStep(
+        name                           = "ReduceGlobalQuantities",
+        dependencies                   = AlgorithmStep.Dependencies.SELF,
         effect                         = AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-        cell_kernel                    = """::swift2::statistics::reduceVelocityAndCutOffRadius( localParticles );""",
+        cell_kernel                    = """::swift2::statistics::reduceVelocityAndSearchRadius( localParticles );""",
         prepare_traversal_kernel       = """
-                                         globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
+                                         globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                          globaldata::{PARTICLE}::getSpecies().clearVelocity();
                                          """.replace( "{PARTICLE}", self.name ),
         unprepare_traversal_kernel     = """
                                          globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
-                                         ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
+                                         ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
                                          """.replace( "{PARTICLE}", self.name ),
         includes                       = """
                                          #include "Constants.h"
@@ -104,7 +104,7 @@ class testDensityCalculation(Particle):
                                          #include "swift2/statistics/Statistics.h"
                                          #include "swift2/kernels/kernel_hydro.h"
                                          #include "swift2/kernels/equation_of_state.h"
-                                         """              
+                                         """
       ),
     ]
 
@@ -134,7 +134,7 @@ class testDensityCalculation(Particle):
     self.data.add_attribute( self.uDot )
 
     # Variable smoothing length scheme ---------------------------------------------
-    self.f        = dastgen2.attributes.Double("f")   
+    self.f        = dastgen2.attributes.Double("f")
     self.wcount_dh= dastgen2.attributes.Double("wcount_dh")
     self.rho_dh   = dastgen2.attributes.Double("rho_dh")
     self.hleft    = dastgen2.attributes.Double("hLeft")
@@ -190,7 +190,7 @@ class testDensityCalculation(Particle):
 
   """
   Set the eta factor used by the SPH kernel to target a certain number
-  of neighbour particles. 
+  of neighbour particles.
   The default value is eta = 1.235.
   """
   def set_eta_factor(self, etaFactor):

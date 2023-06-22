@@ -7,12 +7,12 @@
 namespace swift2 {
   namespace statistics {
     /**
-     * Report the cut off
+     * Report the search radius
      *
      * Degenerates to nop if it is not called by the global master.
      */
     template <typename Particle>
-    void reportCutOffRadiusVTDt( const std::string& particleName );
+    void reportSearchRadiusVTDt( const std::string& particleName );
   }
 }
 

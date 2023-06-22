@@ -17,8 +17,8 @@ swift2::ParticleSpecies::ParticleSpecies():
   _maxTimeStepSize(0.0),
   _minTimeStamp(0.0), // std::numeric_limits<double>::max()
   _maxTimeStamp(0.0),
-  _minCutOffRadius(std::numeric_limits<double>::max()),
-  _maxCutOffRadius(0.0),
+  _minSearchRadius(std::numeric_limits<double>::max()),
+  _maxSearchRadius(0.0),
   _minVelocity(std::numeric_limits<double>::max()),
   _maxVelocity(0.0),
   _rerunPreviousGridSweep(false) {
@@ -98,13 +98,13 @@ double swift2::ParticleSpecies::getMaxTimeStamp() const {
 }
 
 
-double swift2::ParticleSpecies::getMinCutOffRadius() const {
-  return _minCutOffRadius;
+double swift2::ParticleSpecies::getMinSearchRadius() const {
+  return _minSearchRadius;
 }
 
 
-double swift2::ParticleSpecies::getMaxCutOffRadius() const {
-  return _maxCutOffRadius;
+double swift2::ParticleSpecies::getMaxSearchRadius() const {
+  return _maxSearchRadius;
 }
 
 
@@ -122,15 +122,15 @@ void swift2::ParticleSpecies::setVelocity(double vMin, double vMax, double rMin,
   tarch::multicore::Lock lock(_semaphore);
   _minVelocity     = std::min( _minVelocity, vMin );
   _maxVelocity     = std::max( _maxVelocity, vMax );
-  _minCutOffRadius = std::min( _minCutOffRadius, rMin );
-  _maxCutOffRadius = std::max( _maxCutOffRadius, rMax );
+  _minSearchRadius = std::min( _minSearchRadius, rMin );
+  _maxSearchRadius = std::max( _maxSearchRadius, rMax );
   logDebug( "setVelocity()", vMin << "x" << vMax );
 }
 
 
-void swift2::ParticleSpecies::clearCutOffRadius() {
-  _minCutOffRadius = std::numeric_limits<double>::max();
-  _maxCutOffRadius = 0.0;
+void swift2::ParticleSpecies::clearSearchRadius() {
+  _minSearchRadius = std::numeric_limits<double>::max();
+  _maxSearchRadius = 0.0;
 }
 
 
@@ -167,8 +167,8 @@ void swift2::ParticleSpecies::allReduce() {
   double localMinTimeStamp     = _minTimeStamp;
   double localMaxTimeStamp     = _maxTimeStamp;
 
-  double localMinCutOffRadius  = _minCutOffRadius;
-  double localMaxCutOffRadius  = _maxCutOffRadius;
+  double localMinSearchRadius  = _minSearchRadius;
+  double localMaxSearchRadius  = _maxSearchRadius;
 
   double localMinVelocity      = _minVelocity;
   double localMaxVelocity      = _maxVelocity;
@@ -205,15 +205,15 @@ void swift2::ParticleSpecies::allReduce() {
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
   tarch::mpi::Rank::getInstance().allReduce(
-    &localMinCutOffRadius,
-    &_minCutOffRadius,
+    &localMinSearchRadius,
+    &_minSearchRadius,
     1, MPI_DOUBLE,
     MPI_MIN,
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
   tarch::mpi::Rank::getInstance().allReduce(
-    &localMaxCutOffRadius,
-    &_maxCutOffRadius,
+    &localMaxSearchRadius,
+    &_maxSearchRadius,
     1, MPI_DOUBLE,
     MPI_MAX,
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }

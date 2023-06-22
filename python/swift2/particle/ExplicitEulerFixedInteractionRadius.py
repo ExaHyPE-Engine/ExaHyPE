@@ -131,8 +131,8 @@ class ExplicitEulerFixedInteractionRadius(Particle):
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
                 cell_kernel="""
-                                         ::swift2::kernels::genericInteraction<globaldata::{}>( 
-                                           localParticles, 
+                                         ::swift2::kernels::genericInteraction<globaldata::{}>(
+                                           localParticles,
                                            activeParticles,
                                            [&] (globaldata::{}* localParticle, const globaldata::{} * const globalParticle) -> void {{
                                              {}
@@ -170,9 +170,9 @@ class ExplicitEulerFixedInteractionRadius(Particle):
                 name="ReduceGlobalQuantities",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-                cell_kernel="""::swift2::statistics::reduceVelocityAndCutOffRadius( localParticles );""",
+                cell_kernel="""::swift2::statistics::reduceVelocityAndSearchRadius( localParticles );""",
                 prepare_traversal_kernel="""
-                                         globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
+                                         globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                          globaldata::{PARTICLE}::getSpecies().clearVelocity();
                                          """.replace(
                     "{PARTICLE}", self.name
@@ -180,7 +180,7 @@ class ExplicitEulerFixedInteractionRadius(Particle):
                 unprepare_traversal_kernel="""
                                          globaldata::{PARTICLE}::getSpecies().allReduce();
                                          globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
-                                         ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
+                                         ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
                                          """.replace(
                     "{PARTICLE}", self.name
                 ),

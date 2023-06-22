@@ -50,10 +50,10 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
         initialisation_call: String (C++ code snippet)
           Arbitrary code snippet which can work over a pointer particle. The object
           to which this pointer points to is properly allocated, and its
-          coordinates are set. Furthermore, the object's cut-off radius is
+          coordinates are set. Furthermore, the object's search radius is
           initialised with zero. You can alter the particle attributes now, i.e.
           initialise the domain-specific data. Please also ensure you assign the
-          particle a proper cut-off (interaction) radius if the radius is of
+          particle a proper search (interaction) radius if the radius is of
           relevance for your application.
 
           Please note that we create a lot of particles and then decide if we

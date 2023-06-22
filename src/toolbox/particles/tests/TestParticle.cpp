@@ -11,7 +11,7 @@ tarch::la::Vector<Dimensions, double> toolbox::particles::tests::TestParticle::g
   return _x;
 }
 
-double toolbox::particles::tests::TestParticle::getCutOffRadius() const {
+double toolbox::particles::tests::TestParticle::getSearchRadius() const {
   return _h;
 }
 
