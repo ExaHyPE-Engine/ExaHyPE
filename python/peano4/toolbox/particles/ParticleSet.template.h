@@ -300,6 +300,9 @@
 
       /**
        * Mark whole particle set as set of particles which can't be lifted
+       *
+       * The operation runs over all hosted particles and invokes
+       * particleCanNotBeLiftedLocally() per particle.
        */
       void particlesCanNotBeLiftedLocally();
 

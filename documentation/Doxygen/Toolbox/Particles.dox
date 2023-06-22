@@ -2,6 +2,9 @@
 
 @page toolbox_particles Particles
 
+\li \subpage toolbox_particles_memorypool
+
+
 Peano's particle toolbox provides features to add tracers to your code, but 
 also to add particles which swim around. We have some features to dump 
 Lagrangian data into data bases and some generic input file readers. However,
