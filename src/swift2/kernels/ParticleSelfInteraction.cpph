@@ -145,7 +145,7 @@ void swift2::kernels::endDensityCalculation(
           //          const double GridSizeHalf = 0.5 * GridSize(0);
 
           /* TODO MLADEN: What exactly is going on here?? */
-          const double GridSizeHalf    = 0.5 * 0.3;
+          const double GridSizeHalf  = 0.5 * 0.3;
           const double IactParticleH = kernel_gamma * particle->getSmoothingLength();
 
           if (((particle->getSmoothingLength() >= hHydroMax) && (f < 0.0)) || ((particle->getSmoothingLength() <= hHydroMin) && (f > 0.0)) || tarch::la::greaterEquals(IactParticleH, GridSizeHalf)) {

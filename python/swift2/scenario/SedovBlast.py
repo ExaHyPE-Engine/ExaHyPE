@@ -1,12 +1,13 @@
 # @TODO: add dependence on SPH scheme (only minimal SPH ATM)
 # @TODO: merge 1D and 2D based on HYDRO_DIMENSIONS input parameter.
 class SedovBlastIC:
-  """
-  Initialisation snippet for the Sedov Blast problem in different spatial dimensions.
-  Returns a string with C++ code.
-  """
-  def __init__(self):
-      self.initialisation_snippet = """
+    """
+    Initialisation snippet for the Sedov Blast problem in different spatial dimensions.
+    Returns a string with C++ code.
+    """
+
+    def __init__(self):
+        self.initialisation_snippet = """
 
       /* Code inserted via the python initialisation snippet library.
        * Do not modify unless you know what you are doing.
@@ -129,4 +130,3 @@ class SedovBlastIC:
       /* End of inserted block */
 
     """
-

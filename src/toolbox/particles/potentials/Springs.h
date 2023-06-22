@@ -2,10 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
-
+#include "tarch/la/Vector.h"
 
 namespace toolbox {
   namespace particles {
@@ -36,12 +34,9 @@ namespace toolbox {
        *
        * @return Vector from p1 to p2 representing a force.
        */
-      tarch::la::Vector<Dimensions,double> springPotential(
-        const tarch::la::Vector<Dimensions,double>& p1,
-        const tarch::la::Vector<Dimensions,double>& p2,
-        double h
+      tarch::la::Vector<Dimensions, double> springPotential(
+        const tarch::la::Vector<Dimensions, double>& p1, const tarch::la::Vector<Dimensions, double>& p2, double h
       );
-    }
-  }
-}
-
+    } // namespace potentials
+  }   // namespace particles
+} // namespace toolbox

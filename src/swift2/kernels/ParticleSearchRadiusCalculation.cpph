@@ -15,8 +15,8 @@ void swift2::kernels::adoptInteractionRadiusAndTriggerRerun(
   static tarch::logging::Log _log("swift2::kernels");
 
   auto countParticlesWithinSearchRadius = [&](Particle* localParticle) -> int {
-    const double R2 = localParticle->getSearchRadius() * localParticle->getSearchRadius();
-    int interactingParticles = -1; // self-interaction will reset to 0
+    const double R2                   = localParticle->getSearchRadius() * localParticle->getSearchRadius();
+    int          interactingParticles = -1; // self-interaction will reset to 0
     for (auto* activeParticle : activeParticles) {
       double distanceSquared = tarch::la::norm2Squared(activeParticle->getX() - localParticle->getX());
       if (distanceSquared <= R2) {
@@ -52,7 +52,8 @@ void swift2::kernels::adoptInteractionRadiusAndTriggerRerun(
       } else {
         logDebug(
           "adoptInteractionRadiusAndTriggerRerun(...)",
-          "increasing the search radius of particle " << localParticle->toString() << " was useless, so keep old search radius"
+          "increasing the search radius of particle " << localParticle->toString(
+          ) << " was useless, so keep old search radius"
         );
         localParticle->setSearchRadius(oldSearch);
       }
@@ -63,7 +64,8 @@ void swift2::kernels::adoptInteractionRadiusAndTriggerRerun(
       if (newNumberOfInteractingParticles < targetNumberOfNeighbourParticles) {
         logDebug(
           "adoptInteractionRadiusAndTriggerRerun(...)",
-          "increasing the search radius of particle " << localParticle->toString() << " was too aggressive, so roll back"
+          "increasing the search radius of particle " << localParticle->toString(
+          ) << " was too aggressive, so roll back"
         );
         localParticle->setSearchRadius(oldR);
       }

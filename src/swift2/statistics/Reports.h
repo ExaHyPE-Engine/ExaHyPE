@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
 namespace swift2 {
   namespace statistics {
     /**
@@ -12,10 +10,8 @@ namespace swift2 {
      * Degenerates to nop if it is not called by the global master.
      */
     template <typename Particle>
-    void reportSearchRadiusVTDt( const std::string& particleName );
-  }
-}
-
+    void reportSearchRadiusVTDt(const std::string& particleName);
+  } // namespace statistics
+} // namespace swift2
 
 #include "Reports.cpph"
-

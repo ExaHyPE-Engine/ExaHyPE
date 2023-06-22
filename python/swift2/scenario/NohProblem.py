@@ -1,15 +1,16 @@
 # @TODO: add dependence on SPH scheme (only minimal SPH ATM)
 # @TODO: add dependence on input parameters, e.g. grid size ...
 
-class NohProblemIC:
-  """
-  Initialisation snippet for the Noh problem in different spatial dimensions.
-  Returns a string with C++ code.
-  """
-  def __init__(self, dimensions):
 
-    if( dimensions==2 ):
-      self.initialisation_snippet = """
+class NohProblemIC:
+    """
+    Initialisation snippet for the Noh problem in different spatial dimensions.
+    Returns a string with C++ code.
+    """
+
+    def __init__(self, dimensions):
+        if dimensions == 2:
+            self.initialisation_snippet = """
 
       /* Code inserted via the python initialisation snippet library.
        * Do not modify unless you know what you are doing.
@@ -115,5 +116,5 @@ class NohProblemIC:
       /* End of inserted block */
 
     """
-    else:
-      print('dimensions not supported!')
+        else:
+            print("dimensions not supported!")

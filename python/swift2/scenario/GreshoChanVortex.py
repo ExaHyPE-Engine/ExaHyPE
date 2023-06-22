@@ -2,15 +2,16 @@
 # @TODO: add dependence on input parameters, e.g. grid size, HYDRO_DIMENSIONS...
 # @TODO: add dependence for the background pressure degree of freedom (Mach)
 
-class GreshoChanVortexIC:
-  """
-  Initialisation snippet for the Gresho-Chan vortex in different spatial dimensions.
-  Returns a string with C++ code.
-  """
-  def __init__(self, dimensions):
 
-    if( dimensions==2 ):
-      self.initialisation_snippet = """
+class GreshoChanVortexIC:
+    """
+    Initialisation snippet for the Gresho-Chan vortex in different spatial dimensions.
+    Returns a string with C++ code.
+    """
+
+    def __init__(self, dimensions):
+        if dimensions == 2:
+            self.initialisation_snippet = """
 
       /* Code inserted via the python initialisation snippet library.
        * Do not modify unless you know what you are doing.
@@ -137,5 +138,5 @@ class GreshoChanVortexIC:
       /* End of inserted block */
 
       """
-    else:
-      print('dimensions not supported!')
+        else:
+            print("dimensions not supported!")

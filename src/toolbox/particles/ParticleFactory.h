@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <vector>
 
 #include "peano4/datamanagement/CellMarker.h"
@@ -67,12 +66,7 @@ namespace toolbox {
      * when we leave a cell.
      */
     template <class T>
-    void init(
-      T&                                          particle,
-      const tarch::la::Vector<Dimensions,double>& x,
-      double                                      searchRadius
-    );
-
+    void init(T& particle, const tarch::la::Vector<Dimensions, double>& x, double searchRadius);
 
     /**
      * Create equally spaced particles for one cell

@@ -1,13 +1,11 @@
-
 class TestDensityCalculation:
-  """
-  Initialisation snippet for testing the calculation of the SPH density.
-  Returns a string with C++ code.
-  """
+    """
+    Initialisation snippet for testing the calculation of the SPH density.
+    Returns a string with C++ code.
+    """
 
-  def __init__(self):
-
-    self.initialisation_snippet = """
+    def __init__(self):
+        self.initialisation_snippet = """
 
     /*
      * Most of the initialised variables are dummy (i.e. not used)

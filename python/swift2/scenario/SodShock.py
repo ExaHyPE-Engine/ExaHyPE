@@ -1,21 +1,21 @@
 # @TODO: add dependence on SPH scheme (only minimal SPH ATM)
 # @TODO: add dependence on input parameters, e.g. grid size, HYDRO_DIMENSIONS...
 
+
 class SodShockIC:
-  """
-  Initialisation snippet for the Sod shock problem in different spatial dimensions.
-  This problem should have been initialized via a HDF5 file which set up
-  the relevant variables.
-  Here we initialize the rest of arrays which are mostly trivial, but
-  also fine-tune the boundary particles.
+    """
+    Initialisation snippet for the Sod shock problem in different spatial dimensions.
+    This problem should have been initialized via a HDF5 file which set up
+    the relevant variables.
+    Here we initialize the rest of arrays which are mostly trivial, but
+    also fine-tune the boundary particles.
 
-  Returns a string with C++ code.
-  """
+    Returns a string with C++ code.
+    """
 
-  def __init__(self, dimensions):
-
-    if( dimensions==1 ):
-      self.initialisation_snippet = """
+    def __init__(self, dimensions):
+        if dimensions == 1:
+            self.initialisation_snippet = """
 
       /* Code inserted via the python initialisation snippet library.
        * Do not modify unless you know what you are doing.
@@ -92,5 +92,5 @@ class SodShockIC:
       /* End of inserted block */
 
       """
-    else:
-      print('dimensions not supported!')
+        else:
+            print("dimensions not supported!")

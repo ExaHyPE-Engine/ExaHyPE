@@ -7,23 +7,22 @@ import jinja2
 
 
 class PlotParticlesInVTKFormat(ActionSet):
-  """
+    """
+
+    For constructor's time_stamp_evaluation argument.
+
+    """
+
+    NoMetaFile = "no-meta-file"
+
+    """
 
    For constructor's time_stamp_evaluation argument.
 
   """
-  NoMetaFile = "no-meta-file"
+    CountTimeSteps = "count-time-steps"
 
-
-  """
-
-   For constructor's time_stamp_evaluation argument.
-
-  """
-  CountTimeSteps = "count-time-steps"
-
-
-  """
+    """
 
    By default, I plot the point particles (obviously) and drop their
    coordinates as vector, too. I also plot the search radius which
@@ -37,43 +36,50 @@ class PlotParticlesInVTKFormat(ActionSet):
    scale by magnitude.
 
   """
-  def __init__(self,filename,particle_set,time_stamp_evaluation=NoMetaFile,additional_includes=""):
-    """
-      Plot only the grid structure
 
-      :Attibutes:
+    def __init__(
+        self,
+        filename,
+        particle_set,
+        time_stamp_evaluation=NoMetaFile,
+        additional_includes="",
+    ):
+        """
+        Plot only the grid structure
 
-      filename: String
-         Name of the output file.
+        :Attibutes:
 
-      particle: ParticleSet
-         I take this as particle set and I assume that it yields a C++
-         container which I can traverse.
+        filename: String
+           Name of the output file.
 
-      time_stamp_evaluation: String yielding a C++ double
-         Pass in prefined constants to use default behaviour.
+        particle: ParticleSet
+           I take this as particle set and I assume that it yields a C++
+           container which I can traverse.
 
-    """
-    super( PlotParticlesInVTKFormat, self ).__init__(priority=1, parallel=False)
+        time_stamp_evaluation: String yielding a C++ double
+           Pass in prefined constants to use default behaviour.
 
-    self.d = {}
-    self.d[ "FILENAME" ]                           = filename
-    self.d[ "PARTICLE" ]                           = particle_set.particle_model.name
-    self.d[ "PARTICLES_CONTAINER" ]                = particle_set.name
-    self.d[ "WRITE_BINARY" ]                       = "false"
-    self.d[ "ATTRIBUTE_WRITER_NULL_INITIALISERS" ] = ""
-    self.d[ "ATTRIBUTE_WRITER_CLOSES" ]            = ""
-    self.d[ "ATTRIBUTE_WRITER_DELETES" ]           = ""
-    self.d[ "ATTRIBUTE_WRITER_INITIALISERS" ]      = ""
-    self.d[ "ATTRIBUTE_WRITER_PLOT_CALLS" ]        = ""
-    self.d[ "TIMESTAMP" ]                          = time_stamp_evaluation
+        """
+        super(PlotParticlesInVTKFormat, self).__init__(priority=1, parallel=False)
 
-    self._attributes_to_plot = []
+        self.d = {}
+        self.d["FILENAME"] = filename
+        self.d["PARTICLE"] = particle_set.particle_model.name
+        self.d["PARTICLES_CONTAINER"] = particle_set.name
+        self.d["WRITE_BINARY"] = "false"
+        self.d["ATTRIBUTE_WRITER_NULL_INITIALISERS"] = ""
+        self.d["ATTRIBUTE_WRITER_CLOSES"] = ""
+        self.d["ATTRIBUTE_WRITER_DELETES"] = ""
+        self.d["ATTRIBUTE_WRITER_INITIALISERS"] = ""
+        self.d["ATTRIBUTE_WRITER_PLOT_CALLS"] = ""
+        self.d["TIMESTAMP"] = time_stamp_evaluation
 
-    self.additional_includes                       = additional_includes
+        self._attributes_to_plot = []
 
+        self.additional_includes = additional_includes
 
-  __Template_Constructor = jinja2.Template("""
+    __Template_Constructor = jinja2.Template(
+        """
   _writer             = nullptr;
   _positionWriter     = nullptr;
   _searchRadiusWriter       = nullptr;
@@ -84,102 +90,110 @@ class PlotParticlesInVTKFormat(ActionSet):
   // An MPI lock (critical section) would be important!
 
   logDebug( "PlotGrid2PlotGridInPeanoBlockFormat1()", "created tree instance for " << treeNumber );
-""")
+"""
+    )
+
+    def add_attribute_to_plot(self, attribute, cardinality=1, accessor=None):
+        """
+
+        Add an attribute to the plotter
+
+        You have to ensure that each attribute is added at most once.
 
 
-  def add_attribute_to_plot(self,
-                            attribute,
-                            cardinality = 1,
-                            accessor = None):
-      """
+        ## Type casts for non-floating point types
 
-      Add an attribute to the plotter
+        The plotter supports only floating point data. If you have attributes that are
+        not of floating point type, then you have to convert them into floating point
+        data before they are dumped into VTK. For this, the routine offers the accessor
+        attribute. As long as it equals None, we assume that there is a pointer p pointing
+        to the particle, and that we can use getXXXX() to access the attribute data. The
+        XXXX is the name of the attribute with the first letter written uppercase. This
+        is how Peano 4 writes down accessors (using DaStGen - but that's a different story
+        how and why we use certain code generator conventions).
 
-      You have to ensure that each attribute is added at most once.
+        You can however inject any other accessor expression (using the pointer p) to
+        read out particle data. If your particle data is for example a vector over
+        integers, you might want to hand in
 
+              tarch::la::convertScalar<double>(p->getXXXX())
 
-      ## Type casts for non-floating point types
-
-      The plotter supports only floating point data. If you have attributes that are
-      not of floating point type, then you have to convert them into floating point
-      data before they are dumped into VTK. For this, the routine offers the accessor
-      attribute. As long as it equals None, we assume that there is a pointer p pointing
-      to the particle, and that we can use getXXXX() to access the attribute data. The
-      XXXX is the name of the attribute with the first letter written uppercase. This
-      is how Peano 4 writes down accessors (using DaStGen - but that's a different story
-      how and why we use certain code generator conventions).
-
-      You can however inject any other accessor expression (using the pointer p) to
-      read out particle data. If your particle data is for example a vector over
-      integers, you might want to hand in
-
-            tarch::la::convertScalar<double>(p->getXXXX())
-
-      which converts the data into a proper format.
+        which converts the data into a proper format.
 
 
-      ## Arguments
+        ## Arguments
 
-      attribute: Attribute
-        The actual attribute that we have to plot.
+        attribute: Attribute
+          The actual attribute that we have to plot.
 
-      cardinality: Integer
-        The cardinality of the attribute. This is 1 for a scalar value, 2 for a 2d vector,
-        and so forth. We support arbitrary cardinalities, but the cardinality hsa to match
-        attribute.
+        cardinality: Integer
+          The cardinality of the attribute. This is 1 for a scalar value, 2 for a 2d vector,
+          and so forth. We support arbitrary cardinalities, but the cardinality hsa to match
+          attribute.
 
-      accessor: String or None
-        If this term is None, then we use getXXX() constructs as they are generated by
-        DaStGen by default. If you hand in something not equal to None, then we use this
-        particular string to access a field of a pointer p, i.e. we use
+        accessor: String or None
+          If this term is None, then we use getXXX() constructs as they are generated by
+          DaStGen by default. If you hand in something not equal to None, then we use this
+          particular string to access a field of a pointer p, i.e. we use
 
-              p->accessor
+                p->accessor
 
-        to get the data out of the particle.
+          to get the data out of the particle.
 
-      """
-      assert cardinality>0, "cardinality has to be greater than 0"
+        """
+        assert cardinality > 0, "cardinality has to be greater than 0"
 
-      self._attributes_to_plot.append(attribute)
-      writer_name   = f"_{attribute._name}Writer"
-      delim         = "\n  "
-      if accessor!=None:
-        accessor_name = accessor
-      elif cardinality<=3:
-        accessor_name = "p->get" + attribute._name[0].title() + attribute._name[1:] + "()"
-      else:
-        accessor_name = "p->get" + attribute._name[0].title() + attribute._name[1:] + "().data()"
+        self._attributes_to_plot.append(attribute)
+        writer_name = f"_{attribute._name}Writer"
+        delim = "\n  "
+        if accessor != None:
+            accessor_name = accessor
+        elif cardinality <= 3:
+            accessor_name = (
+                "p->get" + attribute._name[0].title() + attribute._name[1:] + "()"
+            )
+        else:
+            accessor_name = (
+                "p->get"
+                + attribute._name[0].title()
+                + attribute._name[1:]
+                + "().data()"
+            )
 
-      self.d[ "ATTRIBUTE_WRITER_NULL_INITIALISERS" ] += f"{delim}{writer_name} = nullptr;"
-      self.d[ "ATTRIBUTE_WRITER_CLOSES" ]            += f"{delim}{writer_name}->close();"
-      self.d[ "ATTRIBUTE_WRITER_DELETES" ]           += f"{delim}delete {writer_name};"
-      self.d[ "ATTRIBUTE_WRITER_INITIALISERS" ]      += f"{delim}{writer_name} = _writer->createPointDataWriter( \"{attribute._name}\", {cardinality} );"
-      if cardinality<=3:
-        self.d[ "ATTRIBUTE_WRITER_PLOT_CALLS" ]        += f"{delim}  {writer_name}->plot(particleNumber,{accessor_name});"
-      else:
-        self.d[ "ATTRIBUTE_WRITER_PLOT_CALLS" ]        += f"{delim}  {writer_name}->plot(particleNumber,{accessor_name},{cardinality});"
+        self.d[
+            "ATTRIBUTE_WRITER_NULL_INITIALISERS"
+        ] += f"{delim}{writer_name} = nullptr;"
+        self.d["ATTRIBUTE_WRITER_CLOSES"] += f"{delim}{writer_name}->close();"
+        self.d["ATTRIBUTE_WRITER_DELETES"] += f"{delim}delete {writer_name};"
+        self.d[
+            "ATTRIBUTE_WRITER_INITIALISERS"
+        ] += f'{delim}{writer_name} = _writer->createPointDataWriter( "{attribute._name}", {cardinality} );'
+        if cardinality <= 3:
+            self.d[
+                "ATTRIBUTE_WRITER_PLOT_CALLS"
+            ] += f"{delim}  {writer_name}->plot(particleNumber,{accessor_name});"
+        else:
+            self.d[
+                "ATTRIBUTE_WRITER_PLOT_CALLS"
+            ] += f"{delim}  {writer_name}->plot(particleNumber,{accessor_name},{cardinality});"
 
+    def get_constructor_body(self):
+        return self.__Template_Constructor.render(**self.d)
 
-  def get_constructor_body(self):
-    return self.__Template_Constructor.render(**self.d)
+    def get_destructor_body(self):
+        return ""
 
+    def get_body_of_getGridControlEvents(self):
+        return "  return std::vector< peano4::grid::GridControlEvent >();\n"
 
-  def get_destructor_body(self):
-    return ""
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")
 
+    def user_should_modify_template(self):
+        return False
 
-  def get_body_of_getGridControlEvents(self):
-    return "  return std::vector< peano4::grid::GridControlEvent >();\n"
-
-
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
-
-
-  def user_should_modify_template(self):
-    return False
-
-  __Template_TouchVertexFirstTime = jinja2.Template("""
+    __Template_TouchVertexFirstTime = jinja2.Template(
+        """
   assertion( _positionWriter!=nullptr );
   for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
     if (
@@ -192,10 +206,11 @@ class PlotParticlesInVTKFormat(ActionSet):
       {{ATTRIBUTE_WRITER_PLOT_CALLS}}
     }
   }
-""")
+"""
+    )
 
-
-  __Template_BeginTraversal = jinja2.Template("""
+    __Template_BeginTraversal = jinja2.Template(
+        """
   tarch::mpi::Lock lock( _semaphore );
 
   static int counter = -1;
@@ -208,13 +223,17 @@ class PlotParticlesInVTKFormat(ActionSet):
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }
 
-  {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}
+  {% if TIMESTAMP==\""""
+        + NoMetaFile
+        + """\" %}
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
     false, snapshotFileName.str(), "{{FILENAME}}",
     tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile,
     0.0
   );
-  {% elif TIMESTAMP==\"""" + CountTimeSteps + """\" %}
+  {% elif TIMESTAMP==\""""
+        + CountTimeSteps
+        + """\" %}
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
     false, snapshotFileName.str(), "{{FILENAME}}",
     tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData,
@@ -232,10 +251,11 @@ class PlotParticlesInVTKFormat(ActionSet):
   _searchRadiusWriter      = _writer->createPointDataWriter( "search-radius", 1 );
   _associationWriter = _writer->createPointDataWriter( "association", 3 );
   {{ATTRIBUTE_WRITER_INITIALISERS}}
-""")
+"""
+    )
 
-
-  __Template_EndTraversal = jinja2.Template("""
+    __Template_EndTraversal = jinja2.Template(
+        """
   assertion(_positionWriter!=nullptr);
 
   _positionWriter->close();
@@ -255,28 +275,28 @@ class PlotParticlesInVTKFormat(ActionSet):
   _associationWriter = nullptr;
   {{ATTRIBUTE_WRITER_NULL_INITIALISERS}}
   _writer            = nullptr;
-""")
+"""
+    )
 
+    def get_body_of_operation(self, operation_name):
+        result = "\n"
+        if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
+            result = self.__Template_TouchVertexFirstTime.render(**self.d)
+        if operation_name == ActionSet.OPERATION_BEGIN_TRAVERSAL:
+            result = self.__Template_BeginTraversal.render(**self.d)
+        if operation_name == ActionSet.OPERATION_END_TRAVERSAL:
+            result = self.__Template_EndTraversal.render(**self.d)
+        return result
 
-  def get_body_of_operation(self,operation_name):
-    result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = self.__Template_TouchVertexFirstTime.render(**self.d)
-    if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
-      result = self.__Template_BeginTraversal.render(**self.d)
-    if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
-      result = self.__Template_EndTraversal.render(**self.d)
-    return result
+    def _get_attribute_writer_declarations(self):
+        delim = "\n    "
+        datatype = "tarch::plotter::pointdata::PointWriter::PointDataWriter*"
+        return delim.join(
+            f"{datatype}  _{attr._name}Writer;" for attr in self._attributes_to_plot
+        )
 
-
-  def _get_attribute_writer_declarations(self):
-    delim = "\n    "
-    datatype = "tarch::plotter::pointdata::PointWriter::PointDataWriter*"
-    return delim.join(f"{datatype}  _{attr._name}Writer;" for attr in self._attributes_to_plot)
-
-
-  def get_attributes(self):
-    return f"""
+    def get_attributes(self):
+        return f"""
     static tarch::mpi::BooleanSemaphore                                              _semaphore;
 
     int                _treeNumber;
@@ -288,23 +308,33 @@ class PlotParticlesInVTKFormat(ActionSet):
     {self._get_attribute_writer_declarations()}
 """
 
-
-  def get_includes(self):
-    return """
+    def get_includes(self):
+        return (
+            """
 #include "tarch/plotter/pointdata/vtk/VTKWriter.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/mpi/Lock.h"
 #include "tarch/mpi/BooleanSemaphore.h"
 #include "peano4/parallel/SpacetreeSet.h"
-#include "../vertexdata/""" + self.d["PARTICLES_CONTAINER"] + """.h"
-#include "../globaldata/""" + self.d["PARTICLE"] + """.h"
-""" + self.additional_includes
-
-
-
-  def get_static_initialisations(self,full_qualified_classname):
-    return """
-tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + "::_semaphore(\"""" + full_qualified_classname + """\");
+#include "../vertexdata/"""
+            + self.d["PARTICLES_CONTAINER"]
+            + """.h"
+#include "../globaldata/"""
+            + self.d["PARTICLE"]
+            + """.h"
 """
+            + self.additional_includes
+        )
 
+    def get_static_initialisations(self, full_qualified_classname):
+        return (
+            """
+tarch::mpi::BooleanSemaphore  """
+            + full_qualified_classname
+            + '::_semaphore("'
+            ""
+            + full_qualified_classname
+            + """\");
+"""
+        )
