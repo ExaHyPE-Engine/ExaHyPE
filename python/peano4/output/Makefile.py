@@ -155,6 +155,8 @@ the SISC paper
         self.d["CMAKE_CORE_LIBS"] = ["Peano4Core"]
         self.d["CMAKE_LIBS"] = []
         self.d["USING_CMAKE"] = False
+        self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = ""
+        self.d["CMAKE_MAKE_COMMAND"] = ""
         self.set_mode(CompileMode.Debug)
         self.clear_files()
 
@@ -601,6 +603,7 @@ then this message can typically be ignored.
         self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
         self.d["GENERATOR"] = sys.argv[0]
         self.d["USING_CMAKE"] = cmake_build_dir != ""
+        self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake")
 
         dist = caller_distance_to_build_root()
         command = 'cd '
@@ -661,9 +664,7 @@ then this message can typically be ignored.
         # We do not want the same line multiple times as it creates build problems, so we read it into a set
         # and do not write if the new executable entry is already inside.
         if cmake_build_dir != "":
-          generated_paths_filepath = os.path.join(
-              self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake"
-          )
+          generated_paths_filepath = self.d["GENERATED_SUBDIRECTORY_FULLPATH"]
 
           print("generated_paths_filepath " + self.d["CMAKE_BUILD_DIR"])
 

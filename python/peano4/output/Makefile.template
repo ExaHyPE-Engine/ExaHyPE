@@ -123,10 +123,16 @@ all: solver
 solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS)
 	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o {{EXECUTABLENAME}}
 
+{% if USING_CMAKE %}
+clean:
+	bash -c "{{CMAKE_MAKE_COMMAND}} && make clean"
+{% else %}
 clean:
 	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) $(FORTRAN_MODULE_OBJS) $(CU_OBJS)
 	rm -f *.mod
 	rm -f {{EXECUTABLENAME}}
+{% endif %}
+
 
 distclean:
 	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) $(FORTRAN_MODULE_OBJS) $(CU_OBJS)
@@ -140,6 +146,7 @@ distclean:
 	rm -f Constants.h
 	rm -f README-*
 	rm -f .gitignore
-	rm -f CMakeLists.txt
+	{% if USING_CMAKE %}rm -f CMakeLists.txt{% endif %}
+	{% if USING_CMAKE %}rm -f {{GENERATED_SUBDIRECTORY_FULLPATH}}{% endif %}
 
 maintainer-clean: distclean
