@@ -24,28 +24,51 @@ def write_file(overwrite,overwrite_is_default,full_qualified_filename):
     print( "Error: undefined overwrite strategy" )
     return True
 
-def find_cmake_build_dir():
-  call_directory = os.getcwd()
+def find_CMake_build_dir():
+  if find_CMake_build_dir.CMake_build_dir_check_done:
+    return find_CMake_build_dir.saved_CMake_build_dir
+  else:
+    find_CMake_build_dir.CMake_build_dir_check_done = True
+    call_directory = os.getcwd()
+    file_dir = os.path.dirname(os.path.realpath(__file__))
+    project_root_dir = os.path.abspath(os.path.join(file_dir, '../../..', ))
 
-  # We will iterate upwards aka implement "cd .." until we reach the peano4 root, or until we find CMakeCache.txt 
-  current_iter_dir = call_directory
-  while True:
-    found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt"))
-    if found_cache_file:
-      return current_iter_dir
-    current_iter_dir =os.path.abspath(os.path.join(current_iter_dir, ".."))
+    if os.path.commonpath([call_directory, project_root_dir]) != project_root_dir:
+      return ""
+  
+    # We will iterate upwards aka implement "cd .." until we reach the peano4 root, or until we find CMakeCache.txt 
+    current_iter_dir = call_directory
+    while current_iter_dir != project_root_dir:
+      found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt"))
+      if found_cache_file:
+        find_CMake_build_dir.saved_CMake_build_dir = current_iter_dir
+        return current_iter_dir
+      current_iter_dir = os.path.abspath(os.path.join(current_iter_dir, ".."))
+
+find_CMake_build_dir.CMake_build_dir_check_done = False
+find_CMake_build_dir.saved_CMake_build_dir = ""
 
 def using_cuda_backend():
-  build_dir_path = find_cmake_build_dir()
-  if build_dir_path != "":
-    try:
-      with open(os.path.join(build_dir_path,"CMakeCache.txt")) as cache:
-        for line in cache:
-          if "WITH_GPU:STRING=cuda" in line:
-            return True
-    except Exception:
-      return False
-  return False
+  if using_cuda_backend.using_cuda_backend_check_done:
+    return using_cuda_backend.using_cuda_backend_cached_value
+  else:
+    using_cuda_backend.using_cuda_backend_check_done = True
+    build_dir_path = find_CMake_build_dir()
+    if build_dir_path != "":
+      try:
+        with open(os.path.join(build_dir_path,"CMakeCache.txt")) as cache:
+          for line in cache:
+            if "WITH_GPU:STRING=cuda" in line:
+              using_cuda_backend.using_cuda_backend_cached_value = True
+              return using_cuda_backend.using_cuda_backend_cached_value
+      except Exception:
+        using_cuda_backend.using_cuda_backend_cached_value = False
+        return using_cuda_backend.using_cuda_backend_cached_value
+    using_cuda_backend.using_cuda_backend_cached_value = False
+    return using_cuda_backend.using_cuda_backend_cached_value
+
+using_cuda_backend.using_cuda_backend_check_done = False
+using_cuda_backend.using_cuda_backend_cached_value = False
 
 def caller_distance_to_build_root():
   # File dir is under src/

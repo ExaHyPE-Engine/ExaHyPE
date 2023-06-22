@@ -8,7 +8,7 @@ import subprocess
 import jinja2
 
 from .Helper import write_file
-from .Helper import find_cmake_build_dir
+from .Helper import find_CMake_build_dir
 from .Helper import using_cuda_backend
 from .Helper import caller_distance_to_build_root
 
@@ -291,7 +291,7 @@ the SISC paper
         src and parse the Makefile there.
         """
         self.d["CONFIGUREPATH"] = directory
-        cmake_path = find_cmake_build_dir()
+        cmake_path = find_CMake_build_dir()
         if cmake_path != "":
             return
 
@@ -588,7 +588,7 @@ then this message can typically be ignored.
             self.add_Fortran_module(i)
 
     def generate(self, overwrite, directory):
-        cmake_build_dir = find_cmake_build_dir()
+        cmake_build_dir = find_CMake_build_dir()
         self.d["CMAKE_BUILD_DIR"] = cmake_build_dir
         self.d["H_HEADERS"] = self.hfiles
         self.d["CXX_SOURCES"] = self.cppfiles
