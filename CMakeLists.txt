@@ -377,8 +377,10 @@ write_basic_package_version_file(
 
 list(APPEND DRIECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications")
 foreach(item IN LISTS DRIECTORIES_TO_LINK_OVER)
-  execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/${item}" "${CMAKE_BINARY_DIR}/${item}")
-  install(DIRECTORY "${CMAKE_SOURCE_DIR}/${item}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+  if (NOT EXISTS "${CMAKE_BINARY_DIR}/${item}")
+    execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/${item}" "${CMAKE_BINARY_DIR}/${item}")
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/${item}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+  endif()
 endforeach()
 
 file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
