@@ -154,6 +154,7 @@ the SISC paper
         self.d["GENERATED_INCLUDE_DIRS"] = set()
         self.d["CMAKE_CORE_LIBS"] = ["Peano4Core"]
         self.d["CMAKE_LIBS"] = []
+        self.d["USING_CMAKE"] = False
         self.set_mode(CompileMode.Debug)
         self.clear_files()
 
@@ -599,6 +600,15 @@ then this message can typically be ignored.
         self.d["GENERATED_CU_SOURCES"] = self.generated_cufiles
         self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
         self.d["GENERATOR"] = sys.argv[0]
+        self.d["USING_CMAKE"] = cmake_build_dir != ""
+
+        dist = caller_distance_to_build_root()
+        command = 'cd '
+        if dist != 0:
+            command += '../' * dist
+        else:
+            command += '.'
+        self.d["CMAKE_MAKE_COMMAND"] = command
 
         # Anonymous function that generates the output_file_path from input_file_path template
         def generate_build_file(input_file_path, output_file_path):
