@@ -43,6 +43,9 @@ class ParticleSetGenerator(object):
         templatefile_prefix = (
             os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
         )
+        
+        Nein. Das sollte was mit Scattered im Namen haben und dann sollte es auch ne Version geben, die mit einem Vector arbeitet
+        
         generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             templatefile_prefix + ".template.h",
             templatefile_prefix + ".template.cpp",
