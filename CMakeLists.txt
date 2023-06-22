@@ -381,9 +381,9 @@ foreach(item IN LISTS DRIECTORIES_TO_LINK_OVER)
   install(DIRECTORY "${CMAKE_SOURCE_DIR}/${item}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
 endforeach()
 
-file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
-include(${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
+file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
+include(${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 
 add_subdirectory(src)
 

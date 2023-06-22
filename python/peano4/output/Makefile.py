@@ -636,12 +636,7 @@ then this message can typically be ignored.
                 os.path.join(directory, "Makefile"),
             )
         )
-        template_output_pairs.append(
-            (
-                os.path.join(file_dir, "CMakeLists.txt.template"),
-                os.path.join(directory, "CMakeLists.txt"),
-            )
-        )
+
         template_output_pairs.append(
             (
                 os.path.join(file_dir, "Gitignore.template"),
@@ -649,25 +644,24 @@ then this message can typically be ignored.
             )
         )
 
+        cmake_list_output_pair = (
+                os.path.join(file_dir, "CMakeLists.txt.template"),
+                os.path.join(directory, "CMakeLists.txt"),)
+
         # We do not want the same line multiple times as it creates build problems, so we read it into a set
         # and do not write if the new executable entry is already inside.
-        generated_paths_filepath = os.path.join(
-            self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectories.cmake"
-        )
-        print("generated_paths_filepath " + self.d["CMAKE_BUILD_DIR"])
-        generated_paths_before = os.path.exists(generated_paths_filepath)
-        generated_path_entries = set()
+        if cmake_build_dir != "":
+          generated_paths_filepath = os.path.join(
+              self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake"
+          )
 
-        if generated_paths_before:
-            with open(generated_paths_filepath, "r") as generated_paths_file:
-                for line in generated_paths_file.readlines():
-                    generated_path_entries.add(line)
+          print("generated_paths_filepath " + self.d["CMAKE_BUILD_DIR"])
 
-        # Only append to the file only if doesnt exist before
-        generated_entry = f"add_subdirectory({os.path.abspath(directory)})\n"
-        if not generated_entry in generated_path_entries:
-            with open(generated_paths_filepath, "a") as subdir_cmake:
-                subdir_cmake.write(f"add_subdirectory({os.path.abspath(directory)})\n")
+          with open(generated_paths_filepath, "w") as subdir_cmake:
+              subdir_cmake.write(f"add_subdirectory({os.path.abspath(directory)})\n")
 
         for template, output_file in template_output_pairs:
             generate_build_file(template, output_file)
+        
+        if cmake_build_dir != "":
+          generate_build_file(cmake_list_output_pair[0], cmake_list_output_pair[1])
