@@ -31,7 +31,12 @@ void toolbox::particles::init(
 
 
 template <class T>
-std::vector<T*> toolbox::particles::createEquallySpacedParticles(double spacing, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, bool roundDown, bool addNoise) {
+std::vector<T*> toolbox::particles::createEquallySpacedParticles(
+  double                                       spacing,
+  const tarch::la::Vector<Dimensions,double>&  voxelX,
+  const tarch::la::Vector<Dimensions,double>&  voxelH,
+  bool                                         addNoise
+) {
   std::vector<T*> result;
 
   double continuousParticlesPerAxis = voxelH(0) / spacing;
@@ -69,7 +74,13 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(double spacing,
 
 
 template <class T>
-std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMesh(double spacing, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, const tarch::la::Vector<Dimensions,double>& domainOffset, bool addNoise) {
+std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMesh(
+  double                                       spacing,
+  const tarch::la::Vector<Dimensions,double>&  voxelX,
+  const tarch::la::Vector<Dimensions,double>&  voxelH,
+  const tarch::la::Vector<Dimensions,double>&  domainOffset,
+  bool                                         addNoise
+) {
   static tarch::logging::Log _log( "toolbox::particles" );
   logTraceInWith4Arguments( "createParticlesAlignedWithGlobalCartesianMesh(...)", spacing, voxelX, domainOffset, addNoise );
   std::vector<T*> result;

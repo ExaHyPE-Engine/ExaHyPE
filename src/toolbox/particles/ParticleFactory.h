@@ -75,14 +75,19 @@ namespace toolbox {
 
 
     /**
-     * Typical usage of this factor method:
-<pre>
-if ( not marker.isRefined() ) {
-  auto newParticles = toolbox::particles::createEquallySpacedParticles<{{PARTICLE}}>({{H}},marker);
-  fineGridVertex{{PARTICLES_CONTAINER}}.insert( fineGridVertex{{PARTICLES_CONTAINER}}.end(), newParticles.begin(), newParticles.end() );
-}
-</pre>
-
+     * Create equally spaced particles for one cell
+     *
+     * This routine creates equally spaced particles within one cell. It is a
+     * solely cell-local factory method, i.e. it does not take any adjacent
+     * cell into account. As a consequence, you will get a locally equidistant
+     * layout of particles, but you will not get a globally equidistant layout:
+     * The particles will not be spaced the same way across a cell face as
+     * they are spaced out inside a cell. If you need a globally equidistant
+     * layout, you will have to use createParticlesAlignedWithGlobalCartesianMesh().
+     *
+     * The routine creates all the resulting particles on the heap via a plain
+     * new(). That is, the particles will be scattered in memory.
+     *
      * @param spacingH Spacing of particles. Pick it smaller or equal to 0 and we'll always
      *   create one particle in the center.
      *
@@ -90,22 +95,23 @@ if ( not marker.isRefined() ) {
      *
      * @param voxelH Size of voxel, i.e. subcell, into which the particles shall be embedded
      *
-     * @param roundDown Always round down. In this case, you get a totally equal-spaced
-     *   initial particle layout, but it will not match h globally.
-     *
-     *
      */
     template <class T>
     std::vector<T*> createEquallySpacedParticles(
       double spacingH,
       const tarch::la::Vector<Dimensions,double>& voxelX,
       const tarch::la::Vector<Dimensions,double>& voxelH,
-      bool roundDown,
       bool addNoise
     );
 
     template <class T>
-    std::vector<T*> createParticlesAlignedWithGlobalCartesianMesh(double spacingH, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, const tarch::la::Vector<Dimensions,double>& domainOffset, bool addNoise);
+    std::vector<T*> createParticlesAlignedWithGlobalCartesianMesh(
+      double spacingH,
+      const tarch::la::Vector<Dimensions,double>&  voxelX,
+      const tarch::la::Vector<Dimensions,double>&  voxelH,
+      const tarch::la::Vector<Dimensions,double>&  domainOffset,
+      bool addNoise
+    );
   }
 }
 
