@@ -45,11 +45,24 @@ namespace tarch {
  *    unblocking, i.e. we don't have to wait for an answer.
  *
  * Multiple request handling routines (calls of acquireLock()) can be active at
- * the same time, i.e. reside on the call stack. They will be served one by
- * one, although implicitly in reverse order as we work with the call stack.
- * It is important to poll receiveDanglingMessages() all the time, as we might
- * wait for a lock to be freed, but for the lock to be freed, we have to check
- * unexpected aka dangling messages.
+ * the same time, i.e. reside on the global master's call stack. They will be
+ * served one by one, although implicitly in reverse order as we work with the
+ * call stack. It is important to poll receiveDanglingMessages() all the time,
+ * as we might wait for a lock to be freed, but for the lock to be freed, we
+ * have to check unexpected aka dangling messages.
+ *
+ * The need to combine the MPI semaphore with a normal multicore semaphore
+ * arises from the fact that we use SPMD and therefore run this code on the
+ * global master, too. On any rank, we send out a request and wait for an
+ * answer. Another thread on this rank could, in theory, submit a lock request
+ * as well, but both will wait until an answer arrives. The only thing that
+ * could happen now is that the second request snatches the lock away from the
+ * first one, i.e. we become unfair. But no real problems should arise.
+ *
+ * Things are different on the global master, where we don't wait for an
+ * incoming answer message (we simply grab the lock and return) and therefore
+ * might run into a race if two threads on the global master concurrently
+ * acquire a global MPI lock. Here, we have to use the multicore lock, too.
  *
  * @see Constructor for details
  *
