@@ -313,7 +313,9 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
       
       //insert the stencil for CF interactions
       repositories::instanceOfPetsc.insertLocalMatrix( cellDofIndices, faceDofIndices, _stencilCF );
-      
+
+      //insert the stencil for FC interactions
+      repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, cellDofIndices, _stencilFC );
 
     }
 
@@ -369,6 +371,24 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
         self.d["STENCILCF"] += "\n"
       self.d["STENCILCF"] += str(el)
     self.d["STENCILCF"] += "}"
+
+    #NEXT - HANDLE STENCIL FOR FACE-CELL INTERACTIONS
+
+    ##first, capture the dimensions of the stencil
+    self.d["stencilRowsFC"] = len(solver.stencilFC)
+    self.d["stencilColsFC"] = len(solver.stencilFC[0])
+    numberOfCols = len(solver.stencilFC[0]) #use this to insert a line break after every row
+
+    #pass in stencil as a list of lists
+    #convert it to a flat list for passing as std::initializer_list
+    stencil=[item for sublist in solver.stencilFC for item in sublist]
+    self.d["STENCILFC"] = "\n{" + str(stencil[0])
+    for index, el in enumerate(stencil[1:]):
+      self.d["STENCILFC"] += ", "
+      if index > 0 and (index-1) % numberOfCols == 1:
+        self.d["STENCILFC"] += "\n"
+      self.d["STENCILFC"] += str(el)
+    self.d["STENCILFC"] += "}"
 
     #FINALLY - HANDLE STENCIL FOR CELL-CELL INTERACTIONS
 
@@ -450,5 +470,6 @@ Consult petsc.Project for details
   const int _cellDofs = {self.d["CELL_CARDINALITY"]};
   const tarch::la::Matrix<{self.d["stencilRowsFF"]},{self.d["stencilColsFF"]},double> _stencilFF = {self.d["STENCILFF"]};
   const tarch::la::Matrix<{self.d["stencilRowsCF"]},{self.d["stencilColsCF"]},double> _stencilCF = {self.d["STENCILCF"]};
+  const tarch::la::Matrix<{self.d["stencilRowsFC"]},{self.d["stencilColsFC"]},double> _stencilFC = {self.d["STENCILFC"]};
   const tarch::la::Matrix<{self.d["stencilRowsCC"]},{self.d["stencilColsCC"]},double> _stencilCC = {self.d["STENCILCC"]};
 """

@@ -48,6 +48,11 @@ stencilCF=[
      for _ in range(cellDofs)
 ] #27 x 3
 
+stencilFC=[
+  [1 for _ in range(cellDofs)]
+     for _ in range(faceDofs)
+] #3 x 27
+
 stencilCC=[
   [1 for _ in range(cellDofs)]
      for _ in range(cellDofs)
@@ -66,6 +71,7 @@ solver = petsc.solvers.HdgFirstDiscretisation("HDG",
                                               args.meshsize,
                                               stencilFF,
                                               stencilCF,
+                                              stencilFC,
                                               stencilCC
                                               )
 

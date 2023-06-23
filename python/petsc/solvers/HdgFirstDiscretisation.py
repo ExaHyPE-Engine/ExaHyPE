@@ -48,6 +48,7 @@ class HdgFirstDiscretisation(Solver):
                max_h,
                stencilFF,
                stencilCF,
+               stencilFC,
                stencilCC):
     """!
    
@@ -89,6 +90,7 @@ class HdgFirstDiscretisation(Solver):
     
     self.stencilFF = stencilFF
     self.stencilCF = stencilCF
+    self.stencilFC = stencilFC
     self.stencilCC = stencilCC
     pass
 

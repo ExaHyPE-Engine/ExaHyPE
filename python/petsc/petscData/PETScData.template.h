@@ -82,7 +82,10 @@ class {{NAMESPACE | join("::")}}::PetscData{
     7. insert policy. let's use ADD_VALUES (equivalent to +=)
 
   */
-    if (rowIndices.size() * colIndices.size() != stencil.rows() * stencil.cols())
+    if (rowIndices.size() != stencil.rows() 
+        or
+        colIndices.size() != stencil.cols()
+    )
       throw std::runtime_error("mismatched stencil!");
     MatSetValues( _A, rowIndices.size(), &rowIndices[0], colIndices.size(), &colIndices[0], stencil.data(), ADD_VALUES );
     }
