@@ -344,7 +344,7 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
     stencil=[item for sublist in solver.stencilFF for item in sublist]
-    self.d["STENCILFF"] = "{" + str(stencil[0])
+    self.d["STENCILFF"] = "\n{" + str(stencil[0])
     for index, el in enumerate(stencil[1:]):
       self.d["STENCILFF"] += ", "
       if index > 0 and (index-1) % numberOfCols == 1:
@@ -362,7 +362,7 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
     stencil=[item for sublist in solver.stencilCF for item in sublist]
-    self.d["STENCILCF"] = "{" + str(stencil[0])
+    self.d["STENCILCF"] = "\n{" + str(stencil[0])
     for index, el in enumerate(stencil[1:]):
       self.d["STENCILCF"] += ", "
       if index > 0 and (index-1) % numberOfCols == 1:
@@ -380,7 +380,7 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
     stencil=[item for sublist in solver.stencilCC for item in sublist]
-    self.d["STENCILCC"] = "{" + str(stencil[0])
+    self.d["STENCILCC"] = "\n{" + str(stencil[0])
     for index, el in enumerate(stencil[1:]):
       self.d["STENCILCC"] += ", "
       if index > 0 and (index-1) % numberOfCols == 1:
