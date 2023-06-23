@@ -339,12 +339,16 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     ##first, capture the dimensions of the stencil
     self.d["stencilRowsFF"] = len(solver.stencilFF)
     self.d["stencilColsFF"] = len(solver.stencilFF[0])
+    numberOfCols = len(solver.stencilFF[0]) #use this to insert a line break after every row
+    
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
     stencil=[item for sublist in solver.stencilFF for item in sublist]
     self.d["STENCILFF"] = "{" + str(stencil[0])
-    for el in stencil[1:]:
+    for index, el in enumerate(stencil[1:]):
       self.d["STENCILFF"] += ", "
+      if index > 0 and (index-1) % numberOfCols == 1:
+        self.d["STENCILFF"] += "\n"
       self.d["STENCILFF"] += str(el)
     self.d["STENCILFF"] += "}"
 
@@ -353,12 +357,16 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     ##first, capture the dimensions of the stencil
     self.d["stencilRowsCF"] = len(solver.stencilCF)
     self.d["stencilColsCF"] = len(solver.stencilCF[0])
+    numberOfCols = len(solver.stencilCF[0]) #use this to insert a line break after every row
+
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
     stencil=[item for sublist in solver.stencilCF for item in sublist]
     self.d["STENCILCF"] = "{" + str(stencil[0])
-    for el in stencil[1:]:
+    for index, el in enumerate(stencil[1:]):
       self.d["STENCILCF"] += ", "
+      if index > 0 and (index-1) % numberOfCols == 1:
+        self.d["STENCILCF"] += "\n"
       self.d["STENCILCF"] += str(el)
     self.d["STENCILCF"] += "}"
 
@@ -367,12 +375,16 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     ##first, capture the dimensions of the stencil
     self.d["stencilRowsCC"] = len(solver.stencilCC)
     self.d["stencilColsCC"] = len(solver.stencilCC[0])
+    numberOfCols = len(solver.stencilCC[0]) #use this to insert a line break after every row
+
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
     stencil=[item for sublist in solver.stencilCC for item in sublist]
     self.d["STENCILCC"] = "{" + str(stencil[0])
-    for el in stencil[1:]:
+    for index, el in enumerate(stencil[1:]):
       self.d["STENCILCC"] += ", "
+      if index > 0 and (index-1) % numberOfCols == 1:
+        self.d["STENCILCC"] += "\n"
       self.d["STENCILCC"] += str(el)
     self.d["STENCILCC"] += "}"
 
