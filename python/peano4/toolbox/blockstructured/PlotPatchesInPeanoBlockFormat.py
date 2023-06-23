@@ -327,6 +327,6 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
   def get_static_initialisations(self,full_qualified_classname):
     return """
-tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + "::_semaphore(\"""" + full_qualified_classname + """\");
+tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + """::_semaphore;
 """
     

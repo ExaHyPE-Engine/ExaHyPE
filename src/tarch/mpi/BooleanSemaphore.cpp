@@ -9,8 +9,10 @@ tarch::logging::Log  tarch::mpi::BooleanSemaphore::_log( "tarch::mpi::BooleanSem
 
 int tarch::mpi::BooleanSemaphore::_semaphoreCounter(1);
 
-
 tarch::mpi::BooleanSemaphore::BooleanSemaphoreService  tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::_singleton;
+
+tarch::multicore::BooleanSemaphore  tarch::mpi::BooleanSemaphore::_localRankSemaphore;
+
 
 void tarch::mpi::BooleanSemaphore::enterCriticalSection() {
   BooleanSemaphoreService::getInstance().acquireLock(_semaphoreNumber);
@@ -20,7 +22,7 @@ void tarch::mpi::BooleanSemaphore::leaveCriticalSection() {
   BooleanSemaphoreService::getInstance().releaseLock(_semaphoreNumber);
 }
 
-tarch::mpi::BooleanSemaphore::BooleanSemaphore( [[maybe_unused]] const std::string& identifier ):
+tarch::mpi::BooleanSemaphore::BooleanSemaphore():
   _semaphoreNumber( _semaphoreCounter ) {
   _semaphoreCounter++;
 }

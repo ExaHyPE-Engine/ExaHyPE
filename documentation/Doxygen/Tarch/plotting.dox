@@ -42,7 +42,8 @@ snapshotFileName.str() to it.
 Before we discuss how we implement this constructor, let's clarify that this 
 constructor is neither thread-safe nor MPI-safe. That is, you should not call
 it concurrently from two threads or two ranks. To ensure that this does not
-happen, you typically wrap the construction into a tarch::mpi::Lock region.
+happen, you typically wrap the construction into a tarch::mpi::Lock region
+around an global instance of tarch::mpi::BooleanSemaphore.
 
 
 A comprehensive (and documented) version of such a plotter is tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter.

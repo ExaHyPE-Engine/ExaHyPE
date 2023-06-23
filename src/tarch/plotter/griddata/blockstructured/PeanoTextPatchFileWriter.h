@@ -30,6 +30,41 @@ namespace tarch {
  * patterns behind the realisation of this class. This is a technical view. If
  * you are interested in the file format that is written, you have to read the
  * @ref tarch_patch_files "documentation of the Peano patch file format".
+ *
+ *
+ * ## Meta file construction modes
+ *
+ * There are different configuration modes. They are passed as an argument to
+ * the constructor:
+ *
+ * - IndexFileMode::CreateNew Create a new index file. The old one is thrown
+ *   away.
+ * - IndexFileMode::NoIndexFile Ignore the whole index file stuff. Every
+ *   instance of the plotter dumps its own data and they do not synchronise in
+ *   any way.
+ * - IndexFileMode::AppendNewData Try to append a new data set to a given
+ *   index file.
+ *
+ * The last one is the most sophisticated variant and deserves further
+ * explanation. First of all, the code searches for the index (or meta) file.
+ * If there is none, the code basically falls back to IndexFileMode::CreateNew,
+ * i.e. creates a new index file.
+ *
+ * If there is a file, we open it and look what the latest time stamp in
+ * there is. For this, we call getLatestTimeStepInIndexFile(). If that time
+ * stamp is bigger than the current time stamp, we know that this index file is
+ * from a previous run. We create a backup (some people do appreciate if we
+ * do so) and then again create a new index file.
+ *
+ * If our own time stamp matches the last time stamp in the index file, we know
+ * that the current dump is one (of many) dumps by a spacetree which contributes
+ * towards the overall picture. That is, we add our own data set to the existing
+ * time stamp.
+ *
+ * If our own time stamp is bigger than the last one, we know that we are the
+ * first plotter of all the plotters out there which started to dump the data of
+ * the next time stamp. We append a new section for a new dump and add our own
+ * file there.
  */
 class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: public tarch::plotter::griddata::blockstructured::PatchWriter {
   protected:
