@@ -9,8 +9,8 @@ tarch::logging::Log  tarch::mpi::BooleanSemaphore::_log( "tarch::mpi::BooleanSem
 
 int tarch::mpi::BooleanSemaphore::_semaphoreCounter(1);
 
-
 tarch::mpi::BooleanSemaphore::BooleanSemaphoreService  tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::_singleton;
+
 
 void tarch::mpi::BooleanSemaphore::enterCriticalSection() {
   BooleanSemaphoreService::getInstance().acquireLock(_semaphoreNumber);
@@ -20,7 +20,7 @@ void tarch::mpi::BooleanSemaphore::leaveCriticalSection() {
   BooleanSemaphoreService::getInstance().releaseLock(_semaphoreNumber);
 }
 
-tarch::mpi::BooleanSemaphore::BooleanSemaphore( [[maybe_unused]] const std::string& identifier ):
+tarch::mpi::BooleanSemaphore::BooleanSemaphore():
   _semaphoreNumber( _semaphoreCounter ) {
   _semaphoreCounter++;
 }
@@ -106,8 +106,9 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::receiveDanglingMessa
         releaseLock(-number);
       }
     }
-
-    serveLockRequests();
+    else {
+      serveLockRequests();
+    }
     #endif
   }
 }
@@ -163,7 +164,8 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int num
   else {
     #ifdef Parallel
     logDebug( "acquireLock()", "have to acquire lock on global master " << tarch::mpi::Rank::getGlobalMasterRank() << " and thus send master a " << number );
-           
+    
+    tarch::multicore::Lock lock( _localRankLockRequestSemaphore );    
     MPI_Send( &number, 1, MPI_INT, tarch::mpi::Rank::getGlobalMasterRank(), _semaphoreTag, tarch::mpi::Rank::getInstance().getCommunicator() );
 
     logDebug( "acquireLock()", "wait for confirmation from global master rank" );
