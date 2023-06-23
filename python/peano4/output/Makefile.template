@@ -123,15 +123,15 @@ all: solver
 solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS)
 	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o {{EXECUTABLENAME}}
 
-{% if USING_CMAKE %}
+{#{% if USING_CMAKE %}
 clean:
 	bash -c "{{CMAKE_MAKE_COMMAND}} && make clean"
-{% else %}
+{% else %} #}
 clean:
 	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) $(FORTRAN_MODULE_OBJS) $(CU_OBJS)
 	rm -f *.mod
 	rm -f {{EXECUTABLENAME}}
-{% endif %}
+{#{% endif %}#}
 
 
 distclean:
