@@ -309,16 +309,16 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
         faceDofIndices.push_back( globalIndex + i );
       
       //insert the stencil for FF interactions
-      repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, faceDofIndices, _stencilFF.data() );
+      repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, faceDofIndices, _stencilFF );
       
       //insert the stencil for CF interactions
-      repositories::instanceOfPetsc.insertLocalMatrix( cellDofIndices, faceDofIndices, _stencilCF.data() );
+      repositories::instanceOfPetsc.insertLocalMatrix( cellDofIndices, faceDofIndices, _stencilCF );
       
 
     }
 
     //before we exit, let's insert the stencil for cell-cell interactions
-    repositories::instanceOfPetsc.insertLocalMatrix( cellDofIndices, cellDofIndices, _stencilCC.data() );
+    repositories::instanceOfPetsc.insertLocalMatrix( cellDofIndices, cellDofIndices, _stencilCC );
   }
 """
 

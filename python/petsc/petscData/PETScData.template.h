@@ -63,8 +63,29 @@ class {{NAMESPACE | join("::")}}::PetscData{
               intention is to call this function with tarch::la::Matrix::data(), which
               will return a pointer to the first value in this matrix. Ideally this matrix
               will be the intended stencil for this cell/face/vertex
+
+      IMPLEMENTATION IS IN THE HEADER SO THE TEMPLATES WORK
     */
-    void insertLocalMatrix( const std::vector< int >& rowIndices, const std::vector< int >& colIndices, const double* values );
+    template <int rows, int columns>
+    void insertLocalMatrix( const std::vector< int >& rowIndices, const std::vector< int >& colIndices, const tarch::la::Matrix<rows,columns,double>& stencil ){
+
+  /**
+  in order of appearance, the params are:
+    1. _A, our petsc matrix
+    2. the number of rows we wish to insert into
+    3. a pointer to the start of an array containing the indices of the rows we wish to insert into
+      here we just use the address of the start of the std::vector we pass in
+    4. the number of cols we wish to insert into
+    5. a pointer to the start of an array containing the indices of the cols we wish to insert into
+      here we use same as above
+    6. a logically 2d array of doubles to insert. we get this from tarch::la::Matrix::data()
+    7. insert policy. let's use ADD_VALUES (equivalent to +=)
+
+  */
+    if (rowIndices.size() * colIndices.size() != stencil.rows() * stencil.cols())
+      throw std::runtime_error("mismatched stencil!");
+    MatSetValues( _A, rowIndices.size(), &rowIndices[0], colIndices.size(), &colIndices[0], stencil.data(), ADD_VALUES );
+    }
 
     /**
     * method to insert value and rhs into the _x and _b vectors 

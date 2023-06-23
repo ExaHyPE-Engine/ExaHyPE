@@ -196,12 +196,13 @@ void step() {
         logInfo( "step()", "total no of dofs="  << totalNumberOfDegreesOfFreedom );
 
         {% if Project_Name=="HDG" %}
-        const int totalNumberOfFaces    = repositories::getTotalFaceDofs();
-        const int totalNumberOfCells    = repositories::getTotalCellDofs();
-        logInfo( "step()", "total no of face dofs=" << totalNumberOfFaces );
-        logInfo( "step()", "total no of cell dofs=" << totalNumberOfCells );
-        logInfo( "step()", "initialising petsc matrix with " << totalNumberOfFaces << " dofs" );
-        repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfFaces );
+        const int totalNumberOfFaceDofs  = repositories::getTotalFaceDofs();
+        const int totalNumberOfCellDofs  = repositories::getTotalCellDofs();
+        const int totalDofs              = totalNumberOfFaceDofs + totalNumberOfCellDofs;
+        logInfo( "step()", "total no of face dofs=" << totalNumberOfFaceDofs );
+        logInfo( "step()", "total no of cell dofs=" << totalNumberOfCellDofs );
+        logInfo( "step()", "initialising petsc matrix with " << totalDofs << " dofs" );
+        repositories::instanceOfPetsc.initMatrixAndVectors( totalDofs );
 
         {%else%}
         repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );
@@ -230,8 +231,8 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
 
         watch.start();
-        // solve
         {% if Project_Name=="Poisson" %}
+        // solve
         repositories::instanceOfPetsc.petscSolve();
         {% endif %}
 

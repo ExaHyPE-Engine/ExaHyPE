@@ -1,4 +1,5 @@
 #include "PETScData.h"
+
 /**
 * todo - change this class to use CLASS_NAME, cf the abstract poisson tempaltes etc
 */
@@ -86,25 +87,6 @@ void {{NAMESPACE | join("::")}}::PetscData::incrementDoubleAtIndexij( int i, int
   MatSetValue(_A, i, j, val, ADD_VALUES);
 }
 
-void {{NAMESPACE | join("::")}}::PetscData::insertLocalMatrix( const std::vector< int >& rowIndices, const std::vector< int >& colIndices, const double* values ){
-
-  /**
-  in order of appearance, the params are:
-    1. _A, our petsc matrix
-    2. the number of rows we wish to insert into
-    3. a pointer to the start of an array containing the indices of the rows we wish to insert into
-      here we just use the address of the start of the std::vector we pass in
-    4. the number of cols we wish to insert into
-    5. a pointer to the start of an array containing the indices of the cols we wish to insert into
-      here we use same as above
-    6. a logically 2d array of doubles to insert. we get this from tarch::la::Matrix::data()
-    7. insert policy. let's use ADD_VALUES (equivalent to +=)
-
-    TODO - check that rowIndices.size() * colIndices.size() == values.size().
-      i think we can just call values.size() in c++
-  */
-  MatSetValues( _A, rowIndices.size(), &rowIndices[0], colIndices.size(), &colIndices[0], values, ADD_VALUES );
-}
 
 void {{NAMESPACE | join("::")}}::PetscData::insertValueAndRHS(double val, double rhs, int index){
   // insert "val" into _x 
