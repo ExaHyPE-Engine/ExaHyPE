@@ -293,7 +293,7 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     }
 
     //we have constructed everything we need. send to petsc.
-    repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, _stencil.data() );
+    repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, faceDofIndices, _stencil.data() );
   }
 """
 
@@ -305,19 +305,51 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     self.d["CELL_CARDINALITY"]   = solver.number_of_cell_unknowns
     self.d["FACE_CARDINALITY"]   = solver.number_of_face_unknowns
 
-    ##handling stencil
+    '''
+    HANDLING THE STENCILS!
+    '''
+    
+    #FIRST - HANDLE STENCIL FOR FACE-FACE INTERACTIONS
 
     ##first, capture the dimensions of the stencil
-    self.d["stencilRows"] = len(solver.stencil)
-    self.d["stencilCols"] = len(solver.stencil[0])
+    self.d["stencilRowsFF"] = len(solver.stencilFF)
+    self.d["stencilColsFF"] = len(solver.stencilFF[0])
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
-    stencil=[item for sublist in solver.stencil for item in sublist]
-    self.d["STENCIL"] = "{" + str(stencil[0])
+    stencil=[item for sublist in solver.stencilFF for item in sublist]
+    self.d["STENCILFF"] = "{" + str(stencil[0])
     for el in stencil[1:]:
-      self.d["STENCIL"] += ", "
-      self.d["STENCIL"] += str(el)
-    self.d["STENCIL"] += "}"
+      self.d["STENCILFF"] += ", "
+      self.d["STENCILFF"] += str(el)
+    self.d["STENCILFF"] += "}"
+
+    #NEXT - HANDLE STENCIL FOR CELL-FACE INTERACTIONS
+
+    ##first, capture the dimensions of the stencil
+    self.d["stencilRowsCF"] = len(solver.stencilCF)
+    self.d["stencilColsCF"] = len(solver.stencilCF[0])
+    #pass in stencil as a list of lists
+    #convert it to a flat list for passing as std::initializer_list
+    stencil=[item for sublist in solver.stencilCF for item in sublist]
+    self.d["STENCILCF"] = "{" + str(stencil[0])
+    for el in stencil[1:]:
+      self.d["STENCILCF"] += ", "
+      self.d["STENCILCF"] += str(el)
+    self.d["STENCILCF"] += "}"
+
+    #FINALLY - HANDLE STENCIL FOR CELL-CELL INTERACTIONS
+
+    ##first, capture the dimensions of the stencil
+    self.d["stencilRowsCC"] = len(solver.stencilCC)
+    self.d["stencilColsCC"] = len(solver.stencilCC[0])
+    #pass in stencil as a list of lists
+    #convert it to a flat list for passing as std::initializer_list
+    stencil=[item for sublist in solver.stencilCC for item in sublist]
+    self.d["STENCILCC"] = "{" + str(stencil[0])
+    for el in stencil[1:]:
+      self.d["STENCILCC"] += ", "
+      self.d["STENCILCC"] += str(el)
+    self.d["STENCILCC"] += "}"
 
   def get_constructor_body(self):
     return f"""
@@ -377,6 +409,9 @@ Consult petsc.Project for details
     """
     return f"""
   int _spacetreeId;
-  const int _faceDofs = {self.d["FACE_CARDINALITY"]}; 
-  const tarch::la::Matrix<{self.d["stencilRows"]},{self.d["stencilRows"]},double> _stencil = {self.d["STENCIL"]};
+  const int _faceDofs = {self.d["FACE_CARDINALITY"]};
+  const int _cellDofs = {self.d["CELL_CARDINALITY"]};
+  const tarch::la::Matrix<{self.d["stencilRowsFF"]},{self.d["stencilColsFF"]},double> _stencilFF = {self.d["STENCILFF"]};
+  const tarch::la::Matrix<{self.d["stencilRowsCF"]},{self.d["stencilColsCF"]},double> _stencilCF = {self.d["STENCILCF"]};
+  const tarch::la::Matrix<{self.d["stencilRowsCC"]},{self.d["stencilColsCC"]},double> _stencilCC = {self.d["STENCILCC"]};
 """

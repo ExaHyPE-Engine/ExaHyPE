@@ -46,7 +46,9 @@ class HdgFirstDiscretisation(Solver):
                face_dofs,
                min_h,
                max_h,
-               stencil):
+               stencilFF,
+               stencilCF,
+               stencilCC):
     """!
    
  Test comment (C)
@@ -54,10 +56,10 @@ class HdgFirstDiscretisation(Solver):
    
     """
     super( HdgFirstDiscretisation, self ).__init__( name,
-                                                              min_h,
-                                                              max_h
-                                                              )
-    
+                                                    min_h,
+                                                    max_h
+                                                  )
+
 
 
     #hardcode one unknown on vertices for now
@@ -85,7 +87,9 @@ class HdgFirstDiscretisation(Solver):
     self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     
-    self.stencil = stencil
+    self.stencilFF = stencilFF
+    self.stencilCF = stencilCF
+    self.stencilCC = stencilCC
     pass
 
 

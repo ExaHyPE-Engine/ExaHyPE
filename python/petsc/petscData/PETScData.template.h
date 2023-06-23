@@ -12,6 +12,7 @@
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/LogFilterFileReader.h"
+#include "tarch/la/Matrix.h"
 
 #include <petscksp.h>
 #include <vector>
@@ -63,7 +64,7 @@ class {{NAMESPACE | join("::")}}::PetscData{
               will return a pointer to the first value in this matrix. Ideally this matrix
               will be the intended stencil for this cell/face/vertex
     */
-    void insertLocalMatrix( const std::vector< int >& indices, const double* values );
+    void insertLocalMatrix( const std::vector< int >& rowIndices, const std::vector< int >& colIndices, const double* values );
 
     /**
     * method to insert value and rhs into the _x and _b vectors 

@@ -86,7 +86,7 @@ void {{NAMESPACE | join("::")}}::PetscData::incrementDoubleAtIndexij( int i, int
   MatSetValue(_A, i, j, val, ADD_VALUES);
 }
 
-void {{NAMESPACE | join("::")}}::PetscData::insertLocalMatrix( const std::vector< int >& indices, const double* values ){
+void {{NAMESPACE | join("::")}}::PetscData::insertLocalMatrix( const std::vector< int >& rowIndices, const std::vector< int >& colIndices, const double* values ){
 
   /**
   in order of appearance, the params are:
@@ -99,8 +99,11 @@ void {{NAMESPACE | join("::")}}::PetscData::insertLocalMatrix( const std::vector
       here we use same as above
     6. a logically 2d array of doubles to insert. we get this from tarch::la::Matrix::data()
     7. insert policy. let's use ADD_VALUES (equivalent to +=)
+
+    TODO - check that rowIndices.size() * colIndices.size() == values.size().
+      i think we can just call values.size() in c++
   */
-  MatSetValues( _A, indices.size(), &indices[0], indices.size(), &indices[0], values, ADD_VALUES );
+  MatSetValues( _A, rowIndices.size(), &rowIndices[0], colIndices.size(), &colIndices[0], values, ADD_VALUES );
 }
 
 void {{NAMESPACE | join("::")}}::PetscData::insertValueAndRHS(double val, double rhs, int index){
