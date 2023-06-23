@@ -278,11 +278,28 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
   ## add templates
   TemplateInitCell = """
   if (not marker.willBeRefined()){
-    //init temp vector to collect the indices we use
-    std::vector<int> faceDofIndices;
+    //init vector to collect the cell indices we use
+    std::vector<int> cellDofIndices;
 
-    //enumerate the faces
+    //get global index
+    std::pair<int,int> cellLocalIndex = std::make_pair(_spacetreeId, fineGridCell{{SOLVER_NAME}}.getNumber());
+    int cellGlobalIndex = repositories::{{SOLVER_INSTANCE}}.getCellLocalToGlobalMap().getGlobalIndex(cellLocalIndex);
+
+    //add this global index, plus each of its degrees of freedom, to the cellDofIndices
+    for (int i=0; i<_cellDofs; i++)
+      cellDofIndices.push_back( cellGlobalIndex + i ); //works because we reserved (eg) 27 indices per cell earlier
+    
+    /*
+    enumerate the faces. for each face, we do the following:
+    1. collect the global index of the face, add this to the list faceDofIndices
+      - also add to the list each degree of freedom that lies on this face
+    2. (have already done same for cell indices above)
+    3. insert stencil for FF, CF, FC and CC using these indices
+    */
+
     for (int face=0; face<2*Dimensions; face++){
+      std::vector<int> faceDofIndices;
+
       //get global index
       std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}(face).getNumber());
       int globalIndex = repositories::{{SOLVER_INSTANCE}}.getFaceLocalToGlobalMap().getGlobalIndex(localIndex);
@@ -290,10 +307,18 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
       //insert the faceDofs into our temp vector.
       for (int i=0; i<_faceDofs; i++)
         faceDofIndices.push_back( globalIndex + i );
+      
+      //insert the stencil for FF interactions
+      repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, faceDofIndices, _stencilFF.data() );
+      
+      //insert the stencil for CF interactions
+      repositories::instanceOfPetsc.insertLocalMatrix( cellDofIndices, faceDofIndices, _stencilCF.data() );
+      
+
     }
 
-    //we have constructed everything we need. send to petsc.
-    repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, faceDofIndices, _stencil.data() );
+    //before we exit, let's insert the stencil for cell-cell interactions
+    repositories::instanceOfPetsc.insertLocalMatrix( cellDofIndices, cellDofIndices, _stencilCC.data() );
   }
 """
 
