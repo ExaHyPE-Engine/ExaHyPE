@@ -59,6 +59,47 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     points, you have a vertex marker which gives you the position of the
     vertex to which a particular is associated, and you have the localParticles.
     This is a vector of pointers in this particular case.
+    
+    ## Precision 
+
+    By default, all particle attributes are modelled as doubles or arrays of
+    doubles. This might be overly precise. You can alter the precision through
+    our LLVM compiler modifications if you invoke the following commands on a
+    particle species:
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~        
+  particle.mass.valid_mantissa_bits         = args.mantissa_size
+  particle.velocity.valid_mantissa_bits     = args.mantissa_size
+  particle.acceleration.valid_mantissa_bits = args.mantissa_size
+  particle.density.valid_mantissa_bits      = args.mantissa_size
+  particle.pressure.valid_mantissa_bits     = args.mantissa_size
+  particle.smoothL.valid_mantissa_bits      = args.mantissa_size
+  particle.u.valid_mantissa_bits            = args.mantissa_size
+  particle.uDot.valid_mantissa_bits         = args.mantissa_size
+  particle.f.valid_mantissa_bits            = args.mantissa_size
+  particle.wcount_dh.valid_mantissa_bits    = args.mantissa_size
+  particle.rho_dh.valid_mantissa_bits       = args.mantissa_size
+  particle.hleft.valid_mantissa_bits        = args.mantissa_size
+  particle.hright.valid_mantissa_bits       = args.mantissa_size
+  particle.smoothL_prev.valid_mantissa_bits = args.mantissa_size
+  particle.wcount.valid_mantissa_bits       = args.mantissa_size
+  particle.hDot.valid_mantissa_bits         = args.mantissa_size
+  particle.residual.valid_mantissa_bits     = args.mantissa_size
+  particle.balsara.valid_mantissa_bits      = args.mantissa_size
+  particle.rot_v.valid_mantissa_bits        = args.mantissa_size
+  particle.div_v.valid_mantissa_bits        = args.mantissa_size
+  particle.v_sig_AV.valid_mantissa_bits     = args.mantissa_size
+  particle.soundSpeed.valid_mantissa_bits   = args.mantissa_size
+  particle.v_full.valid_mantissa_bits       = args.mantissa_size
+  particle.u_full.valid_mantissa_bits       = args.mantissa_size
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~        
+
+    This is an example. You can also add ony a few of these fields, and picking
+    a value for args.mantissa_size is obviously up to you. We refrain from 
+    illustrating that you can also alter the precision of the position and 
+    maximum cut-off-radius of a particle this way. This is on purpose: We have
+    made bad experience with such modifications.
+    
 
     ## Attributes
 
@@ -127,23 +168,19 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self._alpha_av = 0.8
         self._beta_av = 3.0
 
-        # Mantissa size. Can be used for Pawel's clang truncation.
-        # Default value corresponds to IEEE doubles.
-        self._mantissa_size = 52
-
         # Project namespace to have consistent use of exported Constants in kernels
         # Not used right now.
         self._swift_project_namespace = swift_project_namespace
 
         # Baseline particle properties --------------------------------------------------------------
         self.mass = dastgen2.attributes.Double(
-            "mass", valid_mantissa_bits=self._mantissa_size
+            "mass"
         )
         self.velocity = peano4.dastgen2.Peano4DoubleArray(
-            "v", "Dimensions", valid_mantissa_bits=self._mantissa_size
+            "v", "Dimensions"
         )
         self.acceleration = peano4.dastgen2.Peano4DoubleArray(
-            "a", "Dimensions", valid_mantissa_bits=self._mantissa_size
+            "a", "Dimensions"
         )
         self.data.add_attribute(self.mass)
         self.data.add_attribute(self.velocity)
@@ -151,19 +188,19 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
         # Basic SPH properties
         self.density = dastgen2.attributes.Double(
-            "density", valid_mantissa_bits=self._mantissa_size
+            "density"
         )
         self.pressure = dastgen2.attributes.Double(
-            "pressure", valid_mantissa_bits=self._mantissa_size
+            "pressure"
         )
         self.smoothL = dastgen2.attributes.Double(
-            "smoothingLength", valid_mantissa_bits=self._mantissa_size
+            "smoothingLength"
         )
         self.u = dastgen2.attributes.Double(
-            "u", valid_mantissa_bits=self._mantissa_size
+            "u"
         )
         self.uDot = dastgen2.attributes.Double(
-            "uDot", valid_mantissa_bits=self._mantissa_size
+            "uDot"
         )
         self.data.add_attribute(self.density)
         self.data.add_attribute(self.pressure)
@@ -173,19 +210,19 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
         # Variable smoothing length scheme ---------------------------------------------
         self.f = dastgen2.attributes.Double(
-            "f", valid_mantissa_bits=self._mantissa_size
+            "f"
         )
         self.wcount_dh = dastgen2.attributes.Double(
-            "wcount_dh", valid_mantissa_bits=self._mantissa_size
+            "wcount_dh"
         )
         self.rho_dh = dastgen2.attributes.Double(
-            "rho_dh", valid_mantissa_bits=self._mantissa_size
+            "rho_dh"
         )
         self.hleft = dastgen2.attributes.Double(
-            "hLeft", valid_mantissa_bits=self._mantissa_size
+            "hLeft"
         )
         self.hright = dastgen2.attributes.Double(
-            "hRight", valid_mantissa_bits=self._mantissa_size
+            "hRight"
         )
         self.data.add_attribute(self.f)
         self.data.add_attribute(self.wcount_dh)
@@ -195,16 +232,16 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
         # Newton-Raphson iterations ----------------------------------------------------
         self.smoothL_prev = dastgen2.attributes.Double(
-            "smoothingLengthPrevious", valid_mantissa_bits=self._mantissa_size
+            "smoothingLengthPrevious"
         )
         self.wcount = dastgen2.attributes.Double(
-            "wcount", valid_mantissa_bits=self._mantissa_size
+            "wcount"
         )
         self.hDot = dastgen2.attributes.Double(
-            "hDot", valid_mantissa_bits=self._mantissa_size
+            "hDot"
         )
         self.residual = dastgen2.attributes.Double(
-            "residual", valid_mantissa_bits=self._mantissa_size
+            "residual"
         )
         self.iteration_count = dastgen2.attributes.Integer("iterCount")
         self.has_converged = dastgen2.attributes.Boolean("hasConverged")
@@ -217,24 +254,24 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
         # Artificial viscosity scheme -------------------------------------------------
         self.balsara = dastgen2.attributes.Double(
-            "balsara", valid_mantissa_bits=self._mantissa_size
+            "balsara"
         )
         if self._hydroDimensions == 3:
             self.rot_v = peano4.dastgen2.Peano4DoubleArray(
-                "rot_v", "Dimensions", valid_mantissa_bits=self._mantissa_size
+                "rot_v", "Dimensions"
             )
         else:  # Curl is a scalar in lower dimensions
             self.rot_v = dastgen2.attributes.Double(
-                "rot_v", valid_mantissa_bits=self._mantissa_size
+                "rot_v"
             )  # In 2D sims it only has 1 component (z)
         self.div_v = dastgen2.attributes.Double(
-            "div_v", valid_mantissa_bits=self._mantissa_size
+            "div_v"
         )
         self.v_sig_AV = dastgen2.attributes.Double(
-            "v_sig_AV", valid_mantissa_bits=self._mantissa_size
+            "v_sig_AV"
         )
         self.soundSpeed = dastgen2.attributes.Double(
-            "soundSpeed", valid_mantissa_bits=self._mantissa_size
+            "soundSpeed"
         )
         self.data.add_attribute(self.balsara)
         self.data.add_attribute(self.rot_v)
@@ -244,10 +281,10 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
         # Extended arrays for time integration consistency
         self.v_full = peano4.dastgen2.Peano4DoubleArray(
-            "v_full", "Dimensions", valid_mantissa_bits=self._mantissa_size
+            "v_full", "Dimensions"
         )
         self.u_full = dastgen2.attributes.Double(
-            "u_full", valid_mantissa_bits=self._mantissa_size
+            "u_full"
         )
         self.data.add_attribute(self.v_full)
         self.data.add_attribute(self.u_full)

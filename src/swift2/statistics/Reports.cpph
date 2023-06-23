@@ -1,4 +1,4 @@
-#include "repositories/GlobalState.h"
+#include "../../../benchmarks/swift2/hydro/noh-implosion-test/repositories/GlobalState.h"
 #include "tarch/mpi/Rank.h"
 
 

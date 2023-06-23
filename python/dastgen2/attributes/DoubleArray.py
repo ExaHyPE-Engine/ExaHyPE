@@ -88,3 +88,19 @@ class DoubleArray(Double):
     else:
       return "_" + self._name + "[0] << \",...\""
 
+
+  @property
+  def valid_mantissa_bits(self):
+    return self._valid_mantissa_bits
+
+  @valid_mantissa_bits.setter
+  def valid_mantissa_bits(self,value):
+    """!
+    
+    Set mantissa used
+    
+    Pass in None, if you want to use the default accuracy.
+    
+    """
+    assert value==None or value>0
+    self._valid_mantissa_bits = value

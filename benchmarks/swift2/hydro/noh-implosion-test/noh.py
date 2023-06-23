@@ -96,6 +96,13 @@ parser.add_argument(
     default=False,
     help="Switch on assertions",
 )
+parser.add_argument(
+    "-ms",  
+    "--mantissa-size",   
+    dest="mantissa_size", 
+    type=int, 
+    default=0, 
+    help="Mantissa size for clang truncation (if supported by compiler). Default of 0 disables any compression")
 args = parser.parse_args()
 
 
@@ -196,9 +203,33 @@ HYDRO_h_MIN = particle.h_hydro_min
 
 particle.h_hydro_max = HYDRO_h_MAX
 
-# Optional: Reduce the mantissa size for particle attributes -------------------
+# IMPORTANT: Reduce the mantissa size for particle attributes -------------------
 # Native size is 53 (double precision)
-particle.mantissa_size = 23
+if args.mantissa_size>0:
+  particle.mass.valid_mantissa_bits         = args.mantissa_size
+  particle.velocity.valid_mantissa_bits     = args.mantissa_size
+  particle.acceleration.valid_mantissa_bits = args.mantissa_size
+  particle.density.valid_mantissa_bits      = args.mantissa_size
+  particle.pressure.valid_mantissa_bits     = args.mantissa_size
+  particle.smoothL.valid_mantissa_bits      = args.mantissa_size
+  particle.u.valid_mantissa_bits            = args.mantissa_size
+  particle.uDot.valid_mantissa_bits         = args.mantissa_size
+  particle.f.valid_mantissa_bits            = args.mantissa_size
+  particle.wcount_dh.valid_mantissa_bits    = args.mantissa_size
+  particle.rho_dh.valid_mantissa_bits       = args.mantissa_size
+  particle.hleft.valid_mantissa_bits        = args.mantissa_size
+  particle.hright.valid_mantissa_bits       = args.mantissa_size
+  particle.smoothL_prev.valid_mantissa_bits = args.mantissa_size
+  particle.wcount.valid_mantissa_bits       = args.mantissa_size
+  particle.hDot.valid_mantissa_bits         = args.mantissa_size
+  particle.residual.valid_mantissa_bits     = args.mantissa_size
+  particle.balsara.valid_mantissa_bits      = args.mantissa_size
+  particle.rot_v.valid_mantissa_bits        = args.mantissa_size
+  particle.div_v.valid_mantissa_bits        = args.mantissa_size
+  particle.v_sig_AV.valid_mantissa_bits     = args.mantissa_size
+  particle.soundSpeed.valid_mantissa_bits   = args.mantissa_size
+  particle.v_full.valid_mantissa_bits       = args.mantissa_size
+  particle.u_full.valid_mantissa_bits       = args.mantissa_size
 
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
