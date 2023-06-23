@@ -97,6 +97,8 @@ namespace tarch::accelerator::sycl
 
   std::vector<bool> testKernelLaunch()
   {
+    logInfo("runBenchmarks()", "Running benchmarks with Sycl backend");
+
     std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
     std::vector<bool> offloadResults(devices.size(), false);
     bool a = false;

@@ -29,14 +29,14 @@ namespace tarch::accelerator
   std::vector<std::vector<std::string>> queryDeviceInformation()
   {
     std::vector<std::vector<std::string>> devInfo;
-#if defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
+#if defined(GPUOffloadingCPP)
+    tarch::accelerator::cpp::queryDeviceInformation(devInfo);
+#elif defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
     tarch::accelerator::cuda::queryDeviceInformation(devInfo);
 #elif defined(GPUOffloadingSYCL)
     tarch::accelerator::sycl::queryDeviceInformation(devInfo);
 #elif defined(GPUOffloadingOMP)
     tarch::accelerator::omp::queryDeviceInformation(devInfo);
-#elif defined(GPUOffloadingCPP)
-    tarch::accelerator::cpp::queryDeviceInformation(devInfo);
 #else
     return devInfo;
 #endif
@@ -47,16 +47,16 @@ namespace tarch::accelerator
   void printDeviceInformation()
   {
     auto propertymatrix = queryDeviceInformation();
-#if defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
+#if defined(GPUOffloadingCPP)
+    // Can't get any information with cpp GPU offloading rn
+    tarch::accelerator::cpp::printDeviceInformation(propertymatrix);
+#elif defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
     tarch::accelerator::cuda::printDeviceInformation(propertymatrix);
 #elif defined(GPUOffloadingSYCL)
     tarch::accelerator::sycl::printDeviceInformation(propertymatrix);
 #elif defined(GPUOffloadingOMP)
     // An empty table, with OpenMP we will only know how many GPUs we have
     tarch::accelerator::omp::printDeviceInformation(propertymatrix);
-#elif defined(GPUOffloadingCPP)
-    // Can't get any information with cpp GPU offloading rn
-    tarch::accelerator::cpp::printDeviceInformation(propertymatrix);
 #else
     // Print noinformation since we do not have an accelerator
     // The following logInfo not really needed
@@ -129,8 +129,13 @@ namespace tarch::accelerator
 
     for (unsigned int x = 0; x < numberOfDevices; x++)
     {
+#if defined(GPUOffloadingCPP)
+      std::string idPad(maxIdLength, ' ');
+      ss << idPad << "X" << " |";
+#else
       std::string idPad(maxIdLength + 1 - std::to_string(x).size(), ' ');
       ss << idPad << x << " |";
+#endif
       for (unsigned int y = 0; y < identifiers.size(); y++) //(const auto& row : propertyMatrix)
       {
         unsigned int paddingLength = columnMaxStringSizes[y] + 1 - propertyMatrix[y][x].size();

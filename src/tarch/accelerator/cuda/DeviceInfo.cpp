@@ -90,6 +90,8 @@ namespace tarch::accelerator::cuda
 #if defined(GPUOffloadingCUDA)
   std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> runBenchmarks()
   {
+    logInfo("runBenchmarks()", "Running benchmarks with CUDA backend");
+
     int numberOfDevices;
     cudaGetDeviceCount(&numberOfDevices);
     std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});

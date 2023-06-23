@@ -59,6 +59,8 @@ namespace tarch::accelerator::omp
 
   std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> runBenchmarks()
   {
+    logInfo("runBenchmarks()", "Running benchmarks with OpenMP backend");
+
     int numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
     std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});
 
@@ -88,6 +90,9 @@ namespace tarch::accelerator::omp
         double end = 0.0;
         double diff = 0.0;
 
+        /*
+        // It doesnt always return NULL when not enough memory
+        // For right now just allocate ~1 GB
         start = omp_get_wtime();
         void *a_dev = omp_target_alloc(N * sizeof(float), deviceId);
         void *b_dev = omp_target_alloc(N * sizeof(float), deviceId);
@@ -99,6 +104,7 @@ namespace tarch::accelerator::omp
         }
         omp_target_free(a_dev, deviceId);
         omp_target_free(b_dev, deviceId);
+        */
 
         start = omp_get_wtime();
 #pragma omp target enter data map(to : a[0 : N], b[0 : N]) device(deviceId)
@@ -136,6 +142,10 @@ namespace tarch::accelerator::omp
         }
 
 #pragma omp target exit data map(release : a[0 : N], b[0 : N]) device(deviceId)
+        {
+        }
+
+#pragma omp target exit data map(delete : a[0 : N], b[0 : N]) device(deviceId)
         {
         }
 
