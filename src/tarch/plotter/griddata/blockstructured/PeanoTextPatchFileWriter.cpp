@@ -193,7 +193,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
       logInfo(
         "PeanoTextPatchFileWriter(...)",
         "create new dataset for time stamp "
-          << timeStamp << " as last time stamp had been " << getLatestTimeStepInIndexFile()
+          << timeStamp << " linking to " << _fileName << " as last time stamp had been " << getLatestTimeStepInIndexFile()
       );
       addNewDatasetToIndexFile(timeStamp);
     }
