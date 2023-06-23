@@ -23,34 +23,44 @@ class SWE_Adjoint_Solver():
         self.b = np.zeros((self.nx+2, self.ny+2)) 
 
         with netCDF4.Dataset(bathymetry_file_path, "r") as bathymetry_nc:
-
+            # create lists of indices that index the bathymetry entries to be used in the simulation
             index_list_bathymetry_x, mesh_width_x = np.linspace(0, len(bathymetry_nc['z'][0]), num=self.nx, endpoint=False, dtype=int, retstep=True)
             index_list_bathymetry_y, mesh_width_y = np.linspace(0, len(bathymetry_nc['z']), num=self.ny, endpoint=False, dtype=int, retstep=True)
+            # convert (data) mesh width to integer
             mesh_width_x = int(mesh_width_x)
             mesh_width_y = int(mesh_width_y)
 
+            # Define indices for splicing. Why splicing and not fancy indexing?
+            # Because fancy indexing doesn't work in the displacement at the latest because of differing mesh widths.
+            # Splicing works equally as good and also works for the displacement. 
             right_x_start, right_x_end = index_list_bathymetry_x[[0, -1]]
             right_x_end = right_x_end + 1
             right_y_start, right_y_end = index_list_bathymetry_y[[0, -1]]
             right_y_end = right_y_end + 1
 
+            # Put values of bathymetry file into simulation arrays
             self.b.T[1:self.ny+1, 1:self.nx+1] = bathymetry_nc['z'][right_y_start:right_y_end:mesh_width_y, right_x_start:right_x_end:mesh_width_x]
             self.h[1:self.nx+1, 1:self.ny+1] = -self.b[1:self.nx+1, 1:self.ny+1]
+
             with netCDF4.Dataset(displacement_file_path, "r") as displacement_nc:
+                # read out coordinate variables of the different files
                 bath_x = bathymetry_nc['x']
                 bath_y = bathymetry_nc['y']
                 displ_x = displacement_nc['x']
                 displ_y = displacement_nc['y']
 
+                # Define indices for splicing (again). 
+                # These lines describe the section of the bathymetry, that the displacement shall be added to.
                 left_x_start, left_x_end = np.arange(1, self.nx+1)[np.isin(bath_x[index_list_bathymetry_x], displ_x)][[0, -1]]
                 left_x_end = left_x_end + 1
                 left_y_start, left_y_end = np.arange(1, self.ny+1)[np.isin(bath_y[index_list_bathymetry_y], displ_y)][[0, -1]]
                 left_y_end = left_y_end + 1
+                # Include all displacement values, whose x and y coordinate are also in our reduced bathymetry array
                 right_x_start, right_x_end = np.arange(0, len(displ_x))[np.isin(displ_x, bath_x[index_list_bathymetry_x])][[0, -1]]
                 right_x_end = right_x_end + 1
                 right_y_start, right_y_end = np.arange(0, len(displ_y))[np.isin(displ_y, bath_y[index_list_bathymetry_y])][[0, -1]]
                 right_y_end = right_y_end + 1
-
+                # add displacement to bathymetry array
                 self.b.T[left_y_start:left_y_end, left_x_start:left_x_end] += displacement_nc['z'][right_y_start:right_y_end:mesh_width_y, right_x_start:right_x_end:mesh_width_x]
 
         # initialize ghost layer
@@ -181,19 +191,19 @@ class SWE_Adjoint_Solver():
                     max_wave_speed_x = max(max_edge_speed, max_wave_speed_x)
 
             if max_wave_speed_x > 0:
-                self.update_unknowns_x_sweep(0.9 * self.cell_size / max_wave_speed_x)
+                update_unknowns_x_sweep(0.9 * self.cell_size / max_wave_speed_x)
             
             max_wave_speed_y = 0.0
             for j in range(1, self.ny+2):
                 for i in range(1, self.nx+2):
                     max_edge_speed = 0.0
-                    self.h_net_updates_below[i][j-1], self.hv_net_updates_below[i][j-1], self.h_net_updates_above[i][j-1], self.hu_net_updates_above[i][j-1], max_edge_speed = compute_net_updates(self.h[i][j-1], self.h[i][j], self.hu[i][j-1], self.hu[i][j], self.b[i][j-1], self.b[i][j])
+                    self.h_net_updates_below[i][j-1], self.hv_net_updates_below[i][j-1], self.h_net_updates_above[i][j-1], self.hv_net_updates_above[i][j-1], max_edge_speed = compute_net_updates(self.h[i][j-1], self.h[i][j], self.hu[i][j-1], self.hu[i][j], self.b[i][j-1], self.b[i][j])
                     max_wave_speed_y = max(max_edge_speed, max_wave_speed_y)
 
             max_wave_speed = max(max_wave_speed_x, max_wave_speed_y)
             # by here, we kind of assume a wave_speed greater 0
             max_time_step = 0.9 * self.cell_size / max_wave_speed
-            self.update_unknowns_y_sweep(max_time_step)
+            update_unknowns_y_sweep(max_time_step)
             return max_time_step
 
         def write_eta_to_file(checkpoint, t):
@@ -210,6 +220,7 @@ class SWE_Adjoint_Solver():
         checkpoint = checkpoint + 1
         # simulation loop
         while t < self.end_time:
+            print("Simulating time: %f" % t)
             self.set_ghost_layer()
             t = t + compute_numerical_fluxes()
             # checkpointing
@@ -255,5 +266,5 @@ class SWE_Adjoint_Solver():
     def close_netcdf(self):
         self.nc_file.close()
     
-solver = SWE_Adjoint_Solver(bathymetry_file_path="./netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_bath.nc", displacement_file_path="./netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_displ.nc", width=[10,10], cell_size=0.1, end_time=0.01)
+solver = SWE_Adjoint_Solver(bathymetry_file_path="./netCDFInputs/artificialtsunami_bathymetry_1000.nc", displacement_file_path="./netCDFInputs/artificialtsunami_displ_1000.nc", width=[10,10], cell_size=0.1, end_time=0.5)
 solver.time_loop()
