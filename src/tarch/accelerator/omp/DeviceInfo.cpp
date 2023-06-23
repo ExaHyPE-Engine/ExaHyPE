@@ -8,11 +8,11 @@
 #include "../DeviceInfo.h"
 #include "Device.h"
 
-namespace tarch::accelerator::info::omp
+namespace tarch::accelerator::omp
 {
   void queryDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix)
   {
-    unsigned int propertyCount = tarch::accelerator::info::properties.size();
+    unsigned int propertyCount = tarch::accelerator::properties.size();
     unsigned int numberOfDevices = omp_get_num_devices();
     std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(numberOfDevices, "X"));
     propertyMatrix = std::move(_propertyMatrix);
@@ -31,7 +31,7 @@ namespace tarch::accelerator::info::omp
     }
     else
     {
-      deviceInfoStr = tarch::accelerator::info::parseMatrix(propertyMatrix, numberOfDevices);
+      deviceInfoStr = tarch::accelerator::parseMatrix(propertyMatrix, numberOfDevices);
       logInfo("printDeviceInformation()", "\n" << deviceInfoStr);
     }
   }
@@ -57,16 +57,16 @@ namespace tarch::accelerator::info::omp
     return testResults;
   }
 
-  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks()
+  std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> runBenchmarks()
   {
     int numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
-    std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});
+    std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});
 
     constexpr uint64_t repeats = 10;
 
     for (int deviceId = 0; deviceId < numberOfDevices; deviceId++)
     {
-      tarch::accelerator::info::BenchmarkResultInNanoSeconds &benchmarkResult = benchmarkResults[deviceId];
+      tarch::accelerator::BenchmarkResultInNanoSeconds &benchmarkResult = benchmarkResults[deviceId];
       benchmarkResult.repeats = repeats;
 
       // No way to now the amount of free memory without a look up... lets do something not too big
@@ -146,6 +146,6 @@ namespace tarch::accelerator::info::omp
 
     return benchmarkResults;
   }
-} // namespace tarch::accelerator::info::omp
+} // namespace tarch::accelerator::omp
 
 #endif

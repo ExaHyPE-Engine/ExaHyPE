@@ -134,8 +134,8 @@ int peano4::initParallelEnvironment(int* argc, char*** argv) {
 
   writeCopyrightMessage();
 
-  tarch::accelerator::info::offloadCapabilityTest();
-  tarch::accelerator::info::printDeviceInformation();
+  tarch::accelerator::offloadCapabilityTest();
+  tarch::accelerator::printDeviceInformation();
 
   return result;
 }

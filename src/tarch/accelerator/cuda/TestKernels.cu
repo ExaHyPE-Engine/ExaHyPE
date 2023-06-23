@@ -61,7 +61,7 @@ __global__ void copyKernelDouble(const double *a, double *b, size_t N)
 
 void copyKernelLauncher(const float *a, float *b, size_t N)
 {
-  static tarch::logging::Log _log("tarch::accelerator::info::cuda::kernel");
+  static tarch::logging::Log _log("tarch::accelerator::cuda::kernel");
 
   static int called = 0;
   int blockSize;   // The launch configurator returned block size

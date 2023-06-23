@@ -16,7 +16,7 @@
 #pragma pop_macro("Dimensions")
 #pragma pop_macro("assertion")
 
-namespace tarch::accelerator::info::sycl
+namespace tarch::accelerator::sycl
 {
   void queryDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix)
   {
@@ -24,7 +24,7 @@ namespace tarch::accelerator::info::sycl
     constexpr unsigned int mb = kb * kb;
     std::vector<::sycl::device> devices = ::sycl::device::get_devices();
 
-    unsigned int propertyCount = tarch::accelerator::info::properties.size();
+    unsigned int propertyCount = tarch::accelerator::properties.size();
     std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(devices.size(), "X"));
     propertyMatrix = std::move(_propertyMatrix);
 
@@ -68,11 +68,11 @@ namespace tarch::accelerator::info::sycl
       std::string work_item = ss.str();
       ss.str("");
 
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Device Name")][devId] = dev.get_info<
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Device Name")][devId] = dev.get_info<
           ::sycl::info::device::name>();
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Global Memory")][devId] = std::to_string(dev.get_info<::sycl::info::device::global_mem_size>() / mb) + " mb";
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Clock Frequency")][devId] = std::to_string(dev.get_info<::sycl::info::device::max_clock_frequency>()) + " mHz";
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Compute Units")][devId] = std::to_string(dev.get_info<::sycl::info::device::max_compute_units>());
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Global Memory")][devId] = std::to_string(dev.get_info<::sycl::info::device::global_mem_size>() / mb) + " mb";
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Clock Frequency")][devId] = std::to_string(dev.get_info<::sycl::info::device::max_clock_frequency>()) + " mHz";
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Compute Units")][devId] = std::to_string(dev.get_info<::sycl::info::device::max_compute_units>());
 
       devId += 1;
     }
@@ -89,7 +89,7 @@ namespace tarch::accelerator::info::sycl
     }
     else
     {
-      deviceInfoStr = tarch::accelerator::info::parseMatrix(
+      deviceInfoStr = tarch::accelerator::parseMatrix(
           propertyMatrix, numberOfDevices);
       logInfo("printDeviceInformation()", "\n" << deviceInfoStr);
     }
@@ -127,10 +127,10 @@ namespace tarch::accelerator::info::sycl
     return offloadResults;
   }
 
-  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks()
+  std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> runBenchmarks()
   {
-    return std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds>();
+    return std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds>();
   }
-} // namespace tarch::accelerator::info::sycl
+} // namespace tarch::accelerator::sycl
 
 #endif

@@ -5,11 +5,11 @@
 
 #include "../DeviceInfo.h"
 
-namespace tarch::accelerator::info::cpp
+namespace tarch::accelerator::cpp
 {
   void queryDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix)
   {
-    unsigned int propertyCount = tarch::accelerator::info::properties.size();
+    unsigned int propertyCount = tarch::accelerator::properties.size();
     std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(0, "X"));
     propertyMatrix = std::move(_propertyMatrix);
   }
@@ -29,9 +29,9 @@ namespace tarch::accelerator::info::cpp
 #endif
   }
 
-  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks()
+  std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> runBenchmarks()
   {
-    return std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds>();
+    return std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds>();
   }
-} // namespace tarch::accelerator::info::cpp
+} // namespace tarch::accelerator::cpp
 #endif

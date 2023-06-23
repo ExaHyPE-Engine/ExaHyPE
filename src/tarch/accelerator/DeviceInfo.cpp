@@ -24,23 +24,23 @@
 #include <cassert>
 // #else if defined(WITH_SYCL_API) // Possible TODO to differentiate SYCL_API and Sycl
 
-namespace tarch::accelerator::info
+namespace tarch::accelerator
 {
   std::vector<std::vector<std::string>> queryDeviceInformation()
   {
     std::vector<std::vector<std::string>> devInfo;
 #if defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
-    tarch::accelerator::info::cuda::queryDeviceInformation(devInfo);
+    tarch::accelerator::cuda::queryDeviceInformation(devInfo);
 #elif defined(GPUOffloadingSYCL)
-    tarch::accelerator::info::sycl::queryDeviceInformation(devInfo);
+    tarch::accelerator::sycl::queryDeviceInformation(devInfo);
 #elif defined(GPUOffloadingOMP)
-    tarch::accelerator::info::omp::queryDeviceInformation(devInfo);
+    tarch::accelerator::omp::queryDeviceInformation(devInfo);
 #elif defined(GPUOffloadingCPP)
-    tarch::accelerator::info::cpp::queryDeviceInformation(devInfo);
+    tarch::accelerator::cpp::queryDeviceInformation(devInfo);
 #else
     return devInfo;
 #endif
-    tarch::accelerator::info::runBenchmarks(devInfo);
+    tarch::accelerator::runBenchmarks(devInfo);
     return devInfo;
   }
 
@@ -48,15 +48,15 @@ namespace tarch::accelerator::info
   {
     auto propertymatrix = queryDeviceInformation();
 #if defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
-    tarch::accelerator::info::cuda::printDeviceInformation(propertymatrix);
+    tarch::accelerator::cuda::printDeviceInformation(propertymatrix);
 #elif defined(GPUOffloadingSYCL)
-    tarch::accelerator::info::sycl::printDeviceInformation(propertymatrix);
+    tarch::accelerator::sycl::printDeviceInformation(propertymatrix);
 #elif defined(GPUOffloadingOMP)
     // An empty table, with OpenMP we will only know how many GPUs we have
-    tarch::accelerator::info::omp::printDeviceInformation(propertymatrix);
+    tarch::accelerator::omp::printDeviceInformation(propertymatrix);
 #elif defined(GPUOffloadingCPP)
     // Can't get any information with cpp GPU offloading rn
-    tarch::accelerator::info::cpp::printDeviceInformation(propertymatrix);
+    tarch::accelerator::cpp::printDeviceInformation(propertymatrix);
 #else
     // Print noinformation since we do not have an accelerator
     // The following logInfo not really needed
@@ -148,13 +148,13 @@ namespace tarch::accelerator::info
   {
     std::vector<bool> testResults;
 #if defined(GPUOffloadingCUDA)
-    testResults = tarch::accelerator::info::cuda::testKernelLaunch();
+    testResults = tarch::accelerator::cuda::testKernelLaunch();
 #elif defined(GPUOffloadingSYCL)
-    testResults = tarch::accelerator::info::sycl::testKernelLaunch();
+    testResults = tarch::accelerator::sycl::testKernelLaunch();
 #elif defined(GPUOffloadingOMP)
-    testResults = tarch::accelerator::info::omp::testKernelLaunch();
+    testResults = tarch::accelerator::omp::testKernelLaunch();
 #elif defined(GPUOffloadingCPP)
-    testResults = tarch::accelerator::info::cpp::testKernelLaunch();
+    testResults = tarch::accelerator::cpp::testKernelLaunch();
     if (testResults.size() == 0)
     {
       logInfo("offloadCapabiltiyTest()", "Iso C++ GPU-Parallelism with NVHPC compilers can't check kernel launch tests currently");
@@ -213,16 +213,16 @@ namespace tarch::accelerator::info
   {
     std::vector<BenchmarkResultInNanoSeconds> results;
 #if defined(GPUOffloadingCUDA)
-    results = tarch::accelerator::info::cuda::runBenchmarks();
+    results = tarch::accelerator::cuda::runBenchmarks();
     parseBenchmarkResults(results, propertyMatrix);
 #elif defined(GPUOffloadingSYCL)
-    results = tarch::accelerator::info::sycl::runBenchmarks();
+    results = tarch::accelerator::sycl::runBenchmarks();
     parseBenchmarkResults(results, propertyMatrix);
 #elif defined(GPUOffloadingOMP)
-    results = tarch::accelerator::info::omp::runBenchmarks();
+    results = tarch::accelerator::omp::runBenchmarks();
     parseBenchmarkResults(results, propertyMatrix);
 #elif defined(GPUOffloadingCPP)
-    results = tarch::accelerator::info::cpp::runBenchmarks();
+    results = tarch::accelerator::cpp::runBenchmarks();
     parseBenchmarkResults(results, propertyMatrix);
 #endif
   }
@@ -242,11 +242,11 @@ namespace tarch::accelerator::info
       double gpuToCpu = benchmarkResult.allocatedDataSize * benchmarkResult.repeats * (1.0 / static_cast<double>(benchmarkResult.GPUtoCPUCopy));
       double averageStream = (cpuToGpu + gpuToCpu) / 2.0;
       ss << averageStream << " Gb/s";
-      benchmarkResultsStringRepresentations[tarch::accelerator::info::getPropertyOffset("Streaming Bandwidth")][i] = ss.str();
+      benchmarkResultsStringRepresentations[tarch::accelerator::getPropertyOffset("Streaming Bandwidth")][i] = ss.str();
       ss.str(std::string());
       ss << benchmarkResult.allocatedDataSize * benchmarkResult.repeats * (1.0 / static_cast<double>(benchmarkResult.GPUtoGPUCopy)) << " Gb/s";
-      benchmarkResultsStringRepresentations[tarch::accelerator::info::getPropertyOffset("GPU-GPU Copy")][i] = ss.str();
+      benchmarkResultsStringRepresentations[tarch::accelerator::getPropertyOffset("GPU-GPU Copy")][i] = ss.str();
       ss.str(std::string());
     }
   }
-} // namespace tarch::accelerator::info
+} // namespace tarch::accelerator

@@ -28,14 +28,14 @@ void check_error(const char *file, int line)
 }
 #endif
 
-namespace tarch::accelerator::info::cuda
+namespace tarch::accelerator::cuda
 {
   void queryDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix)
   {
     std::stringstream ss;
     int numberOfDevices;
     cudaGetDeviceCount(&numberOfDevices);
-    unsigned int propertyCount = tarch::accelerator::info::properties.size();
+    unsigned int propertyCount = tarch::accelerator::properties.size();
     std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(numberOfDevices, "X"));
     propertyMatrix = std::move(_propertyMatrix);
 
@@ -50,11 +50,11 @@ namespace tarch::accelerator::info::cuda
       cudaMemGetInfo(&free, &total);
       constexpr unsigned int kb = 1024;
       constexpr unsigned int mb = kb * kb;
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Device Name")][i] = props.name;
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Global Memory")][i] = std::to_string(props.totalGlobalMem / mb) + " mb";
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Free Memory")][i] = std::to_string(free / mb) + " mb";
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Clock Frequency")][i] = std::to_string(props.clockRate / 1000) + " mHz";
-      propertyMatrix[tarch::accelerator::info::getPropertyOffset("Compute Units")][i] = std::to_string(props.multiProcessorCount);
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Device Name")][i] = props.name;
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Global Memory")][i] = std::to_string(props.totalGlobalMem / mb) + " mb";
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Free Memory")][i] = std::to_string(free / mb) + " mb";
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Clock Frequency")][i] = std::to_string(props.clockRate / 1000) + " mHz";
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Compute Units")][i] = std::to_string(props.multiProcessorCount);
     }
     cudaSetDevice(defaultDevice);
   }
@@ -70,7 +70,7 @@ namespace tarch::accelerator::info::cuda
     }
     else
     {
-      std::string deviceInfoStr = tarch::accelerator::info::parseMatrix(
+      std::string deviceInfoStr = tarch::accelerator::parseMatrix(
           propertyMatrix, numberOfDevices);
       logInfo("printDeviceInformation()", "\n" << deviceInfoStr);
     }
@@ -88,17 +88,17 @@ namespace tarch::accelerator::info::cuda
   }
 
 #if defined(GPUOffloadingCUDA)
-  std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> runBenchmarks()
+  std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> runBenchmarks()
   {
     int numberOfDevices;
     cudaGetDeviceCount(&numberOfDevices);
-    std::vector<tarch::accelerator::info::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});
+    std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});
 
     constexpr uint64_t repeats = 10;
 
     for (int deviceId = 0; deviceId < numberOfDevices; deviceId++)
     {
-      tarch::accelerator::info::BenchmarkResultInNanoSeconds &benchmarkResult = benchmarkResults[deviceId];
+      tarch::accelerator::BenchmarkResultInNanoSeconds &benchmarkResult = benchmarkResults[deviceId];
       benchmarkResult.repeats = repeats;
       for (uint i = 0; i < repeats + 1; i++)
       {
@@ -196,6 +196,6 @@ namespace tarch::accelerator::info::cuda
     return benchmarkResults;
   }
 #endif
-} // namespace tarch::accelerator::info::cuda
+} // namespace tarch::accelerator::cuda
 
 #endif

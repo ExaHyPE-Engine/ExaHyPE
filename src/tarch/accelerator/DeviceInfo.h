@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "tarch/logging/Log.h"
-namespace tarch::accelerator::info
+namespace tarch::accelerator
 {
   // Using a struct per Device Could be easier, but this way it is easier to create a Matrix with more Freedom
   // For a cleaner code it can be a future todo since there is only 1 table being printed
@@ -28,7 +28,7 @@ namespace tarch::accelerator::info
     uint64_t readWriteSize;
   };
 
-  static tarch::logging::Log _log("tarch::accelerator::info");
+  static tarch::logging::Log _log("tarch::accelerator");
 
   std::vector<std::vector<std::string>> queryDeviceInformation();
   void printDeviceInformation();
@@ -37,4 +37,4 @@ namespace tarch::accelerator::info
   void offloadCapabilityTest();
   void runBenchmarks(std::vector<std::vector<std::string>> &propertyMatrix);
   void parseBenchmarkResults(std::vector<BenchmarkResultInNanoSeconds> &benchmarkResults, std::vector<std::vector<std::string>> &propertyMatrix);
-} // namespace tarch::accelerator::info
+} // namespace tarch::accelerator
