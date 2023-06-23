@@ -92,4 +92,4 @@ def caller_distance_to_build_root():
     current_iter_dir =os.path.abspath(os.path.join(current_iter_dir, ".."))
     dist += 1
 
-  raise -1
+  return -1
