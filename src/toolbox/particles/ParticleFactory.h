@@ -104,6 +104,17 @@ namespace toolbox {
       bool addNoise
     );
 
+    /**
+     * Insert particles that are aligned along a Cartesian grid globally
+     *
+     * ## Biased insertion
+     *
+     * We compute the left number of the particle and the right one. If the
+     * left particle ends up exactly on the face, then we add it. If the right
+     * one ends up exactly on the face, we skip it. The rationale is that the
+     * right neighbour will insert that guy later on, and we don't want to
+     * insert particles twice.
+     */
     template <class T>
     std::vector<T*> createParticlesAlignedWithGlobalCartesianMesh(
       double spacingH,
