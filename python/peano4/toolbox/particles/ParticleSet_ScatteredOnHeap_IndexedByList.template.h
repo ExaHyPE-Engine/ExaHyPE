@@ -18,6 +18,8 @@
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/grid/TraversalObserver.h"
 
+#include "toolbox/particles/ParticleSet.h"
+
 
 {% for item in NAMESPACE -%}
   {% if not loop.last %}
@@ -41,84 +43,27 @@
 {%- endfor %}
 
 
-  class {{CLASSNAME}}: public std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
+  class {{CLASSNAME}}: public std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >,
+                       public toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >
+                       {
     public:
-      typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  DoFType;
-      typedef std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >  Base;
+      typedef std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >                       BaseContainer;
+      typedef toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >  BaseParticleSetClass;
 
     private:
       static tarch::logging::Log _log;
-
-      static int _SieveReductionTag;
-
-      static tarch::multicore::BooleanSemaphore   _statisticsSemaphore;
-      static tarch::multicore::BooleanSemaphore   _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
-
-      static {{CLASSNAME}}     _particlesThatCanNotBeLiftedWithinTheirTree;
-
-      /**
-       * Particles that should be sieved
-       *
-       * This is a set of particles which should be sieved in the next traversal.
-       * However, nobody takes particles directly from this list. Instead, tasks
-       * will work with their own clones of this list.
-       *
-       * @see getSievedParticlesForNextGridTraversal()
-       *
-       * The list is populated by finishedTraversal().
-       */
-      static {{CLASSNAME}}     _particlesThatHaveToBeSieved;
-
-      static int _numberOfLifts;
-      static int _numberOfDrops;
-      static int _numberOfSieves;
-      static int _numberOfAssignmentsToGlobalSieve;
-      static int _numberOfReassignments;
-
-      /**
-       * Set by parallel state analysis
-       */
-      static int _numberOfRemainingLocalParticles;
-      static int _numberOfIncomingLocalParticles;
-      static int _numberOfLeavingLocalParticles;
-      
-      /**
-       * Typically updated by boundary merge operations
-       *
-       * @see merge()
-       */
-      static int _numberOfMergedVirtualParticles;
-
-      /**
-       * This one is updated internally by eliminateSpatialDuplicates() which you
-       * might call or you might not call.
-       */
-      static int _numberOfVirtualEliminatedSpatialDuplicates;
-      static int _numberOfLocalEliminatedSpatialDuplicates;
-
-      #if PeanoDebug>=1
-      private:
-       tarch::la::Vector<Dimensions,double> _debugX;
-       tarch::la::Vector<Dimensions,double> _debugH;
-
-      public:
-        void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
-        void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
-        tarch::la::Vector<Dimensions,double> getDebugX() const;
-        tarch::la::Vector<Dimensions,double> getDebugH() const;
-      #endif
 
       /**
        * Check if there's already a particle at p's position in the set.
        *
        * As we return a non-const iterator, the operation may not be labelled
-       * as const.
+       * as const. It is essential
        *
        *
        * @return container's end() if there is no duplicate. Otherwise, return
        *   iterator pointing to existing particle.
        */
-      Base::iterator particleIsDuplicate( const DoFType*  p );
+      BaseContainer::iterator particleIsDuplicate( const DoFType*  p );
     public:
 
       /**
@@ -235,68 +180,9 @@
        */
       void eliminateSpatialDuplicates();
 
-      #ifdef Parallel
-      static void initDatatype();
-
-      static void shutdownDatatype();
-      #endif
-
       std::string toString() const;
 
       double getMinCutOffRadius() const;
-
-      /**
-       * Get all the global sieve data consistent
-       *
-       * Has to be called after the traversal has finished on each rank by the
-       * main, i.e. do not call it within the action sets. You may not call
-       * this routine more than once per rank per traversal. The core purpose
-       * of this routine is to get the global sieve data all consistent: If a
-       * tree cannot resort its local particles, and, hence, cannot even
-       * synchronise with its neighbours as particles moved too fast, it dumps
-       * the particle into the global sieve list. After the traversal, all
-       * ranks (and eventually trees) should see the same global sieve list and
-       * start to sieve particles into their respective domain.
-       *
-       *
-       * ## Algorithmic steps
-       *
-       * - Delete all the sieve particles which have not been sieved. We note
-       *   that only particles within the domain are taken from the sieve set
-       *   and inserted into the mesh. For particles close to domain
-       *   boundaries, we create copies and insert these copies. The preimage
-       *   consequently has to be deleted at one point, i.e. here in this
-       *   routine.
-       * - Inform all other ranks about my number of local particles that I
-       *   could not sort on the local rank.
-       * - Per other rank:
-       *   - Find out how many particles will be received from this partner.
-       *   - Send out my own copy of particles with an unblocking send.
-       *   - Receive the guys from the neighbour. We can append these received
-       *     data directly to our local data. We will use these local buffers
-       *     to send out stuff to other neighbours, but as we append, we will
-       *     only send out the first few particles which really stem from the
-       *     local node.
-       *   - Wrap up the unblocking send via a wait.
-       *   It is important that we allow the rank to handle other (unexpected)
-       *   message while we wait for the particle exchange to terminate. This
-       *   is possible, as we use a tag of its own for the global particle
-       *   exchange. Without a wait for unexpected messages, it could for
-       *   example be that another rank requires a tree booking due to load
-       *   balancing, and we cannot serve the tree request in our rank, as we
-       *   are already stuck in the global particle exchange.
-       * - We roll over the globally lifted particles into the sieve set for
-       *   the next mesh traversal.
-       * - Remove duplicates from the sieve list. The sieve list might contain
-       *   redundant particles for those guys which ended up exactly on the
-       *   boundary between two trees. Such guys are considered to be local in
-       *   multiple subdomains and hence might also end up redundantly within
-       *   the sieve list.
-       * - Clear the container _particlesThatCanNotBeLiftedWithinTheirTree
-       *   which will be used in the future to gather the newly sieved
-       *   particles.
-       */
-      static void finishedTraversal();
 
       /**
        * Mark whole particle set as set of particles which can't be lifted
@@ -316,6 +202,8 @@
        * copy/clear mechanism.
        */
       void clear();
+
+      // @todo
 
       /**
        * Inform set that particle cannot be lifted on its current tree
@@ -367,6 +255,10 @@
       /**
        * Get particles that are to be sieved
        *
+       * @todo There's the same operation on the sieve particles. But they
+       * have slightly different semantics.
+       *
+       *
        * Takes the current particle set and finds those particles which can be
        * sieved into current vertex. The operation alters the object state, as
        * it returns the particles that are to be sieved and removes them from
@@ -396,45 +288,9 @@
        * @see ::toolbox::particles::sieveParticle() for the sieve logic.
        * @see deleteParticles() for the deletion of deep copies.
        */
-      {{NAMESPACE | join("::")}}::{{CLASSNAME}}  getParticlesToBeSievedIntoVertex(
+      {{NAMESPACE | join("::")}}::{{CLASSNAME}}  getParticlesToBeDroppedIntoVertex(
         const peano4::datamanagement::VertexMarker&  marker
       );
-
-      static void updateLiftDropStatistics(
-        int numberOfLiftsInThisTree,
-        int numberOfDropsInThisTree,
-        int numberOfReassignmentsInThisTree,
-        int numberOfSievesInThisTree
-      );
-
-      static void updateNumberOfLocalParticleStatistics(
-        int numberOfRemainingLocalParticles,
-        int numberOfIncomingLocalParticles,
-        int numberOfLeavingLocalParticles
-      );
-
-      /**
-       * Deep copy of particles that have to be sieved
-       *
-       * This routine returns a deep copy of all the particles that are to be
-       * sieved. Use this before you start to traverse your local domain. As
-       * it is a deep copy, you have to invoke deleteParticles() on the result.
-       * The rationale behind the deep copying is as follows: Individual
-       * threads run through their subdomain in parallel and they should not
-       * compete for a global sieve set. At the same time, you want to
-       * eliminate a particle from the sieve set as soon as you have worked it
-       * in: No code should check that particle again, and you definitely don't
-       * want to insert it multiple times. So I make each thread (subtree) work
-       * with a sieve set of its own which it can manipulate as it wants. At
-       * the end of the traversal, it will delete all remaining particles, i.e.
-       * kill all those deep copies that were not relevant to the local
-       * partition.
-       *
-       * @see deleteParticles() to clean up the local copy.
-       * @see _particlesThatHaveToBeSieved which is the container from which we
-       *   create a deep copy.
-       */
-      static {{NAMESPACE | join("::")}}::{{CLASSNAME}} getSievedParticlesForNextGridTraversal();
 
       /**
        * This is a deep delete
@@ -446,14 +302,6 @@
        * invalid.
        */
       void deleteParticles();
-
-      static void clearReassignmentStatistics();
-      static void clearParticleStateStatistics();
-
-      /**
-       * Reduces and prints the global statistics
-       */
-      static void reduceAndPrintStatistics();
 };
 
 {% for item in NAMESPACE -%}

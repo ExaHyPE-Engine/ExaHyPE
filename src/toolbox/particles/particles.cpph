@@ -38,8 +38,8 @@ void toolbox::particles::insertParticleIntoCell(
   static tarch::logging::Log _log( "toolbox::particles" );
   std::bitset<Dimensions> targetVertex;
   for (int d=0; d<Dimensions; d++) {
-    assertion2( tarch::la::greaterEquals(newParticle->getX()(d),marker.x()(d)-marker.h()(d)/2.0), marker.toString(), newParticle->toString() );
-    assertion2( tarch::la::smallerEquals(newParticle->getX()(d),marker.x()(d)+marker.h()(d)/2.0), marker.toString(), newParticle->toString() );
+    assertion4( tarch::la::greaterEquals(newParticle->getX()(d),marker.x()(d)-marker.h()(d)/2.0), marker.toString(), newParticle->toString(), marker.x()(d)-marker.h()(d)/2.0, d );
+    assertion4( tarch::la::smallerEquals(newParticle->getX()(d),marker.x()(d)+marker.h()(d)/2.0), marker.toString(), newParticle->toString(), marker.x()(d)+marker.h()(d)/2.0, d );
     targetVertex[d] = newParticle->getX()(d)>marker.x()(d);
   }
 

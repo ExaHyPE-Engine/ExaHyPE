@@ -180,6 +180,9 @@ namespace peano4 {
 
 
 /**
+ * d-dimensional Loop
+ *
+ *
  * Very often one needs a d-dimensional for loop. A d-dimensional for loop is
  * something like
  * \code
@@ -206,9 +209,15 @@ namespace peano4 {
  * results in [0,0], [1,0], [0,1], [1,1] if Dimensions equals 2. If DIMENSION
  * equals 3 the same construct gives you [0,0,0], [1,0,0], [0,1,0], [1,1,0],
  * [0,0,1], [1,0,1], [0,1,1], [1,1,1].
+ *
+ * There are some short-cuts for frequently used iteration ranges, i.e. popular
+ * N. Please note that this routine works for quadratic iteration ranges, i.e.
+ * if you make N a scalar. It also works if max has the type
+ * tarch::la::Vector<Dimensions,int> and hosts different entries per dimension.
  */
 #define dfor(counter,max) \
   for (tarch::la::Vector<Dimensions,int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter,max); peano4::utils::dInc(counter,max) )
+
 
 /**
  * Shortcut For dfor(counter,4)

@@ -84,33 +84,38 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
   logTraceInWith4Arguments( "createParticlesAlignedWithGlobalCartesianMesh(...)", spacing, voxelX, domainOffset, addNoise );
   std::vector<T*> result;
 
-  const double RelativeAccuracyForGeometricChecks = 0.01 * voxelH(0);
-
-  double continuousParticlesPerAxis = voxelH(0) / spacing;
-
-  tarch::la::Vector<Dimensions,double> firstParticleX = domainOffset;
+  tarch::la::Vector<Dimensions,int>    particlesPerAxis;
+  tarch::la::Vector<Dimensions,double> firstParticleX;
   for (int d=0; d<Dimensions; d++) {
-    while ( tarch::la::smaller( firstParticleX(d), voxelX(d) - 0.5*voxelH(d), RelativeAccuracyForGeometricChecks ) ) {
-      firstParticleX(d) += spacing;
-    }
+    int leftParticleNumberAlongAxis  = static_cast<int>( std::round( (voxelX(d) - 0.5*voxelH(d) - domainOffset(d)) / spacing ) );
+    int rightParticleNumberAlongAxis = static_cast<int>( std::round( (voxelX(d) + 0.5*voxelH(d) - domainOffset(d)) / spacing ) );
+
+    double leftX  = domainOffset(d) + spacing * leftParticleNumberAlongAxis;
+    double rightX = domainOffset(d) + spacing * rightParticleNumberAlongAxis;
+
+    // One of them has to be biased
+    if ( tarch::la::smaller(leftX, voxelX(d) - 0.5*voxelH(d)) )       leftParticleNumberAlongAxis++;
+    if ( tarch::la::greaterEquals(rightX,voxelX(d) + 0.5*voxelH(d)) ) rightParticleNumberAlongAxis--;
+
+    particlesPerAxis(d) = std::max(0, rightParticleNumberAlongAxis - leftParticleNumberAlongAxis + 1);
+    firstParticleX(d)   = domainOffset(d) + spacing * leftParticleNumberAlongAxis;
   }
 
-  int    particlesPerAxis           = static_cast<int>( std::floor(continuousParticlesPerAxis) )+1;
+  const double RelativeAccuracyForGeometricChecks = 0.01 * voxelH(0);
+
   dfor(k,particlesPerAxis) {
     tarch::la::Vector<Dimensions,double> x = firstParticleX + spacing * tarch::la::convertScalar<double>(k);
 
-    if ( tarch::la::allSmaller(x,voxelX+0.5*voxelH, RelativeAccuracyForGeometricChecks) ) {
-      T* newParticle = new T();
+    T* newParticle = new T();
 
-      if (addNoise) {
-        for (int d=0; d<Dimensions; d++) {
-          x(d) += (randomDist(e2) - 0.5) * spacing;
-        }
+    if (addNoise) {
+      for (int d=0; d<Dimensions; d++) {
+        x(d) += (randomDist(e2) - 0.5) * spacing;
       }
-
-      init(*newParticle,x,0.9*tarch::la::min(voxelH));
-      result.push_back(newParticle);
     }
+
+    init(*newParticle,x,0.9*tarch::la::min(voxelH));
+    result.push_back(newParticle);
   }
 
   logTraceOutWith1Argument( "createParticlesAlignedWithGlobalCartesianMesh(...)", result.size() );

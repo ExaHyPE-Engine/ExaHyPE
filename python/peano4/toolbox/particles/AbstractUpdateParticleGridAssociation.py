@@ -206,7 +206,7 @@ unphysical.
   _numberOfDrops  = 0;
   _numberOfSieves = 0;
   
-  _sieveParticles = vertexdata::{{PARTICLES_CONTAINER}}::getSievedParticlesForNextGridTraversal();
+  _sieveParticles = vertexdata::{{PARTICLES_CONTAINER}}::sieveParticles.getSievedParticlesForNextGridTraversal();
 """ )
 
 
@@ -218,7 +218,7 @@ unphysical.
     _numberOfSieves
   );
 
-  _sieveParticles.deleteParticles();
+  vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::deleteParticles(_sieveParticles);
 """ )
 
 
@@ -258,8 +258,8 @@ unphysical.
 
 
   _Template_Sieve = jinja2.Template("""
-  if ( not _sieveParticles.empty() ) {
-    vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = _sieveParticles.getParticlesToBeSievedIntoVertex( marker );
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::sieveParticles.hasParticlesToBeSievedIntoVertices() ) {
+    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::sieveParticles.getParticlesToBeSievedIntoVertex( marker );
       
     _numberOfSieves += sievedParticles.size();
 
@@ -332,6 +332,6 @@ unphysical.
   int  _numberOfDrops;
   int  _numberOfSieves;
   
-  vertexdata::{{PARTICLES_CONTAINER}}  _sieveParticles;
+  vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::ParticleList  _sieveParticles;
 """).render(**self.d)
 

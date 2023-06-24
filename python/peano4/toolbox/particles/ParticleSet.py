@@ -11,7 +11,10 @@ import dastgen2
 import os
 
 
-class ParticleSetGenerator(object):
+from enum import Enum
+
+
+class ParticleSetGenerator_ScatteredOnHeap_IndexByList(object):
     def __init__(self, data):
         self._data = data
 
@@ -40,15 +43,11 @@ class ParticleSetGenerator(object):
     def construct_output(self, output):
         d = {"PARTICLE_TYPE": self._data.particle_model.name}
 
-        templatefile_prefix = (
-            os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
-        )
-        
-#        Nein. Das sollte was mit Scattered im Namen haben und dann sollte es auch ne Version geben, die mit einem Vector arbeitet
-        
+        templatefile_prefix = os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
+                
         generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            templatefile_prefix + ".template.h",
-            templatefile_prefix + ".template.cpp",
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByList.template.h",
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByList.template.cpp",
             self._data.name,
             self._data.namespace,
             self._data.namespace[-1],
@@ -63,9 +62,11 @@ class ParticleSetGenerator(object):
 
 
 class ParticleSet(DoF):
-    """
+    """!
+    
+    Represents a particle set
 
-    :Attributes:
+    ## Attributes
 
     name: String
       Name of the particle. Has to be a valid C++ class name.
@@ -86,7 +87,7 @@ class ParticleSet(DoF):
             )
 
         self.particle_model = particle
-        self.generator = ParticleSetGenerator(self)
+        self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
 
     @property
     def readme_descriptor(self):
