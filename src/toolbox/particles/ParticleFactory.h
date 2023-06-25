@@ -121,6 +121,7 @@ namespace toolbox {
       const tarch::la::Vector<Dimensions,double>&  voxelX,
       const tarch::la::Vector<Dimensions,double>&  voxelH,
       const tarch::la::Vector<Dimensions,double>&  domainOffset,
+      const tarch::la::Vector<Dimensions,double>&  domainSize,
       bool addNoise
     );
   }

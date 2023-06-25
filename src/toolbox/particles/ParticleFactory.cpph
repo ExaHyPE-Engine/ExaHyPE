@@ -78,27 +78,34 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
   const tarch::la::Vector<Dimensions,double>&  voxelX,
   const tarch::la::Vector<Dimensions,double>&  voxelH,
   const tarch::la::Vector<Dimensions,double>&  domainOffset,
+  const tarch::la::Vector<Dimensions,double>&  domainSize,
   bool                                         addNoise
 ) {
   static tarch::logging::Log _log( "toolbox::particles" );
   logTraceInWith4Arguments( "createParticlesAlignedWithGlobalCartesianMesh(...)", spacing, voxelX, domainOffset, addNoise );
   std::vector<T*> result;
 
+  tarch::la::Vector<Dimensions,double> biasedOffset = domainOffset + 0.5 * tarch::la::remainder(domainOffset,spacing);
+
   tarch::la::Vector<Dimensions,int>    particlesPerAxis;
   tarch::la::Vector<Dimensions,double> firstParticleX;
   for (int d=0; d<Dimensions; d++) {
-    int leftParticleNumberAlongAxis  = static_cast<int>( std::round( (voxelX(d) - 0.5*voxelH(d) - domainOffset(d)) / spacing ) );
-    int rightParticleNumberAlongAxis = static_cast<int>( std::round( (voxelX(d) + 0.5*voxelH(d) - domainOffset(d)) / spacing ) );
+    int leftParticleNumberAlongAxis  = static_cast<int>( std::round( (voxelX(d) - 0.5*voxelH(d) - biasedOffset(d)) / spacing ) );
+    int rightParticleNumberAlongAxis = static_cast<int>( std::round( (voxelX(d) + 0.5*voxelH(d) - biasedOffset(d)) / spacing ) );
 
-    double leftX  = domainOffset(d) + spacing * leftParticleNumberAlongAxis;
-    double rightX = domainOffset(d) + spacing * rightParticleNumberAlongAxis;
+    double leftX  = biasedOffset(d) + spacing * leftParticleNumberAlongAxis;
+    double rightX = biasedOffset(d) + spacing * rightParticleNumberAlongAxis;
 
     // One of them has to be biased
     if ( tarch::la::smaller(leftX, voxelX(d) - 0.5*voxelH(d)) )       leftParticleNumberAlongAxis++;
-    if ( tarch::la::greaterEquals(rightX,voxelX(d) + 0.5*voxelH(d)) ) rightParticleNumberAlongAxis--;
+    if (
+      tarch::la::equals(rightX,voxelX(d) + 0.5*voxelH(d)) and tarch::la::smaller(rightX, domainOffset(d)+domainSize(d))
+      or
+      tarch::la::greater(rightX,voxelX(d) + 0.5*voxelH(d))
+    ) rightParticleNumberAlongAxis--;
 
     particlesPerAxis(d) = std::max(0, rightParticleNumberAlongAxis - leftParticleNumberAlongAxis + 1);
-    firstParticleX(d)   = domainOffset(d) + spacing * leftParticleNumberAlongAxis;
+    firstParticleX(d)   = biasedOffset(d) + spacing * leftParticleNumberAlongAxis;
   }
 
   const double RelativeAccuracyForGeometricChecks = 0.01 * voxelH(0);
