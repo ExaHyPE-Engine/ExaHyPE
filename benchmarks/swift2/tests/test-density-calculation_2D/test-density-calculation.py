@@ -10,12 +10,6 @@ import shutil
 
 import swift2.particle.tests
 
-# HDF5 Reader
-import peano4.toolbox.particles.sph.fileReader
-
-# SPH initialisation snippets library
-import peano4.toolbox.particles.sph.initSnippets
-
 ########################################################################################
 # Parse user input
 ########################################################################################
@@ -70,8 +64,8 @@ if args.asserts:
   build_mode = peano4.output.CompileMode.Asserts
 else:
   build_mode = peano4.output.CompileMode.Release
-    
-offset      = [ 0, 0, 0 ] 
+
+offset      = [ 0, 0, 0 ]
 domain_size = [ 1, 1, 1 ]
 periodic_boundary_conditions = [False,False,False]          # Periodic BC
 
@@ -90,7 +84,7 @@ project.set_global_simulation_parameters(
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
-project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new toolbox::loadbalancing::RecursiveSubdivision::DefaultConfiguration()")
+project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new toolbox::loadbalancing::DefaultConfiguration()")
 
 
 
@@ -98,15 +92,15 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 # Initialisation snippet for the particle
 ###############################################################################
 #
-# If we work with only one particle, then we can simply set its velocity. 
+# If we work with only one particle, then we can simply set its velocity.
 # However, our script works both if we only module the earth but also when we
-# model earth and sun explicitly. In the latter case, we have to ensure that 
+# model earth and sun explicitly. In the latter case, we have to ensure that
 # only the earth is given an initial velocity.
 #
 ###############################################################################
 
 # Snippet from library
-ICs = peano4.toolbox.particles.sph.initSnippets.TestDensityCalculation()
+ICs = swift2.scenario.TestDensityCalculation()
 initialisation_snippet = ICs.initialisation_snippet
 
 #
@@ -130,7 +124,7 @@ coords[:,1] = yp
 
 print('inserting particles at:', coords)
 
-project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
+project.algorithm_step_initial_conditions.add_action_set( swift2.input.InsertParticlesByCoordinates(
   particle_set         = particle_set,
   initialisation_call  = initialisation_snippet,
   coordinates          = coords,
@@ -140,10 +134,10 @@ project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParti
 #
 #  Insert particles from file
 #
-#project.algorithm_step_init.add_action_set( peano4.toolbox.particles.sph.fileReader.InsertParticlesFromHDF5File( 
-#  particle_set         = particle_set,
-#  filename='sodShock.hdf5' 
-#  ))
+#  project.algorithm_step_initial_conditions.add_action_set(
+#      swift2.input.InsertParticlesFromHDF5File(
+#          particle_set=particle_set, filename="sodShock.hdf5"
+#      )
 
 
 ###############################################################################
@@ -152,26 +146,26 @@ project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParti
 #
 # A plotter has to be told explicitly which data to visualisation. We visualise
 # the velocity here as scalar attribute. To some degree, this is redundant info
-# as we implicitly have the position of the particle and can "see" its 
+# as we implicitly have the position of the particle and can "see" its
 # velocity when we play through a movie. But the explicit visualisation shows
 # how to handle attributes per particle.
 #
-# When we create the plotter, we have to inform it how to enumerate the 
+# When we create the plotter, we have to inform it how to enumerate the
 # individual snapshots. Obviously, we can just count through the snapshots.
 # In this case, you have to pass the constant peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps
 # into the field time_stamp_evaluation. You can also define your own time
-# stamp. For this, it is useful to know that each particle definition in the 
-# Python script will yield a particle class with the same name in the 
+# stamp. For this, it is useful to know that each particle definition in the
+# Python script will yield a particle class with the same name in the
 # subnamespace globaldata. Every particle class in return has a class attribute
-#      
+#
 #            getSpecies()
 #
-# which returns an object that holds global information about this particle 
-# type. 
+# which returns an object that holds global information about this particle
+# type.
 ###############################################################################
 #particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particle_set, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
-particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", 
-                                                                      particle_set, 
+particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles",
+                                                                      particle_set,
                                                                       "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name) )
 particle_plotter.add_attribute_to_plot(particle.part_id , 1)
 particle_plotter.add_attribute_to_plot(particle.velocity     , dimensions)
@@ -188,7 +182,7 @@ project.algorithm_step_plot.add_action_set( particle_plotter )
 # Generate plain Peano 4 project
 ###############################################################################
 #
-# See commments above (for the force interaction kernel) why we might want to 
+# See commments above (for the force interaction kernel) why we might want to
 # have some of the constants from the Python script within the C++ code base
 # that's generated.
 #
@@ -198,9 +192,9 @@ peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 # -----------------------------------------------------------------------------
 # Export global SPH constants and parameters
 # -----------------------------------------------------------------------------
- 
+
 # There are plenty of constant simulation paramaters to specify for our SPH
-# simulation - we do that here. 
+# simulation - we do that here.
 
 
 # EoS parameter ---------------------------------------------------------------
@@ -216,9 +210,9 @@ kernel_list_symbols = ['QUARTIC_SPLINE_KERNEL']
 KERNEL = kernel_list[0]
 KERNEL_SYMBOL = kernel_list_symbols[0]
 
-# Smoothing-length free parameter (resolution "eta_neighbours"). 
+# Smoothing-length free parameter (resolution "eta_neighbours").
 # Can be set by specifying a desired number of neighbours.
-SMOOTH_ETA_FAC = str( 1.235 ) 
+SMOOTH_ETA_FAC = str( 1.235 )
 particle.set_eta_factor(SMOOTH_ETA_FAC)
 
 if(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
@@ -231,7 +225,7 @@ else:
 N_MEAN_TARGET = str( 2.0 * (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_ETA_FAC) ) )
 
 # Max/min allowed values for smoothing length h
-HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD) ) 
+HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD) )
 HYDRO_h_MIN = "1e-6"
 
 

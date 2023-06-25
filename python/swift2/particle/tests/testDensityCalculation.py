@@ -204,3 +204,11 @@ class testDensityCalculation(Particle):
 
     def set_eta_factor(self, etaFactor):
         self.etaFactor = etaFactor
+
+    def initialisation_steps(self):
+        """!
+
+        No particular initialisation required
+
+        """
+        return []

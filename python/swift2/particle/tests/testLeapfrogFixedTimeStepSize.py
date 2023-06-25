@@ -263,3 +263,11 @@ class testLeapfrogFixedTimeStepSize(Particle):
                                          """,
             ),
         ]
+
+    def initialisation_steps(self):
+        """!
+
+        No particular initialisation required
+
+        """
+        return []

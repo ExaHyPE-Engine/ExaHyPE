@@ -66,7 +66,7 @@ parser.add_argument(
     help="Cell size (default 0.3)",
 )
 parser.add_argument(
-    "-pd", "--peano-dir", dest="peanodir", default="../../..", help="Peano4 directory"
+    "-pd", "--peano-dir", dest="peanodir", default="../../../../", help="Peano4 directory"
 )
 parser.add_argument(
     "-asserts",
@@ -187,8 +187,8 @@ EARTH_V_INI_Y = str(V_MAX / LENGTH_UNIT * T)
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::RecursiveSubdivision",
-    "new toolbox::loadbalancing::RecursiveSubdivision::DefaultConfiguration()",
+    "toolbox::loadbalancing::RecursiveBipartition",
+    "new toolbox::loadbalancing::DefaultConfiguration()",
 )
 
 
@@ -289,7 +289,7 @@ initialisation_snippet = (
    */
 
   /* Internal search radius used by Peano.
-   * Should always be larger than actual SPH interaction radious (~2h).
+   * Should always be larger than actual SPH interaction radius (~2h).
    * But no really used here. */
   particle->setSearchRadius("""
     + str(search_radius)
@@ -341,8 +341,8 @@ initialisation_snippet = (
 #
 # I either insert sun and earth or only the earth
 #
-project.algorithm_step_init.add_action_set(
-    peano4.toolbox.particles.InsertParticlesbyCoordinates(
+project.algorithm_step_initial_conditions.add_action_set(
+    peano4.toolbox.particles.InsertParticlesByCoordinates(
         particle_set=particle_set,
         initialisation_call=initialisation_snippet,
         coordinates=[(EARTH_X_INI, EARTH_Y_INI, 0)],

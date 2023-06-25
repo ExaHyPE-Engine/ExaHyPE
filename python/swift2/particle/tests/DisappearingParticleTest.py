@@ -243,3 +243,11 @@ class DisappearingParticleTest(Particle):
                                          """,
             ),
         ]
+
+    def initialisation_steps(self):
+        """!
+
+        No particular initialisation required
+
+        """
+        return []

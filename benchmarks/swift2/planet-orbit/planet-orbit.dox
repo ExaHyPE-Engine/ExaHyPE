@@ -62,13 +62,13 @@ We therefore specify min_h and max_h.
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-particle   = swift2.particle.LeapfrogFixedInteractionRadius( name                   = "Planet",
-                                                             cfl_factor             = 0.2,
-                                                             initial_time_step_size = args.timestep_size,
-                                                             particles_per_cell = 0,
-                                                             min_h = 0.0011,
-                                                             max_h = 0.3
-                                                           )
+particle   = swift2.particle.LeapfrogFixedSearchRadius( name                   = "Planet",
+                                                        cfl_factor             = 0.2,
+                                                        initial_time_step_size = args.timestep_size,
+                                                        particles_per_cell = 0,
+                                                        min_h = 0.0011,
+                                                        max_h = 0.3
+                                                        )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As we set the interaction radius to

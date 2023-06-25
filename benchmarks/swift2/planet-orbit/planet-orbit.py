@@ -111,8 +111,8 @@ Declare the particle type:
 We need to specify the time integration scheme that will be used to evolve
 this particle. Current choices include:
   - Leapfrog (default)
-  - Explicit Euler with fixed interaction radius
-  - Explicit Euler with variable interaction radius
+  - Explicit Euler with fixed search radius
+  - Explicit Euler with variable search radius
 
 These take the same input parameters as shown below. If you switch between
 these, do not forget to remove the previous main
@@ -121,7 +121,7 @@ these, do not forget to remove the previous main
 """
 
 if args.time_integrator == "leapfrog":
-    particle = swift2.particle.LeapfrogFixedInteractionRadius(
+    particle = swift2.particle.LeapfrogFixedSearchRadius(
         name="Planet",
         cfl_factor=0.2,
         initial_time_step_size=args.timestep_size,
@@ -130,7 +130,7 @@ if args.time_integrator == "leapfrog":
         max_h=0.3,
     )
 elif args.time_integrator == "euler" or "Euler":
-    particle = swift2.particle.ExplicitEulerFixedInteractionRadius(
+    particle = swift2.particle.ExplicitEulerFixedSearchRadius(
         name="Planet",
         cfl_factor=0.2,
         initial_time_step_size=args.timestep_size,
@@ -140,7 +140,7 @@ elif args.time_integrator == "euler" or "Euler":
     )
 
 elif args.time_integrator == "euler-dynamic" or "Euler-dynamic":
-    particle = swift2.particle.ExplicitEulerDynamicInteractionRadius(
+    particle = swift2.particle.ExplicitEulerDynamicSearchRadius(
         name="Planet",
         cfl_factor=0.2,
         initial_time_step_size=args.timestep_size,
@@ -330,7 +330,7 @@ particle_set = project.add_particle_species(particle)
 # only the earth is given an initial velocity.
 #
 ###############################################################################
-search_off_radius = args.cell_size / 100.0
+search_radius = args.cell_size / 100.0
 initialisation_snippet = (
     """
   /*
@@ -342,7 +342,7 @@ initialisation_snippet = (
    * Should always be larger than actual SPH interaction radius (~2h).
    * But no really used here. */
   particle->setSearchRadius("""
-    + str(SearchRadius)
+    + str(search_radius)
     + """);
   particle->setV( {0, 0, 0} );
   particle->setA( {0, 0, 0} );
