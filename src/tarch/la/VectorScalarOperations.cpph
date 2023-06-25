@@ -19,6 +19,19 @@ tarch::la::Vector<Size,Scalar>& tarch::la::operator*= (
 
 
 template<int Size, typename Scalar>
+tarch::la::Vector<Size,Scalar> tarch::la::remainder (
+  const Vector<Size,Scalar>&  vector,
+  double                h
+) {
+  Vector<Size,Scalar> result = vector;
+  for (int i=0; i < Size; i++) {
+    result(i) *= vector(i) - std::floor( vector(i)/h ) * h;
+  }
+  return result;
+}
+
+
+template<int Size, typename Scalar>
 tarch::la::Vector<Size,Scalar>& tarch::la::operator/= (
   Vector<Size,Scalar>&  vector,
   const Scalar&         scalar

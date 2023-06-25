@@ -257,6 +257,20 @@ namespace tarch {
       const Vector<Size,int>&  lhs,
       const int&               cmp
     );
+
+    /**
+     * Return the remainder of a division
+     *
+     * Per component x_i, the function computes
+     * x_i/h and then returns the remaining fraction of x_i which did
+     * not fit into h. The function therefore resembles modulo.
+     */
+    template<int Size, typename Scalar>
+    Vector<Size,Scalar> remainder (
+      const Vector<Size,Scalar>&  vector,
+      double                      h
+    );
+
   }
 }
 
