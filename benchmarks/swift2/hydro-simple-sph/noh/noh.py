@@ -124,7 +124,7 @@ project = swift2.Project(
 name = "hydroPart"
 dimensions = args.dimensions
 
-particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(
+particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     name,
     dimensions_hydro=dimensions,
     cfl_factor=args.cfl_factor,

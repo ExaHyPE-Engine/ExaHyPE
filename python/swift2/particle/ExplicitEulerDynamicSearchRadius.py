@@ -8,7 +8,7 @@ import peano4
 from abc import ABC
 
 
-class ExplicitEulerDynamicInteractionRadius(Particle):
+class ExplicitEulerDynamicSearchRadius(Particle):
     """
 
     Extension of the explicit Euler to support dynamic search radius
@@ -23,7 +23,7 @@ class ExplicitEulerDynamicInteractionRadius(Particle):
       use any special symbols besides an underscore.
 
 
-    @see swift2::kernels::adoptInteractionRadiusAndTriggerRerun()
+    @see swift2::kernels::adoptSearchRadiusAndTriggerRerun()
 
     """
 
@@ -40,7 +40,7 @@ class ExplicitEulerDynamicInteractionRadius(Particle):
         min_h=0.005,
         max_h=0.3,
     ):
-        super(ExplicitEulerDynamicInteractionRadius, self).__init__(
+        super(ExplicitEulerDynamicSearchRadius, self).__init__(
             name,
             particles_per_cell,
             min_h,
@@ -85,7 +85,7 @@ class ExplicitEulerDynamicInteractionRadius(Particle):
                 effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
                 touch_vertex_first_time_kernel="",
                 cell_kernel="""
-                                         ::swift2::kernels::adoptInteractionRadiusAndTriggerRerun<globaldata::{}>(
+                                         ::swift2::kernels::adoptSearchRadiusAndTriggerRerun<globaldata::{}>(
                                            localParticles,
                                            activeParticles,
                                            {}

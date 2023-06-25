@@ -8,17 +8,17 @@ import peano4
 from abc import ABC
 
 
-class ExplicitEulerFixedInteractionRadius(Particle):
+class ExplicitEulerFixedSearchRadius(Particle):
     """!
 
-    Simple particle with fixed interaction radius subject to explicit Euler
+    Simple particle with fixed search radius subject to explicit Euler
 
-    Simple particle with a fixed interaction radius h which moves according
+    Simple particle with a fixed search radius H which moves according
     to an explicit Euler. By default, the Euler uses global time stepping,
     i.e. the combination of maximum velocity and minimal mesh size determines
     the time step size of the subsequent time step. The term fixed means that
-    the interaction radius does not change throughout the time step. Nothing
-    stops you however to adopt the interaction radius in-between any two
+    the search radius does not change throughout the time step. Nothing
+    stops you however to adopt the search radius in-between any two
     time steps. However, only change the radius in a step which is marked with
     the AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS.
 
@@ -86,7 +86,7 @@ class ExplicitEulerFixedInteractionRadius(Particle):
         min_h=0.005,
         max_h=0.3,
     ):
-        super(ExplicitEulerFixedInteractionRadius, self).__init__(
+        super(ExplicitEulerFixedSearchRadius, self).__init__(
             name,
             particles_per_cell,
             min_h,

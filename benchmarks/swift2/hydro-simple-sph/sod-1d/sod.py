@@ -126,7 +126,7 @@ dimensions = args.dimensions
 
 hydro_dimensions = 1  # dimensions for the hydro
 
-particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(
+particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     name,
     dimensions_hydro=hydro_dimensions,
     cfl_factor=args.cfl_factor,

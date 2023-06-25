@@ -10,7 +10,7 @@ import peano4.dastgen2
 from abc import ABC
 
 
-class LeapfrogFixedInteractionRadius(Particle):
+class LeapfrogFixedSearchRadius(Particle):
     """
 
     Simple particle with a fixed interaction radius h which moves according
@@ -80,8 +80,7 @@ class LeapfrogFixedInteractionRadius(Particle):
         min_h=0.005,
         max_h=0.3,
     ):
-        # TODO Mladen: Do we still need this? Check later.
-        super(LeapfrogFixedInteractionRadius, self).__init__(
+        super(LeapfrogFixedSearchRadius, self).__init__(
             name,
             particles_per_cell,
             min_h,

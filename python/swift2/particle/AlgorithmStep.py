@@ -24,7 +24,7 @@ class AlgorithmStep(object):
         pre-conditions:
 
         - It can only depend on its own previous step (SELF);
-        - It can depend on the neighbours within a particle's h-radius
+        - It can depend on the neighbours within a particle's interaction radius
           (NEIGHBOURS);
 
         """
