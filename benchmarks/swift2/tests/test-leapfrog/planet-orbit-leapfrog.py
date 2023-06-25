@@ -66,7 +66,11 @@ parser.add_argument(
     help="Cell size (default 0.3)",
 )
 parser.add_argument(
-    "-pd", "--peano-dir", dest="peanodir", default="../../../../", help="Peano4 directory"
+    "-pd",
+    "--peano-dir",
+    dest="peanodir",
+    default="../../../../",
+    help="Peano4 directory",
 )
 parser.add_argument(
     "-asserts",
