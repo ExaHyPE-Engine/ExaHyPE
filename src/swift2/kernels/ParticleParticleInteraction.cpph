@@ -16,7 +16,6 @@ void swift2::kernels::genericInteraction(
   }
 }
 
-
 template <typename ParticleContainer>
 void swift2::kernels::computeDensityWithConstantSmoothingLengths(
   const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
@@ -98,8 +97,6 @@ void swift2::kernels::computeDensityWithConstantSmoothingLengths(
     } /* End Cell has not updated local particle */
   }
 }
-
-
 
 template <typename ParticleContainer>
 void swift2::kernels::computeDensityWithConstantSearchRadius(
@@ -183,7 +180,6 @@ void swift2::kernels::computeDensityWithConstantSearchRadius(
   }
 }
 
-
 template <typename ParticleContainer>
 void swift2::kernels::computeDensity(
   const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
@@ -265,7 +261,6 @@ void swift2::kernels::computeDensity(
     } /* End Cell has not updated local particle */
   }
 }
-
 
 template <typename ParticleContainer>
 void swift2::kernels::computeHydroForce(

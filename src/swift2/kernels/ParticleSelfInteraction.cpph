@@ -207,13 +207,9 @@ void swift2::kernels::endDensityCalculation(
   }
 }
 
-
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
-  const ParticleContainer& localParticles,
-  const int hydroDimensions,
-  const double etaFactor,
-  const double alphaAV
+  const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
 ) {
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
@@ -255,7 +251,6 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
     }
   }
 }
-
 
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSearchRadius(

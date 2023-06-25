@@ -2,10 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <list>
 #include <unordered_set>
-
 
 namespace swift2 {
   namespace kernels {
@@ -31,11 +29,10 @@ namespace swift2 {
      */
     template <typename Particle, typename ParticleContainer>
     void genericInteraction(
-      const ParticleContainer&  localParticles,
-      const ParticleContainer&  activeParticles,
-      std::function<void(Particle *localParticle, const Particle *const activeParticle)>  interaction
+      const ParticleContainer&                                                           localParticles,
+      const ParticleContainer&                                                           activeParticles,
+      std::function<void(Particle* localParticle, const Particle* const activeParticle)> interaction
     );
-
 
     /**
      * @brief Non-symmetric density calculation (as per Swift terminology).
@@ -66,9 +63,8 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensity(
-        const ParticleContainer&  localParticles,
-        const ParticleContainer&  activeParticles,
-        const int                 hydroDimensions);
+      const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
+    );
 
     /**
      * @brief Same as computeDensity(...), but doesn't modify the particles' search radii.
@@ -76,9 +72,8 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSearchRadius(
-        const ParticleContainer&  localParticles,
-        const ParticleContainer&  activeParticles,
-        const int                 hydroDimensions);
+      const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
+    );
 
     /**
      * @brief Same as computeDensity(...), but doesn't modify the particles' search radii
@@ -92,10 +87,8 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSmoothingLengths(
-        const ParticleContainer&  localParticles,
-        const ParticleContainer&  activeParticles,
-        const int                 hydroDimensions);
-
+      const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
+    );
 
     /** Hydro Force calculation particle-particle kernel
      *
@@ -119,13 +112,13 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeHydroForce(
-        const ParticleContainer&  localParticles,
-        const ParticleContainer&  activeParticles,
-        const int hydroDimensions,
-        const double betaAV
-        );
+      const ParticleContainer& localParticles,
+      const ParticleContainer& activeParticles,
+      const int                hydroDimensions,
+      const double             betaAV
+    );
 
-  }
-}
+  } // namespace kernels
+} // namespace swift2
 
 #include "ParticleParticleInteraction.cpph"

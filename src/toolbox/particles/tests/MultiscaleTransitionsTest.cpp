@@ -3,8 +3,10 @@
 #include "TestParticle.h"
 #include "toolbox/particles/MultiscaleTransitions.h"
 
-tarch::logging::Log toolbox::particles::tests::MultiscaleTransitionsTest::_log("toolbox::particles::tests::"
-                                                                               "MultiscaleTransitionsTest");
+tarch::logging::Log toolbox::particles::tests::MultiscaleTransitionsTest::_log(
+  "toolbox::particles::tests::"
+  "MultiscaleTransitionsTest"
+);
 
 #ifdef UseTestSpecificCompilerSettings
 #pragma optimize("", off)

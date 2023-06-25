@@ -91,7 +91,6 @@ namespace swift2 {
       const double             hHydroMax
     );
 
-
     /**
      * @brief Finishes the calculations from the density loop same as
      * prepareDensityCalculation(...), but doesn't modify the particles'
@@ -113,7 +112,6 @@ namespace swift2 {
       const double             hHydroMax
     );
 
-
     /**
      * @brief Finishes the calculations from the density loop same as
      * prepareDensityCalculation(...), but doesn't modify the particles'
@@ -129,8 +127,6 @@ namespace swift2 {
       const double             hHydroMin,
       const double             hHydroMax
     );
-
-
 
     /**
      * Resets the acceleration and other variables
