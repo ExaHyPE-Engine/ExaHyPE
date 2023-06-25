@@ -387,6 +387,26 @@ file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 include(${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 
+if (NOT EXISTS "${CMAKE_BINARY_DIR}/documentation")
+  execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/documentation" "${CMAKE_BINARY_DIR}/documentation")
+endif()
+
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+    # set input and output files
+    set(DOXYGEN ${CMAKE_CURRENT_BINARY_DIR}/documentation/Doxyfile)
+
+    # note the option ALL which allows to build the docs together with the application
+    add_custom_target( documentation
+        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Generating API documentation with Doxygen"
+        VERBATIM )
+else (DOXYGEN_FOUND)
+  message("Doxygen need to be installed to generate the doxygen documentation")
+endif (DOXYGEN_FOUND)
+
+
 add_subdirectory(src)
 
 display_separator("Project Configuration Summary")
