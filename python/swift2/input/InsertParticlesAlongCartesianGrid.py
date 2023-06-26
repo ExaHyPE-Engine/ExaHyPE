@@ -29,6 +29,11 @@ class InsertParticlesAlongCartesianGrid(
                 "DomainOffset[1]",
                 "DomainOffset[2]",
             ],
+            computational_domain_size=[
+                "DomainSize[0]",
+                "DomainSize[1]",
+                "DomainSize[2]",
+            ],
             additional_includes=additional_includes
             + """
 #include "Constants.h"
