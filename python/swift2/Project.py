@@ -412,7 +412,7 @@ but it will never become closer than these constraints.
         self.__compute_global_max_h()
 
         #
-        # Make pre-defined mesh traversals resort the particles. For this, they need
+        # Make plotting resort and filter the particles. For this, they need
         # the species set
         #
         for current_species_set in self._particle_species_set:
@@ -421,16 +421,8 @@ but it will never become closer than these constraints.
                     current_species_set
                 )
             )
-            self.algorithm_step_initial_conditions.add_action_set(
-                peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(
-                    current_species_set
-                )
-            )
 
             self.algorithm_step_plot.add_action_set(
-                peano4.toolbox.particles.UpdateParallelState(current_species_set)
-            )
-            self.algorithm_step_initial_conditions.add_action_set(
                 peano4.toolbox.particles.UpdateParallelState(current_species_set)
             )
 
