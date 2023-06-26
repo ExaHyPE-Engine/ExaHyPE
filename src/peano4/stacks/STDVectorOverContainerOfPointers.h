@@ -234,6 +234,19 @@ class peano4::stacks::STDVectorOverContainerOfPointers: public peano4::stacks::S
      * huge memory sequence, I don't know whether it would go down well if
      * we deleted only subsegments.
      *
+     * ## Implementation remarks
+     *
+     * I originally used the loop
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~
+     * for (auto p: Base::_data[i]) {
+     * }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * but that does not work anymore, as I now hide the particle set
+     * implementation. It used to be a list, but now I only expose a very
+     * few C++ container routines, and resize and non-const iterators are
+     * not among them.
      *
      * @see workInReceivedMetaData()
      * @see tryToFinishSendOrReceive()
