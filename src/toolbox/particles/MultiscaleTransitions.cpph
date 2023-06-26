@@ -3,10 +3,11 @@
 #include "tarch/la/VectorOperations.h"
 
 template <typename Particle>
-toolbox::particles::ParticleReassociationInstruction toolbox::particles::
-  getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
-    const Particle& particle, const peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
-  ) {
+toolbox::particles::ParticleReassociationInstruction toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+  const Particle& particle,
+  const ::peano4::datamanagement::CellMarker& marker,
+  int numberOfVertexWithinCell
+) {
   static tarch::logging::Log _log("toolbox::particles");
 
   if (
@@ -94,7 +95,7 @@ std::bitset<Dimensions> toolbox::particles::getParticleAssociationWithinCell(
 }
 
 template <typename Particle>
-bool toolbox::particles::sieveParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker) {
+bool toolbox::particles::sieveParticle(const Particle& particle, const ::peano4::datamanagement::VertexMarker& marker) {
   return
       marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE)
       and
@@ -107,66 +108,6 @@ bool toolbox::particles::sieveParticle(const Particle& particle, const peano4::d
       );
 }
 
-template <typename ParticleContainer>
-std::tuple<int, int> toolbox::particles::eliminateSpatialDuplicates(ParticleContainer& particleSet) {
-  static tarch::logging::Log _log("toolbox::particles");
-
-  int numberOfLocalEliminatedSpatialDuplicates   = 0;
-  int numberOfVirtualEliminatedSpatialDuplicates = 0;
-
-  auto p = particleSet.begin();
-  while (p != particleSet.end()) {
-    bool foundDuplicate = false;
-
-    auto pp = p;
-    pp++;
-    while (pp != particleSet.end() and not foundDuplicate) {
-      if (tarch::la::equals((*p)->getX(), (*pp)->getX(), SpatialDuplicateTolerance)) {
-        logDebug(
-          "eliminateSpatialDuplicates()", "found duplicates p=" << (*p)->toString() << " and pp=" << (*pp)->toString()
-        );
-        foundDuplicate = true;
-      } else {
-        pp++;
-      }
-    }
-
-    if (foundDuplicate) {
-      assertion((*p) != (*pp));
-
-      // bias to eliminate virtual particles
-      if (
-        (*p)->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-        and
-        (*pp)->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-      ) {
-        logDebug("eliminateSpatialDuplicates()", "particle " << (*pp)->toString() << " found twice as local in domain");
-
-        delete *p;
-        particleSet.erase(p);
-
-        numberOfLocalEliminatedSpatialDuplicates++;
-      } else if ((*p)->getParallelState() == std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Virtual) {
-        delete *p;
-        particleSet.erase(p);
-
-        numberOfVirtualEliminatedSpatialDuplicates++;
-      } else {
-        delete *pp;
-        particleSet.erase(pp);
-
-        numberOfVirtualEliminatedSpatialDuplicates++;
-      }
-
-      p = particleSet.begin(); // if we delete something, we might corrupt the whole container, so
-                               // better start from scratch.
-    } else {
-      p++;
-    }
-  }
-
-  return {numberOfLocalEliminatedSpatialDuplicates, numberOfVirtualEliminatedSpatialDuplicates};
-}
 
 template <typename Particle>
 bool toolbox::particles::dropParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker) {

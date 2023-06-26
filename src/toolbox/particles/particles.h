@@ -11,6 +11,32 @@
 namespace toolbox {
   namespace particles {
     /**
+     * Default tolerance to decide when two particles are the same.
+     *
+     * @see eliminateSpatialDuplicates()
+     */
+    constexpr double SpatialDuplicateTolerance = 1e-6;
+
+    /**
+     * Check if there's already a particle at p's position in the set.
+     *
+     * As we return a non-const iterator, the operation may not be labelled
+     * as const. It is essential
+     *
+     *
+     * @param particle You want to search the container identified by begin
+     *   and end for this particle.
+     * @return container's end() if there is no duplicate. Otherwise, return
+     *   iterator pointing to existing particle.
+     */
+    template <typename Iterator>
+    Iterator particleIsDuplicate(
+      const typename Iterator::value_type&  particle,
+      Iterator                              begin,
+      const Iterator&                       end
+    );
+
+    /**
      * Return true if and only if
      *
      * - we deal with a local particle (virtual ones are copies, to we are not

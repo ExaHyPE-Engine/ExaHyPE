@@ -64,16 +64,7 @@ class toolbox::particles::SieveParticles {
      * @see _particlesThatHaveToBeSieved which is the container from which we
      *   create a deep copy.
      */
-    ParticleList getSievedParticlesForNextGridTraversal() const;
-
-    /**
-     * Delete all the particles that have to be sieved
-     *
-     * This is a deep delete.
-     */
-    void deleteParticlesThatHaveToBeSieved();
-
-    static void deleteParticles(ParticleList& list);
+//    ParticleList getSievedParticlesForNextGridTraversal() const;
 
     /**
      * Get all the global sieve data consistent
@@ -129,17 +120,20 @@ class toolbox::particles::SieveParticles {
     void exchangeSieveListsGlobally();
 
     /**
-     * Is thread-safe.
+     * Add a particle to the list of particles which cannot be lifted
+     *
+     * The routine is thread-safe. The object does not keep any kind of
+     * statistics. You have to maintain stats on your own if you need them.
      */
     void addParticleThatCanNotBeLiftedWithinItsTree( T* );
 
     /**
-     * Get particles that are to be sieved
+     * Get particles that are to be sieved into one vertex
      *
      * Takes the current particle set and finds those particles which can be
-     * sieved into current vertex. The operation alters the object state, as
-     * it returns the particles that are to be sieved and removes them from
-     * the current object.
+     * sieved into current vertex. The operation alters the object state of
+     * particleList, as it returns the particles that are to be sieved and
+     * removes them from the current set.
      *
      * All the particles in the result set have the parallel state Virtual,
      * as we have to assume that they have been non-local on the current rank
@@ -170,9 +164,13 @@ class toolbox::particles::SieveParticles {
     );
 
     bool hasParticlesToBeSievedIntoVertices() const;
+
+    int getNumberOfParticlesToBeSieved() const;
+    int getNumberOfParticlesThatCanNotBeLiftedWithinTheirTree() const;
   private:
     static tarch::logging::Log _log;
 
+    static void deleteParticles(ParticleList& list);
 
     /**
      * Reduction tag
@@ -181,7 +179,13 @@ class toolbox::particles::SieveParticles {
      */
     static int _SieveReductionTag;
 
+    /**
+     * This is for the assembly of the set of particles which require global
+     * (sieve) data exchange. When we later on sieve the particles into their
+     * target vertices, we need another semaphore of its own.
+     */
     static tarch::multicore::BooleanSemaphore   _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
+    static tarch::multicore::BooleanSemaphore   _particlesToBeSievedSemaphore;
 
     ParticleList     _particlesThatCanNotBeLiftedWithinTheirTree;
 

@@ -48,11 +48,9 @@ namespace toolbox {
 template <typename T>
 class toolbox::particles::ParticleSet {
   public:
-    typedef T  DoFType;
-
-    typedef SieveParticles<T> SieveParticles;
-
-    static SieveParticles sieveParticles;
+    typedef T                  DoFType;
+    typedef std::list<T*>      ParticleList;
+    typedef SieveParticles<T>  SieveParticles;
 
     #if PeanoDebug>=1
     void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
@@ -93,6 +91,17 @@ class toolbox::particles::ParticleSet {
      */
     static void finishedTraversal();
 
+    /**
+     * Delegate through. This way, we don't have to expose the actual
+     * sieve object.
+     */
+    static ParticleList  getParticlesToBeSievedIntoVertex(
+      const peano4::datamanagement::VertexMarker&  marker
+    );
+
+    static bool hasParticlesToBeSievedIntoVertices();
+
+//    static ParticleList getSievedParticlesForNextGridTraversal();
   private:
     static tarch::logging::Log _log;
 
@@ -100,11 +109,50 @@ class toolbox::particles::ParticleSet {
 
     static tarch::multicore::BooleanSemaphore   _statisticsSemaphore;
 
+    /**
+     * Sorting statistics
+     *
+     * Used by sorting algorithm of choice. The attribute is updated
+     * through updateLiftDropStatistics() by each and every tree
+     * traversal. The five fields should be cleared through a call of
+     * clearReassignmentStatistics() at the begin of a time step, i.e.
+     * the first grid sweep starting a time step.
+     */
     static int _numberOfLifts;
+
+    /**
+     * Sorting statistics
+     *
+     * Used by sorting algorithm of choice. The attribute is updated
+     * through updateLiftDropStatistics() by each and every tree
+     * traversal. The five fields should be cleared through a call of
+     * clearReassignmentStatistics() at the begin of a time step, i.e.
+     * the first grid sweep starting a time step.
+     */
     static int _numberOfDrops;
-    static int _numberOfSieves;
-    static int _numberOfAssignmentsToGlobalSieve;
+
+    /**
+     * Sorting statistics
+     *
+     * Used by sorting algorithm of choice. The attribute is updated
+     * through updateLiftDropStatistics() by each and every tree
+     * traversal. The five fields should be cleared through a call of
+     * clearReassignmentStatistics() at the begin of a time step, i.e.
+     * the first grid sweep starting a time step.
+     */
     static int _numberOfReassignments;
+
+    /**
+     * Sorting statistics
+     *
+     * Used by sorting algorithm of choice. The attribute is updated
+     * through updateLiftDropStatistics() by each and every tree
+     * traversal. The five fields should be cleared through a call of
+     * clearReassignmentStatistics() at the begin of a time step, i.e.
+     * the first grid sweep starting a time step.
+     */
+    static int _numberOfSieves;
+
     /**
      * Set by parallel state analysis
      */
@@ -113,23 +161,32 @@ class toolbox::particles::ParticleSet {
     static int _numberOfLeavingLocalParticles;
 
     /**
-     * Typically updated by boundary merge operations
+     * Number of updated halo particles
+     *
+     * Updated by boundary merge operations.
      *
      * @see merge()
      */
-    static int _numberOfMergedVirtualParticles;
+    static int _numberOfAddedVirtualParticles;
+    static int _numberOfReplacedVirtualParticles;
+    static int _numberOfDroppedVirtualParticles;
 
     /**
+     * Stats on duplicate elimination
+     *
      * This one is updated internally by eliminateSpatialDuplicates() which you
-     * might call or you might not call.
+     * might call or you might not call. It is never updated anywhere else.
      */
     static int _numberOfVirtualEliminatedSpatialDuplicates;
     static int _numberOfLocalEliminatedSpatialDuplicates;
+
+    static SieveParticles sieveParticles;
 
     #if PeanoDebug>=1
     tarch::la::Vector<Dimensions,double> _debugX;
     tarch::la::Vector<Dimensions,double> _debugH;
     #endif
+
 };
 
 

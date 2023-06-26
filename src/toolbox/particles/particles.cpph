@@ -1,6 +1,24 @@
 #include "tarch/la/VectorVectorOperations.h"
 
 
+template <typename Iterator>
+Iterator toolbox::particles::particleIsDuplicate(
+  const typename Iterator::value_type&  particle,
+  Iterator                     begin,
+  const Iterator&              end
+) {
+  while (begin!=end) {
+    if (
+      tarch::la::equals( (*begin)->getX(), particle->getX(), SpatialDuplicateTolerance )
+    ) {
+      return begin;
+    }
+    begin++;
+  }
+  return begin;
+}
+
+
 template <typename Particle>
 bool toolbox::particles::particleWillStayWithinComputationalDomain(
   const Particle&                              particle,
@@ -48,5 +66,5 @@ void toolbox::particles::insertParticleIntoCell(
   const int linearisedTargetVertex = targetVertex.to_ulong();
 
   logDebug( "insertParticleIntoCell(...)", "assign particle " << newParticle->toString() << " to vertex " << linearisedTargetVertex << " in cell " << marker.toString() << " (vertex=" << fineGridVertices( targetVertex.to_ulong() ).toString() << ")" );
-  fineGridVertices( linearisedTargetVertex ).push_back( newParticle );
+  fineGridVertices( linearisedTargetVertex ).add( newParticle );
 }
