@@ -59,7 +59,22 @@ class toolbox::particles::ParticleSet {
     tarch::la::Vector<Dimensions,double> getDebugH() const;
     #endif
 
+    /**
+     * Clear stats
+     *
+     * Has to be called per rank prior to any mesh traversal assembling stats.
+     * I typically realise this in the prepare traversal event. See
+     * peano4.toolbox.particles.AbstractUpdateParticleGridAssociation.get_body_of_prepareTraversal().
+     */
     static void clearReassignmentStatistics();
+
+    /**
+     * Clear stats
+     *
+     * Has to be called per rank prior to any mesh traversal assembling stats.
+     * I typically realise this in the prepare traversal event. See
+     * peano4.toolbox.particles.UpdateParallelState.get_body_of_prepareTraversal().
+     */
     static void clearParticleStateStatistics();
 
     /**
