@@ -91,7 +91,6 @@ class InsertParticlesFromHDF5File(ActionSet):
        */
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = GridSize(0);
-      const double PeanoCutOffRadius = GridSize_x / 2.0;
 
       /* Compute the pressure from the EoS */
       const double Pressure = gas_pressure_from_internal_energy( Density, InternalEnergy );
@@ -105,9 +104,6 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setMass           ( Mass );
       newParticle->setSmoothingLength( SmoothingLength );
 
-//      /* Hard coded for Sod 1D test */
-//      newParticle->setSmoothingLength( 0.005 );
-
       newParticle->setU              ( InternalEnergy );
 
       /*
@@ -118,7 +114,7 @@ class InsertParticlesFromHDF5File(ActionSet):
 
       newParticle->setSmoothingLengthPrevious( SmoothingLength );
 
-      newParticle->setCutOffRadius( GridSize_x / 2.0);
+      newParticle->setCutOffRadius(GridSize_x / 2.0);
 
       newParticle->setPressure  ( Pressure );
       newParticle->setSoundSpeed( Soundspeed );
@@ -126,7 +122,6 @@ class InsertParticlesFromHDF5File(ActionSet):
       // Vectors
       for (int d=0; d<Dimensions; d++) {
          newParticle->setA          (d,0);
-//         newParticle->setA_prev_step(d,0);
       }
 
       /* For 2D sims, we only get one component */
@@ -137,7 +132,6 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setU_full( newParticle->getU() );
 
       newParticle->setUDot  (0.0);
-//      newParticle->setUDot_prev_step(0.0);
       newParticle->setHDot  (0.0);
       newParticle->setWcount(0.0);
       newParticle->setNcount(0  );

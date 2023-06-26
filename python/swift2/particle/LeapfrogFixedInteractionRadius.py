@@ -80,6 +80,7 @@ class LeapfrogFixedInteractionRadius(Particle):
         min_h=0.005,
         max_h=0.3,
     ):
+        # TODO Mladen: Do we still need this? Check later.
         super(LeapfrogFixedInteractionRadius, self).__init__(
             name,
             particles_per_cell,
@@ -144,8 +145,8 @@ class LeapfrogFixedInteractionRadius(Particle):
                 dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
-                cell_kernel="""::swift2::kernels::gravity::computeGravitationalForce( 
-                                           localParticles, 
+                cell_kernel="""::swift2::kernels::gravity::computeGravitationalForce(
+                                           localParticles,
                                            activeParticles
                                          );""",
                 touch_vertex_last_time_kernel=self.touch_particles_of_set_last_time_kernel,
@@ -194,8 +195,8 @@ class LeapfrogFixedInteractionRadius(Particle):
                 dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
-                cell_kernel="""::swift2::kernels::gravity::computeGravitationalForce( 
-                                           localParticles, 
+                cell_kernel="""::swift2::kernels::gravity::computeGravitationalForce(
+                                           localParticles,
                                            activeParticles
                                          );""",
                 touch_vertex_last_time_kernel=self.touch_particles_of_set_last_time_kernel,

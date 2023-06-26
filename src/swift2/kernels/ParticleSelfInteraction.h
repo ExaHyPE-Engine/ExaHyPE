@@ -2,10 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <list>
 #include <vector>
-
 
 namespace swift2 {
   namespace kernels {
@@ -13,7 +11,7 @@ namespace swift2 {
      * Generic particle self-interaction kernel accepting a functor
      *
      * The generic implementation realises a single loop: We call a self interaction
-     * per particle that has no dependence over neighbours. The functor hence modifies the particle. 
+     * per particle that has no dependence over neighbours. The functor hence modifies the particle.
      *
      * We distinguish two use cases for the particle self-interactions:
      *
@@ -26,11 +24,11 @@ namespace swift2 {
      * In order to ensure the self-interaction kernels execute consistently during the mesh
      * traversals for these type of operations, the user should bear in mind the difference between these two cases:
      *
-     *  - The 'prepare' case should be mapped into touchVertexFirstTime. Peano internally ensures 
+     *  - The 'prepare' case should be mapped into touchVertexFirstTime. Peano internally ensures
      *  that CellHasUpdatedParticle is false in this situation.
-     *  - The 'end' case should be mapped into touchVertexLastTime. Peano internally ensures 
+     *  - The 'end' case should be mapped into touchVertexLastTime. Peano internally ensures
      *  that CellHasUpdatedParticle is true in this situation.
-     * 
+     *
      *
      * @param ParticleContainer Typicaly either
      *         std::list<Particle *>
@@ -41,12 +39,11 @@ namespace swift2 {
      */
     template <typename ParticleContainer, typename Particle>
     void genericSelfInteraction(
-      const ParticleContainer& localParticles,
-      std::function< void(Particle* localParticle) > interaction
+      const ParticleContainer& localParticles, std::function<void(Particle* localParticle)> interaction
     );
 
     /**
-     * @brief Prepares a particle for the density calculation  
+     * @brief Prepares a particle for the density calculation
      *
      * Zeroes all the relevant arrays in perparation for the sums taking place
      * in the loop over neighbours (local-active set)
@@ -61,11 +58,9 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void prepareDensityCalculation(
-      const ParticleContainer& localParticles
-    );
+    void prepareDensityCalculation(const ParticleContainer& localParticles);
 
-    /** 
+    /**
      * @brief Finishes the calculations from the density loop
      *
      * Multiplies the denstiy and number of neighbours by the appropiate
@@ -87,17 +82,17 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void endDensityCalculation(
-      const ParticleContainer&  localParticles,
-      const int hydroDimensions,
-      const double etaFactor,
-      const double alphaAV,
-      const double hTolerance,
-      const double hHydroMin,
-      const double hHydroMax
+      const ParticleContainer& localParticles,
+      const int                hydroDimensions,
+      const double             etaFactor,
+      const double             alphaAV,
+      const double             hTolerance,
+      const double             hHydroMin,
+      const double             hHydroMax
     );
 
     /**
-     * Same as above, but with constant h, i.e. no Newton-Raphson 
+     * Same as above, but with constant h, i.e. no Newton-Raphson
      *
      * @param ParticleContainer Typicaly either
      *         std::list<Particle *>
@@ -108,10 +103,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void endDensityCalculationWithConstantSmoothingLength(
-      const ParticleContainer&   localParticles,
-      const int hydroDimensions,
-      const double etaFactor,
-      const double alphaAV
+      const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
     );
 
     /**
@@ -127,7 +119,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void prepareHydroForceCalculation(
-      const ParticleContainer& localParticles
+      const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
     );
 
     /**
@@ -142,10 +134,7 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void endHydroForceCalculation(
-      const ParticleContainer& localParticles,
-      const int hydroDimensions
-    );
+    void endHydroForceCalculation(const ParticleContainer& localParticles, const int hydroDimensions);
 
     /**
      * Flag boundary particles.
@@ -159,23 +148,17 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void flagBoundaryParticles(
-      const ParticleContainer&  localParticles,
-      const double nparts
-    );
-
+    void flagBoundaryParticles(const ParticleContainer& localParticles, const double nparts);
 
     template <typename ParticleContainer>
     void flagBoundaryParticles(
-      const ParticleContainer&  localParticles,
-      const double nparts,
-      const tarch::la::Vector<Dimensions,double>& domainSize,
-      const tarch::la::Vector<Dimensions,double>& domainOffset
+      const ParticleContainer&                     localParticles,
+      const double                                 nparts,
+      const tarch::la::Vector<Dimensions, double>& domainSize,
+      const tarch::la::Vector<Dimensions, double>& domainOffset
     );
 
-  }
-}
-
+  } // namespace kernels
+} // namespace swift2
 
 #include "ParticleSelfInteraction.cpph"
-
