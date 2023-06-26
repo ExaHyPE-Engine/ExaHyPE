@@ -16,6 +16,84 @@ void swift2::kernels::genericInteraction(
   }
 }
 
+
+template <typename Particle>
+void swift2::kernels::densityKernel(
+  Particle* localParticle, const Particle* activeParticle, const int hydroDimensions
+) {
+
+  /* Retrieve basic properties of local and active particles */
+  const double h_a = localParticle->getSmoothingLength();
+  const double m_a = localParticle->getMass();
+  const double m_b = activeParticle->getMass();
+
+  /* Distance between the particles */
+  tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
+  const double                          r  = tarch::la::norm2(dx);
+
+  /* Normalized distance to evaluate kernel */
+  const double q_a = r / h_a;
+
+  /* Compute the actual interaction radius */
+  const double iactR = kernel_gamma * h_a;
+
+  /* Velocity terms for viscosity */
+  tarch::la::Vector<Dimensions, double> dv_ab;
+  tarch::la::Vector<Dimensions, double> curlvr(0.0);
+
+  if(
+    tarch::la::smaller( r, iactR )
+    and
+    tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */
+    and
+    not localParticle->getIsBoundaryParticle()
+    )
+    {
+
+    // Evaluate kernel and its derivative
+
+    /* SWIFT KERNEL */
+    double w_a, dwa_dx, dwa_dh;
+    kernel_deval(q_a, w_a, dwa_dx);
+    dwa_dh = -(hydroDimensions * w_a + q_a * dwa_dx);
+
+    /* Increment density */
+    localParticle->setDensity(localParticle->getDensity() + m_b * w_a);
+
+    /* Increment drho/dh */
+    localParticle->setRho_dh(localParticle->getRho_dh() + m_b * dwa_dh);
+
+    /* Increment fractional number density */
+    localParticle->setWcount(localParticle->getWcount() + w_a);
+
+    /* Increment dWcount/dh */
+    localParticle->setWcount_dh(localParticle->getWcount_dh() + dwa_dh);
+
+    /* Now we need to compute the div terms */
+    const double r_inv = r ? 1.0 / r : 0.0;
+    const double fac_a = m_b * dwa_dx * r_inv;
+
+    /* Compute dv dot r */
+    dv_ab             = localParticle->getV() - activeParticle->getV();
+    const double dvdr = tarch::la::dot(dv_ab, dx);
+    localParticle->setDiv_v(localParticle->getDiv_v() - fac_a * dvdr);
+
+    /* Compute dv cross r */
+    /* 2D Term only has 1 component (z) */
+    const double curlvr2D = dv_ab[0] * dx[1] - dv_ab[1] * dx[0];
+    localParticle->setRot_v(localParticle->getRot_v() + fac_a * curlvr2D);
+    // @TODO Mladen: Implement 3D curl
+    if (hydroDimensions == 3)
+      assertionMsg(false, "3D not implemented");
+
+    /* Debug: Increment number of detected neighbours */
+    localParticle->setNcount(localParticle->getNcount() + 1);
+
+  } /* End if r<iactR */
+}
+
+
+
 template <typename ParticleContainer>
 void swift2::kernels::computeDensityWithConstantSmoothingLengths(
   const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
@@ -24,79 +102,13 @@ void swift2::kernels::computeDensityWithConstantSmoothingLengths(
     if (not localParticle->getCellHasUpdatedParticle()) {
       for (auto* activeParticle : activeParticles) {
 
-        /* Retrieve basic properties of local and active particles */
-        const double h_a = localParticle->getSmoothingLength();
-        const double m_a = localParticle->getMass();
-        const double m_b = activeParticle->getMass();
-
-        /* Distance between the particles */
-        tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
-        const double                          r  = tarch::la::norm2(dx);
-
-        /* Normalized distance to evaluate kernel */
-        const double q_a = r / h_a;
-
-        /* Compute the actual interaction radius */
-        const double iactR = kernel_gamma * h_a;
-
-        /* Velocity terms for viscosity */
-        tarch::la::Vector<Dimensions, double> dv_ab;
-        tarch::la::Vector<Dimensions, double> curlvr(0.0);
-
-        if(
-          tarch::la::smaller( r, iactR )
-          and
-          tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */
-          and
-          not localParticle->getIsBoundaryParticle()
-          )
-          {
-
-          // Evaluate kernel and its derivative
-
-          /* SWIFT KERNEL */
-          double w_a, dwa_dx, dwa_dh;
-          kernel_deval(q_a, w_a, dwa_dx);
-          dwa_dh = -(hydroDimensions * w_a + q_a * dwa_dx);
-
-          /* Increment density */
-          localParticle->setDensity(localParticle->getDensity() + m_b * w_a);
-
-          /* Increment drho/dh */
-          localParticle->setRho_dh(localParticle->getRho_dh() + m_b * dwa_dh);
-
-          /* Increment fractional number density */
-          localParticle->setWcount(localParticle->getWcount() + w_a);
-
-          /* Increment dWcount/dh */
-          localParticle->setWcount_dh(localParticle->getWcount_dh() + dwa_dh);
-
-          /* Now we need to compute the div terms */
-          const double r_inv = r ? 1.0 / r : 0.0;
-          const double fac_a = m_b * dwa_dx * r_inv;
-
-          /* Compute dv dot r */
-          dv_ab             = localParticle->getV() - activeParticle->getV();
-          const double dvdr = tarch::la::dot(dv_ab, dx);
-          localParticle->setDiv_v(localParticle->getDiv_v() - fac_a * dvdr);
-
-          /* Compute dv cross r */
-          /* 2D Term only has 1 component (z) */
-          const double curlvr2D = dv_ab[0] * dx[1] - dv_ab[1] * dx[0];
-          localParticle->setRot_v(localParticle->getRot_v() + fac_a * curlvr2D);
-          // @TODO Mladen: Implement 3D curl
-          if (hydroDimensions == 3)
-            assertionMsg(false, "3D not implemented");
-
-          /* Debug: Increment number of detected neighbours */
-          localParticle->setNcount(localParticle->getNcount() + 1);
-
-        } /* End if r<iactR */
+        swift2::kernels::densityKernel(localParticle, activeParticle, hydroDimensions);
       }   /* End for active particles */
-
     } /* End Cell has not updated local particle */
   }
 }
+
+
 
 template <typename ParticleContainer>
 void swift2::kernels::computeDensityWithConstantSearchRadius(
@@ -106,76 +118,8 @@ void swift2::kernels::computeDensityWithConstantSearchRadius(
     if (not localParticle->getCellHasUpdatedParticle()) {
       for (auto* activeParticle : activeParticles) {
 
-        /* Retrieve basic properties of local and active particles */
-        const double h_a = localParticle->getSmoothingLength();
-        const double m_a = localParticle->getMass();
-        const double m_b = activeParticle->getMass();
-
-        /* Distance between the particles */
-        tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
-        const double                          r  = tarch::la::norm2(dx);
-
-        /* Normalized distance to evaluate kernel */
-        const double q_a = r / h_a;
-
-        /* Compute the actual interaction radius */
-        const double iactR = kernel_gamma * h_a;
-
-        /* Velocity terms for viscosity */
-        tarch::la::Vector<Dimensions, double> dv_ab;
-        tarch::la::Vector<Dimensions, double> curlvr(0.0);
-
-        if(
-          tarch::la::smaller( r, iactR )
-          and
-          tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */
-          and
-          not localParticle->getIsBoundaryParticle()
-          )
-          {
-
-          // Evaluate kernel and its derivative
-
-          /* SWIFT KERNEL */
-          double w_a, dwa_dx, dwa_dh;
-          kernel_deval(q_a, w_a, dwa_dx);
-          dwa_dh = -(hydroDimensions * w_a + q_a * dwa_dx);
-
-          /* Increment density */
-          localParticle->setDensity(localParticle->getDensity() + m_b * w_a);
-
-          /* Increment drho/dh */
-          localParticle->setRho_dh(localParticle->getRho_dh() + m_b * dwa_dh);
-
-          /* Increment fractional number density */
-          localParticle->setWcount(localParticle->getWcount() + w_a);
-
-          /* Increment dWcount/dh */
-          localParticle->setWcount_dh(localParticle->getWcount_dh() + dwa_dh);
-
-          /* Now we need to compute the div terms */
-          const double r_inv = r ? 1.0 / r : 0.0;
-          const double fac_a = m_b * dwa_dx * r_inv;
-
-          /* Compute dv dot r */
-          dv_ab             = localParticle->getV() - activeParticle->getV();
-          const double dvdr = tarch::la::dot(dv_ab, dx);
-          localParticle->setDiv_v(localParticle->getDiv_v() - fac_a * dvdr);
-
-          /* Compute dv cross r */
-          /* 2D Term only has 1 component (z) */
-          const double curlvr2D = dv_ab[0] * dx[1] - dv_ab[1] * dx[0];
-          localParticle->setRot_v(localParticle->getRot_v() + fac_a * curlvr2D);
-          // @TODO Mladen: Implement 3D curl
-          if (hydroDimensions == 3)
-            assertionMsg(false, "3D not implemented");
-
-          /* Debug: Increment number of detected neighbours */
-          localParticle->setNcount(localParticle->getNcount() + 1);
-
-        } /* End if r<iactR */
+        swift2::kernels::densityKernel(localParticle, activeParticle, hydroDimensions);
       }   /* End for active particles */
-
     } /* End Cell has not updated local particle */
   }
 }

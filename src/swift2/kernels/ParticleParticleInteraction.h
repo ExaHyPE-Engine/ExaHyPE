@@ -35,6 +35,16 @@ namespace swift2 {
     );
 
     /**
+     * @brief The actual density kernel, which interacts a local particle and an active
+     * particle, and updated the local particle.
+     *
+     */
+    template <typename Particle>
+    void densityKernel(
+      Particle* localParticle, const Particle* activeParticle, const int hydroDimensions
+    );
+
+    /**
      * @brief Non-symmetric density calculation (as per Swift terminology).
      * In this, only the local particle is updated (in the symmetric case, both
      * are updated at the same time). This compute kernel is inserted by Peano's
