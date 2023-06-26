@@ -205,8 +205,6 @@ unphysical.
   _numberOfLifts  = 0;
   _numberOfDrops  = 0;
   _numberOfSieves = 0;
-  
-  _sieveParticles = vertexdata::{{PARTICLES_CONTAINER}}::sieveParticles.getSievedParticlesForNextGridTraversal();
 """ )
 
 
@@ -217,8 +215,6 @@ unphysical.
     _numberOfParticleReassignmentsOnCurrentLevel,
     _numberOfSieves
   );
-
-  vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::deleteParticles(_sieveParticles);
 """ )
 
 
@@ -247,8 +243,7 @@ unphysical.
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
     while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
       if ( ::toolbox::particles::dropParticle(**p,marker) ) {
-        fineGridVertex{{PARTICLES_CONTAINER}}.push_back( *p );
-        p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.move( p, coarseGridVertices{{PARTICLES_CONTAINER}}(i) );
         _numberOfDrops++;
       }
       else p++;
@@ -258,17 +253,12 @@ unphysical.
 
 
   _Template_Sieve = jinja2.Template("""
-  if ( vertexdata::{{PARTICLES_CONTAINER}}::sieveParticles.hasParticlesToBeSievedIntoVertices() ) {
-    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::sieveParticles.getParticlesToBeSievedIntoVertex( marker );
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
+    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker );
       
     _numberOfSieves += sievedParticles.size();
 
-    fineGridVertex{{PARTICLES_CONTAINER}}.insert(
-      fineGridVertex{{PARTICLES_CONTAINER}}.end(),
-      sievedParticles.begin(),
-      sievedParticles.end()
-    );
-
+    fineGridVertex{{PARTICLES_CONTAINER}}.add( sievedParticles );
     fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates();
   }
 """)  
@@ -292,7 +282,7 @@ unphysical.
       target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
     }
     _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
-    coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).end(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
+    coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).move( fineGridVertex{{PARTICLES_CONTAINER}} );
   }
   else {
     fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeLiftedLocally();
@@ -331,7 +321,5 @@ unphysical.
   int  _numberOfLifts;
   int  _numberOfDrops;
   int  _numberOfSieves;
-  
-  vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::ParticleList  _sieveParticles;
 """).render(**self.d)
 
