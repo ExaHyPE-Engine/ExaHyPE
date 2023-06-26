@@ -12,6 +12,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
         particle_set,
         distance_between_particles,
         computational_domain_offset,
+        computational_domain_size,
         initialisation_call="",
         noise=True,
         additional_includes="",
@@ -67,6 +68,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
         self.d["PARTICLES_CONTAINER"] = particle_set.name
         self.d["INITIALISATION_CALL"] = initialisation_call
         self.d["DOMAIN_OFFSET"] = computational_domain_offset
+        self.d["DOMAIN_SIZE"] = computational_domain_size
         self.d["H"] = distance_between_particles
         self.d["GUARD"] = guard
         if noise:
@@ -80,14 +82,17 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
   if ( not marker.hasBeenRefined() and not marker.willBeRefined() ) {
     #if Dimensions==2
     tarch::la::Vector<2,double> domainOffset = { {{DOMAIN_OFFSET[0]}}, {{DOMAIN_OFFSET[1]}} };
+    tarch::la::Vector<2,double> domainSize   = { {{DOMAIN_SIZE[0]}}, {{DOMAIN_SIZE[1]}} };
     #else
     tarch::la::Vector<3,double> domainOffset = { {{DOMAIN_OFFSET[0]}}, {{DOMAIN_OFFSET[1]}}, {{DOMAIN_OFFSET[2]}} };
+    tarch::la::Vector<3,double> domainSize   = { {{DOMAIN_SIZE[0]}}, {{DOMAIN_SIZE[1]}}, {{DOMAIN_SIZE[2]}} };
     #endif
     std::vector< globaldata::{{PARTICLE}}* > newParticles = toolbox::particles::createParticlesAlignedWithGlobalCartesianMesh<globaldata::{{PARTICLE}}>(
       {{H}},
       marker.x(),
       marker.h(),
       domainOffset,
+      domainSize,
       {{NOISE}}
     );
     for (auto* particle: newParticles) {
