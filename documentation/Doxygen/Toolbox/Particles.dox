@@ -74,6 +74,39 @@ two different implementations of the same "tree walker" algorithms which
 eventually provides pseudo-Verlet lists distilled from the tree structure.
 
 
+To realise this vertex-based storage, each vertex is associated with a particle
+set. A particle set has to have a certain signature, which is similar to a C++
+standard container. Notably, it exposes all the particles as pointers. So, 
+logically, a vertex holds a sequence of pointers to particles. This does not
+mean that the particles are scattered all over the heap. Having particles 
+scattered is the default storage, but you can optimise the storage. Logically,
+this means that you work @ref toolbox_particles_memorypool "with a particle pool". 
+You still pretend that each and every particle is represented by a pointer to 
+the heap and that you can, consequently, build lists of pointers which might 
+hold totally scattered memory addresses. Internally, a pool however might 
+ensure that these totally scattered addresses are properly stored in memory and 
+fragmentation and a lot of cache misses are avoided. 
+
+
+Here are few examples what we expect a particle list to offer:
+
+- The standard vertex operations
+  - merge()
+  - send(const peano4::datamanagement::VertexMarker& marker)
+  - receiveAndMerge(const peano4::datamanagement::VertexMarker& marker)
+  - storePersistently(const peano4::datamanagement::VertexMarker& marker)
+  - loadPersistently(const peano4::datamanagement::VertexMarker& marker)
+- If we run in debug mode, we further require the x and h values
+- Simple begin() and end() iterators. However, we only expect the const 
+  variants. Whenever someone manipulates a particle set, we use dedicated
+  routines for that, such that the implementation can decide if it wants
+  to alter the underlying memory layout, e.g.
+- A toString() routine
+- Some multiscale-specific operations. 
+  
+I thought for a while that I could make the set inherit publicly from list,
+vector, ...
+
 
 ## Particle sorting 
 
