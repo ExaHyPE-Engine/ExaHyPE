@@ -323,3 +323,10 @@ unphysical.
   int  _numberOfSieves;
 """).render(**self.d)
 
+
+  def get_body_of_prepareTraversal(self):
+    template = jinja2.Template( """
+  vertexdata::{{PARTICLES_CONTAINER}}::clearReassignmentStatistics();
+""" )
+    return template.render(**self.d)
+
