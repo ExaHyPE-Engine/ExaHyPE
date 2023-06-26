@@ -105,7 +105,7 @@ struct peano4::datamanagement::VertexMarker {
      */
     VertexMarker() = default;
   public:
-    VertexMarker(const peano4::grid::GridTraversalEvent& event, int select = 0);
+    VertexMarker(const ::peano4::grid::GridTraversalEvent& event, int select = 0);
 
     /**
      * Picks a vertex within a cell. After that, the routine returns.
