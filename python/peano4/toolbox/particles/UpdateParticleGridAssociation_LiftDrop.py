@@ -130,8 +130,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
         break;
       case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
         logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
-        fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(*p);    
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
         break;
       case 0:
       case 1:
@@ -143,9 +142,8 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
       case 6:
       case 7:
       #endif
-        coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).push_back( *p );
+        p = coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).move( p, fineGridVertex{{PARTICLES_CONTAINER}} );
         _numberOfLifts ++;
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
         break;
       default:
         assertionMsg( false, "value not implemented" );

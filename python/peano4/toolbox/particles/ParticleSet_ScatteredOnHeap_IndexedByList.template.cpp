@@ -9,20 +9,6 @@
 tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleIsDuplicate(const DoFType* particle) {
-  iterator result = {{NAMESPACE | join("::")}}::{{CLASSNAME}}::begin();
-  while (result!={{NAMESPACE | join("::")}}::{{CLASSNAME}}::end()) {
-    if (
-      tarch::la::equals( (*result)->getX(), particle->getX(), toolbox::particles::SpatialDuplicateTolerance )
-    ) {
-      return result;
-    }
-    result++;
-  }
-  return result;
-}
-
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   ::peano4::grid::TraversalObserver::SendReceiveContext  context,
   {{CLASSNAME}}&                                         neighbour,
@@ -46,20 +32,20 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           ) {
             p->setParallelState( DoFType::ParallelState::Virtual );
 
-            iterator iteratorToExistingCopy = particleIsDuplicate(p);
+            Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _container.begin(), _container.end());
             if ( iteratorToExistingCopy!=end() ) {
               logDebug( "merge(...)", "incoming particle " << p->toString() << " is local on other rank and will be virtual here. It replaces existing copy" );
               delete *iteratorToExistingCopy;
-              erase(iteratorToExistingCopy);
-              push_back(p);
+              _container.erase(iteratorToExistingCopy);
+              _container.push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
-              _numberOfVirtualEliminatedSpatialDuplicates++;
+              _numberOfReplacedVirtualParticles++;
             }
             else {
               logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
-              this->push_back(p);
+              _container.push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
-              _numberOfMergedVirtualParticles++;
+              _numberOfAddedVirtualParticles++;
             }
           }
           else if (
@@ -70,6 +56,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
               "incoming particle " << p->toString() << " is virtual on neighbour. Such a copy is not relevant here."
             );
             delete p;
+            _numberOfDroppedVirtualParticles++;
           }
           else {
             assertion1(false,p->toString());
@@ -103,8 +90,59 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
-  auto [numberOfLocalEliminatedSpatialDuplicates,numberOfVirtualEliminatedSpatialDuplicates] =
-    toolbox::particles::eliminateSpatialDuplicates(*this);
+  int numberOfLocalEliminatedSpatialDuplicates   = 0;
+  int numberOfVirtualEliminatedSpatialDuplicates = 0;
+
+  auto p = _container.begin();
+  while (p != _container.end()) {
+    bool foundDuplicate = false;
+
+    auto pp = p;
+    pp++;
+    while (pp != _container.end() and not foundDuplicate) {
+      if (tarch::la::equals((*p)->getX(), (*pp)->getX(), ::toolbox::particles::SpatialDuplicateTolerance)) {
+        logDebug(
+          "eliminateSpatialDuplicates()", "found duplicates p=" << (*p)->toString() << " and pp=" << (*pp)->toString()
+        );
+        foundDuplicate = true;
+      } else {
+        pp++;
+      }
+    }
+
+    if (foundDuplicate) {
+      assertion((*p) != (*pp));
+
+      // bias to eliminate virtual particles
+      if (
+        (*p)->getParallelState()==DoFType::ParallelState::Local
+        and
+        (*pp)->getParallelState()==DoFType::ParallelState::Local
+      ) {
+        logDebug("eliminateSpatialDuplicates()", "particle " << (*pp)->toString() << " found twice as local in domain");
+
+        delete *p;
+        _container.erase(p);
+
+        numberOfLocalEliminatedSpatialDuplicates++;
+      } else if ((*p)->getParallelState() == DoFType::ParallelState::Virtual) {
+        delete *p;
+        _container.erase(p);
+
+        numberOfVirtualEliminatedSpatialDuplicates++;
+      } else {
+        delete *pp;
+        _container.erase(pp);
+
+        numberOfVirtualEliminatedSpatialDuplicates++;
+      }
+
+      p = _container.begin(); // if we delete something, we might corrupt the whole container, so
+                              // better start from scratch.
+    } else {
+      p++;
+    }
+  }
 
   tarch::multicore::Lock lock( _statisticsSemaphore );
   _numberOfLocalEliminatedSpatialDuplicates   += numberOfLocalEliminatedSpatialDuplicates;
@@ -144,20 +182,11 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCutOffRadius() const {
-  double result = std::numeric_limits<double>::max();
-  for (auto *p: *this) {
-    result = std::min( result, p->getCutOffRadius() );
-  }
-  return result;
-}
-
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& otherSet ) {
-  assertion1( empty(), toString() );
-  for (auto p: otherSet) {
+  assertion1( _container.empty(), toString() );
+  for (auto p: otherSet._container) {
     DoFType* newParticle =  new DoFType(*p);
-    this->push_back( newParticle );
+    _container.push_back( newParticle );
   }
   #if PeanoDebug>=1
   _debugX = otherSet._debugX;
@@ -167,33 +196,38 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
-  for (auto *p: *this) {
+  for (auto *p: _container) {
     delete p;
   }
-  BaseContainer::clear();
+  _container.clear();
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
-  BaseContainer::clear();
+  _container.clear();
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally( globaldata::{{PARTICLE_TYPE}}* p ) {
-  if ( p->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local ) {
-    sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p);
-  }
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally(
+  const Container::iterator&   particle
+) {
+  assertion1( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
+
+  sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle);
+  return _container.erase(particle);
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
-  for (auto *p: *this) {
-    particleCanNotBeLiftedLocally(p);
+  for (auto p: _container) {
+    sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p);
   }
+  _container.clear();
 }
 
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getParticlesToBeDroppedIntoVertex(
+/*
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::ParticleList  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getParticlesToBeDroppedIntoVertex(
   const peano4::datamanagement::VertexMarker& marker
 ) {
   assertion( not empty() );
@@ -213,3 +247,70 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
   }
   return result;
 }
+*/
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::const_iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::begin() const {
+  return _container.begin();
+}
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::const_iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::end() const {
+  return _container.end();
+}
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::begin() {
+  return _container.begin();
+}
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::end() {
+  return _container.end();
+}
+
+
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::size() const {
+  return _container.size();
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::add(DoFType*  particle) {
+  _container.push_back(particle);
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::add(const ParticleList&  particles) {
+  _container.insert(
+    _container.end(),
+    particles.begin(),
+    particles.end()
+  );
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::move({{CLASSNAME}}&  particles) {
+  _container.insert(
+    _container.end(),
+    particles.begin(),
+    particles.end()
+  );
+  particles.clear();
+}
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::move(
+  const Container::iterator&     particle,
+  {{CLASSNAME}}&                 sourceParticleSet
+) {
+  _container.push_back( *particle );
+  return _container.erase(particle);
+}
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticle( const Container::iterator&   particle ) {
+  delete *particle;
+  return _container.erase(particle);
+}
+
+

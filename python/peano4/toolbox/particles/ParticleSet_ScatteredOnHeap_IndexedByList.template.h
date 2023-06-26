@@ -43,28 +43,29 @@
 {%- endfor %}
 
 
-  class {{CLASSNAME}}: public std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >,
-                       public toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >
+  class {{CLASSNAME}}: public toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >
                        {
     public:
-      typedef std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >                       BaseContainer;
-      typedef toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >  BaseParticleSetClass;
-
-    private:
-      static tarch::logging::Log _log;
+      typedef toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >  Base;
+      typedef std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >                       Container;
 
       /**
-       * Check if there's already a particle at p's position in the set.
-       *
-       * As we return a non-const iterator, the operation may not be labelled
-       * as const. It is essential
-       *
-       *
-       * @return container's end() if there is no duplicate. Otherwise, return
-       *   iterator pointing to existing particle.
+       * Expose C++ standard interface
        */
-      BaseContainer::iterator particleIsDuplicate( const DoFType*  p );
-    public:
+      typedef Container::value_type      value_type;
+      typedef Container::iterator        iterator;
+      typedef Container::const_iterator  const_iterator;
+
+      {{CLASSNAME}}() = default;
+
+      /**
+       * Shallow copy constructor
+       *
+       * There's no need to redefine this one. I just wanted to highlight
+       * that it is a shallow copy, i.e. to add a comment, and so I
+       * "overwrote" it.
+       */
+      {{CLASSNAME}}( const {{CLASSNAME}}& ) = default;
 
       /**
        * Merge two particle sets
@@ -170,19 +171,26 @@
       void clone( const {{CLASSNAME}}& otherSet );
 
       /**
-       * Run over set and remove particles that reside at same location
+       * Eliminate spatial duplicates
+       *
+       * Run over set and remove particles that reside at same location.
        *
        * Such an eliminate of duplicates can be motivated through physics, but
        * it is also used by the merger, where it can happen that multiple ranks
        * tell us about a particle (some of them have virtual copies, some have
        * local ones). In this case, we however only check the virtual particles.
        * Those are the bad guys.
+       *
+       * Whenever we work with distributed data structures and multilevel transitions
+       * in a distributed memory mindset, we can run into redundant particles which
+       * we then have to eliminate.
+       *
+       * This elimination means that I actually delete the particle held by
+       * particleSet.
        */
       void eliminateSpatialDuplicates();
 
       std::string toString() const;
-
-      double getMinCutOffRadius() const;
 
       /**
        * Mark whole particle set as set of particles which can't be lifted
@@ -200,10 +208,12 @@
        * that behaviour, you have to call deleteParticles(). I merely introduce
        * this wrapper to be able to add this comment on the shallow vs deep
        * copy/clear mechanism.
+       *
+       * There's no need to redefine this one. I just wanted to highlight
+       * that it is a shallow copy, i.e. to add a comment, and so I
+       * "overwrote" it.
        */
       void clear();
-
-      // @todo
 
       /**
        * Inform set that particle cannot be lifted on its current tree
@@ -249,48 +259,17 @@
        * As we add particles to the static field _particlesThatCanNotBeLiftedWithinTheirTree,
        * we have to protect any additional via a semaphore. As we do so, the
        * routine is thread safe.
+       *
+       *
+       * ## Iterators
+       *
+       * If you call this routine, any (const) iterator over the underlying
+       * container becomes invalid.
+       *
+       * @return A const iterator. You can continue to iterate with that one,
+       *   assuming that the order of particle and the result is preserved.
        */
-      static void particleCanNotBeLiftedLocally( globaldata::{{PARTICLE_TYPE}}* particle );
-
-      /**
-       * Get particles that are to be sieved
-       *
-       * @todo There's the same operation on the sieve particles. But they
-       * have slightly different semantics.
-       *
-       *
-       * Takes the current particle set and finds those particles which can be
-       * sieved into current vertex. The operation alters the object state, as
-       * it returns the particles that are to be sieved and removes them from
-       * the current object.
-       *
-       * All the particles in the result set have the parallel state Virtual,
-       * as we have to assume that they have been non-local on the current rank
-       * so far. The new parallel state is not altered, as this is the job of
-       * the action set UpdateParallelSet.
-       *
-       *
-       * ## Thread safety
-       *
-       * This routine is not static, i.e. we assume it works on a thread-local
-       * list of particles. This thread-local list is typically constructed as
-       * deep copy of the global sieve list. getSievedParticlesForNextGridTraversal()
-       * provides these deep copy semantics. Since we work with a copy of the
-       * global particles per thread, there's no need to add semaphores. We are
-       * inherently thread-safe. However, we have to delete all left-over
-       * particles which have not been sieved by a local thread. As the list
-       * had been a deep copy, we'd otherwise create a memory leak.
-       *
-       *
-       * @see getSievedParticlesForNextGridTraversal() for the deep copy and the
-       *   roll-over of particles that cannot be lifted into particles that have
-       *   to be sieved.
-       * @see ::toolbox::particles::sieveParticle() for the sieve logic.
-       * @see deleteParticles() for the deletion of deep copies.
-       */
-      {{NAMESPACE | join("::")}}::{{CLASSNAME}}  getParticlesToBeDroppedIntoVertex(
-        const peano4::datamanagement::VertexMarker&  marker
-      );
+      Container::iterator particleCanNotBeLiftedLocally( const Container::iterator&   particle );
 
       /**
        * This is a deep delete
@@ -302,6 +281,69 @@
        * invalid.
        */
       void deleteParticles();
+
+      /**
+       * Expose the STD container partially
+       *
+       * The fact that you hold a const or non-const iterator does not mean that
+       * you are ever allowed to delete a particle. That has to be done through
+       * the corresponding deleteParticle() operation.
+       */
+      Container::iterator begin();
+      Container::iterator end();
+      Container::const_iterator begin() const;
+      Container::const_iterator end() const;
+      int size() const;
+
+      /**
+       * Add one particle
+       *
+       * Is internally mapped onto a push_back.
+       */
+      void add(DoFType* particle);
+
+      /**
+       * Add set of particles
+       *
+       * This is a shallow addition, i.e. I attach these new pointers. The
+       * particles themselves are not copied.
+       */
+      void add(const ParticleList& particleSet);
+
+      /**
+       * Moves particles from one particle set to the other
+       *
+       * This is used by the multiscale algorithm
+       */
+      void move({{CLASSNAME}}& sourceParticleSet);
+
+      /**
+       * Move particle from one container to the other one
+       *
+       * @return Iterator within sourceParticleSet which is returned after
+       *   erasing it from this set.
+       */
+      Container::iterator move(
+        const Container::iterator&         particle,
+        {{CLASSNAME}}&                     sourceParticleSet
+      );
+
+      /**
+       * Delete a particle
+       *
+       * Should be used, for example, if a particle has left the local domain.
+       * 
+       * @return an iterator to the particle. This iterator is robust, i.e. even 
+       *   if we have altered the underlying data, this one is still valid. It is
+       *   however not efficient, i.e. it might point to begin() and any outer
+       *   loop hence might restart to run over all particles again. 
+       */
+      Container::iterator deleteParticle( const Container::iterator&   particle );
+
+    private:
+      static tarch::logging::Log _log;
+
+      Container  _container;
 };
 
 {% for item in NAMESPACE -%}
