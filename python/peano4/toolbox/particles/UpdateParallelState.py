@@ -143,8 +143,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   ) {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was local but now is remote" );
     _numberOfLeavingLocalParticles++;
-    delete *p;
-    p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+    p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
   }
   else if ( 
     (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual
@@ -152,8 +151,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
   ) {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was virtual but remains virtual" );
-    delete *p;
-    p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+    p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
   }
   else {
     assertion2( false, (*p)->toString(), marker.toString() );
