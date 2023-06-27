@@ -32,32 +32,39 @@ args = parser.parse_args()
 '''
 set the number of cell and face dofs
 '''
-cellDofs = 3 * (args.degree + 1) ** 2 #27 for degree 2 
-faceDofs = (args.degree + 1)          # 3 for degree 2
+
+#below is only temporary
+cellDofs = (args.degree + 1) **  args.dimensions 
+faceDofs = (args.degree + 1) ** (args.dimensions - 1)
 
 '''
-add a stencil. should be 12*12 in 2d and 54 * 54 in 3d
+add some stencils
 '''
+
+# matrix[20136:20139, 20136:20139]
 stencilFF=[
   [1 for _ in range(faceDofs)]
      for _ in range(faceDofs)
-] # 3 x 3 for degree 2
+]
 
 stencilCF=[
   [1 for _ in range(faceDofs)]
      for _ in range(cellDofs)
-] #27 x 3
+]
 
 stencilFC=[
   [1 for _ in range(cellDofs)]
      for _ in range(faceDofs)
-] #3 x 27
+]
 
 stencilCC=[
   [1 for _ in range(cellDofs)]
      for _ in range(cellDofs)
-] #27 x 27
+]
 
+if args.degree != 1:
+  print('for now, we just want to get visualisation working with degree = 2')
+  exit()
 
 project = petsc.Project(project_name = "HDG", 
                         namespace = [ "benchmarks", "multigrid", "petsc", "hdg" ]
