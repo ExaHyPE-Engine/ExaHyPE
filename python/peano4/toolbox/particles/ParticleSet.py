@@ -176,8 +176,8 @@ class ParticleSet(DoF):
             )
 
         self.particle_model = particle
-        self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
-        #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
+        #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
+        self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
 
     @property
     def readme_descriptor(self):

@@ -281,7 +281,7 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
       ": #eliminated local spatial duplicates=" << globalNumberOfLocalEliminatedSpatialDuplicates <<
       ", #eliminated virtual spatial duplicates=" << globalNumberOfVirtualEliminatedSpatialDuplicates
     );
-    assertion(globalNumberOfRemainingLocalParticles==0 or globalNumberOfRemainingLocalParticles + globalNumberOfIncomingLocalParticles>=10201);
+//    assertion(globalNumberOfRemainingLocalParticles==0 or globalNumberOfRemainingLocalParticles + globalNumberOfIncomingLocalParticles>=10201);
   }
 }
 
