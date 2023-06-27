@@ -41,6 +41,9 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
            strings, as long as these strings make sense in the generated C++ code
            and eventually return a double each.
 
+        computational_domain_size: [Float]
+           Defines size of domain.
+           
         guard: String (C code)
            A simple boolean expression. You can decide if a particle is inserted or not.
 
