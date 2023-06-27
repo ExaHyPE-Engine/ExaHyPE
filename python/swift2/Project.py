@@ -414,10 +414,10 @@ but it will never become closer than these constraints.
         #
         # Make plotting resort and filter the particles. For this, they need
         # the species set. The initialisation steps and the actual time steps
-        # are added the resorting action sets by the graph compiler, i.e. we 
+        # are added the resorting action sets by the graph compiler, i.e. we
         # should and we may not add them here manually. It is only the plotting
-        # (and the grid construction) which are not automatically added the 
-        # sorting steps. However, the grid construction does not hold any 
+        # (and the grid construction) which are not automatically added the
+        # sorting steps. However, the grid construction does not hold any
         # particles yet, so we don't have to deal with this algorithm phase.
         #
         for current_species_set in self._particle_species_set:

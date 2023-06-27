@@ -10,12 +10,10 @@
  */
 #pragma once
 
-#include "peano4/utils/Globals.h"
-
-#include "tarch/la/Vector.h"
-
-
 #include <bitset>
+
+#include "peano4/utils/Globals.h"
+#include "tarch/la/Vector.h"
 
 namespace peano4 {
   namespace utils {
@@ -30,15 +28,15 @@ namespace peano4 {
      * greater than max-1, the component is set zero and the next component is
      * incremented by one. This operation is used often by d-dimensional for-loops.
      */
-    void dInc(tarch::la::Vector<Dimensions,int>& counter, int max);
+    void dInc(tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
-       * This operation performs a d-dimensional decrement on a given integer vector:
-       * The first component of the vector is decremented. If the first component is
-       * smaller than 0, the component is set to max and the next component is
-       * decremented by one.
-       */
-    void dDec(tarch::la::Vector<Dimensions,int>& counter, int max);
+     * This operation performs a d-dimensional decrement on a given integer vector:
+     * The first component of the vector is decremented. If the first component is
+     * smaller than 0, the component is set to max and the next component is
+     * decremented by one.
+     */
+    void dDec(tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
      * This operation performs a d-dimensional increment on a given integer vector:
@@ -46,7 +44,7 @@ namespace peano4 {
      * greater than max(0)-1, the component is set zero and the next component is
      * incremented by one. This operation is used often by d-dimensional for-loops.
      */
-    void dInc(tarch::la::Vector<Dimensions,int>& counter, const tarch::la::Vector<Dimensions,int>& max);
+    void dInc(tarch::la::Vector<Dimensions, int>& counter, const tarch::la::Vector<Dimensions, int>& max);
 
     /**
      * Perform a d-dimensional increment by value increment: The first component
@@ -54,46 +52,48 @@ namespace peano4 {
      * checks the first entry: If it exceeds max, its module value is set, the
      * next component is incremented by increment, and the check continues.
      */
-    void dIncByVector(tarch::la::Vector<Dimensions,int>& counter, int max, int increment);
+    void dIncByVector(tarch::la::Vector<Dimensions, int>& counter, int max, int increment);
 
     /**
      * Perform a scalar increment of a vector: The operation equals a sequence of
      * increment calls to dInc().
      */
-    void dIncByScalar(tarch::la::Vector<Dimensions,int>& counter, int max, int increment);
+    void dIncByScalar(tarch::la::Vector<Dimensions, int>& counter, int max, int increment);
 
     /**
      * Same operation as dInc(tarch::la::Vector<Dimensions,int>,int), but now one dimension is not taken
      * into consideration.
      */
-    void dInc(tarch::la::Vector<Dimensions,int>& counter, int max, int doNotExamine);
+    void dInc(tarch::la::Vector<Dimensions, int>& counter, int max, int doNotExamine);
 
     /**
      * Operation similar to dInc, but is given a direction bitset that identifies
      * whether the counters has to be incremented or decremented. See the dforz
      * macro for an example how to use dInc.
      */
-    void dInc(tarch::la::Vector<Dimensions,int>& counter, int max, LoopDirection& direction );
+    void dInc(tarch::la::Vector<Dimensions, int>& counter, int max, LoopDirection& direction);
 
     /**
      * Element-wise comparison for the for loops.
      * @return true if all entries of counter are smaller max
      */
-    int dCmp(const tarch::la::Vector<Dimensions,int>& counter, int max);
+    int dCmp(const tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
      * Element-wise comparison for the loops.
      * @return true if all entries of counter are smaller than their corresponding
      *         entries in max
      */
-    int dCmp(const tarch::la::Vector<Dimensions,int>& counter, const tarch::la::Vector<Dimensions,int>& max);
+    int dCmp(const tarch::la::Vector<Dimensions, int>& counter, const tarch::la::Vector<Dimensions, int>& max);
 
     /**
      * compares two vectors with regards to their linearised value.
      *
      * @returns true, if dLinearised(counter, XXX) < dLinearised(max, XXX)
      */
-    bool dCmpLinearOrder(const tarch::la::Vector<Dimensions,int>& counter, const tarch::la::Vector<Dimensions,int>& max);
+    bool dCmpLinearOrder(
+      const tarch::la::Vector<Dimensions, int>& counter, const tarch::la::Vector<Dimensions, int>& max
+    );
 
     /**
      * This operation is called pretty often and, thus, might cause a significant
@@ -115,20 +115,20 @@ namespace peano4 {
      * @return the linearisation of the counter, i.e. the k-th component is
      *         multiplied by max^k and the results are accumulated.
      */
-    int dLinearised( const tarch::la::Vector<Dimensions,int>& counter, int max );
-    int dLinearised( const std::bitset<Dimensions>& counter );
+    int dLinearised(const tarch::la::Vector<Dimensions, int>& counter, int max);
+    int dLinearised(const std::bitset<Dimensions>& counter);
 
     /**
      * Special 2d variant of dLinearised that works also if you compile with other
      * dimensions.
      */
-    int d2Linearised( const tarch::la::Vector<2,int>& counter, int max );
+    int d2Linearised(const tarch::la::Vector<2, int>& counter, int max);
 
     /**
      * Special 3d variant of dLinearised that works also if you compile with other
      * dimensions.
      */
-    int d3Linearised( const tarch::la::Vector<3,int>& counter, int max );
+    int d3Linearised(const tarch::la::Vector<3, int>& counter, int max);
 
     /**
      * Linearisation not Optimised
@@ -137,7 +137,7 @@ namespace peano4 {
      * optimised at all. It thus allows to have arbitrary argument values. Yet,
      * this version is not optimised, i.e. it might become a bottleneck.
      */
-    int dLinearisedWithoutLookup( const tarch::la::Vector<Dimensions,int>& counter, int max );
+    int dLinearisedWithoutLookup(const tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
      * Counterpart of dLinearised().
@@ -146,12 +146,12 @@ namespace peano4 {
      * optimised at all. It thus allows to have arbitrary argument values. Yet,
      * this version is not optimised, i.e. it might become a bottleneck.
      */
-    tarch::la::Vector<Dimensions,int> dDelinearised(int value, int max );
+    tarch::la::Vector<Dimensions, int> dDelinearised(int value, int max);
 
     /**
      * Delinearization not optimised.
      */
-    tarch::la::Vector<Dimensions,int> dDelinearisedWithoutLookup(int value, int max);
+    tarch::la::Vector<Dimensions, int> dDelinearisedWithoutLookup(int value, int max);
 
 
     void setupLookupTableForDLinearised();
@@ -160,13 +160,13 @@ namespace peano4 {
     /**
      * @return a vector containing zero values only.
      */
-    tarch::la::Vector<Dimensions,int> dStartVector();
+    tarch::la::Vector<Dimensions, int> dStartVector();
 
     /**
      * @return a vector containing only zero values besides the dim-th entry. This
      *         entry is set value.
      */
-    tarch::la::Vector<Dimensions,int> dStartVector(int dim, int value);
+    tarch::la::Vector<Dimensions, int> dStartVector(int dim, int value);
 
     /**
      * Creates a start vector. Each component is set either 0 or max-1 depending
@@ -174,7 +174,7 @@ namespace peano4 {
      *
      * @return a start vector for an osciallating loop.
      */
-    tarch::la::Vector<Dimensions,int> dStartVector( int max, const LoopDirection& direction );
+    tarch::la::Vector<Dimensions, int> dStartVector(int max, const LoopDirection& direction);
   }
 }
 
@@ -215,8 +215,9 @@ namespace peano4 {
  * if you make N a scalar. It also works if max has the type
  * tarch::la::Vector<Dimensions,int> and hosts different entries per dimension.
  */
-#define dfor(counter,max) \
-  for (tarch::la::Vector<Dimensions,int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter,max); peano4::utils::dInc(counter,max) )
+#define dfor(counter, max) \
+  for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \
+       peano4::utils::dInc(counter, max))
 
 
 /**
@@ -250,18 +251,19 @@ namespace peano4 {
  * kScalar giving you k's value linearised.
  */
 #define dfor4(counter) \
-  for( int counter##Scalar=0; counter##Scalar<FOUR_POWER_D; counter##Scalar++) { \
-    tarch::la::Vector<Dimensions,int> counter; \
+  for (int counter##Scalar = 0; counter##Scalar < FOUR_POWER_D; counter##Scalar++) { \
+    tarch::la::Vector<Dimensions, int> counter; \
     { \
-    int   copy##counter##Scalar = counter##Scalar; \
-    for (int counter##ddd=Dimensions-1; counter##ddd>=0; counter##ddd--) { \
-      int counter##aPowI = 1; \
-      for (int counter##jjj=0; counter##jjj<counter##ddd; counter##jjj++) { \
+      int copy##counter##Scalar = counter##Scalar; \
+      for (int counter##ddd = Dimensions - 1; counter##ddd >= 0; counter##ddd--) { \
+        int counter##aPowI = 1; \
+        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
           counter##aPowI *= 4; \
+        } \
+        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
+        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
       } \
-      counter(counter##ddd) = copy##counter##Scalar /  counter##aPowI; \
-      copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-    }}
+    }
 
 
 /**
@@ -295,62 +297,66 @@ namespace peano4 {
  * kScalar giving you k's value linearised.
  */
 #define dfor3(counter) \
-  for( int counter##Scalar=0; counter##Scalar<ThreePowerD; counter##Scalar++) { \
-    tarch::la::Vector<Dimensions,int> counter; \
+  for (int counter##Scalar = 0; counter##Scalar < ThreePowerD; counter##Scalar++) { \
+    tarch::la::Vector<Dimensions, int> counter; \
     { \
-    int   copy##counter##Scalar = counter##Scalar; \
-    for (int counter##ddd=Dimensions-1; counter##ddd>=0; counter##ddd--) { \
-      int counter##aPowI = 1; \
-      for (int counter##jjj=0; counter##jjj<counter##ddd; counter##jjj++) { \
-        counter##aPowI *= 3; \
+      int copy##counter##Scalar = counter##Scalar; \
+      for (int counter##ddd = Dimensions - 1; counter##ddd >= 0; counter##ddd--) { \
+        int counter##aPowI = 1; \
+        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
+          counter##aPowI *= 3; \
+        } \
+        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
+        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
       } \
-      counter(counter##ddd) = copy##counter##Scalar /  counter##aPowI; \
-      copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-    }}
+    }
 
 
 #define dfor5(counter) \
-  for( int counter##Scalar=0; counter##Scalar<FIVE_POWER_D; counter##Scalar++) { \
-    tarch::la::Vector<Dimensions,int> counter; \
+  for (int counter##Scalar = 0; counter##Scalar < FIVE_POWER_D; counter##Scalar++) { \
+    tarch::la::Vector<Dimensions, int> counter; \
     { \
-    int   copy##counter##Scalar = counter##Scalar; \
-    for (int counter##ddd=Dimensions-1; counter##ddd>=0; counter##ddd--) { \
-      int counter##aPowI = 1; \
-      for (int counter##jjj=0; counter##jjj<counter##ddd; counter##jjj++) { \
-        counter##aPowI *= 5; \
+      int copy##counter##Scalar = counter##Scalar; \
+      for (int counter##ddd = Dimensions - 1; counter##ddd >= 0; counter##ddd--) { \
+        int counter##aPowI = 1; \
+        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
+          counter##aPowI *= 5; \
+        } \
+        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
+        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
       } \
-      counter(counter##ddd) = copy##counter##Scalar /  counter##aPowI; \
-      copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-    }}
+    }
 
 #define dfor7(counter) \
-  for( int counter##Scalar=0; counter##Scalar<SEVEN_POWER_D; counter##Scalar++) { \
-    tarch::la::Vector<Dimensions,int> counter; \
+  for (int counter##Scalar = 0; counter##Scalar < SEVEN_POWER_D; counter##Scalar++) { \
+    tarch::la::Vector<Dimensions, int> counter; \
     { \
-    int   copy##counter##Scalar = counter##Scalar; \
-    for (int counter##ddd=Dimensions-1; counter##ddd>=0; counter##ddd--) { \
-      int counter##aPowI = 1; \
-      for (int counter##jjj=0; counter##jjj<counter##ddd; counter##jjj++) { \
-        counter##aPowI *= 7; \
+      int copy##counter##Scalar = counter##Scalar; \
+      for (int counter##ddd = Dimensions - 1; counter##ddd >= 0; counter##ddd--) { \
+        int counter##aPowI = 1; \
+        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
+          counter##aPowI *= 7; \
+        } \
+        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
+        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
       } \
-      counter(counter##ddd) = copy##counter##Scalar /  counter##aPowI; \
-      copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-    }}
+    }
 
 
 #define dfor9(counter) \
-  for( int counter##Scalar=0; counter##Scalar<NINE_POWER_D; counter##Scalar++) { \
-    tarch::la::Vector<Dimensions,int> counter; \
+  for (int counter##Scalar = 0; counter##Scalar < NINE_POWER_D; counter##Scalar++) { \
+    tarch::la::Vector<Dimensions, int> counter; \
     { \
-    int   copy##counter##Scalar = counter##Scalar; \
-    for (int counter##ddd=Dimensions-1; counter##ddd>=0; counter##ddd--) { \
-      int counter##aPowI = 1; \
-      for (int counter##jjj=0; counter##jjj<counter##ddd; counter##jjj++) { \
-        counter##aPowI *= 9; \
+      int copy##counter##Scalar = counter##Scalar; \
+      for (int counter##ddd = Dimensions - 1; counter##ddd >= 0; counter##ddd--) { \
+        int counter##aPowI = 1; \
+        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
+          counter##aPowI *= 9; \
+        } \
+        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
+        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
       } \
-      counter(counter##ddd) = copy##counter##Scalar /  counter##aPowI; \
-      copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-    }}
+    }
 
 /**
  * If Dimensions is not set to two, we might nevertheless need
@@ -366,19 +372,20 @@ namespace peano4 {
  * explicitly) to work with 2d index vectors within such a loop. Do not just use
  * dLinearised, but use the d2Linearised or d3Linearised variant instead.
  */
-#define d2for(counter,max) \
-  for( int counter##Scalar=0; counter##Scalar<tarch::la::aPowI(2,max); counter##Scalar++) { \
-    tarch::la::Vector<2,int> counter; \
+#define d2for(counter, max) \
+  for (int counter##Scalar = 0; counter##Scalar < tarch::la::aPowI(2, max); counter##Scalar++) { \
+    tarch::la::Vector<2, int> counter; \
     { \
-    int   copy##counter##Scalar = counter##Scalar; \
-    for (int counter##ddd=2-1; counter##ddd>=0; counter##ddd--) { \
-      int counter##aPowI = 1; \
-      for (int counter##jjj=0; counter##jjj<counter##ddd; counter##jjj++) { \
-        counter##aPowI *= max; \
+      int copy##counter##Scalar = counter##Scalar; \
+      for (int counter##ddd = 2 - 1; counter##ddd >= 0; counter##ddd--) { \
+        int counter##aPowI = 1; \
+        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
+          counter##aPowI *= max; \
+        } \
+        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
+        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
       } \
-      counter(counter##ddd) = copy##counter##Scalar /  counter##aPowI; \
-      copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-    }}
+    }
 
 /**
  * If Dimensions is not set to two, we might nevertheless need
@@ -387,18 +394,19 @@ namespace peano4 {
  * Please use enddforx to close a loop started with this macro.
  */
 #define d2for2(counter) \
-  for( int counter##Scalar=0; counter##Scalar<tarch::la::aPowI(2,2); counter##Scalar++) { \
-    tarch::la::Vector<2,int> counter; \
+  for (int counter##Scalar = 0; counter##Scalar < tarch::la::aPowI(2, 2); counter##Scalar++) { \
+    tarch::la::Vector<2, int> counter; \
     { \
-    int   copy##counter##Scalar = counter##Scalar; \
-    for (int counter##ddd=2-1; counter##ddd>=0; counter##ddd--) { \
-      int counter##aPowI = 1; \
-      for (int counter##jjj=0; counter##jjj<counter##ddd; counter##jjj++) { \
-        counter##aPowI *= 2; \
+      int copy##counter##Scalar = counter##Scalar; \
+      for (int counter##ddd = 2 - 1; counter##ddd >= 0; counter##ddd--) { \
+        int counter##aPowI = 1; \
+        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
+          counter##aPowI *= 2; \
+        } \
+        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
+        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
       } \
-      counter(counter##ddd) = copy##counter##Scalar /  counter##aPowI; \
-      copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-    }}
+    }
 
 /**
  * If Dimensions is not set to three, we might nevertheless need
@@ -407,19 +415,19 @@ namespace peano4 {
  * Please use enddforx to close a loop started with this macro.
  */
 #define d3for2(counter) \
-  for( int counter##Scalar=0; counter##Scalar<tarch::la::aPowI(3,2); counter##Scalar++) { \
-    tarch::la::Vector<3,int> counter; \
+  for (int counter##Scalar = 0; counter##Scalar < tarch::la::aPowI(3, 2); counter##Scalar++) { \
+    tarch::la::Vector<3, int> counter; \
     { \
-    int   copy##counter##Scalar = counter##Scalar; \
-    for (int counter##ddd=3-1; counter##ddd>=0; counter##ddd--) { \
-      int counter##aPowI = 1; \
-      for (int counter##jjj=0; counter##jjj<counter##ddd; counter##jjj++) { \
-        counter##aPowI *= 2; \
+      int copy##counter##Scalar = counter##Scalar; \
+      for (int counter##ddd = 3 - 1; counter##ddd >= 0; counter##ddd--) { \
+        int counter##aPowI = 1; \
+        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
+          counter##aPowI *= 2; \
+        } \
+        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
+        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
       } \
-      counter(counter##ddd) = copy##counter##Scalar /  counter##aPowI; \
-      copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-    }}
-
+    }
 
 
 /**
@@ -436,19 +444,20 @@ namespace peano4 {
  * explicitly) to work with 2d index vectors within such a loop. Do not just use
  * dLinearised, but use the d2Linearised or d3Linearised variant instead.
  */
-#define d3for(counter,max) \
-  for( int counter##Scalar=0; counter##Scalar<tarch::la::aPowI(3,max); counter##Scalar++) { \
-    tarch::la::Vector<3,int> counter; \
+#define d3for(counter, max) \
+  for (int counter##Scalar = 0; counter##Scalar < tarch::la::aPowI(3, max); counter##Scalar++) { \
+    tarch::la::Vector<3, int> counter; \
     { \
-    int   copy##counter##Scalar = counter##Scalar; \
-    for (int counter##ddd=3-1; counter##ddd>=0; counter##ddd--) { \
-      int counter##aPowI = 1; \
-      for (int counter##jjj=0; counter##jjj<counter##ddd; counter##jjj++) { \
-        counter##aPowI *= max; \
+      int copy##counter##Scalar = counter##Scalar; \
+      for (int counter##ddd = 3 - 1; counter##ddd >= 0; counter##ddd--) { \
+        int counter##aPowI = 1; \
+        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
+          counter##aPowI *= max; \
+        } \
+        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
+        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
       } \
-      counter(counter##ddd) = copy##counter##Scalar /  counter##aPowI; \
-      copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-    }}
+    }
 
 
 /**
@@ -458,18 +467,19 @@ namespace peano4 {
  * Please use enddforx to close a loop started with this macro.
  */
 #define d2for3(counter) \
-  for( int counter##Scalar=0; counter##Scalar<tarch::la::aPowI(2,3); counter##Scalar++) { \
-    tarch::la::Vector<2,int> counter; \
+  for (int counter##Scalar = 0; counter##Scalar < tarch::la::aPowI(2, 3); counter##Scalar++) { \
+    tarch::la::Vector<2, int> counter; \
     { \
-    int   copy##counter##Scalar = counter##Scalar; \
-    for (int counter##ddd=2-1; counter##ddd>=0; counter##ddd--) { \
-      int counter##aPowI = 1; \
-      for (int counter##jjj=0; counter##jjj<counter##ddd; counter##jjj++) { \
-        counter##aPowI *= 3; \
+      int copy##counter##Scalar = counter##Scalar; \
+      for (int counter##ddd = 2 - 1; counter##ddd >= 0; counter##ddd--) { \
+        int counter##aPowI = 1; \
+        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
+          counter##aPowI *= 3; \
+        } \
+        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
+        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
       } \
-      counter(counter##ddd) = copy##counter##Scalar /  counter##aPowI; \
-      copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-    }}
+    }
 
 /**
  * If Dimensions is not set to three, we might nevertheless need
@@ -478,18 +488,19 @@ namespace peano4 {
  * Please use enddforx to close a loop started with this macro.
  */
 #define d3for3(counter) \
-  for( int counter##Scalar=0; counter##Scalar<tarch::la::aPowI(3,3); counter##Scalar++) { \
-    tarch::la::Vector<3,int> counter; \
+  for (int counter##Scalar = 0; counter##Scalar < tarch::la::aPowI(3, 3); counter##Scalar++) { \
+    tarch::la::Vector<3, int> counter; \
     { \
-    int   copy##counter##Scalar = counter##Scalar; \
-    for (int counter##ddd=3-1; counter##ddd>=0; counter##ddd--) { \
-      int counter##aPowI = 1; \
-      for (int counter##jjj=0; counter##jjj<counter##ddd; counter##jjj++) { \
-        counter##aPowI *= 3; \
+      int copy##counter##Scalar = counter##Scalar; \
+      for (int counter##ddd = 3 - 1; counter##ddd >= 0; counter##ddd--) { \
+        int counter##aPowI = 1; \
+        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
+          counter##aPowI *= 3; \
+        } \
+        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
+        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
       } \
-      counter(counter##ddd) = copy##counter##Scalar /  counter##aPowI; \
-      copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-    }}
+    }
 
 
 /**
@@ -526,41 +537,43 @@ namespace peano4 {
 /*
  * bit flipping used for Dimensions = 2, and Dimensions = 3
  * for more information about the idea principle used refer to https://opt-patterns.wiki.tum.de/dfor
- */ 
+ */
 #if Dimensions == 2
 #define dfor2(counter) \
-  for( int counter##Scalar=0, AA##counter = 0, BB##counter = 0; counter##Scalar<TwoPowerD; counter##Scalar++) { \
-  tarch::la::Vector<Dimensions,int> counter; \
-  counter(0) = AA##counter; \
-  counter(1) = BB##counter; \
-  AA##counter = !AA##counter; \
-  BB##counter = !(AA##counter ^ BB##counter); 
+  for (int counter##Scalar = 0, AA##counter = 0, BB##counter = 0; counter##Scalar < TwoPowerD; counter##Scalar++) { \
+    tarch::la::Vector<Dimensions, int> counter; \
+    counter(0)  = AA##counter; \
+    counter(1)  = BB##counter; \
+    AA##counter = !AA##counter; \
+    BB##counter = !(AA##counter ^ BB##counter);
 
 #elif Dimensions == 3
 #define dfor2(counter) \
-  for( int counter##Scalar=0, AA##counter = 0, BB##counter = 0, CC##counter = 0; counter##Scalar<TwoPowerD; counter##Scalar++) { \
-  tarch::la::Vector<Dimensions,int> counter; \
-  counter(0) = AA##counter; \
-  counter(1) = BB##counter; \
-  counter(2) = CC##counter; \
-  AA##counter = !AA##counter; \
-  BB##counter = !(AA##counter ^ BB##counter); \
-  CC##counter = CC##counter || (!AA##counter && !BB##counter && !CC##counter);  
+  for (int counter##Scalar = 0, AA##counter = 0, BB##counter = 0, CC##counter = 0; counter##Scalar < TwoPowerD; \
+       counter##Scalar++) { \
+    tarch::la::Vector<Dimensions, int> counter; \
+    counter(0)  = AA##counter; \
+    counter(1)  = BB##counter; \
+    counter(2)  = CC##counter; \
+    AA##counter = !AA##counter; \
+    BB##counter = !(AA##counter ^ BB##counter); \
+    CC##counter = CC##counter || (!AA##counter && !BB##counter && !CC##counter);
 
-#else 
+#else
 #define dfor2(counter) \
-  for( int counter##Scalar=0; counter##Scalar<TwoPowerD; counter##Scalar++) { \
-    tarch::la::Vector<Dimensions,int> counter; \
-      { \
-      int   copy##counter##Scalar = counter##Scalar; \
-      for (int counter##ddd=Dimensions-1; counter##ddd>=0; counter##ddd--) { \
+  for (int counter##Scalar = 0; counter##Scalar < TwoPowerD; counter##Scalar++) { \
+    tarch::la::Vector<Dimensions, int> counter; \
+    { \
+      int copy##counter##Scalar = counter##Scalar; \
+      for (int counter##ddd = Dimensions - 1; counter##ddd >= 0; counter##ddd--) { \
         int counter##aPowI = 1; \
-        for (int counter##jjj=0; counter##jjj<counter##ddd; counter##jjj++) { \
+        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
           counter##aPowI *= 2; \
         } \
-      counter(counter##ddd) = copy##counter##Scalar /  counter##aPowI; \
-      copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-      }}
+        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
+        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
+      } \
+    }
 
 #endif
 
@@ -578,8 +591,10 @@ namespace peano4 {
  * (entry of the counter) is specified by dim and has the value value
  * throughout the for-loop.
  */
-#define dfore(counter,max,dim,value) \
-  for (tarch::la::Vector<Dimensions,int> counter = peano4::utils::dStartVector(dim,value); peano4::utils::dCmp(counter,max); peano4::utils::dInc(counter,max,dim) )
+#define dfore(counter, max, dim, value) \
+  for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(dim, value); \
+       peano4::utils::dCmp(counter, max); \
+       peano4::utils::dInc(counter, max, dim))
 
 
 /**
@@ -611,62 +626,78 @@ namespace peano4 {
  * \endcode
  * yields in [0,2],[1,2],[2,2],[2,1],[1,1],[0,1],[0,0],[1,0],[2,0].
  */
- 
- 
-#define zfor(counter,max,direction) \
-  {for (tarch::la::Vector<Dimensions,int> counter = peano4::utils::dStartVector(max,direction); peano4::utils::dCmp(counter,max); peano4::utils::dInc(counter,max,direction) ) {
 
 
+#define zfor(counter, max, direction) \
+  { \
+    for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(max, direction); \
+         peano4::utils::dCmp(counter, max); \
+         peano4::utils::dInc(counter, max, direction)) {
 
 
-
-/* 
- * zfor3 is an optimized version of zfor for max = 3 
+/*
+ * zfor3 is an optimized version of zfor for max = 3
  * A lookup table is used for dim=2 and dim=3, for higher dimensions
  * the standard zfor is used instead
  */
 #if Dimensions == 2
- // first entry is direction, second entry is cell, third entry is tuples
- static const int lookupzfor3[4][9][2] = {
- {{2,2},{1,2},{0,2},{0,1},{1,1},{2,1},{2,0},{1,0},{0,0}},
-   {{0,2},{1,2},{2,2},{2,1},{1,1},{0,1},{0,0},{1,0},{2,0}},
-   {{2,0},{1,0},{0,0},{0,1},{1,1},{2,1},{2,2},{1,2},{0,2}},
-   {{0,0},{1,0},{2,0},{2,1},{1,1},{0,1},{0,2},{1,2},{2,2}}
- };
-
- #define zfor3(counter, direction) \
-  { tarch::la::Vector<Dimensions,int> counter; \
-   int counter##initDir = static_cast<int>(direction.to_ulong()); \
-   for (int counter##i = 0; counter##i < 9; ++counter##i) { \
-     counter(0) = lookupzfor3[counter##initDir][counter##i][0]; \
-     counter(1) = lookupzfor3[counter##initDir][counter##i][1];
-
-#elif Dimensions == 3
-  static const int lookupzfor3[8][27][3] = {
-  {{2,2,2},{1,2,2},{0,2,2},{0,1,2},{1,1,2},{2,1,2},{2,0,2},{1,0,2},{0,0,2},{0,0,1},{1,0,1},{2,0,1},{2,1,1},{1,1,1},{0,1,1},{0,2,1},{1,2,1},{2,2,1},{2,2,0},{1,2,0},{0,2,0},{0,1,0},{1,1,0},{2,1,0},{2,0,0},{1,0,0},{0,0,0}},
-    {{0,2,2},{1,2,2},{2,2,2},{2,1,2},{1,1,2},{0,1,2},{0,0,2},{1,0,2},{2,0,2},{2,0,1},{1,0,1},{0,0,1},{0,1,1},{1,1,1},{2,1,1},{2,2,1},{1,2,1},{0,2,1},{0,2,0},{1,2,0},{2,2,0},{2,1,0},{1,1,0},{0,1,0},{0,0,0},{1,0,0},{2,0,0}},
-    {{2,0,2},{1,0,2},{0,0,2},{0,1,2},{1,1,2},{2,1,2},{2,2,2},{1,2,2},{0,2,2},{0,2,1},{1,2,1},{2,2,1},{2,1,1},{1,1,1},{0,1,1},{0,0,1},{1,0,1},{2,0,1},{2,0,0},{1,0,0},{0,0,0},{0,1,0},{1,1,0},{2,1,0},{2,2,0},{1,2,0},{0,2,0}},
-    {{0,0,2},{1,0,2},{2,0,2},{2,1,2},{1,1,2},{0,1,2},{0,2,2},{1,2,2},{2,2,2},{2,2,1},{1,2,1},{0,2,1},{0,1,1},{1,1,1},{2,1,1},{2,0,1},{1,0,1},{0,0,1},{0,0,0},{1,0,0},{2,0,0},{2,1,0},{1,1,0},{0,1,0},{0,2,0},{1,2,0},{2,2,0}},
-    {{2,2,0},{1,2,0},{0,2,0},{0,1,0},{1,1,0},{2,1,0},{2,0,0},{1,0,0},{0,0,0},{0,0,1},{1,0,1},{2,0,1},{2,1,1},{1,1,1},{0,1,1},{0,2,1},{1,2,1},{2,2,1},{2,2,2},{1,2,2},{0,2,2},{0,1,2},{1,1,2},{2,1,2},{2,0,2},{1,0,2},{0,0,2}},
-    {{0,2,0},{1,2,0},{2,2,0},{2,1,0},{1,1,0},{0,1,0},{0,0,0},{1,0,0},{2,0,0},{2,0,1},{1,0,1},{0,0,1},{0,1,1},{1,1,1},{2,1,1},{2,2,1},{1,2,1},{0,2,1},{0,2,2},{1,2,2},{2,2,2},{2,1,2},{1,1,2},{0,1,2},{0,0,2},{1,0,2},{2,0,2}},
-    {{2,0,0},{1,0,0},{0,0,0},{0,1,0},{1,1,0},{2,1,0},{2,2,0},{1,2,0},{0,2,0},{0,2,1},{1,2,1},{2,2,1},{2,1,1},{1,1,1},{0,1,1},{0,0,1},{1,0,1},{2,0,1},{2,0,2},{1,0,2},{0,0,2},{0,1,2},{1,1,2},{2,1,2},{2,2,2},{1,2,2},{0,2,2}},
-    {{0,0,0},{1,0,0},{2,0,0},{2,1,0},{1,1,0},{0,1,0},{0,2,0},{1,2,0},{2,2,0},{2,2,1},{1,2,1},{0,2,1},{0,1,1},{1,1,1},{2,1,1},{2,0,1},{1,0,1},{0,0,1},{0,0,2},{1,0,2},{2,0,2},{2,1,2},{1,1,2},{0,1,2},{0,2,2},{1,2,2},{2,2,2}}
-  };
+// first entry is direction, second entry is cell, third entry is tuples
+static const int lookupzfor3[4][9][2] = {
+  {{2, 2}, {1, 2}, {0, 2}, {0, 1}, {1, 1}, {2, 1}, {2, 0}, {1, 0}, {0, 0}},
+  {{0, 2}, {1, 2}, {2, 2}, {2, 1}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {2, 0}},
+  {{2, 0}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {2, 1}, {2, 2}, {1, 2}, {0, 2}},
+  {{0, 0}, {1, 0}, {2, 0}, {2, 1}, {1, 1}, {0, 1}, {0, 2}, {1, 2}, {2, 2}}};
 
 #define zfor3(counter, direction) \
-  { tarch::la::Vector<Dimensions,int> counter; \
-    int counter##initDir = static_cast<int>(direction.to_ulong()); \
+  { \
+    tarch::la::Vector<Dimensions, int> counter; \
+    int                                counter##initDir = static_cast<int>(direction.to_ulong()); \
+    for (int counter##i = 0; counter##i < 9; ++counter##i) { \
+      counter(0) = lookupzfor3[counter##initDir][counter##i][0]; \
+      counter(1) = lookupzfor3[counter##initDir][counter##i][1];
+
+#elif Dimensions == 3
+static const int lookupzfor3[8][27][3] = {
+  {{2, 2, 2}, {1, 2, 2}, {0, 2, 2}, {0, 1, 2}, {1, 1, 2}, {2, 1, 2}, {2, 0, 2}, {1, 0, 2}, {0, 0, 2},
+   {0, 0, 1}, {1, 0, 1}, {2, 0, 1}, {2, 1, 1}, {1, 1, 1}, {0, 1, 1}, {0, 2, 1}, {1, 2, 1}, {2, 2, 1},
+   {2, 2, 0}, {1, 2, 0}, {0, 2, 0}, {0, 1, 0}, {1, 1, 0}, {2, 1, 0}, {2, 0, 0}, {1, 0, 0}, {0, 0, 0}},
+  {{0, 2, 2}, {1, 2, 2}, {2, 2, 2}, {2, 1, 2}, {1, 1, 2}, {0, 1, 2}, {0, 0, 2}, {1, 0, 2}, {2, 0, 2},
+   {2, 0, 1}, {1, 0, 1}, {0, 0, 1}, {0, 1, 1}, {1, 1, 1}, {2, 1, 1}, {2, 2, 1}, {1, 2, 1}, {0, 2, 1},
+   {0, 2, 0}, {1, 2, 0}, {2, 2, 0}, {2, 1, 0}, {1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}, {2, 0, 0}},
+  {{2, 0, 2}, {1, 0, 2}, {0, 0, 2}, {0, 1, 2}, {1, 1, 2}, {2, 1, 2}, {2, 2, 2}, {1, 2, 2}, {0, 2, 2},
+   {0, 2, 1}, {1, 2, 1}, {2, 2, 1}, {2, 1, 1}, {1, 1, 1}, {0, 1, 1}, {0, 0, 1}, {1, 0, 1}, {2, 0, 1},
+   {2, 0, 0}, {1, 0, 0}, {0, 0, 0}, {0, 1, 0}, {1, 1, 0}, {2, 1, 0}, {2, 2, 0}, {1, 2, 0}, {0, 2, 0}},
+  {{0, 0, 2}, {1, 0, 2}, {2, 0, 2}, {2, 1, 2}, {1, 1, 2}, {0, 1, 2}, {0, 2, 2}, {1, 2, 2}, {2, 2, 2},
+   {2, 2, 1}, {1, 2, 1}, {0, 2, 1}, {0, 1, 1}, {1, 1, 1}, {2, 1, 1}, {2, 0, 1}, {1, 0, 1}, {0, 0, 1},
+   {0, 0, 0}, {1, 0, 0}, {2, 0, 0}, {2, 1, 0}, {1, 1, 0}, {0, 1, 0}, {0, 2, 0}, {1, 2, 0}, {2, 2, 0}},
+  {{2, 2, 0}, {1, 2, 0}, {0, 2, 0}, {0, 1, 0}, {1, 1, 0}, {2, 1, 0}, {2, 0, 0}, {1, 0, 0}, {0, 0, 0},
+   {0, 0, 1}, {1, 0, 1}, {2, 0, 1}, {2, 1, 1}, {1, 1, 1}, {0, 1, 1}, {0, 2, 1}, {1, 2, 1}, {2, 2, 1},
+   {2, 2, 2}, {1, 2, 2}, {0, 2, 2}, {0, 1, 2}, {1, 1, 2}, {2, 1, 2}, {2, 0, 2}, {1, 0, 2}, {0, 0, 2}},
+  {{0, 2, 0}, {1, 2, 0}, {2, 2, 0}, {2, 1, 0}, {1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}, {2, 0, 0},
+   {2, 0, 1}, {1, 0, 1}, {0, 0, 1}, {0, 1, 1}, {1, 1, 1}, {2, 1, 1}, {2, 2, 1}, {1, 2, 1}, {0, 2, 1},
+   {0, 2, 2}, {1, 2, 2}, {2, 2, 2}, {2, 1, 2}, {1, 1, 2}, {0, 1, 2}, {0, 0, 2}, {1, 0, 2}, {2, 0, 2}},
+  {{2, 0, 0}, {1, 0, 0}, {0, 0, 0}, {0, 1, 0}, {1, 1, 0}, {2, 1, 0}, {2, 2, 0}, {1, 2, 0}, {0, 2, 0},
+   {0, 2, 1}, {1, 2, 1}, {2, 2, 1}, {2, 1, 1}, {1, 1, 1}, {0, 1, 1}, {0, 0, 1}, {1, 0, 1}, {2, 0, 1},
+   {2, 0, 2}, {1, 0, 2}, {0, 0, 2}, {0, 1, 2}, {1, 1, 2}, {2, 1, 2}, {2, 2, 2}, {1, 2, 2}, {0, 2, 2}},
+  {{0, 0, 0}, {1, 0, 0}, {2, 0, 0}, {2, 1, 0}, {1, 1, 0}, {0, 1, 0}, {0, 2, 0}, {1, 2, 0}, {2, 2, 0},
+   {2, 2, 1}, {1, 2, 1}, {0, 2, 1}, {0, 1, 1}, {1, 1, 1}, {2, 1, 1}, {2, 0, 1}, {1, 0, 1}, {0, 0, 1},
+   {0, 0, 2}, {1, 0, 2}, {2, 0, 2}, {2, 1, 2}, {1, 1, 2}, {0, 1, 2}, {0, 2, 2}, {1, 2, 2}, {2, 2, 2}}};
+
+#define zfor3(counter, direction) \
+  { \
+    tarch::la::Vector<Dimensions, int> counter; \
+    int                                counter##initDir = static_cast<int>(direction.to_ulong()); \
     for (int counter##i = 0; counter##i < 27; ++counter##i) { \
       counter(0) = lookupzfor3[counter##initDir][counter##i][0]; \
       counter(1) = lookupzfor3[counter##initDir][counter##i][1]; \
       counter(2) = lookupzfor3[counter##initDir][counter##i][2];
 
 #else
-#define zfor3(counter, direction) \
-  zfor(counter, 3, direction)
-  
+#define zfor3(counter, direction) zfor(counter, 3, direction)
+
 #endif
 
-  
-#define endzfor }}    
 
+#define endzfor \
+  } \
+  }

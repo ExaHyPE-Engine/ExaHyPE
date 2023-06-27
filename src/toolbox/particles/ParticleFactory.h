@@ -4,10 +4,10 @@
 
 
 #include <vector>
-#include "peano4/utils/Globals.h"
 
-#include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/datamanagement/CellMarker.h"
+#include "peano4/datamanagement/VertexMarker.h"
+#include "peano4/utils/Globals.h"
 
 
 namespace toolbox {
@@ -67,11 +67,7 @@ namespace toolbox {
      * when we leave a cell.
      */
     template <class T>
-    void init(
-      T&                                          particle,
-      const tarch::la::Vector<Dimensions,double>& x,
-      double                                      cutOffRadius
-    );
+    void init(T& particle, const tarch::la::Vector<Dimensions, double>& x, double cutOffRadius);
 
 
     /**
@@ -98,10 +94,10 @@ namespace toolbox {
      */
     template <class T>
     std::vector<T*> createEquallySpacedParticles(
-      double spacingH,
-      const tarch::la::Vector<Dimensions,double>& voxelX,
-      const tarch::la::Vector<Dimensions,double>& voxelH,
-      bool addNoise
+      double                                       spacingH,
+      const tarch::la::Vector<Dimensions, double>& voxelX,
+      const tarch::la::Vector<Dimensions, double>& voxelH,
+      bool                                         addNoise
     );
 
     /**
@@ -117,17 +113,15 @@ namespace toolbox {
      */
     template <class T>
     std::vector<T*> createParticlesAlignedWithGlobalCartesianMesh(
-      double spacingH,
-      const tarch::la::Vector<Dimensions,double>&  voxelX,
-      const tarch::la::Vector<Dimensions,double>&  voxelH,
-      const tarch::la::Vector<Dimensions,double>&  domainOffset,
-      const tarch::la::Vector<Dimensions,double>&  domainSize,
-      bool addNoise
+      double                                       spacingH,
+      const tarch::la::Vector<Dimensions, double>& voxelX,
+      const tarch::la::Vector<Dimensions, double>& voxelH,
+      const tarch::la::Vector<Dimensions, double>& domainOffset,
+      const tarch::la::Vector<Dimensions, double>& domainSize,
+      bool                                         addNoise
     );
-  }
-}
+  } // namespace particles
+} // namespace toolbox
 
 
 #include "ParticleFactory.cpph"
-
-

@@ -87,6 +87,3 @@
  *
  * for examples of different pool realisations.
  */
-
-
-

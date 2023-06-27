@@ -43,7 +43,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
 
         computational_domain_size: [Float]
            Defines size of domain.
-           
+
         guard: String (C code)
            A simple boolean expression. You can decide if a particle is inserted or not.
 

@@ -13,103 +13,103 @@ from abc import ABC
 class SPHLeapfrogFixedInteractionRadius(Particle):
     """!
 
-    SPH particle with fixed interaction radius
+      SPH particle with fixed interaction radius
 
-    Same as LeapfrogFixedInteractionRadius but augmented for full SPH.
-    Implements the Minimal SPH scheme.
+      Same as LeapfrogFixedInteractionRadius but augmented for full SPH.
+      Implements the Minimal SPH scheme.
 
-    Simple particle with a fixed interaction radius h which moves according
-    to leapfrog KDK scheme.
-    By default, it uses global time stepping,
-    i.e. the combination of maximum velocity and minimal mesh size determines
-    the time step size of the subsequent time step. Besides the default
-    variables x and h, the particle has the following properties:
+      Simple particle with a fixed interaction radius h which moves according
+      to leapfrog KDK scheme.
+      By default, it uses global time stepping,
+      i.e. the combination of maximum velocity and minimal mesh size determines
+      the time step size of the subsequent time step. Besides the default
+      variables x and h, the particle has the following properties:
 
-      - a vector a which is the acceleration;
-      - a vector v which is the velocity.
+        - a vector a which is the acceleration;
+        - a vector v which is the velocity.
 
-    You can add further properties via
+      You can add further properties via
 
-           myparticle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("myFancyArray","Dimensions") )
+             myparticle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("myFancyArray","Dimensions") )
 
-    in your code. Or you can create a subclass which adds additional fields
-    after it has called the baseline constructor.
+      in your code. Or you can create a subclass which adds additional fields
+      after it has called the baseline constructor.
 
-    You will need to add further properties for any SPH project.
+      You will need to add further properties for any SPH project.
 
-    ## Force calculation
+      ## Force calculation
 
-    particle_particle_interaction_over_particle_sets_kernel is a C++ string which defines a force between two
-    particles. It has access to three important objects:
+      particle_particle_interaction_over_particle_sets_kernel is a C++ string which defines a force between two
+      particles. It has access to three important objects:
 
-    - localParticles is a container (list) over pointers to local particles
-    - activeParticles is a container (list) over pointers to active particles
-    - marker is a cell marker which identifies the current cell.
+      - localParticles is a container (list) over pointers to local particles
+      - activeParticles is a container (list) over pointers to active particles
+      - marker is a cell marker which identifies the current cell.
 
-    Please consult the guidebook for a definition of local and active particles
-    but take into account that the local particles always are a subset of the
-    active particles.
+      Please consult the guidebook for a definition of local and active particles
+      but take into account that the local particles always are a subset of the
+      active particles.
 
-    Besides the actual particle-to-particle calculation, i.e. a force
-    calculation, users can also provide kernels that kick in when you touch
-    particles for the first time before you actually compute any
-    particle-particle interaction, and there is a plug-in point what you do
-    just once the particle-particle interaction has terminated. The latter
-    point is reached before we do the actual time stepping. In both plug-in
-    points, you have a vertex marker which gives you the position of the
-    vertex to which a particular is associated, and you have the localParticles.
-    This is a vector of pointers in this particular case.
-    
-    ## Precision 
+      Besides the actual particle-to-particle calculation, i.e. a force
+      calculation, users can also provide kernels that kick in when you touch
+      particles for the first time before you actually compute any
+      particle-particle interaction, and there is a plug-in point what you do
+      just once the particle-particle interaction has terminated. The latter
+      point is reached before we do the actual time stepping. In both plug-in
+      points, you have a vertex marker which gives you the position of the
+      vertex to which a particular is associated, and you have the localParticles.
+      This is a vector of pointers in this particular case.
 
-    By default, all particle attributes are modelled as doubles or arrays of
-    doubles. This might be overly precise. You can alter the precision through
-    our LLVM compiler modifications if you invoke the following commands on a
-    particle species:
-    
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~        
-  particle.mass.valid_mantissa_bits         = args.mantissa_size
-  particle.velocity.valid_mantissa_bits     = args.mantissa_size
-  particle.acceleration.valid_mantissa_bits = args.mantissa_size
-  particle.density.valid_mantissa_bits      = args.mantissa_size
-  particle.pressure.valid_mantissa_bits     = args.mantissa_size
-  particle.smoothL.valid_mantissa_bits      = args.mantissa_size
-  particle.u.valid_mantissa_bits            = args.mantissa_size
-  particle.uDot.valid_mantissa_bits         = args.mantissa_size
-  particle.f.valid_mantissa_bits            = args.mantissa_size
-  particle.wcount_dh.valid_mantissa_bits    = args.mantissa_size
-  particle.rho_dh.valid_mantissa_bits       = args.mantissa_size
-  particle.hleft.valid_mantissa_bits        = args.mantissa_size
-  particle.hright.valid_mantissa_bits       = args.mantissa_size
-  particle.smoothL_prev.valid_mantissa_bits = args.mantissa_size
-  particle.wcount.valid_mantissa_bits       = args.mantissa_size
-  particle.hDot.valid_mantissa_bits         = args.mantissa_size
-  particle.residual.valid_mantissa_bits     = args.mantissa_size
-  particle.balsara.valid_mantissa_bits      = args.mantissa_size
-  particle.rot_v.valid_mantissa_bits        = args.mantissa_size
-  particle.div_v.valid_mantissa_bits        = args.mantissa_size
-  particle.v_sig_AV.valid_mantissa_bits     = args.mantissa_size
-  particle.soundSpeed.valid_mantissa_bits   = args.mantissa_size
-  particle.v_full.valid_mantissa_bits       = args.mantissa_size
-  particle.u_full.valid_mantissa_bits       = args.mantissa_size
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~        
+      ## Precision
 
-    This is an example. You can also add ony a few of these fields, and picking
-    a value for args.mantissa_size is obviously up to you. We refrain from 
-    illustrating that you can also alter the precision of the position and 
-    maximum cut-off-radius of a particle this way. This is on purpose: We have
-    made bad experience with such modifications.
-    
+      By default, all particle attributes are modelled as doubles or arrays of
+      doubles. This might be overly precise. You can alter the precision through
+      our LLVM compiler modifications if you invoke the following commands on a
+      particle species:
 
-    ## Attributes
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    particle.mass.valid_mantissa_bits         = args.mantissa_size
+    particle.velocity.valid_mantissa_bits     = args.mantissa_size
+    particle.acceleration.valid_mantissa_bits = args.mantissa_size
+    particle.density.valid_mantissa_bits      = args.mantissa_size
+    particle.pressure.valid_mantissa_bits     = args.mantissa_size
+    particle.smoothL.valid_mantissa_bits      = args.mantissa_size
+    particle.u.valid_mantissa_bits            = args.mantissa_size
+    particle.uDot.valid_mantissa_bits         = args.mantissa_size
+    particle.f.valid_mantissa_bits            = args.mantissa_size
+    particle.wcount_dh.valid_mantissa_bits    = args.mantissa_size
+    particle.rho_dh.valid_mantissa_bits       = args.mantissa_size
+    particle.hleft.valid_mantissa_bits        = args.mantissa_size
+    particle.hright.valid_mantissa_bits       = args.mantissa_size
+    particle.smoothL_prev.valid_mantissa_bits = args.mantissa_size
+    particle.wcount.valid_mantissa_bits       = args.mantissa_size
+    particle.hDot.valid_mantissa_bits         = args.mantissa_size
+    particle.residual.valid_mantissa_bits     = args.mantissa_size
+    particle.balsara.valid_mantissa_bits      = args.mantissa_size
+    particle.rot_v.valid_mantissa_bits        = args.mantissa_size
+    particle.div_v.valid_mantissa_bits        = args.mantissa_size
+    particle.v_sig_AV.valid_mantissa_bits     = args.mantissa_size
+    particle.soundSpeed.valid_mantissa_bits   = args.mantissa_size
+    particle.v_full.valid_mantissa_bits       = args.mantissa_size
+    particle.u_full.valid_mantissa_bits       = args.mantissa_size
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    name: String
-      To be in line with other conventions, I recommend you start with an
-      uppercase letter. This has to be a valid C++ identifier, i.e. don't
-      use any special symbols besides an underscore.
+      This is an example. You can also add ony a few of these fields, and picking
+      a value for args.mantissa_size is obviously up to you. We refrain from
+      illustrating that you can also alter the precision of the position and
+      maximum cut-off-radius of a particle this way. This is on purpose: We have
+      made bad experience with such modifications.
 
-    @see peano4::datamanagement::CellMarker
-    @see peano4::datamanagement::VertexMarker
+
+      ## Attributes
+
+      name: String
+        To be in line with other conventions, I recommend you start with an
+        uppercase letter. This has to be a valid C++ identifier, i.e. don't
+        use any special symbols besides an underscore.
+
+      @see peano4::datamanagement::CellMarker
+      @see peano4::datamanagement::VertexMarker
 
     """
 
@@ -173,35 +173,19 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self._swift_project_namespace = swift_project_namespace
 
         # Baseline particle properties --------------------------------------------------------------
-        self.mass = dastgen2.attributes.Double(
-            "mass"
-        )
-        self.velocity = peano4.dastgen2.Peano4DoubleArray(
-            "v", "Dimensions"
-        )
-        self.acceleration = peano4.dastgen2.Peano4DoubleArray(
-            "a", "Dimensions"
-        )
+        self.mass = dastgen2.attributes.Double("mass")
+        self.velocity = peano4.dastgen2.Peano4DoubleArray("v", "Dimensions")
+        self.acceleration = peano4.dastgen2.Peano4DoubleArray("a", "Dimensions")
         self.data.add_attribute(self.mass)
         self.data.add_attribute(self.velocity)
         self.data.add_attribute(self.acceleration)
 
         # Basic SPH properties
-        self.density = dastgen2.attributes.Double(
-            "density"
-        )
-        self.pressure = dastgen2.attributes.Double(
-            "pressure"
-        )
-        self.smoothL = dastgen2.attributes.Double(
-            "smoothingLength"
-        )
-        self.u = dastgen2.attributes.Double(
-            "u"
-        )
-        self.uDot = dastgen2.attributes.Double(
-            "uDot"
-        )
+        self.density = dastgen2.attributes.Double("density")
+        self.pressure = dastgen2.attributes.Double("pressure")
+        self.smoothL = dastgen2.attributes.Double("smoothingLength")
+        self.u = dastgen2.attributes.Double("u")
+        self.uDot = dastgen2.attributes.Double("uDot")
         self.data.add_attribute(self.density)
         self.data.add_attribute(self.pressure)
         self.data.add_attribute(self.smoothL)
@@ -209,21 +193,11 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self.data.add_attribute(self.uDot)
 
         # Variable smoothing length scheme ---------------------------------------------
-        self.f = dastgen2.attributes.Double(
-            "f"
-        )
-        self.wcount_dh = dastgen2.attributes.Double(
-            "wcount_dh"
-        )
-        self.rho_dh = dastgen2.attributes.Double(
-            "rho_dh"
-        )
-        self.hleft = dastgen2.attributes.Double(
-            "hLeft"
-        )
-        self.hright = dastgen2.attributes.Double(
-            "hRight"
-        )
+        self.f = dastgen2.attributes.Double("f")
+        self.wcount_dh = dastgen2.attributes.Double("wcount_dh")
+        self.rho_dh = dastgen2.attributes.Double("rho_dh")
+        self.hleft = dastgen2.attributes.Double("hLeft")
+        self.hright = dastgen2.attributes.Double("hRight")
         self.data.add_attribute(self.f)
         self.data.add_attribute(self.wcount_dh)
         self.data.add_attribute(self.rho_dh)
@@ -231,18 +205,10 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self.data.add_attribute(self.hright)
 
         # Newton-Raphson iterations ----------------------------------------------------
-        self.smoothL_prev = dastgen2.attributes.Double(
-            "smoothingLengthPrevious"
-        )
-        self.wcount = dastgen2.attributes.Double(
-            "wcount"
-        )
-        self.hDot = dastgen2.attributes.Double(
-            "hDot"
-        )
-        self.residual = dastgen2.attributes.Double(
-            "residual"
-        )
+        self.smoothL_prev = dastgen2.attributes.Double("smoothingLengthPrevious")
+        self.wcount = dastgen2.attributes.Double("wcount")
+        self.hDot = dastgen2.attributes.Double("hDot")
+        self.residual = dastgen2.attributes.Double("residual")
         self.iteration_count = dastgen2.attributes.Integer("iterCount")
         self.has_converged = dastgen2.attributes.Boolean("hasConverged")
         self.data.add_attribute(self.smoothL_prev)
@@ -253,26 +219,16 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self.data.add_attribute(self.has_converged)
 
         # Artificial viscosity scheme -------------------------------------------------
-        self.balsara = dastgen2.attributes.Double(
-            "balsara"
-        )
+        self.balsara = dastgen2.attributes.Double("balsara")
         if self._hydroDimensions == 3:
-            self.rot_v = peano4.dastgen2.Peano4DoubleArray(
-                "rot_v", "Dimensions"
-            )
+            self.rot_v = peano4.dastgen2.Peano4DoubleArray("rot_v", "Dimensions")
         else:  # Curl is a scalar in lower dimensions
             self.rot_v = dastgen2.attributes.Double(
                 "rot_v"
             )  # In 2D sims it only has 1 component (z)
-        self.div_v = dastgen2.attributes.Double(
-            "div_v"
-        )
-        self.v_sig_AV = dastgen2.attributes.Double(
-            "v_sig_AV"
-        )
-        self.soundSpeed = dastgen2.attributes.Double(
-            "soundSpeed"
-        )
+        self.div_v = dastgen2.attributes.Double("div_v")
+        self.v_sig_AV = dastgen2.attributes.Double("v_sig_AV")
+        self.soundSpeed = dastgen2.attributes.Double("soundSpeed")
         self.data.add_attribute(self.balsara)
         self.data.add_attribute(self.rot_v)
         self.data.add_attribute(self.div_v)
@@ -280,12 +236,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self.data.add_attribute(self.soundSpeed)
 
         # Extended arrays for time integration consistency
-        self.v_full = peano4.dastgen2.Peano4DoubleArray(
-            "v_full", "Dimensions"
-        )
-        self.u_full = dastgen2.attributes.Double(
-            "u_full"
-        )
+        self.v_full = peano4.dastgen2.Peano4DoubleArray("v_full", "Dimensions")
+        self.u_full = dastgen2.attributes.Double("u_full")
         self.data.add_attribute(self.v_full)
         self.data.add_attribute(self.u_full)
 
