@@ -49,17 +49,6 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     tarch::la::Vector<Dimensions,double> _debugH;
     #endif
 
-    /**
-     * Pointer to array.
-     *
-     * We have to use double[] here for example to be C++ conformal. This still
-     * means that _dataSmartPointer is only one pointer. See
-     *
-     * https://www.nextptr.com/question/qa1348405750/dynamic-array-with-stdunique_ptr
-     *
-     * for an example.
-     */
-    std::shared_ptr< {{FLOAT_TYPE}}[] > _dataSmartPointer;
   public:
     typedef {{FLOAT_TYPE}} DoFType;
 
@@ -120,6 +109,8 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
    * Shallow copy
    */
   {{CLASSNAME}}(const {{CLASSNAME}}& other);
+
+  ~{{CLASSNAME}}();
 
   /**
    * Clone content. Assume other and present class have their own smart pointer

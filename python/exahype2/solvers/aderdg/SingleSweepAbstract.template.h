@@ -12,6 +12,7 @@
 {{SOLVER_INCLUDES}}
 
 #include "exahype2/RefinementControl.h"
+#include "exahype2/PrecisionControl.h"
 
 #include "exahype2/aderdg/solvers/ADERDGSolver.h"
 
@@ -200,14 +201,56 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      *                         and time-averaged (over [t,t+dt]) as C array (already allocated).
      */
     virtual void boundaryConditions(
-      const {{PREDICTOR_STORAGE_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      {{PREDICTOR_STORAGE_PRECISION}} * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal
     ){% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
 
+    {% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>" %}
+    /**
+     * Evaluate precision criterion over cell
+     *
+     * @param Q             Vector of unknowns
+     * @param x             Centre of underlying cell
+     * @param h             Size of underlying cell
+     * @param t             Time
+     * @param currentState  State of the solver at time of calling
+     */
+    virtual ::exahype2::PrecisionCommand precisionCriterion(
+      const {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions,double>&         x,
+      const tarch::la::Vector<Dimensions,double>&         h,
+      double                                              t,
+      SolverState                                         currentState
+    ) {% if ADAPTIVE_PRECISION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
+    {% endif %}
+
+    {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
+    /**
+     * Evaluate precision criterion over cell
+     *
+     * @param Q             Vector of unknowns
+     * @param x             Centre of underlying cell
+     * @param h             Size of underlying cell
+     * @param t             Time
+     * @param currentState  State of the solver at time of calling
+     */
+    virtual void riemannSolver(
+      {{CORRECTOR_COMPUTATION_PRECISION}}* const FL, // FL[{{NUMBER_OF_UNKNOWNS}}
+      {{CORRECTOR_COMPUTATION_PRECISION}}* const FR, // FR[{{NUMBER_OF_UNKNOWNS}}
+      const {{CORRECTOR_COMPUTATION_PRECISION}}* const QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{CORRECTOR_COMPUTATION_PRECISION}}* const QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const double t,
+      const double dt, 
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
+      const int direction, 
+      bool isBoundaryFace, 
+      int faceIndex) {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
+    {% endif %}
 
     /**
      * If you hook into this routine, ensure the abstract base class

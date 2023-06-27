@@ -247,6 +247,34 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 }
 {% endif %}
 
+{% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<empty>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<user-defined>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>"%}
+    exahype2::PrecisionCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::precisionCriterion(
+      const {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions,double>&         x,
+      const tarch::la::Vector<Dimensions,double>&         h,
+      double                                              t,
+      SolverState                                         currentState
+    ) {
+  {{ADAPTIVE_PRECISION_IMPLEMENTATION}}
+}
+{% endif %}
+
+{% if RIEMANN_SOLVER_IMPLEMENTATION!="<empty>" and RIEMANN_SOLVER_IMPLEMENTATION!="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>"%}
+    void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::riemannSolver(
+      {{CORRECTOR_COMPUTATION_PRECISION}}* const FL, // FL[{{NUMBER_OF_UNKNOWNS}}
+      {{CORRECTOR_COMPUTATION_PRECISION}}* const FR, // FR[{{NUMBER_OF_UNKNOWNS}}
+      const {{CORRECTOR_COMPUTATION_PRECISION}}* const QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{CORRECTOR_COMPUTATION_PRECISION}}* const QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const double t,
+      const double dt, 
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
+      const int direction, 
+      bool isBoundaryFace, 
+      int faceIndex) {
+  {{RIEMANN_SOLVER_IMPLEMENTATION}}
+}
+{% endif %}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
   assertion( _solverState == SolverState::GridConstruction );
@@ -264,7 +292,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
 
-  {{FINISH_TIME_STEP_IMPLEMENTATION}}
+
 
 }
 

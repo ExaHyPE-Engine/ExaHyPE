@@ -3,13 +3,11 @@
 #pragma once
 
 #include "Functors.h"
-
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-#include "exahype2/enumerator/SoALexicographicEnumerator.h"
 #include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
-
-#include "tarch/multicore/multicore.h"
+#include "exahype2/enumerator/SoALexicographicEnumerator.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/multicore/multicore.h"
 
 namespace exahype2 {
   namespace fv {
@@ -74,53 +72,53 @@ namespace exahype2 {
        *
        */
       namespace internal {
-        /**
-         * Copy solution from QIn to QOut. Typically, both fields have different
-         * halo sizes, so we have to use two different enumerators. The loop body
-         * copies over exactly one scalar.
-         *
-         * There is no specialisation for this one, as it is a plain copy anyway.
-         *
-         * ## Vectorisation
-         *
-         * One might be tempted to think of this as a plain memcopy. However, it
-         * is more than that: The input data has a halo, while the output data
-         * (typically) has no halo. So they are not of the same size. We therefore
-         * can copy lines from the input in one rush, but we cannot copy all of it.
-         * In the outer loop calling this routine, we exploit the fact that we
-         * know that we have AoS for both usually, so as long as we loop over the
-         * unknowns and the x-direction internally and collapse those two loops,
-         * we can actually use simd.
-         *
-         * It makes no sense to provide specialisation of this routine for
-         * different enumerators, as the routine works per volume per unknown
-         * anyway.
-         *
-         * @param patchIndex: Which patch is to be updated. QIn can hold multiple
-         *   patches, and this index picks one of them.
-         * @param volumeIndex: Which volume is to be updated within the target
-         *   patch. This index refers to the target index.
-         */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+/**
+ * Copy solution from QIn to QOut. Typically, both fields have different
+ * halo sizes, so we have to use two different enumerators. The loop body
+ * copies over exactly one scalar.
+ *
+ * There is no specialisation for this one, as it is a plain copy anyway.
+ *
+ * ## Vectorisation
+ *
+ * One might be tempted to think of this as a plain memcopy. However, it
+ * is more than that: The input data has a halo, while the output data
+ * (typically) has no halo. So they are not of the same size. We therefore
+ * can copy lines from the input in one rush, but we cannot copy all of it.
+ * In the outer loop calling this routine, we exploit the fact that we
+ * know that we have AoS for both usually, so as long as we loop over the
+ * unknowns and the x-direction internally and collapse those two loops,
+ * we can actually use simd.
+ *
+ * It makes no sense to provide specialisation of this routine for
+ * different enumerators, as the routine works per volume per unknown
+ * anyway.
+ *
+ * @param patchIndex: Which patch is to be updated. QIn can hold multiple
+ *   patches, and this index picks one of them.
+ * @param volumeIndex: Which volume is to be updated within the target
+ *   patch. This index refers to the target index.
+ */
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolution_LoopBody(
-          const double* __restrict__                QIn,
+          const double* __restrict__ QIn,
           const QInEnumeratorType&                  QInEnumerator,
           int                                       patchIndex,
-          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+          const tarch::la::Vector<Dimensions, int>& volumeIndex,
           int                                       unknown,
-          double* __restrict__                      QOut,
-          const QOutEnumeratorType&                 QOutEnumerator
+          double* __restrict__ QOut,
+          const QOutEnumeratorType& QOutEnumerator
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
-
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
         /**
          * Copy previous solution over into new time step and add source term
@@ -149,17 +147,17 @@ namespace exahype2 {
          */
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolutionAndAddSourceTerm_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* __restrict__ QIn,
           const QInEnumeratorType&                     QInEnumerator,
           exahype2::fv::rusanov::Source                source,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           double                                       t,
           double                                       dt,
-          double* __restrict__                         QOut,
-          const QOutEnumeratorType&                    QOutEnumerator
+          double* __restrict__ QOut,
+          const QOutEnumeratorType& QOutEnumerator
         ) InlineMethod;
 
         /**
@@ -175,66 +173,67 @@ namespace exahype2 {
          * @see copySolution_LoopBody() for vectorisation details.
          */
         template <>
-        KeywordToAvoidDuplicateSymbolsForInlinedFunctions
-        void copySolutionAndAddSourceTerm_LoopBody(
-          const double* __restrict__                QIn,
+        KeywordToAvoidDuplicateSymbolsForInlinedFunctions void copySolutionAndAddSourceTerm_LoopBody(
+          const double* __restrict__ QIn,
           const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-          exahype2::fv::rusanov::Source                source,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                       patchIndex,
-          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-          double                                    t,
-          double                                    dt,
-          double* __restrict__                      QOut,
+          exahype2::fv::rusanov::Source                           source,
+          const tarch::la::Vector<Dimensions, double>&            patchCentre,
+          const tarch::la::Vector<Dimensions, double>&            patchSize,
+          int                                                     patchIndex,
+          const tarch::la::Vector<Dimensions, int>&               volumeIndex,
+          double                                                  t,
+          double                                                  dt,
+          double* __restrict__ QOut,
           const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
-        )  InlineMethod;
+        ) InlineMethod;
 
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolutionAndAddSourceTerm_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* __restrict__ QIn,
           const QInEnumeratorType&                     QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           double                                       t,
           double                                       dt,
-          double* __restrict__                         QOut,
-          const QOutEnumeratorType&                    QOutEnumerator
+          double* __restrict__ QOut,
+          const QOutEnumeratorType& QOutEnumerator
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <typename Solver>
         static void copySolutionAndAddSourceTerm_LoopBody(
-          const double* __restrict__                QIn,
-          const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                       patchIndex,
-          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-          double                                    t,
-          double                                    dt,
-          double* __restrict__                      QOut,
-          const exahype2::enumerator::AoSLexicographicEnumerator&  QOutEnumerator
-        )  InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+          const double* __restrict__ QIn,
+          const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
+          const tarch::la::Vector<Dimensions, double>&            patchCentre,
+          const tarch::la::Vector<Dimensions, double>&            patchSize,
+          int                                                     patchIndex,
+          const tarch::la::Vector<Dimensions, int>&               volumeIndex,
+          double                                                  t,
+          double                                                  dt,
+          double* __restrict__ QOut,
+          const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
+        ) InlineMethod;
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
         /**
          * Compute maximum eigenvalue for one voxel in one direction.
@@ -255,19 +254,19 @@ namespace exahype2 {
          */
         template <class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
         static void computeMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* __restrict__ QIn,
           QInEnumeratorType                            QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           double                                       t,
           double                                       dt,
           int                                          normal,
-          double* __restrict__                         QMaxEigenvalue,
-          QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
-        )  InlineMethod;
+          double* __restrict__ QMaxEigenvalue,
+          QMaxEigenvalueEnumeratorType QMaxEigenvalueEnumerator
+        ) InlineMethod;
 
         /**
          * Specialisation if input data is already in AoS format. This holds for
@@ -275,73 +274,75 @@ namespace exahype2 {
          */
         template <class QMaxEigenvalueEnumeratorType>
         static void computeMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
-          exahype2::enumerator::AoSLexicographicEnumerator  QInEnumerator,
-          exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double* __restrict__                         QMaxEigenvalue,
-          QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
+          const double* __restrict__ QIn,
+          exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
+          exahype2::fv::rusanov::MaxEigenvalue             maxEigenvalue,
+          const tarch::la::Vector<Dimensions, double>&     patchCentre,
+          const tarch::la::Vector<Dimensions, double>&     patchSize,
+          int                                              patchIndex,
+          const tarch::la::Vector<Dimensions, int>&        volumeIndex,
+          double                                           t,
+          double                                           dt,
+          int                                              normal,
+          double* __restrict__ QMaxEigenvalue,
+          QMaxEigenvalueEnumeratorType QMaxEigenvalueEnumerator
         ) InlineMethod;
 
-        /**
-         * Specialisation invoking the static eigenvalue variant (for GPUs).
-         */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+/**
+ * Specialisation invoking the static eigenvalue variant (for GPUs).
+ */
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <typename Solver, class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
         static void computeMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
+          const double* __restrict__ QIn,
           const QInEnumeratorType&                     QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           double                                       t,
           double                                       dt,
           int                                          normal,
-          double* __restrict__                         QMaxEigenvalue,
-          const QMaxEigenvalueEnumeratorType&          QMaxEigenvalueEnumerator
-        )  InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+          double* __restrict__ QMaxEigenvalue,
+          const QMaxEigenvalueEnumeratorType& QMaxEigenvalueEnumerator
+        ) InlineMethod;
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
-        /**
-         * Specialisation for static eigenvalue call plus AoS input data.
-         */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+/**
+ * Specialisation for static eigenvalue call plus AoS input data.
+ */
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <typename Solver, class QMaxEigenvalueEnumeratorType>
         static void computeMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
-          const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double* __restrict__                         QMaxEigenvalue,
-          const QMaxEigenvalueEnumeratorType&          QMaxEigenvalueEnumerator
+          const double* __restrict__ QIn,
+          const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
+          const tarch::la::Vector<Dimensions, double>&            patchCentre,
+          const tarch::la::Vector<Dimensions, double>&            patchSize,
+          int                                                     patchIndex,
+          const tarch::la::Vector<Dimensions, int>&               volumeIndex,
+          double                                                  t,
+          double                                                  dt,
+          int                                                     normal,
+          double* __restrict__ QMaxEigenvalue,
+          const QMaxEigenvalueEnumeratorType& QMaxEigenvalueEnumerator
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
         /**
          * This is the actual eigenvalue loop which reduces the directional
@@ -356,13 +357,13 @@ namespace exahype2 {
          */
         template <class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QOut,
+          const double* __restrict__ QOut,
           QOutEnumeratorType                           QOutEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           double                                       t,
           double                                       dt
         ) InlineMethod;
@@ -374,92 +375,94 @@ namespace exahype2 {
          */
         template <>
         KeywordToAvoidDuplicateSymbolsForInlinedFunctions double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QOut,
+          const double* __restrict__ QOut,
           exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator,
-          exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-          double                                       t,
-          double                                       dt
+          exahype2::fv::rusanov::MaxEigenvalue             maxEigenvalue,
+          const tarch::la::Vector<Dimensions, double>&     patchCentre,
+          const tarch::la::Vector<Dimensions, double>&     patchSize,
+          int                                              patchIndex,
+          const tarch::la::Vector<Dimensions, int>&        volumeIndex,
+          double                                           t,
+          double                                           dt
         ) InlineMethod;
 
-        /**
-         * Specialised version for GPU. See generic variant for documentation.
-         */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+/**
+ * Specialised version for GPU. See generic variant for documentation.
+ */
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <typename Solver, class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QOut,
+          const double* __restrict__ QOut,
           const QOutEnumeratorType&                    QOutEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           double                                       t,
           double                                       dt
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
-        /**
-         * Optimised version for the GPU which is furthermore optimised
-         * towards one specific unknown enumeration. This is the enumeration
-         * we encounter in almost all of the cases, so it makes sense to
-         * specialise for this one.
-         */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+/**
+ * Optimised version for the GPU which is furthermore optimised
+ * towards one specific unknown enumeration. This is the enumeration
+ * we encounter in almost all of the cases, so it makes sense to
+ * specialise for this one.
+ */
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <typename Solver>
         static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QOut,
-          const exahype2::enumerator::AoSLexicographicEnumerator&  QOutEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-          double                                       t,
-          double                                       dt
+          const double* __restrict__ QOut,
+          const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
+          const tarch::la::Vector<Dimensions, double>&            patchCentre,
+          const tarch::la::Vector<Dimensions, double>&            patchSize,
+          int                                                     patchIndex,
+          const tarch::la::Vector<Dimensions, int>&               volumeIndex,
+          double                                                  t,
+          double                                                  dt
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
-        /**
-         * Compute the flux in one direction for a volume and store it.
-         * Computing the fluxes requires us to gather the input data, invoke
-         * the flux function and then to scatter the result again, as the
-         * user signatures require an AoS data format whereas the loop body
-         * itself is generic.
-         */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
+/**
+ * Compute the flux in one direction for a volume and store it.
+ * Computing the fluxes requires us to gather the input data, invoke
+ * the flux function and then to scatter the result again, as the
+ * user signatures require an AoS data format whereas the loop body
+ * itself is generic.
+ */
+#if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
         template <class QInEnumeratorType, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
-          const double* __restrict__                QIn,
-          QInEnumeratorType                   QInEnumerator,
-          exahype2::fv::rusanov::Flux         flux,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const double* __restrict__ QIn,
+          QInEnumeratorType                            QInEnumerator,
+          exahype2::fv::rusanov::Flux                  flux,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           double                                       t,
-          double                              dt,
-          int                                 normal,
-          double* __restrict__                QFlux,
-          QFluxEnumeratorType                 QFluxEnumerator
+          double                                       dt,
+          int                                          normal,
+          double* __restrict__ QFlux,
+          QFluxEnumeratorType QFluxEnumerator
         ) InlineMethod;
 
         /**
@@ -467,272 +470,273 @@ namespace exahype2 {
          * reason ...
          */
         static void computeFlux_LoopBody(
-          const double* __restrict__                                  QIn,
-          exahype2::enumerator::AoSLexicographicEnumerator  QInEnumerator,
-          exahype2::fv::rusanov::Flux                                 flux,
-          const tarch::la::Vector<Dimensions,double>&                 patchCentre,
-          const tarch::la::Vector<Dimensions,double>&                 patchSize,
-          int                                                         patchIndex,
-          const tarch::la::Vector<Dimensions,int>&                    volumeIndex,
-          double                                                      t,
-          double                                                      dt,
-          int                                                         normal,
-          double* __restrict__                                        QFlux,
-          exahype2::enumerator::AoSLexicographicEnumerator  QFluxEnumerator
+          const double* __restrict__ QIn,
+          exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
+          exahype2::fv::rusanov::Flux                      flux,
+          const tarch::la::Vector<Dimensions, double>&     patchCentre,
+          const tarch::la::Vector<Dimensions, double>&     patchSize,
+          int                                              patchIndex,
+          const tarch::la::Vector<Dimensions, int>&        volumeIndex,
+          double                                           t,
+          double                                           dt,
+          int                                              normal,
+          double* __restrict__ QFlux,
+          exahype2::enumerator::AoSLexicographicEnumerator QFluxEnumerator
         ) InlineMethod;
 
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <
           typename Solver,
           int numberOfUnknowns,
           int numberOfAuxiliaryVariables,
           class QInEnumeratorType,
-          class QFluxEnumeratorType
-        >
+          class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
-          const double* __restrict__                   QIn,
-          const QInEnumeratorType &                    QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const double* __restrict__ QIn,
+          const QInEnumeratorType&                     QInEnumerator,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           double                                       t,
           double                                       dt,
           int                                          normal,
-          double* __restrict__                         QFlux,
-          const QFluxEnumeratorType &                  QFluxEnumerator,
-          int                                          pick = PickAllEntriesFromOutputVector
+          double* __restrict__ QFlux,
+          const QFluxEnumeratorType& QFluxEnumerator,
+          int                        pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
-        template <
-          typename Solver,
-          int   numberOfUnknowns,
-          int   numberOfAuxiliaryVariables,
-          class QFluxEnumeratorType
-        >
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+        template <typename Solver, int numberOfUnknowns, int numberOfAuxiliaryVariables, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
-          const double* __restrict__                                  QIn,
-          const exahype2::enumerator::AoSLexicographicEnumerator & QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&                 patchCentre,
-          const tarch::la::Vector<Dimensions,double>&                 patchSize,
-          int                                                         patchIndex,
-          const tarch::la::Vector<Dimensions,int>&                    volumeIndex,
-          double                                                      t,
-          double                                                      dt,
-          int                                                         normal,
-          double* __restrict__                                        QFlux,
-          const QFluxEnumeratorType &                                 QFluxEnumerator,
-          int                                                         pick = PickAllEntriesFromOutputVector
+          const double* __restrict__ QIn,
+          const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
+          const tarch::la::Vector<Dimensions, double>&            patchCentre,
+          const tarch::la::Vector<Dimensions, double>&            patchSize,
+          int                                                     patchIndex,
+          const tarch::la::Vector<Dimensions, int>&               volumeIndex,
+          double                                                  t,
+          double                                                  dt,
+          int                                                     normal,
+          double* __restrict__ QFlux,
+          const QFluxEnumeratorType& QFluxEnumerator,
+          int                        pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
-        template <typename Solver>
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+        template <typename Solver, int numberOfUnknowns, int numberOfAuxiliaryVariables>
         static void computeFlux_LoopBody(
-          const double* __restrict__                                  QIn,
-          const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&                 patchCentre,
-          const tarch::la::Vector<Dimensions,double>&                 patchSize,
-          int                                                         patchIndex,
-          const tarch::la::Vector<Dimensions,int>&                    volumeIndex,
-          double                                                      t,
-          double                                                      dt,
-          int                                                         normal,
-          double* __restrict__                                        QFlux,
-          const exahype2::enumerator::AoSLexicographicEnumerator&  QFluxEnumerator
+          const double* __restrict__ QIn,
+          const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
+          const tarch::la::Vector<Dimensions, double>&            patchCentre,
+          const tarch::la::Vector<Dimensions, double>&            patchSize,
+          int                                                     patchIndex,
+          const tarch::la::Vector<Dimensions, int>&               volumeIndex,
+          double                                                  t,
+          double                                                  dt,
+          int                                                     normal,
+          double* __restrict__ QFlux,
+          const exahype2::enumerator::AoSLexicographicEnumerator& QFluxEnumerator
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
-        /**
-         * Update one volume with the flux contribution
-         *
-         * For each dimension: Take the flux left and in the actual volume and the one
-         * to the right and combine them.
-         *
-         * @todo Remove flux in the centre, as it is eliminated
-         */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+/**
+ * Update one volume with the flux contribution
+ *
+ * For each dimension: Take the flux left and in the actual volume and the one
+ * to the right and combine them.
+ *
+ * @todo Remove flux in the centre, as it is eliminated
+ */
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithFlux_LoopBody(
-          const double* __restrict__                   tempFluxX,
-          const double* __restrict__                   tempFluxY,
-          const double* __restrict__                   tempFluxZ,
+          const double* __restrict__ tempFluxX,
+          const double* __restrict__ tempFluxY,
+          const double* __restrict__ tempFluxZ,
           const QFluxEnumeratorType&                   fluxEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           int                                          unknown,
           double                                       dt,
-          double* __restrict__                         QOut,
-          const QOutEnumeratorType&                    QOutEnumerator
+          double* __restrict__ QOut,
+          const QOutEnumeratorType& QOutEnumerator
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
-        /**
-         * Constructs the average of the flux and adds it to the left and right
-         * neighbour cell with inverted sign. This is the counterpart of the other
-         * updateSolutionWithFlux_LoopBody() routine which works cell-wisely.
-         *
-         * We always enumerate right looking, i.e. the right face of cell i is
-         * face i. The leftmost cell consequently has no left face (it is cell no
-         * 0 and 0 is its right face). For N cells in a row, there's a face N-1
-         * but no face N anymore.
-         */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+/**
+ * Constructs the average of the flux and adds it to the left and right
+ * neighbour cell with inverted sign. This is the counterpart of the other
+ * updateSolutionWithFlux_LoopBody() routine which works cell-wisely.
+ *
+ * We always enumerate right looking, i.e. the right face of cell i is
+ * face i. The leftmost cell consequently has no left face (it is cell no
+ * 0 and 0 is its right face). For N cells in a row, there's a face N-1
+ * but no face N anymore.
+ */
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <typename FluxEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithFlux_LoopBody(
-          const double* __restrict__                   fluxL,
-          const double* __restrict__                   fluxR,
+          const double* __restrict__ fluxL,
+          const double* __restrict__ fluxR,
           const FluxEnumeratorType&                    fluxEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           int                                          unknown,
           double                                       dt,
           int                                          normal,
-          double* __restrict__                         QOut,
-          const QOutEnumeratorType&                    QOutEnumerator
+          double* __restrict__ QOut,
+          const QOutEnumeratorType& QOutEnumerator
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
-        /**
-         * Uses the eigenvalues to damp the solution update.
-         *
-         * ## Rationale for alternative realisations
-         *
-         * I originally throught the following:
-         *
-         * We could damp along the individual coordinate axis (normal). That is, if normal
-         * equals zero, we take the left and right neighbour of a cell into account,
-         * if it equals one, we look at the lower and upper face-connected neighbour.
-         *
-         * To allow the compiler to vectorise over this routine, it is essential that
-         * you make the loop over normal the outer loop, and then you can collapse
-         * and vectorise over the patch. Yet, even if you do so, there is no guarantee
-         * that the compiler will manage to vectorise. It really depends upon the
-         * QOutEnumerator, i.e. the ordering of the image. If the image is stored as
-         * AoS (default ordering for output data), then the loops over this routine
-         * cannot vectorise properly. To make a long story short: This routine will
-         * vectorise if and only if you explicitly re-sort input and output values of
-         * a patch prior to the update such that they are in SoA format. Obviously,
-         * it is up to you to decide if the overhead for this re-sorting is worth it.
-         *
-         * Anyway, such a damping is a fundamental rewrite, as we then have to pick
-         * either tempMaxEigenvalueX, Y or Z, so we might end up with three routines.
-         *
-         * Along the same lines, all of these arguments motivate why we do not specialise
-         * the template further. We need to do this scattering/gathering anyway, so
-         * what's the point of specialising for particular data formats?
-         *
-         * ## OpenMP offloading flaws
-         *
-         * With NVC++, there are at least two flaws that you might run into. Both did 
-         * not yield a compiler error on my system but resulted in a GPU crash, which 
-         * is kind of frustrating:
-         *
-         * - The std::max() call cannot be resolved. Weirdly, my NVC++ does not 
-         *   complain about this. In other places, it does complain. 
-         * - The NVC++ seems to struggle with the auto reference if you capture 
-         *   pointers via &. Actually, we 
-         *   see that the tempMaxEigenvalue pointer is messed up. If we capture 
-         *   via copy, everything is fine.
-         *
-         */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+/**
+ * Uses the eigenvalues to damp the solution update.
+ *
+ * ## Rationale for alternative realisations
+ *
+ * I originally throught the following:
+ *
+ * We could damp along the individual coordinate axis (normal). That is, if normal
+ * equals zero, we take the left and right neighbour of a cell into account,
+ * if it equals one, we look at the lower and upper face-connected neighbour.
+ *
+ * To allow the compiler to vectorise over this routine, it is essential that
+ * you make the loop over normal the outer loop, and then you can collapse
+ * and vectorise over the patch. Yet, even if you do so, there is no guarantee
+ * that the compiler will manage to vectorise. It really depends upon the
+ * QOutEnumerator, i.e. the ordering of the image. If the image is stored as
+ * AoS (default ordering for output data), then the loops over this routine
+ * cannot vectorise properly. To make a long story short: This routine will
+ * vectorise if and only if you explicitly re-sort input and output values of
+ * a patch prior to the update such that they are in SoA format. Obviously,
+ * it is up to you to decide if the overhead for this re-sorting is worth it.
+ *
+ * Anyway, such a damping is a fundamental rewrite, as we then have to pick
+ * either tempMaxEigenvalueX, Y or Z, so we might end up with three routines.
+ *
+ * Along the same lines, all of these arguments motivate why we do not specialise
+ * the template further. We need to do this scattering/gathering anyway, so
+ * what's the point of specialising for particular data formats?
+ *
+ * ## OpenMP offloading flaws
+ *
+ * With NVC++, there are at least two flaws that you might run into. Both did
+ * not yield a compiler error on my system but resulted in a GPU crash, which
+ * is kind of frustrating:
+ *
+ * - The std::max() call cannot be resolved. Weirdly, my NVC++ does not
+ *   complain about this. In other places, it does complain.
+ * - The NVC++ seems to struggle with the auto reference if you capture
+ *   pointers via &. Actually, we
+ *   see that the tempMaxEigenvalue pointer is messed up. If we capture
+ *   via copy, everything is fine.
+ *
+ */
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <typename QInEnumeratorType, typename QMaxEigenvalueEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithEigenvalueDamping_LoopBody(
-          const double* __restrict__                   QIn,
-          const QInEnumeratorType &                    QInEnumerator,
-          const double* __restrict__                   tempMaxEigenvalueX,
-          const double* __restrict__                   tempMaxEigenvalueY,
-          const double* __restrict__                   tempMaxEigenvalueZ,
-          const QMaxEigenvalueEnumeratorType &         eigenvalueEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const double* __restrict__ QIn,
+          const QInEnumeratorType& QInEnumerator,
+          const double* __restrict__ tempMaxEigenvalueX,
+          const double* __restrict__ tempMaxEigenvalueY,
+          const double* __restrict__ tempMaxEigenvalueZ,
+          const QMaxEigenvalueEnumeratorType&          eigenvalueEnumerator,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           int                                          unknown,
           double                                       dt,
-          double* __restrict__                         QOut,
-          const QOutEnumeratorType &                   QOutEnumerator
+          double* __restrict__ QOut,
+          const QOutEnumeratorType& QOutEnumerator
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
-        /**
-         * Face-wise version of routine, i.e. it takes the eigenvalues and
-         * updates the left and right adjacent volume of it.
-         */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+/**
+ * Face-wise version of routine, i.e. it takes the eigenvalues and
+ * updates the left and right adjacent volume of it.
+ */
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <typename QInEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithEigenvalueDamping_LoopBody(
-          const double* __restrict__                   QIn,
-          const QInEnumeratorType &                    QInEnumerator,
+          const double* __restrict__ QIn,
+          const QInEnumeratorType&                     QInEnumerator,
           double                                       maxEigenvalueL,
           double                                       maxEigenvalueR,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           int                                          unknown,
           double                                       dt,
           int                                          normal,
-          double* __restrict__                         QOut,
-          const QOutEnumeratorType &                   QOutEnumerator
+          double* __restrict__ QOut,
+          const QOutEnumeratorType& QOutEnumerator
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
         /**
          * We count faces starting with zero, i.e. effectively shift the indices
@@ -741,138 +745,137 @@ namespace exahype2 {
          * The leftmost volume's left face does not exist. Its right face has index
          * 0.
          */
-        template <
-          class QInEnumeratorType,
-          class QNCPFaceEnumeratorType
-        >
+        template <class QInEnumeratorType, class QNCPFaceEnumeratorType>
         static void computeNonconservativeFlux_LoopBody(
-          const double* __restrict__                     QIn,
-          QInEnumeratorType                              QInEnumerator,
-          exahype2::fv::rusanov::NonconservativeProduct  ncp,
-          const tarch::la::Vector<Dimensions,double>&    patchCentre,
-          const tarch::la::Vector<Dimensions,double>&    patchSize,
-          int                                            patchIndex,
-          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
-          double                                         t,
-          double                                         dt,
-          int                                            normal,
-          double* __restrict__                           QNcp,
-          QNCPFaceEnumeratorType                         QNcpEnumerator,
-          int                                            pick = PickAllEntriesFromOutputVector
+          const double* __restrict__ QIn,
+          QInEnumeratorType                             QInEnumerator,
+          exahype2::fv::rusanov::NonconservativeProduct ncp,
+          const tarch::la::Vector<Dimensions, double>&  patchCentre,
+          const tarch::la::Vector<Dimensions, double>&  patchSize,
+          int                                           patchIndex,
+          const tarch::la::Vector<Dimensions, int>&     volumeIndex,
+          double                                        t,
+          double                                        dt,
+          int                                           normal,
+          double* __restrict__ QNcp,
+          QNCPFaceEnumeratorType QNcpEnumerator,
+          int                    pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
 
-        /**
-         *
-         * ## Template parameters
-         *
-         * numberOfUnknowns and numberOfAuxiliaryVariables have to be template
-         * parameters, as we create data and we want to keep these data on the
-         * call stack.
-         */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+/**
+ *
+ * ## Template parameters
+ *
+ * numberOfUnknowns and numberOfAuxiliaryVariables have to be template
+ * parameters, as we create data and we want to keep these data on the
+ * call stack.
+ */
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <
           typename Solver,
-          int   numberOfUnknowns,
-          int   numberOfAuxiliaryVariables,
+          int numberOfUnknowns,
+          int numberOfAuxiliaryVariables,
           class QInEnumeratorType,
-          class QNCPFaceEnumeratorType
-        >
+          class QNCPFaceEnumeratorType>
         static void computeNonconservativeFlux_LoopBody(
-          const double* __restrict__                     QIn,
-          const QInEnumeratorType&                       QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&    patchCentre,
-          const tarch::la::Vector<Dimensions,double>&    patchSize,
-          int                                            patchIndex,
-          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
-          double                                         t,
-          double                                         dt,
-          int                                            normal,
-          double* __restrict__                           QNcp,
-          const QNCPFaceEnumeratorType&                  QNcpEnumerator,
-          int                                            pick = PickAllEntriesFromOutputVector
+          const double* __restrict__ QIn,
+          const QInEnumeratorType&                     QInEnumerator,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double* __restrict__ QNcp,
+          const QNCPFaceEnumeratorType& QNcpEnumerator,
+          int                           pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
-        /**
-         * Add the non-conservative flux contributions to one volume.
-         *
-         * The NCP is defined over faces, i.e. we know that QNcpX, QNcpY, QNcpZ
-         * hold one (vector) entry per face and ncpEnumerator is aware that we
-         * work with faces. So we compute the left and the right face and we get
-         * the corresponing non-conservative flux from there. This flux is now
-         * scaled with the time step size, as we do an explicit Euler step, i.e.
-         * the right-hand side of the PDE
-         *
-         * @f$ \partial _t Q = ncp(Q) @f$
-         *
-         * is discretised as @f$ \partial _t Q \approx \frac{Q^{(new)}-Q^{(old)}}{dt}@f$
-         * which gives us a scaling of dt for the update. We also have a volume
-         * integral on the left-hand side and a face integral on the right-hand
-         * side, and therefore a further scaling by one over the volume size.
-         */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+/**
+ * Add the non-conservative flux contributions to one volume.
+ *
+ * The NCP is defined over faces, i.e. we know that QNcpX, QNcpY, QNcpZ
+ * hold one (vector) entry per face and ncpEnumerator is aware that we
+ * work with faces. So we compute the left and the right face and we get
+ * the corresponing non-conservative flux from there. This flux is now
+ * scaled with the time step size, as we do an explicit Euler step, i.e.
+ * the right-hand side of the PDE
+ *
+ * @f$ \partial _t Q = ncp(Q) @f$
+ *
+ * is discretised as @f$ \partial _t Q \approx \frac{Q^{(new)}-Q^{(old)}}{dt}@f$
+ * which gives us a scaling of dt for the update. We also have a volume
+ * integral on the left-hand side and a face integral on the right-hand
+ * side, and therefore a further scaling by one over the volume size.
+ */
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithNonconservativeFlux_LoopBody(
-          const double* __restrict__                   QNcpX,
-          const double* __restrict__                   QNcpY,
-          const double* __restrict__                   QNcpZ,
+          const double* __restrict__ QNcpX,
+          const double* __restrict__ QNcpY,
+          const double* __restrict__ QNcpZ,
           const QNCPFaceEnumeratorType&                ncpEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
           int                                          unknown,
           double                                       dt,
-          double* __restrict__                         QOut,
-          const QOutEnumeratorType&                    QOutEnumerator
+          double* __restrict__ QOut,
+          const QOutEnumeratorType& QOutEnumerator
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
-        /**
-         * Face-oriented flavour of ncp
-         *
-         * The non-conservative flux is always computed per face. So we know that
-         */
-        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
+/**
+ * Face-oriented flavour of ncp
+ *
+ * The non-conservative flux is always computed per face. So we know that
+ */
+#if defined(SharedOMP) \
+  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
+#pragma omp declare simd
+#endif
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
         template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithNonconservativeFlux_LoopBody(
-          const double* __restrict__                   fluxNCP,
+          const double* __restrict__ fluxNCP,
           const QNCPFaceEnumeratorType&                fluxEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          const tarch::la::Vector<Dimensions, double>& patchCentre,
+          const tarch::la::Vector<Dimensions, double>& patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     faceIndex,
+          const tarch::la::Vector<Dimensions, int>&    faceIndex,
           int                                          unknown,
           double                                       dt,
           int                                          normal,
-          double* __restrict__                         QOut,
-          const QOutEnumeratorType&                    QOutEnumerator
+          double* __restrict__ QOut,
+          const QOutEnumeratorType& QOutEnumerator
         ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
-      }
-    }
-  }
-}
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
+      } // namespace internal
+    }   // namespace rusanov
+  }     // namespace fv
+} // namespace exahype2
 
 #include "LoopBody.cpph"
