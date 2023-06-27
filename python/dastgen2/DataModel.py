@@ -145,6 +145,9 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 
 
   def write_header_file(self,full_qualified_filename):
+    """!
+    writes the header file for your data model.
+    """
     d = {}
     d[ "INCLUDE_GUARD" ]              = dastgen2.get_include_guard(self._full_qualified_name)
     d[ "UNQUALIFIED_CLASS_NAME" ]     = dastgen2.get_unqualified_class_name(self._full_qualified_name)
@@ -271,6 +274,9 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 
 
   def write_implementation_file(self,full_qualified_filename):
+    """!
+    writes the implementation (.cpp) file for your data model.
+    """
     with open( full_qualified_filename, "w" ) as output:
       output.write( "#include \"" + dastgen2.get_unqualified_class_name(self._full_qualified_name) + ".h\"\n\n\n" )
 

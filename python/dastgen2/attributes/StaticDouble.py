@@ -27,14 +27,15 @@ class StaticDouble(Attribute):
 
   def get_methods(self,_full_qualified_class_name):
     accessor_name = self._name[:1].title() + self._name[1:]
-    return [
-      ("get" + accessor_name + "() const", "double"),
-      #  ("set" + accessor_name + "(double value)", "void") # TODO clean this
-    ]
+    methods = []
+    methods.append( ("get" + accessor_name + "() const", "double"), )
+    if not self.is_const_static:
+        methods.append( ("set" + accessor_name + "(double value)", "void") )
+
+    return methods
 
 
   def get_plain_C_attributes(self):
-    #  if self.is_static or self
 
     typestring = "double"
     namestring = "_" + self._name
@@ -43,6 +44,7 @@ class StaticDouble(Attribute):
     if self.is_const_static:
         typestring = "inline const static double"
         namestring += " = " + str(self._initval)
+
     if self._valid_mantissa_bits is None:
       return [ (namestring, typestring, "" ) ]
     else:

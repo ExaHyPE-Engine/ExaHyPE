@@ -163,6 +163,9 @@ void """ + full_qualified_name + """::initDatatype() {
 """
 
     for i in self._data_model._attributes:
+      # TODO: DO I NEED TO COMMUNICATE STATIC ATTRIBUTES?
+      if i.is_static or i.is_const_static:
+        continue
       if (i.ifdefs!=[]):
         result += construct_ifdef_string(i.ifdefs)
         result += "  NumberOfAttributes++;\n#endif \n"
@@ -178,6 +181,9 @@ void """ + full_qualified_name + """::initDatatype() {
 """
 
     for i in self._data_model._attributes:
+      # TODO: DO I NEED TO COMMUNICATE STATIC ATTRIBUTES?
+      if i.is_static or i.is_const_static:
+        continue
       if (i.ifdefs!=[]):
         result += construct_ifdef_string(i.ifdefs)
       for ii in i.get_native_MPI_type():
@@ -197,6 +203,9 @@ void """ + full_qualified_name + """::initDatatype() {
 """
 
     for i in self._data_model._attributes:
+      # TODO: DO I NEED TO COMMUNICATE STATIC ATTRIBUTES?
+      if i.is_static or i.is_const_static:
+        continue
       if (i.ifdefs!=[]):
         result += "\n"
         result += construct_ifdef_string(i.ifdefs)
