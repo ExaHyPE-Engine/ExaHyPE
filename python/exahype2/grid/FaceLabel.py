@@ -63,7 +63,7 @@ class UpdateFaceLabel(ActionSet):
 
 
   _Template_CreateFace = """
-  logTraceInWith1Argument( "createPersistent/HangingFace(...)", marker.toString() );
+  logTraceInWith1Argument( "createPersistentFace(...)", marker.toString() );
       
   tarch::la::Vector<Dimensions, double> offset(DomainOffset);
   tarch::la::Vector<Dimensions, double> size(DomainSize);
@@ -73,16 +73,19 @@ class UpdateFaceLabel(ActionSet):
     isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
   }
   fineGridFace{{FACE_LABEL_NAME}}.setBoundary( isBoundary );
-
+  fineGridFace{{FACE_LABEL_NAME}}.setIsHanging( false );
   fineGridFace{{FACE_LABEL_NAME}}.setUpdatedTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setNewTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setOldTimeStamp( 0.0 );
 
-  logTraceOutWith1Argument( "createPersistent/HangingFace(...)", fineGridFace{{FACE_LABEL_NAME}}.toString() );
+  logTraceOutWith1Argument( "createPersistentFace(...)", fineGridFace{{FACE_LABEL_NAME}}.toString() );
 """
 
 
   _Template_CreateHangingFace = """
+  logTraceInWith1Argument( "createHangingFace(...)", marker.toString() );
+  fineGridFace{{FACE_LABEL_NAME}}.setIsHanging( true );
+  logTraceOutWith1Argument( "createHangingFace(...)", fineGridFace{{FACE_LABEL_NAME}}.toString() );
 """  
   
   
@@ -139,6 +142,7 @@ def create_face_label(solver_name):
   result = peano4.datamodel.DaStGen2( UpdateFaceLabel.get_attribute_name( solver_name ) )
 
   result.data.add_attribute( dastgen2.attributes.Boolean("Boundary") )
+  result.data.add_attribute( dastgen2.attributes.Boolean("IsHanging") )
   result.data.add_attribute( dastgen2.attributes.BooleanArray("Updated","2",compress=True) )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("UpdatedTimeStamp","2") )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("NewTimeStamp","2") )
