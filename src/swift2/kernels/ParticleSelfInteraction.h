@@ -92,18 +92,40 @@ namespace swift2 {
     );
 
     /**
-     * Same as above, but with constant h, i.e. no Newton-Raphson
+     * @brief Finishes the calculations from the density loop same as
+     * prepareDensityCalculation(...), but doesn't modify the particles'
+     * smoothing lengths.
      *
-     * @param ParticleContainer Typicaly either
-     *         std::list<Particle *>
-     *   or
-     *         std::unordered_set<Particle *>
-     *
-     *
+     * WARNING: the only reason we still have this is because it was already implemented,
+     * and we might use it in the future. However we currently DO NOT have a SPH
+     * formulation which correctly works with constant smoothing lengths. We're solving
+     * the wrong equations for that.
      */
     template <typename ParticleContainer>
     void endDensityCalculationWithConstantSmoothingLength(
-      const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
+      const ParticleContainer& localParticles,
+      const int                hydroDimensions,
+      const double             etaFactor,
+      const double             alphaAV,
+      const double             hTolerance,
+      const double             hHydroMin,
+      const double             hHydroMax
+    );
+
+    /**
+     * @brief Finishes the calculations from the density loop same as
+     * prepareDensityCalculation(...), but doesn't modify the particles'
+     * smoothing lengths.
+     */
+    template <typename ParticleContainer>
+    void endDensityCalculationWithConstantSearchRadius(
+      const ParticleContainer& localParticles,
+      const int                hydroDimensions,
+      const double             etaFactor,
+      const double             alphaAV,
+      const double             hTolerance,
+      const double             hHydroMin,
+      const double             hHydroMax
     );
 
     /**

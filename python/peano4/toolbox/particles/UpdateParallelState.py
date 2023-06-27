@@ -13,7 +13,7 @@ class UpdateParallelState(ActionSet):
     Update the parallel state of particles and keep stats of local particles
 
     This operation should always been called after you've resorted the particles
-    due to position changes or alterations of the cut-off radii. The action set
+    due to position changes or alterations of the search radii. The action set
     is the only place which heavily uses the particles' parallel states. These
     states are not to be used anywhere else in the code.
 
@@ -84,17 +84,17 @@ class UpdateParallelState(ActionSet):
     )
 
     """
-  
+
   Flag those particles which are definitely inside. As we are really
   aggressive in throwing particles away, there's no guard here.
-  
+
   """
     __Template_TouchCell = jinja2.Template(
         """
 // run over all adjacent vertices
 for (int i=0; i<TwoPowerD; i++) {
   for (auto* p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
-    if ( 
+    if (
       marker.isContained(p->getX(), toolbox::particles::relativeSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE )
     ) {
       p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
@@ -119,27 +119,27 @@ for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
 // run over all adjacent vertices
 auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
 while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
-  if ( 
-    (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local 
+  if (
+    (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
     and
-    (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local 
+    (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
   ) {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is local and remains local" );
     _numberOfRemainingLocalParticles++;
     (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
     p++;
   }
-  else if ( 
-    (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual 
+  else if (
+    (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual
     and
-    (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local 
+    (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
   ) {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was remote but now is local" );
     _numberOfIncomingLocalParticles++;
     (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
     p++;
   }
-  else if ( 
+  else if (
     (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
     and
     (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
@@ -148,7 +148,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     _numberOfLeavingLocalParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
   }
-  else if ( 
+  else if (
     (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual
     and
     (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
@@ -206,7 +206,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     def get_attributes(self):
         return """
   int  _treeNumber;
-  
+
   int  _numberOfRemainingLocalParticles;
   int  _numberOfIncomingLocalParticles;
   int  _numberOfLeavingLocalParticles;

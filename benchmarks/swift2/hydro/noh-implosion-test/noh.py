@@ -130,7 +130,7 @@ max_cell_size = (
     1.0 / args.particle_number * particle_per_cell / math.sqrt(args.dimensions)
 )
 
-particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(
+particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     name=name,
     dimensions_hydro=dimensions,
     cfl_factor=args.cfl_factor,

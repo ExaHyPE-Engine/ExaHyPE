@@ -102,7 +102,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
 
     This action set has to be used in each and every grid traversal. In-between
     time steps, it is idempotent if particles do not move or change their
-    cut-off radius. However, as we have hanging vertices, it might move
+    search radius. However, as we have hanging vertices, it might move
     particular up and down. So you have to insert it into each and every
     mesh traversal.
 
@@ -123,16 +123,16 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
         self._drop_into_hanging_vertices = drop_into_hanging_vertices
 
     """
-  
+
   @see toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment()
-  
+
   """
     __Template_ReassignAndLiftWithinCell = jinja2.Template(
         """
   for (int i=0; i<TwoPowerD; i++) {
-    vertexdata::{{PARTICLES_CONTAINER}}::iterator p = fineGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
+    vertexdata::{{PARTICLES_CONTAINER}}::iterator p = fineGridVertices{{PARTICLES_CONTAINER}}(i).begin();
     while ( p!=fineGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
-      toolbox::particles::ParticleReassociationInstruction instruction = 
+      toolbox::particles::ParticleReassociationInstruction instruction =
         toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
           p, marker, i
         );
@@ -142,7 +142,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
           break;
         case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
           logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " has to be sieved globally. Current assocation=" << marker.toString() );
-          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
+          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);
           break;
         case 0:
         case 1:
@@ -174,10 +174,10 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
         default:
           assertionMsg( false, "value not implemented" );
           break;
-      }      
+      }
     }
   }
-  
+
 """
     )
 

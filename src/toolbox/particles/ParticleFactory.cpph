@@ -11,14 +11,14 @@ namespace {
 
 
 template <class T>
-void toolbox::particles::init(T& particle, const tarch::la::Vector<Dimensions, double>& x, double cutOffRadius) {
+void toolbox::particles::init(T& particle, const tarch::la::Vector<Dimensions, double>& x, double searchRadius) {
 #if PeanoDebug > 0
   particle.setDebugX(x);
   particle.setDebugH(0.0);
 #endif
 
   particle.setX(x);
-  particle.setCutOffRadius(cutOffRadius);
+  particle.setSearchRadius(searchRadius);
 
   particle.setParallelState(T::ParallelState::Local);
   particle.setNewParallelState(T::NewParallelState::Local);

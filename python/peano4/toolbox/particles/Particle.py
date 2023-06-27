@@ -42,11 +42,11 @@ class Particle(DaStGen2):
       always stored in the closest vertex. If you alter the position of a
       particle, you might destroy this association and have to re-assign the
       object to another vertex.
-    - A cut-off radius. Every particle in Peano has a cut-off, i.e. a maximal
+    - A search radius. Every particle in Peano has a search radius, i.e. a maximal
       interaction radius. As I only compare particles stored in one vertex to
-      particles stored in a cell-connected vertex, the cut-off radius also
+      particles stored in a cell-connected vertex, the search radius also
       implicitly determines the tree grid level that I use to hold a particle.
-      The bigger the cut-off, the higher up in the mesh I have to store a
+      The bigger the search, the higher up in the mesh I have to store a
       particle.
     - Two states. These states should not be used by the user. They are
       exclusively made for the actionset UpdateParallelState. A tree owns the
@@ -76,7 +76,7 @@ class Particle(DaStGen2):
         self.name = name
 
         self.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("x", "Dimensions"))
-        self.data.add_attribute(dastgen2.attributes.Double("cutOffRadius"))
+        self.data.add_attribute(dastgen2.attributes.Double("searchRadius"))
 
         #
         # Both states are not to be used by algorithms. They are for the grid management.
