@@ -3,9 +3,9 @@
 #pragma once
 
 
-#include "tarch/la/Vector.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexEnumerator.h"
+#include "tarch/la/Vector.h"
 
 
 namespace toolbox {
@@ -30,11 +30,7 @@ namespace toolbox {
      *   iterator pointing to existing particle.
      */
     template <typename Iterator>
-    Iterator particleIsDuplicate(
-      const typename Iterator::value_type&  particle,
-      Iterator                              begin,
-      const Iterator&                       end
-    );
+    Iterator particleIsDuplicate(const typename Iterator::value_type& particle, Iterator begin, const Iterator& end);
 
     /**
      * Return true if and only if
@@ -46,8 +42,8 @@ namespace toolbox {
     template <typename Particle>
     bool particleWillStayWithinComputationalDomain(
       const Particle&                              particle,
-      const tarch::la::Vector<Dimensions,double>&  domainOffset,
-      const tarch::la::Vector<Dimensions,double>&  domainWidth
+      const tarch::la::Vector<Dimensions, double>& domainOffset,
+      const tarch::la::Vector<Dimensions, double>& domainWidth
     );
 
 
@@ -59,11 +55,11 @@ namespace toolbox {
      * other insertParticleIntoCell() operation per particle.
      *
      */
-    template <typename Particle, typename ParticleSet >
+    template <typename Particle, typename ParticleSet>
     void insertParticlesIntoCell(
-      const peano4::datamanagement::CellMarker&                 marker,
-      const std::vector< Particle* >&                           newParticles,
-      peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
+      const peano4::datamanagement::CellMarker&              marker,
+      const std::vector<Particle*>&                          newParticles,
+      peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices
     );
 
 
@@ -95,16 +91,14 @@ namespace toolbox {
      * - Set the particle state to local. As we know that we insert only into
      *   local cells, we can do this without any fear.
      */
-    template <typename Particle, typename ParticleSet >
+    template <typename Particle, typename ParticleSet>
     void insertParticleIntoCell(
-      const peano4::datamanagement::CellMarker&                 marker,
-      Particle*                                                 newParticles,
-      peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
+      const peano4::datamanagement::CellMarker&              marker,
+      Particle*                                              newParticles,
+      peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices
     );
-  }
-}
+  } // namespace particles
+} // namespace toolbox
 
 
 #include "particles.cpph"
-
-

@@ -3,18 +3,17 @@
 #pragma once
 
 
-#include "tarch/multicore/BooleanSemaphore.h"
 #include <list>
 
 #include "SieveParticles.h"
+#include "tarch/multicore/BooleanSemaphore.h"
 
 namespace toolbox {
   namespace particles {
     template <typename T>
     class ParticleSet;
-  }
-}
-
+  } // namespace particles
+} // namespace toolbox
 
 
 /**
@@ -47,161 +46,155 @@ namespace toolbox {
  */
 template <typename T>
 class toolbox::particles::ParticleSet {
-  public:
-    typedef T                  DoFType;
-    typedef std::list<T*>      ParticleList;
-    typedef SieveParticles<T>  SieveParticles;
+public:
+  typedef T                 DoFType;
+  typedef std::list<T*>     ParticleList;
+  typedef SieveParticles<T> SieveParticles;
 
-    #if PeanoDebug>=1
-    void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
-    void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
-    tarch::la::Vector<Dimensions,double> getDebugX() const;
-    tarch::la::Vector<Dimensions,double> getDebugH() const;
-    #endif
+#if PeanoDebug >= 1
+  void                                  setDebugX(const tarch::la::Vector<Dimensions, double>& data);
+  void                                  setDebugH(const tarch::la::Vector<Dimensions, double>& data);
+  tarch::la::Vector<Dimensions, double> getDebugX() const;
+  tarch::la::Vector<Dimensions, double> getDebugH() const;
+#endif
 
-    /**
-     * Clear stats
-     *
-     * Has to be called per rank prior to any mesh traversal assembling stats.
-     * I typically realise this in the prepare traversal event. See
-     * peano4.toolbox.particles.AbstractUpdateParticleGridAssociation.get_body_of_prepareTraversal().
-     */
-    static void clearReassignmentStatistics();
+  /**
+   * Clear stats
+   *
+   * Has to be called per rank prior to any mesh traversal assembling stats.
+   * I typically realise this in the prepare traversal event. See
+   * peano4.toolbox.particles.AbstractUpdateParticleGridAssociation.get_body_of_prepareTraversal().
+   */
+  static void clearReassignmentStatistics();
 
-    /**
-     * Clear stats
-     *
-     * Has to be called per rank prior to any mesh traversal assembling stats.
-     * I typically realise this in the prepare traversal event. See
-     * peano4.toolbox.particles.UpdateParallelState.get_body_of_prepareTraversal().
-     */
-    static void clearParticleStateStatistics();
+  /**
+   * Clear stats
+   *
+   * Has to be called per rank prior to any mesh traversal assembling stats.
+   * I typically realise this in the prepare traversal event. See
+   * peano4.toolbox.particles.UpdateParallelState.get_body_of_prepareTraversal().
+   */
+  static void clearParticleStateStatistics();
 
-    /**
-     * Reduces and prints the global statistics
-     */
-    static void reduceAndPrintStatistics();
+  /**
+   * Reduces and prints the global statistics
+   */
+  static void reduceAndPrintStatistics();
 
-    static void updateLiftDropStatistics(
-      int numberOfLiftsInThisTree,
-      int numberOfDropsInThisTree,
-      int numberOfReassignmentsInThisTree,
-      int numberOfSievesInThisTree
-    );
+  static void updateLiftDropStatistics(
+    int numberOfLiftsInThisTree,
+    int numberOfDropsInThisTree,
+    int numberOfReassignmentsInThisTree,
+    int numberOfSievesInThisTree
+  );
 
-    static void updateNumberOfLocalParticleStatistics(
-      int numberOfRemainingLocalParticles,
-      int numberOfIncomingLocalParticles,
-      int numberOfLeavingLocalParticles
-    );
+  static void updateNumberOfLocalParticleStatistics(
+    int numberOfRemainingLocalParticles, int numberOfIncomingLocalParticles, int numberOfLeavingLocalParticles
+  );
 
-    #ifdef Parallel
-    static void initDatatype();
+#ifdef Parallel
+  static void initDatatype();
 
-    static void shutdownDatatype();
-    #endif
+  static void shutdownDatatype();
+#endif
 
-    /**
-     * Invoke exchangeSieveListsGlobally().
-     */
-    static void finishedTraversal();
+  /**
+   * Invoke exchangeSieveListsGlobally().
+   */
+  static void finishedTraversal();
 
-    /**
-     * Delegate through. This way, we don't have to expose the actual
-     * sieve object.
-     */
-    static ParticleList  getParticlesToBeSievedIntoVertex(
-      const peano4::datamanagement::VertexMarker&  marker
-    );
+  /**
+   * Delegate through. This way, we don't have to expose the actual
+   * sieve object.
+   */
+  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker);
 
-    static bool hasParticlesToBeSievedIntoVertices();
+  static bool hasParticlesToBeSievedIntoVertices();
 
-//    static ParticleList getSievedParticlesForNextGridTraversal();
-  private:
-    static tarch::logging::Log _log;
+  //    static ParticleList getSievedParticlesForNextGridTraversal();
+private:
+  static tarch::logging::Log _log;
 
-  protected:
+protected:
+  static tarch::multicore::BooleanSemaphore _statisticsSemaphore;
 
-    static tarch::multicore::BooleanSemaphore   _statisticsSemaphore;
+  /**
+   * Sorting statistics
+   *
+   * Used by sorting algorithm of choice. The attribute is updated
+   * through updateLiftDropStatistics() by each and every tree
+   * traversal. The five fields should be cleared through a call of
+   * clearReassignmentStatistics() at the begin of a time step, i.e.
+   * the first grid sweep starting a time step.
+   */
+  static int _numberOfLifts;
 
-    /**
-     * Sorting statistics
-     *
-     * Used by sorting algorithm of choice. The attribute is updated
-     * through updateLiftDropStatistics() by each and every tree
-     * traversal. The five fields should be cleared through a call of
-     * clearReassignmentStatistics() at the begin of a time step, i.e.
-     * the first grid sweep starting a time step.
-     */
-    static int _numberOfLifts;
+  /**
+   * Sorting statistics
+   *
+   * Used by sorting algorithm of choice. The attribute is updated
+   * through updateLiftDropStatistics() by each and every tree
+   * traversal. The five fields should be cleared through a call of
+   * clearReassignmentStatistics() at the begin of a time step, i.e.
+   * the first grid sweep starting a time step.
+   */
+  static int _numberOfDrops;
 
-    /**
-     * Sorting statistics
-     *
-     * Used by sorting algorithm of choice. The attribute is updated
-     * through updateLiftDropStatistics() by each and every tree
-     * traversal. The five fields should be cleared through a call of
-     * clearReassignmentStatistics() at the begin of a time step, i.e.
-     * the first grid sweep starting a time step.
-     */
-    static int _numberOfDrops;
+  /**
+   * Sorting statistics
+   *
+   * Used by sorting algorithm of choice. The attribute is updated
+   * through updateLiftDropStatistics() by each and every tree
+   * traversal. The five fields should be cleared through a call of
+   * clearReassignmentStatistics() at the begin of a time step, i.e.
+   * the first grid sweep starting a time step.
+   */
+  static int _numberOfReassignments;
 
-    /**
-     * Sorting statistics
-     *
-     * Used by sorting algorithm of choice. The attribute is updated
-     * through updateLiftDropStatistics() by each and every tree
-     * traversal. The five fields should be cleared through a call of
-     * clearReassignmentStatistics() at the begin of a time step, i.e.
-     * the first grid sweep starting a time step.
-     */
-    static int _numberOfReassignments;
+  /**
+   * Sorting statistics
+   *
+   * Used by sorting algorithm of choice. The attribute is updated
+   * through updateLiftDropStatistics() by each and every tree
+   * traversal. The five fields should be cleared through a call of
+   * clearReassignmentStatistics() at the begin of a time step, i.e.
+   * the first grid sweep starting a time step.
+   */
+  static int _numberOfSieves;
 
-    /**
-     * Sorting statistics
-     *
-     * Used by sorting algorithm of choice. The attribute is updated
-     * through updateLiftDropStatistics() by each and every tree
-     * traversal. The five fields should be cleared through a call of
-     * clearReassignmentStatistics() at the begin of a time step, i.e.
-     * the first grid sweep starting a time step.
-     */
-    static int _numberOfSieves;
+  /**
+   * Set by parallel state analysis
+   */
+  static int _numberOfRemainingLocalParticles;
+  static int _numberOfIncomingLocalParticles;
+  static int _numberOfLeavingLocalParticles;
 
-    /**
-     * Set by parallel state analysis
-     */
-    static int _numberOfRemainingLocalParticles;
-    static int _numberOfIncomingLocalParticles;
-    static int _numberOfLeavingLocalParticles;
+  /**
+   * Number of updated halo particles
+   *
+   * Updated by boundary merge operations.
+   *
+   * @see merge()
+   */
+  static int _numberOfAddedVirtualParticles;
+  static int _numberOfReplacedVirtualParticles;
+  static int _numberOfDroppedVirtualParticles;
 
-    /**
-     * Number of updated halo particles
-     *
-     * Updated by boundary merge operations.
-     *
-     * @see merge()
-     */
-    static int _numberOfAddedVirtualParticles;
-    static int _numberOfReplacedVirtualParticles;
-    static int _numberOfDroppedVirtualParticles;
+  /**
+   * Stats on duplicate elimination
+   *
+   * This one is updated internally by eliminateSpatialDuplicates() which you
+   * might call or you might not call. It is never updated anywhere else.
+   */
+  static int _numberOfVirtualEliminatedSpatialDuplicates;
+  static int _numberOfLocalEliminatedSpatialDuplicates;
 
-    /**
-     * Stats on duplicate elimination
-     *
-     * This one is updated internally by eliminateSpatialDuplicates() which you
-     * might call or you might not call. It is never updated anywhere else.
-     */
-    static int _numberOfVirtualEliminatedSpatialDuplicates;
-    static int _numberOfLocalEliminatedSpatialDuplicates;
+  static SieveParticles sieveParticles;
 
-    static SieveParticles sieveParticles;
-
-    #if PeanoDebug>=1
-    tarch::la::Vector<Dimensions,double> _debugX;
-    tarch::la::Vector<Dimensions,double> _debugH;
-    #endif
-
+#if PeanoDebug >= 1
+  tarch::la::Vector<Dimensions, double> _debugX;
+  tarch::la::Vector<Dimensions, double> _debugH;
+#endif
 };
 
 

@@ -3,16 +3,14 @@
 #pragma once
 
 
-
 namespace toolbox {
   namespace particles {
     namespace memorypool {
       template <class T>
       class VertexWiseContinuousMemoryPool;
-    }
-  }
-}
-
+    } // namespace memorypool
+  }   // namespace particles
+} // namespace toolbox
 
 
 /**
@@ -25,32 +23,31 @@ namespace toolbox {
  */
 template <class T>
 class toolbox::particles::memorypool::VertexWiseContinuousMemoryPool {
-  public:
-    class ParticleSet {
-
-    };
+public:
+  class ParticleSet {};
 
 
-    static constexpr int UndefinedPoolReference = -1;
+  static constexpr int UndefinedPoolReference = -1;
 
-    /**
-     * Factory mechanism
-     *
-     * To be called within touchVertexFirstTime() if you want to link a vertex
-     * to a memory bank in the pool.
-     */
-    int createUniquePoolReference();
+  /**
+   * Factory mechanism
+   *
+   * To be called within touchVertexFirstTime() if you want to link a vertex
+   * to a memory bank in the pool.
+   */
+  int createUniquePoolReference();
 
-    /**
-     * Free a reference
-     *
-     * You can either pass in a value obtained via createUniquePoolReference()
-     * or you pass in UndefinedPoolReference. Should be called by
-     * destroyPersistentVertex() but if and only if all particles have
-     * previously been removed from the pool.
-     */
-    void destroyUniquePoolReference(int reference);
+  /**
+   * Free a reference
+   *
+   * You can either pass in a value obtained via createUniquePoolReference()
+   * or you pass in UndefinedPoolReference. Should be called by
+   * destroyPersistentVertex() but if and only if all particles have
+   * previously been removed from the pool.
+   */
+  void destroyUniquePoolReference(int reference);
 
-    void removeParticleFromPool(int reference, pointer);
-  private:
+  void removeParticleFromPool(int reference, pointer);
+
+private:
 };

@@ -3,11 +3,10 @@
 #include "tarch/la/VectorOperations.h"
 
 template <typename Particle>
-toolbox::particles::ParticleReassociationInstruction toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
-  const Particle& particle,
-  const ::peano4::datamanagement::CellMarker& marker,
-  int numberOfVertexWithinCell
-) {
+toolbox::particles::ParticleReassociationInstruction toolbox::particles::
+  getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+    const Particle& particle, const ::peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
+  ) {
   static tarch::logging::Log _log("toolbox::particles");
 
   if (
