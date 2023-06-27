@@ -1,17 +1,17 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import dastgen2
-from dastgen2.DataModel import construct_ifdef_string
+from dastgen2.Utils import construct_ifdef_string
 
 
 class MPI( object ):
-  """ 
-  
-  Represents the MPI aspect injected into a DaStGen model.
-    
   """
-  
-  
+
+  Represents the MPI aspect injected into a DaStGen model.
+
+  """
+
+
   def __init__(self):
     pass
 
@@ -28,18 +28,18 @@ class MPI( object ):
 #endif
 """
 
-  
+
   def get_attributes(self):
     return """
     #ifdef Parallel
     private:
       int                  _senderDestinationRank;
 
-      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
+      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
       /**
        * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
        * initialisation of the datatype. However, Peano calls init explicitly
-       * in most cases. Without the LLVM extension which caches the MPI 
+       * in most cases. Without the LLVM extension which caches the MPI
        * datatype once constructed, this field stores the type.
        */
       static MPI_Datatype  Datatype;
@@ -69,40 +69,40 @@ class MPI( object ):
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    
-    
+
+
     /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
      */
     int getSenderRank() const;
-    
+
     /**
      * Wrapper around getDatatype() to trigger lazy evaluation if we
      * use the lazy initialisation.
      */
     static void initDatatype();
-    
+
     /**
      * Free the underlying MPI datatype.
      */
     static void shutdownDatatype();
-    
+
     /**
      * In DaStGen (the first version), I had a non-static version of the send
-     * as well as the receive. However, this did not work with newer C++11 
-     * versions, as a member function using this as pointer usually doesn't 
-     * see the vtable while the init sees the object from outside, i.e. 
+     * as well as the receive. However, this did not work with newer C++11
+     * versions, as a member function using this as pointer usually doesn't
+     * see the vtable while the init sees the object from outside, i.e.
      * including a vtable. So this routine now is basically an alias for a
-     * blocking MPI_Send. 
+     * blocking MPI_Send.
      */
     static void send(const """ + full_qualified_name + """& buffer, int destination, int tag, MPI_Comm communicator );
     static void receive(""" + full_qualified_name + """& buffer, int source, int tag, MPI_Comm communicator );
 
     /**
-     * Alternative to the other send() where I trigger a non-blocking send an 
-     * then invoke the functor until the corresponding MPI_Test tells me that 
-     * the message went through. In systems with heavy MPI usage, this can 
+     * Alternative to the other send() where I trigger a non-blocking send an
+     * then invoke the functor until the corresponding MPI_Test tells me that
+     * the message went through. In systems with heavy MPI usage, this can
      * help to avoid deadlocks.
      */
     static void send(const """ + full_qualified_name + """& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
@@ -115,7 +115,7 @@ class MPI( object ):
     result = """
 #ifdef Parallel
 
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype """ + full_qualified_name + """::Datatype;
 #endif
 
@@ -168,14 +168,14 @@ void """ + full_qualified_name + """::initDatatype() {
         result += "  NumberOfAttributes++;\n#endif \n"
       else:
         result += "  NumberOfAttributes++;\n"
-    
+
     result += """
   MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
-  int*          blocklen = new int[NumberOfAttributes]; 
+  int*          blocklen = new int[NumberOfAttributes];
   MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
-  
+
   int counter            = 0;
-"""  
+"""
 
     for i in self._data_model._attributes:
       if (i.ifdefs!=[]):
@@ -186,13 +186,13 @@ void """ + full_qualified_name + """::initDatatype() {
         result += "  counter++;\n"
       if (i.ifdefs!=[]):
         result += "#endif\n"
-  
-    result += """   
+
+    result += """
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
   MPI_Get_address( &instances[0], &baseFirstInstance );
   MPI_Get_address( &instances[1], &baseSecondInstance );
-  
+
   counter = 0;
 """
 
@@ -207,7 +207,7 @@ void """ + full_qualified_name + """::initDatatype() {
         result += "  counter++;\n"
       if (i.ifdefs!=[]):
         result += "#endif\n"
-      
+
     result += """
   MPI_Aint offset = disp[0] - baseFirstInstance;
   MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
@@ -215,8 +215,8 @@ void """ + full_qualified_name + """::initDatatype() {
     disp[i] = disp[i] - disp[0];
   }
 
-  int errorCode = 0; 
-  MPI_Datatype tmpType; 
+  int errorCode = 0;
+  MPI_Datatype tmpType;
   errorCode += MPI_Type_create_struct( NumberOfAttributes, blocklen, disp, subtypes, &tmpType );
   errorCode += MPI_Type_create_resized( tmpType, offset, extent, &Datatype );
   errorCode += MPI_Type_commit( &Datatype );
@@ -224,7 +224,7 @@ void """ + full_qualified_name + """::initDatatype() {
   if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
 
   delete[] subtypes;
-  delete[] blocklen; 
+  delete[] blocklen;
   delete[] disp;
 
   #else
@@ -271,49 +271,49 @@ void """ + full_qualified_name + """::receive(""" + full_qualified_name + """& b
 
 
 void """ + full_qualified_name + """::send(
-  const """ + full_qualified_name + """& buffer, 
-  int destination, 
-  int tag, 
-  std::function<void()> startCommunicationFunctor, 
-  std::function<void()> waitFunctor, 
-  MPI_Comm communicator 
+  const """ + full_qualified_name + """& buffer,
+  int destination,
+  int tag,
+  std::function<void()> startCommunicationFunctor,
+  std::function<void()> waitFunctor,
+  MPI_Comm communicator
 ) {
-  MPI_Request sendRequestHandle; 
-  int         flag = 0; 
-  MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle ); 
+  MPI_Request sendRequestHandle;
+  int         flag = 0;
+  MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle );
   MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
-  startCommunicationFunctor(); 
-  while (!flag) { 
+  startCommunicationFunctor();
+  while (!flag) {
     waitFunctor();
-    MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
+    MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
   }
 }
 
 
 void """ + full_qualified_name + """::receive(
-  """ + full_qualified_name + """& buffer, 
-  int source, 
-  int tag, 
-  std::function<void()> startCommunicationFunctor, 
-  std::function<void()> waitFunctor, 
-  MPI_Comm communicator 
-) {   
+  """ + full_qualified_name + """& buffer,
+  int source,
+  int tag,
+  std::function<void()> startCommunicationFunctor,
+  std::function<void()> waitFunctor,
+  MPI_Comm communicator
+) {
   MPI_Status  status;
-  MPI_Request receiveRequestHandle; 
-  int         flag = 0; 
-  MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle ); 
+  MPI_Request receiveRequestHandle;
+  int         flag = 0;
+  MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle );
   MPI_Test( &receiveRequestHandle, &flag, &status );
-  startCommunicationFunctor(); 
-  while (!flag) { 
+  startCommunicationFunctor();
+  while (!flag) {
     waitFunctor();
-    MPI_Test( &receiveRequestHandle, &flag, &status ); 
+    MPI_Test( &receiveRequestHandle, &flag, &status );
   }
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
 #endif
-""" 
+"""
 
-    return result;    
+    return result;
 
 
 
