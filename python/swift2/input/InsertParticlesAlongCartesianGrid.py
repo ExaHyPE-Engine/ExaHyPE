@@ -14,9 +14,19 @@ class InsertParticlesAlongCartesianGrid(
         additional_includes="",
     ):
         """!
+        
+        Wrapper around toolbox tying it to Swift's global properties
 
         Very simplistic wrapper around generic factory mechanism from
-        the toolbox.
+        the toolbox. The script adds references to DomainOffset[2] and
+        DomainSize[2] for example which are defined in Constants.h. This
+        constants file is something that's specific to Swift and not to
+        the particles toolbox.
+        
+        We do not care at this point, if entries like DomainOffset[2]
+        do exist, i.e. if we run a 3d simulation. These are just inserted
+        into the generated C++ code which then in turn masks entries like
+        DomainSize[2] out if we work with Dimensions==2.
 
         """
         super(InsertParticlesAlongCartesianGrid, self).__init__(
