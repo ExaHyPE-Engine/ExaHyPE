@@ -63,9 +63,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           }
         }
 
-        // not done before we insert
-        //eliminateSpatialDuplicates();
-
         logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
         for (auto *p: *this) {
           logDebug( "merge(...)", " - " << p->toString() );
@@ -304,7 +301,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::move({{CLASSNAME}}&  particles) 
   {{CLASSNAME}}&                 sourceParticleSet
 ) {
   _container.push_back( *particle );
-  return _container.erase(particle);
+  return sourceParticleSet._container.erase(particle);
 }
 
 

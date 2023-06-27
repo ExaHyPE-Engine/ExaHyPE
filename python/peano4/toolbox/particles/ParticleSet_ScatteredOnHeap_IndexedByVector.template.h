@@ -8,7 +8,7 @@
 
 
 #include <vector>
-#include <list>
+
 
 #include "tarch/logging/Log.h"
 #include "tarch/la/Vector.h"
@@ -47,7 +47,7 @@
                        {
     public:
       typedef toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >  Base;
-      typedef std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >                       Container;
+      typedef std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >                       Container;
 
       /**
        * Expose C++ standard interface
@@ -64,81 +64,17 @@
        * There's no need to redefine this one. I just wanted to highlight
        * that it is a shallow copy, i.e. to add a comment, and so I
        * "overwrote" it.
+       *
+       * Please consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * further context.
        */
       {{CLASSNAME}}( const {{CLASSNAME}}& ) = default;
 
       /**
        * Merge two particle sets
        *
-       * This merges an incoming particle set from neighbour into the local
-       * set. We run through neighbour and assess what to do with the particles
-       * therein. Basically, we look at its state and then decide whether to
-       * enqueue the particle here, too. Furthermore, we do some state switches.
-       * If a particle is local on another rank for example, it has to be
-       * virtual here.
-       *
-       * It is important to study this routine in combination with the (Python)
-       * action set peano4.toolbox.particles.UpdateParallelState which is the
-       * routine that actually manages the parallel lifecycle.
-       *
-       * ## Data ownership
-       *
-       * The merge works with shallow copies. We assume that all necessary real
-       * copying has been done before. See peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks()
-       * for a discussion of deep copying in this context.
-       *
-       * If we decide not to insert an incoming particle into our local data
-       * structure, we have to destroy it, as the containers for boundary data
-       * exchange perform deep copies.
-       *
-       *
-       * ## Particle states
-       *
-       * We receive particle sets from other trees. These are sent out after
-       * particles have been touched for the last time there. Therefore,
-       * their parallel state has already changed and reflects the latest
-       * state. It makes no sense to study the new and the current state as
-       * they now will be the same. Logically, it is the current state only
-       * which determines what type of particle we have here, as this is the
-       * one that has overwritten the other state.
-       *
-       * In an ideal world, the sending rank would eliminate all of its virtual
-       * local copies of particles before it sends its stuff out. So it would
-       * send out only its local particles. In practice, we do not rely on this
-       * fact and just ignore incoming particles that have been flagged as
-       * virtual by their sender. This means that our neighbour had a halo
-       * particle (which it must have gotten from somewhere) and now sends this
-       * one back to us. We just ignore it (mind the deletion).
-       *
-       * It makes no sense to set the new state of the particle here, as the
-       * merge always precedes the actual first touch of a particle where the
-       * new state is reset anyway.
-       *
-       * ## Clean-up
-       *
-       * If a particle moves from one domain into the other, Peano will
-       * distribute the particle copy among all the other guys and all other
-       * trees will first assume that the particle is local. If it is not, they
-       * will set it to virtual and consequently remove it. In-between they
-       * exchange their local (assumed) particles, so we end up with a particle
-       * accumulation on one rank: Multiple copies of the virtual particle drop
-       * in. One per tree which assumes it were its own local copy. So I have
-       * to remove duplicates, i.e. ensure that we don't insert duplicates here.
-       *
-       * The other redundancy results from two adjacent cells on different
-       * trees and a vertex in-between which hosts a particle which is actually
-       * completely outside of the domain. We need two grid sweeps to eliminate
-       * such guys. See the action set UpdateParallelState. In-between, both
-       * adjacent trees send their virtual copy to the counterpart, so we
-       * accumulate local particles and get more and more. We have to eliminate
-       * replicas asap.
-       *
-       * I started with an implementation which first inserts all the particles
-       * into the vertex and then eliminates those guys which are redundant.
-       * This turns out to be a slow version. It is way faster to find those
-       * guys which are to be added and then to check prior to the insert if
-       * they really should be added or not.
-       *
+       * Please consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" before
+       * you study the implementation remarks below.
        *
        * @see STDVectorOverContainerOfPointers::startReceive()
        * @see clone()
@@ -153,14 +89,8 @@
       /**
        * Deep clone
        *
-       * This is a deep clone. We get data from somewhere else and create our
-       * own version with which we can work from hereon. Besides the particles,
-       * we also copy (aka clone) the debug x and h values.
-       *
-       * The clone itself is mechanical. When you transfer particles between
-       * two ranks you also have to amend the particle states. Only one particle
-       * on one rank is a real local one, all the others have virtual copies.
-       * This state analysis or flipping is realised within merge().
+       * Please consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" before
+       * you study the implementation remarks below.
        *
        * @see STDVectorOverContainerOfPointers() for a description of the
        *   intra-node parallelisation. This description provides an overview
@@ -173,20 +103,8 @@
       /**
        * Eliminate spatial duplicates
        *
-       * Run over set and remove particles that reside at same location.
-       *
-       * Such an eliminate of duplicates can be motivated through physics, but
-       * it is also used by the merger, where it can happen that multiple ranks
-       * tell us about a particle (some of them have virtual copies, some have
-       * local ones). In this case, we however only check the virtual particles.
-       * Those are the bad guys.
-       *
-       * Whenever we work with distributed data structures and multilevel transitions
-       * in a distributed memory mindset, we can run into redundant particles which
-       * we then have to eliminate.
-       *
-       * This elimination means that I actually delete the particle held by
-       * particleSet.
+       * Please consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" before
+       * you study the implementation remarks below.
        */
       void eliminateSpatialDuplicates();
 
@@ -194,6 +112,9 @@
 
       /**
        * Mark whole particle set as set of particles which can't be lifted
+       *
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * some context and references to other routines.
        *
        * The operation runs over all hosted particles and invokes
        * particleCanNotBeLiftedLocally() per particle.
@@ -218,67 +139,16 @@
       /**
        * Inform set that particle cannot be lifted on its current tree
        *
-       * This routine basically takes the particle and inserts it into the list
-       * of particles that the current tree cannot re-sort locally. They will
-       * end up in a global sieve list which is distributed among all MPI
-       * ranks.
-       *
-       * The tree traversal handles all particles independent of their status.
-       * However, it makes no sense to lift virtual particles, as they are
-       * copies of another rank and therefore this other rank has the
-       * responsibility to handle them. Whenever this routine is called for
-       * a virtual particle, I hence ignore the lift/sieve request. Someone
-       * else will have to handle the respective particle.
-       *
-       * Side note: a rank should not move around a virtual particle anyway,
-       * but some codes do. In this case, the moving is wrong almost certainly
-       * anyway, as we have no ownership of virtual particles and their data
-       * thus might not be correct.
-       *
-       * The fact that we ignore virtual particles mirrors the fact that we
-       * never send out virtual particles that run through the domain boundary.
-       * Actually, we do send these guys out, but they will be ignored on the
-       * receiver side.
-       *
-       * The routine equals a shallow copy or move semantically.
-       *
-       *
-       * ## MPI
-       *
-       * Each rank will assemble its own set of particles within
-       * _particlesThatCanNotBeLiftedWithinTheirTree. These rank-local lists
-       * have to be consolidated (all reduce) after each step. This reduction
-       * is done within finishedTraversal(). It is hence important that
-       * finishedTraversal() is called on the set after each grid sweep which
-       * might lift particles. Otherwise, the subsequent sweep cannot sieve
-       * the particles correctly.
-       *
-       *
-       * ## Thread safety
-       *
-       * As we add particles to the static field _particlesThatCanNotBeLiftedWithinTheirTree,
-       * we have to protect any additional via a semaphore. As we do so, the
-       * routine is thread safe.
-       *
-       *
-       * ## Iterators
-       *
-       * If you call this routine, any (const) iterator over the underlying
-       * container becomes invalid.
-       *
-       * @return A const iterator. You can continue to iterate with that one,
-       *   assuming that the order of particle and the result is preserved.
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * some context and references to other routines.
        */
       Container::iterator particleCanNotBeLiftedLocally( const Container::iterator&   particle );
 
       /**
        * This is a deep delete
        *
-       * The normal clear() operation only eliminates the list to the pointers,
-       * but not the pointers themselves. In a way, it is a shallow free. This
-       * routine runs over each individual particle and erases them. Other
-       * pointers or pointer sets that also point to these particles thus become
-       * invalid.
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * some context and references to other routines.
        */
       void deleteParticles();
 
@@ -288,6 +158,9 @@
        * The fact that you hold a const or non-const iterator does not mean that
        * you are ever allowed to delete a particle. That has to be done through
        * the corresponding deleteParticle() operation.
+       *
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * some context and references to other routines.
        */
       Container::iterator begin();
       Container::iterator end();
@@ -298,6 +171,9 @@
       /**
        * Add one particle
        *
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * some context and references to other routines.
+       *
        * Is internally mapped onto a push_back.
        */
       void add(DoFType* particle);
@@ -307,6 +183,9 @@
        *
        * This is a shallow addition, i.e. I attach these new pointers. The
        * particles themselves are not copied.
+       *
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * some context and references to other routines.
        */
       void add(const ParticleList& particleSet);
 
@@ -332,6 +211,8 @@
        * Delete a particle
        *
        * Should be used, for example, if a particle has left the local domain.
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * some context and references to other routines.
        * 
        * @return an iterator to the particle. This iterator is robust, i.e. even 
        *   if we have altered the underlying data, this one is still valid. It is

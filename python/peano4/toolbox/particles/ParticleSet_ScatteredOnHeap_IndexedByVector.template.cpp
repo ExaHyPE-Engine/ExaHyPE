@@ -97,11 +97,20 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
   while (p != _container.end()) {
     bool foundDuplicate = false;
 
+    // data consistency check
+    assertion2(
+      p->getParallelState()==T::ParallelState::Local
+      or
+      p->getParallelState()==T::ParallelState::Virtual,
+      p->toString(),
+      marker.toString()
+    );
+
     auto pp = p;
     pp++;
     while (pp != _container.end() and not foundDuplicate) {
       if (tarch::la::equals((*p)->getX(), (*pp)->getX(), ::toolbox::particles::SpatialDuplicateTolerance)) {
-        logDebug(
+        logInfo(
           "eliminateSpatialDuplicates()", "found duplicates p=" << (*p)->toString() << " and pp=" << (*pp)->toString()
         );
         foundDuplicate = true;
@@ -226,30 +235,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
 }
 
 
-/*
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::ParticleList  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getParticlesToBeDroppedIntoVertex(
-  const peano4::datamanagement::VertexMarker& marker
-) {
-  assertion( not empty() );
-
-  {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
-  {{CLASSNAME}}::iterator p = begin();
-  while ( p!=end() ) {
-    if ( ::toolbox::particles::sieveParticle( **p, marker ) ) {
-      logDebug( "getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
-      (*p)->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
-      result.push_back( *p );
-      p = this->erase(p);
-    }
-    else {
-      p++;
-    }
-  }
-  return result;
-}
-*/
-
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::const_iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::begin() const {
   return _container.begin();
 }
@@ -290,6 +275,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::add(const ParticleList&  particl
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::move({{CLASSNAME}}&  particles) {
+  logInfo( "move(...)", "move " << particles.size() << " particle(s) into container already hosting " << size() << " element(s)" );
   _container.insert(
     _container.end(),
     particles.begin(),
@@ -304,7 +290,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::move({{CLASSNAME}}&  particles) 
   {{CLASSNAME}}&                 sourceParticleSet
 ) {
   _container.push_back( *particle );
-  return _container.erase(particle);
+  return sourceParticleSet._container.erase(particle);
 }
 
 
