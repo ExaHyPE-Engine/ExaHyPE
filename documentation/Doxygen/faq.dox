@@ -220,6 +220,10 @@ undefined reference to for_write_seq_list
 
 # External tools
 
+- ***doxygen shows a lot of code as if it were preformatted (source) code, even though it should be proper class/function documentations*** This
+  is a known bug in Doxygen. Update to a newer version of the tool (at least 1.9.7) from
+  <a href="https://www.doxygen.nl/files">https://www.doxygen.nl/files</a> and you should
+  be fine.
 - ***The Intel performance and correctness tools yield invalid or messed-up results*** Ensure
   you have built your code with -DTBB_USE_ASSERT -DTBB_USE_THREADING_TOOLS.
   Please consult the vendor-specific \ref compiler_specific_settings "supercomputer/tool remarks"
