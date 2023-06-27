@@ -14,9 +14,9 @@ import exahype2.solvers
 
 class Project(object):
   """!"
-      
+
   ExaHyPE 2 project
-  
+
   Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4
   project with a particular set of actions (algorithmic phases)
   that you can choose from and with particular solver types. It
@@ -64,13 +64,13 @@ class Project(object):
   def set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
     """
       load_balancer_name: string
-        Should be full-qualified name of the load balancer. 
+        Should be full-qualified name of the load balancer.
         By default, I recommend to pass "toolbox::loadbalancing::RecursiveSubdivision"
 
       load_balancer_arguments: string
         If your load balancing requires parameters, add them
-        here. It is a string that will be copied into the C++ class instantiation. 
-        Please add the brackets yourself, i.e. "(3,4,5)" is fine, but "3,4,5" is not. 
+        here. It is a string that will be copied into the C++ class instantiation.
+        Please add the brackets yourself, i.e. "(3,4,5)" is fine, but "3,4,5" is not.
         The only exception is the empty parameter list. Here, you can/should simply
         add the empty string.
     """
@@ -89,7 +89,7 @@ class Project(object):
   def set_Peano4_installation(self, src_path, mode=peano4.output.CompileMode.Release ):
     """
       src_path: string
-        Path (relative or absolute) to the src directory of Peano. This path 
+        Path (relative or absolute) to the src directory of Peano. This path
         should hold both the headers (in subdirectories) and all the static
         libraries.
 
@@ -112,7 +112,7 @@ class Project(object):
     frequency: int
       A positive value. Peano makes snapshots every dt simulation
       units. This is something you specify once per simulation. But
-      you might decide only to splot every k of these snapshots.
+      you might decide only to plot every k of these snapshots.
     """
     new_entry = "{{"
     new_entry += str(offset[0])
@@ -279,9 +279,9 @@ thus appreciate any citation of the original release paper
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + "SolverRepository.template.h",
       templatefile_prefix + "SolverRepository.template.cpp",
-      "SolverRepository", 
+      "SolverRepository",
       self._project.namespace + ["repositories"],
-      "repositories", 
+      "repositories",
       solverRepositoryDictionary,
       True)
 
@@ -443,14 +443,12 @@ thus appreciate any citation of the original release paper
 
   def add_action_set_to_timestepping(self, action_set):
     """!
-    
     Add a new action set to the time stepping
-    
+
     You have to be careful with the priorities, i.e. you might want to 
     use myproject.perform_time_step.max_priority() or myproject.perform_time_step.min_priority()
-    to find out which 
+    to find out which
     priority you should assign to action_set.
-    
     """
     self.perform_time_step.add_action_set( action_set )
 
@@ -479,7 +477,7 @@ thus appreciate any citation of the original release paper
     self._project.solversteps.add_step(self.create_grid_and_converge_lb)
     self._project.solversteps.add_step(self.plot_solution)
     self._project.solversteps.add_step(self.perform_time_step)
-   
+
     for solver in self._solvers:
       print( "---------------------------------------")
       print( "Create data for solver " +solver._name  )
@@ -504,11 +502,10 @@ thus appreciate any citation of the original release paper
 
       solver.add_implementation_files_to_project( self._project.namespace, self._project.output, self._dimensions )
 
-    self.__generate_solver_repository();
+    self.__generate_solver_repository()
 
     self._project.main = exahype2.ExaHyPEMain(self._project)
 
-    # maybe use ..
     self.__configure_makefile()
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
     self.__export_constants()

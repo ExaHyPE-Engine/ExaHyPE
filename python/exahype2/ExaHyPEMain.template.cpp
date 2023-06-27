@@ -44,29 +44,26 @@
 #include "exahype2/UserInterface.h"
 #include "exahype2/UnitTests.h"
 
-//#ifdef UseFenv
-//#include "tarch/FenvWrapper.h"
-//#endif
-
+{% if FENV_ARGS != "" -%}
 #include <fenv.h>
+#pragma float_control(precise, on)
+#pragma STDC FENV_ACCESS ON
+{% endif -%}
 
 using namespace {{NAMESPACE | join("::")}};
 
-
 tarch::logging::Log _log("::");
 
-
-tarch::timing::Measurement   gridConstructionMeasurement;
-tarch::timing::Measurement   timeStepMeasurement;
-tarch::timing::Measurement   plotMeasurement;
-
+tarch::timing::Measurement gridConstructionMeasurement;
+tarch::timing::Measurement timeStepMeasurement;
+tarch::timing::Measurement plotMeasurement;
 
 /**
  * Decide which step to run next
  *
  * ## Control of the parallel grid construction
  *
- * 
+ *
  * @return continues to run
  */
 bool selectNextAlgorithmicStep() {
@@ -81,7 +78,7 @@ bool selectNextAlgorithmicStep() {
   static tarch::la::Vector<Dimensions,double> minH          = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
   static int    globalNumberOfTrees                         = 0;
   bool          continueToSolve                             = true;
-  
+
   if (exahype2::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::PlotSolution )
@@ -123,14 +120,14 @@ bool selectNextAlgorithmicStep() {
       addGridSweepWithoutGridRefinementNext = true;
     }
     else if (repositories::loadBalancer.getGlobalNumberOfTrees()>globalNumberOfTrees) {
-      logInfo( 
-        "selectNextAlgorithmicStep()", 
-        "mesh has rebalanced recently, so postpone further refinement)" 
+      logInfo(
+        "selectNextAlgorithmicStep()",
+        "mesh has rebalanced recently, so postpone further refinement)"
       );
       addGridSweepWithoutGridRefinementNext = true;
       globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     }
-    else if (  
+    else if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
       and
       // ensure that a proper creation has been ran before, so the mesh had the opportunity
@@ -267,7 +264,7 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
 
         repositories::startGridConstructionStep();
-        
+
         observers::CreateGrid  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
@@ -366,7 +363,7 @@ void step() {
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         plotMeasurement.setValue( watch.getCalendarTime() );
-        
+
         repositories::finishPlottingStep();
       }
       break;
@@ -387,13 +384,13 @@ void step() {
 
         otterPhaseSwitch( "time-step" );
         repositories::startTimeStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
-        
+
         observers::TimeStep  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         timeStepMeasurement.setValue( watch.getCalendarTime() );
-        
+
         repositories::finishTimeStep();
       }
       break;
@@ -432,10 +429,9 @@ int main(int argc, char** argv) {
 
   repositories::DataRepository::initDatatypes();
 
-//#ifdef UseFenv
-  //tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-//#endif
-  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+  {% if FENV_ARGS != "" -%}
+  feenableexcept({{FENV_ARGS}} );
+  {% endif -%}
 
   #if PeanoDebug>=2
   tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection();
@@ -460,7 +456,7 @@ int main(int argc, char** argv) {
   #if defined(SharedOMP)
   #pragma omp parallel
   {
-  #pragma omp master 
+  #pragma omp master
   {
   #endif
 

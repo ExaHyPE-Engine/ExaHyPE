@@ -427,28 +427,6 @@ if test "$use_libxsmm" == true; then
   AC_DEFINE([UseLibXSMM], [UseLibXSMM], [UseLibXSMM])
 fi
 
-
-
-#
-# ===============================================================
-#   Floating-point exception handling
-# ===============================================================
-#
-
-AC_ARG_WITH(fenv,
-  AS_HELP_STRING([--with-fenv],[build with floating-point exception handling [default=false]]),
-  [ AC_MSG_CHECKING(for fenv)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);    use_fenv=false ;;
-      *)     AC_MSG_RESULT(yes);   use_fenv=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for fenv); AC_MSG_RESULT(no); use_fenv=false ])
-AM_CONDITIONAL([UseFenv],[test "x$use_fenv" = xtrue])
-
-if test "$use_fenv" == true; then
-  AC_DEFINE([UseFenv], [UseFenv], [UseFenv])
-fi
-
 #
 # ===============================================================
 #   Tailored toolchains
@@ -486,13 +464,13 @@ AC_ARG_WITH(toolchain,
 if test "$toolchain" == itac; then
   AC_DEFINE([UseITAC], [1], [UseITAC])
   AC_DEFINE([UseLogService], [ITACLogger], [ITACLogger])
-  
+
   CXXFLAGS_PEANO_2D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_2D_STATS+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_2D_ASSERTS+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
   CXXFLAGS_PEANO_2D_TRACE+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_2D_DEBUG+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
-  
+
   CXXFLAGS_PEANO_3D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_3D_STATS+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_3D_ASSERTS+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
@@ -504,13 +482,13 @@ fi
 if test "$toolchain" == itt; then
   AC_DEFINE([UseITT], [1], [UseITT])
   AC_DEFINE([UseLogService], [ITTLogger], [ITTLogger])
-  
+
   CXXFLAGS_PEANO_2D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_2D_STATS+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_2D_ASSERTS+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
   CXXFLAGS_PEANO_2D_TRACE+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_2D_DEBUG+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
-  
+
   CXXFLAGS_PEANO_3D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_3D_STATS+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_3D_ASSERTS+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
@@ -556,7 +534,7 @@ fi
 
 
 #
-# FEM 
+# FEM
 #
 AC_ARG_ENABLE(finiteelements,
   AS_HELP_STRING([--enable-finiteelements],[enable finite elements toolbox  [default=false]]),
@@ -570,7 +548,7 @@ AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$toolbox_finiteelements" = xtr
 
 
 #
-# Multiprecision 
+# Multiprecision
 #
 AC_ARG_ENABLE(multiprecision,
   AS_HELP_STRING([--enable-multiprecision],[enable multiprecision  [default=false]]),
@@ -581,10 +559,9 @@ AC_ARG_ENABLE(multiprecision,
     esac ],
   [ AC_MSG_CHECKING(for multiprecision); AC_MSG_RESULT(no); toolbox_multiprecision=false ])
 AM_CONDITIONAL([UseToolboxMultiprecision],[test "x$toolbox_multiprecision" = xtrue])
- 
- 
+
 #
-# Load balancing 
+# Load balancing
 #
 AC_ARG_ENABLE(loadbalancing,
   AS_HELP_STRING([--enable-loadbalancing],[enable loadbalancing  [default=false]]),
@@ -598,7 +575,7 @@ AM_CONDITIONAL([UseToolboxLoadBalancing],[test "x$toolbox_loadbalancing" = xtrue
 
 
 #
-# Particles 
+# Particles
 #
 AC_ARG_ENABLE(particles,
   AS_HELP_STRING([--enable-particles],[enable particles  [default=false]]),
@@ -687,20 +664,20 @@ AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
 
 
 #
-# FEM 
+# FEM
 #
 if test "$toolbox_finiteelements" != false; then
   AC_DEFINE([UseToolboxFiniteElements], [1], [UseToolboxFiniteElements])
-  
+
   LDADD_PEANO_2D_RELEASE=" -lToolboxFiniteElements2d         $LDADD_PEANO_2D_RELEASE"
   LDADD_PEANO_2D_STATS="   -lToolboxFiniteElements2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lToolboxFiniteElements2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxFiniteElements2d_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lToolboxFiniteElements2d_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lToolboxFiniteElements2d_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lToolboxFiniteElements3d         $LDADD_PEANO_3D_RELEASE"
   LDADD_PEANO_3D_STATS="   -lToolboxFiniteElements3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lToolboxFiniteElements3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxFiniteElements3d_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lToolboxFiniteElements3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lToolboxFiniteElements3d_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -713,11 +690,11 @@ fi
 
 
 #
-# Multiprecision 
+# Multiprecision
 #
 if test "$toolbox_multiprecision" != false; then
   AC_DEFINE([UseToolboxMultiprecision], [1], [UseToolboxMultiprecision])
-  
+
   LDADD_PEANO_2D_RELEASE=" -lToolboxMultiprecision         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxMultiprecision_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxMultiprecision_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -739,20 +716,20 @@ fi
 
 
 #
-# Load balancing 
+# Load balancing
 #
 if test "$toolbox_loadbalancing" != false; then
   AC_DEFINE([UseToolboxLoadBalancing], [1], [UseToolboxLoadBalancing])
-  
+
   LDADD_PEANO_2D_RELEASE=" -lToolboxLoadBalancing2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxLoadBalancing2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lToolboxLoadBalancing2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxLoadBalancing2d_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lToolboxLoadBalancing2d_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lToolboxLoadBalancing2d_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lToolboxLoadBalancing3d         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS="   -lToolboxLoadBalancing3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lToolboxLoadBalancing3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxLoadBalancing3d_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lToolboxLoadBalancing3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lToolboxLoadBalancing3d_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -769,16 +746,16 @@ fi
 #
 if test "$toolbox_blockstructured" != false; then
   AC_DEFINE([UseToolboxBlockstructured], [1], [UseToolboxBlockstructured])
-  
+
   LDADD_PEANO_2D_RELEASE=" -lToolboxBlockstructured2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxBlockstructured2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lToolboxBlockstructured2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxBlockstructured2d_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lToolboxBlockstructured2d_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lToolboxBlockstructured2d_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lToolboxBlockstructured3d         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS="   -lToolboxBlockstructured3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lToolboxBlockstructured3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxBlockstructured3d_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lToolboxBlockstructured3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lToolboxBlockstructured3d_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -791,20 +768,20 @@ fi
 
 
 #
-# Particles 
+# Particles
 #
 if test "$toolbox_particles" != false; then
   AC_DEFINE([UseToolboxParticles], [1], [UseToolboxParticles])
-  
-  LDADD_PEANO_2D_RELEASE+=" -lToolboxParticles2d         $LDADD_PEANO_2D_RELEASE " 
+
+  LDADD_PEANO_2D_RELEASE+=" -lToolboxParticles2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS+="   -lToolboxParticles2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS+=" -lToolboxParticles2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS+=" -lToolboxParticles2d_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE+="   -lToolboxParticles2d_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG+="   -lToolboxParticles2d_debug   $LDADD_PEANO_2D_DEBUG "
 
-  LDADD_PEANO_3D_RELEASE+=" -lToolboxParticles3d         $LDADD_PEANO_3D_RELEASE " 
+  LDADD_PEANO_3D_RELEASE+=" -lToolboxParticles3d         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS+="   -lToolboxParticles3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS+=" -lToolboxParticles3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS+=" -lToolboxParticles3d_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE+="   -lToolboxParticles3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG+="   -lToolboxParticles3d_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -826,13 +803,13 @@ if test "$petsc" != false; then
   fi
   LDADD_PEANO_2D_RELEASE=" -lPETSc         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lPETSc_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lPETSc_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lPETSc_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lPETSc         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS="   -lPETSc_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lPETSc_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lPETSc_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -857,13 +834,13 @@ if test "$toolbox_exahype" != false; then
   fi
   LDADD_PEANO_2D_RELEASE=" -lExaHyPE2Core2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lExaHyPE2Core2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lExaHyPE2Core2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lExaHyPE2Core2d_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lExaHyPE2Core2d_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lExaHyPE2Core2d_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lExaHyPE2Core3d         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS="   -lExaHyPE2Core3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lExaHyPE2Core3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lExaHyPE2Core3d_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lExaHyPE2Core3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lExaHyPE2Core3d_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -893,7 +870,7 @@ if test "$use_libxsmm" != false; then
     rm -rf documentation/ #around 10M of documentation
     cd ../..
   fi
-  
+
   # build libxsmm
   if @<:@ ! -d submodules/libxsmm/bin @:>@ || @<:@ ! -e submodules/libxsmm/bin/libxsmm_gemm_generator @:>@; then
     REBUILD_LIBXSMM=true
@@ -908,8 +885,6 @@ if test "$use_libxsmm" != false; then
     cd ../..
   fi
   echo "Finished building libxsmm generator"
-
-
 fi
 
 
@@ -926,13 +901,13 @@ if test "$toolbox_swift" != false; then
   fi
   LDADD_PEANO_2D_RELEASE=" -lSWIFT2Core2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lSWIFT2Core2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lSWIFT2Core2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lSWIFT2Core2d_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lSWIFT2Core2d_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lSWIFT2Core2d_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lSWIFT2Core3d         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS="   -lSWIFT2Core3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lSWIFT2Core3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lSWIFT2Core3d_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lSWIFT2Core3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lSWIFT2Core3d_debug   $LDADD_PEANO_3D_DEBUG "
 
