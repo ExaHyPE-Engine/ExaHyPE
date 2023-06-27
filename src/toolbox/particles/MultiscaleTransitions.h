@@ -4,10 +4,18 @@
 
 #include <tuple>
 
+#include "particles.h"
+#include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
+
 
 namespace toolbox {
   namespace particles {
+    typedef int ParticleReassociationInstruction;
+
+    constexpr int ParticleReassociationInstruction_Keep          = -1;
+    constexpr int ParticleReassociationInstruction_SieveGlobally = -2;
+
     /**
      * Multilevel sorting tolerance
      *
@@ -78,7 +86,7 @@ namespace toolbox {
     /**
      * @see SpatialReassignmentTolerance
      */
-    constexpr double MultilevelSortingTolerance = 1.01;
+    constexpr double MultilevelSortingTolerance = SpatialSortingTolerance;
 
     /**
      * We try to pick the damping such that the two halo layers from the
@@ -94,18 +102,6 @@ namespace toolbox {
      * @see SpatialSortingTolerance
      */
     constexpr double AsymmetricSortingDamping = 0.5 / SpatialSortingTolerance + 0.5;
-
-    /**
-     * Default tolerance to decide when two particles are the same.
-     *
-     * @see eliminateSpatialDuplicates()
-     */
-    constexpr double SpatialDuplicateTolerance = 1e-6;
-
-    typedef int ParticleReassociationInstruction;
-
-    constexpr int ParticleReassociationInstruction_Keep          = -1;
-    constexpr int ParticleReassociationInstruction_SieveGlobally = -2;
 
     /**
      * If you use this operation, you can be sure that every particle is
@@ -293,31 +289,10 @@ namespace toolbox {
     template <typename Particle>
     bool dropParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
 
-    /**
-     * Eliminate spatial duplicates
-     *
-     * Whenever we work with distributed data structures and multilevel transitions
-     * in a distributed memory mindset, we can run into redundant particles which
-     * we then have to eliminate.
-     *
-     * This elimination means that I actually delete the particle held by
-     * particleSet.
-     *
-     * @param particleSet Reference to a C++ container (often a stack) which in turn
-     *   hosts pointers to particles. If we find redundancies, we will delete this
-     *   object where the pointer points to and afterwards remove the pointer from
-     *   the container.
-     *
-     * @return [int,int] representing
-     * [numberOfLocalEliminatedSpatialDuplicates,numberOfVirtualEliminatedSpatialDuplicates]
-     */
-    template <typename ParticleContainer>
-    std::tuple<int, int> eliminateSpatialDuplicates(ParticleContainer& particleSet);
-
-    double relativeSpatialSortingTolerance(const peano4::datamanagement::VertexMarker& marker);
-    double relativeSpatialSortingTolerance(const peano4::datamanagement::CellMarker& marker);
-    double relativeMultilevelSortingTolerance(const peano4::datamanagement::VertexMarker& marker);
-    double relativeMultilevelSortingTolerance(const peano4::datamanagement::CellMarker& marker);
+    double relativeSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
+    double relativeSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
+    double relativeMultilevelSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
+    double relativeMultilevelSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
   } // namespace particles
 } // namespace toolbox
 

@@ -103,11 +103,6 @@ void startIntermediateStep() {
 
 
 void startInitialConditionStep() {
-  {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
-  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
-  {%- endfor %}
-
   if (not ::swift2::commandlinesettings::enableDynamicLoadBalancing() ) {
     loadBalancer.enable(false);
   }
@@ -116,11 +111,6 @@ void startInitialConditionStep() {
 
 
 void startInitialisationStep() {
-  {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
-  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
-  {%- endfor %}
-
   if (not ::swift2::commandlinesettings::enableDynamicLoadBalancing() ) {
     loadBalancer.enable(false);
   }
@@ -130,8 +120,6 @@ void startInitialisationStep() {
 
 void startTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
-  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
   globaldata::{{PARTICLE}}::getSpecies().startTimeStep();
   {%- endfor %}
   logTraceIn( "TimeStep()" );
