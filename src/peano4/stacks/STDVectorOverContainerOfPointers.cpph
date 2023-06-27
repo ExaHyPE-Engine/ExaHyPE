@@ -12,8 +12,6 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::workInReceivedMetaData
   #endif
 
   for (int i=0; i<Base::_currentElement; i++) {
-//    const int entries = _metaDataSizeBuffer[i];
-    //Base::_data[i].resize(entries);
     #if PeanoDebug>=1 and Dimensions==2
     tarch::la::Vector<Dimensions,double> x = {_metaDataDebugBuffer[i*2*2+0], _metaDataDebugBuffer[i*2*2+1]};
     tarch::la::Vector<Dimensions,double> h = {_metaDataDebugBuffer[i*2*2+2], _metaDataDebugBuffer[i*2*2+3]};
@@ -34,13 +32,10 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::workInReceivedMetaData
 
 template <class T>
 void peano4::stacks::STDVectorOverContainerOfPointers<T>::workInReceivedData() {
-//  int entry = 0;
   for (int i=0; i<Base::_currentElement; i++) {
     assertionEquals( Base::_data[i].size(), 0 );
     for (int entry=0; entry<_metaDataSizeBuffer[i]; entry++) {
-//    for (std::vector<T>::const_iterator p: Base::_data[i]) {
      Base::_data[i].add( new typename T::DoFType( _deepCopyDataBuffer[entry] ) );
-//     entry++;
     }
   }
 }

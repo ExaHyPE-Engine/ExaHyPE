@@ -196,18 +196,34 @@ class peano4::stacks::STDVectorOverContainerOfPointers: public peano4::stacks::S
     MPI_Comm                                            _communicator;
 
     /**
+     * Take the received data and work them into the current data
      *
      * If we are in debug mode, we receive the meta data and set the meta
-     * attributes accordingly. Next, we take the array of integers stored
-     * in _metaDataSizeBuffer and use the entries therein to resize the
-     * individual vectors within the stack: After all, the stack size is
-     * known a priori (encoded within _currentElement), but the vector
-     * sizes per stack element are not known. They are read from the buffer.
-     * The routine solely resizes these vectors. It does not create any
-     * memory, i.e. the resized vectors stored on the stack hold exclusively
+     * attributes accordingly.
+     *
+     * ## Old code versions
+     *
+     * In previous code generations, I used the size of the received data,
+     * which is stored within _metaDataSizeBuffer, and immediately called
+     * a resize on the target data structures. While this means that the
+     * target data size and the values in _metaDataSizeBuffer hold redundant
+     * information, it meant that we avoid frequent reallocations as the
+     * target data grows once we actually insert data.
+     * The routine solely resized the vectors. It did not create any
+     * memory, i.e. the resized vectors stored on the stack held exclusively
      * pointers to garbage once the routine has terminated.
      *
-     * @see workInReceivedData() for the next step.
+     * In the current, revised version, the particle set does not have to
+     * offer a resize() operation. It is not part of @ref toolbox_particles "required signature".
+     * @see workInReceivedData() for the next step. Therefore, I had to remove
+     * the resize statements of the type
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * const int entries = _metaDataSizeBuffer[i];
+     * Base::_data[i].resize(entries);
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * @see workInReceivedData()
      */
     void workInReceivedMetaData();
 
