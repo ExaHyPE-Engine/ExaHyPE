@@ -6,7 +6,7 @@ from adjoint_solver import compute_net_updates
 
 class SWE_Adjoint_Solver():
 
-    def __init__(self, bathymetry_file_path:str, displacement_file_path:str, width:List[float], cell_size:float, end_time:float, checkpoints:int = 0):
+    def __init__(self, output_file_name:str, bathymetry_file_path:str, displacement_file_path:str, width:List[float], cell_size:float, end_time:float, checkpoints:int = 0):
 
         self.cell_size = cell_size
         self.end_time = end_time
@@ -89,7 +89,9 @@ class SWE_Adjoint_Solver():
             self.number_of_checkpoints = self.number_of_checkpoints + 2 # for netcdf file (one output at t=0 and one at t=end_time)
 
         # set up netCDF file for output
-        self.set_up_netcdf("test.nc")
+        if not output_file_name.endswith(".nc"):
+            output_file_name = output_file_name + ".nc"
+        self.set_up_netcdf("%s" % output_file_name)
         
     def run_simulation(self):
         ############# DEF HELPER FUNCTIONS #############
@@ -118,7 +120,7 @@ class SWE_Adjoint_Solver():
                     max_wave_speed_x = max(max_edge_speed, max_wave_speed_x)
 
             if max_wave_speed_x > 0:
-                update_unknowns_x_sweep(0.9 * self.cell_size / max_wave_speed_x)
+                update_unknowns_x_sweep(0.4 * self.cell_size / max_wave_speed_x)
             
             max_wave_speed_y = 0.0
             for j in range(1, self.ny+2):
@@ -129,13 +131,14 @@ class SWE_Adjoint_Solver():
 
             max_wave_speed = max(max_wave_speed_x, max_wave_speed_y)
             # by here, we kind of assume a wave_speed greater 0
-            max_time_step = 0.9 * self.cell_size / max_wave_speed
+            print("max wave speed: %f" % max_wave_speed)
+            max_time_step = 0.4 * self.cell_size / max_wave_speed
             update_unknowns_y_sweep(max_time_step)
             return max_time_step
 
         def write_eta_to_file(checkpoint, t):
             self.nc_var_time[checkpoint] = t
-            self.nc_var_eta[checkpoint, :, :] = self.b.T[1:self.ny+1, 1:self.nx+1] + self.h.T[1:self.ny+1, 1:self.nx+1]
+            self.nc_var_eta[checkpoint, :, :] = self.h.T[1:self.ny+1, 1:self.nx+1] + self.b.T[1:self.ny+1, 1:self.nx+1]
 
         ############# END DEF HELPER FUNCTIONS #############
 
@@ -165,15 +168,15 @@ class SWE_Adjoint_Solver():
         self.h.T[0] = self.h.T[1]
         self.h.T[-1] = self.h.T[-2]
 
-        self.hu[0] = self.hu[1]
-        self.hu[-1] = self.hu[-2]
-        self.hu.T[0] = self.hu.T[1]
-        self.hu.T[-1] = self.hu.T[-2]
+        self.hu[0] = 0.0 # self.hu[1]
+        self.hu[-1] = 0.0 # self.hu[-2]
+        self.hu.T[0] = 0.0 # self.hu.T[1]
+        self.hu.T[-1] = 0.0 # self.hu.T[-2]
 
-        self.hv[0] = self.hv[1]
-        self.hv[-1] = self.hv[-2]
-        self.hv.T[0] = self.hv.T[1]
-        self.hv.T[-1] = self.hv.T[-2]
+        self.hv[0] = 0.0 # self.hv[1]
+        self.hv[-1] = 0.0 # self.hv[-2]
+        self.hv.T[0] = 0.0 # self.hv.T[1]
+        self.hv.T[-1] = 0.0 # self.hv.T[-2]
 
     def set_up_netcdf(self, filename:str):
         self.nc_file = netCDF4.Dataset(filename, "w")
@@ -193,5 +196,5 @@ class SWE_Adjoint_Solver():
     def close_netcdf(self):
         self.nc_file.close()
     
-solver = SWE_Adjoint_Solver(bathymetry_file_path="../netCDFInputs/artificialtsunami_bathymetry_1000.nc", displacement_file_path="../netCDFInputs/artificialtsunami_displ_1000.nc", width=[10,10], cell_size=0.1, end_time=0.1)
+solver = SWE_Adjoint_Solver(output_file_name="abc.nc", bathymetry_file_path="../netCDFInputs/artificialtsunami_bathymetry_1000.nc", displacement_file_path="../netCDFInputs/artificialtsunami_displ_1000.nc", width=[10,10], cell_size=0.1, end_time=0.1)
 solver.run_simulation()

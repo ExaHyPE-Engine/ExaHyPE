@@ -1,8 +1,17 @@
 from math import sqrt
 from numpy import zeros
 def compute_net_updates(h_l, h_r, hu_l, hu_r, b_l, b_r):
+    if h_l < 0.0:
+        h_l = 0.0
+        hu_l = 0.0
+    
+    if h_r < 0.0:
+        h_r = 0.0
+        hu_r = 0.0
+    
     if b_r >= 0 and b_l >= 0:
         return (0, 0, 0, 0, 0)
+
     if b_r >= 0 and b_l < 0:
         h_r = h_l
         hu_r = -hu_l
@@ -11,10 +20,6 @@ def compute_net_updates(h_l, h_r, hu_l, hu_r, b_l, b_r):
         h_l = h_r
         hu_l = -hu_r
         b_l = b_r
-
-    if h_l == h_r and b_l == b_r and hu_l == hu_r:
-        # steady state
-        return (0, 0, 0, 0, 0)
 
     #############################################################################################
     # The following code is translated from:                                                    #
@@ -60,7 +65,7 @@ def compute_net_updates(h_l, h_r, hu_l, hu_r, b_l, b_r):
     apdq = zeros(2) # right going flux
 
     # determine  left and right going fluxes
-    for i in [0, 1]:
+    for i in range(len(sw)):
         if sw[i] < 0:
             amdq = amdq + fw.T[i]
         elif sw[i] > 0:
