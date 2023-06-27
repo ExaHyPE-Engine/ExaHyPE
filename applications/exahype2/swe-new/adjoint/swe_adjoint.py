@@ -132,9 +132,11 @@ class SWE_Adjoint_Solver():
             max_wave_speed = max(max_wave_speed_x, max_wave_speed_y)
             # by here, we kind of assume a wave_speed greater 0
             print("max wave speed: %f" % max_wave_speed)
-            max_time_step = 0.4 * self.cell_size / max_wave_speed
-            update_unknowns_y_sweep(max_time_step)
-            return max_time_step
+            if max_wave_speed > 0.00001:
+                max_time_step = 0.4 * self.cell_size / max_wave_speed
+                update_unknowns_y_sweep(max_time_step)
+                return max_time_step
+            return max_wave_speed
 
         def write_eta_to_file(checkpoint, t):
             self.nc_var_time[checkpoint] = t
