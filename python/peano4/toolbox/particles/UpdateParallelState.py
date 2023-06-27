@@ -106,7 +106,15 @@ for (int i=0; i<TwoPowerD; i++) {
   __Template_TouchVertexFirstTime = jinja2.Template("""
 // run over all adjacent vertices
 for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
-  logDebug( "enterCell(...)", "Particle " << p->toString() << " is marked as local" );
+  // data consistency check
+  assertion3(
+    p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+    or 
+    p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual,
+    p->toString(),
+    fineGridVertex{{PARTICLES_CONTAINER}}.toString(),
+    marker.toString()
+  );
   p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Virtual );
 }
 """)
@@ -141,7 +149,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     and
     (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
   ) {
-    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was local but now is remote" );
+    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was local but now is remote. Remove local copy" );
     _numberOfLeavingLocalParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
   }
@@ -150,11 +158,11 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     and
     (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
   ) {
-    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was virtual but remains virtual" );
+    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was virtual and remains virtual. Remove local copy" );
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
   }
   else {
-    assertion2( false, (*p)->toString(), marker.toString() );
+    assertion3( false, (*p)->toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString(), marker.toString() );
   }
 }
 """)
