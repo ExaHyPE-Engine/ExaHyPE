@@ -4,7 +4,6 @@ from .Attribute import Attribute
 
 
 class Integer(Attribute):
-
     def __init__(
         self,
         name,
@@ -59,8 +58,14 @@ class Integer(Attribute):
         if self._min_value is None and self._max_value is None:
             return [(namestring, typestring, "")]
         else:
-            packstring = "[[clang::pack_range(" + str(self._min_value) + "," + str(self._max_value) + ")]]"
-            return [ ( namestring, typestring, packstring) ]
+            packstring = (
+                "[[clang::pack_range("
+                + str(self._min_value)
+                + ","
+                + str(self._max_value)
+                + ")]]"
+            )
+            return [(namestring, typestring, packstring)]
 
     def get_method_body(self, signature):
         if signature.startswith("get") and self.use_data_store:

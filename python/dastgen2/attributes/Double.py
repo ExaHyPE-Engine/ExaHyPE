@@ -62,8 +62,10 @@ class Double(Attribute):
         if self._valid_mantissa_bits is None:
             return [(namestring, typestring, "")]
         else:
-            mantissastring = "[[clang::truncate_mantissa(" + str(self._valid_mantissa_bits) + ")]]"
-            return [ ( namestring, typestring, mantissastring) ]
+            mantissastring = (
+                "[[clang::truncate_mantissa(" + str(self._valid_mantissa_bits) + ")]]"
+            )
+            return [(namestring, typestring, mantissastring)]
 
     def get_method_body(self, signature):
         if signature.startswith("get") and self.use_data_store:
@@ -107,4 +109,3 @@ class Double(Attribute):
         """
         assert value == None or value > 0
         self._valid_mantissa_bits = value
-

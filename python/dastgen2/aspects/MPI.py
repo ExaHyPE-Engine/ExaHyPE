@@ -4,33 +4,29 @@ import dastgen2
 from dastgen2.Utils import construct_ifdef_string
 
 
-class MPI( object ):
-  """
+class MPI(object):
+    """
 
-  Represents the MPI aspect injected into a DaStGen model.
+    Represents the MPI aspect injected into a DaStGen model.
 
-  """
+    """
 
+    def __init__(self):
+        pass
 
-  def __init__(self):
-    pass
+    def set_model(self, data_model):
+        self._data_model = data_model
 
-
-  def set_model(self,data_model):
-    self._data_model = data_model
-
-
-  def get_include(self):
-    return """
+    def get_include(self):
+        return """
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
 """
 
-
-  def get_attributes(self):
-    return """
+    def get_attributes(self):
+        return """
     #ifdef Parallel
     private:
       int                  _senderDestinationRank;
@@ -47,8 +43,9 @@ class MPI( object ):
     #endif
 """
 
-  def get_method_declarations(self,full_qualified_name):
-    return """
+    def get_method_declarations(self, full_qualified_name):
+        return (
+            """
     #ifdef Parallel
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
@@ -96,8 +93,12 @@ class MPI( object ):
      * including a vtable. So this routine now is basically an alias for a
      * blocking MPI_Send.
      */
-    static void send(const """ + full_qualified_name + """& buffer, int destination, int tag, MPI_Comm communicator );
-    static void receive(""" + full_qualified_name + """& buffer, int source, int tag, MPI_Comm communicator );
+    static void send(const """
+            + full_qualified_name
+            + """& buffer, int destination, int tag, MPI_Comm communicator );
+    static void receive("""
+            + full_qualified_name
+            + """& buffer, int source, int tag, MPI_Comm communicator );
 
     /**
      * Alternative to the other send() where I trigger a non-blocking send an
@@ -105,74 +106,98 @@ class MPI( object ):
      * the message went through. In systems with heavy MPI usage, this can
      * help to avoid deadlocks.
      */
-    static void send(const """ + full_qualified_name + """& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(   """ + full_qualified_name + """& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(const """
+            + full_qualified_name
+            + """& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(   """
+            + full_qualified_name
+            + """& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 """
+        )
 
-
-  def get_implementation(self,full_qualified_name):
-    result = """
+    def get_implementation(self, full_qualified_name):
+        result = (
+            """
 #ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-MPI_Datatype """ + full_qualified_name + """::Datatype;
+MPI_Datatype """
+            + full_qualified_name
+            + """::Datatype;
 #endif
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype """ + full_qualified_name + """::getForkDatatype() {
+MPI_Datatype """
+            + full_qualified_name
+            + """::getForkDatatype() {
   return Datatype;
 }
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype """ + full_qualified_name + """::getGlobalCommunciationDatatype() {
+MPI_Datatype """
+            + full_qualified_name
+            + """::getGlobalCommunciationDatatype() {
   return Datatype;
 }
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype """ + full_qualified_name + """::getJoinDatatype() {
+MPI_Datatype """
+            + full_qualified_name
+            + """::getJoinDatatype() {
   return Datatype;
 }
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype """ + full_qualified_name + """::getBoundaryExchangeDatatype() {
+MPI_Datatype """
+            + full_qualified_name
+            + """::getBoundaryExchangeDatatype() {
   return Datatype;
 }
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype """ + full_qualified_name + """::getMultiscaleDataExchangeDatatype() {
+MPI_Datatype """
+            + full_qualified_name
+            + """::getMultiscaleDataExchangeDatatype() {
   return Datatype;
 }
 
 
-int """ + full_qualified_name + """::getSenderRank() const {
+int """
+            + full_qualified_name
+            + """::getSenderRank() const {
   return _senderDestinationRank;
 }
 
 
-void """ + full_qualified_name + """::initDatatype() {
+void """
+            + full_qualified_name
+            + """::initDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  """ + full_qualified_name + """  instances[2];
+  """
+            + full_qualified_name
+            + """  instances[2];
 
   int NumberOfAttributes = 0;
 """
+        )
 
-    for i in self._data_model._attributes:
-      if i.is_static or i.is_const_static:
-        # No comms for static members
-        continue
-      if (i.ifdefs!=[]):
-        result += construct_ifdef_string(i.ifdefs)
-        result += "  NumberOfAttributes++;\n#endif \n"
-      else:
-        result += "  NumberOfAttributes++;\n"
+        for i in self._data_model._attributes:
+            if i.is_static or i.is_const_static:
+                # No comms for static members
+                continue
+            if i.ifdefs != []:
+                result += construct_ifdef_string(i.ifdefs)
+                result += "  NumberOfAttributes++;\n#endif \n"
+            else:
+                result += "  NumberOfAttributes++;\n"
 
-    result += """
+        result += """
   MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
   int*          blocklen = new int[NumberOfAttributes];
   MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
@@ -180,20 +205,20 @@ void """ + full_qualified_name + """::initDatatype() {
   int counter            = 0;
 """
 
-    for i in self._data_model._attributes:
-      if i.is_static or i.is_const_static:
-        # No comms for static members
-        continue
-      if (i.ifdefs!=[]):
-        result += construct_ifdef_string(i.ifdefs)
-      for ii in i.get_native_MPI_type():
-        result += "  subtypes[counter] = " + ii[0] + ";\n"
-        result += "  blocklen[counter] = " + str(ii[1]) + ";\n"
-        result += "  counter++;\n"
-      if (i.ifdefs!=[]):
-        result += "#endif\n"
+        for i in self._data_model._attributes:
+            if i.is_static or i.is_const_static:
+                # No comms for static members
+                continue
+            if i.ifdefs != []:
+                result += construct_ifdef_string(i.ifdefs)
+            for ii in i.get_native_MPI_type():
+                result += "  subtypes[counter] = " + ii[0] + ";\n"
+                result += "  blocklen[counter] = " + str(ii[1]) + ";\n"
+                result += "  counter++;\n"
+            if i.ifdefs != []:
+                result += "#endif\n"
 
-    result += """
+        result += """
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
   MPI_Get_address( &instances[0], &baseFirstInstance );
@@ -202,22 +227,23 @@ void """ + full_qualified_name + """::initDatatype() {
   counter = 0;
 """
 
-    for i in self._data_model._attributes:
-      if i.is_static or i.is_const_static:
-        # no comms for static members
-        continue
-      if (i.ifdefs!=[]):
-        result += "\n"
-        result += construct_ifdef_string(i.ifdefs)
-      for ii in i.get_first_plain_C_attribute():
-        result += "  MPI_Get_address( &(instances[0]."
-        result += ii[0]
-        result += "), &disp[counter] );\n"
-        result += "  counter++;\n"
-      if (i.ifdefs!=[]):
-        result += "#endif\n"
+        for i in self._data_model._attributes:
+            if i.is_static or i.is_const_static:
+                # no comms for static members
+                continue
+            if i.ifdefs != []:
+                result += "\n"
+                result += construct_ifdef_string(i.ifdefs)
+            for ii in i.get_first_plain_C_attribute():
+                result += "  MPI_Get_address( &(instances[0]."
+                result += ii[0]
+                result += "), &disp[counter] );\n"
+                result += "  counter++;\n"
+            if i.ifdefs != []:
+                result += "#endif\n"
 
-    result += """
+        result += (
+            """
   MPI_Aint offset = disp[0] - baseFirstInstance;
   MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
   for (int i=NumberOfAttributes-1; i>=0; i--) {
@@ -247,7 +273,9 @@ void """ + full_qualified_name + """::initDatatype() {
 }
 
 
-void """ + full_qualified_name + """::shutdownDatatype() {
+void """
+            + full_qualified_name
+            + """::shutdownDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   MPI_Datatype type;
   type = getForkDatatype();
@@ -267,20 +295,32 @@ void """ + full_qualified_name + """::shutdownDatatype() {
 }
 
 
-void """ + full_qualified_name + """::send(const """ + full_qualified_name + """& buffer, int destination, int tag, MPI_Comm communicator ) {
+void """
+            + full_qualified_name
+            + """::send(const """
+            + full_qualified_name
+            + """& buffer, int destination, int tag, MPI_Comm communicator ) {
   MPI_Send( &buffer, 1, Datatype, destination, tag, communicator);
 }
 
 
-void """ + full_qualified_name + """::receive(""" + full_qualified_name + """& buffer, int source, int tag, MPI_Comm communicator ) {
+void """
+            + full_qualified_name
+            + """::receive("""
+            + full_qualified_name
+            + """& buffer, int source, int tag, MPI_Comm communicator ) {
   MPI_Status status;
   MPI_Recv( &buffer, 1, Datatype, source, tag, communicator, &status);
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
 
 
-void """ + full_qualified_name + """::send(
-  const """ + full_qualified_name + """& buffer,
+void """
+            + full_qualified_name
+            + """::send(
+  const """
+            + full_qualified_name
+            + """& buffer,
   int destination,
   int tag,
   std::function<void()> startCommunicationFunctor,
@@ -299,8 +339,12 @@ void """ + full_qualified_name + """::send(
 }
 
 
-void """ + full_qualified_name + """::receive(
-  """ + full_qualified_name + """& buffer,
+void """
+            + full_qualified_name
+            + """::receive(
+  """
+            + full_qualified_name
+            + """& buffer,
   int source,
   int tag,
   std::function<void()> startCommunicationFunctor,
@@ -321,9 +365,6 @@ void """ + full_qualified_name + """::receive(
 }
 #endif
 """
+        )
 
-    return result;
-
-
-
-
+        return result
