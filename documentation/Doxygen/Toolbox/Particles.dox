@@ -104,38 +104,10 @@ These are operations each vertex offers:
   - receiveAndMerge(const peano4::datamanagement::VertexMarker& marker)
   - storePersistently(const peano4::datamanagement::VertexMarker& marker)
   - loadPersistently(const peano4::datamanagement::VertexMarker& marker)
-<<<<<<< HEAD
-
-These are static markers, which the users can control to determine if data
-exchange happens. By default, they return true.
-
-If we run in debug mode, we further require the x and h values for the 
-debugging and the corresponding getters and setters.
-
-Finally, the set should offer a toString() operation.
-
-### Container operators
-
-We expect each particle set to offer the begin() and end() iterators. While we
-do offer non-const iterators, the user is never allowed to delete the actual
-particle itself. That has to be done through the deleteParticle() operation.
-
-Besides begin() and end(), a particle set should also offer size().
-=======
-- If we run in debug mode, we further require the x and h values
-- Simple begin() and end() iterators. However, we only expect the const
-  variants. Whenever someone manipulates a particle set, we use dedicated
-  routines for that, such that the implementation can decide if it wants
-  to alter the underlying memory layout, e.g.
-- A toString() routine
-- Some multiscale-specific operations.
-
-I thought for a while that I could make the set inherit publicly from list,
-vector, ...
->>>>>>> refs/remotes/origin/particles
+  - If we run in debug mode, we further require the x and h values
+  - A toString() routine
 
 
-<<<<<<< HEAD
 ### clear(), deleteParticle() and deleteParticles()
 
 The operation clear() on a particle set becomes a shallow clear, as the set
@@ -199,15 +171,11 @@ is thread-safe.
 The routine returns an iterator. So if you iterate over a set and if you call
 this operation, you should take the result as new iterator, as it will point
 to a consistent memory view.
-=======
-## Particle sorting
->>>>>>> refs/remotes/origin/particles
 
 
 
 ### Eliminate spatial duplicates
 
-<<<<<<< HEAD
 The routine eliminateSpatialDuplicates() has to be offered by each vertex 
 set. Run over set and removes one of the two particles that reside at same 
 location.
@@ -308,7 +276,3 @@ The copy constructor is a shallow copy constructor.
 
  */
  
- 
-=======
- */
->>>>>>> refs/remotes/origin/particles
