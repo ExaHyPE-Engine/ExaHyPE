@@ -50,7 +50,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellInit(
   //hardcode 2 since 2 vertices in each dimension
   for (int i=0; i<2; i++){
     for (int j=0; j<2; j++){
-      rhs[ i*2 + j ] = poissonRHS( { tempX[0] + j*h[0], tempX[1] + i*h[1] } );
+      rhs[ i*2 + j ]   = poissonRHS( { tempX[0] + j*h[0], tempX[1] + i*h[1] } );
+      value[ i*2 + j ] = 0;
     }
   }
 }
