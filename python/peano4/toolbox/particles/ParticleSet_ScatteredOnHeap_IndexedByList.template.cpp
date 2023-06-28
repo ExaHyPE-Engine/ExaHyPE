@@ -94,6 +94,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
   while (p != _container.end()) {
     bool foundDuplicate = false;
 
+    // data consistency check
+    assertion2(
+      (*p)->getParallelState()==DoFType::ParallelState::Local
+      or
+      (*p)->getParallelState()==DoFType::ParallelState::Virtual,
+      (*p)->toString(),
+      toString()
+    );
+
     auto pp = p;
     pp++;
     while (pp != _container.end() and not foundDuplicate) {
@@ -108,7 +117,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
     }
 
     if (foundDuplicate) {
-      assertion((*p) != (*pp));
+      assertion2((*p) != (*pp), (*p)->toString(), (*pp)->toString());
 
       // bias to eliminate virtual particles
       if (

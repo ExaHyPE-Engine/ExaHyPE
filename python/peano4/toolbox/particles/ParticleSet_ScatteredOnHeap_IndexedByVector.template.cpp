@@ -117,7 +117,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
     }
 
     if (foundDuplicate) {
-      assertion((*p) != (*pp));
+      assertion2((*p) != (*pp), (*p)->toString(), (*pp)->toString());
 
       // bias to eliminate virtual particles
       if (

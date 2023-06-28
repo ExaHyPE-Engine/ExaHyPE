@@ -49,7 +49,6 @@ class toolbox::particles::ParticleSet {
 public:
   typedef T                 DoFType;
   typedef std::list<T*>     ParticleList;
-  typedef SieveParticles<T> SieveParticles;
 
 #if PeanoDebug >= 1
   void                                  setDebugX(const tarch::la::Vector<Dimensions, double>& data);
@@ -189,7 +188,7 @@ protected:
   static int _numberOfVirtualEliminatedSpatialDuplicates;
   static int _numberOfLocalEliminatedSpatialDuplicates;
 
-  static SieveParticles sieveParticles;
+  static SieveParticles<T>  sieveParticles;
 
 #if PeanoDebug >= 1
   tarch::la::Vector<Dimensions, double> _debugX;

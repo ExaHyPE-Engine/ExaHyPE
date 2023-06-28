@@ -182,13 +182,9 @@ class ParticleSet(DoF):
             )
 
         self.particle_model = particle
-<<<<<<< HEAD
-        #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
-        self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
-=======
-        self.generator = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
-        # self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
->>>>>>> branch 'particles-memorypool' of https://gitlab.lrz.de/hpcsoftware/Peano.git
+        self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
+        #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
+
 
     @property
     def readme_descriptor(self):

@@ -3,7 +3,7 @@
 
 
 template <typename T>
-toolbox::particles::ParticleSet<T>::SieveParticles toolbox::particles::ParticleSet<T>::sieveParticles;
+toolbox::particles::SieveParticles<T> toolbox::particles::ParticleSet<T>::sieveParticles;
 
 template <typename T>
 tarch::logging::Log toolbox::particles::ParticleSet<T>::_log("toolbox::particles::ParticleSet");
@@ -291,14 +291,12 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
         << ": #eliminated local spatial duplicates=" << globalNumberOfLocalEliminatedSpatialDuplicates
         << ", #eliminated virtual spatial duplicates=" << globalNumberOfVirtualEliminatedSpatialDuplicates
     );
-<<<<<<< HEAD
-//    assertion(globalNumberOfRemainingLocalParticles==0 or globalNumberOfRemainingLocalParticles + globalNumberOfIncomingLocalParticles>=10201);
-=======
+/*
     assertion(
       globalNumberOfRemainingLocalParticles == 0
       or globalNumberOfRemainingLocalParticles + globalNumberOfIncomingLocalParticles >= 10201
     );
->>>>>>> branch 'particles-memorypool' of https://gitlab.lrz.de/hpcsoftware/Peano.git
+*/
   }
 }
 
