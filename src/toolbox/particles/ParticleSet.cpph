@@ -348,7 +348,7 @@ void toolbox::particles::ParticleSet<T>::finishedTraversal() {
 
 
 template <typename T>
-toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::ParticleSet<T>::getParticlesToBeSievedIntoVertex(
+typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::ParticleSet<T>::getParticlesToBeSievedIntoVertex(
   const peano4::datamanagement::VertexMarker& marker
 ) {
   return sieveParticles.getParticlesToBeSievedIntoVertex(marker);
