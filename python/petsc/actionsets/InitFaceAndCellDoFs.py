@@ -65,13 +65,15 @@ degrees of freedom and the global mapping for indices on faces and cells
     fineGridFace{{SOLVER_NAME}}.setValue( value );
     fineGridFace{{SOLVER_NAME}}.setRhs( rhs );
 
-    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
+    logTraceOut( "touchFaceFirstTime(...)---InitialCondition" );
 
   }
   """
 
   TemplateInitCell="""
   if ( not marker.willBeRefined() ){
+    logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
+
     // place some values in the mesh for the face
     tarch::la::Vector<{{CELL_CARDINALITY}}, double>   value;
     tarch::la::Vector<{{CELL_CARDINALITY}}, double>   rhs;
@@ -83,9 +85,11 @@ degrees of freedom and the global mapping for indices on faces and cells
       rhs
     );
 
-    /*
-    * todo place these values into the mesh
-    */
+    //place these values into the mesh
+    fineGridCell{{SOLVER_NAME}}.setValue( value );
+    fineGridCell{{SOLVER_NAME}}.setRhs( rhs );
+
+    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   }
 
   """

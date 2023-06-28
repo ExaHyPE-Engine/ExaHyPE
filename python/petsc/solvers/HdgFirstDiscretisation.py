@@ -218,7 +218,7 @@ class HdgFirstDiscretisation(Solver):
       namespace,
       ".", 
       dictionary,
-      False,
+      True,
       True)
 
     output.add( generated_abstract_header_file )
