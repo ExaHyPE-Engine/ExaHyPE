@@ -46,7 +46,10 @@ class HdgFirstDiscretisation(Solver):
                face_dofs,
                min_h,
                max_h,
-               stencil):
+               stencilFF,
+               stencilCF,
+               stencilFC,
+               stencilCC):
     """!
    
  Test comment (C)
@@ -54,10 +57,10 @@ class HdgFirstDiscretisation(Solver):
    
     """
     super( HdgFirstDiscretisation, self ).__init__( name,
-                                                              min_h,
-                                                              max_h
-                                                              )
-    
+                                                    min_h,
+                                                    max_h
+                                                  )
+
 
 
     #hardcode one unknown on vertices for now
@@ -85,7 +88,10 @@ class HdgFirstDiscretisation(Solver):
     self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     
-    self.stencil = stencil
+    self.stencilFF = stencilFF
+    self.stencilCF = stencilCF
+    self.stencilFC = stencilFC
+    self.stencilCC = stencilCC
     pass
 
 
@@ -98,24 +104,25 @@ class HdgFirstDiscretisation(Solver):
     solution and right-hand side. 
     
     """
-    # observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
-    #   filename       = "solution-" + self._name,
-    #   vertex_unknown = self._vertexDof,
-    #   getter         = "getValue().data()",
-    #   description    = "u",
-    #   time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-    #   number_of_unknows_per_vertex = self._vertex_unknowns,
-    #   guard_predicate              = "true", 
-    #   ))
-    # observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
-    #   filename       = "rhs-" + self._name,
-    #   vertex_unknown = self._vertexDof,
-    #   getter         = "getRhs().data()",
-    #   description    = "u",
-    #   time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-    #   number_of_unknows_per_vertex = self._vertex_unknowns,
-    #   guard_predicate              = "true", 
-    #   ))
+    observer.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat(
+      filename       = "solution-" + self._name,
+      cell_unknown   = self._cellDof,
+      getter         = "getValue().data()",
+      description    = "u",
+      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
+      number_of_unknows_per_cell   = self._cell_unknowns,
+      guard_predicate              = "true", 
+      ))
+
+    observer.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat(
+      filename       = "rhs-" + self._name,
+      cell_unknown   = self._cellDof,
+      getter         = "getRhs().data()",
+      description    = "b",
+      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
+      number_of_unknows_per_cell   = self._cell_unknowns,
+      guard_predicate              = "true", 
+      ))
     pass
 
 
@@ -212,7 +219,7 @@ class HdgFirstDiscretisation(Solver):
       namespace,
       ".", 
       dictionary,
-      False,
+      True,
       True)
 
     output.add( generated_abstract_header_file )

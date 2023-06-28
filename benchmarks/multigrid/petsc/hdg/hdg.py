@@ -23,7 +23,7 @@ parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
-parser.add_argument("-deg", "--degree",             dest="degree",         type=int, default=3, help="Polynomial degree")
+parser.add_argument("-deg", "--degree",             dest="degree",         type=int, default=2, help="Polynomial degree")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.1, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
@@ -32,16 +32,39 @@ args = parser.parse_args()
 '''
 set the number of cell and face dofs
 '''
-cellDofs = 1 #we aren't using this; hardcode as 1
-faceDofs = 3**(args.dimensions-1) #3 per face in 2d, 9 in 3d
+
+#below is only temporary
+cellDofs = (args.degree + 1) **  args.dimensions 
+faceDofs = (args.degree + 1) ** (args.dimensions - 1)
 
 '''
-add a stencil. should be 12*12 in 2d and 54 * 54 in 3d
+add some stencils
 '''
-stencil=[
-  [1 for _ in range(faceDofs * 2 * args.dimensions)]
-    for _ in range(faceDofs * 2 * args.dimensions)
+
+# matrix[20136:20139, 20136:20139]
+stencilFF=[
+  [1 for _ in range(faceDofs)]
+     for _ in range(faceDofs)
 ]
+
+stencilCF=[
+  [1 for _ in range(faceDofs)]
+     for _ in range(cellDofs)
+]
+
+stencilFC=[
+  [1 for _ in range(cellDofs)]
+     for _ in range(faceDofs)
+]
+
+stencilCC=[
+  [1 for _ in range(cellDofs)]
+     for _ in range(cellDofs)
+]
+
+if args.degree != 1:
+  print('for now, we just want to get visualisation working with degree = 1')
+  exit()
 
 project = petsc.Project(project_name = "HDG", 
                         namespace = [ "benchmarks", "multigrid", "petsc", "hdg" ]
@@ -53,7 +76,10 @@ solver = petsc.solvers.HdgFirstDiscretisation("HDG",
                                               faceDofs,
                                               args.meshsize,
                                               args.meshsize,
-                                              stencil
+                                              stencilFF,
+                                              stencilCF,
+                                              stencilFC,
+                                              stencilCC
                                               )
 
 project.add_solver( solver )

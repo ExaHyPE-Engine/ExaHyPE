@@ -278,11 +278,28 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
   ## add templates
   TemplateInitCell = """
   if (not marker.willBeRefined()){
-    //init temp vector to collect the indices we use
-    std::vector<int> faceDofIndices;
+    //init vector to collect the cell indices we use
+    std::vector<int> cellDofIndices;
 
-    //enumerate the faces
+    //get global index
+    std::pair<int,int> cellLocalIndex = std::make_pair(_spacetreeId, fineGridCell{{SOLVER_NAME}}.getNumber());
+    int cellGlobalIndex = repositories::{{SOLVER_INSTANCE}}.getCellLocalToGlobalMap().getGlobalIndex(cellLocalIndex);
+
+    //add this global index, plus each of its degrees of freedom, to the cellDofIndices
+    for (int i=0; i<_cellDofs; i++)
+      cellDofIndices.push_back( cellGlobalIndex + i ); //works because we reserved (eg) 27 indices per cell earlier
+    
+    /*
+    enumerate the faces. for each face, we do the following:
+    1. collect the global index of the face, add this to the list faceDofIndices
+      - also add to the list each degree of freedom that lies on this face
+    2. (have already done same for cell indices above)
+    3. insert stencil for FF, CF, FC and CC using these indices
+    */
+
     for (int face=0; face<2*Dimensions; face++){
+      std::vector<int> faceDofIndices;
+
       //get global index
       std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}(face).getNumber());
       int globalIndex = repositories::{{SOLVER_INSTANCE}}.getFaceLocalToGlobalMap().getGlobalIndex(localIndex);
@@ -290,10 +307,20 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
       //insert the faceDofs into our temp vector.
       for (int i=0; i<_faceDofs; i++)
         faceDofIndices.push_back( globalIndex + i );
+      
+      //insert the stencil for FF interactions
+      repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, faceDofIndices, _stencilFF );
+      
+      //insert the stencil for CF interactions
+      repositories::instanceOfPetsc.insertLocalMatrix( cellDofIndices, faceDofIndices, _stencilCF );
+
+      //insert the stencil for FC interactions
+      repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, cellDofIndices, _stencilFC );
+
     }
 
-    //we have constructed everything we need. send to petsc.
-    repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, _stencil.data() );
+    //before we exit, let's insert the stencil for cell-cell interactions
+    repositories::instanceOfPetsc.insertLocalMatrix( cellDofIndices, cellDofIndices, _stencilCC );
   }
 """
 
@@ -305,19 +332,81 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     self.d["CELL_CARDINALITY"]   = solver.number_of_cell_unknowns
     self.d["FACE_CARDINALITY"]   = solver.number_of_face_unknowns
 
-    ##handling stencil
+    '''
+    HANDLING THE STENCILS!
+    '''
+    
+    #FIRST - HANDLE STENCIL FOR FACE-FACE INTERACTIONS
 
     ##first, capture the dimensions of the stencil
-    self.d["stencilRows"] = len(solver.stencil)
-    self.d["stencilCols"] = len(solver.stencil[0])
+    self.d["stencilRowsFF"] = len(solver.stencilFF)
+    self.d["stencilColsFF"] = len(solver.stencilFF[0])
+    numberOfCols = len(solver.stencilFF[0]) #use this to insert a line break after every row
+    
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
-    stencil=[item for sublist in solver.stencil for item in sublist]
-    self.d["STENCIL"] = "{" + str(stencil[0])
-    for el in stencil[1:]:
-      self.d["STENCIL"] += ", "
-      self.d["STENCIL"] += str(el)
-    self.d["STENCIL"] += "}"
+    stencil=[item for sublist in solver.stencilFF for item in sublist]
+    self.d["STENCILFF"] = "\n{" + str(stencil[0])
+    for index, el in enumerate(stencil[1:]):
+      self.d["STENCILFF"] += ", "
+      if index > 0 and (index-1) % numberOfCols == 1:
+        self.d["STENCILFF"] += "\n"
+      self.d["STENCILFF"] += str(el)
+    self.d["STENCILFF"] += "}"
+
+    #NEXT - HANDLE STENCIL FOR CELL-FACE INTERACTIONS
+
+    ##first, capture the dimensions of the stencil
+    self.d["stencilRowsCF"] = len(solver.stencilCF)
+    self.d["stencilColsCF"] = len(solver.stencilCF[0])
+    numberOfCols = len(solver.stencilCF[0]) #use this to insert a line break after every row
+
+    #pass in stencil as a list of lists
+    #convert it to a flat list for passing as std::initializer_list
+    stencil=[item for sublist in solver.stencilCF for item in sublist]
+    self.d["STENCILCF"] = "\n{" + str(stencil[0])
+    for index, el in enumerate(stencil[1:]):
+      self.d["STENCILCF"] += ", "
+      if index > 0 and (index-1) % numberOfCols == 1:
+        self.d["STENCILCF"] += "\n"
+      self.d["STENCILCF"] += str(el)
+    self.d["STENCILCF"] += "}"
+
+    #NEXT - HANDLE STENCIL FOR FACE-CELL INTERACTIONS
+
+    ##first, capture the dimensions of the stencil
+    self.d["stencilRowsFC"] = len(solver.stencilFC)
+    self.d["stencilColsFC"] = len(solver.stencilFC[0])
+    numberOfCols = len(solver.stencilFC[0]) #use this to insert a line break after every row
+
+    #pass in stencil as a list of lists
+    #convert it to a flat list for passing as std::initializer_list
+    stencil=[item for sublist in solver.stencilFC for item in sublist]
+    self.d["STENCILFC"] = "\n{" + str(stencil[0])
+    for index, el in enumerate(stencil[1:]):
+      self.d["STENCILFC"] += ", "
+      if index > 0 and (index-1) % numberOfCols == 1:
+        self.d["STENCILFC"] += "\n"
+      self.d["STENCILFC"] += str(el)
+    self.d["STENCILFC"] += "}"
+
+    #FINALLY - HANDLE STENCIL FOR CELL-CELL INTERACTIONS
+
+    ##first, capture the dimensions of the stencil
+    self.d["stencilRowsCC"] = len(solver.stencilCC)
+    self.d["stencilColsCC"] = len(solver.stencilCC[0])
+    numberOfCols = len(solver.stencilCC[0]) #use this to insert a line break after every row
+
+    #pass in stencil as a list of lists
+    #convert it to a flat list for passing as std::initializer_list
+    stencil=[item for sublist in solver.stencilCC for item in sublist]
+    self.d["STENCILCC"] = "\n{" + str(stencil[0])
+    for index, el in enumerate(stencil[1:]):
+      self.d["STENCILCC"] += ", "
+      if index > 0 and (index-1) % numberOfCols == 1:
+        self.d["STENCILCC"] += "\n"
+      self.d["STENCILCC"] += str(el)
+    self.d["STENCILCC"] += "}"
 
   def get_constructor_body(self):
     return f"""
@@ -377,6 +466,10 @@ Consult petsc.Project for details
     """
     return f"""
   int _spacetreeId;
-  const int _faceDofs = {self.d["FACE_CARDINALITY"]}; 
-  const tarch::la::Matrix<{self.d["stencilRows"]},{self.d["stencilRows"]},double> _stencil = {self.d["STENCIL"]};
+  const int _faceDofs = {self.d["FACE_CARDINALITY"]};
+  const int _cellDofs = {self.d["CELL_CARDINALITY"]};
+  const tarch::la::Matrix<{self.d["stencilRowsFF"]},{self.d["stencilColsFF"]},double> _stencilFF = {self.d["STENCILFF"]};
+  const tarch::la::Matrix<{self.d["stencilRowsCF"]},{self.d["stencilColsCF"]},double> _stencilCF = {self.d["STENCILCF"]};
+  const tarch::la::Matrix<{self.d["stencilRowsFC"]},{self.d["stencilColsFC"]},double> _stencilFC = {self.d["STENCILFC"]};
+  const tarch::la::Matrix<{self.d["stencilRowsCC"]},{self.d["stencilColsCC"]},double> _stencilCC = {self.d["STENCILCC"]};
 """
