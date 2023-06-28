@@ -44,7 +44,7 @@
 #include "exahype2/UserInterface.h"
 #include "exahype2/UnitTests.h"
 
-{% if FENV_ARGS != "" -%}
+{% if FENV_ARGS is defined and FENV_ARGS != "" -%}
 #include <fenv.h>
 #pragma float_control(precise, on)
 #pragma STDC FENV_ACCESS ON
@@ -429,7 +429,7 @@ int main(int argc, char** argv) {
 
   repositories::DataRepository::initDatatypes();
 
-  {% if FENV_ARGS != "" -%}
+  {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
   feenableexcept({{FENV_ARGS}} );
   {% endif -%}
 
