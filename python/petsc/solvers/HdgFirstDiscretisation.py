@@ -104,24 +104,25 @@ class HdgFirstDiscretisation(Solver):
     solution and right-hand side. 
     
     """
-    # observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
-    #   filename       = "solution-" + self._name,
-    #   vertex_unknown = self._vertexDof,
-    #   getter         = "getValue().data()",
-    #   description    = "u",
-    #   time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-    #   number_of_unknows_per_vertex = self._vertex_unknowns,
-    #   guard_predicate              = "true", 
-    #   ))
-    # observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
-    #   filename       = "rhs-" + self._name,
-    #   vertex_unknown = self._vertexDof,
-    #   getter         = "getRhs().data()",
-    #   description    = "u",
-    #   time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-    #   number_of_unknows_per_vertex = self._vertex_unknowns,
-    #   guard_predicate              = "true", 
-    #   ))
+    observer.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat(
+      filename       = "solution-" + self._name,
+      cell_unknown   = self._cellDof,
+      getter         = "getValue().data()",
+      description    = "u",
+      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
+      number_of_unknows_per_cell   = self._cell_unknowns,
+      guard_predicate              = "true", 
+      ))
+
+    observer.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat(
+      filename       = "rhs-" + self._name,
+      cell_unknown   = self._cellDof,
+      getter         = "getRhs().data()",
+      description    = "b",
+      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
+      number_of_unknows_per_cell   = self._cell_unknowns,
+      guard_predicate              = "true", 
+      ))
     pass
 
 
