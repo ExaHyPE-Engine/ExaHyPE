@@ -1021,7 +1021,7 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     QAverage[unknown] = 0.5 * QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ]
                       + 0.5 * QIn[ QInEnumerator(patchIndex,normalAdjacentVolume,unknown) ];
-    DeltaQ[unknown]    = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
+    DeltaQ[unknown * Dimensions]    = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
                       - QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ];
     if (Dimensions >= 2)
       DeltaQ[unknown * Dimensions + 1] = QIn[QInEnumerator(patchIndex, topAdjacentVolume, unknown)] 
@@ -1093,7 +1093,7 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     QAverage[unknown] = 0.5 * QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ]
                       + 0.5 * QIn[ QInEnumerator(patchIndex,normalAdjacentVolume,unknown) ];
-    DeltaQ[unknown]   = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
+    DeltaQ[unknown * Dimensions]   = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
                       - QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ];
     if (Dimensions >= 2)
       DeltaQ[unknown * Dimensions + 1] = QIn[QInEnumerator(patchIndex, topAdjacentVolume, unknown)] 

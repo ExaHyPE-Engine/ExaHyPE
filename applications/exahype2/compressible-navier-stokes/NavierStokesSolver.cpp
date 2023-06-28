@@ -38,15 +38,27 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::initi
     Q[rho] = 1.0;
     Q[u]   = 0.0;
     Q[v]   = 0.0;
-    Q[e]   = (100 / Gamma) / (Gamma - 1) + 0.5 * (Q[u] * Q[u] + Q[v] * Q[v]) / Q[rho];
+#if Dimensions == 3
+    Q[w] = 0.0;
+#endif
+    Q[e] = (100 / Gamma) / (Gamma - 1) + 0.5 * (Q[u] * Q[u] + Q[v] * Q[v]) / Q[rho];
     break;
   case Scenario::PointExplosion:
+#if Dimensions == 2
     const tarch::la::Vector<2, double> circleCentre  = {0.5, 0.3};
     bool                               isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < 0.05);
-    Q[rho]                                           = 0.1;
-    Q[u]                                             = 0;
-    Q[v]                                             = 0;
-    Q[e]                                             = isInTheCentre ? 1.0 : 0.05; // inner energy
+#endif
+#if Dimensions == 3
+    const tarch::la::Vector<3, double> circleCentre  = {0.5, 0.3, 0.5};
+    bool                               isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < 0.05);
+#endif
+    Q[rho] = 0.1;
+    Q[u]   = 0;
+    Q[v]   = 0;
+#if Dimensions == 3
+    Q[w] = 0.0;
+#endif
+    Q[e] = isInTheCentre ? 1.0 : 0.05; // inner energy
     break;
   }
 }
@@ -75,13 +87,19 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesSolver::bound
       Qoutside[u] = LidDrivenCavityVelocity;
     }
     Qoutside[v] = 0;
+#if Dimensions == 3
+    Qoutside[w] = 0;
+#endif
     Qoutside[e] = Qinside[e];
     break;
   case Scenario::PointExplosion:
     Qoutside[rho] = Qinside[rho];
     Qoutside[u]   = Qinside[u];
     Qoutside[v]   = Qinside[v];
-    Qoutside[e]   = Qinside[e];
+#if Dimensions == 3
+    Qoutside[w] = Qinside[w];
+#endif
+    Qoutside[e] = Qinside[e];
     break;
   }
 }

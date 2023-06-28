@@ -116,10 +116,19 @@ public:
     assertion(!std::isnan(Q[rho]));
     assertion(!std::isnan(Q[u]));
     assertion(!std::isnan(Q[v]));
+#if Dimensions == 3
+    assertion(!std::isnan(Q[w]));
+#endif
     assertion(!std::isnan(Q[e]));
 #endif
 
+#if Dimensions == 2
     const double pressure = (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v]) / Q[rho]);
+#else
+    // std::cout << Q[rho] << "," << Q[u] << "," << Q[v] << "," << Q[w] << "," << Q[e] << "\n";
+    // std::cout << faceCentre[0] << "," << faceCentre[1] << "," << faceCentre[2] << "\n";
+    const double pressure = (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v] + Q[w] * Q[w]) / Q[rho]);
+#endif
     assertion(pressure > 0);
 
     const double c_speedOfSound = std::sqrt(Gamma * pressure / Q[rho]);
@@ -128,7 +137,6 @@ public:
     const double max_lambda_viscous    = std::max(
       4.0 / 3.0 * Viscosity / Q[rho], Gamma * Viscosity / (PrandtlNumber * Q[rho])
     );
-
     return std::max(max_lambda_convective, max_lambda_viscous);
   }
 
@@ -162,10 +170,18 @@ public:
     assertion(!std::isnan(Q[rho]));
     assertion(!std::isnan(Q[u]));
     assertion(!std::isnan(Q[v]));
+#if Dimensions == 3
+    assertion(!std::isnan(Q[w]));
+#endif
     assertion(!std::isnan(Q[e]));
 #endif
 
+#if Dimensions == 2
     const double pressure = (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v]) / Q[rho]);
+#else
+    const double pressure = (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v] + Q[w] * Q[w]) / Q[rho]);
+#endif
+
 #ifdef GPUOffloadingOff
     assertion(pressure > 0);
 #endif
@@ -176,12 +192,29 @@ public:
     if (normal == 0)
     {
       F[u] = Q[u] * Q[u] / Q[rho] + pressure;
-      F[v] = Q[u] * Q[v] / Q[rho];
+      F[v] = Q[v] * Q[v] / Q[rho];
+#if Dimensions == 3
+      F[w] = Q[w] * Q[u] / Q[rho];
+#endif
     }
     else
     {
-      F[u] = Q[u] * Q[v] / Q[rho];
-      F[v] = Q[v] * Q[v] / Q[rho] + pressure;
+#if Dimensions == 3
+      if (normal == 1)
+      {
+#endif
+        F[u] = Q[u] * Q[v] / Q[rho];
+        F[v] = Q[v] * Q[v] / Q[rho] + pressure;
+#if Dimensions == 3
+        F[w] = Q[w] * Q[v] / Q[rho];
+      }
+      else
+      {
+        F[u] = Q[u] * Q[w] / Q[rho];
+        F[v] = Q[v] * Q[w] / Q[rho];
+        F[w] = Q[w] * Q[w] / Q[rho] + pressure;
+      }
+#endif
     }
   }
 
@@ -224,26 +257,67 @@ public:
     assertion(!std::isnan(deltaQ[dvdy]));
     assertion(!std::isnan(deltaQ[dedx]));
     assertion(!std::isnan(deltaQ[dedy]));
+#if Dimensions == 3
+    assertion(!std::isnan(Q[w]));
+    assertion(!std::isnan(Q[drhodz]));
+    assertion(!std::isnan(deltaQ[dudz]));
+    assertion(!std::isnan(deltaQ[dvdz]));
+    assertion(!std::isnan(deltaQ[dwdx]));
+    assertion(!std::isnan(deltaQ[dwdy]));
+    assertion(!std::isnan(deltaQ[dwdz]));
+    assertion(!std::isnan(deltaQ[dedz]));
+#endif
 #endif
 
     if (normal == 0)
     {
       // -mu{2(du/dx) - 2/3 (du/dx + dv/dy)}
-      BTimesDeltaQ[u] = -Viscosity * (2.0 * deltaQ[dudx] - 2.0 / 3.0 * (deltaQ[dudx] + deltaQ[dvdy])) / Q[rho];
+      BTimesDeltaQ[u] = -Viscosity * (2.0 * deltaQ[dudx] - 2.0 / 3.0 * (deltaQ[dudx] + deltaQ[dvdy]
+#if Dimension == 3
+      +deltaQ[dwdz]
+#endif
+      )) / Q[rho];
 
       // -mu{dv/dx + du/dy}
       BTimesDeltaQ[v] = -Viscosity * (deltaQ[dvdx] + deltaQ[dudy]) / Q[rho];
+
+#if Dimension == 3
+      BTimesDeltaQ[w] = -Viscosity * (deltaQ[dudz] + deltaQ[dwdx]) / Q[rho];
+#endif
     }
     else
     {
-      // -mu{dv/dx + du/dy}
-      BTimesDeltaQ[u] = -Viscosity * (deltaQ[dvdx] + deltaQ[dudy]) / Q[rho];
+#if Dimension == 3
+      if (normal == 1)
+      {
+#endif
+        // -mu{dv/dx + du/dy}
+        BTimesDeltaQ[u] = -Viscosity * (deltaQ[dvdx] + deltaQ[dudy]) / Q[rho];
 
-      // -mu{2(dv/dy) - 2/3 (du/dx + dv/dy)}
-      BTimesDeltaQ[v] = -Viscosity * (2.0 * deltaQ[dvdy] - 2.0 / 3.0 * (deltaQ[dudx] + deltaQ[dvdy])) / Q[rho];
+        // -mu{2(dv/dy) - 2/3 (du/dx + dv/dy)}
+        BTimesDeltaQ[v] = -Viscosity * (2.0 * deltaQ[dvdy] - 2.0 / 3.0 * (deltaQ[dudx] + deltaQ[dvdy]
+#if Dimension == 3
+      +deltaQ[dwdz]
+#endif
+      )) / Q[rho];
+#if Dimension == 3
+        BTimesDeltaQ[w] = -Viscosity * (deltaQ[dvdz] + deltaQ[dwdy]) / Q[rho];
+      }
+      else
+      {
+        BTimesDeltaQ[u] = -Viscosity * (deltaQ[dudz] + deltaQ[dwdx]) / Q[rho];
+        BTimesDeltaQ[v] = -Viscosity * (deltaQ[dvdz] + deltaQ[dwdy]) / Q[rho];
+        BTimesDeltaQ[w] = -Viscosity * (2.0 * deltaQ[dwdz] - 2.0 / 3.0 * (deltaQ[dudx] + deltaQ[dvdy] + deltaQ[dwdz]))
+                          / Q[rho];
+      }
+#endif
     }
 
     BTimesDeltaQ[rho] = 0;
-    BTimesDeltaQ[e]   = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v]) / Q[rho];
+#if Dimensions == 2
+    BTimesDeltaQ[e] = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v]) / Q[rho];
+#else
+    BTimesDeltaQ[e] = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v] + Q[w] * BTimesDeltaQ[w]) / Q[rho];
+#endif
   }
 };
