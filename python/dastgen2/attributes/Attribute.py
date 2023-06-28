@@ -5,9 +5,9 @@ from dastgen2.Utils import construct_ifdef_string
 
 
 class Attribute(object):
-    """
+    """!
 
-    Represents one attribute
+    Represents one attribute.
 
     is_static: bool
       if True, make attribute static.
@@ -44,7 +44,7 @@ class Attribute(object):
             )
 
     def get_public_fields(self):
-        """
+        """!
 
         Return string that is to be embedded into the public part of the class
         definition. Most attributes don't add anything here, but some (alike
@@ -55,7 +55,7 @@ class Attribute(object):
 
     @abc.abstractmethod
     def get_methods(self, _full_qualified_class_name):
-        """
+        """!
 
         Return sequence of methods that are defined for this attribute. Each
         entry is a tuple. Its first entry is the signature of the function
@@ -65,7 +65,7 @@ class Attribute(object):
         return
 
     def use_default_copy_constructor(self):
-        """
+        """!
 
         If this routine returns False, the generator will create a copy
         constructor copying each attribute over via a setter/getter
@@ -75,7 +75,7 @@ class Attribute(object):
         return True
 
     def get_constructor_arguments(self):
-        """
+        """!
 
         Return list of tuple of arguments for the constructor. The first
         tuple entry is the name, the second one the type. By default,
@@ -87,7 +87,7 @@ class Attribute(object):
 
     @abc.abstractmethod
     def get_plain_C_attributes(self):
-        """
+        """!
 
         Return list of n-tuples. The tuple can either host two, three or
         four entries.
@@ -131,7 +131,7 @@ class Attribute(object):
         return
 
     def get_first_plain_C_attribute(self):
-        """
+        """!
 
         For MPI for example, I need to know the first attribute. If you map
         your attribute onto multiple data types, it is one type that represents the whole thing.
@@ -140,8 +140,12 @@ class Attribute(object):
         return self.get_plain_C_attributes()
 
     def get_attribute_declaration_string(self):
-        """
-        docu: TODO MLADEN
+        """!
+        Construct the string used for variable declaration using the
+        output of get_plain_C_attributes(self). This is a list of tuples,
+        each tuple containing two, three, or four entries.
+
+        See get_plain_C_attributes(self) for more details.
         """
 
         decString = ""
@@ -186,7 +190,7 @@ class Attribute(object):
 
     @abc.abstractmethod
     def get_method_body(self, signature):
-        """
+        """!
 
         I hand in the method signature (see get_methods()) and wanna get
         the whole implementation.
@@ -197,7 +201,7 @@ class Attribute(object):
 
     @property
     def name(self):
-        """
+        """!
 
         I expect that there's at least one setter/getter pair
 
@@ -206,7 +210,7 @@ class Attribute(object):
 
     @abc.abstractmethod
     def get_native_MPI_type(self):
-        """
+        """!
 
         Return native (built-in) MPI datatype. Return None if there's no
         direct mapping. The actual result is not a string only, but a list
@@ -217,7 +221,7 @@ class Attribute(object):
 
     @abc.abstractmethod
     def get_to_string(self):
-        """
+        """!
 
         Return string representation of attribute. Should be something
         that can be streamed via << into a sstream. So the result has
