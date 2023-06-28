@@ -85,5 +85,8 @@
  * - toolbox::particles::memorypool::VertexWiseContinuousMemoryPool
  * - toolbox::particles::memorypool::GlobalContinuousMemoryPool
  *
- * for examples of different pool realisations.
+ * for examples of different pool realisations (in C++) and study the various
+ * generators shipped with peano4.toolbox.particles.ParticleSet for further
+ * flavours.
+ *
  */

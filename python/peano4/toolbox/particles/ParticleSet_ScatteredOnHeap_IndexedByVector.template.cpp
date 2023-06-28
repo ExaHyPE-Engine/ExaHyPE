@@ -26,7 +26,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
       {
         logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
-        for (auto p: neighbour) {
+        for (auto& p: neighbour) {
           if (
             p->getParallelState()==DoFType::ParallelState::Local
           ) {
@@ -59,14 +59,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
             _numberOfDroppedVirtualParticles++;
           }
           else {
-            assertion1(false,p->toString());
+            assertion3(false,p->toString(),size(),marker.x());
           }
         }
 
-        // not done before we insert
-        //eliminateSpatialDuplicates();
-
-        logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
+        logInfo( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
         for (auto *p: *this) {
           logDebug( "merge(...)", " - " << p->toString() );
         }
@@ -99,18 +96,18 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
 
     // data consistency check
     assertion2(
-      p->getParallelState()==T::ParallelState::Local
+      (*p)->getParallelState()==DoFType::ParallelState::Local
       or
-      p->getParallelState()==T::ParallelState::Virtual,
-      p->toString(),
-      marker.toString()
+      (*p)->getParallelState()==DoFType::ParallelState::Virtual,
+      (*p)->toString(),
+      toString()
     );
 
     auto pp = p;
     pp++;
     while (pp != _container.end() and not foundDuplicate) {
       if (tarch::la::equals((*p)->getX(), (*pp)->getX(), ::toolbox::particles::SpatialDuplicateTolerance)) {
-        logInfo(
+        logDebug(
           "eliminateSpatialDuplicates()", "found duplicates p=" << (*p)->toString() << " and pp=" << (*pp)->toString()
         );
         foundDuplicate = true;
@@ -120,7 +117,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
     }
 
     if (foundDuplicate) {
-      assertion((*p) != (*pp));
+      assertion2((*p) != (*pp), (*p)->toString(), (*pp)->toString());
 
       // bias to eliminate virtual particles
       if (
@@ -193,7 +190,7 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& otherSet ) {
   assertion1( _container.empty(), toString() );
-  for (auto p: otherSet._container) {
+  for (const auto& p: otherSet._container) {
     DoFType* newParticle =  new DoFType(*p);
     _container.push_back( newParticle );
   }
@@ -289,6 +286,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::move({{CLASSNAME}}&  particles) 
   const Container::iterator&     particle,
   {{CLASSNAME}}&                 sourceParticleSet
 ) {
+  logInfo( "move(...)", "move " << (*particle)->toString() << " to other vertex" );
   _container.push_back( *particle );
   return sourceParticleSet._container.erase(particle);
 }
