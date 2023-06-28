@@ -26,7 +26,7 @@ else:
 gamma                     = 1.4
 fluid_viscosity           = 0.01
 prandtl_number            = 0.7
-lid_drive_cavity_velocity = 1.0 # Wall velocity for lid-driven cavity
+lid_driven_cavity_velocity = 1.0 # Wall velocity for lid-driven cavity
 
 my_project = exahype2.Project(
   ["applications", "exahype2", "CompressibleNavierStokes"],
@@ -61,7 +61,7 @@ my_solver.set_implementation(
 my_solver.add_solver_constants("static constexpr double Gamma = {};".format(gamma))
 my_solver.add_solver_constants("static constexpr double Viscosity = {};".format(fluid_viscosity))
 my_solver.add_solver_constants("static constexpr double PrandtlNumber = {};".format(prandtl_number))
-my_solver.add_solver_constants("static constexpr double LidDrivenCavityVelocity = {};".format(lid_drive_cavity_velocity))
+my_solver.add_solver_constants("static constexpr double LidDrivenCavityVelocity = {};".format(lid_driven_cavity_velocity))
 my_solver.add_solver_constants("static constexpr double DomainSize[] = {%s};" % str(size).strip('[]'))
 my_solver.add_solver_constants("static constexpr double DomainOffset[] = {%s};" % str(offset).strip('[]'))
 
