@@ -97,14 +97,19 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/la/DynamicMatrix.cpp \
  tarch/accelerator/accelerator.cpp \
  tarch/accelerator/Device.cpp \
+ tarch/accelerator/DeviceInfo.cpp \
  tarch/accelerator/cpp/accelerator.cpp \
  tarch/accelerator/cpp/Device.cpp \
+ tarch/accelerator/cpp/DeviceInfo.cpp \
  tarch/accelerator/omp/accelerator.cpp \
  tarch/accelerator/omp/Device.cpp \
+ tarch/accelerator/omp/DeviceInfo.cpp \
  tarch/accelerator/omp/GPUMemoryManager.cpp \
  tarch/accelerator/sycl/accelerator.cpp \
  tarch/accelerator/sycl/Device.cpp \
+ tarch/accelerator/sycl/DeviceInfo.cpp \
  tarch/accelerator/cuda/ErrorCheck.cpp \
+ tarch/accelerator/cuda/DeviceInfo.cpp \
  tarch/multicore/BooleanSemaphore.cpp \
  tarch/multicore/multicore.cpp \
  tarch/multicore/Core.cpp \
