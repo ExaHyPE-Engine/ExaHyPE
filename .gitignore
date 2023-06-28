@@ -297,3 +297,4 @@ UnitTests2d.trs
 UnitTests3d.trs
 
 .gitignore
+/documentation/

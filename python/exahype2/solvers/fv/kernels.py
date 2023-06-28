@@ -3,14 +3,14 @@
 from enum import Enum
 
 class SolverVariant(Enum):
-  WithVirtualFunctions = 0,
-  Stateless            = 1,
-  Multicore            = 2,
+  WithVirtualFunctions = 0
+  Stateless            = 1
+  Multicore            = 2
   """
   The default accelerator version that you should use
   """
-  AcceleratorWithExplicitCopy = 3,
-  AcceleratorWithManagedRemoteMemory = 4,
+  AcceleratorWithExplicitCopy = 3
+  AcceleratorWithManagedRemoteMemory = 4
 
 class KernelVariant(Enum):
   PatchWiseAoSStack                = 10

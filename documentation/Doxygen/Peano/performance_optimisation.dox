@@ -49,6 +49,40 @@ tarch::MemoryLocation.
 @see tarch::allocateMemory()
 @see tarch::MemoryLocation
 
+### Adaptive mesh refinement is very expensive
+
+Peano realises a strict cell-wise traversal paradigm, where individual
+actions @ref peano_action_sets "are tied to single cells, faces or vertices".
+Therefore, @ref peano_amr_tex "Peano's AMR" is also controlled by sets of 
+refine and erase events. The decision to refine or erase a mesh is made
+by Peano by comparing each and every mesh entity against the set of 
+erase and refine commands. This happens in 
+peano4::grid::Spacetree::updateVertexAfterLoad().
+
+If you work with thousands of mesh refinement and coarsening events, the 
+AMR checks themselves become time-consuming. Therefore, each tree traversal
+invokes peano4::grid::merge() on the command first. This routine tries to 
+consolidate many erase and refine commands into fewer ones, and it also 
+throws away those erase commands which contradict refines. However, you 
+can still tune this behaviour:
+
+- As each and every traversal automaton calls the merger, it might make
+  sense that you invoke merge() yourself earlier, before you hand stuff
+  over to Peano. This way, you avoid multiple (though parallel) merges
+  on different threads and ranks.
+- The merge() operation will search for refine and erase commands which
+  are adjacent to each other and combine them into one. So it 
+  intrinsically works with hexahedral areas. Try to ensure that your 
+  refine and erase commands span a hexahedral area, so they can be 
+  combined into one single command. For this, you might refine a little
+  bit too aggressively but gain in terms of effective runtime.
+- The merge() operation works with a certain tolerance (as it works with
+  floating point numbers, but also with geometric data). If you invoke 
+  merge() yourself, you can add in a higher tolerance and hence merge
+  together subareas that are to be refined or erased which are not 
+  exactly adjacent to each other but close.  
+
+
 
 ## Multithreading optimisation
 

@@ -21,7 +21,9 @@ import exahype2
 # We first create a new ExaHyPE2 project.
 # For this, we specify the (nested) namespaces, the name of our main file and our executable name.
 #
-my_project = exahype2.Project( ["tutorials", "exahype2", "swe"], "SWETutorial", ".", executable="swe" )
+my_project = exahype2.Project(
+    ["tutorials", "exahype2", "swe"], "SWETutorial", ".", executable="swe"
+)
 
 #
 # Add the Finite Volumes solver using named arguments.
@@ -29,13 +31,13 @@ my_project = exahype2.Project( ["tutorials", "exahype2", "swe"], "SWETutorial", 
 # This requires the 'BlockStructured' toolbox and 'ExaHyPE' to be built.
 #
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
-  name                  = "SWESolver",
-  patch_size            = 3,
-  unknowns              = 3,
-  auxiliary_variables   = 1,
-  min_volume_h          = 0.005,
-  max_volume_h          = 0.05,
-  time_step_relaxation  = 0.5
+    name="SWESolver",
+    patch_size=3,
+    unknowns=3,
+    auxiliary_variables=1,
+    min_volume_h=0.005,
+    max_volume_h=0.05,
+    time_step_relaxation=0.5,
 )
 
 #
@@ -54,34 +56,36 @@ my_solver.plot_description = "h, hu, hv, b"
 # generate a solver on its own (which would be empty as we specify a user-defined implementation here).
 #
 my_solver.set_implementation(
-  ncp                   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  flux                  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  refinement_criterion  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    flux=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
 )
 
 #
 # We can add additional variables to our solver instance, such as constexpr values
 # we want to use in our solver implementations multiple times.
 #
-my_solver.add_solver_constants("static constexpr double Gravity = {}; // [m/s^2]".format(9.81))
+my_solver.add_solver_constants(
+    "static constexpr double Gravity = {}; // [m/s^2]".format(9.81)
+)
 
 #
 # Add the solver to our project
 #
-my_project.add_solver( my_solver )
+my_project.add_solver(my_solver)
 
 #
 # Configure some global parameters
 #
 my_project.set_global_simulation_parameters(
-  dimensions            = 2,
-  size                  = [2.0, 2.0],
-  offset                = [-1.0, -1.0],
-  min_end_time          = 0.20,
-  max_end_time          = 0.20,
-  first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.005, # snapshot interval
-  periodic_BC           = [False, False, False]
+    dimensions=2,
+    size=[2.0, 2.0],
+    offset=[-1.0, -1.0],
+    min_end_time=0.20,
+    max_end_time=0.20,
+    first_plot_time_stamp=0.0,
+    time_in_between_plots=0.005,  # snapshot interval
+    periodic_BC=[False, False, False],
 )
 
 #
@@ -90,14 +94,17 @@ my_project.set_global_simulation_parameters(
 #
 my_project.set_output_path("solution")
 if not os.path.exists("solution"):
-  os.makedirs("solution")
+    os.makedirs("solution")
 
 #
 # If you only target a sequential execution, you can omit the load balancing.
 # However, for a parallel build and execution you need to set load balancing.
 # This requires the 'LoadBalancing' toolbox to be built.
 #
-my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+my_project.set_load_balancing(
+    "toolbox::loadbalancing::RecursiveBipartition",
+    "new ::exahype2::LoadBalancingConfiguration()",
+)
 
 #
 # We need to set the location of our core libraries ('Peano4').
@@ -105,7 +112,7 @@ my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "
 # Additionally, we specify the build mode which you can also change to a different mode.
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-my_project.set_Peano4_installation( "../../../", mode=peano4.output.CompileMode.Release )
+my_project.set_Peano4_installation("../../../", mode=peano4.output.CompileMode.Release)
 
 #
 # We generate and grab the underlying core project of 'Peano4'.
@@ -125,7 +132,7 @@ my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 # Furthermore, this ensures that the C++ file is not ignored by the generated .gitignore (which ignores all generated files).
 # As you want to have your own custom C++ file tracked by Git.
 #
-my_project.output.makefile.add_cpp_file( "SWESolver.cpp" )
+my_project.output.makefile.add_cpp_file("SWESolver.cpp")
 
 #
 # Finally, we want to build our project.
@@ -141,5 +148,9 @@ print("Clean object files via 'make clean'")
 print("Recompile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
 print("Regenerate all code by running 'python3 swe.py' again")
-print("Convert any output via python3 ../../../python/peano4/visualisation/render.py solution/solution-SWESolver.peano-patch-file")
-print("Then you can open the generated .pvd file in a tool of your choice (e.g., ParaView)")
+print(
+    "Convert any output via python3 ../../../python/peano4/visualisation/render.py solution/solution-SWESolver.peano-patch-file"
+)
+print(
+    "Then you can open the generated .pvd file in a tool of your choice (e.g., ParaView)"
+)
