@@ -47,24 +47,42 @@ stencilFF=[
      for _ in range(faceDofs)
 ]
 
+if len(stencilFF)    != faceDofs \
+or len(stencilFF[0]) != faceDofs:
+  print("incorrect dimensions for stencilFF")
+  exit()
+
 stencilCF=[
   [1 for _ in range(faceDofs)]
      for _ in range(cellDofs)
 ]
+if len(stencilCF)    != cellDofs \
+or len(stencilCF[0]) != faceDofs:
+  print("incorrect dimensions for stencilFF")
+  exit()
 
 stencilFC=[
   [1 for _ in range(cellDofs)]
      for _ in range(faceDofs)
 ]
+if len(stencilFC)    != faceDofs \
+or len(stencilFC[0]) != cellDofs:
+  print("incorrect dimensions for stencilFF")
+  exit()
 
 stencilCC=[
   [1 for _ in range(cellDofs)]
      for _ in range(cellDofs)
 ]
+if len(stencilCC)    != cellDofs \
+or len(stencilCC[0]) != cellDofs:
+  print("incorrect dimensions for stencilFF")
+  exit()
 
 if args.degree != 1:
   print('for now, we just want to get visualisation working with degree = 1')
   exit()
+
 
 project = petsc.Project(project_name = "HDG", 
                         namespace = [ "benchmarks", "multigrid", "petsc", "hdg" ]

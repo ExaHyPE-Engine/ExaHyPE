@@ -1,0 +1,91 @@
+/**
+
+@page benchmark_multigrid_petsc_hdg Mixed Possion equation with PETSc
+
+Here we discuss the steps involved in running the file benchmarks/multigrid/petsc/hdg.py.
+We will try and discuss some of the mathematics behind the solver, but we mainly focus on
+how to build and run it.
+
+For information on how to build Peano with PETSc, see \ref multigrid_home.
+
+## Mixed Poisson / Hybridised Discontinuous Galerkin
+
+At time of writing, the actual focus of this part of the repo has not yet been fixed. We
+aim to provide a fairly general solver, which we describe here.
+
+## Cell and Face Degrees of Freedom
+
+Taking some inspiration from DG schemes, we fix the number of degrees of freedom on the 
+cells and the faces by the degree of our desired polynomial. In particular, for 
+polynomal degree @f$ n @f$ and spatial dimension @f$ d @f$, we set up our equation to 
+have:
+
+@f$  (n + 1) ^d  @f$ degrees of freedom on each face (hereafter referred to as faceDofs), and
+
+@f$  ( n + 1 )^ {d-1}  @f$ degrees of freedom on each cell (hereafter referred to as cellDofs).
+
+At time of writing, we fix @f$ n @f$ to be 1, and @f$ d @f$ to be 2.
+
+## What does the code do?
+
+Much of the setup is hidden from the user. It's worth mentioning that Peano traverses across the mesh,
+assigining global indices to the cells and faces. Cells take indices from 0 to cellDofs -1,
+and Faces take indices from cellDofs to cellDofs + faceDofs - 1. We also initialise a square 
+matrix, which has (cellDofs + faceDofs) rows. This will capture our "problem", and we describe
+how it is filled below. We also initialise vectors for LHS and RHS, both of which need filling
+in by the user.
+
+The main thing that happens during the Assembly routine, is that stencils of certain size are 
+inserted into the problem matrix above. Broken down into some steps, we:
+
+\li Traverse through the mesh, stopping in at each cell
+\li Inside each cell, we gather all the global indices associated with the @f$ 2d @f$ faces, as well as the
+    global indices associated with each of the cells.
+\li We use these indices to insert stencils at the appropriate location in the problem matrix
+
+## What do we use for stencils? Is this the correct terminology?
+
+The stencils can be provided by the user. At time of writing, we include some stencils
+which pertain to a mixed poisson problem, considering velocities and pressures. We accept stencils for:
+
+\li Interactions between degrees of freedom within a cell
+\li Interactions between degrees of freedom on a face
+\li Interactions between degrees of freedom on a cell, with those on each of the @f$ 2d @f$ faces within that cell
+\li Interactions between degrees of freedom on the @f$ 2d @f$ faces with the cell.
+
+Note that the stencils for the final two mentioned here may indeed be transposes of each other. In general, they
+may be different, and so we treat them as such.
+
+We note the dimensions for each of the stencils mentioned above:
+
+\li The stencil should contain cellDofs rows, cellDofs columns.
+\li The stencil should contain faceDofs rows, faceDofs columns.
+\li The stencil should contain cellDofs rows, faceDofs * 2d columns.
+\li The stencil should contain faceDofs * 2d rows, cellDofs columns.
+
+The reason for the dimensions of the last two is that in general, there is a different stencil for interactions between the face and the cell, depending on whether the face is at the left, bottom,
+right or top of the cell. So, following the enumeration order outlined in @ref multigrid_enumeration,
+the first faceDofs columns are reserved for the stencil that governs the interactions between the
+left face and the cell, the next columns for the bottom stencil, etc in the order left, bottom, 
+right, top.
+
+## Insert a custom stencil
+
+The user is free to insert a stencil for a problem that suits them in the file benchmarks/multigrid/petsc/hdg.py. There is no guarantee it will do something physical!
+
+As an example, we show how to insert a 3x3 matrix, describing how the face degrees of freedom interact with each other. Note that this is a special case, and the matrix inserted must have dimensions
+faceDofs x faceDofs. We write as a list of lists.
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+stencilFF=[
+  [-0.00987654,  0.00246914, -0.00493827],
+  [ 0.00246914, -0.00987654, -0.00493827],
+  [-0.00493827, -0.00493827, -0.03950617]
+]
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+As a sanity check, len(stencilFF) should be equal to the intended number of rows, and len(stencilFF[0]) 
+should be equal to the intended number of columns.
+
+
+*/
