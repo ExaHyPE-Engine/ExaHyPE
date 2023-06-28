@@ -63,7 +63,7 @@ class InsertParticlesFromHDF5File(ActionSet):
       // Create a particle pointer
       globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
 
-      // Initialise the particle with x=coords and CutOffRadius=0
+      // Initialise the particle with x=coords and SearchRadius=0
       toolbox::particles::init(*newParticle, p, 0.0);
       _particleNumberOnThisTree++;
 
@@ -86,7 +86,7 @@ class InsertParticlesFromHDF5File(ActionSet):
 
       tarch::la::Vector<Dimensions,double> acceleration;
 
-      /* Internal cutoff radius used by Peano.
+      /* Internal search radius used by Peano.
        * We set the maximum allowed value, R = grid_size/2.
        */
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
@@ -114,7 +114,7 @@ class InsertParticlesFromHDF5File(ActionSet):
 
       newParticle->setSmoothingLengthPrevious( SmoothingLength );
 
-      newParticle->setCutOffRadius(GridSize_x / 2.0);
+      newParticle->setSearchRadius(GridSize_x / 2.0);
 
       newParticle->setPressure  ( Pressure );
       newParticle->setSoundSpeed( Soundspeed );

@@ -5,7 +5,7 @@
 
 from swift2.particle import Particle
 
-from .ExplicitEulerDynamicInteractionRadius import ExplicitEulerDynamicInteractionRadius
-from .ExplicitEulerFixedInteractionRadius import ExplicitEulerFixedInteractionRadius
-from .LeapfrogFixedInteractionRadius import LeapfrogFixedInteractionRadius
-from .SPHLeapfrogFixedInteractionRadius import SPHLeapfrogFixedInteractionRadius
+from .ExplicitEulerDynamicSearchRadius import ExplicitEulerDynamicSearchRadius
+from .ExplicitEulerFixedSearchRadius import ExplicitEulerFixedSearchRadius
+from .LeapfrogFixedSearchRadius import LeapfrogFixedSearchRadius
+from .SPHLeapfrogFixedSearchRadius import SPHLeapfrogFixedSearchRadius

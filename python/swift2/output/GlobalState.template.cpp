@@ -56,19 +56,19 @@ double getMaxTimeStamp() {
 }
 
 
-double getMinCutOffRadius() {
+double getMinSearchRadius() {
   double result = std::numeric_limits<double>::max();
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  result = std::min( result, globaldata::{{PARTICLE}}::getSpecies().getMinCutOffRadius() );
+  result = std::min( result, globaldata::{{PARTICLE}}::getSpecies().getMinSearchRadius() );
   {%- endfor %}
   return result;
 }
 
 
-double getMaxCutOffRadius() {
+double getMaxSearchRadius() {
   double result = 0.0;
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  result = std::max( result, globaldata::{{PARTICLE}}::getSpecies().getMaxCutOffRadius() );
+  result = std::max( result, globaldata::{{PARTICLE}}::getSpecies().getMaxSearchRadius() );
   {%- endfor %}
   return result;
 }

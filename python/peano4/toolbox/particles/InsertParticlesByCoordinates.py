@@ -32,10 +32,10 @@ class InsertParticlesByCoordinates(ActionSet):
         initialisation_call: String (C++ code snippet)
           Arbitrary code snippet which can work over a pointer particle. The object
           to which this pointer points to is properly allocated, and its
-          coordinates are set. Furthermore, the object's cut-off radius is
+          coordinates are set. Furthermore, the object's search radius is
           initialised with zero. You can alter the particle attributes now, i.e.
           initialise the domain-specific data. Please also ensure you assign the
-          particle a proper cut-off (interaction) radius if the radius is of
+          particle a proper search (interaction) radius if the radius is of
           relevance for your application.
 
         """
@@ -52,20 +52,20 @@ class InsertParticlesByCoordinates(ActionSet):
 
     __Template_TouchCellFirstTime = jinja2.Template(
         """
-  
+
   for(int i=0;i<{{N}};i++){
     // It is important to have this asymmetric comparisons with <= as we
     // need to ensure that particles right in the centre are either associated
     // with the vertex left or right.
     if (
-      not marker.willBeRefined() 
-      and 
+      not marker.willBeRefined()
+      and
       marker.isContained(_coordinates[i])
     ) {
       globaldata::{{PARTICLE}}* particle = new globaldata::{{PARTICLE}}();
-      
+
       toolbox::particles::init(*particle,_coordinates[i],0.0);
-      
+
       // See documentation of constructor on initialisation snippet
       {{INITIALISATION_CALL}}
 
@@ -126,7 +126,7 @@ if (_coordinates==nullptr) {
   _coordinates = new tarch::la::Vector<Dimensions,double>["""
             + str(self.d["N"])
             + """];
-  
+
     """
         )
         dimensions = -1

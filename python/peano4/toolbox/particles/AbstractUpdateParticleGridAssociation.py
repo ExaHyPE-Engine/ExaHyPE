@@ -19,7 +19,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     spacetree and associated to vertices:
 
     - A particle resides on a mesh level within the tree such that the
-      cut off radius @f$ r \leq h@f$ if h is the resolution of this level.
+      search radius @f$ r \leq h@f$ if h is the resolution of this level.
     - A particle is associated to the vertex of this level that's closest to
       its centre x.
 
@@ -52,14 +52,14 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 
 
     A tree with three levels.
-    Particles with a large cut-off radius (red) are held on rather coarse levels.
-    Particles with very small cut-off are sorted (dropped) into the fine grid
+    Particles with a large search radius (red) are held on rather coarse levels.
+    Particles with very small search radius are sorted (dropped) into the fine grid
     levels.
     Each particle is always associated to its closest vertex (dotted line).
     It is the mesh which holds (owns) the vertices.
     The toolset's predefined action set can automatically maintain/update these
     associations after each grid sweep.
-    It also moves particles up and down the grid hierarchy if the particles' cut-off
+    It also moves particles up and down the grid hierarchy if the particles' search
     radius changes or the grid changes.
 
 
@@ -81,11 +81,11 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     automatically supported.
     If particles travel through your domain and the mesh is not very fine, they
     end up in the tree leaves.
-    If particles have a large cut-off radius, they are stored in rather coarse
+    If particles have a large search radius, they are stored in rather coarse
     levels of the tree.
 
 
-    If you change the cut-off radius or the position of a particle, the particle
+    If you change the search radius or the position of a particle, the particle
     will stay within its current cell/vertex within the tree.
     In the next grid sweep, it will however we held by the ``correct'' vertex,
     i.e.~its grid-vertex association will be updated:
@@ -172,10 +172,10 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     Tunneling means that a particle moves more than one mesh size per time
      step.
      In the context of Peano's multiscale tree structure, this is equivalent to
-     particles which travel more than their cut-off radius per step.
+     particles which travel more than their search radius per step.
 
 
-    Tunneling arises if cut-off radii change suddenly, and if meshes are extremely
+    Tunneling arises if search radii change suddenly, and if meshes are extremely
     refined where they should likely not refine.
     Peano does support tunneling in principle, but you can tell the update script
     if you want to get a warning if particles tunnel - in some applications, this is
@@ -230,17 +230,17 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     )
 
     """
-  
+
    Happens when we touch a vertex for the first time. The only thing this routine
-   does is to drop particles within the tree, i.e. move them to finer levels. 
-   No parallelisation is taken into account. 
-   
+   does is to drop particles within the tree, i.e. move them to finer levels.
+   No parallelisation is taken into account.
+
   """
     _Template_Drop = jinja2.Template(
         """
   for (int i=0; i<TwoPowerD; i++) {
     // Define inside for loop, as sieve will define it as well
-    vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
+    vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin();
     while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
       if ( ::toolbox::particles::dropParticle(**p,marker) ) {
         p = fineGridVertex{{PARTICLES_CONTAINER}}.move( p, coarseGridVertices{{PARTICLES_CONTAINER}}(i) );
@@ -248,7 +248,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       }
       else p++;
     }
-  }  
+  }
 """
     )
 
@@ -256,7 +256,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         """
   if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
     auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker );
-      
+
     _numberOfSieves += sievedParticles.size();
 
     fineGridVertex{{PARTICLES_CONTAINER}}.add( sievedParticles );
@@ -266,13 +266,13 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     )
 
     """
-  
+
   Explicit lift of particles to a coarser level. Usually, lifts are
-  realised within touchCellLastTime aka the template 
+  realised within touchCellLastTime aka the template
   __Template_ReassignAndLiftWithinCell. If a vertex is however destroyed or
-  is hanging, i.e. not persistent in-between two mesh traversals, 
+  is hanging, i.e. not persistent in-between two mesh traversals,
   then we have to lift the particles explicitly.
-  
+
   """
     _Template_LiftAllParticles = jinja2.Template(
         """

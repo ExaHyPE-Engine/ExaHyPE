@@ -207,10 +207,10 @@ namespace toolbox {
      * - this vertex is closer to the particle than half the mesh size of
      *   an adjacent mesh element, as we always store particles next to
      *   their closest vertex; AND
-     * - this vertex's cut-off radius would not fit into the next finer
+     * - this vertex's search radius would not fit into the next finer
      *   mesh level OR
      *   there is no next finer mesh level; AND
-     * - the particle's cut-off is not too big for the current mesh level.
+     * - the particle's search radius is not too big for the current mesh level.
      *
      *
      * ## Rationale and usage
@@ -256,7 +256,7 @@ namespace toolbox {
      *
      * Lifting will always be subject to a comparison similar to
      *
-     *       marker.h() < 2.0 * particle.getCutOffRadius()
+     *       marker.h() < 2.0 * particle.getSearchRadius()
      *
      * This threshold is hard. However, we can sieve into a coarser
      * level obviously to ensure that we don't violate it.
@@ -267,8 +267,8 @@ namespace toolbox {
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *  const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.h() )     * MultilevelSortingTolerance *
-     * AsymmetricSortingDamping >= 2.0 * particle.getCutOffRadius(); const bool   fitsIntoNextFinerGridResolution =
-     * tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getCutOffRadius();
+     * AsymmetricSortingDamping >= 2.0 * particle.getSearchRadius(); const bool   fitsIntoNextFinerGridResolution =
+     * tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getSearchRadius();
      *
      *  return marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) *
      * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE) and fitsIntoThisGridResolution and ( not
@@ -276,7 +276,7 @@ namespace toolbox {
      *     );
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
-     * However, it turns out a lot of runtime is spent in getCutOffRadius(). It
+     * However, it turns out a lot of runtime is spent in getSearchRadius(). It
      * is not clear if the compiler manages to exploit the non-strict evaluation
      * if we first define the two const bools. So I moved them now into the
      * boolean expression, i.e. work without the explicit temporary variables.

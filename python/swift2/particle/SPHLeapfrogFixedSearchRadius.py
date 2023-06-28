@@ -10,64 +10,64 @@ import peano4.dastgen2
 from abc import ABC
 
 
-class SPHLeapfrogFixedInteractionRadius(Particle):
+class SPHLeapfrogFixedSearchRadius(Particle):
     """!
 
-      SPH particle with fixed interaction radius
+    SPH particle with fixed search radius
 
-      Same as LeapfrogFixedInteractionRadius but augmented for full SPH.
-      Implements the Minimal SPH scheme.
+    Same as LeapfrogFixedSearchRadius but augmented for full SPH.
+    Implements the Minimal SPH scheme.
 
-      Simple particle with a fixed interaction radius h which moves according
-      to leapfrog KDK scheme.
-      By default, it uses global time stepping,
-      i.e. the combination of maximum velocity and minimal mesh size determines
-      the time step size of the subsequent time step. Besides the default
-      variables x and h, the particle has the following properties:
+    Simple particle with a fixed search radius h which moves according
+    to leapfrog KDK scheme.
+    By default, it uses global time stepping,
+    i.e. the combination of maximum velocity and minimal mesh size determines
+    the time step size of the subsequent time step. Besides the default
+    variables x and h, the particle has the following properties:
 
-        - a vector a which is the acceleration;
-        - a vector v which is the velocity.
+    - a vector a which is the acceleration;
+    - a vector v which is the velocity.
 
-      You can add further properties via
+    You can add further properties via
 
-             myparticle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("myFancyArray","Dimensions") )
+         myparticle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("myFancyArray","Dimensions") )
 
-      in your code. Or you can create a subclass which adds additional fields
-      after it has called the baseline constructor.
+    in your code. Or you can create a subclass which adds additional fields
+    after it has called the baseline constructor.
 
-      You will need to add further properties for any SPH project.
+    You will need to add further properties for any SPH project.
 
-      ## Force calculation
+    ## Force calculation
 
-      particle_particle_interaction_over_particle_sets_kernel is a C++ string which defines a force between two
-      particles. It has access to three important objects:
+    particle_particle_interaction_over_particle_sets_kernel is a C++ string which defines a force between two
+    particles. It has access to three important objects:
 
-      - localParticles is a container (list) over pointers to local particles
-      - activeParticles is a container (list) over pointers to active particles
-      - marker is a cell marker which identifies the current cell.
+    - localParticles is a container (list) over pointers to local particles
+    - activeParticles is a container (list) over pointers to active particles
+    - marker is a cell marker which identifies the current cell.
 
-      Please consult the guidebook for a definition of local and active particles
-      but take into account that the local particles always are a subset of the
-      active particles.
+    Please consult the guidebook for a definition of local and active particles
+    but take into account that the local particles always are a subset of the
+    active particles.
 
-      Besides the actual particle-to-particle calculation, i.e. a force
-      calculation, users can also provide kernels that kick in when you touch
-      particles for the first time before you actually compute any
-      particle-particle interaction, and there is a plug-in point what you do
-      just once the particle-particle interaction has terminated. The latter
-      point is reached before we do the actual time stepping. In both plug-in
-      points, you have a vertex marker which gives you the position of the
-      vertex to which a particular is associated, and you have the localParticles.
-      This is a vector of pointers in this particular case.
+    Besides the actual particle-to-particle calculation, i.e. a force
+    calculation, users can also provide kernels that kick in when you touch
+    particles for the first time before you actually compute any
+    particle-particle interaction, and there is a plug-in point what you do
+    just once the particle-particle interaction has terminated. The latter
+    point is reached before we do the actual time stepping. In both plug-in
+    points, you have a vertex marker which gives you the position of the
+    vertex to which a particular is associated, and you have the localParticles.
+    This is a vector of pointers in this particular case.
 
-      ## Precision
+    ## Precision
 
-      By default, all particle attributes are modelled as doubles or arrays of
-      doubles. This might be overly precise. You can alter the precision through
-      our LLVM compiler modifications if you invoke the following commands on a
-      particle species:
+    By default, all particle attributes are modelled as doubles or arrays of
+    doubles. This might be overly precise. You can alter the precision through
+    our LLVM compiler modifications if you invoke the following commands on a
+    particle species:
 
-      ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
     particle.mass.valid_mantissa_bits         = args.mantissa_size
     particle.velocity.valid_mantissa_bits     = args.mantissa_size
     particle.acceleration.valid_mantissa_bits = args.mantissa_size
@@ -92,24 +92,24 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     particle.soundSpeed.valid_mantissa_bits   = args.mantissa_size
     particle.v_full.valid_mantissa_bits       = args.mantissa_size
     particle.u_full.valid_mantissa_bits       = args.mantissa_size
-      ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-      This is an example. You can also add ony a few of these fields, and picking
-      a value for args.mantissa_size is obviously up to you. We refrain from
-      illustrating that you can also alter the precision of the position and
-      maximum cut-off-radius of a particle this way. This is on purpose: We have
-      made bad experience with such modifications.
+    This is an example. You can also add ony a few of these fields, and picking
+    a value for args.mantissa_size is obviously up to you. We refrain from
+    illustrating that you can also alter the precision of the position and
+    maximum search radius of a particle this way. This is on purpose: We have
+    made bad experience with such modifications.
 
 
-      ## Attributes
+    ## Attributes
 
-      name: String
-        To be in line with other conventions, I recommend you start with an
-        uppercase letter. This has to be a valid C++ identifier, i.e. don't
-        use any special symbols besides an underscore.
+    name: String
+    To be in line with other conventions, I recommend you start with an
+    uppercase letter. This has to be a valid C++ identifier, i.e. don't
+    use any special symbols besides an underscore.
 
-      @see peano4::datamanagement::CellMarker
-      @see peano4::datamanagement::VertexMarker
+    @see peano4::datamanagement::CellMarker
+    @see peano4::datamanagement::VertexMarker
 
     """
 
@@ -127,7 +127,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         min_h=0.3,
         max_h=0.3,
     ):
-        super(SPHLeapfrogFixedInteractionRadius, self).__init__(
+        super(SPHLeapfrogFixedSearchRadius, self).__init__(
             name,
             particles_per_cell,
             min_h,
@@ -365,15 +365,15 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         )
         self.algorithm_steps_dict["PredictHydro"] = predictHydro
 
-        densityWithConstantSmoothingLength = AlgorithmStep(
-            name="DensityLoopWithConstantSmoothingLength",
+        densityWithConstantSearchRadius = AlgorithmStep(
+            name="DensityLoopWithConstantSearchRadius",
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
             touch_vertex_first_time_kernel="""
                                        ::swift2::kernels::prepareDensityCalculation( localParticles );
                                        """,
             cell_kernel="""
-                                       ::swift2::kernels::computeDensity(
+                                       ::swift2::kernels::computeDensityWithConstantSearchRadius(
                                          localParticles,
                                          activeParticles,
                                          {}
@@ -382,7 +382,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                 self._hydroDimensions
             ),
             touch_vertex_last_time_kernel="""
-                                       ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
+                                       ::swift2::kernels::endDensityCalculationWithConstantSearchRadius(
                                            localParticles,
                                            {},
                                            {},
@@ -399,7 +399,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                        #include "swift2/kernels/equation_of_state.h"
                                        """,
         )
-        self.algorithm_steps_dict["Density"] = densityWithConstantSmoothingLength
+        self.algorithm_steps_dict["Density"] = densityWithConstantSearchRadius
 
         force = AlgorithmStep(
             name="ForceLoop",
@@ -485,16 +485,16 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
             name="ReduceGlobalQuantities",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-            cell_kernel="""::swift2::statistics::reduceVelocityAndCutOffRadius( localParticles );""",
+            cell_kernel="""::swift2::statistics::reduceVelocityAndSearchRadius( localParticles );""",
             prepare_traversal_kernel="""
-                                       globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
+                                       globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                        globaldata::{PARTICLE}::getSpecies().clearVelocity();
                                        """.replace(
                 "{PARTICLE}", self.name
             ),
             unprepare_traversal_kernel="""
                                        globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
-                                       ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
+                                       ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
                                        """.replace(
                 "{PARTICLE}", self.name
             ),
@@ -594,7 +594,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         """
 
         Set the limits allowed for the SPH smoothing length. Notice that the max value
-        is bounded by Peano's cutoff radius as h_max = R_cutoff_max = max_grid_size /
+        is bounded by Peano's search radius as h_max = R_search_max = max_grid_size /
         gamma_k, where gamma_k is the SPH kernel factor that relates h and H.
         Typically gamma_k = 2, so h_max = max_grid_size / 2.
 
@@ -690,12 +690,12 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     @property
     def readme_descriptor(self):
         return (
-            super(SPHLeapfrogFixedInteractionRadius, self).readme_descriptor
+            super(SPHLeapfrogFixedSearchRadius, self).readme_descriptor
             + """
 
   Time integrator: SPH Leapfrog
 
-  - interaction radius:             fixed
+  - search radius:                  fixed
   - CFL factor:                     """
             + str(self._cfl_factor)
             + """
