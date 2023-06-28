@@ -3,6 +3,7 @@
 @page multigrid_tutorials Tutorials
 
 \li \subpage benchmark_multigrid_petsc_poisson
+\li \subpage benchmark_multigrid_petsc_hdg
 
 Here are some very simple multigrid tutorials:
 
