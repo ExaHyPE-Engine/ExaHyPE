@@ -17,7 +17,8 @@ class Attribute(object):
 
   initval: str or None
     if is_static or is_const_static are True, then provide initialisation
-    value via this parameter.
+    value via this parameter. This is optional is is_static = True, but
+    mandatory if is_const_static = True.
   """
   def __init__(self, name, ifdefs=[], is_static=False, is_const_static=False, initval=None):
     self._name          = name
@@ -30,7 +31,7 @@ class Attribute(object):
     if self.is_static and self.is_const_static:
         raise ValueError("Attribute", self._name, ": Can't be static and const static. Pick one.")
 
-    if (self.is_static or self.is_const_static) and self._initval is None:
+    if self.is_const_static and self._initval is None:
         raise ValueError("Attribute", self._name, ": You need to provide an initialisation value for a static attribute")
 
 

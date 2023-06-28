@@ -163,8 +163,8 @@ void """ + full_qualified_name + """::initDatatype() {
 """
 
     for i in self._data_model._attributes:
-      # TODO: DO I NEED TO COMMUNICATE STATIC ATTRIBUTES?
       if i.is_static or i.is_const_static:
+        # No comms for static members
         continue
       if (i.ifdefs!=[]):
         result += construct_ifdef_string(i.ifdefs)
@@ -181,8 +181,8 @@ void """ + full_qualified_name + """::initDatatype() {
 """
 
     for i in self._data_model._attributes:
-      # TODO: DO I NEED TO COMMUNICATE STATIC ATTRIBUTES?
       if i.is_static or i.is_const_static:
+        # No comms for static members
         continue
       if (i.ifdefs!=[]):
         result += construct_ifdef_string(i.ifdefs)
@@ -203,8 +203,8 @@ void """ + full_qualified_name + """::initDatatype() {
 """
 
     for i in self._data_model._attributes:
-      # TODO: DO I NEED TO COMMUNICATE STATIC ATTRIBUTES?
       if i.is_static or i.is_const_static:
+        # no comms for static members
         continue
       if (i.ifdefs!=[]):
         result += "\n"
