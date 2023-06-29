@@ -22,7 +22,8 @@ tarch::logging::Log   applications::exahype2::ccz4::FiniteVolumeCCZ4::_log( "app
 //pre-process, solve the puncture equations
 void applications::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* tp){
     //first we set the parameter. TODO:find a way to read parameter from python script
-    //int swi=0;//0--single black hole, 1--BBH hoc, 2--BBH rotation, 3--GW150914
+    //int swi=0;//0--single black hole,  2--BBH hoc, 2--BBH rotation, 3--GW150914
+    //bbhtype=0 head on, 1-b=3, 2-b=2
     
 	if (CCZ4swi==0){
 		tp->par_b=1.0;
@@ -48,7 +49,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* t
     tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
     tp->TP_epsilon=1e-6;}
 		
-	if (CCZ4swi==1){
+	if (CCZ4swi==2 and CCZ4BBHType==0){
 		tp->par_b=2.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
 		tp->target_M_plus=0.5;//adm mass

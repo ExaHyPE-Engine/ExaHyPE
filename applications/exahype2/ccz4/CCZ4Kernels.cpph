@@ -9,8 +9,9 @@ double applications::exahype2::ccz4::maxEigenvalue(
         const double        CCZ4GLMc,
         const double        CCZ4GLMd
 ) {
+  const double np = 1.0;
   const double qmin = std::min({Q[0],Q[3],Q[5]});
-  const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, Q[54]}) / std::sqrt(qmin);
+  const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, std::pow(Q[54],1.0/np)}) / std::sqrt(qmin);
 
   constexpr double sqrtwo = 1.4142135623730951;
   const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
@@ -96,31 +97,115 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     // Baojiu-01-08-22: moved here because phi will be needed in the new Christoffel
     // Baojiu-01-08-22: now phi^2 is bound to be larger than 0.0001, in agreement with 2112.10567
     //const double phi = std::exp(std::fmax(-20., std::fmin(20.,Q[54]))); 
-    const double phi = std::fmax(1e-2,Q[54]); 
-    const double phi2 = phi*phi;
+    const double np = 1.0;  					// Baojiu-13-06-23: chi=phi^n, np is the index n here
+    const double phi = std::fmax(1e-2,pow(Q[54],(1.0/np)));     // Baojiu-13-06-23: changed so that Q[54] is now chi=phi^n
+    const double phi2 = phi*phi; 
+    const double chi = pow(phi,np); 				// Baojiu-13-06-23: new change of variable
 
     const double PP[3] = {Q[55], Q[56], Q[57]};
 
-    double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    double Christoffel_tilde[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    // =====================================================
+    // Baojiu-13-06-23 COMMENTED OUT ALL LINES IN THIS BLOCK
+    // -----------------------------------------------------
+//
+//  double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//  double Christoffel_tilde[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//
+//  for (int j = 0; j < 3; j++)
+//  for (int i = 0; i < 3; i++)
+//  for (int k = 0; k < 3; k++)
+//  for (int l = 0; l < 3; l++)
+//  {
+//      Christoffel_tilde[i][j][k] += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] );
+//      // Baojiu-01-08-22: multiplied all PP by 1/phi
+//      Christoffel[i][j][k]       += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l]/phi * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] );
+//  }
+//
+//
+//  double dChristoffelSrc[3][3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//  double dChristoffel_tildeSrc[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//  for (int l = 0; l < 3; l++)
+//  for (int m = 0; m < 3; m++)
+//  for (int j = 0; j < 3; j++)
+//  for (int i = 0; i < 3; i++)
+//  for (int k = 0; k < 3; k++)
+//  {
+//      // Baojiu-01-08-22: added PP*PP terms, and multiplied all PP terms by 1/phi
+//      dChristoffelSrc[k][i][j][m] +=     dgup[k][m][l]*(DD[i][j][l]      +DD[j][i][l]      -DD[l][i][j]      )
+//                                    -    dgup[k][m][l]*(g_cov[j][l]*PP[i]+g_cov[i][l]*PP[j]-g_cov[i][j]*PP[l])/phi
+//                                    -2.0*g_contr[m][l]*(DD[k][j][l]*PP[i]+DD[k][i][l]*PP[j]-DD[k][i][j]*PP[l])/phi
+//                                    +    g_contr[m][l]*(g_cov[j][l]*PP[i]*PP[k]+g_cov[i][l]*PP[j]*PP[k]-g_cov[i][j]*PP[k]*PP[l])/phi2;
+//
+//      dChristoffel_tildeSrc[k][i][j][m] += dgup[k][m][l]*(DD[i][j][l]+DD[j][i][l]-DD[l][i][j]);
+//  }
+//
+//  double RiemannSrc[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//  for (int m = 0; m < 3; m++)
+//  for (int j = 0; j < 3; j++)
+//  for (int k = 0; k < 3; k++)
+//  for (int i = 0; i < 3; i++)
+//  {
+//    RiemannSrc[i][k][j][m] = dChristoffelSrc[k][i][j][m] - dChristoffelSrc[j][i][k][m];
+//    for (int l = 0; l < 3; l++) RiemannSrc[i][k][j][m] += Christoffel[i][j][l]*Christoffel[l][k][m] - Christoffel[i][k][l]*Christoffel[l][j][m];
+//  }
+//
+//  double RicciSrc[3][3] = {0,0,0,0,0,0,0,0,0};
+//  for (int l = 0; l < 3; l++)
+//  for (int n = 0; n < 3; n++)
+//  for (int m = 0; m < 3; m++) RicciSrc[m][n] += RiemannSrc[m][l][n][l];
+//
+//  // Here we directly compute the derivative of Gtilde from its original definition as contracted Christoffel symbol,
+//  // without assuming unit determinant of the conformal metric. Back to the roots, and as few assumptions as possible...
+//  double dGtildeSrc[3][3] = {0,0,0,0,0,0,0,0,0};
+//  for (int l = 0; l < 3; l++)
+//  for (int j = 0; j < 3; j++)
+//  for (int i = 0; i < 3; i++)
+//  for (int k = 0; k < 3; k++) dGtildeSrc[k][i] += dgup[k][j][l]*Christoffel_tilde[j][l][i] + g_contr[j][l]*dChristoffel_tildeSrc[k][j][l][i];
+//
+//  double dZSrc[3][3] = {0,0,0,0,0,0,0,0,0};
+//  for (int j = 0; j < 3; j++)
+//  for (int i = 0; i < 3; i++)
+//  for (int k = 0; k < 3; k++) dZSrc[k][i] += CCZ4ds*(DD[k][i][j]*(Ghat[j]-Gtilde[j]) - 0.5*g_cov[i][j]*dGtildeSrc[k][j]);
+//
+//  double nablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0};
+//  for (int j = 0; j < 3; j++)
+//  for (int i = 0; i < 3; i++)
+//  {
+//    nablaZSrc[i][j] = dZSrc[i][j];
+//    for (int k = 0; k < 3; k++) nablaZSrc[i][j] -= Christoffel[i][j][k]*Z[k];
+//  }
+//
+//  double RicciPlusNablaZSrc[3][3];
+//  for (int i = 0; i < 3; i++)
+//  for (int j = 0; j < 3; j++) RicciPlusNablaZSrc[i][j] = RicciSrc[i][j] + nablaZSrc[i][j] + nablaZSrc[j][i];
+//
+    // -----------------------------------------------------
+    // Baojiu-13-06-23 COMMENTED OUT ALL LINES IN THIS BLOCK
+    // =====================================================
 
+    // ================================
+    // Baojiu-21-09-22 START OF CHANGES
+    // --------------------------------
+
+    double Christoffel_tilde[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
-    for (int l = 0; l < 3; l++)
-    {
-        Christoffel_tilde[i][j][k] += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] );
-        // Baojiu-01-08-22: multiplied all PP by 1/phi
-        Christoffel[i][j][k]       += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l]/phi * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] );
-    }
+    for (int l = 0; l < 3; l++) Christoffel_tilde[i][j][k] += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] );
+
+    double Christoffel_tilde_down[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int k = 0; k < 3; k++)
+    for (int l = 0; l < 3; l++) Christoffel_tilde_down[i][j][k] += g_cov[i][l]*Christoffel_tilde[j][k][l];
 
     double Gtilde[3] = {0,0,0};
     for (int l = 0; l < 3; l++)
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++) Gtilde[i] += g_contr[j][l] * Christoffel_tilde[j][l][i];
-
+  
     const double Ghat[3] = {Q[13], Q[14], Q[15]};
-
+  
     double Z[3] = {0,0,0}; // Matrix vector multiplications
     for (int i=0;i<3;i++)
     for (int j=0;j<3;j++) Z[i] += 0.5*CCZ4ds*( g_cov[i][j]* (Ghat[j] - Gtilde[j]));
@@ -128,104 +213,37 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int i=0;i<3;i++)
     for (int j=0;j<3;j++) Zup[i] += phi2 * g_contr[i][j] * Z[j];
 
-    double dChristoffelSrc[3][3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    double dChristoffel_tildeSrc[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    for (int l = 0; l < 3; l++)
-    for (int m = 0; m < 3; m++)
-    for (int j = 0; j < 3; j++)
-    for (int i = 0; i < 3; i++)
-    for (int k = 0; k < 3; k++)
-    {
-        // Baojiu-01-08-22: added PP*PP terms, and multiplied all PP terms by 1/phi
-        dChristoffelSrc[k][i][j][m] +=     dgup[k][m][l]*(DD[i][j][l]      +DD[j][i][l]      -DD[l][i][j]      )
-                                      -    dgup[k][m][l]*(g_cov[j][l]*PP[i]+g_cov[i][l]*PP[j]-g_cov[i][j]*PP[l])/phi
-                                      -2.0*g_contr[m][l]*(DD[k][j][l]*PP[i]+DD[k][i][l]*PP[j]-DD[k][i][j]*PP[l])/phi
-                                      +    g_contr[m][l]*(g_cov[j][l]*PP[i]*PP[k]+g_cov[i][l]*PP[j]*PP[k]-g_cov[i][j]*PP[k]*PP[l])/phi2;
-
-        dChristoffel_tildeSrc[k][i][j][m] += dgup[k][m][l]*(DD[i][j][l]+DD[j][i][l]-DD[l][i][j]);
-    }
-
-    double RiemannSrc[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    for (int m = 0; m < 3; m++)
-    for (int j = 0; j < 3; j++)
-    for (int k = 0; k < 3; k++)
-    for (int i = 0; i < 3; i++)
-    {
-      RiemannSrc[i][k][j][m] = dChristoffelSrc[k][i][j][m] - dChristoffelSrc[j][i][k][m];
-      for (int l = 0; l < 3; l++) RiemannSrc[i][k][j][m] += Christoffel[i][j][l]*Christoffel[l][k][m] - Christoffel[i][k][l]*Christoffel[l][j][m];
-    }
-
-    double RicciSrc[3][3] = {0,0,0,0,0,0,0,0,0};
-    for (int l = 0; l < 3; l++)
-    for (int n = 0; n < 3; n++)
-    for (int m = 0; m < 3; m++) RicciSrc[m][n] += RiemannSrc[m][l][n][l];
-
-    // Here we directly compute the derivative of Gtilde from its original definition as contracted Christoffel symbol,
-    // without assuming unit determinant of the conformal metric. Back to the roots, and as few assumptions as possible...
-    double dGtildeSrc[3][3] = {0,0,0,0,0,0,0,0,0};
-    for (int l = 0; l < 3; l++)
-    for (int j = 0; j < 3; j++)
-    for (int i = 0; i < 3; i++)
-    for (int k = 0; k < 3; k++) dGtildeSrc[k][i] += dgup[k][j][l]*Christoffel_tilde[j][l][i] + g_contr[j][l]*dChristoffel_tildeSrc[k][j][l][i];
-
-    double dZSrc[3][3] = {0,0,0,0,0,0,0,0,0};
-    for (int j = 0; j < 3; j++)
-    for (int i = 0; i < 3; i++)
-    for (int k = 0; k < 3; k++) dZSrc[k][i] += CCZ4ds*(DD[k][i][j]*(Ghat[j]-Gtilde[j]) - 0.5*g_cov[i][j]*dGtildeSrc[k][j]);
-
-    double nablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0};
-    for (int j = 0; j < 3; j++)
-    for (int i = 0; i < 3; i++)
-    {
-      nablaZSrc[i][j] = dZSrc[i][j];
-      for (int k = 0; k < 3; k++) nablaZSrc[i][j] -= Christoffel[i][j][k]*Z[k];
-    }
-
-    //double RicciPlusNablaZSrc[3][3];
-    //for (int i = 0; i < 3; i++)
-    //for (int j = 0; j < 3; j++) RicciPlusNablaZSrc[i][j] = RicciSrc[i][j] + nablaZSrc[i][j] + nablaZSrc[j][i];
-
-    // ================================
-    // Baojiu-21-09-22 START OF CHANGES
-    // --------------------------------
-    double Christoffel_tilde_down[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)
-    for (int k = 0; k < 3; k++)
-    for (int l = 0; l < 3; l++) Christoffel_tilde_down[i][j][k] += g_cov[i][l]*Christoffel_tilde[j][k][l];
-
-    double RicciPlusNablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0}; // Use this line later when we comment out the lines above
-    //RicciPlusNablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0};
+    double RicciPlusNablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0}; 
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     {
        for (int k = 0; k < 3; k++)
        {
           RicciPlusNablaZSrc[i][j] += Ghat[k]*DD[k][i][j];
-          RicciPlusNablaZSrc[i][j] -= PP[k]*Christoffel_tilde[i][j][k]/phi;
-          RicciPlusNablaZSrc[i][j] += 2.0*Zup[k]/(phi*phi2)*( g_cov[i][k]*PP[j] + g_cov[j][k]*PP[i] - g_cov[i][j]*PP[k] );
+          RicciPlusNablaZSrc[i][j] -= PP[k]*Christoffel_tilde[i][j][k]/(np*chi); 					// Baojiu-13-06-23: changed to chi=phi^n
+          RicciPlusNablaZSrc[i][j] += 2.0*Zup[k]/(np*chi*phi2)*(g_cov[i][k]*PP[j]+g_cov[j][k]*PP[i]-g_cov[i][j]*PP[k]); // Baojiu-13-06-23: changed to chi=phi^n
           for (int l = 0; l < 3; l++)
           {  
-             RicciPlusNablaZSrc[i][j] -= 2.0*g_cov[i][j]*g_contr[k][l]*PP[k]*PP[l]/phi2;
+             RicciPlusNablaZSrc[i][j] -= (np-1.0)*                          PP[i]*PP[j]/(np*np*chi*chi); 		// Baojiu-13-06-23: changed to chi=phi^n
+             RicciPlusNablaZSrc[i][j] -= (np+1.0)*g_cov[i][j]*g_contr[k][l]*PP[k]*PP[l]/(np*np*chi*chi); 		// Baojiu-13-06-23: changed to chi=phi^n
              for (int m = 0; m < 3; m++)
              {
                 RicciPlusNablaZSrc[i][j] += g_contr[l][m]*( Christoffel_tilde[l][i][k] * Christoffel_tilde_down[j][k][m] + 
                                                             Christoffel_tilde[l][j][k] * Christoffel_tilde_down[i][k][m] + 
                                                             Christoffel_tilde[i][m][k] * Christoffel_tilde_down[k][l][j] );
-                RicciPlusNablaZSrc[i][j] -= g_cov[i][j]*g_contr[l][m]*Christoffel_tilde[l][m][k]*PP[k]/phi;
+                RicciPlusNablaZSrc[i][j] -= g_cov[i][j]*g_contr[l][m]*Christoffel_tilde[l][m][k]*PP[k]/(np*chi);	// Baojiu-13-06-23: changed to chi=phi^n
              }
           }
        }
     }
-    // --------------------------------
+    // ------------------------------
     // Baojiu-21-09-22 END OF CHANGES
-    // ================================
+    // ==============================
 
     double RPlusTwoNablaZSrc = 0;
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) RPlusTwoNablaZSrc += g_contr[i][j]*RicciPlusNablaZSrc[i][j]; // TODO fuse these steps
+    for (int j = 0; j < 3; j++) RPlusTwoNablaZSrc += g_contr[i][j]*RicciPlusNablaZSrc[i][j]; 
     RPlusTwoNablaZSrc*=phi2;
-
 
     const double AA[3] = {Q[23], Q[24], Q[25]};
 
@@ -236,14 +254,14 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
        // ================================
        // Baojiu-21-09-22 START OF CHANGES
        // --------------------------------
-       // for (int k = 0; k < 3; k++) nablaijalphaSrc[i][j] -= Christoffel[i][j][k]*AA[k]; // This is the original line; all other lines are new
-       nablaijalphaSrc[i][j] += ( PP[i]*AA[j] + PP[j]*AA[i] )/phi;
+//     for (int k = 0; k < 3; k++) nablaijalphaSrc[i][j] -= Christoffel[i][j][k]*AA[k]; // This is the original line; all other lines are new
+       nablaijalphaSrc[i][j] += (PP[i]*AA[j] + PP[j]*AA[i])/(np*chi); 			// Baojiu-13-06-23: changed to chi=phi^n
        for (int k = 0; k < 3; k++) 
        {
           nablaijalphaSrc[i][j] -= Christoffel_tilde[i][j][k]*AA[k];
           for (int l = 0; l < 3; l++)
           {
-             nablaijalphaSrc[i][j] -= g_cov[i][j]*g_contr[k][l]*PP[k]*AA[l]/phi;
+             nablaijalphaSrc[i][j] -= g_cov[i][j]*g_contr[k][l]*PP[k]*AA[l]/(np*chi);	// Baojiu-13-06-23: changed to chi=phi^n
           }
        }
        // --------------------------------
@@ -259,13 +277,13 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     // ================================
     // Baojiu-21-09-22 START OF CHANGES
     // --------------------------------
-    // Note: I suspect that these lines won't make a difference
-    nablanablaalphaSrc = 0.0;
-    for (int i = 0; i < 3; i++)
-    {
-       nablanablaalphaSrc -= phi2*Gtilde[i]*AA[i];
-       for (int j = 0; j < 3; j++) nablanablaalphaSrc -= phi*g_contr[i][j]*PP[i]*AA[j];
-    }
+    // these lines won't make a difference
+//  nablanablaalphaSrc = 0.0;
+//  for (int i = 0; i < 3; i++)
+//  {
+//     nablanablaalphaSrc -= phi2*Gtilde[i]*AA[i];
+//     for (int j = 0; j < 3; j++) nablanablaalphaSrc -= phi2*g_contr[i][j]*PP[i]*AA[j]/(np*chi); // Baojiu-13-06-23: changed to chi=phi^n
+//  }
     // --------------------------------
     // Baojiu-21-09-22 END OF CHANGES
     // ================================
@@ -296,7 +314,6 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++) dtgamma[i][j] += g_cov[k][i]*BB[j][k] + g_cov[k][j]*BB[i][k] - 2./3. *g_cov[i][j]*BB[k][k] + 2.*beta[k]*DD[k][i][j];
 
-
     // MATMUL(Aex,Amix)
     double Atemp[3][3]={0,0,0,0,0,0,0,0,0};
     for (int i = 0; i < 3; i++)
@@ -318,22 +335,21 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
 
     // Baojiu-01-08-22: alpha*k1 -> k1 below
     double dtTraceK = -nablanablaalphaSrc + alpha*(RPlusTwoNablaZSrc + traceK*traceK - 2.0*CCZ4c*Theta*traceK) - 3.0*alpha*CCZ4k1*(1.+CCZ4k2)*Theta/alpha;
+
     // Baojiu-01-08-22: multiplied the second term on the RHS by phi in the equation below
-    double dtphi = beta[0]*PP[0] + beta[1]*PP[1] + beta[2]*PP[2] + 1./3.*(alpha*traceK-traceB)*phi;
+    double dtchi = beta[0]*PP[0] + beta[1]*PP[1] + beta[2]*PP[2] + np/3.*(alpha*traceK-traceB)*chi; // Baojiu-13-06-23: changed to chi=phi^n
+
     // Baojiu-01-08-22: multiplied the first term on the RHS by alpha in the equation below
     double dtalpha = -alpha*alpha*fa*(traceK-K0-2.*CCZ4c*Theta)+beta[0]*AA[0]+beta[1]*AA[1]+beta[2]*AA[2];
-
 
     double Aupdown = 0;
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) Aupdown += Aex[i][j]*Aup[i][j];
 
-
     double sumzupaa = 0.0;
     for (int i = 0; i < 3; i++) sumzupaa += Zup[i]*AA[i];
     // Baojiu-01-08-22: divided sumzupaa by alpha, and rescaled alpha*k1 -> k1, in the equation below
     double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*(RPlusTwoNablaZSrc - Aupdown + 2./3.*traceK*traceK) - alpha*(CCZ4c*Theta*traceK + sumzupaa/alpha + CCZ4k1*(2.+CCZ4k2)*Theta/alpha); 
-
 
     double dtGhat[3] = {0,0,0};
     for (int i = 0; i < 3; i++)
@@ -341,9 +357,9 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
         double temp1=0, temp2=0, temp3=0, temp4=0, temp5=0, temp6=0;
         for (int m = 0; m < 3; m++)
         {
-          temp1 += Aup[i][m]*PP[m]/phi;   // Baojiu-01-08-22: divided PP by phi
-          temp3 += Aup[i][m]*AA[m]/alpha; // Baojiu-01-08-22: divided AA by alpha
-          temp2 += g_contr[m][i]*(-Theta*AA[m]/alpha -2./3.*traceK*Z[m]); // Baojiu-01-08-22: divided AA by alpha
+          temp1 += Aup[i][m]*PP[m]/(np*chi);   					// Baojiu-13-06-23: changed to chi=phi^n
+          temp3 += Aup[i][m]*AA[m]/alpha; 					// Baojiu-01-08-22: divided AA by alpha
+          temp2 += g_contr[m][i]*(-Theta*AA[m]/alpha -2./3.*traceK*Z[m]); 	// Baojiu-01-08-22: divided AA by alpha
           temp4 += g_contr[i][m]*Z[m];
           temp5 += Gtilde[m]*BB[m][i];
           for (int n = 0; n < 3; n++) temp6  += Christoffel_tilde[m][n][i]*Aup[m][n];
@@ -364,9 +380,8 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     }
 
     // matrix vector multiplication in a loop and add result to existing vector
-    // 09-08-22: remove this constraint
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j];//21-04-22 remove this for test
+    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j];
 
     const double myb[3] = {Q[20], Q[21], Q[22]};
 
@@ -377,7 +392,6 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int i = 0; i < 3; i++) dtbeta[i] = CCZ4f*myb[i];
     for (int i = 0; i < 3; i++) dtbeta[i] += CCZ4bs*(beta[0]*BB[0][i] + beta[1]*BB[1][i] + beta[2]*BB[2][i]);
     for (int i = 0; i < 3; i++) dtbeta[i] *= CCZ4sk;
-
 
     // Auxiliary variables
     double dtA[3] ={0,0,0};
@@ -393,10 +407,10 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
       double temp = 0;
       for (int i = 0; i < 3; i++)
       for (int j = 0; j < 3; j++) temp+= dgup[k][i][j]*Aex[i][j];
-      dtA[k] += -CCZ4sk*alpha*fa*temp; // Baojiu-01-08-22: multiplied by alpha //04-08-22: remove one alpha //21-04-22 remove this for test
+      dtA[k] += -CCZ4sk*alpha*fa*temp; // Baojiu-13-06-23: here there is only one alpha as in the Dumbser paper
     }
 
-    double dtB[3][3] ={0,0,0,0,0,0,0,0,0};
+    double dtB[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     for (int u = 0; u < 3; u++) dtB[i][j] += CCZ4sk*(BB[i][u] * BB[u][j]);
@@ -406,15 +420,13 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
-    for (int n = 0; n < 3; n++) dtD[k][i][j] += 1./3*alpha*g_cov[i][j]*dgup[k][n][m]*Aex[n][m]; // explicitly remove the trace of tilde A again
-//21-04-22 remove above for test
+    for (int n = 0; n < 3; n++) dtD[k][i][j] += 1./3*alpha*g_cov[i][j]*dgup[k][n][m]*Aex[n][m]; 
+
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
     {
-      // Baojiu-01-08-22: alpha*AA -> alpha 
-      //dtD[k][i][j] -= alpha*AA[k]*Aex[i][j];
-      dtD[k][i][j] -= AA[k]*Aex[i][j];
+      dtD[k][i][j] -= AA[k]*Aex[i][j]; 		// Baojiu-01-08-22: alpha*AA -> alpha
       for (int l = 0; l < 3; l++) dtD[k][i][j] += BB[k][l]*DD[l][i][j] + BB[j][l]*DD[k][l][i] + BB[i][l]*DD[k][l][j] - 2./3.*BB[l][l]*DD[k][i][j];
     }
 
@@ -427,12 +439,10 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
       double temp=0;
       for (int i = 0; i < 3; i++)
       for (int j = 0; j < 3; j++) temp += dgup[k][i][j]*Aex[i][j];
-      dtP[k] += 1./3.*(AA[k]*traceK + alpha*CCZ4sk*temp/phi)*phi; // Baojiu-01-08-22: changed AA to AA/alpha, multiplied by phi
-      //04-08-22 remove one phi 
-      //dtP[k] += 1./3.*(AA[k]*traceK)*phi;//21-04-22 remove this for test
-      dtP[k] += 1./3.*(alpha*traceK-traceB)*PP[k]; // Baojiu-01-08-22: added this new line
+      dtP[k] += np/3.*AA[k]*traceK*chi; 				// Baojiu-13-06-23: changed to chi=phi^n 
+      dtP[k] += np/3.*(alpha*traceK-traceB)*PP[k]; 			// Baojiu-13-06-23: changed to chi=phi^n
+      dtP[k] += np/3.*alpha*CCZ4sk*temp*chi; 				// Baojiu-13-06-23: changed to chi=phi^n 
     }
-
 
     S[0]  = dtgamma[0][0];
     S[1]  = dtgamma[0][1];
@@ -481,7 +491,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     S[51] = dtD[2][1][2];
     S[52] = dtD[2][2][2];
     S[53] = dtTraceK;
-    S[54] = dtphi;
+    S[54] = dtchi;
     for (int i = 0; i < 3; i++) S[55+i] = dtP[i];
     S[58] = 0;
     //used only in soccz4
@@ -505,9 +515,10 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     // Han 09-2022: add a parameter to switch off or on the advection here
     const double advec=0.0;
     const double advec_aux=0.0;
-    // Baojiu-01-08-22: changed the line below to make sure alpha>0.0001
-    //const double alpha = std::exp(std::fmax(-20., std::fmin(20.,Q[16])));
-    const double alpha = std::fmax(1e-4,Q[16]);
+
+//  const double alpha = std::exp(std::fmax(-20., std::fmin(20.,Q[16])));
+    const double alpha = std::fmax(1e-4,Q[16]); // Baojiu-01-08-22: changed to make sure alpha>0.0001
+
     //printf("alpha %f\n",alpha);
     const double alpha2 = alpha*alpha;
     double fa  = 1.0;
@@ -526,7 +537,6 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     // FIXME the use of 2D arrays can be avoided: all terms not in the normal are 0
     for (int i=0; i<nVar; i++) gradQin[i][normal] = gradQSerialised[i+normal*nVar];
 
-
     // Note g_cov is symmetric
     const double g_cov[3][3] = { {Q[0], Q[1], Q[2]}, {Q[1], Q[3], Q[4]}, {Q[2], Q[4], Q[5]} };
     const double invdet = 1./( Q[0]*Q[3]*Q[5] - Q[0]*Q[4]*Q[4] - Q[1]*Q[1]*Q[5] + 2*Q[1]*Q[2]*Q[4] -Q[2]*Q[2]*Q[3]);
@@ -536,7 +546,6 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         {-( Q[1]*Q[5]-Q[4]*Q[2])*invdet,  ( Q[0]*Q[5]-Q[2]*Q[2])*invdet, -( Q[0]*Q[4]-Q[2]*Q[1])*invdet},
         {-(-Q[1]*Q[4]+Q[3]*Q[2])*invdet, -( Q[0]*Q[4]-Q[1]*Q[2])*invdet,  ( Q[0]*Q[3]-Q[1]*Q[1])*invdet}
     };
-
 
     // NOTE Aex is symmetric
     double Aex[3][3] = { {Q[6], Q[7], Q[8]}, {Q[7], Q[9], Q[10]}, {Q[8], Q[10], Q[11]} };
@@ -572,8 +581,10 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     for (int j = 0; j < 3; j++) dgup[k][m][l] -= g_contr[m][n]*g_contr[j][l]*2*DD[k][n][j];
     
     // Baojiu-01-08-22: changed so that phi^2>0.0001
-    //const double phi = std::exp(std::fmax(-20., std::fmin(20.,Q[54])));
-    const double phi = std::fmax(1e-2,Q[54]);
+//  const double phi = std::exp(std::fmax(-20., std::fmin(20.,Q[54])));
+    const double np = 1.0; 					// Baojiu-13-06-23: changed to chi=phi^n 
+    const double phi = std::fmax(1e-2,pow(Q[54],1.0/np));       // Baojiu-13-06-23: changed to chi=phi^n, note Q[54] is chi
+    const double chi  = pow(phi,np);				// Baojiu-13-06-23: changed to chi=phi^n
     const double phi2 = phi*phi;
 
     const double PP[3] = {Q[55], Q[56], Q[57]};
@@ -583,7 +594,6 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         {gradQin[55][2],gradQin[56][2],gradQin[57][2]}
     };
 
-
     const double AA[3] = {Q[23], Q[24], Q[25]};
     double dAA[3][3] = {
         {gradQin[23][0],gradQin[24][0],gradQin[25][0]},
@@ -591,21 +601,19 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         {gradQin[23][2],gradQin[24][2],gradQin[25][2]}
     };
 
-
-    double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//  double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     double Christoffel_tilde[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    //double Christoffel_kind1[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//  double Christoffel_kind1[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
     {
-        //Christoffel_kind1[i][j][k] = DD[k][i][j] + DD[j][i][k] - DD[i][j][k];
+//      Christoffel_kind1[i][j][k] = DD[k][i][j] + DD[j][i][k] - DD[i][j][k];
         for (int l = 0; l < 3; l++)
         {
             Christoffel_tilde[i][j][k] += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] );
-            // Baojiu-01-08-22: divided all PP terms by phi in the line below
-            Christoffel[i][j][k]       += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l] * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] )/phi;
+//          Christoffel[i][j][k]       += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l] * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] )/phi;
         }
     }
 
@@ -622,7 +630,6 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     double Zup[3] = {0,0,0};
     for (int i=0;i<3;i++)
     for (int j=0;j<3;j++) Zup[i] += phi2 * g_contr[i][j] * Z[j];
-
 
     const double dDD[3][3][3][3] = {
         {
@@ -660,44 +667,60 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         }
     };
 
-    double dChristoffelNCP[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    double dChristoffel_tildeNCP[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)
-    for (int m = 0; m < 3; m++)
-    for (int k = 0; k < 3; k++)
-    {
-        dChristoffelNCP      [k][i][j][m] = 0;
-        dChristoffel_tildeNCP[k][i][j][m] = 0;
-        for (int l = 0; l < 3; l++)
-        {
-            // Baojiu-01-08-22: multiplied the original dPP terms by 1/phi //a small issue
-            dChristoffelNCP[k][i][j][m] +=  0.5*g_contr[m][l] * (
-                    dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j]
-                    - g_cov[j][l]*(dPP[k][i] + dPP[i][k])/phi - g_cov[i][l]*(dPP[k][j]+dPP[j][k])/phi +  g_cov[i][j]*(dPP[k][l]+dPP[l][k])/phi );
-
-            dChristoffel_tildeNCP[k][i][j][m] += 0.5*g_contr[m][l]*(dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j]);
-
-        }
-    }
-
-    double RiemannNCP[3][3][3][3] = {0};
-    for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)
-    for (int m = 0; m < 3; m++)
-    for (int k = 0; k < 3; k++) RiemannNCP[i][k][j][m] = dChristoffelNCP[k][i][j][m] - dChristoffelNCP[j][i][k][m];
-
-    double RicciNCP[3][3] = {0,0,0,0,0,0,0,0,0};
-    for (int m = 0; m < 3; m++)
-    for (int n = 0; n < 3; n++)
-    for (int l = 0; l < 3; l++) RicciNCP[m][n] += RiemannNCP[m][l][n][l];
-
-    double dGtildeNCP[3][3] = {0,0,0,0,0,0,0,0,0};
-    for (int i = 0; i < 3; i++)
-    for (int k = 0; k < 3; k++)
-    for (int j = 0; j < 3; j++)
-    for (int l = 0; l < 3; l++) dGtildeNCP[k][i] += g_contr[j][l]*dChristoffel_tildeNCP[k][j][l][i];
-
+    // =====================================================
+    // Baojiu-13-06-23 COMMENTED OUT ALL LINES IN THIS BLOCK
+    // -----------------------------------------------------
+//
+//  double dChristoffelNCP[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//  double dChristoffel_tildeNCP[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//  for (int i = 0; i < 3; i++)
+//  for (int j = 0; j < 3; j++)
+//  for (int m = 0; m < 3; m++)
+//  for (int k = 0; k < 3; k++)
+//  {
+//      dChristoffelNCP      [k][i][j][m] = 0;
+//      dChristoffel_tildeNCP[k][i][j][m] = 0;
+//      for (int l = 0; l < 3; l++)
+//      {
+//          // Baojiu-01-08-22: multiplied the original dPP terms by 1/phi //a small issue
+//          dChristoffelNCP[k][i][j][m] +=  0.5*g_contr[m][l] * (
+//                  dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j]
+//                  - g_cov[j][l]*(dPP[k][i] + dPP[i][k])/phi - g_cov[i][l]*(dPP[k][j]+dPP[j][k])/phi +  g_cov[i][j]*(dPP[k][l]+dPP[l][k])/phi );
+//
+//          dChristoffel_tildeNCP[k][i][j][m] += 0.5*g_contr[m][l]*(dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j]);
+//
+//      }
+//  }
+//
+//  double RiemannNCP[3][3][3][3] = {0};
+//  for (int i = 0; i < 3; i++)
+//  for (int j = 0; j < 3; j++)
+//  for (int m = 0; m < 3; m++)
+//  for (int k = 0; k < 3; k++) RiemannNCP[i][k][j][m] = dChristoffelNCP[k][i][j][m] - dChristoffelNCP[j][i][k][m];
+//
+//  double RicciNCP[3][3] = {0,0,0,0,0,0,0,0,0};
+//  for (int m = 0; m < 3; m++)
+//  for (int n = 0; n < 3; n++)
+//  for (int l = 0; l < 3; l++) RicciNCP[m][n] += RiemannNCP[m][l][n][l];
+//
+//  double dGtildeNCP[3][3] = {0,0,0,0,0,0,0,0,0};
+//  for (int i = 0; i < 3; i++)
+//  for (int k = 0; k < 3; k++)
+//  for (int j = 0; j < 3; j++)
+//  for (int l = 0; l < 3; l++) dGtildeNCP[k][i] += g_contr[j][l]*dChristoffel_tildeNCP[k][j][l][i];
+//
+//  double dZNCP[3][3] = {0,0,0,0,0,0,0,0,0};
+//  for (int j = 0; j < 3; j++)
+//  for (int i = 0; i < 3; i++)
+//  for (int k = 0; k < 3; k++) dZNCP[k][i] += CCZ4ds*0.5*g_cov[i][j]*(dGhat[k][j]-dGtildeNCP[k][j]);
+//
+//  double RicciPlusNablaZNCP[3][3];
+//  for (int i = 0; i < 3; i++)
+//  for (int j = 0; j < 3; j++) RicciPlusNablaZNCP[i][j] = RicciNCP[i][j] + dZNCP[i][j] + dZNCP[j][i];
+//
+    // -----------------------------------------------------
+    // Baojiu-13-06-23 COMMENTED OUT ALL LINES IN THIS BLOCK
+    // =====================================================
 
     const double dGhat[3][3] = {
         {gradQin[13][0],gradQin[14][0],gradQin[15][0]},
@@ -705,33 +728,21 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         {gradQin[13][2],gradQin[14][2],gradQin[15][2]}
     };
 
-
-    double dZNCP[3][3] = {0,0,0,0,0,0,0,0,0};
-    for (int j = 0; j < 3; j++)
-    for (int i = 0; i < 3; i++)
-    for (int k = 0; k < 3; k++) dZNCP[k][i] += CCZ4ds*0.5*g_cov[i][j]*(dGhat[k][j]-dGtildeNCP[k][j]);
-
-
-    //double RicciPlusNablaZNCP[3][3];
-    //for (int i = 0; i < 3; i++)
-    //for (int j = 0; j < 3; j++) RicciPlusNablaZNCP[i][j] = RicciNCP[i][j] + dZNCP[i][j] + dZNCP[j][i];
-
     // ================================
     // Baojiu-21-09-22 START OF CHANGES
     // --------------------------------
-    double RicciPlusNablaZNCP[3][3] = {0,0,0,0,0,0,0,0,0}; // Use this line later when we comment out lines above
-    //RicciPlusNablaZNCP[3][3] = {0,0,0,0,0,0,0,0,0};
+    double RicciPlusNablaZNCP[3][3] = {0,0,0,0,0,0,0,0,0}; 
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) 
     {
-       RicciPlusNablaZNCP[i][j] += 0.5*( dPP[i][j] + dPP[j][i] )/phi; // explicit symmetrisation, shouldn't make a difference though
+       RicciPlusNablaZNCP[i][j] += 0.5*(dPP[i][j] + dPP[j][i])/(np*chi); 					// Baojiu-13-06-23: changed to chi=phi^n 
        for (int k = 0; k < 3; k++)
        {
           RicciPlusNablaZNCP[i][j] += 0.5*( g_cov[k][i]*dGhat[j][k] + g_cov[k][j]*dGhat[i][k] );
           for (int l = 0; l < 3; l++)
           {
-             RicciPlusNablaZNCP[i][j] -= 0.5*g_contr[k][l]*( dDD[k][l][i][j] + dDD[l][k][i][j] ); // explicit symmetrisation, shouldn't make a difference
-             RicciPlusNablaZNCP[i][j] += 0.5*g_cov[i][j]*g_contr[k][l]*( dPP[k][l] + dPP[l][k] )/phi; // explicit symmetrisation, shouldn't make a difference
+             RicciPlusNablaZNCP[i][j] -= 0.5*g_contr[k][l]*( dDD[k][l][i][j] + dDD[l][k][i][j] ); 		// explicit symmetrisation
+             RicciPlusNablaZNCP[i][j] += 0.5*g_cov[i][j]*g_contr[k][l]*( dPP[k][l] + dPP[l][k] )/(np*chi); 	// Baojiu-13-06-23: changed to chi=phi^n
           }
        }
     }
@@ -741,19 +752,17 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
 
     double RPlusTwoNablaZNCP = 0;
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) RPlusTwoNablaZNCP += g_contr[i][j]*RicciPlusNablaZNCP[i][j]; // TODO fuse these steps
+    for (int j = 0; j < 3; j++) RPlusTwoNablaZNCP += g_contr[i][j]*RicciPlusNablaZNCP[i][j]; 
     RPlusTwoNablaZNCP*=phi2;
 
     double nablaijalphaNCP[3][3];
     for (int i = 0; i < 3; i++)
-    //for (int j = 0; j < 3; j++) nablaijalphaNCP[i][j] = alpha*0.5*( dAA[i][j] + dAA[j][i] );
     for (int j = 0; j < 3; j++) nablaijalphaNCP[i][j] = 0.5*( dAA[i][j] + dAA[j][i] ); // Baojiu-01-08-22: removed the alpha
 
     double nablanablaalphaNCP = 0;
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) nablanablaalphaNCP += g_contr[i][j]*nablaijalphaNCP[i][j];
     nablanablaalphaNCP*=phi2;
-
 
     double SecondOrderTermsNCP[3][3];
     for (int i = 0; i < 3; i++)
@@ -773,17 +782,13 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         {{gradQin[6][1],gradQin[7][1],gradQin[8][1]}, {gradQin[7][1], gradQin[9][1], gradQin[10][1]},  {gradQin[8][1], gradQin[10][1], gradQin[11][1]}},
         {{gradQin[6][2],gradQin[7][2],gradQin[8][2]}, {gradQin[7][2], gradQin[9][2], gradQin[10][2]},  {gradQin[8][2], gradQin[10][2], gradQin[11][2]}}
     };
-    //! Now assemble all this terrible stuff...
-    //!
-    //! Main variables of the CCZ4 system
+
     double dtK[3][3];
-    // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)  dtK[i][j] = phi2*SecondOrderTermsNCP[i][j] + advec*(beta[0] * dAex[0][i][j] + beta[1] * dAex[1][i][j] + beta[2] * dAex[2][i][j]); // extrinsic curvature
+    for (int j = 0; j < 3; j++)  dtK[i][j] = phi2*SecondOrderTermsNCP[i][j] + advec*(beta[0]*dAex[0][i][j] + beta[1]*dAex[1][i][j] + beta[2]*dAex[2][i][j]); // extrinsic curvature
 
     const double dtraceK[3] = {gradQin[53][0], gradQin[53][1], gradQin[53][2]};
 
-    // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
     double dtTraceK = -nablanablaalphaNCP + alpha*RPlusTwoNablaZNCP + advec*(beta[0]*dtraceK[0] + beta[1]*dtraceK[1] + beta[2]*dtraceK[2]);
 
     const double BB[3][3] = {
@@ -797,16 +802,13 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     for (int j = 0; j < 3; j++) Aupdown += Aex[i][j]*Aup[i][j];
 
     const double dTheta[3] = {gradQin[12][0],gradQin[12][1],gradQin[12][2]};
-    // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
-    double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*( RPlusTwoNablaZNCP ) + advec*(beta[0]*dTheta[0] + beta[1]*dTheta[1] + beta[2]*dTheta[2]); // *** original cleaning ***
+    double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*RPlusTwoNablaZNCP + advec*(beta[0]*dTheta[0] + beta[1]*dTheta[1] + beta[2]*dTheta[2]);
 
-    //double divAupNCP[3] = {0,0,0};
-
-    //for (int i = 0; i < 3; i++)
-    //for (int j = 0; j < 3; j++)
-    //for (int l = 0; l < 3; l++)
-    //for (int k = 0; k < 3; k++) divAupNCP[i] += g_contr[i][l]*g_contr[j][k]*dAex[j][l][k];
-
+//  double divAupNCP[3] = {0,0,0};
+//  for (int i = 0; i < 3; i++)
+//  for (int j = 0; j < 3; j++)
+//  for (int l = 0; l < 3; l++)
+//  for (int k = 0; k < 3; k++) divAupNCP[i] += g_contr[i][l]*g_contr[j][k]*dAex[j][l][k];
 
     const double dBB[3][3][3] = {
         {
@@ -829,13 +831,11 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
             temp  +=g_contr[i][j]*dtraceK[j];
             temp2 +=g_contr[j][i]*dTheta[j];
         }
-        // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
         dtGhat[i] = -4./3.*alpha*temp + 2*alpha*temp2 + advec*(beta[0]*dGhat[0][i] + beta[1]*dGhat[1][i] + beta[2]*dGhat[2][i]);
         for (int l = 0; l < 3; l++)
         for (int k = 0; k < 3; k++) dtGhat[i] += g_contr[k][l]*0.5*(dBB[k][l][i] + dBB[l][k][i]) + 1./3.*g_contr[i][k]*0.5*(dBB[k][l][l] + dBB[l][k][l]);
     }
 
-    //09-08-22: remove this constraint
     double ov[3];
     for (int k = 0; k < 3; k++)
     {
@@ -845,55 +845,45 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         ov[k] = 2*alpha*temp;
     }
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j]; //21-04-22 remove this for test
+    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j]; 
 
     double dtbb[3];
     for (int i = 0; i < 3; i++)
     {
-        // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
-        dtbb[i] = CCZ4xi*dtGhat[i] + CCZ4bs * advec*( beta[0]*gradQin[20+i][0] + beta[1]*gradQin[20+i][1] + beta[2]*gradQin[20+i][2] - beta[0]*gradQin[13+i][0] - beta[1]*gradQin[13+i][1] - beta[2]*gradQin[13+i][2]);
+        dtbb[i] = CCZ4xi*dtGhat[i] + CCZ4bs*advec*( beta[0]*gradQin[20+i][0] + beta[1]*gradQin[20+i][1] + beta[2]*gradQin[20+i][2] - beta[0]*gradQin[13+i][0] - beta[1]*gradQin[13+i][1] - beta[2]*gradQin[13+i][2]);
         dtbb[i] *= CCZ4sk;
     }
 
-    // Auxiliary variables
-    double dtA[3]={0,0,0};
+    double dtA[3] = {0,0,0};
     double dK0[3] = {0,0,0};
     for (int i = 0; i < 3; i++)
     {
-        // Baojiu-01-08-22: alpha*fa -> alpha^2*fa
-        // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
-        dtA[i] = -alpha*alpha*fa*(dtraceK[i] - dK0[i] - CCZ4c*2*dTheta[i]) + advec_aux*(beta[0]*dAA[0][i] + beta[1]*dAA[1][i] + beta[2]*dAA[2][i]);
+        dtA[i] = -alpha*alpha*fa*(dtraceK[i] - dK0[i] - CCZ4c*2*dTheta[i]) + advec_aux*(beta[0]*dAA[0][i] + beta[1]*dAA[1][i] + beta[2]*dAA[2][i]); // Baojiu-01-08-22: alpha*fa -> alpha^2*fa
     }
     for (int k = 0; k < 3; k++)
     {
         double temp=0;
         for (int i = 0; i < 3; i++)
-        for (int j = 0; j < 3; j++) temp += g_contr[i][j]*dAex[k][i][j]; // TODO we computed this quantity  few lines earlier alrady
-        dtA[k] -= CCZ4sk*alpha*fa*temp; // Baojiu-01-08-22: alpha*fa -> alpha^2*fa //04-08-22 remove one alpha 
-    }//21-04-22 remove this for test
+        for (int j = 0; j < 3; j++) temp += g_contr[i][j]*dAex[k][i][j];
+        dtA[k] -= CCZ4sk*alpha*fa*temp; // Baojiu-13-06-23: here there is only one alpha as in the Dumbser paper
+    }
 
-    //double dtB[3][3] ={0,0,0,0,0,0,0,0,0};
     double dtB[3][3] = {
         {CCZ4f*gradQin[20][0],CCZ4f*gradQin[21][0],CCZ4f*gradQin[22][0]},
         {CCZ4f*gradQin[20][1],CCZ4f*gradQin[21][1],CCZ4f*gradQin[22][1]},
         {CCZ4f*gradQin[20][2],CCZ4f*gradQin[21][2],CCZ4f*gradQin[22][2]}
     };
-
-
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
     for (int j = 0; j < 3; j++)
     {
-        dtB[k][i] += CCZ4mu*alpha2 * g_contr[i][j]*( dPP[k][j] - dPP[j][k])/phi; // Baojiu-01-08-22: divided dPP by phi
+        dtB[k][i] += CCZ4mu*alpha2 * g_contr[i][j]*( dPP[k][j] - dPP[j][k]); 		// Baojiu-13-06-23: Option 1 - similar form as in the Dumbser paper
+//      dtB[k][i] += CCZ4mu*alpha2 * g_contr[i][j]*( dPP[k][j] - dPP[j][k])/(np*chi); 	// Baojiu-13-06-23: Option 2 - same values as in the Dumbser paper
         for (int n = 0; n < 3; n++)
-        for (int l = 0; l < 3; l++) dtB[k][i] -= CCZ4mu*alpha2 * g_contr[i][j]*g_contr[n][l]*( dDD[k][l][j][n] - dDD[l][k][j][n]);
-    } //21-04-22 remove this for test
-
-    // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
+        for (int l = 0; l < 3; l++) dtB[k][i] -= CCZ4mu*alpha2 * g_contr[i][j]*g_contr[n][l]*(dDD[k][l][j][n] - dDD[l][k][j][n]);
+    } 
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) dtB[i][j] += CCZ4bs*advec_aux*(beta[0]*dBB[0][i][j] + beta[1]*dBB[1][i][j] + beta[2]*dBB[2][i][j]);
-
-    // NOTE 0 value param
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) dtB[i][j] *= CCZ4sk;
 
@@ -901,24 +891,21 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     for (int k = 0; k < 3; k++) dtD[i][j][k] = -alpha*dAex[i][j][k];
-
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     for (int k = 0; k < 3; k++)
     for (int m = 0; m < 3; m++)
     {
-        dtD[k][i][j] += ( 0.25*(g_cov[m][i]*(dBB[k][j][m] + dBB[j][k][m]) + g_cov[m][j]*(dBB[k][i][m]+dBB[i][k][m])) - 1./6.*g_cov[i][j]*(dBB[k][m][m]+dBB[m][k][m]) );
-        for (int n = 0; n < 3; n++){
-            dtD[k][i][j] += 1./3*alpha*g_cov[i][j]*g_contr[n][m]*dAex[k][n][m]; // explicitly remove the trace of tilde A again //21-04-22 remove this for test
+        dtD[k][i][j] += 0.25*(g_cov[m][i]*(dBB[k][j][m] + dBB[j][k][m]) + g_cov[m][j]*(dBB[k][i][m]+dBB[i][k][m])) - 1./6.*g_cov[i][j]*(dBB[k][m][m]+dBB[m][k][m]);
+        for (int n = 0; n < 3; n++)
+        {
+            dtD[k][i][j] += 1./3*alpha*g_cov[i][j]*g_contr[n][m]*dAex[k][n][m]; 
         }
     }
-
-    // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     for (int k = 0; k < 3; k++) dtD[i][j][k] += advec_aux*(beta[0]*dDD[0][i][j][k] + beta[1]*dDD[1][i][j][k] + beta[2]*dDD[2][i][j][k]);
 
-    // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
     double dtP[3] = {0,0,0};
     for (int i = 0; i < 3; i++) dtP[i] = advec_aux*(beta[0]*dPP[0][i] + beta[1]*dPP[1][i] + beta[2]*dPP[2][i]);
     for (int k = 0; k < 3; k++)
@@ -926,15 +913,15 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         double temp=0;
         for (int m = 0; m < 3; m++)
         for (int n = 0; n < 3; n++) temp += g_contr[m][n]*dAex[k][m][n];
-        dtP[k] += 1./3.*phi*alpha*(dtraceK[k] + CCZ4sk*temp/phi); // Baojiu-01-08-22: multiplied by phi //04-08-22 remove one phi 
-        //dtP[k] += 1./3.*phi*alpha*(dtraceK[k]);//21-04-22 remove this for test
-        for (int i = 0; i < 3; i++) dtP[k] -= 1./6.*phi*(dBB[k][i][i] + dBB[i][k][i]); // Baojiu-01-08-22: multiplied by phi
+        dtP[k] += np/3.*chi*alpha*dtraceK[k]; 						// Baojiu-13-06-23: changed to chi=phi^n
+        dtP[k] += np/3.*chi*alpha*CCZ4sk*temp; 						// Baojiu-13-06-23: changed to chi=phi^n
+        for (int i = 0; i < 3; i++) dtP[k] -= np/6.*chi*(dBB[k][i][i] + dBB[i][k][i]); 	// Baojiu-13-06-23: changed to chi=phi^n
     }
 
     double dtgamma[3][3] = {0,0,0,0,0,0,0,0,0};
     double dtalpha = 0;
     double dtbeta[3] = {0,0,0};
-    double dtphi = 0;
+    double dtchi = 0;
 
     BgradQ[0]  = -dtgamma[0][0];
     BgradQ[1]  = -dtgamma[0][1];
@@ -986,7 +973,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     BgradQ[51] = -dtD[2][1][2];
     BgradQ[52] = -dtD[2][2][2];
     BgradQ[53] = -dtTraceK;
-    BgradQ[54] = -dtphi;
+    BgradQ[54] = -dtchi;
     for (int i = 0; i < 3; i++) BgradQ[55+i] = -dtP[i];
     BgradQ[58] = 0;
     //if (dtP[1]!=0) printf("dtP[1] = %g, dtP[2] = %g \n\n",dtP[1],dtP[2]);

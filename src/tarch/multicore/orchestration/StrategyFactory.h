@@ -2,9 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <string>
-
 
 namespace tarch {
   namespace multicore {
@@ -17,7 +15,7 @@ namespace tarch {
       /**
        * Use toString() to see valid options
        */
-      Strategy* parseRealisation( const std::string& realisation );
+      Strategy* parseRealisation(const std::string& realisation);
 
       std::string getListOfRealisations();
 
@@ -26,9 +24,6 @@ namespace tarch {
        * to fuse 16 tasks into one (GPU) task.
        */
       Strategy* createDefaultStrategy();
-    }
-  }
-}
-
-
-
+    } // namespace orchestration
+  }   // namespace multicore
+} // namespace tarch

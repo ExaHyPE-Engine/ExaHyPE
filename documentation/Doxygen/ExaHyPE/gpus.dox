@@ -1,3 +1,8 @@
+/**
+
+ @page page_exahype_gpu GPU support
+
+
 ### GPU support {#section:exahype:gpu-support}
 
  uses GPUs in a classic *offloading, accelerator style*. This means that
@@ -130,3 +135,8 @@ const;
 in your solver. By default, this routine returns `true` always. Here's
 the clue: This is a normal function, i.e. you can use the solver's state
 and make the result depend on this one.
+ 
+ 
+  */
+  
+  

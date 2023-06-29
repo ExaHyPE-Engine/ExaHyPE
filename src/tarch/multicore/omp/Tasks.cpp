@@ -19,8 +19,7 @@
 
 #if defined(SharedOMP)
 
-namespace
-{
+namespace {
   const int StandardPriority = 16;
 
   const int BackgroundConsumerPriority = 1;
@@ -55,17 +54,13 @@ namespace
  * subsequent taskwait hence synchronises on one logical level above within the
  * task hierarchy, which is not what we want.
  */
-void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks)
-{
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
   assertion(not tasks.empty());
-
-  // TODO(AT): re-insert annotations here? i.e. step_task -> traversal_task[s]?
 
 #if defined(OpenMPTaskGroup)
 #pragma omp taskloop nogroup shared(tasks) priority(StandardPriority) untied
 #endif
-  for (int i = 0; i < static_cast<int>(tasks.size()); i++)
-  {
+  for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
 #if !defined(OpenMPTaskGroup)
 #pragma omp task
 #endif
@@ -95,15 +90,13 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 
 int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawnedTasks; }
 
-void tarch::multicore::native::spawnTask(Task* job)
-{
+void        tarch::multicore::native::spawnTask(Task* job) {
 #pragma omp atomic
   numberOfSpawnedTasks++;
 
 #pragma omp task priority(BackgroundConsumerPriority) untied
   {
-    while (job->run())
-    {
+    while (job->run()) {
 #pragma omp taskyield
     }
     delete job;
@@ -137,20 +130,16 @@ NVC++-S-0155-A possibly throwing copy constructor for a task firstprivate variab
  */
 void tarch::multicore::native::processFusedTask(
   Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
-)
-{
+) {
   std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
 #if !defined(__NVCOMPILER)
 #pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
 #endif
   {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
-    if (stillExecuteLocally)
-    {
+    if (stillExecuteLocally) {
       tarch::multicore::native::spawnTask(myTask);
-    }
-    else
-    {
+    } else {
       delete myTask;
     }
   }
@@ -162,8 +151,7 @@ void tarch::multicore::native::processFusedTask(
  * opportunity to disrupt the local execution and instead progress pending
  * tasks.
  */
-void tarch::multicore::native::drainTaskQueues()
-{
+void        tarch::multicore::native::drainTaskQueues() {
 #pragma omp taskyield
 }
 

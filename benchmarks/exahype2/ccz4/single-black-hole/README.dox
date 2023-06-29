@@ -346,4 +346,16 @@ surrounded by further FV patches.
 It seemed to me to be a waste of compute power to do this. 
 Rather make the black hole influence area smaller.
 
+
+## Optimisation
+
+I found that using more than 8 trees per rank slows down the calculations 
+massively and introduces an enormous overhead, when we do the domain 
+partitioning. Therefore, I constrain the maximum number of initial trees 
+to 8 per rank, and then I also introduce a minimal tree size of 100. As
+the documentation of exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration()
+clarifies, this minimal tree size is not used for the initial decomposition
+(this is where the 8 steps in), but it is used afterwards.
+
+
 */
