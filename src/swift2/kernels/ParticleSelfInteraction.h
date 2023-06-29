@@ -4,6 +4,11 @@
 
 #include <list>
 #include <vector>
+#include <functional>
+
+
+#include "tarch/la/Vector.h"
+
 
 namespace swift2 {
   namespace kernels {

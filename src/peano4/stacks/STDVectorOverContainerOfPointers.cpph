@@ -29,6 +29,7 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::workInReceivedMetaData
     Base::_data[i].setDebugX(x);
     Base::_data[i].setDebugH(h);
 #endif
+    assertion( _metaDataSizeBuffer[i]>=0 );
     assertionEquals(Base::_data[i].size(), 0);
     logDebug("workInReceivedMetaData()", "initialised entry " << i << ": " << Base::_data[i].toString());
   }
