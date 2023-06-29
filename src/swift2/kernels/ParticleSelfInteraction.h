@@ -108,13 +108,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void endDensityCalculationWithConstantSmoothingLength(
-      const ParticleContainer& localParticles,
-      const int                hydroDimensions,
-      const double             etaFactor,
-      const double             alphaAV,
-      const double             hTolerance,
-      const double             hHydroMin,
-      const double             hHydroMax
+      const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
     );
 
     /**
@@ -124,13 +118,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void endDensityCalculationWithConstantSearchRadius(
-      const ParticleContainer& localParticles,
-      const int                hydroDimensions,
-      const double             etaFactor,
-      const double             alphaAV,
-      const double             hTolerance,
-      const double             hHydroMin,
-      const double             hHydroMax
+      const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
     );
 
     /**

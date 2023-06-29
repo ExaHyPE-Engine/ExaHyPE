@@ -54,14 +54,14 @@ class testDensityCalculation(Particle):
         """
         return [
             AlgorithmStep(
-                name="DensityLoopWithConstantSmoothingLength",
+                name="DensityLoopWithConstantSearchRadius",
                 dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 touch_vertex_first_time_kernel="""
                                          ::swift2::kernels::prepareDensityCalculation( localParticles );
                                          """,
                 cell_kernel="""
-                                         ::swift2::kernels::computeDensity(
+                                         ::swift2::kernels::computeDensityWithConstantSearchRadius(
                                            localParticles,
                                            activeParticles,
                                            {}
@@ -70,7 +70,7 @@ class testDensityCalculation(Particle):
                     self.hydroDimensions
                 ),
                 touch_vertex_last_time_kernel="""
-                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
+                                         ::swift2::kernels::endDensityCalculationWithConstantSearchRadius(
                                              localParticles,
                                              {},
                                              {},

@@ -37,6 +37,9 @@ void swift2::kernels::endDensityCalculation(
   const double             hHydroMin,
   const double             hHydroMax
 ) {
+
+  assertionMsg(false, "Don't use this yet.");
+
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
 
