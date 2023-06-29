@@ -122,8 +122,56 @@ stencilsFC=[
 
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
+## The python code itself
 
+We create a project:
 
+~~~~~~~~~~~~~~~~~~~~~~~~
+project = petsc.Project(project_name = "HDG", 
+                        namespace = [ "benchmarks", "multigrid", "petsc", "hdg" ]
+                        ) 
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+This just sets up our namespaces. The real information comes in the next steps.
+
+We add in some global parameters:
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+cube_size = 1.0
+project.set_global_simulation_parameters(
+  dimensions            = args.dimensions,
+  offset                = [ 0.0       for _ in range(args.dimensions) ],
+  domain_size           = [ cube_size for _ in range(args.dimensions) ],
+)
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+and we add in a solver:
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+solver = petsc.solvers.HdgFirstDiscretisation("HDG", 
+                                              cellDofs,
+                                              faceDofs,
+                                              args.meshsize,
+                                              args.meshsize,
+                                              stencilsFF,
+                                              stencilsCF,
+                                              stencilsFC,
+                                              stencilCC
+                                              )
+
+project.add_solver( solver )
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+This will copy all the code in, and ensure that the PETSc routines are available. These PETSc 
+routines are customisable, but for now this is out of the scope of this tutorial.
+
+## Building the project
+
+All the user needs to do is invoke the python script, with build style and polynomial degree:
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+python3 hdg.py -m release --degree 1
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 */
