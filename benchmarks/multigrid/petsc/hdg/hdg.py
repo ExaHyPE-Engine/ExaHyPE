@@ -41,42 +41,29 @@ faceDofs = (args.degree + 1) ** (args.dimensions - 1)
 add some stencils
 '''
 
-# matrix[20136:20139, 20136:20139]
-stencilFF=[
-  [1 for _ in range(faceDofs)]
-     for _ in range(faceDofs)
-]
+from stencils import stencilsCF, stencilsFC, stencilCC, stencilFF
 
 if len(stencilFF)    != faceDofs \
 or len(stencilFF[0]) != faceDofs:
   print("incorrect dimensions for stencilFF")
   exit()
 
-stencilCF=[
-  [1 for _ in range(faceDofs)]
-     for _ in range(cellDofs)
-]
-if len(stencilCF)    != cellDofs \
-or len(stencilCF[0]) != faceDofs:
-  print("incorrect dimensions for stencilFF")
-  exit()
+for stencil in stencilsCF:
+  if len(stencil)    != cellDofs \
+  or len(stencil[0]) != faceDofs:
+    print("incorrect dimensions for stencilCF")
+    exit()
 
-stencilFC=[
-  [1 for _ in range(cellDofs)]
-     for _ in range(faceDofs)
-]
-if len(stencilFC)    != faceDofs \
-or len(stencilFC[0]) != cellDofs:
-  print("incorrect dimensions for stencilFF")
-  exit()
+for stencil in stencilsFC:
+  if len(stencil)    != faceDofs \
+  or len(stencil[0]) != cellDofs:
+    print("incorrect dimensions for stencilFC")
+    exit()
 
-stencilCC=[
-  [1 for _ in range(cellDofs)]
-     for _ in range(cellDofs)
-]
+
 if len(stencilCC)    != cellDofs \
 or len(stencilCC[0]) != cellDofs:
-  print("incorrect dimensions for stencilFF")
+  print("incorrect dimensions for stencilCC")
   exit()
 
 if args.degree != 1:
@@ -95,8 +82,8 @@ solver = petsc.solvers.HdgFirstDiscretisation("HDG",
                                               args.meshsize,
                                               args.meshsize,
                                               stencilFF,
-                                              stencilCF,
-                                              stencilFC,
+                                              stencilsCF,
+                                              stencilsFC,
                                               stencilCC
                                               )
 

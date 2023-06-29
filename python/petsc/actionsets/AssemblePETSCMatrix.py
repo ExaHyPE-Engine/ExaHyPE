@@ -312,10 +312,12 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
       repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, faceDofIndices, _stencilFF );
       
       //insert the stencil for CF interactions
-      repositories::instanceOfPetsc.insertLocalMatrix( cellDofIndices, faceDofIndices, _stencilCF );
+      //use face iterator to index our vector of stencils
+      repositories::instanceOfPetsc.insertLocalMatrix( cellDofIndices, faceDofIndices, _stencilsCF[face] );
 
-      //insert the stencil for FC interactions
-      repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, cellDofIndices, _stencilFC );
+      //insert the stencil for FC interactions, only if we are not on the boundary
+      if ( fineGridFaces{{SOLVER_NAME}}(face).getType() != facedata::{{SOLVER_NAME}}::Type::Boundary )
+        repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, cellDofIndices, _stencilsFC[face] );
 
     }
 
@@ -355,40 +357,55 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     self.d["STENCILFF"] += "}"
 
     #NEXT - HANDLE STENCIL FOR CELL-FACE INTERACTIONS
+    #this time we have a list of stencils which must be ordered
 
     ##first, capture the dimensions of the stencil
-    self.d["stencilRowsCF"] = len(solver.stencilCF)
-    self.d["stencilColsCF"] = len(solver.stencilCF[0])
-    numberOfCols = len(solver.stencilCF[0]) #use this to insert a line break after every row
+    self.d["stencilRowsCF"] = len(solver.stencilsCF[0])   #solver.stencilCF[0] is the 0th stencil itself
+    self.d["stencilColsCF"] = len(solver.stencilsCF[0][0])#captures the number of columns 
+    numberOfCols = self.d["stencilColsCF"]               #use this to insert a line break after every row
+    self.d["STENCILSCF"] = []                            #init a list. we will insert the stencils into them.
 
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
-    stencil=[item for sublist in solver.stencilCF for item in sublist]
-    self.d["STENCILCF"] = "\n{" + str(stencil[0])
-    for index, el in enumerate(stencil[1:]):
-      self.d["STENCILCF"] += ", "
-      if index > 0 and (index-1) % numberOfCols == 1:
-        self.d["STENCILCF"] += "\n"
-      self.d["STENCILCF"] += str(el)
-    self.d["STENCILCF"] += "}"
+    for stencil in solver.stencilsCF:
+      #flatten it
+      stencil=[item for sublist in stencil for item in sublist]
+      
+      #init a string to capture the stencil, we will insert this into the dict at the end
+      stencilAsString = "\n{" + str(stencil[0])
+      for index, el in enumerate(stencil[1:]):
+        stencilAsString += ", "
+        if index > 0 and (index-1) % numberOfCols == 1:
+          stencilAsString += "\n"
+        stencilAsString += str(el)
+      stencilAsString += "}"
+
+      #add to list of stencils 
+      self.d["STENCILSCF"].append(stencilAsString)
 
     #NEXT - HANDLE STENCIL FOR FACE-CELL INTERACTIONS
+    #this time we have a list of stencils which must be ordered
 
     ##first, capture the dimensions of the stencil
-    self.d["stencilRowsFC"] = len(solver.stencilFC)
-    self.d["stencilColsFC"] = len(solver.stencilFC[0])
-    numberOfCols = len(solver.stencilFC[0]) #use this to insert a line break after every row
+    self.d["stencilRowsFC"] = len(solver.stencilsFC[0])   #solver.stencilFC[0] is the 0th stencil itself
+    self.d["stencilColsFC"] = len(solver.stencilsFC[0][0])#captures the number of columns 
+    numberOfCols = self.d["stencilColsFC"]               #use this to insert a line break after every row
+    self.d["STENCILSFC"] = []                            #init a list. we will insert the stencils into them
 
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
-    stencil=[item for sublist in solver.stencilFC for item in sublist]
-    self.d["STENCILFC"] = "\n{" + str(stencil[0])
-    for index, el in enumerate(stencil[1:]):
-      self.d["STENCILFC"] += ", "
-      if index > 0 and (index-1) % numberOfCols == 1:
-        self.d["STENCILFC"] += "\n"
-      self.d["STENCILFC"] += str(el)
-    self.d["STENCILFC"] += "}"
+    for stencil in solver.stencilsFC:
+      stencil=[item for sublist in stencil for item in sublist]
+      stencilAsString = "\n{" + str(stencil[0])
+      for index, el in enumerate(stencil[1:]):
+        stencilAsString += ", "
+        if index > 0 and (index-1) % numberOfCols == 1:
+          stencilAsString += "\n"
+        stencilAsString += str(el)
+      stencilAsString += "}"
+
+      #add to list
+      self.d["STENCILSFC"].append(stencilAsString)
 
     #FINALLY - HANDLE STENCIL FOR CELL-CELL INTERACTIONS
 
@@ -464,12 +481,33 @@ Consult petsc.Project for details
   def get_attributes(self):
     """!
     """
+
+    #construct the output strings for stencilsCF and stencilsFC
+    stencilsCF = '{'
+    for stencil in self.d["STENCILSCF"]:
+      stencilsCF += stencil
+      stencilsCF += ",\n"
+    stencilsCF += "}"
+    #same again
+    stencilsFC = '{'
+    for stencil in self.d["STENCILSFC"]:
+      stencilsFC += stencil
+      stencilsFC += ",\n"
+    stencilsFC += "}"
+
     return f"""
   int _spacetreeId;
   const int _faceDofs = {self.d["FACE_CARDINALITY"]};
   const int _cellDofs = {self.d["CELL_CARDINALITY"]};
   const tarch::la::Matrix<{self.d["stencilRowsFF"]},{self.d["stencilColsFF"]},double> _stencilFF = {self.d["STENCILFF"]};
-  const tarch::la::Matrix<{self.d["stencilRowsCF"]},{self.d["stencilColsCF"]},double> _stencilCF = {self.d["STENCILCF"]};
-  const tarch::la::Matrix<{self.d["stencilRowsFC"]},{self.d["stencilColsFC"]},double> _stencilFC = {self.d["STENCILFC"]};
+
+  //we need a std::vector for these now, since we have mutiple
+  const std::vector< tarch::la::Matrix<{self.d["stencilRowsCF"]},{self.d["stencilColsCF"]},double> > _stencilsCF = 
+    {stencilsCF};
+
+  //we need a std::vector for these now, since we have mutiple
+  const std::vector< tarch::la::Matrix<{self.d["stencilRowsFC"]},{self.d["stencilColsFC"]},double> > _stencilsFC = 
+    {stencilsFC};
+
   const tarch::la::Matrix<{self.d["stencilRowsCC"]},{self.d["stencilColsCC"]},double> _stencilCC = {self.d["STENCILCC"]};
 """

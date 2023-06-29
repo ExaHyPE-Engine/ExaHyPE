@@ -47,8 +47,8 @@ class HdgFirstDiscretisation(Solver):
                min_h,
                max_h,
                stencilFF,
-               stencilCF,
-               stencilFC,
+               stencilsCF,
+               stencilsFC,
                stencilCC):
     """!
    
@@ -88,10 +88,10 @@ class HdgFirstDiscretisation(Solver):
     self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     
-    self.stencilFF = stencilFF
-    self.stencilCF = stencilCF
-    self.stencilFC = stencilFC
-    self.stencilCC = stencilCC
+    self.stencilFF  = stencilFF
+    self.stencilsCF = stencilsCF
+    self.stencilsFC = stencilsFC
+    self.stencilCC  = stencilCC
     pass
 
 
