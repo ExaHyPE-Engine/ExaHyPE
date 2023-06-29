@@ -71,7 +71,6 @@ if args.degree != 1:
   print('for now, we just want to get visualisation working with degree = 1')
   exit()
 
-
 project = petsc.Project(project_name = "HDG", 
                         namespace = [ "benchmarks", "multigrid", "petsc", "hdg" ]
                         ) 

@@ -58,20 +58,18 @@ may be different, and so we treat them as such.
 
 We note the dimensions for each of the stencils mentioned above:
 
-\li The stencil should contain cellDofs rows, cellDofs columns.
-\li The stencil should contain faceDofs rows, faceDofs columns.
-\li The stencil should contain cellDofs rows, faceDofs * 2d columns.
-\li The stencil should contain faceDofs * 2d rows, cellDofs columns.
+\li The stencil for the cell-cell interactions should contain cellDofs rows, cellDofs columns.
+\li The stencil for the face-face interactions should contain faceDofs rows, faceDofs columns.
+\li The stencil for the cell-face interactions should contain cellDofs rows, faceDofs columns.
+\li The stencil for the face-cell interactions should contain faceDofs rows, cellDofs columns.
 
-The reason for the dimensions of the last two is that in general, there is a different stencil for interactions between the face and the cell, depending on whether the face is at the left, bottom,
-right or top of the cell. So, following the enumeration order outlined in @ref multigrid_enumeration,
-the first faceDofs columns are reserved for the stencil that governs the interactions between the
-left face and the cell, the next columns for the bottom stencil, etc in the order left, bottom, 
-right, top.
+We provide flexibility for the C-F and the F-C interactions: we allow for there to be @f$ 2d @f$ different 
+stencils, owing to the fact that there are @f$ 2d @f$ different faces. In this case, there should be 
+a list of stencils, ordered similar to that outlined in @ref multigrid_enumeration. We discuss further in the next section.
 
 ## Insert a custom stencil
 
-The user is free to insert a stencil for a problem that suits them in the file benchmarks/multigrid/petsc/hdg.py. There is no guarantee it will do something physical!
+The user is free to insert a stencil for a problem that suits them in the file benchmarks/multigrid/petsc/stencils.py. There is no guarantee it will do something physical!
 
 As an example, we show how to insert a 3x3 matrix, describing how the face degrees of freedom interact with each other. Note that this is a special case, and the matrix inserted must have dimensions
 faceDofs x faceDofs. We write as a list of lists.
@@ -86,6 +84,46 @@ stencilFF=[
 
 As a sanity check, len(stencilFF) should be equal to the intended number of rows, and len(stencilFF[0]) 
 should be equal to the intended number of columns.
+
+When it comes to the stencils for the C-F and F-C interactions, we want:
+
+\li A list of stencils
+\li The length of this list should be @f$ 2d @f$
+\li The order of the stencils in the list should be left, bottom, right, top, as described in @ref multigrid_enumeration
+
+We demonstrate here, for dimension 2 and degree 1:
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+stencilsFC=[
+  #0th stencil (left side)
+  [
+    [0.1607, 0.4827, 0.8651, 0.3051], #0th row
+    [0.7681, 0.5964, 0.2804, 0.1423], #1st row 
+  ],
+
+  #1st stencil (bottom)
+  [
+    [0.6588, 0.237, 0.798, 0.1824],
+    [0.1443, 0.415, 0.8337, 0.3774]
+  ],
+
+  #2nd stencil (right side)
+  [
+    [0.0978, 0.8793, 0.0053, 0.1696],
+    [0.8305, 0.219, 0.7193, 0.2622]
+  ],
+
+  #3rd and final
+  [
+    [0.7692, 0.0298, 0.7722, 0.4227],
+    [0.0982, 0.6209, 0.1493, 0.7151]
+  ]
+]
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
 
 
 */
