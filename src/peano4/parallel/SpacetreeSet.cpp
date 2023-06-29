@@ -269,12 +269,8 @@ peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
 
 bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
 
-  OTTER_DECLARE_HANDLE(root_task);
   OTTER_DECLARE_HANDLE(local_task);
-#if OTTER_ROOT_TASK_EXPLICIT
-  OTTER_BORROW_FROM_POOL(root_task, otter::label::root);
-#endif
-  OTTER_INIT_TASK(local_task, root_task, 2, otter_add_to_pool, otter::label::unknown);
+  OTTER_INIT_TASK(local_task, OTTER_NULL_TASK, 2, otter_add_to_pool, otter::label::unknown);
   OTTER_TASK_START(local_task);
 
   _spacetreeSet.createObserverCloneIfRequired(_observer,_spacetree._id);

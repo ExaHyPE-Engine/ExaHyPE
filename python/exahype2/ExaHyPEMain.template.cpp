@@ -266,10 +266,6 @@ void step()
 
   static int creepingNumberOfLocalCells = 0;
 
-  OTTER_DECLARE_HANDLE(root_task);
-#if OTTER_ROOT_TASK_EXPLICIT
-  OTTER_BORROW_FROM_POOL(root_task, otter::label::root);
-#endif
   OTTER_DECLARE_HANDLE(step_task);
 
   switch (stepName)
@@ -278,13 +274,11 @@ void step()
   {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid-but-postpone-refinement");
 
-#if OTTER_USE_PHASES
     OTTER_PHASE_SWITCH(otter::phase::create_grid_no_refine);
-#endif
 
     repositories::startGridConstructionStep();
 
-    OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
+    OTTER_INIT_TASK(step_task, OTTER_NULL_TASK, stepIdentifier, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     observers::CreateGridButPostponeRefinement observer;
@@ -296,7 +290,7 @@ void step()
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
     OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(root_task, descendants);
+    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishGridConstructionStep();
   }
@@ -305,13 +299,11 @@ void step()
   {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid");
 
-#if OTTER_USE_PHASES
     OTTER_PHASE_SWITCH(otter::phase::create_grid);
-#endif
 
     repositories::startGridConstructionStep();
 
-    OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
+    OTTER_INIT_TASK(step_task, OTTER_NULL_TASK, stepIdentifier, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     observers::CreateGrid observer;
@@ -323,7 +315,7 @@ void step()
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
     OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(root_task, descendants);
+    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishGridConstructionStep();
 
@@ -348,9 +340,7 @@ void step()
 
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid-and-converge-load-balancing");
 
-#if OTTER_USE_PHASES
     OTTER_PHASE_SWITCH(otter::phase::create_grid_converge);
-#endif
 
     // The smaller here corresponds to the -1 below
     if (::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() < 0 and repositories::loadBalancer.isEnabled(false))
@@ -374,7 +364,7 @@ void step()
 
     repositories::startGridConstructionStep();
 
-    OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
+    OTTER_INIT_TASK(step_task, OTTER_NULL_TASK, stepIdentifier, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     observers::CreateGridButPostponeRefinement observer;
@@ -386,7 +376,7 @@ void step()
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
     OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(root_task, descendants);
+    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishGridConstructionStep();
 
@@ -415,13 +405,11 @@ void step()
     tarch::logging::LogFilter::getInstance().switchProgramPhase("init-grid");
     repositories::loadBalancer.enable(false);
 
-#if OTTER_USE_PHASES
     OTTER_PHASE_SWITCH(otter::phase::init);
-#endif
 
     repositories::startGridInitialisationStep();
 
-    OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
+    OTTER_INIT_TASK(step_task, OTTER_NULL_TASK, stepIdentifier, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     observers::InitGrid observer;
@@ -433,7 +421,7 @@ void step()
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
     OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(root_task, descendants);
+    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishGridInitialisationStep();
   }
@@ -446,13 +434,11 @@ void step()
     const double minTimeStepSize = repositories::getMinTimeStepSize();
     const double maxTimeStepSize = repositories::getMaxTimeStepSize();
 
-#if OTTER_USE_PHASES
     OTTER_PHASE_SWITCH(otter::phase::plot);
-#endif
 
     repositories::startPlottingStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
 
-    OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
+    OTTER_INIT_TASK(step_task, OTTER_NULL_TASK, stepIdentifier, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     observers::PlotSolution observer;
@@ -464,7 +450,7 @@ void step()
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
     OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(root_task, descendants);
+    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishPlottingStep();
   }
@@ -485,13 +471,11 @@ void step()
     const double minMeshSize     = repositories::getMinMeshSize();
     const double maxMeshSize     = repositories::getMaxMeshSize();
 
-#if OTTER_USE_PHASES
     OTTER_PHASE_SWITCH(otter::phase::timestep);
-#endif
 
     repositories::startTimeStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
 
-    OTTER_INIT_TASK(step_task, root_task, stepIdentifier, otter_add_to_pool, otter::label::step);
+    OTTER_INIT_TASK(step_task, OTTER_NULL_TASK, stepIdentifier, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
     observers::TimeStep observer;
@@ -503,7 +487,7 @@ void step()
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
     OTTER_REMOVE_FROM_POOL(step_task, otter::label::step);
-    OTTER_TASK_WAIT_FOR(root_task, descendants);
+    OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishTimeStep();
   }
@@ -567,12 +551,6 @@ int main(int argc, char** argv)
 
   OTTER_INITIALISE();
 
-#if OTTER_ROOT_TASK_EXPLICIT
-  OTTER_DECLARE_HANDLE(root);
-  OTTER_INIT_TASK(root, OTTER_NULL_TASK, 0, otter_add_to_pool, otter::label::root);
-  OTTER_TASK_START(root);
-#endif
-
 #if defined(SharedOMP)
 #pragma omp parallel
   {
@@ -635,9 +613,6 @@ int main(int argc, char** argv)
 
   tarch::logging::Statistics::getInstance().writeToCSV();
 
-#if OTTER_ROOT_TASK_EXPLICIT
-  OTTER_TASK_END(root);
-#endif
 
   OTTER_FINALISE();
 

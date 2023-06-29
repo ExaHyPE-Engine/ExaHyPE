@@ -1,9 +1,4 @@
 #include "config.h"
-
-#if defined(UseOtter)
-#define OTTER_TASK_GRAPH_ENABLE_USER
-#endif
-
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/mpi/Rank.h"

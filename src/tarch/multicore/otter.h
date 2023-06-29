@@ -3,15 +3,6 @@
 #pragma once
 
 #include "config.h"
-#define OTTER_ROOT_PHASES_MODE 2
-
-#if OTTER_ROOT_PHASES_MODE == 1
-#define OTTER_ROOT_TASK_EXPLICIT 1
-#define OTTER_USE_PHASES 0
-#elif OTTER_ROOT_PHASES_MODE == 2
-#define OTTER_ROOT_TASK_EXPLICIT 0
-#define OTTER_USE_PHASES 1
-#endif
 
 /**
  * @namespace otter

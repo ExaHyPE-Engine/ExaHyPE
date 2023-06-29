@@ -2,9 +2,6 @@
 
 #if defined(UseOtter)
 #define OTTER_TASK_GRAPH_ENABLE_USER
-#define INIT_ENCLAVE_TASK_IN_CONSTRUCTOR 1
-#define INIT_ENCLAVE_TASK_ON_RUN 2
-#define INIT_ENCLAVE INIT_ENCLAVE_TASK_IN_CONSTRUCTOR
 #endif
 
 #include "EnclaveTask.h"
@@ -41,31 +38,16 @@ exahype2::EnclaveTask::EnclaveTask(
   _maxEigenvalue( -1.0 ) {
   logTraceIn( "EnclaveTask(...)" );
   logTraceOut( "EnclaveTask(...)" );
-#if INIT_ENCLAVE == INIT_ENCLAVE_TASK_IN_CONSTRUCTOR
-  OTTER_DECLARE_HANDLE(root_task);
   OTTER_DECLARE_HANDLE(enclave_task);
-#if OTTER_ROOT_TASK_EXPLICIT
-  OTTER_BORROW_FROM_POOL(root_task, otter::label::root);
-#endif
-  OTTER_INIT_TASK(enclave_task, root_task, 1, otter_add_to_pool, otter::label::enclave);
-#endif
+  OTTER_INIT_TASK(enclave_task, OTTER_NULL_TASK, 1, otter_add_to_pool, otter::label::enclave);
 }
 
 
 bool exahype2::EnclaveTask::run() {
   logTraceInWith1Argument( "run()", getTaskId() );
 
-#if INIT_ENCLAVE == INIT_ENCLAVE_TASK_ON_RUN
-  OTTER_DECLARE_HANDLE(root_task);
-  OTTER_DECLARE_HANDLE(enclave_task);
-#if OTTER_ROOT_TASK_EXPLICIT
-  OTTER_BORROW_FROM_POOL(root_task, otter::label::root);
-#endif
-  OTTER_INIT_TASK(enclave_task, root_task, 1, otter_no_add_to_pool, otter::label::enclave);
-#elif INIT_ENCLAVE == INIT_ENCLAVE_TASK_IN_CONSTRUCTOR
   OTTER_DECLARE_HANDLE(enclave_task);
   OTTER_REMOVE_FROM_POOL(enclave_task, otter::label::enclave);
-#endif
 
   OTTER_TASK_START(enclave_task);
   computeTask();
