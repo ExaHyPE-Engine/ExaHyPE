@@ -88,7 +88,7 @@ class HdgFirstDiscretisation(Solver):
     self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     
-    self.stencilFF  = stencilFF
+    self.stencilsFF = stencilFF
     self.stencilsCF = stencilsCF
     self.stencilsFC = stencilsFC
     self.stencilCC  = stencilCC

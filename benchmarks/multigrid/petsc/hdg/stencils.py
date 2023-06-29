@@ -63,7 +63,21 @@ stencilCC=[
      for _ in range(cellDofs)
 ]
 
-stencilFF=[
+stencilsFF=[
   [1 for _ in range(faceDofs)]
      for _ in range(faceDofs)
+]
+
+stencilsFF=[
+  #this first one is for the boundary
+  [
+    [1 for _ in range(faceDofs)]
+     for _ in range(faceDofs)
+  ],
+
+  #this one is for the interior
+  [
+    [1 for _ in range(faceDofs)]
+     for _ in range(faceDofs)
+  ],
 ]

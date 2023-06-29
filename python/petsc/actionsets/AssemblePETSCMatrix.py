@@ -308,16 +308,23 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
       for (int i=0; i<_faceDofs; i++)
         faceDofIndices.push_back( globalIndex + i );
       
-      //insert the stencil for FF interactions
-      repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, faceDofIndices, _stencilFF );
-      
       //insert the stencil for CF interactions
       //use face iterator to index our vector of stencils
       repositories::instanceOfPetsc.insertLocalMatrix( cellDofIndices, faceDofIndices, _stencilsCF[face] );
 
       //insert the stencil for FC interactions, only if we are not on the boundary
-      if ( fineGridFaces{{SOLVER_NAME}}(face).getType() != facedata::{{SOLVER_NAME}}::Type::Boundary )
+      if ( fineGridFaces{{SOLVER_NAME}}(face).getType() == facedata::{{SOLVER_NAME}}::Type::Interior ){
         repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, cellDofIndices, _stencilsFC[face] );
+
+        //also insert the FF stencil intended for the interior
+        //there's only two, so we use 0 for boundary and 1 for interior
+        repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, faceDofIndices, _stencilsFF[1] );
+      }
+
+      else if ( fineGridFaces{{SOLVER_NAME}}(face).getType() == facedata::{{SOLVER_NAME}}::Type::Boundary ){
+        //insert FF stencil intended for boundary
+        repositories::instanceOfPetsc.insertLocalMatrix( faceDofIndices, faceDofIndices, _stencilsFF[0] );
+      }
 
     }
 
@@ -339,22 +346,30 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     '''
     
     #FIRST - HANDLE STENCIL FOR FACE-FACE INTERACTIONS
+    #we have two stencils, and we insert them into a std::vector
+    #the 0th one is for the boundary, and the 1st one is for the interior
 
     ##first, capture the dimensions of the stencil
-    self.d["stencilRowsFF"] = len(solver.stencilFF)
-    self.d["stencilColsFF"] = len(solver.stencilFF[0])
-    numberOfCols = len(solver.stencilFF[0]) #use this to insert a line break after every row
+    self.d["stencilRowsFF"] = len(solver.stencilsFF[0])
+    self.d["stencilColsFF"] = len(solver.stencilsFF[0][0])
+    numberOfCols = self.d["stencilColsFF"] #use this to insert a line break after every row
+    self.d["STENCILSFF"] = []
     
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
-    stencil=[item for sublist in solver.stencilFF for item in sublist]
-    self.d["STENCILFF"] = "\n{" + str(stencil[0])
-    for index, el in enumerate(stencil[1:]):
-      self.d["STENCILFF"] += ", "
-      if index > 0 and (index-1) % numberOfCols == 1:
-        self.d["STENCILFF"] += "\n"
-      self.d["STENCILFF"] += str(el)
-    self.d["STENCILFF"] += "}"
+    for stencil in solver.stencilsFF:
+      #flatten it
+      stencil=[item for sublist in stencil for item in sublist]
+      stencilAsString = "\n{" + str(stencil[0])
+      for index, el in enumerate(stencil[1:]):
+        stencilAsString += ", "
+        if index > 0 and (index-1) % numberOfCols == 1:
+          stencilAsString += "\n"
+        stencilAsString += str(el)
+      stencilAsString += "}"
+
+      #add to list of stencils
+      self.d["STENCILSFF"].append(stencilAsString)
 
     #NEXT - HANDLE STENCIL FOR CELL-FACE INTERACTIONS
     #this time we have a list of stencils which must be ordered
@@ -362,8 +377,8 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
     ##first, capture the dimensions of the stencil
     self.d["stencilRowsCF"] = len(solver.stencilsCF[0])   #solver.stencilCF[0] is the 0th stencil itself
     self.d["stencilColsCF"] = len(solver.stencilsCF[0][0])#captures the number of columns 
-    numberOfCols = self.d["stencilColsCF"]               #use this to insert a line break after every row
-    self.d["STENCILSCF"] = []                            #init a list. we will insert the stencils into them.
+    numberOfCols = self.d["stencilColsCF"]                #use this to insert a line break after every row
+    self.d["STENCILSCF"] = []                             #init a list. we will insert the stencils into them.
 
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
@@ -372,13 +387,13 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
       stencil=[item for sublist in stencil for item in sublist]
       
       #init a string to capture the stencil, we will insert this into the dict at the end
-      stencilAsString = "\n{" + str(stencil[0])
+      stencilAsString = "\n{" + str(stencil[0]) # add "{" to begin the intializer list
       for index, el in enumerate(stencil[1:]):
         stencilAsString += ", "
         if index > 0 and (index-1) % numberOfCols == 1:
           stencilAsString += "\n"
         stencilAsString += str(el)
-      stencilAsString += "}"
+      stencilAsString += "}"                    #end the initializer list
 
       #add to list of stencils 
       self.d["STENCILSCF"].append(stencilAsString)
@@ -483,23 +498,34 @@ Consult petsc.Project for details
     """
 
     #construct the output strings for stencilsCF and stencilsFC
-    stencilsCF = '{'
+    stencilsCF = '{' #start the std vector
     for stencil in self.d["STENCILSCF"]:
       stencilsCF += stencil
       stencilsCF += ",\n"
-    stencilsCF += "}"
+    stencilsCF += "}" #end the std vector
     #same again
-    stencilsFC = '{'
+    stencilsFC = '{' #start the std vector
     for stencil in self.d["STENCILSFC"]:
       stencilsFC += stencil
       stencilsFC += ",\n"
-    stencilsFC += "}"
+    stencilsFC += "}" #end the std vector
+
+    #also for stencilsFF
+    stencilsFF = '{' #start the std vector
+    for stencil in self.d["STENCILSFF"]:
+      stencilsFF += stencil
+      stencilsFF += ",\n"
+    stencilsFF += "}" #end the std vector
+
 
     return f"""
   int _spacetreeId;
   const int _faceDofs = {self.d["FACE_CARDINALITY"]};
   const int _cellDofs = {self.d["CELL_CARDINALITY"]};
-  const tarch::la::Matrix<{self.d["stencilRowsFF"]},{self.d["stencilColsFF"]},double> _stencilFF = {self.d["STENCILFF"]};
+
+  //we need a std::vector for these now, since we have mutiple
+  const std::vector< tarch::la::Matrix<{self.d["stencilRowsFF"]},{self.d["stencilColsFF"]},double> > _stencilsFF = 
+    {stencilsFF};
 
   //we need a std::vector for these now, since we have mutiple
   const std::vector< tarch::la::Matrix<{self.d["stencilRowsCF"]},{self.d["stencilColsCF"]},double> > _stencilsCF = 

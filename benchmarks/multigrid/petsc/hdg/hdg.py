@@ -41,12 +41,13 @@ faceDofs = (args.degree + 1) ** (args.dimensions - 1)
 add some stencils
 '''
 
-from stencils import stencilsCF, stencilsFC, stencilCC, stencilFF
+from stencils import stencilsCF, stencilsFC, stencilCC, stencilsFF
 
-if len(stencilFF)    != faceDofs \
-or len(stencilFF[0]) != faceDofs:
-  print("incorrect dimensions for stencilFF")
-  exit()
+for stencil in stencilsFF:
+  if len(stencil)    != faceDofs \
+  or len(stencil[0]) != faceDofs:
+    print("incorrect dimensions for stencilFF")
+    exit()
 
 for stencil in stencilsCF:
   if len(stencil)    != cellDofs \
@@ -81,7 +82,7 @@ solver = petsc.solvers.HdgFirstDiscretisation("HDG",
                                               faceDofs,
                                               args.meshsize,
                                               args.meshsize,
-                                              stencilFF,
+                                              stencilsFF,
                                               stencilsCF,
                                               stencilsFC,
                                               stencilCC
