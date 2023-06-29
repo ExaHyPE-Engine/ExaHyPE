@@ -406,15 +406,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
             touch_vertex_first_time_kernel="""
-                                       ::swift2::kernels::prepareHydroForceCalculation(
-                                           localParticles,
-                                           {},
-                                           {},
-                                           {}
-                                           );
-                                       """.format(
-                self._hydroDimensions, self._eta_factor, self._alpha_av
-            ),
+                                       ::swift2::kernels::prepareHydroForceCalculation(localParticles);
+                                       """,
             cell_kernel="""
                                        ::swift2::kernels::computeHydroForce(
                                          localParticles,
