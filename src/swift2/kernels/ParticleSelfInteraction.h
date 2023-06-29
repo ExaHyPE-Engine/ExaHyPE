@@ -107,7 +107,7 @@ namespace swift2 {
      * the wrong equations for that.
      */
     template <typename ParticleContainer>
-    void endDensityCalculationWithConstantSmoothingLength(
+    void endDensityCalculationWithConstantSearchRadius(
       const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
     );
 
@@ -117,7 +117,7 @@ namespace swift2 {
      * smoothing lengths.
      */
     template <typename ParticleContainer>
-    void endDensityCalculationWithConstantSearchRadius(
+    void D(
       const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
     );
 
@@ -134,7 +134,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void prepareHydroForceCalculation(
-      const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
+      const ParticleContainer& localParticles
     );
 
     /**
