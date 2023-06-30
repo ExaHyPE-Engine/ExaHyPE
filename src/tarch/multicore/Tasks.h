@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "multicore.h"
-#include "tarch/multicore/orchestration/Strategy.h"
 #include "tarch/multicore/otter.h"
+#include "tarch/multicore/orchestration/Strategy.h"
 
 namespace tarch {
   namespace multicore {

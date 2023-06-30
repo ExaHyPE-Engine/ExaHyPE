@@ -3,8 +3,6 @@
 #define OTTER_TASK_GRAPH_ENABLE_USER
 #endif
 
-#include "Tasks.h"
-
 #include <queue>
 #include <set>
 #include <thread>
@@ -13,6 +11,7 @@
 #include "Core.h"
 #include "Lock.h"
 #include "multicore.h"
+#include "Tasks.h"
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/multicore/otter.h"
@@ -65,13 +64,11 @@ namespace {
    *
    * @return -1 if nothing found, otherwise task id
    */
-  bool processOnePendingTaskLIFO()
-  {
+  bool processOnePendingTaskLIFO() {
     tarch::multicore::Task* myTask = nullptr;
 
     tarch::multicore::Lock lock(globalNonblockingTasks.semaphore);
-    if (not globalNonblockingTasks.tasks.empty())
-    {
+    if (not globalNonblockingTasks.tasks.empty()) {
       myTask = globalNonblockingTasks.tasks.back();
       globalNonblockingTasks.tasks.pop_back();
     }
@@ -91,8 +88,7 @@ namespace {
     tarch::multicore::Task* myTask = nullptr;
 
     tarch::multicore::Lock lock(globalNonblockingTasks.semaphore);
-    if (not globalNonblockingTasks.tasks.empty())
-    {
+    if (not globalNonblockingTasks.tasks.empty()) {
       myTask = globalNonblockingTasks.tasks.front();
       globalNonblockingTasks.tasks.pop_front();
     }
@@ -113,8 +109,7 @@ namespace {
 /**
  * @return Number of processed tasks
  */
-int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks)
-{
+int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
   NonblockingTasks::Tasks extractedTasks;
 
   tarch::multicore::Lock lock(globalNonblockingTasks.semaphore);
@@ -150,8 +145,7 @@ bool tarch::multicore::internal::fusePendingTasks(
   std::list<tarch::multicore::Task*> tasksOfSameType;
 
   tarch::multicore::Lock lock(globalNonblockingTasks.semaphore);
-  if (not globalNonblockingTasks.tasks.empty())
-  {
+  if (not globalNonblockingTasks.tasks.empty()) {
     myTask = globalNonblockingTasks.tasks.front();
     globalNonblockingTasks.tasks.pop_front();
   }
@@ -250,16 +244,14 @@ tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
   int taskType, int priority, const std::function<bool()>& taskFunctor
 ):
   Task(taskType, priority),
-  _taskFunctor(taskFunctor)
-{
+  _taskFunctor(taskFunctor) {
   OTTER_DECLARE_HANDLE(step_task);
   OTTER_DECLARE_HANDLE(this_task);
   OTTER_BORROW_FROM_POOL(step_task, otter::label::step);
   OTTER_INIT_TASK(this_task, step_task, 555, otter_add_to_pool, otter::label::TaskWithCopyOfFunctor);
 }
 
-bool tarch::multicore::TaskWithCopyOfFunctor::run()
-{
+bool tarch::multicore::TaskWithCopyOfFunctor::run() {
   OTTER_DECLARE_HANDLE(this_task);
   OTTER_REMOVE_FROM_POOL(this_task, otter::label::TaskWithCopyOfFunctor);
   OTTER_TASK_START(this_task);
@@ -272,16 +264,14 @@ tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(
   int taskType, int priority, std::function<bool()>& taskFunctor
 ):
   Task(taskType, priority),
-  _taskFunctor(taskFunctor)
-{
+  _taskFunctor(taskFunctor) {
   OTTER_DECLARE_HANDLE(step_task);
   OTTER_DECLARE_HANDLE(this_task);
   OTTER_BORROW_FROM_POOL(step_task, otter::label::step);
   OTTER_INIT_TASK(this_task, step_task, 444, otter_add_to_pool, otter::label::TaskWithoutCopyOfFunctor);
 }
 
-bool tarch::multicore::TaskWithoutCopyOfFunctor::run()
-{
+bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
   OTTER_DECLARE_HANDLE(this_task);
   OTTER_REMOVE_FROM_POOL(this_task, otter::label::TaskWithoutCopyOfFunctor);
   OTTER_TASK_START(this_task);
@@ -461,8 +451,7 @@ int tarch::multicore::internal::getNumberOfWithholdPendingTasks() { return globa
 
 void tarch::multicore::native::spawnTask(Task* job) {
   bool reschedule = job->run();
-  if (reschedule)
-  {
+  if (reschedule) {
     tarch::multicore::spawnTask(job);
   } else {
     delete job;

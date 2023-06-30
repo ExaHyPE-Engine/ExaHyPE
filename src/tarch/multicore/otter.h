@@ -21,10 +21,8 @@
  * consequently use Otter. The drawback is that we have to ensure that the functions
  * and macros here are always consistent with the latest Otter version.
  */
-namespace otter
-{
-  namespace label
-  {
+namespace otter {
+  namespace label {
     static const char* root                     = "[ROOT TASK]";
     static const char* step                     = "[STEP TASK]";
     static const char* enclave                  = "[anonymous enclave task]";
@@ -34,8 +32,7 @@ namespace otter
     static const char* TaskWithoutCopyOfFunctor = "TaskWithoutCopyOfFunctor";
   } // namespace label
 
-  namespace phase
-  {
+  namespace phase {
     static const char* init                  = "init";
     static const char* plot                  = "plot";
     static const char* timestep              = "time-step";
