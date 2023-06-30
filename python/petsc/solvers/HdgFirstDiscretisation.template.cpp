@@ -35,6 +35,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::vertexInit(
   // @todo add your stuff here
 }
 
+/*
+
+todo: instead of harcoding 
+  tarch::la::Vector<Dimensions, double> tempX = {x[0] - h[0]/2, x[1] - h[1]/2};
+make it:
+  tarch::la::Vector<Dimensions, double> tempX = {x[0] - h[0]/CARDINALITY, x[1] - h[1]/CARDINALITY};
+and do the same for the nested for loop below
+
+*/
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellInit(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h,
