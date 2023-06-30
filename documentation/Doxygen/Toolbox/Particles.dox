@@ -3,7 +3,7 @@
 @page toolbox_particles Particles
 
 \li \subpage toolbox_particles_memorypool
-
+\li \subpage toolbox::particles::ParticleSet
 
 Peano's particle toolbox provides features to add tracers to your code, but
 also to add particles which swim around. We have some features to dump
