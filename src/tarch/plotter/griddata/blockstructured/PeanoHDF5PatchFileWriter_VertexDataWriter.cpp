@@ -65,8 +65,8 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::VertexDataW
     // Create the data space with unlimited dimensions.
     //
     hsize_t tableDimensions[] = {
-      _writer._dimensions,
-      std::pow(_numberOfUnknowns,_writer._dimensions)
+      static_cast<hsize_t>(_writer._dimensions),
+      static_cast<hsize_t>(std::pow(_numberOfUnknowns,_writer._dimensions))
     };
 
     //
@@ -145,8 +145,8 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::Vertex
   // Create the data space with unlimited dimensions.
   //
   hsize_t tableDimensions[] = {
-    lineLenght,
-    static_cast<int>(_data.size())/lineLenght
+    static_cast<hsize_t>(lineLenght),
+    static_cast<hsize_t>(_data.size())/lineLenght
   };
 
   //

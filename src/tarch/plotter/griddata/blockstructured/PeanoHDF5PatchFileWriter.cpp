@@ -279,8 +279,8 @@ int tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::plotPat
 
 
 #ifdef UseHDF5
-hid_t  tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::createDataTableProperties(int lineWidth, int rowCount) const {
-  const int MinNumberOfRowsForCompressionToPayOff = 64;
+hid_t  tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::createDataTableProperties(const int lineWidth, int rowCount) const {
+  constexpr int MinNumberOfRowsForCompressionToPayOff = 64;
   if (_compress && rowCount>MinNumberOfRowsForCompressionToPayOff) {
     logDebug( "createDataTableProperties(int)", "insert properties of tables which triggers zlib compression" );
 
@@ -289,7 +289,7 @@ hid_t  tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::crea
     // with level 6
     //
     hsize_t cdims[] = {
-      lineWidth,
+      static_cast<hsize_t>(lineWidth),
       MinNumberOfRowsForCompressionToPayOff
     };
     hid_t propertyList = H5Pcreate (H5P_DATASET_CREATE);

@@ -63,8 +63,8 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDataWri
     // Create the data space with unlimited dimensions.
     //
     hsize_t tableDimensions[] = {
-      _writer._dimensions,
-      std::pow(_numberOfUnknowns,_writer._dimensions)
+      static_cast<hsize_t>(writer._dimensions),
+      static_cast<hsize_t>(std::pow(_numberOfUnknowns,_writer._dimensions))
     };
 
     //
@@ -134,7 +134,7 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDa
   assignRemainingCellsDefaultValues();
 
   #ifdef UseHDF5
-  const int lineLenght = std::pow(_numberOfUnknowns,_writer._dimensions);
+  const hsize_t lineLenght = std::pow(_numberOfUnknowns,_writer._dimensions);
 
   assertion6(
     _data.size()%lineLenght == 0,
@@ -151,7 +151,7 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDa
   //
   hsize_t tableDimensions[] = {
     lineLenght,
-    static_cast<int>(_data.size())/lineLenght
+    static_cast<hsize_t>(_data.size())/lineLenght
   };
 
   //
