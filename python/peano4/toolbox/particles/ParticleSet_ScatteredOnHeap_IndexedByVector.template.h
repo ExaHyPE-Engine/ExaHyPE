@@ -176,7 +176,7 @@
        *
        * Is internally mapped onto a push_back.
        */
-      void add(DoFType* particle);
+      void addParticle(DoFType* particle);
 
       /**
        * Add set of particles
@@ -187,14 +187,14 @@
        * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
        * some context and references to other routines.
        */
-      void add(const ParticleList& particleSet);
+      void addParticles(const ParticleList& particleSet);
 
       /**
        * Moves particles from one particle set to the other
        *
        * This is used by the multiscale algorithm
        */
-      void move({{CLASSNAME}}& sourceParticleSet);
+      void grabParticles({{CLASSNAME}}& sourceParticleSet);
 
       /**
        * Move particle from one container to the other one
@@ -202,7 +202,7 @@
        * @return Iterator within sourceParticleSet which is returned after
        *   erasing it from this set.
        */
-      Container::iterator move(
+      Container::iterator grabParticle(
         const Container::iterator&         particle,
         {{CLASSNAME}}&                     sourceParticleSet
       );

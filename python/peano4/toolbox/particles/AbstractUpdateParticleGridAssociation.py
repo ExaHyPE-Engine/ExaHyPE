@@ -243,8 +243,10 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin();
     while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
       if ( ::toolbox::particles::dropParticle(**p,marker) ) {
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.move( p, coarseGridVertices{{PARTICLES_CONTAINER}}(i) );
         _numberOfDrops++;
+        assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),        fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() );
+        assertion2( coarseGridVertices{{PARTICLES_CONTAINER}}(i).isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() );
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.grabParticle( p, coarseGridVertices{{PARTICLES_CONTAINER}}(i) );
       }
       else p++;
     }
@@ -259,8 +261,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 
     _numberOfSieves += sievedParticles.size();
 
-    fineGridVertex{{PARTICLES_CONTAINER}}.add( sievedParticles );
+    fineGridVertex{{PARTICLES_CONTAINER}}.addParticles( sievedParticles );
     fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates();
+    assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
   }
 """
     )
@@ -281,11 +284,14 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     for (int d=0; d<Dimensions; d++) {
       target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
     }
+    assertion2( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).isValid(), coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+    assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                          coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
     _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
-    coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).move( fineGridVertex{{PARTICLES_CONTAINER}} );
+    coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).grabParticles( fineGridVertex{{PARTICLES_CONTAINER}} );
   }
   else {
     fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeLiftedLocally();
+    assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
   }
 """
     )

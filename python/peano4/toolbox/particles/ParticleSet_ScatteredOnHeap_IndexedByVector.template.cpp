@@ -178,11 +178,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::d
 
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream msg;
-  msg << "(size=" << size();
-  #if PeanoDebug>=1
-  msg << ",x=" << _debugX
-      << ",h=" << _debugH;
-  #endif
+  msg << "(size=" << size()
+      << ",";
+  msg << Base::toString(false);
   msg << ")";
   return msg.str();
 }
@@ -257,12 +255,12 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::size() const {
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::add(DoFType*  particle) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticle(DoFType*  particle) {
   _container.push_back(particle);
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::add(const ParticleList&  particles) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticles(const ParticleList&  particles) {
   _container.insert(
     _container.end(),
     particles.begin(),
