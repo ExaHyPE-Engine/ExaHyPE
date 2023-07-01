@@ -6,23 +6,22 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#pragma once
+#ifndef _INCLUDE_PEANO4_GRID_GRIDTRAVERSALEVENT_
+#define _INCLUDE_PEANO4_GRID_GRIDTRAVERSALEVENT_
 
 #include <string>
   
-
-#include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/services/ServiceRepository.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
-
 
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
+
+#include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/services/ServiceRepository.h"
+#include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
   
@@ -40,7 +39,7 @@ struct peano4::grid::GridTraversalEvent {
 
 
     GridTraversalEvent() {}
-    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
+    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoPowerD>  __isParentVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
 
 
     tarch::la::Vector<Dimensions,double>   getX() const;
@@ -66,6 +65,11 @@ struct peano4::grid::GridTraversalEvent {
     bool   getIsVertexLocal(int index) const;
     void   setIsVertexLocal(int index, bool value);
     void   flipIsVertexLocal(int index);
+    std::bitset<TwoPowerD>   getIsParentVertexLocal() const;
+    void   setIsParentVertexLocal(const std::bitset<TwoPowerD>&  value);
+    bool   getIsParentVertexLocal(int index) const;
+    void   setIsParentVertexLocal(int index, bool value);
+    void   flipIsParentVertexLocal(int index);
     std::bitset<TwoTimesD>   getIsFaceLocal() const;
     void   setIsFaceLocal(const std::bitset<TwoTimesD>&  value);
     bool   getIsFaceLocal(int index) const;
@@ -114,15 +118,7 @@ struct peano4::grid::GridTraversalEvent {
     GridTraversalEvent(const GridTraversalEvent& copy);
 
 
-#ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(peano4::grid::GridTraversalEvent& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
-#endif
-    
-
     #ifdef Parallel
-    PRAGMA_PUSH
-    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -142,7 +138,7 @@ struct peano4::grid::GridTraversalEvent {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    PRAGMA_POP
+    
     
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -182,12 +178,15 @@ struct peano4::grid::GridTraversalEvent {
     static void receive(   peano4::grid::GridTraversalEvent& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
+#ifdef Parallel
+    static void sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::grid::GridTraversalEvent& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+#endif
+    
 
     std::string toString() const;
   
   private:
-    PRAGMA_PUSH
-    SILENCE_UNKNOWN_ATTRIBUTE
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
     [[clang::truncate_mantissa(23)]]  double   _x[Dimensions];
 #endif
@@ -217,6 +216,12 @@ struct peano4::grid::GridTraversalEvent {
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       std::bitset<TwoPowerD>   _isVertexLocal;
+#endif
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack]]  bool   _isParentVertexLocal[TwoPowerD];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      std::bitset<TwoPowerD>   _isParentVertexLocal;
 #endif
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
     [[clang::pack]]  bool   _isFaceLocal[TwoTimesD];
@@ -251,7 +256,8 @@ struct peano4::grid::GridTraversalEvent {
 #endif
     [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _invokingSpacetree;
     [[clang::pack]]  bool   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
-    PRAGMA_POP
+
+
 
     #ifdef Parallel
     private:
@@ -267,6 +273,10 @@ struct peano4::grid::GridTraversalEvent {
       static MPI_Datatype  Datatype;
       #endif
     #endif
+
+
+
 };
 
+#endif
   
