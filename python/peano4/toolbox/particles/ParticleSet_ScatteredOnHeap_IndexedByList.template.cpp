@@ -64,7 +64,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           }
         }
 
-        logInfo( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
+        logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.toString() << " which now hosts " << this->size() << " particle(s)" );
         for (auto *p: *this) {
           logDebug( "merge(...)", " - " << p->toString() );
         }
@@ -203,6 +203,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
     DoFType* newParticle =  new DoFType(*particle);
     _container.push_back( newParticle );
   }
+  logDebug( "clone()", "copied " << otherSet.size() << " objects over into local one of size " << size() );
   #if PeanoDebug>=1
   _debugX = otherSet._debugX;
   _debugH = otherSet._debugH;
