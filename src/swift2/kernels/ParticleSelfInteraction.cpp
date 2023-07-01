@@ -4,7 +4,6 @@
 #define QUARTIC_SPLINE_KERNEL
 
 
-
 #include "ParticleSelfInteraction.h"
 
 //
@@ -15,4 +14,3 @@
 // there. Whenever that happens, it is often difficult to reconstruct what
 // exactly is going on.
 //
-
