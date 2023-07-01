@@ -144,11 +144,11 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::clone(const STDVectorO
   Base::_currentElement = data._currentElement;
   Base::_data.resize(Base::_currentElement);
 
-  logInfo("clone()", "copy over stack of size " << data.size());
+  logDebug("clone()", "copy over stack of size " << data.size());
 
   for (int stackNumber = 0; stackNumber < Base::_currentElement; stackNumber++) {
     Base::_data[stackNumber].clone(data._data[stackNumber]);
-    logInfo("clone()", "- copied " << Base::_data[stackNumber].size());
+    logDebug("clone()", "- copied " << Base::_data[stackNumber].size());
   }
 }
 
