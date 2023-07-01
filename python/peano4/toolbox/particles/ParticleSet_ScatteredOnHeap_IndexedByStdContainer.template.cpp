@@ -60,7 +60,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
             _numberOfDroppedVirtualParticles++;
           }
           else {
-            assertion1(false,p->toString());
+            assertion3(false,p->toString(),size(),marker.x());
           }
         }
 
@@ -351,9 +351,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  pa
     sourceParticleSet.toString()
   );
   _container.push_back( *particle );
-//  return sourceParticleSet._container.erase(particle);
-  sourceParticleSet._container.erase(particle);
-  return sourceParticleSet._container.begin();
+  return sourceParticleSet._container.erase(particle);
 }
 
 
@@ -367,9 +365,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  pa
     toString()
   );
   delete *particle;
-//  return _container.erase(particle);
-  _container.erase(particle);
-  return _container.begin();
+  return _container.erase(particle);
 }
 
 

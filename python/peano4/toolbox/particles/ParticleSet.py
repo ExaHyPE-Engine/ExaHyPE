@@ -13,8 +13,36 @@ import os
 
 from enum import Enum
 
+class AbstractParticleSetGenerator(object):
+    def __init__(self, data):
+      self._data = data
 
-class ParticleSetGenerator_ScatteredOnHeap_IndexByList(object):
+
+    def get_stack_container(self):
+        return (
+            "peano4::stacks::STDVectorOverContainerOfPointers< "
+            + self._data.get_full_qualified_type()
+            + " >"
+        )
+
+
+    def get_header_file_include(self):
+        return (
+            """
+#include "peano4/stacks/STDVectorOverContainerOfPointers.h"
+#include "../globaldata/"""
+            + self._data.particle_model.name
+            + """.h"
+#include \""""
+            + self._data.namespace[-1]
+            + """/"""
+            + self._data.name
+            + """.h"
+"""
+        )
+
+
+class ParticleSetGenerator_ScatteredOnHeap_IndexByList(AbstractParticleSetGenerator):
     """!
 
     Map a particle set onto heap objects indexed by a list
@@ -29,40 +57,21 @@ class ParticleSetGenerator_ScatteredOnHeap_IndexByList(object):
     """
 
     def __init__(self, data):
-        self._data = data
-
-    def get_stack_container(self):
-        return (
-            "peano4::stacks::STDVectorOverContainerOfPointers< "
-            + self._data.get_full_qualified_type()
-            + " >"
-        )
-
-    def get_header_file_include(self):
-        return (
-            """
-#include "peano4/stacks/STDVectorOverContainerOfPointers.h"
-#include "../globaldata/"""
-            + self._data.particle_model.name
-            + """.h"
-#include \""""
-            + self._data.namespace[-1]
-            + """/"""
-            + self._data.name
-            + """.h"
-"""
-        )
+        super(ParticleSetGenerator_ScatteredOnHeap_IndexByList,self).__init__(data)
 
     def construct_output(self, output):
-        d = {"PARTICLE_TYPE": self._data.particle_model.name}
+        d = {
+          "PARTICLE_TYPE": self._data.particle_model.name,
+          "STD_CONTAINER": "list"
+        }
 
         templatefile_prefix = (
             os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
         )
 
         generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            templatefile_prefix + "_ScatteredOnHeap_IndexedByList.template.h",
-            templatefile_prefix + "_ScatteredOnHeap_IndexedByList.template.cpp",
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByStdContainer.template.h",
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByStdContainer.template.cpp",
             self._data.name,
             self._data.namespace,
             self._data.namespace[-1],
@@ -76,53 +85,36 @@ class ParticleSetGenerator_ScatteredOnHeap_IndexByList(object):
         pass
 
 
-class ParticleSetGenerator_ScatteredOnHeap_IndexByVector(object):
+class ParticleSetGenerator_ScatteredOnHeap_IndexByVector(AbstractParticleSetGenerator):
     """!
 
-    Map a particle set onto heap objects indexed by a vector
+    Map a particle set onto heap objects indexed by an std::vector
 
-    Very similar to ParticleSetGenerator_ScatteredOnHeap_IndexByList, but this
-    time the container over pointers is realised by a vector. This means slightly
-    more memory movements when we resort particles, but otherwise is a little bit
-    faster.
+    This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+    Peano's stacks are realised via std::vector from the C++ standard library.
+    Each entry within this vector then resembles a C++ container over pointers
+    to the heap. That is, all particles are stored on the heap. They are
+    scattered. The C++ pointer per stack entry that's used to store all the
+    particle pointers is realised through std::list.
 
     """
 
     def __init__(self, data):
-        self._data = data
-
-    def get_stack_container(self):
-        return (
-            "peano4::stacks::STDVectorOverContainerOfPointers< "
-            + self._data.get_full_qualified_type()
-            + " >"
-        )
-
-    def get_header_file_include(self):
-        return (
-            """
-#include "peano4/stacks/STDVectorOverContainerOfPointers.h"
-#include "../globaldata/"""
-            + self._data.particle_model.name
-            + """.h"
-#include \""""
-            + self._data.namespace[-1]
-            + """/"""
-            + self._data.name
-            + """.h"
-"""
-        )
+        super(ParticleSetGenerator_ScatteredOnHeap_IndexByVector,self).__init__(data)
 
     def construct_output(self, output):
-        d = {"PARTICLE_TYPE": self._data.particle_model.name}
+        d = {
+          "PARTICLE_TYPE": self._data.particle_model.name,
+          "STD_CONTAINER": "vector"
+        }
 
         templatefile_prefix = (
             os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
         )
 
         generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            templatefile_prefix + "_ScatteredOnHeap_IndexedByVector.template.h",
-            templatefile_prefix + "_ScatteredOnHeap_IndexedByVector.template.cpp",
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByStdContainer.template.h",
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByStdContainer.template.cpp",
             self._data.name,
             self._data.namespace,
             self._data.namespace[-1],
@@ -134,6 +126,9 @@ class ParticleSetGenerator_ScatteredOnHeap_IndexByVector(object):
             self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True
         )
         pass
+
+
+
 
 
 class ParticleSet(DoF):
@@ -182,8 +177,8 @@ class ParticleSet(DoF):
             )
 
         self.particle_model = particle
-        self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
-        #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
+        #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
+        self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
 
 
     @property

@@ -1,6 +1,15 @@
 /**
 
- @page benchmarks_swift2_hydro_noh_imposion_test NOH 2 experiment to study upscaling
+ @page benchmarks_swift2_hydro_noh_imposion_test NOH implosion test
+ 
+ Simple Noh implosion test benchmark with @f$ N ^d @f$ particles. You specify 
+ the @f$ N @f$ on the command line, as well as some other arguments. The setup
+ will yield snapshots similar to the ones below.
+ 
+  @image html noh_0.png
+  @image html noh_150.png
+  @image html noh_300.png
+ 
  
  As with all Swift 2 experiments, you have to ensure that you translate with --enable-particles --enable-swift.
  
