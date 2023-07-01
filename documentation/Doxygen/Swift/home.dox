@@ -7,8 +7,8 @@
 
 \li \subpage swift_tutorials
 \li \subpage swift_benchmarks
-\li \subpage swift_terminology
 \li \subpage swift_building_project_from_scratch
+\li \subpage swift_terminology
 \li \subpage swift_initial_conditions
 \li \subpage swift_particle_lifecycle
 \li \subpage swift_visualisation
