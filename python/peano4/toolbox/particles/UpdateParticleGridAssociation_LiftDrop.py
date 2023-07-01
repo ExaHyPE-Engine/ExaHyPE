@@ -10,7 +10,8 @@ from .AbstractUpdateParticleGridAssociation import AbstractUpdateParticleGridAss
 
 
 class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociation):
-    """
+    """!
+    
     Associate particles to spacetree vertices
 
     Sort particles into the respective levels and cells. This mapping should

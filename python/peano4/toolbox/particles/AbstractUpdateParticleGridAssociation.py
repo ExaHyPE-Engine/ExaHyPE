@@ -229,27 +229,50 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 """
     )
 
-    """
+    """!
+    
+   Drop fitting particles from coarser mesh level into fine grid mesh
 
    Happens when we touch a vertex for the first time. The only thing this routine
    does is to drop particles within the tree, i.e. move them to finer levels.
    No parallelisation is taken into account.
+   
+   We have to check carefully if all coarse grid particles are local. In the 
+   example below
+   
+   @image html UpdateParticleGridAssociation_LiftDrop.png
+   
+   the coarse vertices could be on another rank if the tree is cut vertically.
+   If could also be that the green vertex is actually from an adjacent domain
+   and hence does not hold any reasonable information.
 
   """
     _Template_Drop = jinja2.Template(
         """
   for (int i=0; i<TwoPowerD; i++) {
-    // Define inside for loop, as sieve will define it as well
-    vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin();
-    while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
-      if ( ::toolbox::particles::dropParticle(**p,marker) ) {
-        _numberOfDrops++;
-        assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),        fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() );
-        assertion2( coarseGridVertices{{PARTICLES_CONTAINER}}(i).isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() );
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.grabParticle( p, coarseGridVertices{{PARTICLES_CONTAINER}}(i) );
-      }
-      else p++;
-    }
+    if ( marker.isParentVertexLocal(i) ) {
+      // Define inside for loop, as sieve will define it as well
+      vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin();
+      while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
+        if ( ::toolbox::particles::dropParticle(**p,marker) ) {
+          _numberOfDrops++;
+          assertion3( 
+            fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),        
+            fineGridVertex{{PARTICLES_CONTAINER}}.toString(), 
+            coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString(),
+            _treeNumber 
+          );
+          assertion3( 
+            coarseGridVertices{{PARTICLES_CONTAINER}}(i).isValid(), 
+            fineGridVertex{{PARTICLES_CONTAINER}}.toString(), 
+            coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString(),
+            _treeNumber 
+          );
+          p = fineGridVertex{{PARTICLES_CONTAINER}}.grabParticle( p, coarseGridVertices{{PARTICLES_CONTAINER}}(i) );
+        }
+        else p++;
+      } // while loop over coarse particles
+    } // if coarse vertex local
   }
 """
     )
@@ -268,22 +291,29 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 """
     )
 
-    """
+    """!
+    
+  Lift all particles to next coarser level
 
   Explicit lift of particles to a coarser level. Usually, lifts are
   realised within touchCellLastTime aka the template
   __Template_ReassignAndLiftWithinCell. If a vertex is however destroyed or
   is hanging, i.e. not persistent in-between two mesh traversals,
   then we have to lift the particles explicitly.
+  
+  If the parent cell is local, we know that all @f$ 2^d @f$ parent
+  vertices are local. However, we have to know if the real parent
+  is local, too.
 
   """
     _Template_LiftAllParticles = jinja2.Template(
         """
-  if ( marker.isParentCellLocal() ) {
-    std::bitset<Dimensions> target;
-    for (int d=0; d<Dimensions; d++) {
-      target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
-    }
+  std::bitset<Dimensions> target;
+  for (int d=0; d<Dimensions; d++) {
+    target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
+  }
+  
+  if ( marker.isParentVertexLocal(target.to_ulong()) ) {
     assertion2( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).isValid(), coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
     assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                          coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
     _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
