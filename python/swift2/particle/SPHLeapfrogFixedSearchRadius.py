@@ -409,11 +409,10 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                        ::swift2::kernels::prepareHydroForceCalculation(
                                            localParticles,
                                            {},
-                                           {},
                                            {}
                                            );
                                        """.format(
-                self._hydroDimensions, self._eta_factor, self._alpha_av
+                self._hydroDimensions, self._alpha_av
             ),
             cell_kernel="""
                                        ::swift2::kernels::computeHydroForce(

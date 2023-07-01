@@ -1,6 +1,7 @@
 #include "swift2/kernels/equation_of_state.h"
 #include "swift2/kernels/kernel_hydro.h"
 
+
 template <typename ParticleContainer, typename Particle>
 void swift2::kernels::genericSelfInteraction(
   const ParticleContainer& localParticles, std::function<void(Particle* localParticle)> interaction
@@ -9,6 +10,7 @@ void swift2::kernels::genericSelfInteraction(
     interaction(particle);
   }
 }
+
 
 template <typename ParticleContainer>
 void swift2::kernels::prepareDensityCalculation(const ParticleContainer& localParticles) {
@@ -27,18 +29,17 @@ void swift2::kernels::prepareDensityCalculation(const ParticleContainer& localPa
   }
 }
 
+
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculation(
-  const ParticleContainer& localParticles,
-  const int                hydroDimensions,
-  const double             etaFactor,
-  const double             alphaAV,
-  const double             hTolerance,
-  const double             hHydroMin,
-  const double             hHydroMax
+  const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
 ) {
 
   assertionMsg(false, "Don't use this yet.");
+  // define variables here until next MR that accesses the correct values properly
+  const double hTolerance = 1.;
+  const double hHydroMin  = 1.;
+  const double hHydroMax  = 1.;
 
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
@@ -255,6 +256,7 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
   }
 }
 
+
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSearchRadius(
   const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
@@ -302,7 +304,7 @@ void swift2::kernels::endDensityCalculationWithConstantSearchRadius(
 
 template <typename ParticleContainer>
 void swift2::kernels::prepareHydroForceCalculation(
-  const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
+  const ParticleContainer& localParticles, const int hydroDimensions, const double alphaAV
 ) {
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
@@ -408,6 +410,7 @@ void swift2::kernels::endHydroForceCalculation(const ParticleContainer& localPar
     }
   }
 }
+
 
 template <typename ParticleContainer>
 void swift2::kernels::flagBoundaryParticles(

@@ -2,14 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include <functional>
 #include <list>
 #include <vector>
+
+#include "tarch/la/Vector.h"
+
 
 namespace swift2 {
   namespace kernels {
     /**
      * Generic particle self-interaction kernel accepting a functor
      *
+     * @TODO Mladen: check docu here once you implement proper SML computation
      * The generic implementation realises a single loop: We call a self interaction
      * per particle that has no dependence over neighbours. The functor hence modifies the particle.
      *
@@ -82,19 +87,13 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void endDensityCalculation(
-      const ParticleContainer& localParticles,
-      const int                hydroDimensions,
-      const double             etaFactor,
-      const double             alphaAV,
-      const double             hTolerance,
-      const double             hHydroMin,
-      const double             hHydroMax
+      const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
     );
 
     /**
      * @brief Finishes the calculations from the density loop same as
-     * prepareDensityCalculation(...), but doesn't modify the particles'
-     * smoothing lengths.
+     * endDensityCalculation(...), but doesn't modify the particles'
+     * smoothing lengths nor search radii.
      *
      * WARNING: the only reason we still have this is because it was already implemented,
      * and we might use it in the future. However we currently DO NOT have a SPH
@@ -107,9 +106,9 @@ namespace swift2 {
     );
 
     /**
-     * @brief Finishes the calculations from the density loop same as
-     * prepareDensityCalculation(...), but doesn't modify the particles'
-     * smoothing lengths.
+     * @brief Finishes the calculations from the density loop. Same as
+     * endDensityCalculation(...), but doesn't modify the particles'
+     * search radii.
      */
     template <typename ParticleContainer>
     void endDensityCalculationWithConstantSearchRadius(
@@ -129,7 +128,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void prepareHydroForceCalculation(
-      const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
+      const ParticleContainer& localParticles, const int hydroDimensions, const double alphaAV
     );
 
     /**
