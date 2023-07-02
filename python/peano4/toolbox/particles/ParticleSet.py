@@ -45,14 +45,19 @@ class AbstractParticleSetGenerator(object):
 class ParticleSetGenerator_ScatteredOnHeap_IndexByList(AbstractParticleSetGenerator):
     """!
 
-    Map a particle set onto heap objects indexed by a list
+Map a particle set onto heap objects indexed by a list
 
-    This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
-    Peano's stacks are realised via std::vector from the C++ standard library.
-    Each entry within this vector then resembles a C++ container over pointers
-    to the heap. That is, all particles are stored on the heap. They are
-    scattered. The C++ pointer per stack entry that's used to store all the
-    particle pointers is realised through std::list.
+This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+Peano's stacks are realised via std::vector from the C++ standard library.
+Each entry within this vector then resembles a C++ container over pointers
+to the heap. That is, all particles are stored on the heap. They are
+scattered. The C++ pointer per stack entry that's used to store all the
+particle pointers is realised through std::list.
+
+Please consult @ref page_swift_performance_optimisation "the generic discussion on the impact of storage schemes".
+
+@image html ParticleSetGenerator_ScatteredOnHeap.png
+
 
     """
 
@@ -88,14 +93,19 @@ class ParticleSetGenerator_ScatteredOnHeap_IndexByList(AbstractParticleSetGenera
 class ParticleSetGenerator_ScatteredOnHeap_IndexByVector(AbstractParticleSetGenerator):
     """!
 
-    Map a particle set onto heap objects indexed by an std::vector
+Map a particle set onto heap objects indexed by an std::vector
 
-    This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
-    Peano's stacks are realised via std::vector from the C++ standard library.
-    Each entry within this vector then resembles a C++ container over pointers
-    to the heap. That is, all particles are stored on the heap. They are
-    scattered. The C++ pointer per stack entry that's used to store all the
-    particle pointers is realised through std::list.
+This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+Peano's stacks are realised via std::vector from the C++ standard library.
+Each entry within this vector then resembles a C++ container over pointers
+to the heap. That is, all particles are stored on the heap. They are
+scattered. The C++ pointer per stack entry that's used to store all the
+particle pointers is realised through std::list.
+
+Please consult @ref page_swift_performance_optimisation "the generic discussion on the impact of storage schemes".
+
+@image html ParticleSetGenerator_ScatteredOnHeap.png
+
 
     """
 
@@ -131,14 +141,20 @@ class ParticleSetGenerator_ScatteredOnHeap_IndexByVector(AbstractParticleSetGene
 class ParticleSetGenerator_ContinuousPerVertex_IndexByVector(AbstractParticleSetGenerator):
     """!
 
-    Map a particle set onto heap objects indexed by an std::vector
+Map a particle set onto heap objects indexed by an std::vector
 
-    This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
-    Peano's stacks are realised via std::vector from the C++ standard library.
-    Each entry within this vector then resembles a C++ container over pointers
-    to the heap. That is, all particles are stored on the heap. They are
-    scattered. The C++ pointer per stack entry that's used to store all the
-    particle pointers is realised through std::list.
+This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+Peano's stacks are realised via std::vector from the C++ standard library.
+Each entry within this vector then resembles a C++ container over pointers
+to the heap. That is, all particles are stored on the heap. They are
+scattered. The C++ pointer per stack entry that's used to store all the
+particle pointers is realised through std::list.
+
+
+Please consult @ref page_swift_performance_optimisation "the generic discussion on the impact of storage schemes".
+
+@image html ParticleSetGenerator_ContinuousPerVertex.png
+
 
     """
 
@@ -174,14 +190,18 @@ class ParticleSetGenerator_ContinuousPerVertex_IndexByVector(AbstractParticleSet
 class ParticleSetGenerator_ContinuousPerVertex_IndexByList(AbstractParticleSetGenerator):
     """!
 
-    Map a particle set onto heap objects indexed by a list
+Map a particle set onto heap objects indexed by a list
 
-    This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
-    Peano's stacks are realised via std::vector from the C++ standard library.
-    Each entry within this vector then resembles a C++ container over pointers
-    to the heap. That is, all particles are stored on the heap. They are
-    scattered. The C++ pointer per stack entry that's used to store all the
-    particle pointers is realised through std::list.
+This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+Peano's stacks are realised via std::vector from the C++ standard library.
+Each entry within this vector then resembles a C++ container over pointers
+to the heap. That is, all particles are stored on the heap. They are
+scattered. The C++ pointer per stack entry that's used to store all the
+particle pointers is realised through std::list.
+
+Please consult @ref page_swift_performance_optimisation "the generic discussion on the impact of storage schemes".
+
+@image html ParticleSetGenerator_ContinuousPerVertex.png
 
     """
 
@@ -218,35 +238,35 @@ class ParticleSetGenerator_ContinuousPerVertex_IndexByList(AbstractParticleSetGe
 class ParticleSet(DoF):
     """!
 
-    Represents a particle set
+Represents a particle set
 
-    A particle set is, in principle, a very simple container tied to a vertex.
-    It allows each vertex to point to the particles around. While the
-    realisation on the Python side is simple - after all, the Python model is
-    solely the data model - interesting questions arise once we discuss how the
-    data model is mapped onto C++. This information is not directly stored
-    within the ParticleSet objects, i.e. this class is solely a presentation
-    of the data topology.
+A particle set is, in principle, a very simple container tied to a vertex.
+It allows each vertex to point to the particles around. While the
+realisation on the Python side is simple - after all, the Python model is
+solely the data model - interesting questions arise once we discuss how the
+data model is mapped onto C++. This information is not directly stored
+within the ParticleSet objects, i.e. this class is solely a presentation
+of the data topology.
 
-    The information how the association is mapped onto Peano's C++ code is held
-    within the generator. By default, this generator maps each particle set onto
-    a vector which in turn hosts particles on the heap. However, there are
-    alternative implementations which you might want to pick by setting the
-    generator attribute to a different value.
+The information how the association is mapped onto Peano's C++ code is held
+within the generator. By default, this generator maps each particle set onto
+a vector which in turn hosts particles on the heap. However, there are
+alternative implementations which you might want to pick by setting the
+generator attribute to a different value.
 
-    - Study ParticleSetGenerator_ScatteredOnHeap_IndexByList to obtain some
-      information about Peano's default storage scheme.
-    - The generator ParticleSetGenerator_ScatteredOnHeap_IndexByVector is
-      a slightly more memory-compact version.
+- Study ParticleSetGenerator_ScatteredOnHeap_IndexByList to obtain some
+  information about Peano's default storage scheme.
+- The generator ParticleSetGenerator_ScatteredOnHeap_IndexByVector is
+  a slightly more memory-compact version.
 
 
-    ## Attributes
+## Attributes
 
-    name: String
-      Name of the particle. Has to be a valid C++ class name.
+name: String
+  Name of the particle. Has to be a valid C++ class name.
 
-    particle: Particle
-      Link to particle definition
+particle: Particle
+  Link to particle definition
 
     """
 

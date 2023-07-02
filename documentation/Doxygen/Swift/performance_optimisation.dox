@@ -43,10 +43,10 @@ administration and storage variants.
 
 Feature | Generator | Semantics
 --------|--------------|----------
-scattered particles, list index | peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList | Scatter the particles all over the heap. The pointers per vertex to the particles are organised as a linked list.
-scattered particles, vector index | peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByVector | Almost the same as peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList, but the lists of pointers are realised through std::vector.
-arrays of particles per vertex, list index | ParticleSetGenerator_ContinuousPerVertex_IndexByList | The code tries to hold the particles associated with one vertex in one consecutive array. Whenever this is not possible, we use a linked list to reference the particles scattered over the memory.
-arrays of particles per vertex, vector index | ParticleSetGenerator_ContinuousPerVertex_IndexByVector | Similar to ParticleSetGenerator_ContinuousPerVertex_IndexByList, but using a std::vector for indexing scattered particles.
+scattered particles, list index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ScatteredOnHeap_IndexByList | Scatter the particles all over the heap. The pointers per vertex to the particles are organised as a linked list.
+scattered particles, vector index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ScatteredOnHeap_IndexByVector | Almost the same as peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList, but the lists of pointers are realised through std::vector.
+arrays of particles per vertex, list index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ContinuousPerVertex_IndexByList | The code tries to hold the particles associated with one vertex in one consecutive array. Whenever this is not possible, we use a linked list to reference the particles scattered over the memory.
+arrays of particles per vertex, vector index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ContinuousPerVertex_IndexByVector | Similar to ParticleSetGenerator_ContinuousPerVertex_IndexByList, but using a std::vector for indexing scattered particles.
 
 
 The scattered variants holds the particles somewhere on the global heap, and 
@@ -56,6 +56,10 @@ we might run into a fragmented heap occupation and the compute kernels will
 have to deal with scattered memory access. Coalescent memory access is basically
 never possible.
 
+
+@image html python/peano4/toolbox/particles/ParticleSetGenerator_ScatteredOnHeap.png
+
+
 In return, we don't move 
 (potentially heavy) particles around in memory and hence don't stress the 
 OS memory system. To maintain the lists of the particles per vertex, we offer
@@ -63,6 +67,10 @@ different versions. Again, the pointers can be stored within a consecutive
 memory block (array), or we can use a list which adds another level of overhead
 but is more flexible if particle-associations change frequently.
 
+
+@image html python/peano4/toolbox/particles/ParticleSetGenerator_ContinuousPerVertex.png
+
+@image html python/peano4/toolbox/particles/ParticleSetGenerator_GlobalContinuous.png
 
  */
  
