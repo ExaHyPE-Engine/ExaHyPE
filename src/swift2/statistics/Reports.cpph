@@ -1,21 +1,19 @@
 #include "repositories/GlobalState.h"
 #include "tarch/mpi/Rank.h"
 
-
 template <typename Particle>
-void swift2::statistics::reportCutOffRadiusVTDt( const std::string& particleName ) {
-  if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    static tarch::logging::Log _log( "swift2::statistics" );
+void swift2::statistics::reportSearchRadiusVTDt(const std::string& particleName) {
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    static tarch::logging::Log _log("swift2::statistics");
 
-    logInfo("reportCutOffRadiusVTDt()", "===============" );
-    logInfo("reportCutOffRadiusVTDt()", particleName );
-    logInfo("reportCutOffRadiusVTDt()", "===============" );
-    logInfo("reportCutOffRadiusVTDt()", "cut-off-radius_{min}=" << Particle::getSpecies().getMinCutOffRadius() );
-    logInfo("reportCutOffRadiusVTDt()", "cut-off-radius_{max}=" << Particle::getSpecies().getMaxCutOffRadius() );
-    logInfo("reportCutOffRadiusVTDt()", "v_{min}=" << Particle::getSpecies().getMinVelocity() );
-    logInfo("reportCutOffRadiusVTDt()", "v_{max}=" << Particle::getSpecies().getMaxVelocity() );
-    logInfo("reportCutOffRadiusVTDt()", "t=" << Particle::getSpecies().getMinTimeStamp() );
-    logInfo("reportCutOffRadiusVTDt()", "dt=" << Particle::getSpecies().getMinTimeStepSize() );
+    logInfo("reportSearchRadiusVTDt()", "===============");
+    logInfo("reportSearchRadiusVTDt()", particleName);
+    logInfo("reportSearchRadiusVTDt()", "===============");
+    logInfo("reportSearchRadiusVTDt()", "search-radius_{min}=" << Particle::getSpecies().getMinSearchRadius());
+    logInfo("reportSearchRadiusVTDt()", "search-radius_{max}=" << Particle::getSpecies().getMaxSearchRadius());
+    logInfo("reportSearchRadiusVTDt()", "v_{min}=" << Particle::getSpecies().getMinVelocity());
+    logInfo("reportSearchRadiusVTDt()", "v_{max}=" << Particle::getSpecies().getMaxVelocity());
+    logInfo("reportSearchRadiusVTDt()", "t=" << Particle::getSpecies().getMinTimeStamp());
+    logInfo("reportSearchRadiusVTDt()", "dt=" << Particle::getSpecies().getMinTimeStepSize());
   }
 }
-

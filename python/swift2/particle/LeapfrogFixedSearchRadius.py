@@ -10,7 +10,7 @@ import peano4.dastgen2
 from abc import ABC
 
 
-class LeapfrogFixedInteractionRadius(Particle):
+class LeapfrogFixedSearchRadius(Particle):
     """
 
     Simple particle with a fixed interaction radius h which moves according
@@ -80,7 +80,7 @@ class LeapfrogFixedInteractionRadius(Particle):
         min_h=0.005,
         max_h=0.3,
     ):
-        super(LeapfrogFixedInteractionRadius, self).__init__(
+        super(LeapfrogFixedSearchRadius, self).__init__(
             name,
             particles_per_cell,
             min_h,
@@ -144,8 +144,8 @@ class LeapfrogFixedInteractionRadius(Particle):
                 dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
-                cell_kernel="""::swift2::kernels::gravity::computeGravitationalForce( 
-                                           localParticles, 
+                cell_kernel="""::swift2::kernels::gravity::computeGravitationalForce(
+                                           localParticles,
                                            activeParticles
                                          );""",
                 touch_vertex_last_time_kernel=self.touch_particles_of_set_last_time_kernel,
@@ -194,8 +194,8 @@ class LeapfrogFixedInteractionRadius(Particle):
                 dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
-                cell_kernel="""::swift2::kernels::gravity::computeGravitationalForce( 
-                                           localParticles, 
+                cell_kernel="""::swift2::kernels::gravity::computeGravitationalForce(
+                                           localParticles,
                                            activeParticles
                                          );""",
                 touch_vertex_last_time_kernel=self.touch_particles_of_set_last_time_kernel,
@@ -225,16 +225,16 @@ class LeapfrogFixedInteractionRadius(Particle):
                 name="ReduceGlobalQuantities",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-                cell_kernel="""::swift2::statistics::reduceVelocityAndCutOffRadius( localParticles );""",
+                cell_kernel="""::swift2::statistics::reduceVelocityAndSearchRadius( localParticles );""",
                 prepare_traversal_kernel="""
-                                         globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
+                                         globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                          globaldata::{PARTICLE}::getSpecies().clearVelocity();
                                          """.replace(
                     "{PARTICLE}", self.name
                 ),
                 unprepare_traversal_kernel="""
                                          globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
-                                         ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
+                                         ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
                                          """.replace(
                     "{PARTICLE}", self.name
                 ),

@@ -412,8 +412,13 @@ but it will never become closer than these constraints.
         self.__compute_global_max_h()
 
         #
-        # Make pre-defined mesh traversals resort the particles. For this, they need
-        # the species set
+        # Make plotting resort and filter the particles. For this, they need
+        # the species set. The initialisation steps and the actual time steps
+        # are added the resorting action sets by the graph compiler, i.e. we
+        # should and we may not add them here manually. It is only the plotting
+        # (and the grid construction) which are not automatically added the
+        # sorting steps. However, the grid construction does not hold any
+        # particles yet, so we don't have to deal with this algorithm phase.
         #
         for current_species_set in self._particle_species_set:
             self.algorithm_step_plot.add_action_set(
@@ -421,16 +426,8 @@ but it will never become closer than these constraints.
                     current_species_set
                 )
             )
-            self.algorithm_step_initial_conditions.add_action_set(
-                peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(
-                    current_species_set
-                )
-            )
 
             self.algorithm_step_plot.add_action_set(
-                peano4.toolbox.particles.UpdateParallelState(current_species_set)
-            )
-            self.algorithm_step_initial_conditions.add_action_set(
                 peano4.toolbox.particles.UpdateParallelState(current_species_set)
             )
 

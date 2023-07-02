@@ -30,6 +30,7 @@ class InsertParticlesFromHDF5File(ActionSet):
             hydro scheme?
 
         """
+        super(InsertParticlesFromHDF5File, self).__init__(priority=1, parallel=False)
 
         self.d = {}
         self.d["PARTICLE"] = particle_set.particle_model.name
@@ -40,12 +41,12 @@ class InsertParticlesFromHDF5File(ActionSet):
         """
   if ( not marker.hasBeenRefined() and not marker.willBeRefined() ) {
     tarch::multicore::Lock lock( _semaphore );
-  
-    /* 
+
+    /*
      * List of particles that overlap with the current cell.
      */
 
-    std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReaderHDF5.getParticlesWithinVoxel( marker.x(), marker.h(), true );  
+    std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReaderHDF5.getParticlesWithinVoxel( marker.x(), marker.h(), true );
 
     /* Retrieve the rest of fields for same set of particles */
     std::vector< tarch::la::Vector<Dimensions,double> > VelocityWithinVoxel = _fileReaderHDF5.getVelocityWithinVoxel();
@@ -62,12 +63,12 @@ class InsertParticlesFromHDF5File(ActionSet):
       // Create a particle pointer
       globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
 
-      // Initialise the particle with x=coords and CutOffRadius=0
+      // Initialise the particle with x=coords and SearchRadius=0
       toolbox::particles::init(*newParticle, p, 0.0);
       _particleNumberOnThisTree++;
 
-      /* 
-       * Initialise the full set of particle attributes 
+      /*
+       * Initialise the full set of particle attributes
        */
 
       tarch::la::Vector<Dimensions,double> Velocity;
@@ -79,74 +80,68 @@ class InsertParticlesFromHDF5File(ActionSet):
       const double InternalEnergy  = InternalEnergyWithinVoxel[indexEntry];
       const int    ParticleID      = PartidWithinVoxel[indexEntry];
 
-      /* 
+      /*
        * Other attributes not set in HDF5 file
        */
 
       tarch::la::Vector<Dimensions,double> acceleration;
 
-      /* Internal cutoff radius used by Peano.
+      /* Internal search radius used by Peano.
        * We set the maximum allowed value, R = grid_size/2.
        */
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
-      const double GridSize_x = GridSize(0); 
-      const double PeanoCutOffRadius = GridSize_x / 2.0;
+      const double GridSize_x = GridSize(0);
 
       /* Compute the pressure from the EoS */
       const double Pressure = gas_pressure_from_internal_energy( Density, InternalEnergy );
-      
+
       /* Sound speed */
       const double Soundspeed = gas_soundspeed_from_internal_energy( InternalEnergy );
 
       /* Now set the values */
       newParticle->setV              ( Velocity );
-      newParticle->setDensity        ( Density );        
+      newParticle->setDensity        ( Density );
       newParticle->setMass           ( Mass );
       newParticle->setSmoothingLength( SmoothingLength );
 
-//      /* Hard coded for Sod 1D test */
-//      newParticle->setSmoothingLength( 0.005 );
+      newParticle->setU              ( InternalEnergy );
 
-      newParticle->setU              ( InternalEnergy ); 
-
-      /* 
-       * Initialize remaining fields 
+      /*
+       * Initialize remaining fields
        * @TODO some of these should be initialised elsewhere to keep this
        * initialisation script general for any hydro scheme, etc.
        */
 
       newParticle->setSmoothingLengthPrevious( SmoothingLength );
 
-      newParticle->setCutOffRadius( GridSize_x / 2.0);
+      newParticle->setSearchRadius(GridSize_x / 2.0);
 
       newParticle->setPressure  ( Pressure );
       newParticle->setSoundSpeed( Soundspeed );
-      
+
       // Vectors
       for (int d=0; d<Dimensions; d++) {
          newParticle->setA          (d,0);
-//         newParticle->setA_prev_step(d,0);
       }
-     
+
       /* For 2D sims, we only get one component */
       newParticle->setRot_v(0);
-      
+
       /* Initialise the "extended" arrays */
       newParticle->setV_full( newParticle->getV() );
       newParticle->setU_full( newParticle->getU() );
 
-      newParticle->setUDot  (0.0);        
-//      newParticle->setUDot_prev_step(0.0);        
-      newParticle->setHDot  (0.0);        
-      newParticle->setWcount(0.0);        
-      newParticle->setNcount(0  );        
-      newParticle->setF     (0.0);        
-      newParticle->setRho_dh(0.0);           
-      newParticle->setWcount_dh(0.0);  
+      newParticle->setUDot  (0.0);
+      newParticle->setHDot  (0.0);
+      newParticle->setWcount(0.0);
+      newParticle->setNcount(0  );
+      newParticle->setF     (0.0);
+      newParticle->setRho_dh(0.0);
+      newParticle->setWcount_dh(0.0);
 
-      newParticle->setHLeft (HYDRO_h_MIN);        
-      newParticle->setHRight(HYDRO_h_MAX);        
-      
+      newParticle->setHLeft (HYDRO_h_MIN);
+      newParticle->setHRight(HYDRO_h_MAX);
+
 //      newParticle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
       newParticle->setHasConverged(false);
       newParticle->setHasNoNeighbours(false);
@@ -162,8 +157,8 @@ class InsertParticlesFromHDF5File(ActionSet):
       // Set particle id
       newParticle->setPartid( ParticleID );
 
-      /* 
-       * All particle attributes for SPH have thus been set 
+      /*
+       * All particle attributes for SPH have thus been set
        */
 
       indexEntry++;
@@ -174,8 +169,8 @@ class InsertParticlesFromHDF5File(ActionSet):
         fineGridVerticeshydroPartSet
       );
     }
-    
-    logDebug( "touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " 
+
+    logDebug( "touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex "
                                                        << marker.toString() << " on tree " << _spacetreeId );
 
   }
@@ -184,8 +179,8 @@ class InsertParticlesFromHDF5File(ActionSet):
 
     __Template_EndTraversal = jinja2.Template(
         """
-  logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " 
-                                         << _spacetreeId 
+  logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree "
+                                         << _spacetreeId
                                          << " (boundary vertices might host redundant particle data)" );
 """
     )
@@ -246,10 +241,10 @@ toolbox::particles::FileReaderHDF5 """
             """
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
-  
+
   tarch::multicore::Lock lock( _semaphore );
 
-  if ( _fileReaderHDF5.empty() ) 
+  if ( _fileReaderHDF5.empty() )
     _fileReaderHDF5.readHDF5File( \""""
             + self._filename
             + """\" );
@@ -263,7 +258,7 @@ toolbox::particles::FileReaderHDF5 """
     def get_attributes(self):
         return """
   static tarch::multicore::BooleanSemaphore _semaphore;
-     
+
   int                                        _particleNumberOnThisTree;
   int                                        _spacetreeId;
   static toolbox::particles::FileReaderHDF5  _fileReaderHDF5;

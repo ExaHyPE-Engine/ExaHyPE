@@ -10,27 +10,27 @@ import peano4.dastgen2
 from abc import ABC
 
 
-class SPHLeapfrogFixedInteractionRadius(Particle):
+class SPHLeapfrogFixedSearchRadius(Particle):
     """!
 
-    SPH particle with fixed interaction radius
+    SPH particle with fixed search radius
 
-    Same as LeapfrogFixedInteractionRadius but augmented for full SPH.
+    Same as LeapfrogFixedSearchRadius but augmented for full SPH.
     Implements the Minimal SPH scheme.
 
-    Simple particle with a fixed interaction radius h which moves according
+    Simple particle with a fixed search radius h which moves according
     to leapfrog KDK scheme.
     By default, it uses global time stepping,
     i.e. the combination of maximum velocity and minimal mesh size determines
     the time step size of the subsequent time step. Besides the default
     variables x and h, the particle has the following properties:
 
-      - a vector a which is the acceleration;
-      - a vector v which is the velocity.
+    - a vector a which is the acceleration;
+    - a vector v which is the velocity.
 
     You can add further properties via
 
-           myparticle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("myFancyArray","Dimensions") )
+         myparticle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("myFancyArray","Dimensions") )
 
     in your code. Or you can create a subclass which adds additional fields
     after it has called the baseline constructor.
@@ -60,12 +60,53 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     vertex to which a particular is associated, and you have the localParticles.
     This is a vector of pointers in this particular case.
 
+    ## Precision
+
+    By default, all particle attributes are modelled as doubles or arrays of
+    doubles. This might be overly precise. You can alter the precision through
+    our LLVM compiler modifications if you invoke the following commands on a
+    particle species:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    particle.mass.valid_mantissa_bits         = args.mantissa_size
+    particle.velocity.valid_mantissa_bits     = args.mantissa_size
+    particle.acceleration.valid_mantissa_bits = args.mantissa_size
+    particle.density.valid_mantissa_bits      = args.mantissa_size
+    particle.pressure.valid_mantissa_bits     = args.mantissa_size
+    particle.smoothL.valid_mantissa_bits      = args.mantissa_size
+    particle.u.valid_mantissa_bits            = args.mantissa_size
+    particle.uDot.valid_mantissa_bits         = args.mantissa_size
+    particle.f.valid_mantissa_bits            = args.mantissa_size
+    particle.wcount_dh.valid_mantissa_bits    = args.mantissa_size
+    particle.rho_dh.valid_mantissa_bits       = args.mantissa_size
+    particle.hleft.valid_mantissa_bits        = args.mantissa_size
+    particle.hright.valid_mantissa_bits       = args.mantissa_size
+    particle.smoothL_prev.valid_mantissa_bits = args.mantissa_size
+    particle.wcount.valid_mantissa_bits       = args.mantissa_size
+    particle.hDot.valid_mantissa_bits         = args.mantissa_size
+    particle.residual.valid_mantissa_bits     = args.mantissa_size
+    particle.balsara.valid_mantissa_bits      = args.mantissa_size
+    particle.rot_v.valid_mantissa_bits        = args.mantissa_size
+    particle.div_v.valid_mantissa_bits        = args.mantissa_size
+    particle.v_sig_AV.valid_mantissa_bits     = args.mantissa_size
+    particle.soundSpeed.valid_mantissa_bits   = args.mantissa_size
+    particle.v_full.valid_mantissa_bits       = args.mantissa_size
+    particle.u_full.valid_mantissa_bits       = args.mantissa_size
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    This is an example. You can also add ony a few of these fields, and picking
+    a value for args.mantissa_size is obviously up to you. We refrain from
+    illustrating that you can also alter the precision of the position and
+    maximum search radius of a particle this way. This is on purpose: We have
+    made bad experience with such modifications.
+
+
     ## Attributes
 
     name: String
-      To be in line with other conventions, I recommend you start with an
-      uppercase letter. This has to be a valid C++ identifier, i.e. don't
-      use any special symbols besides an underscore.
+    To be in line with other conventions, I recommend you start with an
+    uppercase letter. This has to be a valid C++ identifier, i.e. don't
+    use any special symbols besides an underscore.
 
     @see peano4::datamanagement::CellMarker
     @see peano4::datamanagement::VertexMarker
@@ -86,7 +127,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         min_h=0.3,
         max_h=0.3,
     ):
-        super(SPHLeapfrogFixedInteractionRadius, self).__init__(
+        super(SPHLeapfrogFixedSearchRadius, self).__init__(
             name,
             particles_per_cell,
             min_h,
@@ -127,44 +168,24 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self._alpha_av = 0.8
         self._beta_av = 3.0
 
-        # Mantissa size. Can be used for Pawel's clang truncation.
-        # Default value corresponds to IEEE doubles.
-        self._mantissa_size = 52
-
         # Project namespace to have consistent use of exported Constants in kernels
         # Not used right now.
         self._swift_project_namespace = swift_project_namespace
 
         # Baseline particle properties --------------------------------------------------------------
-        self.mass = dastgen2.attributes.Double(
-            "mass", valid_mantissa_bits=self._mantissa_size
-        )
-        self.velocity = peano4.dastgen2.Peano4DoubleArray(
-            "v", "Dimensions", valid_mantissa_bits=self._mantissa_size
-        )
-        self.acceleration = peano4.dastgen2.Peano4DoubleArray(
-            "a", "Dimensions", valid_mantissa_bits=self._mantissa_size
-        )
+        self.mass = dastgen2.attributes.Double("mass")
+        self.velocity = peano4.dastgen2.Peano4DoubleArray("v", "Dimensions")
+        self.acceleration = peano4.dastgen2.Peano4DoubleArray("a", "Dimensions")
         self.data.add_attribute(self.mass)
         self.data.add_attribute(self.velocity)
         self.data.add_attribute(self.acceleration)
 
         # Basic SPH properties
-        self.density = dastgen2.attributes.Double(
-            "density", valid_mantissa_bits=self._mantissa_size
-        )
-        self.pressure = dastgen2.attributes.Double(
-            "pressure", valid_mantissa_bits=self._mantissa_size
-        )
-        self.smoothL = dastgen2.attributes.Double(
-            "smoothingLength", valid_mantissa_bits=self._mantissa_size
-        )
-        self.u = dastgen2.attributes.Double(
-            "u", valid_mantissa_bits=self._mantissa_size
-        )
-        self.uDot = dastgen2.attributes.Double(
-            "uDot", valid_mantissa_bits=self._mantissa_size
-        )
+        self.density = dastgen2.attributes.Double("density")
+        self.pressure = dastgen2.attributes.Double("pressure")
+        self.smoothL = dastgen2.attributes.Double("smoothingLength")
+        self.u = dastgen2.attributes.Double("u")
+        self.uDot = dastgen2.attributes.Double("uDot")
         self.data.add_attribute(self.density)
         self.data.add_attribute(self.pressure)
         self.data.add_attribute(self.smoothL)
@@ -172,21 +193,11 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self.data.add_attribute(self.uDot)
 
         # Variable smoothing length scheme ---------------------------------------------
-        self.f = dastgen2.attributes.Double(
-            "f", valid_mantissa_bits=self._mantissa_size
-        )
-        self.wcount_dh = dastgen2.attributes.Double(
-            "wcount_dh", valid_mantissa_bits=self._mantissa_size
-        )
-        self.rho_dh = dastgen2.attributes.Double(
-            "rho_dh", valid_mantissa_bits=self._mantissa_size
-        )
-        self.hleft = dastgen2.attributes.Double(
-            "hLeft", valid_mantissa_bits=self._mantissa_size
-        )
-        self.hright = dastgen2.attributes.Double(
-            "hRight", valid_mantissa_bits=self._mantissa_size
-        )
+        self.f = dastgen2.attributes.Double("f")
+        self.wcount_dh = dastgen2.attributes.Double("wcount_dh")
+        self.rho_dh = dastgen2.attributes.Double("rho_dh")
+        self.hleft = dastgen2.attributes.Double("hLeft")
+        self.hright = dastgen2.attributes.Double("hRight")
         self.data.add_attribute(self.f)
         self.data.add_attribute(self.wcount_dh)
         self.data.add_attribute(self.rho_dh)
@@ -194,18 +205,10 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self.data.add_attribute(self.hright)
 
         # Newton-Raphson iterations ----------------------------------------------------
-        self.smoothL_prev = dastgen2.attributes.Double(
-            "smoothingLengthPrevious", valid_mantissa_bits=self._mantissa_size
-        )
-        self.wcount = dastgen2.attributes.Double(
-            "wcount", valid_mantissa_bits=self._mantissa_size
-        )
-        self.hDot = dastgen2.attributes.Double(
-            "hDot", valid_mantissa_bits=self._mantissa_size
-        )
-        self.residual = dastgen2.attributes.Double(
-            "residual", valid_mantissa_bits=self._mantissa_size
-        )
+        self.smoothL_prev = dastgen2.attributes.Double("smoothingLengthPrevious")
+        self.wcount = dastgen2.attributes.Double("wcount")
+        self.hDot = dastgen2.attributes.Double("hDot")
+        self.residual = dastgen2.attributes.Double("residual")
         self.iteration_count = dastgen2.attributes.Integer("iterCount")
         self.has_converged = dastgen2.attributes.Boolean("hasConverged")
         self.data.add_attribute(self.smoothL_prev)
@@ -216,26 +219,16 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self.data.add_attribute(self.has_converged)
 
         # Artificial viscosity scheme -------------------------------------------------
-        self.balsara = dastgen2.attributes.Double(
-            "balsara", valid_mantissa_bits=self._mantissa_size
-        )
+        self.balsara = dastgen2.attributes.Double("balsara")
         if self._hydroDimensions == 3:
-            self.rot_v = peano4.dastgen2.Peano4DoubleArray(
-                "rot_v", "Dimensions", valid_mantissa_bits=self._mantissa_size
-            )
+            self.rot_v = peano4.dastgen2.Peano4DoubleArray("rot_v", "Dimensions")
         else:  # Curl is a scalar in lower dimensions
             self.rot_v = dastgen2.attributes.Double(
-                "rot_v", valid_mantissa_bits=self._mantissa_size
+                "rot_v"
             )  # In 2D sims it only has 1 component (z)
-        self.div_v = dastgen2.attributes.Double(
-            "div_v", valid_mantissa_bits=self._mantissa_size
-        )
-        self.v_sig_AV = dastgen2.attributes.Double(
-            "v_sig_AV", valid_mantissa_bits=self._mantissa_size
-        )
-        self.soundSpeed = dastgen2.attributes.Double(
-            "soundSpeed", valid_mantissa_bits=self._mantissa_size
-        )
+        self.div_v = dastgen2.attributes.Double("div_v")
+        self.v_sig_AV = dastgen2.attributes.Double("v_sig_AV")
+        self.soundSpeed = dastgen2.attributes.Double("soundSpeed")
         self.data.add_attribute(self.balsara)
         self.data.add_attribute(self.rot_v)
         self.data.add_attribute(self.div_v)
@@ -243,12 +236,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         self.data.add_attribute(self.soundSpeed)
 
         # Extended arrays for time integration consistency
-        self.v_full = peano4.dastgen2.Peano4DoubleArray(
-            "v_full", "Dimensions", valid_mantissa_bits=self._mantissa_size
-        )
-        self.u_full = dastgen2.attributes.Double(
-            "u_full", valid_mantissa_bits=self._mantissa_size
-        )
+        self.v_full = peano4.dastgen2.Peano4DoubleArray("v_full", "Dimensions")
+        self.u_full = dastgen2.attributes.Double("u_full")
         self.data.add_attribute(self.v_full)
         self.data.add_attribute(self.u_full)
 
@@ -294,79 +283,6 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                        """,
         )
         self.algorithm_steps_dict["FlagBoundaryParticles"] = flagBoundaryParticlesStep
-
-        densityWithConstantSmoothingLengthFirst = AlgorithmStep(
-            name="DensityWithConstantSmoothingLengthFirst",
-            dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""
-                                       ::swift2::kernels::prepareDensityCalculation( localParticles );
-                                       """,
-            cell_kernel="""
-                                       ::swift2::kernels::computeDensity(
-                                         localParticles,
-                                         activeParticles,
-                                         {}
-                                       );
-                                       """.format(
-                self._hydroDimensions
-            ),
-            touch_vertex_last_time_kernel="""
-                                       ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
-                                           localParticles,
-                                           {},
-                                           {},
-                                           {}
-                                           );
-                                       """.format(
-                self._hydroDimensions, self._eta_factor, self._alpha_av
-            ),
-            includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/kernels/ParticleParticleInteraction.h"
-                                       #include "swift2/kernels/ParticleSelfInteraction.h"
-                                       #include "swift2/kernels/kernel_hydro.h"
-                                       #include "swift2/kernels/equation_of_state.h"
-                                       """,
-        )
-        self.algorithm_steps_dict[
-            "DensityWithConstantSmoothingLengthFirst"
-        ] = densityWithConstantSmoothingLengthFirst
-
-        forceFirst = AlgorithmStep(
-            name="ForceLoopInitial",
-            dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""
-                                       ::swift2::kernels::prepareHydroForceCalculation( localParticles );
-                                       """,
-            cell_kernel="""
-                                       ::swift2::kernels::computeHydroForce(
-                                         localParticles,
-                                         activeParticles,
-                                         {},
-                                         {}
-                                       );
-                                       """.format(
-                self._hydroDimensions, self._beta_av
-            ),
-            touch_vertex_last_time_kernel="""
-                                       ::swift2::kernels::endHydroForceCalculation(
-                                           localParticles,
-                                           {}
-                                           );
-                                       """.format(
-                self._hydroDimensions
-            ),
-            includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/kernels/ParticleParticleInteraction.h"
-                                       #include "swift2/kernels/ParticleSelfInteraction.h"
-                                       #include "swift2/kernels/kernel_hydro.h"
-                                       #include "swift2/kernels/equation_of_state.h"
-                                       """,
-        )
-        self.algorithm_steps_dict["ForceFirst"] = forceFirst
 
         kick1 = AlgorithmStep(
             name="Kick1",
@@ -427,7 +343,6 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                        #include "swift2/kernels/equation_of_state.h"
                                        """,
         )
-
         self.algorithm_steps_dict["Drift"] = drift
 
         predictHydro = AlgorithmStep(
@@ -450,15 +365,15 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         )
         self.algorithm_steps_dict["PredictHydro"] = predictHydro
 
-        densityWithConstantSmoothingLength = AlgorithmStep(
-            name="DensityLoopWithConstantSmoothingLength",
+        densityWithConstantSearchRadius = AlgorithmStep(
+            name="DensityLoopWithConstantSearchRadius",
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
             touch_vertex_first_time_kernel="""
                                        ::swift2::kernels::prepareDensityCalculation( localParticles );
                                        """,
             cell_kernel="""
-                                       ::swift2::kernels::computeDensity(
+                                       ::swift2::kernels::computeDensityWithConstantSearchRadius(
                                          localParticles,
                                          activeParticles,
                                          {}
@@ -467,7 +382,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                 self._hydroDimensions
             ),
             touch_vertex_last_time_kernel="""
-                                       ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
+                                       ::swift2::kernels::endDensityCalculationWithConstantSearchRadius(
                                            localParticles,
                                            {},
                                            {},
@@ -484,15 +399,21 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                        #include "swift2/kernels/equation_of_state.h"
                                        """,
         )
-        self.algorithm_steps_dict["Density"] = densityWithConstantSmoothingLength
+        self.algorithm_steps_dict["Density"] = densityWithConstantSearchRadius
 
         force = AlgorithmStep(
             name="ForceLoop",
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
             touch_vertex_first_time_kernel="""
-                                       ::swift2::kernels::prepareHydroForceCalculation( localParticles );
-                                       """,
+                                       ::swift2::kernels::prepareHydroForceCalculation(
+                                           localParticles,
+                                           {},
+                                           {}
+                                           );
+                                       """.format(
+                self._hydroDimensions, self._alpha_av
+            ),
             cell_kernel="""
                                        ::swift2::kernels::computeHydroForce(
                                          localParticles,
@@ -563,16 +484,16 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
             name="ReduceGlobalQuantities",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-            cell_kernel="""::swift2::statistics::reduceVelocityAndCutOffRadius( localParticles );""",
+            cell_kernel="""::swift2::statistics::reduceVelocityAndSearchRadius( localParticles );""",
             prepare_traversal_kernel="""
-                                       globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
+                                       globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                        globaldata::{PARTICLE}::getSpecies().clearVelocity();
                                        """.replace(
                 "{PARTICLE}", self.name
             ),
             unprepare_traversal_kernel="""
                                        globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
-                                       ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
+                                       ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
                                        """.replace(
                 "{PARTICLE}", self.name
             ),
@@ -591,7 +512,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     def algorithm_steps(self):
         """!
 
-        Return algorithm steps
+        Return algorithm steps: A list of AlgorithmStep objects to be executed in
+        that order.
 
         Leapfrog consists basically of four steps per particle. We first
         determine the force. Then we update the velocity by half a timestep and move
@@ -608,8 +530,6 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
         return [
             self.algorithm_steps_dict["FlagBoundaryParticles"],
-            self.algorithm_steps_dict["DensityWithConstantSmoothingLengthFirst"],
-            self.algorithm_steps_dict["ForceFirst"],
             self.algorithm_steps_dict["Kick1"],
             self.algorithm_steps_dict["Kick1Extra"],
             self.algorithm_steps_dict["Drift"],
@@ -673,7 +593,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         """
 
         Set the limits allowed for the SPH smoothing length. Notice that the max value
-        is bounded by Peano's cutoff radius as h_max = R_cutoff_max = max_grid_size /
+        is bounded by Peano's search radius as h_max = R_search_max = max_grid_size /
         gamma_k, where gamma_k is the SPH kernel factor that relates h and H.
         Typically gamma_k = 2, so h_max = max_grid_size / 2.
 
@@ -769,18 +689,18 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     @property
     def readme_descriptor(self):
         return (
-            super(SPHLeapfrogFixedInteractionRadius, self).readme_descriptor
+            super(SPHLeapfrogFixedSearchRadius, self).readme_descriptor
             + """
-    
+
   Time integrator: SPH Leapfrog
-  
-  - interaction radius:             fixed
+
+  - search radius:                  fixed
   - CFL factor:                     """
             + str(self._cfl_factor)
             + """
   - dt_initial:                     """
             + str(self._initial_time_step_size)
             + """
-  
+
     """
         )
