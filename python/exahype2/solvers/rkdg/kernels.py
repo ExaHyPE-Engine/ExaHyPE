@@ -11,8 +11,8 @@ from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBa
 
 
 class SolverVariant(Enum):
-    WithVirtualFunctions = (0,)
-    Stateless = (1,)
+    WithVirtualFunctions = 0
+    Stateless = 1
     Accelerator = 2
 
 
