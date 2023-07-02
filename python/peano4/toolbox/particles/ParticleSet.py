@@ -128,6 +128,90 @@ class ParticleSetGenerator_ScatteredOnHeap_IndexByVector(AbstractParticleSetGene
         pass
 
 
+class ParticleSetGenerator_ContinuousPerVertex_IndexByVector(AbstractParticleSetGenerator):
+    """!
+
+    Map a particle set onto heap objects indexed by an std::vector
+
+    This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+    Peano's stacks are realised via std::vector from the C++ standard library.
+    Each entry within this vector then resembles a C++ container over pointers
+    to the heap. That is, all particles are stored on the heap. They are
+    scattered. The C++ pointer per stack entry that's used to store all the
+    particle pointers is realised through std::list.
+
+    """
+
+    def __init__(self, data):
+        super(ParticleSetGenerator_ContinuousPerVertex_IndexByVector,self).__init__(data)
+
+    def construct_output(self, output):
+        d = {
+          "PARTICLE_TYPE": self._data.particle_model.name,
+          "STD_CONTAINER": "vector"
+        }
+
+        templatefile_prefix = (
+            os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
+        )
+
+        generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.h",
+            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.cpp",
+            self._data.name,
+            self._data.namespace,
+            self._data.namespace[-1],
+            d,
+            True,
+        )
+        output.add(generated_files)
+        output.makefile.add_cpp_file(
+            self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True
+        )
+        pass
+
+
+class ParticleSetGenerator_ContinuousPerVertex_IndexByList(AbstractParticleSetGenerator):
+    """!
+
+    Map a particle set onto heap objects indexed by a list
+
+    This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+    Peano's stacks are realised via std::vector from the C++ standard library.
+    Each entry within this vector then resembles a C++ container over pointers
+    to the heap. That is, all particles are stored on the heap. They are
+    scattered. The C++ pointer per stack entry that's used to store all the
+    particle pointers is realised through std::list.
+
+    """
+
+    def __init__(self, data):
+        super(ParticleSetGenerator_ContinuousPerVertex_IndexByList,self).__init__(data)
+
+    def construct_output(self, output):
+        d = {
+          "PARTICLE_TYPE": self._data.particle_model.name,
+          "STD_CONTAINER": "list"
+        }
+
+        templatefile_prefix = (
+            os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
+        )
+
+        generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.h",
+            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.cpp",
+            self._data.name,
+            self._data.namespace,
+            self._data.namespace[-1],
+            d,
+            True,
+        )
+        output.add(generated_files)
+        output.makefile.add_cpp_file(
+            self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True
+        )
+        pass
 
 
 
@@ -177,8 +261,10 @@ class ParticleSet(DoF):
             )
 
         self.particle_model = particle
-        #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
-        self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
+        self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
+        #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
+        #self.generator      = ParticleSetGenerator_ContinuousPerVertex_IndexByList(self)
+        #self.generator      = ParticleSetGenerator_ContinuousPerVertex_IndexByVector(self)
 
 
     @property

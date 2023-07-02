@@ -30,16 +30,31 @@
  Below is a rough guideline (overview) of particle per axis and outcome for 2d
  experiments:
  
-  np | initial mesh cells | mesh cells after insertion | 
- ------------------------------------------------------
-  10 |            9 (3x3) |                   81 (9x9) |
-  20 |            9 (3x3) |                   81 (9x9) |
-  40 |            9 (3x3) |                   81 (9x9) |
-  80 |           81 (9x9) |                729 (27x27) |
- 160 |        729 (27x27) |               6561 (81x81) |
- 320 |        729 (27x27) |               6561 (81x81) |
- 640 |       6561 (81x81) |                      59049 |
+ np | initial mesh cells | mesh cells after insertion | 
+----|--------------------|----------------------------|
+ 10 |            9 (3x3) |                   81 (9x9) |
+ 20 |            9 (3x3) |                   81 (9x9) |
+ 40 |            9 (3x3) |                   81 (9x9) |
+ 80 |           81 (9x9) |                729 (27x27) |
+160 |        729 (27x27) |               6561 (81x81) |
+320 |        729 (27x27) |               6561 (81x81) |
+640 |       6561 (81x81) |                      59049 |
 
  
+ ## Benchmark different configurations
+ 
+ For benchmarking, I typically pick rather short runtimes and disable the 
+ plots.
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 noh.py -np 320 -plot 0 -et 0.001
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ 
+ We can pick certain mantisssa sizes via the ms argument. Please note that
+ the code sets all variables besides the position to the chosen accuracy.
+ For real real-world setups, you probably want to pick different mantissa
+ accuracies per attribute.
+
+
  
  */

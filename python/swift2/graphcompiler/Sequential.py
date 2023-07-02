@@ -12,6 +12,8 @@ from swift2.actionsets.AMRLogic import (
 )
 
 
+## Constraint: Nach drop darf kein cell-cell interaction kmomen
+
 def translate_one_step_of_species_into_mesh_traversal(
     step,
     current_species_set,
