@@ -1,0 +1,68 @@
+/**
+
+@page page_swift_performance_optimisation Performance optimisation
+
+
+This section discusses some Swift-specific performance optimisation steps.
+While Swift 2.0 and its baseline, Peano, provide simplistic performance analysis 
+features to spot some flaws, a proper performance optimisation has to be guided
+by external performance analysis tools.
+Furthermore, please read @ref page_peano_performance_optimisation "Peano's generic performance optimisation remarks" parallel to this 
+page.
+All of the recommendations there apply for SWIFT, too.
+
+
+## Translating algorithmic steps onto mesh traversals and on-node parallelisation
+
+To be written ...
+
+
+## Single core performance per species
+
+Our code base offers a variety of algorithmic variants per solver species. We 
+do not yet know or even think that there is one combination of different 
+variants that performs for all solver for all setups. Therefore, you might have
+to run through some trial and error.
+
+
+### Storage of particles and maintaining the particle-mesh association
+
+Maintaining the association of particles to meshes is key, as Peano traverses 
+the mesh and issues the particle updates for those particles tied to particular
+vertices or cells. We distinguish different ways how the particles themselves
+are organised in the memory and how the indices over the particles are built
+up and maintained. All particles are always stored on the heap, but how they 
+populate the heap can be changed.
+
+
+You can alter the scheme per particle species by taking your
+instance of peano4.toolbox.particles.ParticleSet. Each particle set hosts an
+attribute generator. You can exchange the generator and thus switch 
+administration and storage variants.
+
+
+Feature | Generator | Semantics
+--------|--------------|----------
+scattered particles, list index | peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList | Scatter the particles all over the heap. The pointers per vertex to the particles are organised as a linked list.
+scattered particles, vector index | peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByVector | Almost the same as peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList, but the lists of pointers are realised through std::vector.
+arrays of particles per vertex, list index | ParticleSetGenerator_ContinuousPerVertex_IndexByList | The code tries to hold the particles associated with one vertex in one consecutive array. Whenever this is not possible, we use a linked list to reference the particles scattered over the memory.
+arrays of particles per vertex, vector index | ParticleSetGenerator_ContinuousPerVertex_IndexByVector | Similar to ParticleSetGenerator_ContinuousPerVertex_IndexByList, but using a std::vector for indexing scattered particles.
+
+
+The scattered variants holds the particles somewhere on the global heap, and 
+try never to move them. If particles travel within their subdomain, the code 
+solely update the pointers each vertex holds to the particle. As a consequence,
+we might run into a fragmented heap occupation and the compute kernels will 
+have to deal with scattered memory access. Coalescent memory access is basically
+never possible.
+
+In return, we don't move 
+(potentially heavy) particles around in memory and hence don't stress the 
+OS memory system. To maintain the lists of the particles per vertex, we offer
+different versions. Again, the pointers can be stored within a consecutive
+memory block (array), or we can use a list which adds another level of overhead
+but is more flexible if particle-associations change frequently.
+
+
+ */
+ 
