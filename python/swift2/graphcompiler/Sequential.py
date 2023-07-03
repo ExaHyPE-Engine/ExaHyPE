@@ -12,13 +12,12 @@ from swift2.actionsets.AMRLogic import (
 )
 
 
-## Constraint: Nach drop darf kein cell-cell interaction kmomen
-
 def translate_one_step_of_species_into_mesh_traversal(
     step,
     current_species_set,
     mesh_traversals,
     alter_particle_position,
+    use_lists_to_construct_active_sets = True,
     preamble="Step",
     verbose=False,
 ):
@@ -78,7 +77,9 @@ def translate_one_step_of_species_into_mesh_traversal(
                     current_species_set.particle_model.name,
                 )
             )
-        action_set_particle_particle_interaction = peano4.toolbox.particles.ParticleParticleInteraction_Sets(
+            
+        if use_lists_to_construct_active_sets:
+          action_set_particle_particle_interaction = peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists(
             particle_set=current_species_set,
             particle_particle_interaction_kernel=step.cell_kernel,
             touch_vertex_first_time_compute_particle_update_kernel=step.touch_vertex_first_time_kernel,
@@ -87,7 +88,18 @@ def translate_one_step_of_species_into_mesh_traversal(
             unprepare_traversal_kernel=step.unprepare_traversal_kernel,
             additional_includes=step.includes,
             active_particle_set=step.input_particles,
-        )
+          )
+        else:
+          action_set_particle_particle_interaction = peano4.toolbox.particles.ParticleParticleInteraction_Sets(
+            particle_set=current_species_set,
+            particle_particle_interaction_kernel=step.cell_kernel,
+            touch_vertex_first_time_compute_particle_update_kernel=step.touch_vertex_first_time_kernel,
+            touch_vertex_last_time_compute_particle_update_kernel=step.touch_vertex_last_time_kernel,
+            prepare_traversal_kernel=step.prepare_traversal_kernel,
+            unprepare_traversal_kernel=step.unprepare_traversal_kernel,
+            additional_includes=step.includes,
+            active_particle_set=step.input_particles,
+          )
         action_set_particle_particle_interaction.priority = (
             new_step.highest_priority() + 1
         )
@@ -182,6 +194,24 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
 
     for current_species_set in species_sets:
         for step in current_species_set.particle_model.algorithm_steps():
+            if use_lists_to_construct_active_sets and step.dependencies == AlgorithmStep.Dependencies.NEIGHBOURS and len(mesh_traversals)>0 and alter_particle_position[-1]:
+              new_step = peano4.solversteps.Step(
+                "DummyStep{}{}_sweep{}".format(
+                  current_species_set.particle_model.name,
+                  step.name,
+                  len(mesh_traversals),
+                ),
+                add_user_defined_actions=False,
+              )
+              mesh_traversals.append(new_step)
+              print(
+                  "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting".format(
+                    len(mesh_traversals),
+                    step.name,
+                    current_species_set.particle_model.name,
+                )
+            )
+            
             translate_one_step_of_species_into_mesh_traversal(
                 step,
                 current_species_set,

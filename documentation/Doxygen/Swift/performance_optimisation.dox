@@ -25,6 +25,27 @@ variants that performs for all solver for all setups. Therefore, you might have
 to run through some trial and error.
 
 
+### Maintaining the active sets
+
+There are two different versions how to maintain the active sets: We can either
+build them up as proper sets and add particles to the set whenever we 
+touchCellFirstTime() and remove them from the cell when we invoke
+touchCellLastTime(). Or we can work with a list, memorise how many particles we
+add per touchCellFirstTime() and remove exactly this number when we backtrack
+through the tree. 
+
+The set variant is robust, but it is not very fast as we have to check for each
+particle in touchCellLastTime() where it is within the set and then we can 
+remove it. We also miss out on any adjacent memory storage. The list variant
+is faster and preserves the ordering of the particles per vertex/cell (see the
+remarks below), but it works if and only if the particle-mesh association 
+remains invariant. If in doubt, we might have to use some dummy mesh traversals.
+
+Whether or not to use one variant or the other is a decision that's made by the 
+graph compiler. Some compiler flavours support different active set 
+construction variants, others are tied to one variant only.
+
+
 ### Storage of particles and maintaining the particle-mesh association
 
 Maintaining the association of particles to meshes is key, as Peano traverses 
