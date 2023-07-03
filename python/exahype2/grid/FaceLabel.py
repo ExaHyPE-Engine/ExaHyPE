@@ -74,6 +74,7 @@ class UpdateFaceLabel(ActionSet):
   }
   fineGridFace{{FACE_LABEL_NAME}}.setBoundary( isBoundary );
   fineGridFace{{FACE_LABEL_NAME}}.setIsHanging( false );
+  fineGridFace{{FACE_LABEL_NAME}}.setAboveHanging( false );
   fineGridFace{{FACE_LABEL_NAME}}.setUpdatedTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setNewTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setOldTimeStamp( 0.0 );
@@ -85,6 +86,7 @@ class UpdateFaceLabel(ActionSet):
   _Template_CreateHangingFace = """
   logTraceInWith1Argument( "createHangingFace(...)", marker.toString() );
   fineGridFace{{FACE_LABEL_NAME}}.setIsHanging( true );
+  coarseGridFaces{{FACE_LABEL_NAME}}(marker.getSelectedFaceNumber()).setAboveHanging( true );
   logTraceOutWith1Argument( "createHangingFace(...)", fineGridFace{{FACE_LABEL_NAME}}.toString() );
 """  
   
@@ -143,6 +145,7 @@ def create_face_label(solver_name):
 
   result.data.add_attribute( dastgen2.attributes.Boolean("Boundary") )
   result.data.add_attribute( dastgen2.attributes.Boolean("IsHanging") )
+  result.data.add_attribute( dastgen2.attributes.Boolean("AboveHanging") )
   result.data.add_attribute( dastgen2.attributes.BooleanArray("Updated","2",compress=True) )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("UpdatedTimeStamp","2") )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("NewTimeStamp","2") )
