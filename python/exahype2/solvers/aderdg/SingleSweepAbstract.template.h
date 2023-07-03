@@ -68,6 +68,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
       GridConstruction,
       GridInitialisation,
       Prediction,
+      PredictionOnHangingCells,
       Correction,
       Plotting
     };

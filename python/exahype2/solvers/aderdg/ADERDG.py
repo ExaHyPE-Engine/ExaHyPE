@@ -20,6 +20,7 @@ from enum import IntEnum
 import jinja2
 from exahype2.solvers.aderdg.actionsets.Prediction_generic import Prediction_generic
 from exahype2.solvers.aderdg.actionsets.Prediction_kernelgenerator import Prediction_kernelgenerator
+from exahype2.solvers.aderdg.actionsets.PredictionOnHangingCell_kernelgenerator import PredictionOnHangingCell_kernelgenerator
 from exahype2.solvers.aderdg.actionsets.Correction_generic import Correction_generic
 from exahype2.solvers.aderdg.actionsets.Correction_kernelgenerator import Correction_kernelgenerator
 
@@ -236,7 +237,7 @@ class ADERDG( object ):
   @abstractmethod
   def create_data_structures(self):
     
-    self._number_of_face_projections = 1;
+    self._number_of_face_projections = 1
 
     #current time step contains the solution, projections are respectively the projection of the solution and of the fluxes as predicted by the space-time predictor
     self._current_time_step             = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier(), self._solution_persistent_storage_precision )
@@ -331,8 +332,9 @@ class ADERDG( object ):
     # correction uses the extrapolated face solutions from the predictor and the neighboring
     #   cells to compute a solution at the next timestep
     if(self._use_kernel_generator):
-      self._action_set_prediction = Prediction_kernelgenerator(self, self._store_cell_data_default_guard())
-      self._action_set_correction = Correction_kernelgenerator(self, self._store_cell_data_default_guard())
+      self._action_set_prediction =                   Prediction_kernelgenerator(self, self._store_cell_data_default_guard())
+      self._action_set_prediction_on_hanging_cells =  PredictionOnHangingCell_kernelgenerator(self, self._store_cell_data_default_guard())
+      self._action_set_correction =                   Correction_kernelgenerator(self, self._store_cell_data_default_guard())
     else:
       self._action_set_prediction = Prediction_generic(self, self._store_cell_data_default_guard())
       self._action_set_correction = Correction_generic(self, self._store_cell_data_default_guard())
@@ -345,6 +347,7 @@ class ADERDG( object ):
     self._action_set_handle_boundary.priority = 1
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = 1
     self._action_set_prediction.priority = 1
+    self._action_set_prediction_on_hanging_cells.priority = 1
     self._action_set_correction.priority = 1 #needs to happen after handle_boundary but this is done on faces anyway
 
     self._action_set_AMR.priority = 2
@@ -518,6 +521,7 @@ class ADERDG( object ):
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
         
     step.add_action_set(self._action_set_prediction)
+    step.add_action_set(self._action_set_prediction_on_hanging_cells)
     step.add_action_set(self._action_set_handle_boundary)
     step.add_action_set(self._action_set_correction)
 

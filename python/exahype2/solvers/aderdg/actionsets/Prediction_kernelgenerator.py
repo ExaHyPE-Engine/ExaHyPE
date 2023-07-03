@@ -18,6 +18,15 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
   """
   
   TemplateProject = """
+
+  bool isHangingCell = false;
+  for(int d=0; d<2*Dimensions; d++){
+    if(fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
+      isHangingCell = true;
+      break;
+    }
+  }
+
   if ({{PREDICATE}}) {
   
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();

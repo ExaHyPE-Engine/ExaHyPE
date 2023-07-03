@@ -315,6 +315,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::Prediction;
       break;
     case SolverState::Prediction:
+      _solverState = SolverState::PredictionOnHangingCells;
+      break;
+    case SolverState::PredictionOnHangingCells:
       _solverState = SolverState::Correction;
       break;
     case SolverState::Correction:
@@ -477,6 +480,9 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "plotting";
     case SolverState::Prediction:
       return "prediction";
+      break;
+    case SolverState::PredictionOnHangingCells:
+      return "prediction on hanging cells";
       break;
     case SolverState::Correction:
 			return "correction";

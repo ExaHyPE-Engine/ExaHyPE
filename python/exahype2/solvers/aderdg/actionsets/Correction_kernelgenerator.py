@@ -100,22 +100,26 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       const double inverseDxDirection = 1/marker.h()[d];
       
       //negative face
-      generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
-        lduh,
-        fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace,
-        d, //direction
-        0, //orientation
-        inverseDxDirection
-      );
+      if(!fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
+        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+          lduh,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace,
+          d, //direction
+          0, //orientation
+          inverseDxDirection
+        );
+      }
 
       //positive face      
-      generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
-        lduh,
-        fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value,
-        d, //direction
-        1, //orientation
-        inverseDxDirection
-      );
+      if(!fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()){
+        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+          lduh,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value,
+          d, //direction
+          1, //orientation
+          inverseDxDirection
+        );
+      }
 
     }// for d    
     
@@ -149,7 +153,8 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     
     """
     super(Correction_kernelgenerator,self).__init__(solver)
-    self.guard            = guard
+    self.guard          = guard
+    self.riemann_guard  = guard
     
 
   def get_body_of_operation(self,operation_name):
@@ -157,11 +162,12 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     d = {}
     self._solver._init_dictionary_with_default_parameters(d)
     self._solver.add_entries_to_text_replacement_dictionary(d)
-    d[ "PREDICATE" ] = self.guard
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      d[ "PREDICATE" ] = self.riemann_guard
       result = jinja2.Template(self.Template_TouchFaceFirstTime).render(**d)
       pass
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      d[ "PREDICATE" ] = self.guard
       result = jinja2.Template(self.Template_TouchCellFirstTime).render(**d)
       pass 
     return result
