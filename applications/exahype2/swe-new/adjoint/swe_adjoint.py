@@ -1,8 +1,9 @@
 import numpy as np
 from typing import List
 from math import floor
+from adjoint.netcdf_writer import NetCDF_Writer
 import netCDF4
-from adjoint_solver import compute_net_updates
+from update_scheme import compute_numerical_fluxes, set_up_update_variables
 
 class SWE_Adjoint_Solver():
 
@@ -70,98 +71,39 @@ class SWE_Adjoint_Solver():
         self.b.T[-1] = self.b.T[-2]
         self.set_ghost_layer()
 
-        # initialize update arrays
-        self.h_net_updates_left = np.zeros((self.nx+2, self.ny+2))
-        self.h_net_updates_right = np.zeros((self.nx+2, self.ny+2))
-        self.h_net_updates_above = np.zeros((self.nx+2, self.ny+2))
-        self.h_net_updates_below = np.zeros((self.nx+2, self.ny+2))
-
-        self.hu_net_updates_left = np.zeros((self.nx+2, self.ny+2))
-        self.hu_net_updates_right = np.zeros((self.nx+2, self.ny+2))
-
-        self.hv_net_updates_below = np.zeros((self.nx+2, self.ny+2))
-        self.hv_net_updates_above = np.zeros((self.nx+2, self.ny+2))
-
         # generate checkpoints
         self.checkpoints = [] # unlimited checkpoints
         if checkpoints > 0:
             self.checkpoints = np.linspace(0, end_time, num=checkpoints+2)
             self.number_of_checkpoints = self.number_of_checkpoints + 2 # for netcdf file (one output at t=0 and one at t=end_time)
 
+        self.netcdf_io = NetCDF_Writer(self.nx, self.ny, self.b)
         # set up netCDF file for output
         if not output_file_name.endswith(".nc"):
             output_file_name = output_file_name + ".nc"
-        self.set_up_netcdf("%s" % output_file_name)
+        self.netcdf_io.set_up_netcdf("%s" % output_file_name, self.number_of_checkpoints)
+
+        set_up_update_variables(self.nx, self.ny, self.cell_size)
         
     def run_simulation(self):
-        ############# DEF HELPER FUNCTIONS #############
-        def update_unknowns_x_sweep(dt):
-            # update unknowns in x-dimension
-            for i in range(1, self.nx+1):
-                for j in range(0, self.ny+2):
-                    self.h[i][j] = self.h[i][j] - (dt / self.cell_size * (self.h_net_updates_right[i-1][j] + self.h_net_updates_left[i][j]))
-                    self.hu[i][j] = self.hu[i][j] - (dt / self.cell_size * (self.hu_net_updates_right[i-1][j] + self.hu_net_updates_left[i][j]))
-
-        def update_unknowns_y_sweep(dt):
-            # update unknowns in y-dimension
-            for j in range(1, self.ny+1):
-                for i in range(1, self.ny+1):
-                    self.h[i][j] = self.h[i][j] - (dt / self.cell_size * (self.h_net_updates_above[i][j-1] + self.h_net_updates_below[i][j]))
-                    self.hv[i][j] = self.hv[i][j] - (dt / self.cell_size * (self.hv_net_updates_above[i][j-1] + self.hv_net_updates_below[i][j]))
-    
-        def compute_numerical_fluxes() -> float:
-            max_wave_speed = 0.0
-
-            max_wave_speed_x = 0.0
-            for i in range(1, self.nx+2):
-                for j in range(0, self.ny+2):
-                    max_edge_speed = 0.0
-                    self.h_net_updates_left[i-1][j], self.hu_net_updates_left[i-1][j], self.h_net_updates_right[i-1][j], self.hu_net_updates_right[i-1][j], max_edge_speed = compute_net_updates(self.h[i-1][j], self.h[i][j], self.hu[i-1][j], self.hu[i][j], self.b[i-1][j], self.b[i][j])
-                    max_wave_speed_x = max(max_edge_speed, max_wave_speed_x)
-
-            if max_wave_speed_x > 0:
-                update_unknowns_x_sweep(0.4 * self.cell_size / max_wave_speed_x)
-            
-            max_wave_speed_y = 0.0
-            for j in range(1, self.ny+2):
-                for i in range(1, self.nx+2):
-                    max_edge_speed = 0.0
-                    self.h_net_updates_below[i][j-1], self.hv_net_updates_below[i][j-1], self.h_net_updates_above[i][j-1], self.hv_net_updates_above[i][j-1], max_edge_speed = compute_net_updates(self.h[i][j-1], self.h[i][j], self.hu[i][j-1], self.hu[i][j], self.b[i][j-1], self.b[i][j])
-                    max_wave_speed_y = max(max_edge_speed, max_wave_speed_y)
-
-            max_wave_speed = max(max_wave_speed_x, max_wave_speed_y)
-            # by here, we kind of assume a wave_speed greater 0
-            print("max wave speed: %f" % max_wave_speed)
-            if max_wave_speed > 0.00001:
-                max_time_step = 0.4 * self.cell_size / max_wave_speed
-                update_unknowns_y_sweep(max_time_step)
-                return max_time_step
-            return max_wave_speed
-
-        def write_eta_to_file(checkpoint, t):
-            self.nc_var_time[checkpoint] = t
-            self.nc_var_eta[checkpoint, :, :] = self.h.T[1:self.ny+1, 1:self.nx+1] + self.b.T[1:self.ny+1, 1:self.nx+1]
-
-        ############# END DEF HELPER FUNCTIONS #############
-
         # run simulation from t=0 to t=end_time
         t = 0.0
         checkpoint = 0
         # write initial state to file
-        write_eta_to_file(checkpoint, t)
+        self.netcdf_io.write_eta_to_file(checkpoint, t, self.h)
         checkpoint = checkpoint + 1
         # simulation loop
         while t < self.end_time:
             print("Simulating time: %f" % t)
             self.set_ghost_layer()
-            t = t + compute_numerical_fluxes()
+            t = t + compute_numerical_fluxes(self.h, self.b, self.hu, self.hv)
             # checkpointing
             if len(self.checkpoints) == 0 or self.checkpoints[checkpoint] <= t:
-                write_eta_to_file(checkpoint, t)
+                self.netcdf_io.write_eta_to_file(checkpoint, t, self.h)
                 checkpoint = checkpoint + 1
 
         # close netCDF file after simulation
-        self.close_netcdf()
+        self.netcdf_io.close_netcdf()
     
     def set_ghost_layer(self):
         # set ghost layer to boundary conditions (outflow)
@@ -169,7 +111,8 @@ class SWE_Adjoint_Solver():
         self.h[-1] = self.h[-2]
         self.h.T[0] = self.h.T[1]
         self.h.T[-1] = self.h.T[-2]
-
+        
+        # TODO coorect boundary conditions?
         self.hu[0] = 0.0 # self.hu[1]
         self.hu[-1] = 0.0 # self.hu[-2]
         self.hu.T[0] = 0.0 # self.hu.T[1]
@@ -180,23 +123,6 @@ class SWE_Adjoint_Solver():
         self.hv.T[0] = 0.0 # self.hv.T[1]
         self.hv.T[-1] = 0.0 # self.hv.T[-2]
 
-    def set_up_netcdf(self, filename:str):
-        self.nc_file = netCDF4.Dataset(filename, "w")
-
-        self.nc_dim_time = self.nc_file.createDimension("time", self.number_of_checkpoints)
-        self.nc_dim_x = self.nc_file.createDimension("x", self.nx)
-        self.nc_dim_y = self.nc_file.createDimension("y", self.ny)
-
-        self.nc_var_x = self.nc_file.createVariable("x", np.float64, ("x",))
-        self.nc_var_y = self.nc_file.createVariable("y", np.float64, ("y",))
-        self.nc_var_time = self.nc_file.createVariable("time", np.float64, ("time",))
-        self.nc_var_eta = self.nc_file.createVariable("eta", np.float64, ("time", "y", "x"))
-
-        self.nc_var_x[:] = np.arange(self.nx)
-        self.nc_var_y[:] = np.arange(self.ny)
-
-    def close_netcdf(self):
-        self.nc_file.close()
-    
-solver = SWE_Adjoint_Solver(output_file_name="abc.nc", bathymetry_file_path="../netCDFInputs/artificialtsunami_bathymetry_1000.nc", displacement_file_path="../netCDFInputs/artificialtsunami_displ_1000.nc", width=[10,10], cell_size=0.1, end_time=0.1)
+# TODO: add t_s as parameter to constructor
+solver = SWE_Adjoint_Solver(output_file_name="test.nc", bathymetry_file_path="../netCDFInputs/artificialtsunami_bathymetry_1000.nc", displacement_file_path="../netCDFInputs/artificialtsunami_displ_1000.nc", width=[10,10], cell_size=0.1, end_time=0.1)
 solver.run_simulation()
