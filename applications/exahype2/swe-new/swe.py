@@ -376,6 +376,7 @@ peano4_project = my_project.generate_Peano4_project(verbose=True)
 if args.scenario == "Tsunami": 
   peano4_project.output.makefile.add_cpp_file("parser/TopologyParser.cpp")
   peano4_project.output.makefile.add_cpp_file("parser/NetCDFReader.cpp")
+  peano4_project.output.makefile.add_cpp_file("parser/NetCDFHelper.cpp")
 
 # define project constants if necessary
 if args.scenario == "Artificial_Tsunami":
