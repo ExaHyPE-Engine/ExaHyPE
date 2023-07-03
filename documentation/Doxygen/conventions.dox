@@ -54,8 +54,8 @@ automake --add-missing
 Open the Eclipse GUI and run the following steps:
 
 - Select `New Project`.
-- Select a C++ project. Older Eclipse versions want you to pick the mode `Managed Build`.
-- Locate the project at a remote directory (where you git deposits the clones.
+- Select a C++ project. Older Eclipse versions want you to pick the mode `Managed Build`. Some wizard generations distinguish C from C/C++. I always pick the C/C++ version.
+- Locate the project at a remote directory (where you git deposits the clones).
 - Select `GNU Autotools`. The Empty Project is the right one to select.
 - You need only one target configuration. By default, Eclipse offers you to build Build and Debug. Disable the debug variant.
 
