@@ -315,8 +315,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::Prediction;
       break;
     case SolverState::Prediction:
-      _solverState = SolverState::PredictionOnHangingCells;
-      break;
+      if(_minCellHThisTimeStep<_maxCellHThisTimeStep){
+        _solverState = SolverState::PredictionOnHangingCells;
+        break;
+      }
+      else{
+        _solverState = SolverState::Correction;
+        break;
+      }
     case SolverState::PredictionOnHangingCells:
       _solverState = SolverState::Correction;
       break;
