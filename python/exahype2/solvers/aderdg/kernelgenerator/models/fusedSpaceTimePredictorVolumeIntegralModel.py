@@ -111,7 +111,7 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                             self.context["matmulConfigs"]["flux_y_sck_vect"] =       MatmulConfig(nDofPad*nVar, nDof, nDof, nDofPad*nVar , nDofPad, nDofPad*nVar , 1, 1, 1, 1, "flux_y_sck_vect", "nopf", "gemm", self.context["predictorComputePrecisions"])
                             if self.context["nDim"]>=3:
                                 self.context["matmulConfigs"]["flux_z_sck_vect"] =   MatmulConfig(nDofPad*nVar, nDof, nDof, nDofPad*nVar , nDofPad, nDofPad*nVar*nDof, 1, 1, 1, 1, "flux_z_sck_vect", "nopf", "gemm", self.context["predictorComputePrecisions"])
-                    self.context["matmulConfigs"]["gradQ_x_sck_vect"] =     MatmulConfig(nDofPad, nData*nDof*nDof3D, nDof, nDofPad , nDofPad, nDofPad    , 1, 0, 1, 1, "gradQ_x_sck_vect", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
+                    self.context["matmulConfigs"]["gradQ_x_sck_vect"] =     MatmulConfig(nDofPad, nVar*nDof*nDof3D, nDof, nDofPad , nDofPad, nDofPad    , 1, 0, 1, 1, "gradQ_x_sck_vect", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
                     self.context["matmulConfigs"]["gradQ_y_sck_vect"] =     MatmulConfig(nDofPad*nVar, nDof, nDof, nDofPad*nVar , nDofPad, nDofPad*nVar , 1, 0, 1, 1, "gradQ_y_sck_vect", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
                     if self.context["nDim"]>=3:
                         self.context["matmulConfigs"]["gradQ_z_sck_vect"] = MatmulConfig(nDofPad*nVar*nDof, nDof, nDof, nDofPad*nVar*nDof, nDofPad, nDofPad*nVar*nDof, 1, 0, 1, 1, "gradQ_z_sck_vect", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
@@ -121,10 +121,10 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         self.context["matmulConfigs"]["flux_y_sck"] =       MatmulConfig(nVarPad, nDof, nDof, nVarPad      , nDofPad, nVarPad*nDof , 1, 1, 1, 1, "flux_y_sck", "nopf", "gemm", self.context["predictorComputePrecisions"])
                         if self.context["nDim"]>=3:
                             self.context["matmulConfigs"]["flux_z_sck"] =   MatmulConfig(nVarPad, nDof, nDof, nVarPad      , nDofPad, nVarPad*nDof2, 1, 1, 1, 1, "flux_z_sck", "nopf", "gemm", self.context["predictorComputePrecisions"])
-                    self.context["matmulConfigs"]["gradQ_x_sck"] =          MatmulConfig(nDataPad, nDof, nDof, nVarPad      , nDofPad, nVarPad      , 1, 0, 1, 1, "gradQ_x_sck", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
-                    self.context["matmulConfigs"]["gradQ_y_sck"] =          MatmulConfig(nDataPad, nDof, nDof, nVarPad*nDof , nDofPad, nVarPad*nDof , 1, 0, 1, 1, "gradQ_y_sck", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
+                    self.context["matmulConfigs"]["gradQ_x_sck"] =          MatmulConfig(nVarPad, nDof, nDof, nVarPad      , nDofPad, nVarPad      , 1, 0, 1, 1, "gradQ_x_sck", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
+                    self.context["matmulConfigs"]["gradQ_y_sck"] =          MatmulConfig(nVarPad, nDof, nDof, nVarPad*nDof , nDofPad, nVarPad*nDof , 1, 0, 1, 1, "gradQ_y_sck", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
                     if self.context["nDim"]>=3:
-                        self.context["matmulConfigs"]["gradQ_z_sck"] =      MatmulConfig(nDataPad, nDof, nDof, nDataPad*nDof2, nDofPad, nDataPad*nDof2, 1, 0, 1, 1, "gradQ_z_sck", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
+                        self.context["matmulConfigs"]["gradQ_z_sck"] =      MatmulConfig(nVarPad, nDof, nDof, nVarPad*nDof2, nDofPad, nVarPad*nDof2, 1, 0, 1, 1, "gradQ_z_sck", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
             else: # default linear
                 if self.context["useFlux"]:
                     self.context["matmulConfigs"]["flux_x"] =     MatmulConfig(nVarPad, nDof, nDof, nVarPad      , nDofPad, nVarPad, 1, 0, 1, 1, "flux_x", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
@@ -132,10 +132,10 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                     if self.context["nDim"]>=3:
                         self.context["matmulConfigs"]["flux_z"] = MatmulConfig(nVarPad, nDof, nDof, nVarPad*nDof2, nDofPad, nVarPad, 1, 0, 1, 1, "flux_z", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
                 if self.context["useNCP"]:
-                    self.context["matmulConfigs"]["gradQ_x"] =     MatmulConfig(nData, nDof, nDof, nDataPad      , nDofPad, nDataPad      , 1, 1, 1, 1, "gradQ_x", "nopf", "gemm", self.context["predictorComputePrecisions"])
-                    self.context["matmulConfigs"]["gradQ_y"] =     MatmulConfig(nData, nDof, nDof, nDataPad*nDof , nDofPad, nDataPad*nDof , 1, 1, 1, 1, "gradQ_y", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                    self.context["matmulConfigs"]["gradQ_x"] =     MatmulConfig(nVar, nDof, nDof, nDataPad      , nDofPad, nVarPad      , 1, 1, 1, 1, "gradQ_x", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                    self.context["matmulConfigs"]["gradQ_y"] =     MatmulConfig(nVar, nDof, nDof, nDataPad*nDof , nDofPad, nVarPad*nDof , 1, 1, 1, 1, "gradQ_y", "nopf", "gemm", self.context["predictorComputePrecisions"])
                     if self.context["nDim"]>=3:
-                        self.context["matmulConfigs"]["gradQ_z"] = MatmulConfig(nData, nDof, nDof, nDataPad*nDof2, nDofPad, nDataPad*nDof2, 1, 1, 1, 1, "gradQ_z", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                        self.context["matmulConfigs"]["gradQ_z"] = MatmulConfig(nVar, nDof, nDof, nDataPad*nDof2, nDofPad, nVarPad*nDof2, 1, 1, 1, 1, "gradQ_z", "nopf", "gemm", self.context["predictorComputePrecisions"])
         else: #NonLinear
             if self.context["predictorRecompute"]: # TODO JMG matmuls for gradQ, rhs and lduh are exactly the same...
                 if self.context["useVectPDE"]:
@@ -149,10 +149,10 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         if self.context["nDim"]>=3:
                             self.context["matmulConfigs"]["lduh_z"] = MatmulConfig(nDofPad*nVar*nDof, nDof, nDof, nDofPad*nVar*nDof, nDofPad, nDofPad*nVar*nDof, 1, 1, 1, 1,  "lduh_z",  "nopf", "gemm", self.context["predictorComputePrecisions"])
                     if self.context["useNCP"] or self.context['useViscousFlux']:
-                        self.context["matmulConfigs"]["gradQ_x"] =     MatmulConfig(nDofPad,           nData, nDof, nDofPad,           nDofPad, nDofPad          , 1, 1, 1, 1, "gradQ_x", "nopf", "gemm", self.context["predictorComputePrecisions"])
-                        self.context["matmulConfigs"]["gradQ_y"] =     MatmulConfig(nDofPad*nData,      nDof, nDof, nDofPad*nData,      nDofPad, nDofPad*nData     , 1, 1, 1, 1, "gradQ_y", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                        self.context["matmulConfigs"]["gradQ_x"] =     MatmulConfig(nDofPad,           nVar, nDof, nDofPad,           nDofPad, nDofPad          , 1, 1, 1, 1, "gradQ_x", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                        self.context["matmulConfigs"]["gradQ_y"] =     MatmulConfig(nDofPad*nVar,      nDof, nDof, nDofPad*nVar,      nDofPad, nDofPad*nVar     , 1, 1, 1, 1, "gradQ_y", "nopf", "gemm", self.context["predictorComputePrecisions"])
                         if self.context["nDim"]>=3:
-                            self.context["matmulConfigs"]["gradQ_z"] = MatmulConfig(nDofPad*nData*nDof, nDof, nDof, nDofPad*nData*nDof, nDofPad, nDofPad*nData*nDof, 1, 1, 1, 1, "gradQ_z", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                            self.context["matmulConfigs"]["gradQ_z"] = MatmulConfig(nDofPad*nVar*nDof, nDof, nDof, nDofPad*nVar*nDof, nDofPad, nDofPad*nVar*nDof, 1, 1, 1, 1, "gradQ_z", "nopf", "gemm", self.context["predictorComputePrecisions"])
                     self.context["matmulConfigs"]["lqi"] = MatmulConfig(nDofPad*nVar, nDof, nDof, nDofPad*nVar*nDof*nDof3D, nDofPad, nDofPad*nVar, 1, 0, 1, 1, "lqi", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
                 else: #scalar predictor recompute
                     if self.context["useFlux"]:
@@ -165,10 +165,10 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         if self.context["nDim"]>=3:
                             self.context["matmulConfigs"]["lduh_z"] = MatmulConfig(nVarPad, nDof, nDof, nVarPad*nDof2, nDofPad, nVarPad*nDof2, 1, 1, 1, 1,  "lduh_z",  "nopf", "gemm", self.context["predictorComputePrecisions"])
                     if self.context["useNCP"] or self.context['useViscousFlux']:
-                        self.context["matmulConfigs"]["gradQ_x"] =     MatmulConfig(nDataPad, nDof, nDof, nDataPad , nDofPad, nDataPad      , 1, 1, 1, 1, "gradQ_x", "nopf", "gemm", self.context["predictorComputePrecisions"])
-                        self.context["matmulConfigs"]["gradQ_y"] =     MatmulConfig(nDataPad, nDof, nDof, nDataPad*nDof, nDofPad, nDataPad*nDof , 1, 1, 1, 1, "gradQ_y", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                        self.context["matmulConfigs"]["gradQ_x"] =     MatmulConfig(nVarPad, nDof, nDof, nVarPad , nDofPad, nVarPad      , 1, 1, 1, 1, "gradQ_x", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                        self.context["matmulConfigs"]["gradQ_y"] =     MatmulConfig(nVarPad, nDof, nDof, nVarPad*nDof, nDofPad, nVarPad*nDof , 1, 1, 1, 1, "gradQ_y", "nopf", "gemm", self.context["predictorComputePrecisions"])
                         if self.context["nDim"]>=3:
-                            self.context["matmulConfigs"]["gradQ_z"] = MatmulConfig(nDataPad, nDof, nDof, nDataPad*nDof2, nDofPad, nDataPad*nDof2, 1, 1, 1, 1, "gradQ_z", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                            self.context["matmulConfigs"]["gradQ_z"] = MatmulConfig(nVarPad, nDof, nDof, nVarPad*nDof2, nDofPad, nVarPad*nDof2, 1, 1, 1, 1, "gradQ_z", "nopf", "gemm", self.context["predictorComputePrecisions"])
                     self.context["matmulConfigs"]["lqi"] = MatmulConfig(nVarPad, nDof, nDof, nVarPad*(nDof**nDim), nDofPad, nVarPad, 1, 0, 1, 1, "lqi", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
             else: # default nonlinear
                 if self.context["useFlux"]:
@@ -187,13 +187,13 @@ class FusedSpaceTimePredictorVolumeIntegralModel(AbstractModelBaseClass):
                         if self.context["nDim"]>=3:
                             self.context["matmulConfigs"]["gradF_z_RKLoop"] = MatmulConfig(nVar, nDof, nDof, nVarPad*nDof2, nDofPad, nVarPad*nDof2, 1, 1, 1, 1, "gradF_z_RKLoop", "nopf", "gemm", self.context["predictorComputePrecisions"])
                 if self.context["useNCP"] or self.context['useViscousFlux']:
-                    self.context["matmulConfigs"]["gradQ_x"] =     MatmulConfig(nData, nDof, nDof, nDataPad , nDofPad, nDataPad      , 1, 1, 1, 1, "gradQ_x", "nopf", "gemm", self.context["predictorComputePrecisions"])
-                    self.context["matmulConfigs"]["gradQ_y"] =     MatmulConfig(nData, nDof, nDof, nDataPad*nDof, nDofPad, nDataPad*nDof , 1, 1, 1, 1, "gradQ_y", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                    self.context["matmulConfigs"]["gradQ_x"] =     MatmulConfig(nVar, nDof, nDof, nDataPad , nDofPad, nVarPad      , 1, 1, 1, 1, "gradQ_x", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                    self.context["matmulConfigs"]["gradQ_y"] =     MatmulConfig(nVar, nDof, nDof, nDataPad*nDof, nDofPad, nVarPad*nDof , 1, 1, 1, 1, "gradQ_y", "nopf", "gemm", self.context["predictorComputePrecisions"])
                     if self.context["nDim"]>=3:
-                        self.context["matmulConfigs"]["gradQ_z"] = MatmulConfig(nData, nDof, nDof, nDataPad*nDof2, nDofPad, nDataPad*nDof2, 1, 1, 1, 1, "gradQ_z", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                        self.context["matmulConfigs"]["gradQ_z"] = MatmulConfig(nVar, nDof, nDof, nDataPad*nDof2, nDofPad, nVarPad*nDof2, 1, 1, 1, 1, "gradQ_z", "nopf", "gemm", self.context["predictorComputePrecisions"])
                     if self.context["useCERKGuess"]:
-                        self.context["matmulConfigs"]["gradQ_x_RKLoop"] =     MatmulConfig(nData, nDof, nDof, nData      , nDofPad, nDataPad      , 1, 1, 0, 1, "gradQ_x_RKLoop", "nopf", "gemm", self.context["predictorComputePrecisions"])
-                        self.context["matmulConfigs"]["gradQ_y_RKLoop"] =     MatmulConfig(nData, nDof, nDof, nData*nDof , nDofPad, nDataPad*nDof , 1, 1, 0, 1, "gradQ_y_RKLoop", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                        self.context["matmulConfigs"]["gradQ_x_RKLoop"] =     MatmulConfig(nVar, nDof, nDof, nData      , nDofPad, nVarPad      , 1, 1, 0, 1, "gradQ_x_RKLoop", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                        self.context["matmulConfigs"]["gradQ_y_RKLoop"] =     MatmulConfig(nVar, nDof, nDof, nData*nDof , nDofPad, nVarPad*nDof , 1, 1, 0, 1, "gradQ_y_RKLoop", "nopf", "gemm", self.context["predictorComputePrecisions"])
                         if self.context["nDim"]>=3:
-                            self.context["matmulConfigs"]["gradQ_z_RKLoop"] = MatmulConfig(nData, nDof, nDof, nData*nDof2, nDofPad, nDataPad*nDof2, 1, 1, 0, 1, "gradQ_z_RKLoop", "nopf", "gemm", self.context["predictorComputePrecisions"])
+                            self.context["matmulConfigs"]["gradQ_z_RKLoop"] = MatmulConfig(nVar, nDof, nDof, nData*nDof2, nDofPad, nVarPad*nDof2, 1, 1, 0, 1, "gradQ_z_RKLoop", "nopf", "gemm", self.context["predictorComputePrecisions"])
                 self.context["matmulConfigs"]["lqi"] = MatmulConfig(nVarPad, nDof, nDof, nVarPad*(nDof**nDim), nDofPad, nVarPad, 1, 0, 1, 1, "lqi", "nopf", "gemm", self.context["predictorComputePrecisions"]) # beta, 0 => overwrite C
