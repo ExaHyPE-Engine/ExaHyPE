@@ -291,6 +291,29 @@ Note the change $ -> @f$
 
 \endverbatim
 
+You can also render a lot more fancy equations as well. This is the expected output, if 
+you have a proper build of Latex on your system:
+
+\f{eqnarray*}{
+      g &=& \frac{Gm_2}{r^2} \\ 
+        &=& \frac{(6.673 \times 10^{-11}\,\mbox{m}^3\,\mbox{kg}^{-1}\,
+            \mbox{s}^{-2})(5.9736 \times 10^{24}\,\mbox{kg})}{(6371.01\,\mbox{km})^2} \\ 
+        &=& 9.82066032\,\mbox{m/s}^2
+\f}
+
+The pattern is something like:
+
+\verbatim
+
+\f{eqnarray*}{
+	Anything between these braces is rendered in the math environment. 
+	Make sure to end your lines with \\
+\f}
+
+\endverbatim
+
+[You can read further on the Doxygen website here.](https://www.doxygen.nl/manual/formulas.html)
+
 ## Including hyperlinks
 
 Recall that a page typically begins with 
@@ -329,5 +352,12 @@ Simply write:
 @image html relative/path/to/file.png
 
 \endverbatim
+
+
+## Misc
+
+You can enumerate lists by starting each new line with \verbatim \li \endverbatim
+
+The standard newline character \verbatim \n \endverbatim works as expected.
 
 */
