@@ -1,11 +1,11 @@
-""" This file is part of the SWIFT 2 project. For conditions of distribution and 
+""" This file is part of the SWIFT 2 project. For conditions of distribution and
  use, please see the copyright notice at www.peano-framework.org
 """
 # use, please see the copyright notice at www.peano-framework.org
 
 from swift2.particle import Particle
 
-from .ExplicitEulerDynamicInteractionRadius import ExplicitEulerDynamicInteractionRadius
-from .ExplicitEulerFixedInteractionRadius   import ExplicitEulerFixedInteractionRadius
-from .LeapfrogFixedInteractionRadius        import LeapfrogFixedInteractionRadius
-from .SPHLeapfrogFixedInteractionRadius     import SPHLeapfrogFixedInteractionRadius
+from .ExplicitEulerDynamicSearchRadius import ExplicitEulerDynamicSearchRadius
+from .ExplicitEulerFixedSearchRadius import ExplicitEulerFixedSearchRadius
+from .LeapfrogFixedSearchRadius import LeapfrogFixedSearchRadius
+from .SPHLeapfrogFixedSearchRadius import SPHLeapfrogFixedSearchRadius

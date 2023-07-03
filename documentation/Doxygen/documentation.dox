@@ -15,6 +15,15 @@ To generate the documentation, \c cd to your Peano directory, and type:
 
       doxygen documentation/Doxyfile
 
+Alternatively, you can also use
+
+      make doc
+
+Some older versions of doxgen didn't produce the expected documentation for python files (docstrings would
+be displayed as code blocks rather than doxygen documentation in the html). The current setup is tested with
+doxygen 1.9.7. This may not be the default version shipped by your OS, but can very easily be installed from
+https://www.doxygen.nl/download.html .
+
 To understand the following descriptions, it is reasonable to keep the
 following terminology in mind:
 

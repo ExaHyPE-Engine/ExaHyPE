@@ -3,7 +3,7 @@
  * Copyright (c) 2016  http://exahype.eu
  * All rights reserved.
  *
- * The project has received funding from the European Union's Horizon 
+ * The project has received funding from the European Union's Horizon
  * 2020 research and innovation programme under grant agreement
  * No 671698. For copyrights and licensing, please consult the webpage.
  *
@@ -12,62 +12,64 @@
  **/
 
 /*
- * This function used to return the stable time step size directly but now returns the sum of the maximal eigenvalues scaled with the cell sizes
- * I've chosen to do this because the eigenvalue can be required by some applications calling this and it saves some redundant computations
- * since the actual time step size may be only required once for the entire application (MML)
+ * This function used to return the stable time step size directly but now returns the sum of the maximal eigenvalues
+ * scaled with the cell sizes I've chosen to do this because the eigenvalue can be required by some applications calling
+ * this and it saves some redundant computations since the actual time step size may be only required once for the
+ * entire application (MML)
  */
 
 #include "exahype2/dg/DGUtils.h"
 #include "peano4/utils/Loop.h"
 
-template <typename SolverType>
+template <typename SolverType, typename T>
 double kernels::aderdg::generic::c::maxScaledEigenvalue(
-    SolverType& solver,
-    const double* const luh,
-    const tarch::la::Vector<Dimensions, double>& cellCentre,
-    const tarch::la::Vector<Dimensions, double>& dx,
-    const double t,
-    const double dt) {
+  SolverType&                                  solver,
+  const T* const                               luh,
+  const tarch::la::Vector<Dimensions, double>& cellCentre,
+  const tarch::la::Vector<Dimensions, double>& dx,
+  const double                                 t,
+  const double                                 dt
+) {
   constexpr int numberOfVariables  = SolverType::NumberOfVariables;
   constexpr int numberOfParameters = SolverType::NumberOfParameters;
-  constexpr int numberOfData       = numberOfVariables+numberOfParameters;
+  constexpr int numberOfData       = numberOfVariables + numberOfParameters;
   constexpr int order              = SolverType::Order;
-  constexpr int basisSize          = order+1;
-  constexpr int basisSize2         = basisSize*basisSize;
+  constexpr int basisSize          = order + 1;
+  constexpr int basisSize2         = basisSize * basisSize;
 
-  const double invDx[3] = { 1.0/dx[0], 1.0/dx[1], 1.0/dx[2] };
-  
+  const double invDx[3] = {1.0 / dx[0], 1.0 / dx[1], 1.0 / dx[2]};
+
   double maxEigenvalue = 0.0;
-  for(int i=0; i<basisSize; i++){
-    for(int j=0; j<basisSize; j++){
-      for(int k=0; k<basisSize; k++){
+  for (int i = 0; i < basisSize; i++) {
+    for (int j = 0; j < basisSize; j++) {
+      for (int k = 0; k < basisSize; k++) {
 
-        int linearisedIndex = i + basisSize*j + basisSize2*k;
-        const tarch::la::Vector<Dimensions, int> index = {i,j,k};
+        int                                      linearisedIndex = i + basisSize * j + basisSize2 * k;
+        const tarch::la::Vector<Dimensions, int> index           = {i, j, k};
 
         double denominator = 0.0;
-        for(int d=0; d<Dimensions; d++){
-          denominator += solver.maxEigenvalue(
-            &luh[linearisedIndex*numberOfData],
-            ::exahype2::dg::getQuadraturePoint(
-              cellCentre,
-              dx,
-              index, //index
-              order,
-              solver.QuadraturePoints1d
-            ), //faceCentre
-            dx,
-            t,
-            dt,
-            d
-          ) * invDx[d];
+        for (int d = 0; d < Dimensions; d++) {
+          denominator
+            += solver.maxEigenvalue(
+                 &luh[linearisedIndex * numberOfData],
+                 ::exahype2::dg::getQuadraturePoint(
+                   cellCentre,
+                   dx,
+                   index, // index
+                   order,
+                   solver.QuadraturePoints1d
+                 ), // faceCentre
+                 dx,
+                 t,
+                 dt,
+                 d
+               )
+               * invDx[d];
         }
-        
-        maxEigenvalue=std::max(maxEigenvalue, denominator);
 
+        maxEigenvalue = std::max(maxEigenvalue, denominator);
       }
     }
   }
   return maxEigenvalue;
-
 }

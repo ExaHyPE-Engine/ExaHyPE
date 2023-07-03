@@ -1,6 +1,10 @@
 /**
 @page page_exahype_tutorials Tutorials
 
+\li \subpage page_exahype_tutorials_euler
+\li \subpage page_exahype_tutorials_coupling
+
+
 \tableofcontents
 
 These tutorials are meant to be an introduction into ExaHyPE2. ExaHyPE2 is part of Peano4,

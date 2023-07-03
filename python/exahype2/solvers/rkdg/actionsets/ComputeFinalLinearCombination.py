@@ -1,55 +1,58 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-from .AbstractRungeKuttaDGActionSet                 import AbstractRungeKuttaDGActionSet
-from .ProjectLinearCombinationOfEstimatesOntoFaces  import FaceProjections
-from .ProjectLinearCombinationOfEstimatesOntoFaces  import compute_number_of_face_projection_quantities
+from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
+from .ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
+from .ProjectLinearCombinationOfEstimatesOntoFaces import (
+    compute_number_of_face_projection_quantities,
+)
 
-from exahype2.solvers.ButcherTableau                import ButcherTableau
+from exahype2.solvers.ButcherTableau import ButcherTableau
 
 import peano4
 import jinja2
 
+
 class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
-  """!
-  
-  Action set determining the final solution using a linear combination of previous Runge-Kutta guesses
-  
-  We solve the ODE
-  
-  @f$ \partial Q = F(Q) @f$
-  
-  where we have multiple guesses for F according to the Butcher tableau. The final 
-  solution can be written down as linear combination over these guesses:
-  
-  
-  @f$ Q^{new} = Q^{old} + a_1 \cdot dt \cdot F_1(Q) + a_2 \cdot dt \cdot F_2(Q) + \dots @f$
-  
-  We observe the following simple facts:
-  
-  - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.value holds @f$ Q^{old} @f$
-  - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.value shall hold @f$ Q^{new} @f$ eventually.
-    We thus can simply add the scaled estimated to it.
-  - The estimates do not alter the auxiliary variables.
-  - We can thus just keep the previous auxiliary variables implicitly.  
-  
-  
-  ## Face projections
-  
-  As I discuss in detail in solvers.rkdg.RungeKuttaDG.create_data_structures(),
-  the field _estimate_projection usually holds the projection of a DG estimate,
-  but not the real solution. At some points, I however need the real solution
-  after a time step. Local time stepping for example depends upon it. So the
-  final combination projects the solution again onto the faces.
-  
-  In return, we could skip the projection within the first Runge-Kutta step 
-  where we effectively take the data and write it to the faces once again.
-  But this is too much of an optimisation, I just retrigger the projection
-  there agin.
-  
-  """
-  
-  TemplateProject = """
+    """!
+
+    Action set determining the final solution using a linear combination of previous Runge-Kutta guesses
+
+    We solve the ODE
+
+    @f$ \partial Q = F(Q) @f$
+
+    where we have multiple guesses for F according to the Butcher tableau. The final
+    solution can be written down as linear combination over these guesses:
+
+
+    @f$ Q^{new} = Q^{old} + a_1 \cdot dt \cdot F_1(Q) + a_2 \cdot dt \cdot F_2(Q) + \dots @f$
+
+    We observe the following simple facts:
+
+    - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.value holds @f$ Q^{old} @f$
+    - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.value shall hold @f$ Q^{new} @f$ eventually.
+      We thus can simply add the scaled estimated to it.
+    - The estimates do not alter the auxiliary variables.
+    - We can thus just keep the previous auxiliary variables implicitly.
+
+
+    ## Face projections
+
+    As I discuss in detail in solvers.rkdg.RungeKuttaDG.create_data_structures(),
+    the field _estimate_projection usually holds the projection of a DG estimate,
+    but not the real solution. At some points, I however need the real solution
+    after a time step. Local time stepping for example depends upon it. So the
+    final combination projects the solution again onto the faces.
+
+    In return, we could skip the projection within the first Runge-Kutta step
+    where we effectively take the data and write it to the faces once again.
+    But this is too much of an optimisation, I just retrigger the projection
+    there agin.
+
+    """
+
+    TemplateProject = """
   if ({{PREDICATE}}) {
     {{COMPUTE_TIME_STEP_SIZE}}
 
@@ -138,7 +141,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
   }
 """
 
-  TemplateUpdateFace = """
+    TemplateUpdateFace = """
   if ( repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() ) {
     for (int leftRight=0; leftRight<2; leftRight++) {
       if ( fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdated(leftRight) ) {
@@ -157,49 +160,56 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
       }
     }
   }
-""" 
+"""
 
-  
-  def __init__(self,solver,guard,face_projections: FaceProjections):
-    """
-    
-    guard_project: String (C++ code)
-      Predicate which controls if the solution is actually projected
-      
-    guard_safe_old_time_step: String (C++ code)
-      Predicate which controls if the projection should be copied into
-      the old solution and the time step should also be moved over
-    
-    """
-    super(ComputeFinalLinearCombination,self).__init__(solver)
-    self.guard            = guard
-    self._butcher_tableau = ButcherTableau(self._solver._rk_order)
-    self._face_projections = face_projections
-    assert  self._face_projections==FaceProjections.Solution, "not supported"
-    
+    def __init__(self, solver, guard, face_projections: FaceProjections):
+        """
 
-  def get_body_of_operation(self,operation_name):
-    result = ""
-    d = {}
-    self._solver._init_dictionary_with_default_parameters(d)
-    self._solver.add_entries_to_text_replacement_dictionary(d)
-    d[ "PREDICATE" ]         = self.guard
-    d[ "WEIGHTS" ]           = self._butcher_tableau.final_estimate_weights()
-    d[ "NUMBER_OF_FACE_PROJECTIONS" ] = compute_number_of_face_projection_quantities(self._face_projections)
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.TemplateProject).render(**d)
-      pass 
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_LAST_TIME:
-      result = jinja2.Template(self.TemplateUpdateFace).render(**d)
-      pass 
-    return result
+        guard_project: String (C++ code)
+          Predicate which controls if the solution is actually projected
 
+        guard_safe_old_time_step: String (C++ code)
+          Predicate which controls if the projection should be copied into
+          the old solution and the time step should also be moved over
 
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
+        """
+        super(ComputeFinalLinearCombination, self).__init__(solver)
+        self.guard = guard
+        self._butcher_tableau = ButcherTableau(self._solver._rk_order)
+        self._face_projections = face_projections
+        assert self._face_projections == FaceProjections.Solution, "not supported"
 
+    def get_body_of_operation(self, operation_name):
+        result = ""
+        d = {}
+        self._solver._init_dictionary_with_default_parameters(d)
+        self._solver.add_entries_to_text_replacement_dictionary(d)
+        d["PREDICATE"] = self.guard
+        d["WEIGHTS"] = self._butcher_tableau.final_estimate_weights()
+        d["NUMBER_OF_FACE_PROJECTIONS"] = compute_number_of_face_projection_quantities(
+            self._face_projections
+        )
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
+        ):
+            result = jinja2.Template(self.TemplateProject).render(**d)
+            pass
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_LAST_TIME
+        ):
+            result = jinja2.Template(self.TemplateUpdateFace).render(**d)
+            pass
+        return result
 
-  def get_includes(self):
-    return super(ComputeFinalLinearCombination,self).get_includes() + """
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")
+
+    def get_includes(self):
+        return (
+            super(ComputeFinalLinearCombination, self).get_includes()
+            + """
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-"""    
+"""
+        )

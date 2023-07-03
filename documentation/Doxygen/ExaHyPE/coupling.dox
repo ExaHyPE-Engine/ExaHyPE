@@ -192,30 +192,35 @@ which furthermore will be moved/accessed in each and every grid sweep, as the
 mesh management of Peano so far does not know that ExaHyPE might not need the 
 data. ExaHyPE has to let Peano know.
 
+
+The principles behind such a localisation @ref page_peano_localisation "are discussed on a generic Peano page of its own".
 Every solver in ExaHyPE has a routine create_data_structures(). Depending on 
 the type of your solver, you might have a pretty deep inheritance hierarchy
 where every subclass specialises and augments the basic numerical scheme. It
-is the base class usually however which defines all the data structures over 
-the mesh which are used by the solver. This happens in its create_data_structures()
-operation. 
+is the base class' create_data_structures() usually which defines all the data structures over 
+the mesh which are used by the different solver (sub-)flavours. 
+Therefore, it is this class, where you decide if and how you localise the 
+data stored.
 
-Each data structure has a generator object attached to it which defines how
-to translate the logical data model onto C++ data structures. These generators
-further add MPI logic and so forth, and they create a predicate (guard) if to 
-load and store data or not. A typical code snippet in a solver reads as
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
 self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-self._patch.generator.compute_condition          = self._patch.generator.store_persistent_condition + " or " + self._patch.generator.load_persistent_condition
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-which means that the generator queries the underlying class whether to store
-data in a cell or not. By default, most solvers only store data for unrefined 
-cells. Subclasses such as enclave tasking variations then augment the guards
+
+By default, most solvers only store data for unrefined 
+cells. They mask coarser levels with in the tree out.    
+Subclasses such as enclave tasking variations augment the guards
 further. Therefore, it makes sense to plug into _store_cell_data_default_guard()
 and _load_cell_data_default_guard() if we want to restrict our solver spatially.
+Just take the existing logic, and add another and correlation.
 
+
+If you work with data (patches) which are administered via smart pointers, it 
+makes a lot of sense to ensure that these smart pointers are allocated if and 
+only if you actually need them in your code. Study the respective subsection
+@ref page_peano_localisation "within the generic localisation discussion".
 
 
 ### The actual solution coupling
@@ -269,86 +274,4 @@ take into account
 @see toolbox/blockstructured/Restriction.h
  
  */
-
-
-
-
-Case study: Coupling finite volumes with Runge-Kutta DG (limiting) {#section:exahype:fv:limiting}
-------------------------------------------------------------------
-
-
-
-For the coupling of two solvers, it is advantageous not to work with
- solver instances directly. Instead, I recommend that you specialise the
-solver of your choice such that you can add further features to this
-class. In Python, this is straightforward. The line
-
-is replaced with
-
-All remarks below refer to objects instantiating the specialisation of
-the FV and DG solver, respectively, rather than a direct specialisation.
-
-##### Two solvers {#two-solvers .unnumbered}
-
-In this simple setup, we just create a DG solver and then add an
-additional Finite Volume solver. The latter works with a patch size of
-$2p+1$ where $p$ is the spatial DG order. You might want to use a
-different patch size, but this choice usually yields time step sizes in
-the FV discretisation which is similar to the DG scheme. We add both of
-them to the project and refer to them as `dg_solver` and `fv_solver`
-objects in the Python script. You can use any solver you like, but I
-strongly recommend that you use the same time stepping scheme for both
-solvers. All the explanations below refer to adaptive time stepping. You
-might have to alter some bits and pieces if you use a different time
-stepping scheme.
-
-##### The marker {#the-marker .unnumbered}
-
-The marker is determined by a quantity $\alpha$ which solves the
-equation $$- \Delta \alpha = C < 0 
- \qquad
- \text{s.t.} \ 
- 0 \leq \alpha  \leq 1, \ 
- \alpha  | _{\partial \Omega} = 0$$ via a cell-centered finite
-differences scheme. In the cells where we definitely need the Finite
-Volume scheme, we set $\alpha
- = 1$. The higher $\alpha$, the more sure we are that the FV scheme
-yields the correct result.
-
- is shipped with a pre-manufactured solver for this Poisson setup which
-takes care of all the details---including the mapping of the continuous
-$\alpha$ value onto the states which solver is active where---and also
-has more documentation):
-
-##### Control the marker {#control-the-marker .unnumbered}
-
-The marker by default will be $\alpha =0$ in the present configuration.
-As a first step, we hence have to reset it to $\alpha =1$ where we want
-the FV scheme to dominate, i.e. where we definitely know that it is the
-FV scheme that we need. Technically, we realise this by a postprocessing
-step on the respective solver:
-
-##### Translate marker outcome onto grid {#translate-marker-outcome-onto-grid .unnumbered}
-
-The marker helps us to identify where which solver is active. This is
-information we next want to project onto the grid, i.e. we want to find
-out which mesh cells have to store which data. For this, we have to
-augment the marker object within the cell which is an object that is
-always associated with any  mesh cell and has nothing to do with the
-stuff that we call "a marker" above.
-
-It seems to be (and is) quite complicated that we move the storage
-information from the marker into the grid. However, there are two good
-reasons for this:
-
--   On the one hand, we might want to tailor the information delivered
-    by the marker towards our needs. It is not even prescribed how many
-    solvers in total are guided by one marker!
-
--   On the other hand, we need the mesh storage information later within
-    the solver, where we have to access to the newly generated Poisson
-    equation. We have access to the mesh marker however.
-
-Ganz ganz wichtig ist, dass der Poisson solver als erstes kommt vor dem
-DG und dem FV Zeugs!
 

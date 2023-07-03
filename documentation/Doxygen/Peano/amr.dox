@@ -1,0 +1,100 @@
+/**
+\page peano_amr_tex AMR
+
+Adaptive mesh refinement {#section:amr}
+========================
+
+ realises a multi-step refinement and erasing[^1] strategy.
+
+1.  Each subpartition asks the action set (clone) for the refinement and
+    coarsening decisions at the startup of the mesh traversal. For this,
+    they query `getGridControlEvents()`.
+
+2.  The mesh traversal uses this information to trigger erases or
+    refinements.
+
+3.  In the subsequent mesh traversal, the mesh is actually altered.
+
+or-based refinement and refinement arguments
+--------------------------------------------
+
+In , a cell is refined, if one of its vertices carries a refinement
+flag. That is, we flag vertices (not cells), and the cells are refined
+if the or combination over all vertices yields true.
+
+Further to the definition above, we realise some simple policies which
+can be summarised as conservative refinement:
+
+1.  All refinement and erase instructions are "at least" instructions.
+     will match them, but it might always decide to make the mesh
+    slighlty finer. Notably, it might ignore erase instructions.
+
+2.   adds or removes at most one grid level per mesh traversal.
+
+'s dynamic AMR is realiesd via `GridControlEvent`s. They mark a certain
+area within the domain and clarify which resolution you would like to
+have within this area. Each event is also marked with a refine or erase
+marker, i.e. you can specify whether you'd expect  to refine towards
+this resolution or erase mesh parts up to a certain level of mesh
+detail.
+
+ will label a vertex as refine, if any of its adjacent cells overlaps
+with a refinement event.  will label vertices as "to be erased"
+(i.e. remove their refined flag), if all of its adjacent cells fit into
+an erase area. The code will glue various events together, i.e. if you
+have a patchwork of refine events, it will create one large refine
+event.
+
+If you want to refine a region, create a refinement event which
+coincides with the cell size which you want to refine. If you want to
+erase a grid region, create a similar event, but then blow it up by a
+factor of three. Otherwise,  might simply ignore it.
+
+Vertex lifecycle
+----------------
+
+This is something I still have to write.
+
+Multi-action set usage pattern
+------------------------------
+
+In many  applications, the refinement pattern is not known a priori.
+Instead, the action sets build up the knowledge where to refine or
+coarsen: They start with an empty
+`std::vector< peano4::grid::GridControlEvent >`, and push back events
+throughout the grid run-through. As action sets are not persistent
+in-between mesh traversal sweeps, as codes might switch between
+different action sets, and as  clones one action set per subdomain
+(again, the number of subdomains per rank can change over time), we have
+to be careful with the data management.
+
+A popular pattern is to have a static
+`std::vector< peano4::grid::GridControlEvent >`. In this case, an action
+set can build up a local set of control events, and commit them to the
+static set. The static set is then returned by `getGridControlEvents()`
+which consequently erases it to accept new events.
+
+To make this work, you might want to work with two static sets: the
+currently active one and a new one, as each subspacetree will query
+`getGridControlEvents()` independently. However, we can exploit the fact
+that each subtree/subdomain asks for the grid control events before they
+actually trigger `beginIteration()`. So it is safe to hand out the
+static set and to clear it within the begin iteration.
+
+If you work with multiple action sets and an algorithm which switches
+between the different ones, you will have to centralise the static
+control events. One action set might feed into the event, while the next
+one delivers from this centralised repository. Alternatively, you can
+add another (static) boolean which you set to true whenever
+`getGridControlEvents()` is invoked. The central events are then cleared
+by `beginIteration()` if and only if the boolean is set.
+
+[^1]: I try to speak of refine and erase and not of refine and coarsen,
+    as the latter is a term used in a multigrid context and usually
+    means that you still keep the fine data somewhere. In contrast, 's
+    erase means that the grid is really thrown away.
+
+Consult @ref page_peano_performance_optimisation "the generic optimisation remarks" for 
+some details around performance flaws tied to dynamic mesh refinement.
+
+*/

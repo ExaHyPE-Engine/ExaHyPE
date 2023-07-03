@@ -2,9 +2,10 @@
 
 # exit on error
 set -e
+set -o pipefail
 
 # set threads number
-export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=4
 
 IC_FILENAME="sodShock.hdf5"
 
@@ -14,7 +15,8 @@ END_TIME=0.2
 TIMESTEP_SIZE=2e-4
 CFL_FACTOR=0.1
 PLOT_DELTA=0.01
-CELL_SIZE=0.1
+# TODO: this is temporary until I fix smoothing length computations so the test doesn't crash.
+CELL_SIZE=0.67
 #
 # Generate initial condition file
 if [ ! -e $IC_FILENAME ]

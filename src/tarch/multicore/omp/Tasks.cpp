@@ -1,11 +1,11 @@
+#include "tarch/multicore/Tasks.h"
+
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
-
-#include "tarch/multicore/multicore.h"
-#include "tarch/multicore/Tasks.h"
-#include "tarch/multicore/Core.h"
-#include "tarch/services/ServiceRepository.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/multicore/Core.h"
+#include "tarch/multicore/multicore.h"
+#include "tarch/services/ServiceRepository.h"
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"
@@ -14,13 +14,12 @@
 #if defined(SharedOMP)
 
 namespace {
-  const int StandardPriority           = 16;
+  const int StandardPriority = 16;
 
   const int BackgroundConsumerPriority = 1;
 
-  int numberOfSpawnedTasks             = 0;
-}
-
+  int numberOfSpawnedTasks = 0;
+} // namespace
 
 /**
  * Native mapping of a task loop onto a task loop
@@ -49,18 +48,16 @@ namespace {
  * subsequent taskwait hence synchronises on one logical level above within the
  * task hierarchy, which is not what we want.
  */
-void tarch::multicore::native::spawnAndWaitAsTaskLoop(
-  const std::vector< tarch::multicore::Task* >&  tasks
-) {
-  assertion( not tasks.empty() );
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
+  assertion(not tasks.empty());
 
-  #if defined(OpenMPTaskGroup)
-  #pragma omp taskloop nogroup shared(tasks) priority(StandardPriority) untied
-  #endif
-  for (int i=0; i<static_cast<int>(tasks.size()); i++) {
-    #if !defined(OpenMPTaskGroup)
-    #pragma omp task
-    #endif
+#if defined(OpenMPTaskGroup)
+#pragma omp taskloop nogroup shared(tasks) priority(StandardPriority) untied
+#endif
+  for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
+#if !defined(OpenMPTaskGroup)
+#pragma omp task
+#endif
     {
       while (tasks[i]->run()) {
         tarch::multicore::Core::getInstance().yield();
@@ -69,45 +66,38 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(
     }
   }
 
-  #ifdef UseSmartMPI
+#ifdef UseSmartMPI
   tarch::timing::Watch taskWaitTime("spawnAndWaitAsTaskLoop", "taskwait", false);
-  #endif
+#endif
 
-  #pragma omp taskwait // wait for all elements from tasks to complete
-                       // do not wait for the children of tasks
-                       // but do children if you have time (this does not
-                       // happen however)
+#pragma omp taskwait // wait for all elements from tasks to complete
+                     // do not wait for the children of tasks
+                     // but do children if you have time (this does not
+                     // happen however)
 
-  #ifdef UseSmartMPI
+#ifdef UseSmartMPI
   taskWaitTime.stop();
-  smartmpi::reportWaitTime(taskWaitTime.getCPUTime(),tarch::mpi::Rank::getInstance().getRank());
-  #endif
+  smartmpi::reportWaitTime(taskWaitTime.getCPUTime(), tarch::mpi::Rank::getInstance().getRank());
+#endif
 }
 
+int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawnedTasks; }
 
-
-
-int tarch::multicore::native::getNumberOfPendingTasks() {
-  return numberOfSpawnedTasks;
-}
-
-
-void tarch::multicore::native::spawnTask(Task*  job) {
-  #pragma omp atomic
+void        tarch::multicore::native::spawnTask(Task* job) {
+#pragma omp atomic
   numberOfSpawnedTasks++;
 
-  #pragma omp task priority(BackgroundConsumerPriority) untied
+#pragma omp task priority(BackgroundConsumerPriority) untied
   {
     while (job->run()) {
-      #pragma omp taskyield
+#pragma omp taskyield
     }
     delete job;
 
-    #pragma omp atomic
+#pragma omp atomic
     numberOfSpawnedTasks--;
   }
 }
-
 
 /**
  * It is not clear what happens if I use tasksOfSameType directly within the task.
@@ -124,29 +114,29 @@ void tarch::multicore::native::spawnTask(Task*  job) {
  * With NVIDIA/nvc++, I get the error
  *
  * <pre>
-NVC++-S-0155-A possibly throwing copy constructor for a task firstprivate variable is not supported  (tarch/multicore/omp/Tasks.cpp: 289)
-NVC++/x86-64 Linux 22.3-0: compilation completed with severe errors
+NVC++-S-0155-A possibly throwing copy constructor for a task firstprivate variable is not supported
+(tarch/multicore/omp/Tasks.cpp: 289) NVC++/x86-64 Linux 22.3-0: compilation completed with severe errors
  * </pre>
  *
  * if I try to map fuse onto a task of its own.
  *
  */
-void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
-  std::list< tarch::multicore::Task* > copyOfTasksOfSameType = tasksOfSameType;
-  #if !defined(__NVCOMPILER)
-  #pragma omp task firstprivate(myTask,copyOfTasksOfSameType,device)
-  #endif
+void tarch::multicore::native::processFusedTask(
+  Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
+) {
+  std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
+#if !defined(__NVCOMPILER)
+#pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
+#endif
   {
-    bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType,device);
+    bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
       tarch::multicore::native::spawnTask(myTask);
-    }
-    else {
+    } else {
       delete myTask;
     }
   }
 }
-
 
 /**
  * There is no draining of the CPU queues in OpenMP, but we can invoke a
@@ -154,10 +144,8 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
  * opportunity to disrupt the local execution and instead progress pending
  * tasks.
  */
-void tarch::multicore::native::drainTaskQueues() {
-  #pragma omp taskyield
+void        tarch::multicore::native::drainTaskQueues() {
+#pragma omp taskyield
 }
 
-
 #endif
-
