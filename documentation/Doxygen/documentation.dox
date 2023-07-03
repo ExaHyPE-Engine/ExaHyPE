@@ -218,4 +218,116 @@ rendered once again as source code. You have to remove the indentation sometimes
 that this mainly affects the Python code, but not the C++ documentation.
 
 
+Brief doxygen cheat sheet
+======================
+
+Creating new chapters within the page (note what appears in the dropdown on the left
+hand side) is done with the "=" symbol. The above chapter above is written under 
+the hood as:
+
+\verbatim
+
+Brief doxygen cheat sheet
+======================
+
+\endverbatim
+
+## Headings
+
+Bold headings such as the one above are created with two hash symbols. This creates
+a "secondary" chapter.
+The above line, under the hood, reads:
+
+\verbatim
+## Headings
+\endverbatim
+
+## Code snippets
+
+If you want code to appear neatly on the page, you have two options.
+
+You can either use tilde (~):
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+double answer;
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Under the hood:
+
+\verbatim
+~~~~~~~~~~~~~~~~~~~~~~~~~
+double answer;
+~~~~~~~~~~~~~~~~~~~~~~~~~
+\endverbatim
+
+You also have the much more powerful "verbatim" keyword:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\verbatim
+
+Anything in here is rendered exactly as written. Keywords and all.
+
+\endverbatim
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Inline "code snippets" can be done like so:
+
+\verbatim
+```import peano4```
+\endverbatim
+
+## TeX
+
+Inline math environments can be done as normal. If we want to write
+@f$ \int_a^b f(x) dx @f$, then we must write:
+
+\verbatim
+
+@f$ \int_a^b f(x) dx @f$
+
+Note the change $ -> @f$
+
+\endverbatim
+
+## Including hyperlinks
+
+Recall that a page typically begins with 
+
+\verbatim
+
+...
+@page page_ref Page Title
+...
+
+\endverbatim
+
+You can then reference this page from any other. Just state:
+
+\verbatim
+
+... for further reference please see \ref page_ref ...
+
+\endverbatim
+
+We can do the same for weblinks, like [this one to the gitlab](https://gitlab.lrz.de/hpcsoftware/Peano):
+
+\verbatim
+
+[this one to the gitlab](https://gitlab.lrz.de/hpcsoftware/Peano)
+
+\endverbatim
+
+
+## Including images 
+
+Simply write:
+
+\verbatim
+
+@image html relative/path/to/file.png
+
+\endverbatim
+
 */
