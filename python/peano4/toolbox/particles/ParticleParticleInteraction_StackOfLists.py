@@ -113,7 +113,7 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
 
 
     \noindent
-    \Peano\ always runs through the mesh top-down, i.e.~it traverses the spacetree
+    Peano always runs through the mesh top-down, i.e.~it traverses the spacetree
     in a depth-first fashion.
     With the definition above, we can realise particle-particle interactions as
     follows:
@@ -178,7 +178,7 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
 
 
     \noindent
-    Typical \Peano\ codes introduce some variables per particle into which they
+    Typical Peano codes introduce some variables per particle into which they
     accumulate data.
     In \texttt{touchVertexFirstTime} we use a vertex for the very first time.
     Consequently, we also read the particles associated to this vertex for the first
@@ -311,7 +311,7 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
   _numberOfActiveParticlesAdded.push_back(0);
   for (int i=0; i<TwoPowerD; i++) {
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
-      _activeParticles.push_front( p );
+      _activeParticles.push_back( p );
       _numberOfActiveParticlesAdded.back()++;
     }
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
@@ -321,6 +321,8 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
       }
     }
   }
+  
+  logDebug( "touchCellFirstTime(...)", "size of local/active particles=" << localParticles.size() << "/" << _activeParticles.size() << " at " << marker.toString() );
 
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
@@ -331,6 +333,8 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
 
     __Template_TouchCellLastTime = jinja2.Template(
         """
+  assertion( not _numberOfActiveParticlesAdded.empty() );
+  assertion( _activeParticles.size()>=_numberOfActiveParticlesAdded.back() );
   for (int i=0; i<_numberOfActiveParticlesAdded.back(); i++) {
     _activeParticles.pop_back();
   }
