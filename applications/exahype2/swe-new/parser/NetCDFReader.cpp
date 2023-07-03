@@ -135,3 +135,16 @@
 
         return 0;
     }
+
+    int applications::exahype2::swe::parser::NetCDFReader::readVariable3DHyperslab(int ncid, const char *key, double *variable, size_t rows, size_t cols, size_t start, size_t end)
+    {
+        int varidkey;
+        if(nc_inq_varid(ncid, key, &varidkey) != NC_NOERR)
+            return -1;
+        size_t startp[]{start, 0, 0};
+        size_t countp[]{end, cols, rows};
+        if(nc_get_vara_double(ncid, varidkey, startp, countp, variable) != NC_NOERR)
+            return -1;
+        
+        return 0;
+    }

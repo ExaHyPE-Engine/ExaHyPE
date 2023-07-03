@@ -111,5 +111,19 @@ namespace applications::exahype2::swe::parser::NetCDFReader
      * @return 0 iff successfull, -1 otherwise.
      */
     int readVariable2DHyperslab(int ncid, const char *key, double **variable, size_t rows, size_t cols, size_t start);
+
+    /**
+     * @brief Read contents of a 3D double variable from netCDF file into 1D array starting at a specified first-dimension value.
+     * 
+     * @param ncid Pointer to location where returned netCDF ID is to be stored.
+     * @param key variable name for which data is loaded.
+     * @param variable Array where data is stored.
+     * @param rows count of rows of the array.
+     * @param cols count of columns of the array.
+     * @param start value of the first dimension from which to start reading.
+     * @param end value of first dimension at which to stop reading.
+     * @return 0 iff successfull, -1 otherwise.
+     */
+    int readVariable3DHyperslab(int ncid, const char *key, double *variable, size_t rows, size_t cols, size_t start, size_t end);
 }
 #endif

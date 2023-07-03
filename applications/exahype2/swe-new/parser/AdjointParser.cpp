@@ -56,6 +56,7 @@ double applications::exahype2::swe::parser::AdjointParser::max_inner_product(dou
             max_inner_product = std::max({inner_product_current, inner_product_previous, max_inner_product});
         }
     }
+    return max_inner_product;
 }
 
 void applications::exahype2::swe::parser::AdjointParser::parse_adjoint_file(const char *adjoint_file_path){
@@ -103,9 +104,9 @@ void applications::exahype2::swe::parser::AdjointParser::parse_adjoint_file(cons
     return;
     }
 
-    eta_ = new double[x_eta_*y_eta_];
+    eta_ = new double[number_timestamps_*x_eta_*y_eta_];
     // Read eta
-    if (NetCDFReader::readVariable2D(ncid, "eta", eta_, x_eta_, y_eta_) == -1)
+    if (NetCDFReader::readVariable3DHyperslab(ncid, "eta", eta_, x_eta_, y_eta_, 0, number_timestamps_) == -1)
     {
     std::cout << "Guided AMR could not be initialized: Eta could not be read." << std::endl;
     return;
