@@ -156,7 +156,6 @@ AC_ARG_WITH(
   ]
 )
 
-
 if test "$multithreading" == cpp; then
   AC_DEFINE([SharedCPP], [1], [SharedCPP])
   AC_SEARCH_LIBS(pthread_create,pthread)
@@ -221,6 +220,7 @@ AC_ARG_WITH(
       hip)   AC_MSG_RESULT(build with HIP GPU support);            gpu=hip ;;
       cpp)   AC_MSG_RESULT(build with C++ GPU support);            gpu=cpp ;;
       sycl)  AC_MSG_RESULT(build with SYCL GPU support);           gpu=sycl ;;
+      cuda)  AC_MSG_RESULT(build with CUDA GPU suppport);          gpu=cuda ;;
       *)     AC_MSG_FAILURE([use omp, cpp or sycl to define target]);            gpu=false ;;
     esac
   ], 
@@ -235,7 +235,7 @@ AM_CONDITIONAL([GPUOffloadingOMP],    [test "$gpu" == omp])
 AM_CONDITIONAL([GPUOffloadingSYCL],   [test "$gpu" == sycl])
 AM_CONDITIONAL([GPUOffloadingHIP],    [test "$gpu" == hip])
 AM_CONDITIONAL([GPUOffloadingCPP],    [test "$gpu" == cpp])
-
+AM_CONDITIONAL([GPUOffloadingCUDA],   [test "$gpu" == cuda])
 
 if test "$gpu" == omp; then
   AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
@@ -255,6 +255,98 @@ fi
 if test "$gpu" == cpp; then
   #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([GPUOffloadingCPP], [1], [GPUOffloadingCPP])
+fi
+
+if test "$gpu" == cuda; then
+  AC_LANG_DEFINE([CUDA], [cuda], [CUDA], [CUDACXX],
+  [])
+
+  AC_DEFINE([GPUOffloadingCUDA], [1], [GPUOffloadingCUDA])
+
+  AC_ARG_WITH([cuda],
+    [AS_HELP_STRING([--with-cuda=PATH], [specify CUDA installation path])],
+    [with_cuda="$withval"],
+    [with_cuda=""])
+
+  # We need to apply further checks on CUDA
+  if test -n "$with_cuda"
+  then
+    # Check the option has argument (empty argument results with a "yes")
+    if test "$with_cuda" = yes
+    then
+      AC_MSG_ERROR([The argument --with-cuda requires the path to CUDA, --with-cuda=<CUDA_PATH>])
+    fi
+
+    # Extract the path from the "--with-cuda" argument and check if the path is valid
+    cuda_path=$(echo "$with_cuda" | sed 's/--with-cuda=//')
+
+    # Check if the path is valid
+    if test ! -d "$cuda_path"; then
+      AC_MSG_ERROR([The input for cuda-path=$cuda_path is not a valid directory])
+    fi
+
+    CUDA_INCLUDE_FLAGS="-I$with_cuda/include"
+    CUDA_LDFLAGS="-L$with_cuda/lib64 -L$with_cuda/lib"
+    CUDA_LIBS="-lcudart"
+    NVCC="$with_cuda/bin/nvcc"
+    CUDA_PATH="$with_cuda"
+
+    AC_SUBST(CUDA_INCLUDE_FLAGS)
+    AC_SUBST(CUDA_LDFLAGS)
+    AC_SUBST(CUDA_LIBS)
+    AC_SUBST(NVCC)
+    AC_SUBST(CUDA_PATH)
+  else
+    AC_MSG_ERROR([If the argument --with-gpu=cuda is geven, --with-cuda=<CUDA_PATH> argument is required with the path to CUDA])
+  fi
+
+  CXXFLAGS_TARCH_RELEASE="$CUDA_INCLUDE_FLAGS"
+  CXXFLAGS_TARCH_STATS="  $CUDA_INCLUDE_FLAGS"
+  CXXFLAGS_TARCH_ASSERTS="$CUDA_INCLUDE_FLAGS"
+  CXXFLAGS_TARCH_TRACE="  $CUDA_INCLUDE_FLAGS"
+  CXXFLAGS_TARCH_DEBUG="  $CUDA_INCLUDE_FLAGS"
+
+  LDADD_TARCH_RELEASE=" $CUDA_LIBS"
+  LDADD_TARCH_STATS="   $CUDA_LIBS"
+  LDADD_TARCH_ASSERTS=" $CUDA_LIBS" 
+  LDADD_TARCH_TRACE="   $CUDA_LIBS"
+  LDADD_TARCH_DEBUG="   $CUDA_LIBS"
+
+  LDFLAGS_TARCH_RELEASE+=" $CUDA_LDFLAGS"
+  LDFLAGS_TARCH_STATS+="   $CUDA_LDFLAGS"
+  LDFLAGS_TARCH_ASSERTS+=" $CUDA_LDFLAGS"
+  LDFLAGS_TARCH_TRACE+="   $CUDA_LDFLAGS"
+  LDFLAGS_TARCH_DEBUG+="   $CUDA_LDFLAGS"
+
+  CXXFLAGS_PEANO_2D_RELEASE=" $CXXFLAGS_PEANO_2D_RELEASE $CXXFLAGS_TARCH_RELEASE"
+  CXXFLAGS_PEANO_2D_STATS="   $CXXFLAGS_PEANO_2D_STATS   $CXXFLAGS_TARCH_STATS"
+  CXXFLAGS_PEANO_2D_ASSERTS=" $CXXFLAGS_PEANO_2D_ASSERTS $CXXFLAGS_TARCH_ASSERTS"
+  CXXFLAGS_PEANO_2D_TRACE="   $CXXFLAGS_PEANO_2D_TRACE   $CXXFLAGS_TARCH_TRACE"
+  CXXFLAGS_PEANO_2D_DEBUG="   $CXXFLAGS_PEANO_2D_DEBUG   $CXXFLAGS_TARCH_DEBUG"
+
+  CXXFLAGS_PEANO_3D_RELEASE=" $CXXFLAGS_PEANO_3D_RELEASE $CXXFLAGS_TARCH_RELEASE"
+  CXXFLAGS_PEANO_3D_STATS="   $CXXFLAGS_PEANO_3D_STATS   $CXXFLAGS_TARCH_STATS"
+  CXXFLAGS_PEANO_3D_ASSERTS=" $CXXFLAGS_PEANO_3D_ASSERTS $CXXFLAGS_TARCH_ASSERTS"
+  CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE   $CXXFLAGS_TARCH_TRACE"
+  CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG   $CXXFLAGS_TARCH_DEBUG"
+
+  LDFLAGS_PEANO_RELEASE=" $LDFLAGS_PEANO_RELEASE $LDFLAGS_TARCH_RELEASE"
+  LDFLAGS_PEANO_STATS="   $LDFLAGS_PEANO_STATS   $LDFLAGS_TARCH_STATS"
+  LDFLAGS_PEANO_ASSERTS=" $LDFLAGS_PEANO_ASSERTS $LDFLAGS_TARCH_ASSERTS"
+  LDFLAGS_PEANO_TRACE="   $LDFLAGS_PEANO_TRACE   $LDFLAGS_TARCH_TRACE"
+  LDFLAGS_PEANO_DEBUG="   $LDFLAGS_PEANO_DEBUG   $LDFLAGS_TARCH_DEBUG"
+
+  LDADD_PEANO_2D_RELEASE="$LDADD_PEANO_2D_RELEASE $LDADD_TARCH_RELEASE"
+  LDADD_PEANO_2D_STATS="  $LDADD_PEANO_2D_STATS   $LDADD_TARCH_STATS"
+  LDADD_PEANO_2D_ASSERTS="$LDADD_PEANO_2D_ASSERTS $LDADD_TARCH_ASSERTS"
+  LDADD_PEANO_2D_TRACE="  $LDADD_PEANO_2D_TRACE   $LDADD_TARCH_TRACE"
+  LDADD_PEANO_2D_DEBUG="  $LDADD_PEANO_2D_DEBUG   $LDADD_TARCH_DEBUG"
+
+  LDADD_PEANO_3D_RELEASE="$LDADD_PEANO_3D_RELEASE $LDADD_TARCH_RELEASE"
+  LDADD_PEANO_3D_STATS="  $LDADD_PEANO_3D_STATS   $LDADD_TARCH_STATS"
+  LDADD_PEANO_3D_ASSERTS="$LDADD_PEANO_3D_ASSERTS $LDADD_TARCH_ASSERTS"
+  LDADD_PEANO_3D_TRACE="  $LDADD_PEANO_3D_TRACE   $LDADD_TARCH_TRACE"
+  LDADD_PEANO_3D_DEBUG="  $LDADD_PEANO_3D_DEBUG   $LDADD_TARCH_DEBUG"
 fi
 
 
@@ -982,6 +1074,12 @@ AC_SUBST(CXXFLAGS_PEANO_3D_STATS)
 AC_SUBST(CXXFLAGS_PEANO_3D_ASSERTS)
 AC_SUBST(CXXFLAGS_PEANO_3D_TRACE)
 AC_SUBST(CXXFLAGS_PEANO_3D_DEBUG)
+
+AC_SUBST(CXXFLAGS_TARCH_RELEASE)
+AC_SUBST(CXXFLAGS_TARCH_STATS)
+AC_SUBST(CXXFLAGS_TARCH_ASSERTS)
+AC_SUBST(CXXFLAGS_TARCH_TRACE)
+AC_SUBST(CXXFLAGS_TARCH_DEBUG)
 
 AC_SUBST(LDFLAGS_PEANO_RELEASE)
 AC_SUBST(LDFLAGS_PEANO_STATS)

@@ -20,6 +20,7 @@ parser.add_argument('--fem', action='store_true', help='Enable finite elements s
 parser.add_argument('--libxsmm', action='store_true', help='Enable libxsmm support')
 parser.add_argument('--multithreading', choices=['omp', 'tbb', 'sycl', 'cpp'], help='Enable multithreading support')
 parser.add_argument('--gpu', choices=['omp', 'cuda', 'sycl', 'cpp', 'hip'], help='Enable GPU support')
+parser.add_argument('--with-cuda', type=str, default='/opt/nvidia/hpc_sdk/Linux_x86_64/23.3/cuda', help='Path to CUDA')
 parser.add_argument('--arch', choices=[
   'gfx906', 'gfx908', 'gfx90a', # gfx906=MI50, gfx908=MI100, gfx90a=MI200
   'cc70', 'cc72', 'cc75', 'cc80', 'cc86', 'cc90',
@@ -28,7 +29,7 @@ parser.add_argument('--arch', choices=[
   help='Select GPU compute capability')
 args = parser.parse_args()
 
-cxxflags = '-std=c++20 -W -Wall -Wextra'
+cxxflags = '-std=c++17 -W -Wall -Wextra -lstdc++fs'
 
 # Merge in any additional flags needed for the selected multithreading backend
 if args.multithreading == 'omp':
@@ -99,6 +100,9 @@ if args.fem:
   configure_args.append('--enable-finiteelements')
 if args.libxsmm:
   configure_args.append('--with-libxsmm')
+
+if args.with_cuda:
+  configure_args.append(f'--with-cuda={args.with_cuda}')
 
 print('Running ./configure ' + ' '.join(configure_args))
 

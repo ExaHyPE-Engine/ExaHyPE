@@ -28,7 +28,7 @@ lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a    
                 libPeano4Core2d.a libPeano4Core2d_debug.a libPeano4Core2d_asserts.a libPeano4Core2d_trace.a libPeano4Core2d_stats.a \
                 libPeano4Core3d.a libPeano4Core3d_debug.a libPeano4Core3d_asserts.a libPeano4Core3d_trace.a libPeano4Core3d_stats.a
 
-libTarch_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
+libTarch_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE)
 libTarch_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE)
 libTarch_asserts_a_CXXFLAGS = $(CXXFLAGS_PEANO_2D_ASSERTS)
 libTarch_debug_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_DEBUG)
@@ -110,6 +110,9 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/accelerator/sycl/DeviceInfo.cpp \
  tarch/accelerator/cuda/ErrorCheck.cpp \
  tarch/accelerator/cuda/DeviceInfo.cpp \
+ tarch/accelerator/cuda/Device.cpp \
+ tarch/accelerator/cuda/accelerator.cpp \
+ tarch/accelerator/cuda/TestKernels.cu \
  tarch/multicore/BooleanSemaphore.cpp \
  tarch/multicore/multicore.cpp \
  tarch/multicore/Core.cpp \
@@ -193,6 +196,52 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/services/Service.cpp \
  tarch/services/ServiceRepository.cpp 
 
+CUDA_SRC= tarch/accelerator/cuda/TestKernels.cu
+
+CUDA_OBJS= $(CUDA_SRC:.cu=.o)
+
+CUDA_OBJS_RELEASE=  tarch/accelerator/cuda/libTarch_a-TestKernels.o
+CUDA_OBJS_STATS=  tarch/accelerator/cuda/libTarch_stats_a-TestKernels.o
+CUDA_OBJS_TRACE=  tarch/accelerator/cuda/libTarch_trace_a-TestKernels.o
+CUDA_OBJS_ASSERTS=  tarch/accelerator/cuda/libTarch_asserts_a-TestKernels.o
+CUDA_OBJS_DEBUG=  tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
+
+# Again warning on GNU Extension here
+#CUDA_OBJS_RELEASE=$(addprefix libTarch_a-, $(CUDA_OBJS))
+#CUDA_OBJS_STATS =$(addprefix libTarch_stats_a-, $(CUDA_OBJS))
+#CUDA_OBJS_TRACE =$(addprefix libTarch_trace_a-, $(CUDA_OBJS))
+#CUDA_OBJS_ASSERTS =$(addprefix libTarch_asserts_a-, $(CUDA_OBJS))
+#CUDA_OBJS_DEBUG =$(addprefix libTarch_debug_a-, $(CUDA_OBJS))
+
+# $(foreach item,$(ITEMS),libTarch_stats_a-$(item)) is GNU extension
+#CUDA_OBJS_RELEASE = $(patsubst %.cu,libTarch_a-%.o,$(ITEMS))
+#CUDA_OBJS_RELEASE = $(addprefix $(CURDIR)/,$(CUDA_OBJS_RELEASE))
+#CUDA_OBJS_STATS = $(patsubst %.cu,libTarch_stats_a-%.o,$(ITEMS))
+#CUDA_OBJS_STATS = $(addprefix $(CURDIR)/,$(CUDA_OBJS_STATS))
+#CUDA_OBJS_TRACE = $(patsubst %.cu,libTarch_trace_a-%.o,$(ITEMS))
+#CUDA_OBJS_TRACE = $(addprefix $(CURDIR)/,$(CUDA_OBJS_TRACE))
+#CUDA_OBJS_ASSERTS = $(patsubst %.cu,libTarch_a-%.o,$(ITEMS))
+#CUDA_OBJS_ASSERTS = $(addprefix $(CURDIR)/,$(CUDA_OBJS_ASSERTS))
+#CUDA_OBJS_DEBUG = $(patsubst %.cu,libTarch_a-%.o,$(ITEMS))
+#CUDA_OBJS_DEBUG = $(addprefix $(CURDIR)/,$(CUDA_OBJS_DEBUG))
+
+# libTarch_debug_a-%.o: %.cu again a GNU extension (% is a GNU Extension)
+
+$(CUDA_OBJS_TRACE) : $(CUDA_SRC)
+	$(NVCC) -c -o $@ $^
+
+$(CUDA_OBJS_ASSERTS) : $(CUDA_SRC)
+	$(NVCC) -c -o $@ $^
+
+$(CUDA_OBJS_RELEASE) : $(CUDA_SRC)
+	$(NVCC) -c -o $@ $^
+
+$(CUDA_OBJS_STATS) : $(CUDA_SRC)
+	$(NVCC) -c -o $@ $^
+
+$(CUDA_OBJS_DEBUG) : $(CUDA_SRC)
+	$(NVCC) -c -o $@ $^
+
 #
 # Map defined source sequences onto libraries
 #
@@ -207,8 +256,15 @@ libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core2d_asserts_a_SOURCES = $(Peano4Core_SOURCES)
 libPeano4Core2d_debug_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core2d_stats_a_SOURCES   = $(Peano4Core_SOURCES)
+
 libPeano4Core3d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core3d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core3d_asserts_a_SOURCES = $(Peano4Core_SOURCES)
 libPeano4Core3d_debug_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core3d_stats_a_SOURCES   = $(Peano4Core_SOURCES)
+
+libTarch_a_LIBADD         = $(CUDA_OBJS_RELEASE) $(LDADD_TARCH_RELEASE)
+libTarch_stats_a_LIBADD   = $(CUDA_OBJS_STATS) $(LDADD_TARCH_STATS)
+libTarch_trace_a_LIBADD   = $(CUDA_OBJS_TRACE) $(LDADD_TARCH_TRACE)
+libTarch_asserts_a_LIBADD = $(CUDA_OBJS_ASSERTS) $(LDADD_TARCH_ASSERTS)
+libTarch_debug_a_LIBADD   = $(CUDA_OBJS_DEBUG) $(LDADD_TARCH_DEBUG)
