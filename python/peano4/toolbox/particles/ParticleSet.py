@@ -13,23 +13,10 @@ import os
 
 from enum import Enum
 
-
-class ParticleSetGenerator_ScatteredOnHeap_IndexByList(object):
-    """!
-
-    Map a particle set onto heap objects indexed by a list
-
-    This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
-    Peano's stacks are realised via std::vector from the C++ standard library.
-    Each entry within this vector then resembles a C++ container over pointers
-    to the heap. That is, all particles are stored on the heap. They are
-    scattered. The C++ pointer per stack entry that's used to store all the
-    particle pointers is realised through std::list.
-
-    """
-
+class AbstractParticleSetGenerator(object):
     def __init__(self, data):
-        self._data = data
+      self._data = data
+
 
     def get_stack_container(self):
         return (
@@ -37,6 +24,7 @@ class ParticleSetGenerator_ScatteredOnHeap_IndexByList(object):
             + self._data.get_full_qualified_type()
             + " >"
         )
+
 
     def get_header_file_include(self):
         return (
@@ -53,76 +41,42 @@ class ParticleSetGenerator_ScatteredOnHeap_IndexByList(object):
 """
         )
 
-    def construct_output(self, output):
-        d = {"PARTICLE_TYPE": self._data.particle_model.name}
 
-        templatefile_prefix = (
-            os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
-        )
-
-        generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            templatefile_prefix + "_ScatteredOnHeap_IndexedByList.template.h",
-            templatefile_prefix + "_ScatteredOnHeap_IndexedByList.template.cpp",
-            self._data.name,
-            self._data.namespace,
-            self._data.namespace[-1],
-            d,
-            True,
-        )
-        output.add(generated_files)
-        output.makefile.add_cpp_file(
-            self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True
-        )
-        pass
-
-
-class ParticleSetGenerator_ScatteredOnHeap_IndexByVector(object):
+class ParticleSetGenerator_ScatteredOnHeap_IndexByList(AbstractParticleSetGenerator):
     """!
 
-    Map a particle set onto heap objects indexed by a vector
+Map a particle set onto heap objects indexed by a list
 
-    Very similar to ParticleSetGenerator_ScatteredOnHeap_IndexByList, but this
-    time the container over pointers is realised by a vector. This means slightly
-    more memory movements when we resort particles, but otherwise is a little bit
-    faster.
+This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+Peano's stacks are realised via std::vector from the C++ standard library.
+Each entry within this vector then resembles a C++ container over pointers
+to the heap. That is, all particles are stored on the heap. They are
+scattered. The C++ pointer per stack entry that's used to store all the
+particle pointers is realised through std::list.
+
+Please consult @ref page_swift_performance_optimisation "the generic discussion on the impact of storage schemes".
+
+@image html ParticleSetGenerator_ScatteredOnHeap.png
+
 
     """
 
     def __init__(self, data):
-        self._data = data
-
-    def get_stack_container(self):
-        return (
-            "peano4::stacks::STDVectorOverContainerOfPointers< "
-            + self._data.get_full_qualified_type()
-            + " >"
-        )
-
-    def get_header_file_include(self):
-        return (
-            """
-#include "peano4/stacks/STDVectorOverContainerOfPointers.h"
-#include "../globaldata/"""
-            + self._data.particle_model.name
-            + """.h"
-#include \""""
-            + self._data.namespace[-1]
-            + """/"""
-            + self._data.name
-            + """.h"
-"""
-        )
+        super(ParticleSetGenerator_ScatteredOnHeap_IndexByList,self).__init__(data)
 
     def construct_output(self, output):
-        d = {"PARTICLE_TYPE": self._data.particle_model.name}
+        d = {
+          "PARTICLE_TYPE": self._data.particle_model.name,
+          "STD_CONTAINER": "list"
+        }
 
         templatefile_prefix = (
             os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
         )
 
         generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            templatefile_prefix + "_ScatteredOnHeap_IndexedByVector.template.h",
-            templatefile_prefix + "_ScatteredOnHeap_IndexedByVector.template.cpp",
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByStdContainer.template.h",
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByStdContainer.template.cpp",
             self._data.name,
             self._data.namespace,
             self._data.namespace[-1],
@@ -134,40 +88,185 @@ class ParticleSetGenerator_ScatteredOnHeap_IndexByVector(object):
             self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True
         )
         pass
+
+
+class ParticleSetGenerator_ScatteredOnHeap_IndexByVector(AbstractParticleSetGenerator):
+    """!
+
+Map a particle set onto heap objects indexed by an std::vector
+
+This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+Peano's stacks are realised via std::vector from the C++ standard library.
+Each entry within this vector then resembles a C++ container over pointers
+to the heap. That is, all particles are stored on the heap. They are
+scattered. The C++ pointer per stack entry that's used to store all the
+particle pointers is realised through std::list.
+
+Please consult @ref page_swift_performance_optimisation "the generic discussion on the impact of storage schemes".
+
+@image html ParticleSetGenerator_ScatteredOnHeap.png
+
+
+    """
+
+    def __init__(self, data):
+        super(ParticleSetGenerator_ScatteredOnHeap_IndexByVector,self).__init__(data)
+
+    def construct_output(self, output):
+        d = {
+          "PARTICLE_TYPE": self._data.particle_model.name,
+          "STD_CONTAINER": "vector"
+        }
+
+        templatefile_prefix = (
+            os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
+        )
+
+        generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByStdContainer.template.h",
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByStdContainer.template.cpp",
+            self._data.name,
+            self._data.namespace,
+            self._data.namespace[-1],
+            d,
+            True,
+        )
+        output.add(generated_files)
+        output.makefile.add_cpp_file(
+            self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True
+        )
+        pass
+
+
+class ParticleSetGenerator_ContinuousPerVertex_IndexByVector(AbstractParticleSetGenerator):
+    """!
+
+Map a particle set onto heap objects indexed by an std::vector
+
+This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+Peano's stacks are realised via std::vector from the C++ standard library.
+Each entry within this vector then resembles a C++ container over pointers
+to the heap. That is, all particles are stored on the heap. They are
+scattered. The C++ pointer per stack entry that's used to store all the
+particle pointers is realised through std::list.
+
+
+Please consult @ref page_swift_performance_optimisation "the generic discussion on the impact of storage schemes".
+
+@image html ParticleSetGenerator_ContinuousPerVertex.png
+
+
+    """
+
+    def __init__(self, data):
+        super(ParticleSetGenerator_ContinuousPerVertex_IndexByVector,self).__init__(data)
+
+    def construct_output(self, output):
+        d = {
+          "PARTICLE_TYPE": self._data.particle_model.name,
+          "STD_CONTAINER": "vector"
+        }
+
+        templatefile_prefix = (
+            os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
+        )
+
+        generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.h",
+            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.cpp",
+            self._data.name,
+            self._data.namespace,
+            self._data.namespace[-1],
+            d,
+            True,
+        )
+        output.add(generated_files)
+        output.makefile.add_cpp_file(
+            self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True
+        )
+        pass
+
+
+class ParticleSetGenerator_ContinuousPerVertex_IndexByList(AbstractParticleSetGenerator):
+    """!
+
+Map a particle set onto heap objects indexed by a list
+
+This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+Peano's stacks are realised via std::vector from the C++ standard library.
+Each entry within this vector then resembles a C++ container over pointers
+to the heap. That is, all particles are stored on the heap. They are
+scattered. The C++ pointer per stack entry that's used to store all the
+particle pointers is realised through std::list.
+
+Please consult @ref page_swift_performance_optimisation "the generic discussion on the impact of storage schemes".
+
+@image html ParticleSetGenerator_ContinuousPerVertex.png
+
+    """
+
+    def __init__(self, data):
+        super(ParticleSetGenerator_ContinuousPerVertex_IndexByList,self).__init__(data)
+
+    def construct_output(self, output):
+        d = {
+          "PARTICLE_TYPE": self._data.particle_model.name,
+          "STD_CONTAINER": "list"
+        }
+
+        templatefile_prefix = (
+            os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
+        )
+
+        generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.h",
+            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.cpp",
+            self._data.name,
+            self._data.namespace,
+            self._data.namespace[-1],
+            d,
+            True,
+        )
+        output.add(generated_files)
+        output.makefile.add_cpp_file(
+            self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True
+        )
+        pass
+
 
 
 class ParticleSet(DoF):
     """!
 
-    Represents a particle set
+Represents a particle set
 
-    A particle set is, in principle, a very simple container tied to a vertex.
-    It allows each vertex to point to the particles around. While the
-    realisation on the Python side is simple - after all, the Python model is
-    solely the data model - interesting questions arise once we discuss how the
-    data model is mapped onto C++. This information is not directly stored
-    within the ParticleSet objects, i.e. this class is solely a presentation
-    of the data topology.
+A particle set is, in principle, a very simple container tied to a vertex.
+It allows each vertex to point to the particles around. While the
+realisation on the Python side is simple - after all, the Python model is
+solely the data model - interesting questions arise once we discuss how the
+data model is mapped onto C++. This information is not directly stored
+within the ParticleSet objects, i.e. this class is solely a presentation
+of the data topology.
 
-    The information how the association is mapped onto Peano's C++ code is held
-    within the generator. By default, this generator maps each particle set onto
-    a vector which in turn hosts particles on the heap. However, there are
-    alternative implementations which you might want to pick by setting the
-    generator attribute to a different value.
+The information how the association is mapped onto Peano's C++ code is held
+within the generator. By default, this generator maps each particle set onto
+a vector which in turn hosts particles on the heap. However, there are
+alternative implementations which you might want to pick by setting the
+generator attribute to a different value.
 
-    - Study ParticleSetGenerator_ScatteredOnHeap_IndexByList to obtain some
-      information about Peano's default storage scheme.
-    - The generator ParticleSetGenerator_ScatteredOnHeap_IndexByVector is
-      a slightly more memory-compact version.
+- Study ParticleSetGenerator_ScatteredOnHeap_IndexByList to obtain some
+  information about Peano's default storage scheme.
+- The generator ParticleSetGenerator_ScatteredOnHeap_IndexByVector is
+  a slightly more memory-compact version.
 
 
-    ## Attributes
+## Attributes
 
-    name: String
-      Name of the particle. Has to be a valid C++ class name.
+name: String
+  Name of the particle. Has to be a valid C++ class name.
 
-    particle: Particle
-      Link to particle definition
+particle: Particle
+  Link to particle definition
 
     """
 
@@ -182,8 +281,10 @@ class ParticleSet(DoF):
             )
 
         self.particle_model = particle
-        self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
+        #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
         #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
+        self.generator      = ParticleSetGenerator_ContinuousPerVertex_IndexByList(self)
+        #self.generator      = ParticleSetGenerator_ContinuousPerVertex_IndexByVector(self)
 
 
     @property

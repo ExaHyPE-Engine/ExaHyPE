@@ -38,6 +38,8 @@ peano4::datamanagement::VertexMarker::VertexMarker(
       _isHanging[position] = true;
     }
   }
+
+  _isParentVertexLocal = event.getIsParentVertexLocal();
 }
 
 
@@ -53,6 +55,13 @@ tarch::la::Vector<Dimensions,int>  peano4::datamanagement::VertexMarker::getRela
     result(d) += index[d] ? 1 : 0;
   }
   return result;
+}
+
+
+bool peano4::datamanagement::VertexMarker::isParentVertexLocal(int i) const {
+  assertion(i>=0);
+  assertion(i<TwoPowerD);
+  return _isParentVertexLocal[i];
 }
 
 

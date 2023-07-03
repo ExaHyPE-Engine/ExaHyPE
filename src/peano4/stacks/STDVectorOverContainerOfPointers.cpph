@@ -38,22 +38,25 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::workInReceivedMetaData
 
 template <class T>
 void peano4::stacks::STDVectorOverContainerOfPointers<T>::workInReceivedData() {
+  int entryInFlattenedDeepCopyBuffer = 0;
   for (int i = 0; i < Base::_currentElement; i++) {
     assertionEquals(Base::_data[i].size(), 0);
-    for (int entry = 0; entry < _metaDataSizeBuffer[i]; entry++) {
-      Base::_data[i].add(new typename T::DoFType(_deepCopyDataBuffer[entry]));
+    for (int entryForThisStackElement = 0; entryForThisStackElement < _metaDataSizeBuffer[i]; entryForThisStackElement++) {
+      Base::_data[i].addParticle(new typename T::DoFType(_deepCopyDataBuffer[entryInFlattenedDeepCopyBuffer]));
+      entryInFlattenedDeepCopyBuffer++;
     }
   }
+  logWarning( "workInReceivedData()", "worked in " << entryInFlattenedDeepCopyBuffer << " entries in total" );
 }
 
 
 template <class T>
 void peano4::stacks::STDVectorOverContainerOfPointers<T>::prepareDataToSendOut() {
-  int entry = 0;
+  int entryInFlattenedDeepCopyBuffer = 0;
   for (int i = 0; i < Base::_currentElement; i++) {
     for (auto& p : Base::_data[i]) {
-      _deepCopyDataBuffer[entry] = *p;
-      entry++;
+      _deepCopyDataBuffer[entryInFlattenedDeepCopyBuffer] = *p;
+      entryInFlattenedDeepCopyBuffer++;
     }
   }
 }
@@ -145,6 +148,7 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::clone(const STDVectorO
 
   for (int stackNumber = 0; stackNumber < Base::_currentElement; stackNumber++) {
     Base::_data[stackNumber].clone(data._data[stackNumber]);
+    logDebug("clone()", "- copied " << Base::_data[stackNumber].size());
   }
 }
 

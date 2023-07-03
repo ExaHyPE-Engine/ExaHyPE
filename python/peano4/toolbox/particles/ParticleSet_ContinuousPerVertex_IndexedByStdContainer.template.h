@@ -7,8 +7,8 @@
 #pragma once
 
 
-#include <vector>
-
+#include <{{STD_CONTAINER}}>
+#include <list>
 
 #include "tarch/logging/Log.h"
 #include "tarch/la/Vector.h"
@@ -47,7 +47,7 @@
                        {
     public:
       typedef toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >  Base;
-      typedef std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >                       Container;
+      typedef std::{{STD_CONTAINER}}< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >          Container;
 
       /**
        * Expose C++ standard interface
@@ -113,7 +113,7 @@
       /**
        * Mark whole particle set as set of particles which can't be lifted
        *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        *
        * The operation runs over all hosted particles and invokes
@@ -139,7 +139,7 @@
       /**
        * Inform set that particle cannot be lifted on its current tree
        *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        */
       Container::iterator particleCanNotBeLiftedLocally( const Container::iterator&   particle );
@@ -147,7 +147,7 @@
       /**
        * This is a deep delete
        *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        */
       void deleteParticles();
@@ -159,7 +159,7 @@
        * you are ever allowed to delete a particle. That has to be done through
        * the corresponding deleteParticle() operation.
        *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        */
       Container::iterator begin();
@@ -171,12 +171,16 @@
       /**
        * Add one particle
        *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
+       *
+       * This routine does not copy the particle. It adds the references
+       * (pointer) to the particle only. Notably, this routine does not
+       * give the set exclusive ownership of the particle.
        *
        * Is internally mapped onto a push_back.
        */
-      void add(DoFType* particle);
+      void addParticle(DoFType* particle);
 
       /**
        * Add set of particles
@@ -184,17 +188,26 @@
        * This is a shallow addition, i.e. I attach these new pointers. The
        * particles themselves are not copied.
        *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        */
-      void add(const ParticleList& particleSet);
+      void addParticles(const ParticleList& particleSet);
+
+      /**
+       * Some simple validation
+       *
+       * I run some simple validations such as: does every particle have a
+       * valid parallel state. This might result in the detection of memory
+       * garbage. The routine is typically used within assertions.
+       */
+      bool isValid() const;
 
       /**
        * Moves particles from one particle set to the other
        *
        * This is used by the multiscale algorithm
        */
-      void move({{CLASSNAME}}& sourceParticleSet);
+      void grabParticles({{CLASSNAME}}& sourceParticleSet);
 
       /**
        * Move particle from one container to the other one
@@ -202,7 +215,7 @@
        * @return Iterator within sourceParticleSet which is returned after
        *   erasing it from this set.
        */
-      Container::iterator move(
+      Container::iterator grabParticle(
         const Container::iterator&         particle,
         {{CLASSNAME}}&                     sourceParticleSet
       );
@@ -211,7 +224,7 @@
        * Delete a particle
        *
        * Should be used, for example, if a particle has left the local domain.
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        * 
        * @return an iterator to the particle. This iterator is robust, i.e. even 

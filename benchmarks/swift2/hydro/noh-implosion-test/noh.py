@@ -125,10 +125,12 @@ project = swift2.Project(
 name = "hydroPart"
 dimensions = args.dimensions
 
-particle_per_cell = 20
-max_cell_size = (
-    1.0 / args.particle_number * particle_per_cell / math.sqrt(args.dimensions)
-)
+particles_per_cell        = 200
+total_number_of_particles = args.particle_number**args.dimensions
+total_number_of_cells     = total_number_of_particles / particles_per_cell
+cells_per_dimension       = total_number_of_cells**(1.0/args.dimensions)
+max_cell_size             = 1.0 / cells_per_dimension
+print( "{} particles in total fit into {} cells, i.e. {} cells per dimension. This gives h={}".format(total_number_of_particles,total_number_of_cells,cells_per_dimension,max_cell_size) )
 
 particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     name=name,
@@ -138,8 +140,8 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     constant_time_step_size=True,
     swift_project_namespace=project_namespace,
     is_sph=True,
-    particles_per_cell=20,
-    min_h=max_cell_size / particle_per_cell,
+    particles_per_cell=particles_per_cell,
+    min_h=max_cell_size,
     max_h=max_cell_size,
 )
 

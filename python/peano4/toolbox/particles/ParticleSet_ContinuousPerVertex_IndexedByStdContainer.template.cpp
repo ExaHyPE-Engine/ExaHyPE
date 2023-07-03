@@ -26,7 +26,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
       {
         logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
-        for (auto& p: neighbour) {
+        for (auto p: neighbour) {
           if (
             p->getParallelState()==DoFType::ParallelState::Local
           ) {
@@ -56,6 +56,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
               "incoming particle " << p->toString() << " is virtual on neighbour. Such a copy is not relevant here."
             );
             delete p;
+            tarch::multicore::Lock lock( _statisticsSemaphore );
             _numberOfDroppedVirtualParticles++;
           }
           else {
@@ -63,10 +64,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           }
         }
 
-        logInfo( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
+        logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.toString() << " which now hosts " << this->size() << " particle(s)" );
         for (auto *p: *this) {
           logDebug( "merge(...)", " - " << p->toString() );
         }
+
+        assertion2( isValid(), toString(), marker.toString() );
       }
       break;
 
@@ -117,7 +120,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
     }
 
     if (foundDuplicate) {
-      assertion2((*p) != (*pp), (*p)->toString(), (*pp)->toString());
+      assertion3((*p) != (*pp), (*p)->toString(), (*pp)->toString(), toString() );
 
       // bias to eliminate virtual particles
       if (
@@ -178,11 +181,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::d
 
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream msg;
-  msg << "(size=" << size();
-  #if PeanoDebug>=1
-  msg << ",x=" << _debugX
-      << ",h=" << _debugH;
-  #endif
+  msg << "(size=" << size()
+      << ",";
+  msg << Base::toString(false);
   msg << ")";
   return msg.str();
 }
@@ -190,10 +191,19 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& otherSet ) {
   assertion1( _container.empty(), toString() );
-  for (const auto& p: otherSet._container) {
-    DoFType* newParticle =  new DoFType(*p);
+  for (auto particle: otherSet._container) {
+    // data consistency check
+    assertion2(
+      particle->getParallelState()==DoFType::ParallelState::Local
+      or
+      particle->getParallelState()==DoFType::ParallelState::Virtual,
+      particle->toString(),
+      toString()
+    );
+    DoFType* newParticle =  new DoFType(*particle);
     _container.push_back( newParticle );
   }
+  logDebug( "clone()", "copied " << otherSet.size() << " objects over into local one of size " << size() );
   #if PeanoDebug>=1
   _debugX = otherSet._debugX;
   _debugH = otherSet._debugH;
@@ -232,6 +242,30 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
 }
 
 
+/*
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::ParticleList  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getParticlesToBeDroppedIntoVertex(
+  const peano4::datamanagement::VertexMarker& marker
+) {
+  assertion( not empty() );
+
+  {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
+  {{CLASSNAME}}::iterator p = begin();
+  while ( p!=end() ) {
+    if ( ::toolbox::particles::sieveParticle( **p, marker ) ) {
+      logDebug( "getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
+      (*p)->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
+      result.push_back( *p );
+      p = this->erase(p);
+    }
+    else {
+      p++;
+    }
+  }
+  return result;
+}
+*/
+
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::const_iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::begin() const {
   return _container.begin();
 }
@@ -257,12 +291,21 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::size() const {
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::add(DoFType*  particle) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticle(DoFType*  particle) {
+  // data consistency check
+  assertion2(
+    particle->getParallelState()==DoFType::ParallelState::Local
+    or
+    particle->getParallelState()==DoFType::ParallelState::Virtual,
+    particle->toString(),
+    toString()
+  );
+
   _container.push_back(particle);
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::add(const ParticleList&  particles) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticles(const ParticleList&  particles) {
   _container.insert(
     _container.end(),
     particles.begin(),
@@ -271,8 +314,20 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::add(const ParticleList&  particl
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::move({{CLASSNAME}}&  particles) {
-  logInfo( "move(...)", "move " << particles.size() << " particle(s) into container already hosting " << size() << " element(s)" );
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isValid() const {
+  for (auto particle: _container) {
+    if (
+      particle->getParallelState()!=DoFType::ParallelState::Local
+      and
+      particle->getParallelState()!=DoFType::ParallelState::Virtual
+    ) return false;
+  }
+
+  return true;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  particles) {
   _container.insert(
     _container.end(),
     particles.begin(),
@@ -282,17 +337,33 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::move({{CLASSNAME}}&  particles) 
 }
 
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::move(
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticle(
   const Container::iterator&     particle,
   {{CLASSNAME}}&                 sourceParticleSet
 ) {
-  logInfo( "move(...)", "move " << (*particle)->toString() << " to other vertex" );
+  // data consistency check
+  assertion3(
+    (*particle)->getParallelState()==DoFType::ParallelState::Local
+    or
+    (*particle)->getParallelState()==DoFType::ParallelState::Virtual,
+    (*particle)->toString(),
+    toString(),
+    sourceParticleSet.toString()
+  );
   _container.push_back( *particle );
   return sourceParticleSet._container.erase(particle);
 }
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticle( const Container::iterator&   particle ) {
+  // data consistency check
+  assertion2(
+    (*particle)->getParallelState()==DoFType::ParallelState::Local
+    or
+    (*particle)->getParallelState()==DoFType::ParallelState::Virtual,
+    (*particle)->toString(),
+    toString()
+  );
   delete *particle;
   return _container.erase(particle);
 }

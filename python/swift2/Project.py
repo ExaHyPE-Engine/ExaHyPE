@@ -438,7 +438,8 @@ but it will never become closer than these constraints.
             self._particle_species_set
         )
         solver_steps = self.algorithm_steps_task_graph_compiler(
-            self._particle_species_set
+            species_sets                       = self._particle_species_set,
+            use_lists_to_construct_active_sets = True
         )
 
         #
