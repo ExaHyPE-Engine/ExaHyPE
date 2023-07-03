@@ -28,6 +28,9 @@ namespace tarch::accelerator
 {
   std::vector<std::vector<std::string>> queryDeviceInformation()
   {
+    // If we have CPP we cant have any information and in the benchmarks we already have distribution
+    // Therefore we do not call the CUDA API, otherwise we always try to prefer the CUDA API as it gives us
+    // the maximum amount of information
     std::vector<std::vector<std::string>> devInfo;
 #if defined(GPUOffloadingCPP)
     tarch::accelerator::cpp::queryDeviceInformation(devInfo);
@@ -46,6 +49,7 @@ namespace tarch::accelerator
 
   void printDeviceInformation()
   {
+    // see queryDeviceInformation
     auto propertymatrix = queryDeviceInformation();
 #if defined(GPUOffloadingCPP)
     // Can't get any information with cpp GPU offloading rn
@@ -76,6 +80,14 @@ namespace tarch::accelerator
 
   std::string parseMatrix(const std::vector<std::vector<std::string>> &propertyMatrix, int numberOfDevices, const std::vector<std::string> &identifiers)
   {
+    // Although the code looks scary:
+    // Transpose the matrix on the fly,
+    // Pad columns so that every entry of the column has the same length
+    // Pad = empty string before
+    // First row is for identifiers
+    // First column for accelerator ids
+    // Separators between the first columns and the rest
+
     unsigned int propertyCount = identifiers.size();
 
     std::stringstream ss;
@@ -151,6 +163,7 @@ namespace tarch::accelerator
 
   void offloadCapabilityTest()
   {
+    // Try to run the kernels in the configured backend
     std::vector<bool> testResults;
 #if defined(GPUOffloadingCUDA)
     testResults = tarch::accelerator::cuda::testKernelLaunch();
@@ -177,6 +190,10 @@ namespace tarch::accelerator
 
     unsigned int offloadCapableGPUCount = 0;
     std::string failMessage;
+
+    // If one of the GPUs fail to launch but we have multiple, then we inform which ones 
+    // failed by adding them to the message in the first loop.
+    // If all of the available GPUs fail, we throw a runtime error that everything failed
     for (unsigned int i = 0; i < testResults.size(); i++)
     {
       if (!testResults[i])
@@ -216,6 +233,7 @@ namespace tarch::accelerator
 
   void runBenchmarks(std::vector<std::vector<std::string>> &propertyMatrix)
   {
+    // Run the results of configured backend
     std::vector<BenchmarkResultInNanoSeconds> results;
 #if defined(GPUOffloadingCUDA)
     results = tarch::accelerator::cuda::runBenchmarks();
@@ -241,6 +259,7 @@ namespace tarch::accelerator
     // Therefore Byte / NanoSecond = GB / Second
     for (uint i = 0; i < benchmarkResults.size(); i++)
     {
+      // Parse the results, bring nanoseconds to something humans would like more and add the units
       std::stringstream ss;
       auto &benchmarkResult = benchmarkResults[i];
       double cpuToGpu = benchmarkResult.allocatedDataSize * benchmarkResult.repeats * (1.0 / static_cast<double>(benchmarkResult.CPUtoGPUCopy));
@@ -248,7 +267,7 @@ namespace tarch::accelerator
       double averageStream = (cpuToGpu + gpuToCpu) / 2.0;
       ss << averageStream << " Gb/s";
       benchmarkResultsStringRepresentations[tarch::accelerator::getPropertyOffset("Streaming Bandwidth")][i] = ss.str();
-      ss.str(std::string());
+      ss.str(std::string()); // This clears the string stream
       ss << benchmarkResult.allocatedDataSize * benchmarkResult.repeats * (1.0 / static_cast<double>(benchmarkResult.GPUtoGPUCopy)) << " Gb/s";
       benchmarkResultsStringRepresentations[tarch::accelerator::getPropertyOffset("GPU-GPU Copy")][i] = ss.str();
       ss.str(std::string());

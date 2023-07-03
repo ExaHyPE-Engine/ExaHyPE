@@ -25,6 +25,16 @@ def write_file(overwrite,overwrite_is_default,full_qualified_filename):
     return True
 
 def find_CMake_build_dir():
+  """!@brief Finds the CMake build directory for the project if exists.
+
+  This function searches for the CMake build directory if exists.
+  It starts from the current working directory (caller's directory) and iterates upwards until
+  it either finds the CMake build directory or reaches the project root (calculated with this files
+  position inside the repositry) directory.
+
+  @return The path to the CMake build directory if found, or an empty string if not found.
+  """
+
   if find_CMake_build_dir.CMake_build_dir_check_done:
     return find_CMake_build_dir.saved_CMake_build_dir
   else:
@@ -49,6 +59,16 @@ find_CMake_build_dir.CMake_build_dir_check_done = False
 find_CMake_build_dir.saved_CMake_build_dir = ""
 
 def using_cuda_backend():
+  """!@brief Determines if the CUDA backend is being used.
+
+  This function checks whether the CUDA backend is being used. It caches the result
+  for subsequent calls to improve performance. The function assumes that CMake was
+  configured before and reads the variable for the GPU backend in the CMakeCache.txt file
+
+  Needs the cmake build directory to work.
+
+  @return True if the CUDA backend is being used, False otherwise.
+  """
   if using_cuda_backend.using_cuda_backend_check_done:
     return using_cuda_backend.using_cuda_backend_cached_value
   else:
