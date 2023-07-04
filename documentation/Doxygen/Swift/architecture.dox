@@ -105,35 +105,35 @@ example.
 
 
 
-# Relation between particle's cut-off radius, the AMR, and the neighbour searches/interactions
+# Relation between particle's search radius, the AMR, and the neighbour searches/interactions
 
 - In SPH, particles interact with neighbor particles.
-- Each particle has a cut-off radius which is the area where it can search for
+- Each particle has a search radius which is the area where it can search for
 neighbours.
 - Peano's AMR tries to adopt the mesh such that `CELL_SIZE` is as small as
-possible everywhere, but still larger than twice the cut-off radius. Particles
+possible everywhere, but still larger than twice the search radius. Particles
 can only access particles within the cell they themselves are located and a
-neighbour cell. So the particle's cut-off radius guides the AMR.
+neighbour cell. So the particle's search radius guides the AMR.
 - The interaction radius is a physical quantity. You run over all particles
 within your current cell and any neighbouring cell and you look if they are
 closer than this interaction radius.
 
 In other words:
-- Particles' cut off radius -> guides AMR
+- Particles' search radius -> guides AMR
 - Particles search within their own cell and neighbouring cells. Only particles
 closer than the physical interaction radius interact with each other.
 
-As long as the cut-off radius is bigger than the interaction radius, the AMR will
+As long as the search radius is bigger than the interaction radius, the AMR will
 ensure that all particles within the interaction radius reside within a
 neighbouring cell.
 
 If you decide to make the interaction radius bigger throughout the simulation,
-you have to check if the cut-off radius still remains bigger. If not, particles
+you have to check if the search radius still remains bigger. If not, particles
 within the interaction radius might be two cells away and you might miss them.
-So once you make the interaction radius bigger than the cut-off, you have to reset
-the cut-off and tell Peano to remesh and resort.
+So once you make the interaction radius bigger than the search radius, you have to reset
+the search radius and tell Peano to remesh and resort.
 
-So the `CELL_SIZE` is chosen by Peano to accommodate the cut-off radius `H`. The `H`
+So the `CELL_SIZE` is chosen by Peano to accommodate the search radius `H`. The `H`
 is the area where particles can search for neighbours. Therefore, any particle-particle
 distance `r` `<=` `H` is fine. If the `r` grows over time, you have to increase `H`.
 In this case, you however have to tell Peano to resort. Peano then might decide

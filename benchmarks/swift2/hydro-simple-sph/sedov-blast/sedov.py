@@ -126,7 +126,7 @@ dimensions = args.dimensions  # Peano dimensions
 
 hydro_dimensions = 2  # dimensions for the hydro
 
-particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(
+particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     name,
     dimensions_hydro=hydro_dimensions,
     cfl_factor=args.cfl_factor,
@@ -234,8 +234,8 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::RecursiveSubdivision",
-    "new toolbox::loadbalancing::RecursiveSubdivision::DefaultConfiguration()",
+    "toolbox::loadbalancing::RecursiveBipartition",
+    "new toolbox::loadbalancing::DefaultConfiguration()",
 )
 
 
@@ -243,7 +243,7 @@ project.set_load_balancing(
 # Initialisation snippet for the particle
 ###############################################################################
 
-# project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesFromHDF5File(
+# project.algorithm_step_initial_conditions.add_action_set( swift2.input.InsertParticlesFromHDF5File(
 #  particle_set= particle_set,
 #  filename='sedov.hdf5'
 #  ))
@@ -278,7 +278,7 @@ ICs = swift2.scenario.SedovBlastIC()
 initialisation_snippet = ICs.initialisation_snippet
 
 # Finally, pass this configuration to the initialisation script
-project.algorithm_step_init.add_action_set(
+project.algorithm_step_initial_conditions.add_action_set(
     swift2.input.InsertParticlesByCoordinates(
         particle_set=particle_set,
         initialisation_call=initialisation_snippet,
@@ -288,17 +288,6 @@ project.algorithm_step_init.add_action_set(
 """,
     )
 )
-
-
-###############################################################################
-# Set up initialization steps
-###############################################################################
-
-# Todo Mladen later: add first kick once we deal with individual time steps
-
-project.algorithm_step_init_density_AlgorithmStep = particle.algorithm_steps_dict[
-    "Density"
-]
 
 
 ###############################################################################
