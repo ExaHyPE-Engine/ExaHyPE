@@ -255,16 +255,40 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self.algorithm_steps_dict = {}
         self._setup_algorithm_steps_dict()
 
-        #------------------------------
-        self.myStaticDoubleVariable = dastgen2.attributes.Double("myStaticDoubleVariable", is_static=True, initval=2.3456)
-        self.myStaticConstDoubleVariable = dastgen2.attributes.Double("myStaticConstDoubleVariable", is_static=False, is_const_static=True, initval=1.2345)
-        self.myStaticIntVariable = dastgen2.attributes.Integer("myStaticIntVariable", is_static=True, initval=123)
-        self.myStaticConstIntVariable = dastgen2.attributes.Integer("myStaticConstIntVariable", is_static=False, is_const_static=True, initval=456)
+        # ------------------------------
+        self.myStaticDoubleVariable = dastgen2.attributes.Double(
+            "myStaticDoubleVariable", is_static=True, initval=2.3456
+        )
+        self.myStaticConstDoubleVariable = dastgen2.attributes.Double(
+            "myStaticConstDoubleVariable",
+            is_static=False,
+            is_const_static=True,
+            initval=1.2345,
+        )
+        self.myStaticIntVariable = dastgen2.attributes.Integer(
+            "myStaticIntVariable", is_static=True, initval=123
+        )
+        self.myStaticConstIntVariable = dastgen2.attributes.Integer(
+            "myStaticConstIntVariable",
+            is_static=False,
+            is_const_static=True,
+            initval=456,
+        )
+        self.myStaticBoolVariable = dastgen2.attributes.Boolean(
+            "myStaticBoolVariable", is_static=True, initval="true"
+        )
+        self.myStaticConstBoolVariable = dastgen2.attributes.Boolean(
+            "myStaticConstBoolVariable",
+            is_static=False,
+            is_const_static=True,
+            initval="false",
+        )
         self.data.add_attribute(self.myStaticDoubleVariable)
         self.data.add_attribute(self.myStaticConstDoubleVariable)
         self.data.add_attribute(self.myStaticIntVariable)
         self.data.add_attribute(self.myStaticConstIntVariable)
-
+        self.data.add_attribute(self.myStaticBoolVariable)
+        self.data.add_attribute(self.myStaticConstBoolVariable)
 
         return
 
