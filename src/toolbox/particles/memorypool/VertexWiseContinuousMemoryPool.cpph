@@ -16,7 +16,7 @@ template <class T>
 void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::scatter() {
   assertion( not container.empty() or _gatheredDataPointer==nullptr );
   if (_gatheredDataPointer!=nullptr) {
-    logInfo( "scatter()", "scatter " << container.size() << " element(s)" );
+    logDebug( "scatter()", "scatter " << container.size() << " element(s)" );
     const int oldSize = container.size();
     container.clear();
     for (int i=0; i<oldSize; i++) {
@@ -43,7 +43,7 @@ toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::scatterAndUpd
     return p;
   }
   else {
-    logInfo( "scatterAndUpdateIterator()", "scatter " << container.size() << " element(s)" );
+    logDebug( "scatterAndUpdateIterator()", "scatter " << container.size() << " element(s)" );
 
     Container newContainer;
     typename Container::iterator result;
@@ -70,7 +70,7 @@ template <class T>
 void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::gather() {
   assertion( not container.empty() or _gatheredDataPointer==nullptr );
   if (_gatheredDataPointer==nullptr and not container.empty()) {
-    logInfo( "gather()", "gather " << container.size() << " element(s)" );
+    logDebug( "gather()", "gather " << container.size() << " element(s)" );
     _gatheredDataPointer = tarch::allocateMemory<T>( container.size(), tarch::MemoryLocation::Heap );
     int entry = 0;
     for (auto& p: container) {
