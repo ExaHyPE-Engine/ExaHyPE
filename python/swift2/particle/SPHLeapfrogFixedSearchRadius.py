@@ -135,38 +135,38 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         )
 
         # Simulation properties
-        self._cfl_factor = cfl_factor
-        self._initial_time_step_size = initial_time_step_size
+        #  self._cfl_factor = cfl_factor
+        #  self._initial_time_step_size = initial_time_step_size
 
         # Whether we want constant dt
-        if constant_time_step_size == True:
-            adjustTimeStepSize = "false"
-        else:
-            adjustTimeStepSize = "true"
-        self._adjustTimeStepSize = adjustTimeStepSize
+        #  if constant_time_step_size == True:
+        #      adjustTimeStepSize = "false"
+        #  else:
+        #      adjustTimeStepSize = "true"
+        #  self._adjustTimeStepSize = adjustTimeStepSize
 
         # SPH-check Boolean for Cpp kernels. Maybe these can be replaced by
         # compiler directives to get better performance.
-        if is_sph == True:
-            isSPH = "true"
-        else:
-            isSPH = "false"
-        self._is_sph = isSPH
+        #  if is_sph == True:
+        #      isSPH = "true"
+        #  else:
+        #      isSPH = "false"
+        #  self._is_sph = isSPH
 
         self._sph_flavour = sph_flavour
 
         # SPH parameters (default values)
-        self._hydroDimensions = dimensions_hydro
-        self._eta_factor = 1.2348
+        #  self._hydroDimensions = dimensions_hydro
+        #  self._eta_factor = 1.2348
         # TODO MLADEN: Check these values later. Looks like this is only valid for specific setups.
-        self._h_hydro_min = 1e-6
-        self._h_hydro_max = 1.0 / 3.0 / 2  # Approximated value for coarsest grid level
-        self._h_tolerance = 1e-4
-        self._h_max_iterations = 10
+        #  self._h_hydro_min = 1e-6
+        #  self._h_hydro_max = 1.0 / 3.0 / 2  # Approximated value for coarsest grid level
+        #  self._h_tolerance = 1e-4
+        #  self._h_max_iterations = 10
 
         # Minimal SPH parameters
-        self._alpha_av = 0.8
-        self._beta_av = 3.0
+        #  self._alpha_av = 0.8
+        #  self._beta_av = 3.0
 
         # Project namespace to have consistent use of exported Constants in kernels
         # Not used right now.
@@ -254,6 +254,58 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         # Algorithm Steps --------------------------------------------------------------
         self.algorithm_steps_dict = {}
         self._setup_algorithm_steps_dict()
+        # "Global variables" constants ----------------------------------------------
+        self.cfl_attr = dastgen2.attributes.Double("cfl", is_const_static=True, initval=cfl_factor)
+        self.data.add_attribute(self.cfl_attr)
+
+        self.initial_time_step_size_attr = dastgen2.attributes.Double("initialTimeStepSize", is_const_static=True, initval=initial_time_step_size)
+        self.data.add_attribute(self.initial_time_step_size_attr)
+
+        if constant_time_step_size == True:
+            adjustTimeStepSize = "false"
+        else:
+            adjustTimeStepSize = "true"
+
+        self.adjust_time_step_size_attr = dastgen2.attributes.Boolean("adjustTimeStepSize", is_const_static=True, initval=adjustTimeStepSize)
+        self.data.add_attribute(self.adjust_time_step_size_attr)
+
+        # Do we still need this though?
+        if is_sph == True:
+            isSPH = "true"
+        else:
+            isSPH = "false"
+
+        self.is_sph_attr = dastgen2.attributes.Boolean("isSPH", is_const_static=True, initval=isSPH)
+        self.data.add_attribute(self.is_sph_attr)
+
+        # There must be a better way to do this. Why aren't we accessing Constants.h?
+        self.hydro_dimensions_attr = dastgen2.attributes.Double("hydroDimensions", is_const_static=True, initval=dimensions_hydro)
+        self.data.add_attribute(self.hydro_dimensions_attr)
+
+        self.eta_factor_attr = dastgen2.attributes.Double("etaFactor", is_const_static=True, initval="1.2348")
+        self.data.add_attribute(self.eta_factor_attr)
+
+        self.h_hydro_min_attr = dastgen2.attributes.Double("h_hydro_min", is_const_static=True, initval="1e-6")
+        self.data.add_attribute(self.h_hydro_min_attr)
+
+        self.h_hydro_max_attr = dastgen2.attributes.Double("h_hydro_max", is_const_static=True, initval="1.0 / 3.0 / 2.")
+        self.data.add_attribute(self.h_hydro_max_attr)
+
+        self.h_tolerance_attr = dastgen2.attributes.Double("h_tolerance", is_const_static=True, initval="1e-4")
+        self.data.add_attribute(self.h_tolerance_attr)
+
+        self.h_max_iterations_attr = dastgen2.attributes.Integer("h_max_iterations", is_const_static=True, initval="1e-4")
+        self.data.add_attribute(self.h_max_iterations_attr)
+
+        self.alpha_av_attr = dastgen2.attributes.Double("alpha_AV", is_const_static=True, initval="0.8")
+        self.data.add_attribute(self.alpha_av_attr)
+
+        self.beta_av_attr = dastgen2.attributes.Double("beta_AV", is_const_static=True, initval="3.0")
+        self.data.add_attribute(self.beta_av_attr)
+
+
+
+
 
         # ------------------------------
         self.myStaticDoubleVariable = dastgen2.attributes.Double(
@@ -283,14 +335,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             is_const_static=True,
             initval="false",
         )
-        self.data.add_attribute(self.myStaticDoubleVariable)
-        self.data.add_attribute(self.myStaticConstDoubleVariable)
-        self.data.add_attribute(self.myStaticIntVariable)
-        self.data.add_attribute(self.myStaticConstIntVariable)
-        self.data.add_attribute(self.myStaticBoolVariable)
-        self.data.add_attribute(self.myStaticConstBoolVariable)
 
         return
+
 
     def _setup_algorithm_steps_dict(self):
         """
