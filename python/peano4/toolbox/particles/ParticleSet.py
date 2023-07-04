@@ -187,7 +187,7 @@ Please consult @ref page_swift_performance_optimisation "the generic discussion 
         pass
 
 
-class ParticleSetGenerator_ContinuousPerVertex_IndexByList(AbstractParticleSetGenerator):
+class ParticleSetGenerator_ContinuousPerVertex(AbstractParticleSetGenerator):
     """!
 
 Map a particle set onto heap objects indexed by a list
@@ -206,12 +206,11 @@ Please consult @ref page_swift_performance_optimisation "the generic discussion 
     """
 
     def __init__(self, data):
-        super(ParticleSetGenerator_ContinuousPerVertex_IndexByList,self).__init__(data)
+        super(ParticleSetGenerator_ContinuousPerVertex,self).__init__(data)
 
     def construct_output(self, output):
         d = {
           "PARTICLE_TYPE": self._data.particle_model.name,
-          "STD_CONTAINER": "list"
         }
 
         templatefile_prefix = (
@@ -219,8 +218,8 @@ Please consult @ref page_swift_performance_optimisation "the generic discussion 
         )
 
         generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.h",
-            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.cpp",
+            templatefile_prefix + "_ContinuousPerVertex.template.h",
+            templatefile_prefix + "_ContinuousPerVertex.template.cpp",
             self._data.name,
             self._data.namespace,
             self._data.namespace[-1],
@@ -283,8 +282,7 @@ particle: Particle
         self.particle_model = particle
         #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
         #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
-        self.generator      = ParticleSetGenerator_ContinuousPerVertex_IndexByList(self)
-        #self.generator      = ParticleSetGenerator_ContinuousPerVertex_IndexByVector(self)
+        self.generator      = ParticleSetGenerator_ContinuousPerVertex(self)
 
 
     @property

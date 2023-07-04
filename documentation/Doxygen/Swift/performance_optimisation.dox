@@ -46,6 +46,7 @@ graph compiler. Some compiler flavours support different active set
 construction variants, others are tied to one variant only.
 
 
+
 ### Storage of particles and maintaining the particle-mesh association
 
 Maintaining the association of particles to meshes is key, as Peano traverses 
@@ -66,8 +67,7 @@ Feature | Generator | Semantics
 --------|--------------|----------
 scattered particles, list index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ScatteredOnHeap_IndexByList | Scatter the particles all over the heap. The pointers per vertex to the particles are organised as a linked list.
 scattered particles, vector index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ScatteredOnHeap_IndexByVector | Almost the same as peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList, but the lists of pointers are realised through std::vector.
-arrays of particles per vertex, list index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ContinuousPerVertex_IndexByList | The code tries to hold the particles associated with one vertex in one consecutive array. Whenever this is not possible, we use a linked list to reference the particles scattered over the memory.
-arrays of particles per vertex, vector index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ContinuousPerVertex_IndexByVector | Similar to ParticleSetGenerator_ContinuousPerVertex_IndexByList, but using a std::vector for indexing scattered particles.
+arrays of particles per vertex | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ContinuousPerVertex | The code tries to hold the particles associated with one vertex in one consecutive array. Whenever this is not possible, we use a linked list to reference the particles scattered over the memory.
 
 
 The scattered variants holds the particles somewhere on the global heap, and 
@@ -90,6 +90,9 @@ but is more flexible if particle-associations change frequently.
 
 
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_ContinuousPerVertex.png
+
+We also hoffer a variant which @ref toolbox_particles_memorypool "stores the particles continuously within one memory chung per vertex".
+
 
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_GlobalContinuous.png
 
