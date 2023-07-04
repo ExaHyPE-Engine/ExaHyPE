@@ -913,7 +913,7 @@ if __name__ == "__main__":
     elif args.extension=="adm" or args.extension=="phy-debug":
       pass
     else:
-      my_solver.select_dofs_to_print = [0,12,16,17,18,53,54]
+      pass#my_solver.select_dofs_to_print = [0,12,16,17,18,53,54]
    
 
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )

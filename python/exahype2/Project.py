@@ -500,7 +500,7 @@ thus appreciate any citation of the original release paper
         self.plot_solution.add_action_set(update_particle_association_action_set)
         self.plot_solution.add_action_set(update_particle_parallel_state_action_set)
 
-        self._tracer_particles.append(particles)
+        self._tracer_particles.append(particle)
 
         return particles
 
