@@ -8,7 +8,9 @@ In many situations that we aim to solve, each of our faces and cells will have m
 degrees of freedom upon them, and we shall reuse this enumeration order to allow
 users to figure out their spatial ordering.
 
-##Vertex Enumeration
+Vertex Enumeration
+======================
+
 
 First we describe how the vertices are enumerated in 2D and 3D, before describing how
 we reuse this pattern in higher dimensions.
@@ -39,7 +41,9 @@ Note that if we have some 4th dimension w, all we need to do is repeat these ste
 along the x axis first, and then the y axis etc.
 
 
-##Face Enumeration
+Face Enumeration
+======================
+
 
 See: 
 
@@ -54,7 +58,9 @@ Following this, we assign subsequent indices to the faces who unit normal vector
 positive x, y and then z directions. This extends to any number of dimensions, as long as the 
 dimensions are strictly ordered (x, y, z, etc)
 
-##Degree of freedom enumeration on faces
+Degree of freedom enumeration on faces
+======================
+
 
 We describe here how we enumerate the degrees of freedom on the faces. 
 In the current setup, we aim for @f$ 3^{(d-1)} @f$ degrees of freedom per face.
@@ -84,7 +90,9 @@ We then repeat the same procedure for each of the faces, keeping the enumeration
  
 @image html faceEnum.png
 
-##Degree of freedom enumeration on cells
+Degree of freedom enumeration on cells
+======================
+
 
 Here we once again have a similar pattern. 
 

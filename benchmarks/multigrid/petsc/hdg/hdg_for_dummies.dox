@@ -1,0 +1,196 @@
+/**
+
+@page benchmark_multigrid_petsc_hdg_discretisation Hybridised DG for non-mathematicians
+
+Here we discuss the Hybridised Discontinuous Galerkin formulation. We aim to explain a few things in
+this page:
+
+1. There are a number of degrees of freedom inside each cell, as well as on each face. Where
+do these come from, and what fixes the number of them?
+
+2. How do these aforementioned degrees of freedom interact with one another?
+
+3. ....
+
+At time of writing, this document is being typed up based on discussion between TW and SB. This document
+will be, for at least much of July 2023, highly variable whilst details are ironed out. This message
+should be gone by the time there is some nice working code available.
+
+Our aim, once we clarify all of the mathematics within this setup, is to describe the machinery
+that will go into place behind the scenes. Let's begin.
+
+## Stuff to mention:
+\li Gauss lobatto
+    - just for patitioning
+    
+
+Some formulation
+======================
+
+As ever, we aim to solve:
+
+@f$ - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u = f @f$
+
+which is a second-order equation. Let us first introduce a helper variable @f$ \phi @f$, so we can instead 
+write in a first-order formulation:
+
+@f$ \phi_x = \partial_x u, \ \phi_y = \partial_y u @f$.
+
+This allows us to rewrite in first order, noting that the left hand side is just a divergence:
+
+@f$ - \partial_x \phi_x - \partial_y \phi_y = f @f$ \n
+@f$ - \text{div} \ \phi = f @f$.
+
+## A note on the number of degrees of freedom
+
+The DG formulation means that we have, for a given polynomial degree @f$ n @f$, and spatial dimension @f$ d@f$:
+
+\li @f$ (n+1)^{d} @f$ degrees of freedom per cell
+\li @f$ (n+1)^{d-1} @f$ degrees of freedom per face
+
+We arrange these points spatially in a Gauss-Lobatto pattern.
+
+We then aim to solve @f$ d+1 @f$ equations for each of these points:
+
+\li We fix @f$ -\text{div} \phi = f @f$ at each of these points
+\li We further fix  @f$ \partial_i u = \phi_i @f$ for each spatial dimension  @f$ i @f$.
+
+
+
+## Let's integrate 
+
+Since we have a first order formulation, we can simply integrate. We take the inner product with a test 
+function @f$ \psi @f$, and then integrate over the cell:
+
+@f$ \int_\text{cell} ( -\text{div} \phi, \psi ) dxdy = \int_\text{cell} ( f, \psi ) dxdy @f$.
+
+The test function we typically use, at every point we have a degree of freedom, is the test function that is 1 at the spatial position of the degree of freedom, and 0 elsewhere.
+
+Next, we want to just consider the left-hand integral. Let's integrate by parts:
+
+\f{eqnarray*}{
+      \int_\text{cell} ( -\text{div} \ \phi, \psi ) dxdy &=& \int_\text{cell} ( \phi, \nabla \psi ) dxdy - \int_\text{cell} \nabla ( \phi \psi ) dx dy \\ 
+
+       &=& \int_\text{cell} ( \phi, \nabla \psi ) dxdy - \int_{\partial c} \phi \psi \cdot \hat{n} dS(x)
+\f}
+
+where in the second line we use Stokes' theorem to turn the second integral into an integral over the 
+boundary of the cell (in other words over the face). We then make an approximation:
+
+\f{eqnarray*}{
+      &\approx& \int_\text{cell} ( \phi, \nabla \psi ) dxdy - \int_\text{face} [[ \phi \cdot \hat{n} ]] \cdot \psi dS(x)
+\f}
+
+Let's first handle the right-hand term, and explain what is meant by  @f$[[ \phi \cdot \hat{n} ]] @f$, hereafter referred to as @f$ \hat{\phi} @f$. 
+
+## The right-hand term
+
+The image below shows a simplistic, 1D diagram of a function @f$ u @f$, approximated in two cells by a 
+piecewise linear function, marked in blue. 
+
+@image html piecewise.png
+
+We note that there is a discontinuity at the boundary for @f$ u @f$ and for its gradient, @f$ \phi @f$. 
+
+So, as a first solution, we take an average, and define @f$\hat{\phi} = [[ \phi \cdot \hat{n} ]] @f$ to be the mean average of the gradient in the left-hand cell and the right-hand cell.
+
+Let's now work out the contribution to the problem matrix that comes from this term. Let's now move to a 2D cell, where we have degree 1 Gauss-Lobatto points. This means we have 2 degrees of freedom on each face (which coincide spatially with the vertices), as well as 4 degrees of freedom on each cell (which again coincide with each vertex). This can be seen in page \ref multigrid_enumeration. Note that the vertices 
+labelled (clockwise from bottom left) as 0, 2, 3, 1, which is an enumeration we keep throughout.
+
+So, let's first evaluate the x component along face 0, which contains the vertices 0 and 2:
+
+\f{eqnarray*}{
+  \begin{pmatrix}
+  1/2 & 0 & 0 & 0 \\
+  0 & 0 & 1/2 & 0 \\
+  \end{pmatrix}
+
+  \cdot 
+
+  \begin{pmatrix}
+  \phi_x^0 \\
+  \phi_x^1 \\
+  \phi_x^2 \\
+  \phi_x^3 \\
+  \end{pmatrix}
+\f}
+
+
+
+What we are doing here is evaluating the dot product of.... **fix wording here, add a note on how the test function affects things**
+
+We note further that the @f$ \phi @f$ variable only packages up the gradients of @f$ u @f$ at certain points. We note that, for instance, @f$ \phi_x^0 = (u^1 - u^0)/h @f$, hence we can even rewrite the 
+above equation as:
+
+\f{eqnarray*}{
+  \begin{pmatrix}
+  -1/h & 1/h & 0 & 0 \\
+  -1/h & 1/h & 0 & 0 \\
+   0 & 0 & -1/h & 1/h  \\
+  -1/h & 1/h & 0 & 0 \\
+
+  \end{pmatrix}
+
+  \cdot 
+
+  \begin{pmatrix}
+  1/2 & 0 & 0 & 0 \\
+  0 & 0 & 1/2 & 0 \\
+  \end{pmatrix}
+
+  \cdot 
+
+  \begin{pmatrix}
+  \phi_x^0 \\
+  \phi_x^1 \\
+  \phi_x^2 \\
+  \phi_x^3 \\
+  \end{pmatrix}
+\f}
+
+**how does this translate into what goes into the matrix itself??**
+
+## The left-hand term
+
+The first term tells us about the cell-cell coupling, and the second tells us about cell-face and face-cell. This is an integral over the whole cell, which we shall take as being 2D for this demo.
+We look to update the components of @f$ \phi @f$ **should this be instead psi, the test function?**
+
+Let's first note what the gradient along the @f$ x @f$ direction is along the bottom face. At the 
+endpoint, we have the value @f$ u^1 @f$, and at the start we have @f$ u^0 @f$. Hence the gradient along
+this face is simply @f$ (u^1 - u^0) / h @f$.
+
+So then, to work out the values of @f$ \phi @f$ along the cell, we must linearly interpolate between
+the value of the gradient on the bottom face and the value at the top face. Hence we evaluate:
+
+
+\f{eqnarray*}{
+
+  \int_\text{cell}
+  \begin{pmatrix}
+  (u^1 - u^0) / h \cdot y + (u^3 - u^2) / h \cdot (1 - y) \\
+
+  \end{pmatrix}
+
+  \cdot 
+
+  \begin{pmatrix}
+  (0 - 1) / h \cdot y + (0 - 0) / h \cdot (1 - y) \\
+
+  \end{pmatrix}
+
+  dy
+\f}
+
+Concluding remarks (this is how we think of things)
+======================
+
+\li Rewrite PDE in first-order formulation, with the helper @f$ \phi @f$.
+\li Apply weak formulation over divergence PDE
+\li Look at CC part
+    - kick out the helpers (we can directly reconstruct them from our @f$ u @f$ values).
+    - calculate entries 
+\li Introduce another helper, @f$ \hat{\phi} @f$ to deal with discontinuity at boundary. We can use this to calculate contribution to Afc
+\li Finally, set  up formula to compute @f$ \phi @f$ from @f$ u @f$
+
+
+*/
