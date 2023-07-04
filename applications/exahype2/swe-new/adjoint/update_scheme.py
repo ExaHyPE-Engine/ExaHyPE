@@ -2,6 +2,10 @@ import numpy as np
 from adjoint_solver import compute_net_updates
 
 def set_up_update_variables(nx, ny, cell_size) -> None:
+    """
+    Call this method once before calling compute_numerical_fluxes.
+    The way the update arrays are initialized is not pretty, but it works.
+    """
     # initialize update arrays
     global h_net_updates_left 
     h_net_updates_left = np.zeros((nx+2, ny+2))
