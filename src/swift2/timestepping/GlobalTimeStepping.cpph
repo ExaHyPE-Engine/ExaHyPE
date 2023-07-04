@@ -3,8 +3,8 @@
 
 template <typename Particle>
 void swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity(
-  double cflFactor,
-  double initialTimeStepSize,
+  const double cflFactor,
+  const double initialTimeStepSize,
   double maxRelativeGrowth
 ) {
   const double minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0);
@@ -25,14 +25,19 @@ void swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMax
 
 
 template <typename Particle>
-void swift2::timestepping::computeCFLTimeStepSizeSPH( double cflFactor, double initialTimeStepSize, bool adjustTimeStepSize
-){
+void swift2::timestepping::computeCFLTimeStepSizeSPH(){
+
+  const Particle dummy;
+  const double cflFactor = dummy.getCfl();
+  const double initialTimeStepSize =  dummy.getInitialTimeStepSize();
+  const bool adjustTimeStepSize =  dummy.getInitialTimeStepSize();
 
   /* Set initial time step size */
   Particle::getSpecies().setTimeStepSize(initialTimeStepSize);
 
   if (adjustTimeStepSize){
-  // @TODO implement the CFL time step for SPH. IT depends not on V but on the signal velocity.
+    // @TODO implement the CFL time step for SPH. IT depends not on V but on the signal velocity.
+    assertionMsg(false, "adjustable time step size not implemented yet");
   }
 
 }

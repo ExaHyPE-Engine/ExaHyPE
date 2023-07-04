@@ -31,9 +31,12 @@ void swift2::kernels::prepareDensityCalculation(const ParticleContainer& localPa
 
 
 template <typename ParticleContainer>
-void swift2::kernels::endDensityCalculation(
-  const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
-) {
+void swift2::kernels::endDensityCalculation(const ParticleContainer& localParticles) {
+
+  const auto* dummyParticle = *localParticles.begin();
+  const int hydroDimensions = dummyParticle->getHydroDimensions();
+  const double etaFactor = dummyParticle->getEtaFactor();
+  const double alphaAV = dummyParticle->getAlphaAV();
 
   assertionMsg(false, "Don't use this yet.");
   // define variables here until next MR that accesses the correct values properly
@@ -212,9 +215,13 @@ void swift2::kernels::endDensityCalculation(
 }
 
 template <typename ParticleContainer>
-void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
-  const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
-) {
+void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const ParticleContainer& localParticles) {
+
+  const auto* dummyParticle = *localParticles.begin();
+  const int hydroDimensions = dummyParticle->getHydroDimensions();
+  const double etaFactor = dummyParticle->getEtaFactor();
+  const double alphaAV = dummyParticle->getAlphaAV();
+
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
 
@@ -258,9 +265,18 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
 
 
 template <typename ParticleContainer>
-void swift2::kernels::endDensityCalculationWithConstantSearchRadius(
-  const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
-) {
+void swift2::kernels::endDensityCalculationWithConstantSearchRadius(const ParticleContainer& localParticles) {
+
+  const auto* dummyParticle = *localParticles.begin();
+  const int hydroDimensions = dummyParticle->getHydroDimensions();
+  const double etaFactor = dummyParticle->getEtaFactor();
+  const double alphaAV = dummyParticle->getAlphaAV();
+
+  std::cout << "TESTING ";
+  std::cout << hydroDimensions << " ";
+  std::cout << etaFactor << " ";
+  std::cout << alphaAV << " \n";
+
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
 
@@ -303,9 +319,12 @@ void swift2::kernels::endDensityCalculationWithConstantSearchRadius(
 }
 
 template <typename ParticleContainer>
-void swift2::kernels::prepareHydroForceCalculation(
-  const ParticleContainer& localParticles, const int hydroDimensions, const double alphaAV
-) {
+void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& localParticles) {
+
+  const auto* dummyParticle = *localParticles.begin();
+  const int hydroDimensions = dummyParticle->getHydroDimensions();
+  const double alphaAV = dummyParticle->getAlphaAV();
+
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
 
@@ -401,7 +420,11 @@ void swift2::kernels::prepareHydroForceCalculation(
 }
 
 template <typename ParticleContainer>
-void swift2::kernels::endHydroForceCalculation(const ParticleContainer& localParticles, const int hydroDimensions) {
+void swift2::kernels::endHydroForceCalculation(const ParticleContainer& localParticles) {
+
+  const auto* dummyParticle = *localParticles.begin();
+  const int hydroDimensions = dummyParticle->getHydroDimensions();
+
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
       particle->setHDot(particle->getHDot() * particle->getSmoothingLength() / hydroDimensions);

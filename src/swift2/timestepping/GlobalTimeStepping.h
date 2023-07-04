@@ -45,7 +45,7 @@ namespace swift2 {
      // At the moment we use this function only to keep dt=constant
 
     template <typename Particle>
-    void computeCFLTimeStepSizeSPH( double cflFactor, double initialTimeStepSize, bool adjustTimeStepSize );
+    void computeCFLTimeStepSizeSPH();
 
 
   }

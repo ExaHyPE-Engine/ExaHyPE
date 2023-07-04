@@ -18,9 +18,9 @@ void swift2::kernels::genericInteraction(
 
 
 template <typename Particle>
-void swift2::kernels::densityKernel(
-  Particle* localParticle, const Particle* activeParticle, const int hydroDimensions
-) {
+void swift2::kernels::densityKernel(Particle* localParticle, const Particle* activeParticle) {
+
+  const int hydroDimensions = localParticle->getHydroDimensions();
 
   /* Retrieve basic properties of local and active particles */
   const double h_a = localParticle->getSmoothingLength();
@@ -96,13 +96,14 @@ void swift2::kernels::densityKernel(
 
 template <typename ParticleContainer>
 void swift2::kernels::computeDensityWithConstantSmoothingLengths(
-  const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
+  const ParticleContainer& localParticles, const ParticleContainer& activeParticles
 ) {
+
   for (auto* localParticle : localParticles) {
     if (not localParticle->getCellHasUpdatedParticle()) {
       for (auto* activeParticle : activeParticles) {
 
-        swift2::kernels::densityKernel(localParticle, activeParticle, hydroDimensions);
+        swift2::kernels::densityKernel(localParticle, activeParticle);
       }   /* End for active particles */
     } /* End Cell has not updated local particle */
   }
@@ -112,13 +113,13 @@ void swift2::kernels::computeDensityWithConstantSmoothingLengths(
 
 template <typename ParticleContainer>
 void swift2::kernels::computeDensityWithConstantSearchRadius(
-  const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
+  const ParticleContainer& localParticles, const ParticleContainer& activeParticles
 ) {
   for (auto* localParticle : localParticles) {
     if (not localParticle->getCellHasUpdatedParticle()) {
       for (auto* activeParticle : activeParticles) {
 
-        swift2::kernels::densityKernel(localParticle, activeParticle, hydroDimensions);
+        swift2::kernels::densityKernel(localParticle, activeParticle);
       }   /* End for active particles */
     } /* End Cell has not updated local particle */
   }
@@ -126,8 +127,11 @@ void swift2::kernels::computeDensityWithConstantSearchRadius(
 
 template <typename ParticleContainer>
 void swift2::kernels::computeDensity(
-  const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
+  const ParticleContainer& localParticles, const ParticleContainer& activeParticles
 ) {
+
+  const int hydroDimensions = *localParticles.begin()->getHydroDimensions();
+
   for (auto* localParticle : localParticles) {
     if (not localParticle->getCellHasUpdatedParticle()) {
       for (auto* activeParticle : activeParticles) {
@@ -209,10 +213,13 @@ void swift2::kernels::computeDensity(
 template <typename ParticleContainer>
 void swift2::kernels::computeHydroForce(
   const ParticleContainer& localParticles,
-  const ParticleContainer& activeParticles,
-  const int                hydroDimensions,
-  const double             betaAV
+  const ParticleContainer& activeParticles
 ) {
+
+  const auto* dummyParticle = *localParticles.begin();
+  const int hydroDimensions = dummyParticle->getHydroDimensions();
+  const double betaAV = dummyParticle->getBetaAV();
+
   for (auto* localParticle : localParticles) {
     if (not localParticle->getCellHasUpdatedParticle()) {
       for (auto* activeParticle : activeParticles) {

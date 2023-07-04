@@ -40,9 +40,7 @@ namespace swift2 {
      *
      */
     template <typename Particle>
-    void densityKernel(
-      Particle* localParticle, const Particle* activeParticle, const int hydroDimensions
-    );
+    void densityKernel(Particle* localParticle, const Particle* activeParticle);
 
     /**
      * @brief Non-symmetric density calculation (as per Swift terminology).
@@ -72,18 +70,14 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeDensity(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
-    );
+    void computeDensity(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
 
     /**
      * @brief Same as computeDensity(...), but doesn't modify the particles' search radii.
      *
      */
     template <typename ParticleContainer>
-    void computeDensityWithConstantSearchRadius(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
-    );
+    void computeDensityWithConstantSearchRadius(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
 
     /**
      * @brief Same as computeDensity(...), but doesn't modify the particles' search radii
@@ -96,9 +90,7 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeDensityWithConstantSmoothingLengths(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
-    );
+    void computeDensityWithConstantSmoothingLengths(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
 
     /** Hydro Force calculation particle-particle kernel
      *
@@ -123,9 +115,7 @@ namespace swift2 {
     template <typename ParticleContainer>
     void computeHydroForce(
       const ParticleContainer& localParticles,
-      const ParticleContainer& activeParticles,
-      const int                hydroDimensions,
-      const double             betaAV
+      const ParticleContainer& activeParticles
     );
 
   } // namespace kernels
