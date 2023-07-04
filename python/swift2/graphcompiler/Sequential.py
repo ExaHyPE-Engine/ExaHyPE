@@ -7,9 +7,7 @@ import peano4
 import swift2
 
 
-from swift2.actionsets.AMRLogic import (
-    add_dynamic_mesh_refinement_and_particle_resorting,
-)
+from .AMRLogic import add_dynamic_mesh_refinement_and_particle_resorting
 
 
 def translate_one_step_of_species_into_mesh_traversal(

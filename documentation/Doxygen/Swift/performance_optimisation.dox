@@ -92,6 +92,11 @@ but is more flexible if particle-associations change frequently.
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_ContinuousPerVertex.png
 
 We also hoffer a variant which @ref toolbox_particles_memorypool "stores the particles continuously within one memory chung per vertex".
+You can study toolbox::particles::memorypool::VertexWiseContinuousMemoryPool 
+for a discussion on its realisation.
+Finally, there's also a variant which tries to hold all the particles in one 
+big blob, i.e. as one large array. This global sorting is realised through
+toolbox::particles::memorypool::GlobalContinuousMemoryPool.
 
 
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_GlobalContinuous.png

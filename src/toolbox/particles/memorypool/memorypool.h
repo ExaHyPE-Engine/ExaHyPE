@@ -88,4 +88,8 @@
  * generators shipped with peano4.toolbox.particles.ParticleSet for further
  * flavours.
  *
+ * You can trigger the resorting in various places. I do recommend to use
+ * the parallel state update. Swift for example implements it there as
+ * documented in swift2.graphcompiler.AMRLogic.add_dynamic_mesh_refinement_and_particle_resorting().
+ *
  */

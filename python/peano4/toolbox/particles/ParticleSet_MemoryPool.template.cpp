@@ -14,10 +14,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   {{CLASSNAME}}&                                         neighbour,
   const peano4::datamanagement::VertexMarker&            marker
 ) {
+  assertion( not neighbour._memoryPool.isGathered() );
   switch (context) {
     case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
       {
-        for (auto p: neighbour) {
+        for (auto p: neighbour._memoryPool.container) {
           assertionMsg( false, "Cristian fix. Here, the coordinates have to be flipped/mirrored along the boundaries. If a boundary is periodic is encoded in Constants.h (I think), so we might want to include it from there" );
         }
       }
@@ -26,24 +27,23 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
       {
         logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
-        for (auto p: neighbour) {
+        for (auto p: neighbour._memoryPool.container) {
           if (
             p->getParallelState()==DoFType::ParallelState::Local
           ) {
             p->setParallelState( DoFType::ParallelState::Virtual );
 
-            Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _container.begin(), _container.end());
+            Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _memoryPool.container.begin(), _memoryPool.container.end());
             if ( iteratorToExistingCopy!=end() ) {
               logDebug( "merge(...)", "incoming particle " << p->toString() << " is local on other rank and will be virtual here. It replaces existing copy" );
-              delete *iteratorToExistingCopy;
-              _container.erase(iteratorToExistingCopy);
-              _container.push_back(p);
+              _memoryPool.replace( iteratorToExistingCopy, p );
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfReplacedVirtualParticles++;
             }
             else {
               logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
-              _container.push_back(p);
+              _memoryPool.scatter();
+              _memoryPool.container.push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfAddedVirtualParticles++;
             }
@@ -93,8 +93,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
   int numberOfLocalEliminatedSpatialDuplicates   = 0;
   int numberOfVirtualEliminatedSpatialDuplicates = 0;
 
-  auto p = _container.begin();
-  while (p != _container.end()) {
+  auto p = _memoryPool.container.begin();
+  while (p != _memoryPool.container.end()) {
     bool foundDuplicate = false;
 
     // data consistency check
@@ -108,7 +108,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
 
     auto pp = p;
     pp++;
-    while (pp != _container.end() and not foundDuplicate) {
+    while (pp != _memoryPool.container.end() and not foundDuplicate) {
       if (tarch::la::equals((*p)->getX(), (*pp)->getX(), ::toolbox::particles::SpatialDuplicateTolerance)) {
         logDebug(
           "eliminateSpatialDuplicates()", "found duplicates p=" << (*p)->toString() << " and pp=" << (*pp)->toString()
@@ -119,7 +119,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
       }
     }
 
-    if (foundDuplicate) {
+    if (foundDuplicate and _memoryPool.isGathered()) {
+      _memoryPool.scatter();
+      p = _memoryPool.container.begin();
+    }
+    else if (foundDuplicate) {
       assertion3((*p) != (*pp), (*p)->toString(), (*pp)->toString(), toString() );
 
       // bias to eliminate virtual particles
@@ -131,24 +135,25 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
         logDebug("eliminateSpatialDuplicates()", "particle " << (*pp)->toString() << " found twice as local in domain");
 
         delete *p;
-        _container.erase(p);
+        _memoryPool.container.erase(p);
 
         numberOfLocalEliminatedSpatialDuplicates++;
       } else if ((*p)->getParallelState() == DoFType::ParallelState::Virtual) {
         delete *p;
-        _container.erase(p);
+        _memoryPool.container.erase(p);
 
         numberOfVirtualEliminatedSpatialDuplicates++;
       } else {
         delete *pp;
-        _container.erase(pp);
+        _memoryPool.container.erase(pp);
 
         numberOfVirtualEliminatedSpatialDuplicates++;
       }
 
-      p = _container.begin(); // if we delete something, we might corrupt the whole container, so
-                              // better start from scratch.
-    } else {
+      p = _memoryPool.container.begin(); // if we delete something, we might corrupt the whole container, so
+                                         // better start from scratch.
+    }
+    else {
       p++;
     }
   }
@@ -182,6 +187,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::d
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream msg;
   msg << "(size=" << size()
+      << ",gathered=" << _memoryPool.isGathered()
       << ",";
   msg << Base::toString(false);
   msg << ")";
@@ -190,8 +196,9 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& otherSet ) {
-  assertion1( _container.empty(), toString() );
-  for (auto particle: otherSet._container) {
+  assertion1( _memoryPool.container.empty(), toString() );
+  assertion1( not _memoryPool.isGathered(), toString() );
+  for (auto particle: otherSet._memoryPool.container) {
     // data consistency check
     assertion2(
       particle->getParallelState()==DoFType::ParallelState::Local
@@ -201,7 +208,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
       toString()
     );
     DoFType* newParticle =  new DoFType(*particle);
-    _container.push_back( newParticle );
+    _memoryPool.container.push_back( newParticle );
   }
   logDebug( "clone()", "copied " << otherSet.size() << " objects over into local one of size " << size() );
   #if PeanoDebug>=1
@@ -212,86 +219,69 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
-  for (auto *p: _container) {
+  _memoryPool.scatter();
+  for (auto *p: _memoryPool.container) {
     delete p;
   }
-  _container.clear();
+  _memoryPool.container.clear();
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
-  _container.clear();
+  _memoryPool.clearAndReset();
 }
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally(
-  const Container::iterator&   particle
+  const Container::iterator&   originalParticleContainer
 ) {
+  logInfo( "particleCanNotBeLiftedLocally()", "call scatter and update iterator" );
+  Container::iterator particle = _memoryPool.scatterAndUpdateIterator( originalParticleContainer );
+
   assertion1( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
 
   sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle);
-  return _container.erase(particle);
+  return _memoryPool.container.erase(particle);
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
-  for (auto p: _container) {
+  _memoryPool.scatter();
+  for (auto p: _memoryPool.container) {
     sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p);
   }
-  _container.clear();
+  _memoryPool.container.clear();
 }
-
-
-/*
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::ParticleList  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getParticlesToBeDroppedIntoVertex(
-  const peano4::datamanagement::VertexMarker& marker
-) {
-  assertion( not empty() );
-
-  {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
-  {{CLASSNAME}}::iterator p = begin();
-  while ( p!=end() ) {
-    if ( ::toolbox::particles::sieveParticle( **p, marker ) ) {
-      logDebug( "getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
-      (*p)->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
-      result.push_back( *p );
-      p = this->erase(p);
-    }
-    else {
-      p++;
-    }
-  }
-  return result;
-}
-*/
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::const_iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::begin() const {
-  return _container.begin();
+  return _memoryPool.container.begin();
 }
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::const_iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::end() const {
-  return _container.end();
+  return _memoryPool.container.end();
 }
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::begin() {
-  return _container.begin();
+  return _memoryPool.container.begin();
 }
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::end() {
-  return _container.end();
+  return _memoryPool.container.end();
 }
 
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::size() const {
-  return _container.size();
+  return _memoryPool.container.size();
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticle(DoFType*  particle) {
+  _memoryPool.scatter();
+
   // data consistency check
   assertion2(
     particle->getParallelState()==DoFType::ParallelState::Local
@@ -301,13 +291,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticle(DoFType*  particle) 
     toString()
   );
 
-  _container.push_back(particle);
+  _memoryPool.container.push_back(particle);
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticles(const ParticleList&  particles) {
-  _container.insert(
-    _container.end(),
+  _memoryPool.scatter();
+
+  _memoryPool.container.insert(
+    _memoryPool.container.end(),
     particles.begin(),
     particles.end()
   );
@@ -315,7 +307,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticles(const ParticleList&
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isValid() const {
-  for (auto particle: _container) {
+  for (auto particle: _memoryPool.container) {
     if (
       particle->getParallelState()!=DoFType::ParallelState::Local
       and
@@ -328,8 +320,10 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isValid() const {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  particles) {
-  _container.insert(
-    _container.end(),
+  _memoryPool.scatter();
+
+  _memoryPool.container.insert(
+    _memoryPool.container.end(),
     particles.begin(),
     particles.end()
   );
@@ -338,34 +332,69 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  pa
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticle(
-  const Container::iterator&     particle,
+  const Container::iterator&     originalParticleContainerIterator,
   {{CLASSNAME}}&                 sourceParticleSet
 ) {
   // data consistency check
   assertion3(
-    (*particle)->getParallelState()==DoFType::ParallelState::Local
+    (*originalParticleContainerIterator)->getParallelState()==DoFType::ParallelState::Local
     or
-    (*particle)->getParallelState()==DoFType::ParallelState::Virtual,
-    (*particle)->toString(),
+    (*originalParticleContainerIterator)->getParallelState()==DoFType::ParallelState::Virtual,
+    (*originalParticleContainerIterator)->toString(),
     toString(),
     sourceParticleSet.toString()
   );
-  _container.push_back( *particle );
-  return sourceParticleSet._container.erase(particle);
+
+  _memoryPool.scatter();
+
+  if ( sourceParticleSet.isGathered() ) {
+    logInfo( "grabParticle()", "call scatter and update iterator" );
+    Container::iterator particle = sourceParticleSet._memoryPool.scatterAndUpdateIterator( originalParticleContainerIterator );
+
+    _memoryPool.container.push_back( *particle );
+
+    logInfo( "grabParticle()", "now host " << _memoryPool.container.size() << " particles in " << toString() );
+    // This time, we cannot say anything about the ordering
+    return sourceParticleSet._memoryPool.container.begin();
+  }
+  else {
+    _memoryPool.container.push_back( *originalParticleContainerIterator );
+    logInfo( "grabParticle()", "add further particle to scattered data set: " << toString() );
+    return sourceParticleSet._memoryPool.container.erase(originalParticleContainerIterator);
+  }
 }
 
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticle( const Container::iterator&   particle ) {
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticle( const Container::iterator&   originalParticleContainerIterator ) {
   // data consistency check
   assertion2(
-    (*particle)->getParallelState()==DoFType::ParallelState::Local
+    (*originalParticleContainerIterator)->getParallelState()==DoFType::ParallelState::Local
     or
-    (*particle)->getParallelState()==DoFType::ParallelState::Virtual,
-    (*particle)->toString(),
+    (*originalParticleContainerIterator)->getParallelState()==DoFType::ParallelState::Virtual,
+    (*originalParticleContainerIterator)->toString(),
     toString()
   );
-  delete *particle;
-  return _container.erase(particle);
+
+  if ( _memoryPool.isGathered() ) {
+    logInfo( "deleteParticle()", "call scatter and update iterator" );
+    Container::iterator particle = _memoryPool.scatterAndUpdateIterator( originalParticleContainerIterator );
+    delete *particle;
+    _memoryPool.container.erase(particle);
+    // Just to be on teh safe side. We don't make assumptions on ordering
+    return _memoryPool.container.begin();
+  }
+  else {
+    delete *originalParticleContainerIterator;
+    return _memoryPool.container.erase(originalParticleContainerIterator);
+  }
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::gather() {
+  _memoryPool.gather();
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isGathered() const {
+  return _memoryPool.isGathered();
+}
