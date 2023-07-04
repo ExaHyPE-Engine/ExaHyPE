@@ -223,12 +223,16 @@
       /**
        * Move particle from one container to the other one
        *
+       * I need a copy of the particle, as I might have to scatter
+       * sourceParticleSet and then redirect particle to an entry within a
+       * scattered set.
+       *
        * @return Iterator within sourceParticleSet which is returned after
        *   erasing it from this set.
        */
       Container::iterator grabParticle(
-        const Container::iterator&         particle,
-        {{CLASSNAME}}&                     sourceParticleSet
+        Container::iterator         particle,
+        {{CLASSNAME}}&              sourceParticleSet
       );
 
       /**
@@ -243,7 +247,7 @@
        *   however not efficient, i.e. it might point to begin() and any outer
        *   loop hence might restart to run over all particles again. 
        */
-      Container::iterator deleteParticle( const Container::iterator&   particle );
+      Container::iterator deleteParticle( Container::iterator  particle );
 
       /**
        * Gather particles

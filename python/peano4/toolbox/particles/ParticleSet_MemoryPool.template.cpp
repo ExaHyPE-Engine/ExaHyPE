@@ -235,7 +235,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally(
   const Container::iterator&   originalParticleContainer
 ) {
-  logInfo( "particleCanNotBeLiftedLocally()", "call scatter and update iterator" );
+  logDebug( "particleCanNotBeLiftedLocally()", "call scatter and update iterator" );
   Container::iterator particle = _memoryPool.scatterAndUpdateIterator( originalParticleContainer );
 
   assertion1( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
@@ -332,15 +332,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  pa
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticle(
-  const Container::iterator&     originalParticleContainerIterator,
-  {{CLASSNAME}}&                 sourceParticleSet
+  Container::iterator  particle,
+  {{CLASSNAME}}&       sourceParticleSet
 ) {
   // data consistency check
   assertion3(
-    (*originalParticleContainerIterator)->getParallelState()==DoFType::ParallelState::Local
+    (*particle)->getParallelState()==DoFType::ParallelState::Local
     or
-    (*originalParticleContainerIterator)->getParallelState()==DoFType::ParallelState::Virtual,
-    (*originalParticleContainerIterator)->toString(),
+    (*particle)->getParallelState()==DoFType::ParallelState::Virtual,
+    (*particle)->toString(),
     toString(),
     sourceParticleSet.toString()
   );
@@ -348,45 +348,33 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  pa
   _memoryPool.scatter();
 
   if ( sourceParticleSet.isGathered() ) {
-    logInfo( "grabParticle()", "call scatter and update iterator" );
-    Container::iterator particle = sourceParticleSet._memoryPool.scatterAndUpdateIterator( originalParticleContainerIterator );
-
-    _memoryPool.container.push_back( *particle );
-
-    logInfo( "grabParticle()", "now host " << _memoryPool.container.size() << " particles in " << toString() );
-    // This time, we cannot say anything about the ordering
-    return sourceParticleSet._memoryPool.container.begin();
+    logDebug( "grabParticle()", "call scatter and update iterator" );
+    particle = sourceParticleSet._memoryPool.scatterAndUpdateIterator( particle );
   }
-  else {
-    _memoryPool.container.push_back( *originalParticleContainerIterator );
-    logInfo( "grabParticle()", "add further particle to scattered data set: " << toString() );
-    return sourceParticleSet._memoryPool.container.erase(originalParticleContainerIterator);
-  }
+
+  _memoryPool.container.push_back( *particle );
+  logDebug( "grabParticle()", "add further particle to scattered data set: " << toString() );
+  return sourceParticleSet._memoryPool.container.erase(particle);
 }
 
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticle( const Container::iterator&   originalParticleContainerIterator ) {
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticle( Container::iterator  particle ) {
   // data consistency check
   assertion2(
-    (*originalParticleContainerIterator)->getParallelState()==DoFType::ParallelState::Local
+    (*particle)->getParallelState()==DoFType::ParallelState::Local
     or
-    (*originalParticleContainerIterator)->getParallelState()==DoFType::ParallelState::Virtual,
-    (*originalParticleContainerIterator)->toString(),
+    (*particle)->getParallelState()==DoFType::ParallelState::Virtual,
+    (*particle)->toString(),
     toString()
   );
 
   if ( _memoryPool.isGathered() ) {
-    logInfo( "deleteParticle()", "call scatter and update iterator" );
-    Container::iterator particle = _memoryPool.scatterAndUpdateIterator( originalParticleContainerIterator );
-    delete *particle;
-    _memoryPool.container.erase(particle);
-    // Just to be on teh safe side. We don't make assumptions on ordering
-    return _memoryPool.container.begin();
+    logDebug( "deleteParticle()", "call scatter and update iterator" );
+    particle = _memoryPool.scatterAndUpdateIterator( particle );
   }
-  else {
-    delete *originalParticleContainerIterator;
-    return _memoryPool.container.erase(originalParticleContainerIterator);
-  }
+
+  delete *particle;
+  return _memoryPool.container.erase(particle);
 }
 
 
