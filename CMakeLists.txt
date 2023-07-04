@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.20.5)
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
   execute_process(
@@ -158,6 +158,7 @@ list(APPEND MULTICORES_BACKENDS
   "cpp"
   "omp"
   "tbb"
+  "sycl"
 )
 set(WITH_MULTITHREADING "" CACHE STRING "${MULTICORES_BACKENDS}")
 set(WITH_MULTITHREADING "omp")
@@ -216,6 +217,26 @@ elseif("${GPU_PREFIX}" STREQUAL "gfx")
   set(AMD_GPU TRUE)
 endif()
 
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "IntelLLVM" AND ("${WITH_GPU}" STREQUAL "sycl" OR "${WITH_MULTITHREADING}" STREQUAL "sycl"))
+  find_package(IntelSYCL REQUIRED)
+  #target_link_libraries(project_options INTERFACE IntelSYCL)
+endif()
+
+if(WITH_CUDA)
+  target_compile_options(project_options INTERFACE -cuda)
+  target_link_options(project_options INTERFACE -cuda)
+endif()
+
+if("${WITH_GPU}" STREQUAL "cuda")
+  set(ENABLE_CUDA_COMPILATION_OPTIONS ON)
+  cmake_dependent_option(CUDA_SEPARABLE_COMPILATION "Cuda Separable Compilation" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
+  cmake_dependent_option(CUDA_RESOLVE_DEVICE_SYMBOLS "Cuda Resolve Device Symbols" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
+  find_package(CUDAToolkit REQUIRED)
+  target_link_libraries(project_options INTERFACE CUDA::toolkit)
+else()
+  set(ENABLE_CUDA_COMPILATION_OPTIONS OFF)
+endif()
+
 if(WITH_GPU)
   string(TOUPPER ${WITH_GPU} WITH_GPU_UPPER)
   target_compile_definitions(project_options INTERFACE GPUOffloading${WITH_GPU_UPPER})
@@ -225,13 +246,11 @@ if(WITH_GPU)
   elseif(WITH_GPU STREQUAL "cpp")
     if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
       string(SUBSTRING "${WITH_GPU_ARCH}" 3 5 GPU_ARCH_SUFFIX)
-      target_link_libraries(project_options INTERFACE -cuda -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX})
-      target_compile_options(project_options INTERFACE -cuda -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX})
-      #target_compile_options(project_options INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:-cuda;-mp=gpu;-gpu=${WITH_GPU_ARCH}>")
-      #target_link_options(project_options INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:-cuda;-mp=gpu;-gpu=${WITH_GPU_ARCH}>")
+      target_link_libraries(project_options INTERFACE -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX} -stdpar=gpu)
+      target_compile_options(project_options INTERFACE -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX} -stdpar=gpu)
     endif()
   elseif(WITH_GPU STREQUAL "sycl")
-    set(WITH_MULTITHREADING CACHE "tbb")
+    set(WITH_MULTITHREADING "sycl" CACHE STRING "GPU sycl needs tbb multithreading")
   elseif(WITH_GPU STREQUAL "hip")
   elseif(WITH_GPU STREQUAL "cuda")
     set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
@@ -361,19 +380,33 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
-file(COPY "${PROJECT_SOURCE_DIR}/python" DESTINATION "${CMAKE_BINARY_DIR}")
-file(COPY "${PROJECT_SOURCE_DIR}/tutorials" DESTINATION "${CMAKE_BINARY_DIR}")
-file(COPY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_BINARY_DIR}")
-file(COPY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_BINARY_DIR}")
+list(APPEND DRIECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications")
+foreach(item IN LISTS DRIECTORIES_TO_LINK_OVER)
+  if (NOT EXISTS "${CMAKE_BINARY_DIR}/${item}")
+    execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/${item}" "${CMAKE_BINARY_DIR}/${item}")
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/${item}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+  endif()
+endforeach()
 
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/python" DESTINATION "${CMAKE_INSTALL_PREFIX}")
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/tutorials" DESTINATION "${CMAKE_INSTALL_PREFIX}")
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_INSTALL_PREFIX}")
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
+include(${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 
-file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
-include(${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
+if (NOT EXISTS "${CMAKE_BINARY_DIR}/documentation")
+  execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/documentation" "${CMAKE_BINARY_DIR}/documentation")
+endif()
+
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+    set(DOXYGEN ${CMAKE_CURRENT_BINARY_DIR}/documentation/Doxyfile)
+
+    add_custom_target( documentation
+        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Generating API documentation with Doxygen"
+        VERBATIM )
+endif (DOXYGEN_FOUND)
+
 
 add_subdirectory(src)
 
