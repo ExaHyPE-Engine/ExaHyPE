@@ -6,47 +6,47 @@ from dastgen2.Utils import LLVMSymbol
 
 class BooleanArray(Boolean):
   """
-  
-  Represent an array of boolean flags 
-  
-  Consult the constructor on details onto which C++ data these flags 
+
+  Represent an array of boolean flags
+
+  Consult the constructor on details onto which C++ data these flags
   are mapped.
-  
+
   """
-  
-  
-  
+
+
+
   def __init__(self, name, cardinality, compress=False, ifdefs=[]):
     """
-    
+
     C++ offers the bitset to accommodate an array of boolean flags. While
     a bitset provides a memory-efficient way to encode a set of booleans,
     it is not efficient if we use it in combination with other booleans or
-    other bitsets, as the C++ compiler will insert empty bits to align 
-    each attribute at least with a byte. 
-    
-    Our LLVM modification can eliminate these fill-in bits, but it does 
+    other bitsets, as the C++ compiler will insert empty bits to align
+    each attribute at least with a byte.
+
+    Our LLVM modification can eliminate these fill-in bits, but it does
     not natively support bitsets (as we, in general, do not cover stuff
     from the standard library). If you want to use the extension, you have
-    to model the bitset as an array of booleans natively. 
-    
-    
-    
+    to model the bitset as an array of booleans natively.
+
+
+
     ## Attributes
-    
+
     compress: Boolean
       Without compression (default), map array onto bitet. Otherwise,
       use native array of boolean.
-    
+
     """
     Boolean.__init__(self, name, ifdefs=ifdefs)
     self._cardinality = cardinality
     self.compress     = compress
-   
-    
-  def get_methods(self,_full_qualified_class_name):
+
+
+  def get_methods(self,_full_qualified_class_name, for_declaration=True):
     accessor_name = self._name[:1].title() + self._name[1:]
-    return [ 
+    return [
       ("get" + accessor_name + "() const", "std::bitset<" + self._cardinality + ">"),
       ("set" + accessor_name + "(const std::bitset<" + self._cardinality + ">&  value)", "void"),
       ("get" + accessor_name + "(int index) const", "bool"),
@@ -56,7 +56,7 @@ class BooleanArray(Boolean):
 
   def get_plain_C_attributes(self):
     if self.compress:
-      return [ 
+      return [
         ("_" + self._name + "[" + self._cardinality + "]", "bool",                                   "[[clang::pack]]", ["defined(" + LLVMSymbol + ")"] ),
         ("_" + self._name,                                 "std::bitset<" + self._cardinality + ">", "",                ["!defined(" + LLVMSymbol + ")"] )
       ]
@@ -92,29 +92,29 @@ class BooleanArray(Boolean):
     elif signature.startswith( "set" ) and self.compress:
       return """
   for (int i=0; i<""" + self._cardinality + """; i++) """ + name + """[i]=value[i];
-"""      
+"""
     elif signature.startswith( "set" ):
       return name + " = value;\n"
     else:
       assert(False)
     return ""
- 
-  
+
+
   def get_native_MPI_type(self):
     return [ ("MPI_UNSIGNED_LONG", 1 ) ]
- 
- 
+
+
   def get_constructor_arguments(self):
     return [( "_"+self._name, "std::bitset<" + self._cardinality + ">" )]
-  
-  
+
+
   def use_default_copy_constructor(self):
     return not self.compress
 
 
   def get_to_string(self):
     """
-    
+
       Return string representation of attribute.
 
     """

@@ -36,12 +36,27 @@ class Double(Attribute):
         )
         self._valid_mantissa_bits = valid_mantissa_bits
 
-    def get_methods(self, _full_qualified_class_name):
+    def get_methods(self, _full_qualified_class_name, for_declaration=True):
         accessor_name = self._name[:1].title() + self._name[1:]
         methods = []
-        methods.append(
-            ("get" + accessor_name + "() const", "double"),
-        )
+
+        qualifiers = ""
+
+        if self.is_static and for_declaration:
+            qualifiers = "static "
+        if self.is_const_static:
+            if for_declaration:
+                qualifiers = "static const "
+            else:
+                qualifiers = "const "
+
+        if self.is_static or self.is_const_static:
+            getter = ("get" + accessor_name + "()", qualifiers + "double")
+        else:
+            getter = ("get" + accessor_name + "() const", "double")
+
+        methods.append(getter)
+
         if not self.is_const_static:
             methods.append(("set" + accessor_name + "(double value)", "void"))
 

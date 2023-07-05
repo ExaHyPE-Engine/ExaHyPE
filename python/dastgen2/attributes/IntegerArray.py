@@ -14,17 +14,17 @@ class IntegerArray(Integer):
 
   def use_default_copy_constructor(self):
     """
-    
-    Cannot use the default copy constructor, as it is an array, 
+
+    Cannot use the default copy constructor, as it is an array,
     i.e. we need some manual deep copying.
-    
+
     """
     return False;
 
 
-  def get_methods(self,_full_qualified_class_name):
+  def get_methods(self,_full_qualified_class_name, for_declaration=True):
     accessor_name = self._name[:1].title() + self._name[1:]
-    return [ 
+    return [
       ("get" + accessor_name + "() const", "const int*"),
       ("set" + accessor_name + "(int value[" + self._cardinality + "])", "void"),
       ("get" + accessor_name + "(int index) const", "int"),
@@ -59,14 +59,14 @@ class IntegerArray(Integer):
     else:
       assert(False)
     return ""
-  
+
   def get_native_MPI_type(self):
     return [ ("MPI_INT", self._cardinality ) ]
-      
-  
+
+
   def get_to_string(self):
     """
-    
+
       Return string representation of attribute.
 
     """

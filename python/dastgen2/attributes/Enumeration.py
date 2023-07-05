@@ -5,30 +5,30 @@ from .Attribute import Attribute
 
 class Enumeration(Attribute):
   """
-  
+
   Wrapper around C++ enumerations which is not a datatype supported
   natively by MPI.
-  
+
   The attribute has two-fold meaning. It defines a enum class subtype
-  within the generated code and it creates a new attribute of this 
+  within the generated code and it creates a new attribute of this
   type.
-  
+
   :Arguments:
-  
+
   name: String
      Something that can become a C++ identifier
-    
+
   variants: [String]
      Sequence of strings. The strings have to be something C++ accepts
      as enumeration identifiers.
-  
+
   """
   def __init__(self, name, variants, ifdefs=[]):
     Attribute.__init__(self, name, ifdefs)
     self._variants    = variants
     self.compress     = True
-    
-    
+
+
   def _enum_name(self):
     return self._name[:1].title() + self._name[1:]
 
@@ -37,22 +37,22 @@ class Enumeration(Attribute):
     result = """
     enum class """ + self._enum_name() + """: int {
       """
-    
+
     for i in self._variants:
       if self._variants.index(i)!=0:
         result += ", "
       result += i
       result += "="
       result += str(self._variants.index(i))
-    
-    result += """    
+
+    result += """
     };"""
     return result
 
-    
-  def get_methods(self,_full_qualified_name):
+
+  def get_methods(self,_full_qualified_name, for_declaration=True):
     accessor_name = self._name[:1].title() + self._name[1:]
-    return [ 
+    return [
       ("get" + accessor_name + "() const", _full_qualified_name + "::" + accessor_name),
       ("set" + accessor_name + "(" + accessor_name + " value)", "void")
     ]
@@ -78,14 +78,14 @@ class Enumeration(Attribute):
       assert(False)
     return ""
 
-  
+
   def get_native_MPI_type(self):
     return [ ("MPI_INT", 1) ]
-  
+
 
   def get_to_string(self):
     """
-    
+
       Return string representation of attribute.
 
     """

@@ -25,7 +25,7 @@ class DoubleArray(Double):
         self._cardinality = cardinality
         self._valid_mantissa_bits = valid_mantissa_bits
 
-    def get_methods(self, _full_qualified_class_name):
+    def get_methods(self, _full_qualified_class_name, for_declaration=True):
         accessor_name = self._name[:1].title() + self._name[1:]
         return [
             ("get" + accessor_name + "() const", "const double*"),

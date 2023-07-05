@@ -54,12 +54,16 @@ class Attribute(object):
         return ""
 
     @abc.abstractmethod
-    def get_methods(self, _full_qualified_class_name):
+    def get_methods(self, _full_qualified_class_name, for_declaration=True):
         """!
 
         Return sequence of methods that are defined for this attribute. Each
         entry is a tuple. Its first entry is the signature of the function
         (not including the semicolon), the second entry is the return type.
+
+        for_declaration: bool
+            if True, assume we want method names for function declaration, not
+            definition.
 
         """
         return

@@ -23,14 +23,28 @@ class Boolean(Attribute):
 
         self.compress = True
 
-    def get_methods(self, _full_qualified_class_name):
+    def get_methods(self, _full_qualified_class_name, for_declaration=True):
         accessor_name = self._name[:1].title() + self._name[1:]
         methods = []
-        methods.append(
-            ("get" + accessor_name + "() const", "int"),
-        )
+
+        if self.is_static and for_declaration:
+            qualifiers = "static "
+        if self.is_const_static:
+            if for_declaration:
+                qualifiers = "static const "
+            else:
+                qualifiers = "const "
+
+        if self.is_static or self.is_const_static:
+            getter = ("get" + accessor_name + "()", qualifiers + "bool")
+        else:
+            getter = ("get" + accessor_name + "() const", "bool")
+
+        methods.append(getter)
+
         if not self.is_const_static:
-            methods.append(("set" + accessor_name + "(int value)", "void"))
+            methods.append(("set" + accessor_name + "(bool value)", "void"))
+
 
         return methods
 

@@ -192,7 +192,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 d["METHOD_DECLARATIONS"] += dastgen2.construct_ifdef_string(
                     attribute.ifdefs
                 )
-            for method in attribute.get_methods(self._full_qualified_name):
+            for method in attribute.get_methods(self._full_qualified_name, for_declaration=True):
                 d["METHOD_DECLARATIONS"] += (
                     "    " + method[1] + "   " + method[0] + ";\n"
                 )
@@ -322,10 +322,13 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         output.write("}\n\n\n")
 
     def __generate_accessors(self, output):
+        """
+        generate getter/setter functions.
+        """
         for attribute in self._attributes:
             if attribute.ifdefs != []:
                 output.write(dastgen2.construct_ifdef_string(attribute.ifdefs))
-            for method in attribute.get_methods(self._full_qualified_name):
+            for method in attribute.get_methods(self._full_qualified_name, for_declaration=False):
                 output.write(
                     method[1]
                     + "   "

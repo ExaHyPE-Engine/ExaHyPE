@@ -32,12 +32,27 @@ class Integer(Attribute):
         self._min_value = min_value
         self._max_value = max_value
 
-    def get_methods(self, _full_qualified_class_name):
+    def get_methods(self, _full_qualified_class_name, for_declaration=True):
         accessor_name = self._name[:1].title() + self._name[1:]
         methods = []
-        methods.append(
-            ("get" + accessor_name + "() const", "int"),
-        )
+
+        qualifiers = ""
+
+        if self.is_static and for_declaration:
+            qualifiers = "static "
+        if self.is_const_static:
+            if for_declaration:
+                qualifiers = "static const "
+            else:
+                qualifiers = "const "
+
+        if self.is_static or self.is_const_static:
+            getter = ("get" + accessor_name + "()", qualifiers + "int")
+        else:
+            getter = ("get" + accessor_name + "() const", "int")
+
+        methods.append(getter)
+
         if not self.is_const_static:
             methods.append(("set" + accessor_name + "(int value)", "void"))
 
