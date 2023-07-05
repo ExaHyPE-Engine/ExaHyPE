@@ -31,6 +31,22 @@ class DataModel(object):
         attribute.use_data_store = self._embed_attributes_into_data_store
         self._attributes.append(attribute)
 
+    def add_or_replace_attribute(self, attribute):
+        """
+        Check first whether attribute already exists. If it does, replace it.
+        """
+
+        attribute.use_data_store = self._embed_attributes_into_data_store
+
+        for i, att in enumerate(self._attributes):
+            if att._name == attribute._name:
+                self._attributes[i] = attribute
+                return
+
+        # if we make it here, it's a new attribute.
+        self._attributes.append(attribute)
+        return
+
     def add_aspect(self, aspect):
         aspect.set_model(self)
         self._aspects.append(aspect)
