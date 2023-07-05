@@ -46,13 +46,13 @@ The DG formulation means that we have, for a given polynomial degree @f$ n @f$, 
 \li @f$ (n+1)^{d} @f$ degrees of freedom per cell
 
 We note that @f$ (n+1)^{d-1} @f$ of these Dofs will then reside on the faces of this cell.
-We arrange these points spatially in a Gauss-Lobatto pattern.
+We arrange these points spatially in a Gauss-Lobatto pattern for the duration of this tutorial.
 
 @image html gaussLobatto.png
 
 We then aim to solve @f$ d+1 @f$ equations for each of these points:
 
-\li We fix @f$ -\text{div} \phi = f @f$ at each of these points
+\li We fix @f$ -\text{div} \ \phi = f @f$ at each of these points
 \li We further fix  @f$ \partial_i u = \phi_i @f$ for each spatial dimension  @f$ i @f$.
 
 
@@ -62,14 +62,14 @@ We then aim to solve @f$ d+1 @f$ equations for each of these points:
 Since we have a first order formulation, we can simply integrate. We take the inner product with a test 
 function @f$ \psi @f$, and then integrate over the cell:
 
-@f$ \int_\text{cell} ( -\text{div} \phi, \psi ) dxdy = \int_\text{cell} ( f, \psi ) dxdy @f$.
+@f$ \int_\text{cell} ( -\text{div} \ \phi, \psi ) dxdy = \int_\text{cell} ( f, \psi ) dxdy @f$.
 
 The test function we typically use, at every point we have a degree of freedom, is the test function that is 1 at the spatial position of the degree of freedom, and 0 elsewhere.
 
 Next, we want to just consider the left-hand integral. Let's integrate by parts:
 
 \f{eqnarray*}{
-      \int_\text{cell} ( -\text{div} \ \phi, \psi ) dxdy &=& \int_\text{cell} ( \phi, \text{div} \psi ) dxdy - \int_\text{cell} \text{div} ( \phi \psi ) dx dy \\ 
+      \int_\text{cell} ( -\text{div} \ \phi, \psi ) dxdy &=& \int_\text{cell} ( \phi, \text{div} \ \psi ) dxdy - \int_\text{cell} \text{div} ( \phi \psi ) dx dy \\ 
 
        &=& \int_\text{cell} ( \phi, \nabla \psi ) dxdy - \int_{\partial c} \phi \cdot \hat{n} \ \psi dS(x)
 \f}
@@ -93,7 +93,7 @@ Having introduced this, we can rewrite the right-hand integral as:
 
 Let's now discuss how we update @f$ u @f$ every step, using this formulation.
 
-## The right-hand term
+## The Face Integral
 
 
 If we solve our equation correctly, then our @f$ \hat{\phi} @f$ should end up in the middle. We think of this as another contraint we are placing on the solution.
@@ -172,7 +172,7 @@ it on-the-fly.
 TEST FUNCTION ARE RITZ GALERKIN. TAKEN FROM SAME FUNCTION SPACE WE HAVE THE u solution
 
 
-## The left-hand term
+## The cell integral
 
 The first term tells us about the cell-cell coupling, and the second tells us about cell-face and face-cell. This is an integral over the whole cell, which we shall take as being 2D for this demo.
 We look to update the components of @f$ \phi @f$ **should this be instead psi, the test function?**
