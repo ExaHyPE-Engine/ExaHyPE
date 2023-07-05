@@ -10,7 +10,7 @@ Peano's multigrid extension provides stand-alone multigrid solers. However, the
 solver ingredients are designed in a way that they can be used by other codes, 
 too.
 
-## Configure PETSc
+# Configure PETSc
 
 The first thing that the user needs to do is install PETSc somewhere on their system.
 [The instructions on their website](https://petsc.org/release/install/download/), but 
@@ -46,7 +46,11 @@ changed at the configure stage.
 It's worth adding PETSC_DIR and PETSC_ARCH to bashrc / bash_profile, as these will be used 
 throughout.
 
-We will then need to reconfigure. In addition to the --with-petsc and --enable-finiteelements flags,
+## Reconfigure Peano
+
+We will then need to reconfigure Peano. Change directories into the top level of Peano.
+
+In addition to the --with-petsc and --enable-finiteelements flags,
 we will need to make additions to CXXFLAGS and LDFLAGS to ensure that we can compile with PETSc.
 
 In addition to whichever CXXFLAGS were present before, we should include:
