@@ -115,7 +115,7 @@ project = swift2.Project(
 
 name = "hydroPart"
 
-dimensions = 2  # peano needs this for whatever reason...
+dimensions = 2
 hydro_dimensions = 2  # dimensions for the hydro
 
 particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
@@ -129,10 +129,6 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     min_h=args.cell_size / 100,
     max_h=args.cell_size,
 )
-
-
-
-
 
 
 ########################################################################################
@@ -186,6 +182,7 @@ particle.h_hydro_max = hydro_h_max
 # particle.eta_factor = 1.2348
 # particle.beta_av = 3.0
 # particle.alpha_av = 0.8
+
 # Optional: Reduce the mantissa size for particle attributes -------------------
 # Native size is 53 (double precision)
 # particle.mantissa_size = 23
@@ -223,6 +220,7 @@ project.set_global_simulation_parameters(
 )
 
 project.set_Peano4_installation(args.peanodir, build_mode)
+
 project.set_load_balancing(
     "toolbox::loadbalancing::RecursiveBipartition",
     "new toolbox::loadbalancing::DefaultConfiguration()",
