@@ -133,7 +133,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         )
 
         # Initialize default parameters.
-        #---------------------------------------
+        # ---------------------------------------
 
         # This is an SPH scheme.
         self._is_sph = True
@@ -166,9 +166,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         # now set these parameters as dastgen attributes
         self.set_parameters()
 
-
         # Construct particle properties
-        #--------------------------------
+        # --------------------------------
 
         # Baseline particle properties -------------------------------------------------
         self.mass = dastgen2.attributes.Double("mass")
@@ -253,7 +252,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self.algorithm_steps_dict = {}
         self._setup_algorithm_steps_dict()
 
-
     def set_parameters(self):
         """
         This function translates "global" particle parameters which are
@@ -272,48 +270,73 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         into the generated C++ files.
         """
 
-        cfl_attr = dastgen2.attributes.Double("cfl", is_const_static=True, initval=self._cfl_factor)
+        cfl_attr = dastgen2.attributes.Double(
+            "cfl", is_const_static=True, initval=self._cfl_factor
+        )
         self.data.add_or_replace_attribute(cfl_attr)
 
-        initial_time_step_size_attr = dastgen2.attributes.Double("initialTimeStepSize", is_const_static=True, initval=self._initial_time_step_size)
+        initial_time_step_size_attr = dastgen2.attributes.Double(
+            "initialTimeStepSize",
+            is_const_static=True,
+            initval=self._initial_time_step_size,
+        )
         self.data.add_or_replace_attribute(initial_time_step_size_attr)
 
         if self._constant_time_step_size == True:
             adjustTimeStepSize = "false"
         else:
             adjustTimeStepSize = "true"
-        adjust_time_step_size_attr = dastgen2.attributes.Boolean("adjustTimeStepSize", is_const_static=True, initval=adjustTimeStepSize)
+        adjust_time_step_size_attr = dastgen2.attributes.Boolean(
+            "adjustTimeStepSize", is_const_static=True, initval=adjustTimeStepSize
+        )
         self.data.add_or_replace_attribute(adjust_time_step_size_attr)
 
-        is_sph_attr = dastgen2.attributes.Boolean("isSPH", is_const_static=True, initval=self._isSPH_cpp)
+        is_sph_attr = dastgen2.attributes.Boolean(
+            "isSPH", is_const_static=True, initval=self._isSPH_cpp
+        )
         self.data.add_or_replace_attribute(is_sph_attr)
 
-        hydro_dimensions_attr = dastgen2.attributes.Double("hydroDimensions", is_const_static=True, initval=self._hydro_dimensions)
+        hydro_dimensions_attr = dastgen2.attributes.Double(
+            "hydroDimensions", is_const_static=True, initval=self._hydro_dimensions
+        )
         self.data.add_or_replace_attribute(hydro_dimensions_attr)
 
-        eta_factor_attr = dastgen2.attributes.Double("etaFactor", is_const_static=True, initval=self._eta_factor)
+        eta_factor_attr = dastgen2.attributes.Double(
+            "etaFactor", is_const_static=True, initval=self._eta_factor
+        )
         self.data.add_or_replace_attribute(eta_factor_attr)
 
-        h_hydro_min_attr = dastgen2.attributes.Double("smlMin", is_const_static=True, initval=self._h_hydro_min)
+        h_hydro_min_attr = dastgen2.attributes.Double(
+            "smlMin", is_const_static=True, initval=self._h_hydro_min
+        )
         self.data.add_or_replace_attribute(h_hydro_min_attr)
 
-        h_hydro_max_attr = dastgen2.attributes.Double("smlMax", is_const_static=True, initval=self._h_hydro_max)
+        h_hydro_max_attr = dastgen2.attributes.Double(
+            "smlMax", is_const_static=True, initval=self._h_hydro_max
+        )
         self.data.add_or_replace_attribute(h_hydro_max_attr)
 
-        h_tolerance_attr = dastgen2.attributes.Double("smlTolerance", is_const_static=True, initval=self._h_tolerance)
+        h_tolerance_attr = dastgen2.attributes.Double(
+            "smlTolerance", is_const_static=True, initval=self._h_tolerance
+        )
         self.data.add_or_replace_attribute(h_tolerance_attr)
 
-        h_max_iterations_attr = dastgen2.attributes.Integer("smlMaxIterations", is_const_static=True, initval=self._h_max_iterations)
+        h_max_iterations_attr = dastgen2.attributes.Integer(
+            "smlMaxIterations", is_const_static=True, initval=self._h_max_iterations
+        )
         self.data.add_or_replace_attribute(h_max_iterations_attr)
 
-        alpha_av_attr = dastgen2.attributes.Double("alphaAV", is_const_static=True, initval=self._alpha_av)
+        alpha_av_attr = dastgen2.attributes.Double(
+            "alphaAV", is_const_static=True, initval=self._alpha_av
+        )
         self.data.add_or_replace_attribute(alpha_av_attr)
 
-        beta_av_attr = dastgen2.attributes.Double("betaAV", is_const_static=True, initval=self._beta_av)
+        beta_av_attr = dastgen2.attributes.Double(
+            "betaAV", is_const_static=True, initval=self._beta_av
+        )
         self.data.add_or_replace_attribute(beta_av_attr)
 
         return
-
 
     def _setup_algorithm_steps_dict(self):
         """
@@ -542,7 +565,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
         return
 
-
     def algorithm_steps(self):
         """!
 
@@ -584,7 +606,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
     @hydro_dimensions.setter
     def hydro_dimensions(self, hydro_dimensions):
-        raise ValueError("Can't change hydro_dimensions now. Modify it while instantiating the class.")
+        raise ValueError(
+            "Can't change hydro_dimensions now. Modify it while instantiating the class."
+        )
 
     @property
     def eta_factor(self):

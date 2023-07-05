@@ -9,10 +9,10 @@ namespace swift2 {
   namespace kernels {
 
 
-template <typename Particle>
-bool smoothingLengthConverged( Particle* localParticle) {
-    return false;
-}
+    template <typename Particle>
+    bool smoothingLengthConverged(Particle* localParticle) {
+      return false;
+    }
 
-  }
-}
+  } // namespace kernels
+} // namespace swift2

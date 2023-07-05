@@ -77,7 +77,9 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeDensityWithConstantSearchRadius(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
+    void computeDensityWithConstantSearchRadius(
+      const ParticleContainer& localParticles, const ParticleContainer& activeParticles
+    );
 
     /**
      * @brief Same as computeDensity(...), but doesn't modify the particles' search radii
@@ -90,7 +92,9 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeDensityWithConstantSmoothingLengths(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
+    void computeDensityWithConstantSmoothingLengths(
+      const ParticleContainer& localParticles, const ParticleContainer& activeParticles
+    );
 
     /** Hydro Force calculation particle-particle kernel
      *
@@ -113,10 +117,7 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeHydroForce(
-      const ParticleContainer& localParticles,
-      const ParticleContainer& activeParticles
-    );
+    void computeHydroForce(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
 
   } // namespace kernels
 } // namespace swift2
