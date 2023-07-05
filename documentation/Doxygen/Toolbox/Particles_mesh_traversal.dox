@@ -1,6 +1,6 @@
 /**
 
-@page page_toolbox_particles_mesh_storage Mesh traversal
+@page page_toolbox_particles_mesh_traversal Mesh traversal
 
 Peano realises mesh sweeps via tree walkers, i.e. automata which run
 through the tree top down and then bottom up again. Each algorithm step

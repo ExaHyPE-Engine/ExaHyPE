@@ -2,9 +2,6 @@
 
 @page page_toolbox_particles_mesh_storage Particle storage within mesh
 
-\li \subpage toolbox_particles_memorypool
-\li \subpage toolbox::particles::ParticleSet
-
 
 The particles are stored following the dual tree storage paradigm.
 
