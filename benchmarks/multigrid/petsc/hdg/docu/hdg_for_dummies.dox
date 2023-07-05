@@ -19,10 +19,6 @@ should be gone by the time there is some nice working code available.
 Our aim, once we clarify all of the mathematics within this setup, is to describe the machinery
 that will go into place behind the scenes. Let's begin.
 
-## Stuff to mention:
-\li Gauss lobatto
-    - just for patitioning
-    
 
 Some formulation
 ======================
@@ -34,7 +30,9 @@ As ever, we aim to solve:
 which is a second-order equation. Let us first introduce a helper variable @f$ \phi @f$, so we can instead 
 write in a first-order formulation:
 
-@f$ \phi_x = \partial_x u, \ \phi_y = \partial_y u @f$.
+@f$ \phi_x = \partial_x u, \ \phi_y = \partial_y u @f$. 
+
+We note that @f$ \phi @f$ is a @f$ d @f$-dimensional vector, which contains the gradient of @f$ u @f$ in each dimension.
 
 This allows us to rewrite in first order, noting that the left hand side is just a divergence:
 
@@ -46,9 +44,11 @@ This allows us to rewrite in first order, noting that the left hand side is just
 The DG formulation means that we have, for a given polynomial degree @f$ n @f$, and spatial dimension @f$ d@f$:
 
 \li @f$ (n+1)^{d} @f$ degrees of freedom per cell
-\li @f$ (n+1)^{d-1} @f$ degrees of freedom per face
 
+We note that @f$ (n+1)^{d-1} @f$ of these Dofs will then reside on the faces of this cell.
 We arrange these points spatially in a Gauss-Lobatto pattern.
+
+@image html gaussLobatto.png
 
 We then aim to solve @f$ d+1 @f$ equations for each of these points:
 
@@ -69,40 +69,56 @@ The test function we typically use, at every point we have a degree of freedom, 
 Next, we want to just consider the left-hand integral. Let's integrate by parts:
 
 \f{eqnarray*}{
-      \int_\text{cell} ( -\text{div} \ \phi, \psi ) dxdy &=& \int_\text{cell} ( \phi, \nabla \psi ) dxdy - \int_\text{cell} \nabla ( \phi \psi ) dx dy \\ 
+      \int_\text{cell} ( -\text{div} \ \phi, \psi ) dxdy &=& \int_\text{cell} ( \phi, \text{div} \psi ) dxdy - \int_\text{cell} \text{div} ( \phi \psi ) dx dy \\ 
 
-       &=& \int_\text{cell} ( \phi, \nabla \psi ) dxdy - \int_{\partial c} \phi \psi \cdot \hat{n} dS(x)
+       &=& \int_\text{cell} ( \phi, \nabla \psi ) dxdy - \int_{\partial c} \phi \cdot \hat{n} \ \psi dS(x)
 \f}
 
-where in the second line we use Stokes' theorem to turn the second integral into an integral over the 
-boundary of the cell (in other words over the face). We then make an approximation:
+where in the second line we use Guass divergence theorem to turn the second integral into an integral over the 
+boundary of the cell (in other words over the face).
+
+** we don't make an approx. we introduce the approximation because phi doesn't exist on the face. add picture to demo right here **
+
+We note crucially that @f$ \phi @f$ does not exist on the face. This is because our approximate solution to @f$ u @f$ is discontinuous,
+meaning we have a jump in the gradient. So, we introduce a new variable @f$ \hat{\phi} :=  [[ \phi \cdot \hat{n} ]]@f$, which is the
+average of @f$ \phi @f$ in the left cell and the right cell. Below is a simplistic depiction, with a 1D cell.
+
+@image html phiHat.png
+
+Having introduced this, we can rewrite the right-hand integral as:
 
 \f{eqnarray*}{
       &\approx& \int_\text{cell} ( \phi, \nabla \psi ) dxdy - \int_\text{face} [[ \phi \cdot \hat{n} ]] \cdot \psi dS(x)
 \f}
 
-Let's first handle the right-hand term, and explain what is meant by  @f$[[ \phi \cdot \hat{n} ]] @f$, hereafter referred to as @f$ \hat{\phi} @f$. 
+Let's now discuss how we update @f$ u @f$ every step, using this formulation.
 
 ## The right-hand term
 
-The image below shows a simplistic, 1D diagram of a function @f$ u @f$, approximated in two cells by a 
-piecewise linear function, marked in blue. 
 
-@image html piecewise.png
+If we solve our equation correctly, then our @f$ \hat{\phi} @f$ should end up in the middle. We think of this as another contraint we are placing on the solution.
+We note also that when we enter each cell to perform some solver steps, we already
+know our approximate solution @f$ u @f$, meaning we can drop the use of our helper
+variable @f$ \phi @f$. Our solution will rest on correctly updating @f$ u @f$ and 
+@f$ \hat{\phi} @f$
 
-We note that there is a discontinuity at the boundary for @f$ u @f$ and for its gradient, @f$ \phi @f$. 
-
-So, as a first solution, we take an average, and define @f$\hat{\phi} = [[ \phi \cdot \hat{n} ]] @f$ to be the mean average of the gradient in the left-hand cell and the right-hand cell.
 
 Let's now work out the contribution to the problem matrix that comes from this term. Let's now move to a 2D cell, where we have degree 1 Gauss-Lobatto points. This means we have 2 degrees of freedom on each face (which coincide spatially with the vertices), as well as 4 degrees of freedom on each cell (which again coincide with each vertex). This can be seen in page \ref multigrid_enumeration. Note that the vertices 
 labelled (clockwise from bottom left) as 0, 2, 3, 1, which is an enumeration we keep throughout.
 
-So, let's first evaluate the x component along face 0, which contains the vertices 0 and 2:
+We aim to fix values of our approximation @f$ u @f$ at each of these spatial points, which we refer to as 
+@f$ u^0, \ u^1, \ u^2, \ u^3 @f$. We will have also a value for @f$ \phi @f$ at each of these points too.
+
+@image html cellFlat.png
+
+So, let's first project the x component of the gradient onto face 0. We only keep components from 
+vertex 0 and 2:
 
 \f{eqnarray*}{
+  \frac{1}{2}
   \begin{pmatrix}
-  1/2 & 0 & 0 & 0 \\
-  0 & 0 & 1/2 & 0 \\
+  1 & 0 & 0 & 0 \\
+  0 & 0 & 1 & 0 \\
   \end{pmatrix}
 
   \cdot 
@@ -115,27 +131,29 @@ So, let's first evaluate the x component along face 0, which contains the vertic
   \end{pmatrix}
 \f}
 
+We take a factor of a half here because we will perform this projection in an adjacent cell also.
 
-
-What we are doing here is evaluating the dot product of.... **fix wording here, add a note on how the test function affects things**
-
-We note further that the @f$ \phi @f$ variable only packages up the gradients of @f$ u @f$ at certain points. We note that, for instance, @f$ \phi_x^0 = (u^1 - u^0)/h @f$, hence we can even rewrite the 
+We note further that the @f$ \phi @f$ variable only packages up the gradients of @f$ u @f$ at certain points. We note that, for instance, @f$ \phi_x^0 = (u^1 - u^0)/h @f$, since we want to calculate the gradient
+in the x direction at point @f$ u^0 @f$; @f$ u^0 @f$ and @f$ u^1 @f$ are the only points which are somehow
+"connected" in this axis, along this face.
+Hence we can even rewrite the 
 above equation as:
 
 \f{eqnarray*}{
+  \frac{1}{2}
   \begin{pmatrix}
-  -1/h & 1/h & 0 & 0 \\
   -1/h & 1/h & 0 & 0 \\
    0 & 0 & -1/h & 1/h  \\
   -1/h & 1/h & 0 & 0 \\
+   0 & 0 & -1/h & 1/h  \\
 
   \end{pmatrix}
 
   \cdot 
 
   \begin{pmatrix}
-  1/2 & 0 & 0 & 0 \\
-  0 & 0 & 1/2 & 0 \\
+  1 & 0 & 0 & 0 \\
+  0 & 0 & 1 & 0 \\
   \end{pmatrix}
 
   \cdot 
@@ -148,7 +166,11 @@ above equation as:
   \end{pmatrix}
 \f}
 
-**how does this translate into what goes into the matrix itself??**
+which is why we feel confident enough to kick out our helper variable @f$ \phi @f$; we can always reconstruct 
+it on-the-fly.
+
+TEST FUNCTION ARE RITZ GALERKIN. TAKEN FROM SAME FUNCTION SPACE WE HAVE THE u solution
+
 
 ## The left-hand term
 
