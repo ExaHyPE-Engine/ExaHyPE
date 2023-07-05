@@ -1,23 +1,39 @@
 import numpy as np
 from typing import List
 from math import floor
-from netcdf_writer import NetCDF_Writer
+from adjoint.python.netcdf_writer import NetCDF_Writer
 import netCDF4
-from update_scheme import compute_numerical_fluxes, set_up_update_variables
+from adjoint.python.dimensional_splitting import compute_numerical_fluxes, set_up_update_variables
 from math import sqrt
 
 class SWE_Adjoint_Solver():
 
-    def __init__(self, output_file_name:str, bathymetry_file_path:str, width:List[float], cell_size:float, area_of_interest:List[List[float]],end_time:float, start_time:float = 0, checkpoints:int = 0):
+    def __init__(
+            self, 
+            output_file_name:str, 
+            bathymetry_file_path:str, 
+            width:List[float], 
+            cell_size:float, 
+            area_of_interest:List[List[float]],
+            end_time:float, 
+            start_time:float = 0, 
+            checkpoints:int = 0, 
+            nc_key_x:str = 'x', 
+            nc_key_y:str = 'y', 
+            nc_key_bathymetry:str = 'z'
+            ):
         """
         output_file_name:       Name of the output file
         bathymetry_file_path:   Path to bathymetry file
         width:                  Width of the simulation plane [x,y]
         cell_size:              Size of a cell of the simulation plane
-        area_of_interest:       Area of interest. Square: [[x1,y1], [x2,y2]]; Circle: [[x,y], [r, INF]]
+        area_of_interest:       Area of interest. Square: [[x1,x2], [y1,y2]]; Circle: [[x,y], [r, INF]]
         end_time:               Time until which the simulation runs
-        start_time:             Only used to write to NetCDF for guided AMR later on
-        checkpoints:            Number of checkpoints for NetCDF output
+        start_time:             Only used to write to NetCDF for guided AMR later on, defaults to 0
+        checkpoints:            Number of checkpoints for NetCDF output, defaults to 0 (= inf)
+        nc_key_x:               Key for x-axis in bathymetry file, defaults to 'x'
+        nc_key_y:               Key for y-axis in bathymetry file, defaults to 'y'
+        nc_key_bathymetry:      Key for bathymetry in bathymetry file, defaults to 'z'
         """
 
         # TODO How does the start time affect the simulation?
@@ -41,25 +57,14 @@ class SWE_Adjoint_Solver():
 
         with netCDF4.Dataset(bathymetry_file_path, "r") as bathymetry_nc:
             # create lists of indices that index the bathymetry entries to be used in the simulation
-            index_list_bathymetry_x, mesh_width_x = np.linspace(0, len(bathymetry_nc['z'][0]), num=self.nx, endpoint=False, dtype=int, retstep=True)
-            index_list_bathymetry_y, mesh_width_y = np.linspace(0, len(bathymetry_nc['z']), num=self.ny, endpoint=False, dtype=int, retstep=True)
-            # convert (data) mesh width to integer
-            mesh_width_x = int(mesh_width_x)
-            mesh_width_y = int(mesh_width_y)
+            index_list_bathymetry_x = np.linspace(0, len(bathymetry_nc[nc_key_bathymetry][0]), num=self.nx, endpoint=False, dtype=int)
+            index_list_bathymetry_y = np.linspace(0, len(bathymetry_nc[nc_key_bathymetry]), num=self.ny, endpoint=False, dtype=int)
 
-            self.min_bathymetry_x, self.max_bathymetry_x = bathymetry_nc['x'][[0, -1]]
-            self.min_bathymetry_y, self.max_bathymetry_y = bathymetry_nc['y'][[0, -1]]
-
-            # Define indices for splicing. Why splicing and not fancy indexing?
-            # Because fancy indexing doesn't work in the displacement at the latest because of differing mesh widths.
-            # Splicing works equally as good and also works for the displacement. 
-            right_x_start, right_x_end = index_list_bathymetry_x[[0, -1]]
-            right_x_end = right_x_end + 1
-            right_y_start, right_y_end = index_list_bathymetry_y[[0, -1]]
-            right_y_end = right_y_end + 1
+            self.min_bathymetry_x, self.max_bathymetry_x = bathymetry_nc[nc_key_x][[0, -1]]
+            self.min_bathymetry_y, self.max_bathymetry_y = bathymetry_nc[nc_key_y][[0, -1]]
 
             # Put values of bathymetry file into simulation arrays
-            self.b.T[1:self.ny+1, 1:self.nx+1] = bathymetry_nc['z'][right_y_start:right_y_end:mesh_width_y, right_x_start:right_x_end:mesh_width_x]
+            self.b.T[1:self.ny+1, 1:self.nx+1] = bathymetry_nc[nc_key_bathymetry][index_list_bathymetry_y, index_list_bathymetry_x]
             self.h[1:self.nx+1, 1:self.ny+1] = np.maximum(-self.b[1:self.nx+1, 1:self.ny+1], 0)
             
             """
@@ -86,7 +91,8 @@ class SWE_Adjoint_Solver():
                 self.b.T[left_y_start:left_y_end, left_x_start:left_x_end] += displacement_nc['z'][right_y_start:right_y_end:mesh_width_y, right_x_start:right_x_end:mesh_width_x]
             """
 
-        self.h[1:self.nx+1, 1:self.ny+1] += np.array([[(hump_criterion(x,y) and self.h[x, y] > 0) * 1 for y in range(1, self.ny+1)] for x in range(1, self.nx+1)])
+        # https://github.com/clawpack/geoclaw/blob/master/src/2d/shallow/qinit_module.f90
+        self.h[1:self.nx+1, 1:self.ny+1] += np.array([[(hump_criterion(x,y) and self.b[x, y] < 0) * 1 for y in range(1, self.ny+1)] for x in range(1, self.nx+1)])
 
         # initialize ghost layer
         self.b[0] = self.b[1]
@@ -108,6 +114,17 @@ class SWE_Adjoint_Solver():
         self.netcdf_writer.set_up_netcdf("%s" % output_file_name, bathymetry_file_path, self.number_of_checkpoints, self.end_time, self.start_time)
 
         set_up_update_variables(self.nx, self.ny, self.cell_size)
+
+        print("""
+Starting simulation with parameters:
+width: [%f, %f]
+dimension: [%d, %d]
+cell_size: %f
+end_time: %f
+hump_criterion: %s
+output_file: %s
+checkpoints: %s
+        """ % (width[0], width[1], self.nx, self.ny, self.cell_size, self.end_time, hump_criterion.__name__, output_file_name, ("inf" if self.number_of_checkpoints == 0 else str(self.number_of_checkpoints))))
         
     def run_simulation(self):
         # run simulation from t=0 to t=end_time
@@ -153,10 +170,10 @@ class SWE_Adjoint_Solver():
         """
         x_trans = transform_index_simulation_to_cdf(x, self.nx, 0, self.max_bathymetry_x, self.min_bathymetry_x)
         y_trans = transform_index_simulation_to_cdf(y, self.ny, 0, self.max_bathymetry_y, self.min_bathymetry_y)
-        x_min = min(self.area_of_interest[0][0], self.area_of_interest[1][0])
-        x_max = max(self.area_of_interest[0][0], self.area_of_interest[1][0])
-        y_min = min(self.area_of_interest[0][1], self.area_of_interest[1][1])
-        y_max = max(self.area_of_interest[0][1], self.area_of_interest[1][1])
+        x_min = min(self.area_of_interest[0][0], self.area_of_interest[0][1])
+        x_max = max(self.area_of_interest[0][0], self.area_of_interest[0][1])
+        y_min = min(self.area_of_interest[1][0], self.area_of_interest[1][1])
+        y_max = max(self.area_of_interest[1][0], self.area_of_interest[1][1])
         return x_min < x_trans and x_max > x_trans and y_min < y_trans and y_max > y_trans
     
     def hump_criterion_circle(self, x, y) -> bool:
@@ -178,5 +195,13 @@ def transform_index_simulation_to_cdf(z, max_z, min_z, max_z_cdf, min_z_cdf):
     ret = m * z + b
     return ret
         
-solver = SWE_Adjoint_Solver(output_file_name="test.nc", bathymetry_file_path="../netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_bath.nc", width=[50,50], cell_size=0.1, area_of_interest=[[0, 100e3], [-100e3, 100e3]], end_time=0.1)
+solver = SWE_Adjoint_Solver(
+    output_file_name="test.nc", 
+    bathymetry_file_path="../netCDFInputs/gebco_2023_n65.0_s10.0_w-180.0_e-120.0.nc", 
+    width=[10,10], cell_size=0.1, 
+    area_of_interest=[[-124.19083, 41.74111e0], [1e0, float('inf')]], 
+    end_time = 0.1,
+    nc_key_x='lon',
+    nc_key_y='lat',
+    nc_key_bathymetry='elevation')
 solver.run_simulation()

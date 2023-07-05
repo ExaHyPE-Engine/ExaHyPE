@@ -2,16 +2,66 @@
 #include <iostream>
 using namespace applications::exahype2::swe::parser::NetCDFHelper;
 
-applications::exahype2::swe::parser::TopologyParser::TopologyParser(const char *bathymetry_file_path, const char *displacement_file_path, double i_uq_displacement_origin_x, double i_uq_displacement_origin_y){
+applications::exahype2::swe::parser::TopologyParser::TopologyParser(
+  const char *bathymetry_file_path, const char *displacement_file_path, 
+  double i_uq_displacement_origin_x, double i_uq_displacement_origin_y,
+  const char *nc_bathymetry_x_key, const char *nc_bathymetry_y_key, const char *nc_bathymetry_bathymetry_key,
+  const char *nc_displacement_x_key, const char *nc_displacement_y_key, const char *nc_displacement_displacement_key
+):
+uq_displacement_origin_x(i_uq_displacement_origin_x),
+uq_displacement_origin_y(i_uq_displacement_origin_y),
+nc_bathymetry_x_key_(nc_bathymetry_x_key),
+nc_bathymetry_y_key_(nc_bathymetry_y_key),
+nc_bathymetry_bathymetry_key_(nc_bathymetry_bathymetry_key),
+nc_displacement_x_key_(nc_displacement_x_key),
+nc_displacement_y_key_(nc_displacement_y_key),
+nc_displacement_displacement_key_(nc_displacement_displacement_key)
+{
 
-  l_nX_ = DomainSize(0);
-  l_nY_ = DomainSize(1);
-  this->uq_displacement_origin_x = i_uq_displacement_origin_x;
-  this->uq_displacement_origin_y = i_uq_displacement_origin_y;
+  l_nX_ = applications::exahype2::swe::DomainSize(0);
+  l_nY_ = applications::exahype2::swe::DomainSize(1);
   this->parse_bathymetry_file(bathymetry_file_path);
   this->parse_displacement_file(displacement_file_path);
 
 }
+
+applications::exahype2::swe::parser::TopologyParser::TopologyParser(
+  const char* bathymetry_file_path,
+  const char* displacement_file_path,
+  const char* nc_bathymetry_x_key,
+  const char* nc_bathymetry_y_key,
+  const char* nc_bathymetry_bathymetry_key,
+  const char* nc_displacement_x_key,
+  const char* nc_displacement_y_key,
+  const char* nc_displacement_displacement_key
+):
+nc_bathymetry_x_key_(nc_bathymetry_x_key),
+nc_bathymetry_y_key_(nc_bathymetry_y_key),
+nc_bathymetry_bathymetry_key_(nc_bathymetry_bathymetry_key),
+nc_displacement_x_key_(nc_displacement_x_key),
+nc_displacement_y_key_(nc_displacement_y_key),
+nc_displacement_displacement_key_(nc_displacement_displacement_key)
+{
+  l_nX_ = applications::exahype2::swe::DomainSize(0);
+  l_nY_ = applications::exahype2::swe::DomainSize(1);
+  this->parse_bathymetry_file(bathymetry_file_path);
+  this->parse_displacement_file(displacement_file_path);
+}
+
+applications::exahype2::swe::parser::TopologyParser::TopologyParser(
+  const char *bathymetry_file_path, 
+  double width_x, double width_y,
+  const char *nc_bathymetry_x_key, const char *nc_bathymetry_y_key, const char *nc_bathymetry_bathymetry_key
+):
+l_nX_(width_x),
+l_nY_(width_y),
+nc_bathymetry_x_key_(nc_bathymetry_x_key),
+nc_bathymetry_y_key_(nc_bathymetry_y_key),
+nc_bathymetry_bathymetry_key_(nc_bathymetry_bathymetry_key)
+{
+  this->parse_bathymetry_file(bathymetry_file_path);
+}
+
 
 applications::exahype2::swe::parser::TopologyParser::~TopologyParser(){
   delete this->bathymetry_; 
@@ -28,14 +78,14 @@ void applications::exahype2::swe::parser::TopologyParser::parse_bathymetry_file(
   }
 
   // Read x-dimension of bathymetry
-  if ((x_bathymetry_ = NetCDFReader::getDimension(ncid, "x")) == 0)
+  if ((x_bathymetry_ = NetCDFReader::getDimension(ncid, nc_bathymetry_x_key_)) == 0)
   {
     std::cout << "Scenario could not be initialized: Dimension of the x-Bathymetry could not be read." << std::endl;
     return;
   }
 
   // Read y-dimension of bathymetry
-  if ((y_bathymetry_ = NetCDFReader::getDimension(ncid, "y")) == 0)
+  if ((y_bathymetry_ = NetCDFReader::getDimension(ncid, nc_bathymetry_y_key_)) == 0)
   {
     std::cout << "Scenario could not be initialized: Dimension of the y-Bathymetry could not be read." << std::endl;
     return;
@@ -43,7 +93,7 @@ void applications::exahype2::swe::parser::TopologyParser::parse_bathymetry_file(
 
   bathymetry_ = new double[x_bathymetry_*y_bathymetry_];
   // Read bathymetry
-  if (NetCDFReader::readVariable2D(ncid, "z", bathymetry_, x_bathymetry_, y_bathymetry_) == -1)
+  if (NetCDFReader::readVariable2D(ncid, nc_bathymetry_bathymetry_key_, bathymetry_, x_bathymetry_, y_bathymetry_) == -1)
   {
     std::cout << "Scenario could not be initialized: Bathymetry could not be read." << std::endl;
     return;
@@ -52,7 +102,7 @@ void applications::exahype2::swe::parser::TopologyParser::parse_bathymetry_file(
   // Get max and min x
   {
     double tmp[x_bathymetry_]{0};
-    if (NetCDFReader::readVariable1D(ncid, "x", tmp) == -1)
+    if (NetCDFReader::readVariable1D(ncid, nc_bathymetry_x_key_, tmp) == -1)
     {
         std::cout << "Scenario could not be initialized: Bathymetry x indices could not be read." << std::endl;
         return;
@@ -64,7 +114,7 @@ void applications::exahype2::swe::parser::TopologyParser::parse_bathymetry_file(
   // Get max and min y
   {
     double tmp[y_bathymetry_]{0};
-    if (NetCDFReader::readVariable1D(ncid, "y", tmp) == -1)
+    if (NetCDFReader::readVariable1D(ncid, nc_bathymetry_y_key_, tmp) == -1)
     {
         std::cout << "Scenario could not be initialized: Bathymetry y indices could not be read." << std::endl;
         return;
@@ -91,14 +141,14 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
   }
 
   // Read x-dimension of displacement
-  if ((x_displacement_ = NetCDFReader::getDimension(ncid, "x")) == 0)
+  if ((x_displacement_ = NetCDFReader::getDimension(ncid, nc_displacement_x_key_)) == 0)
   {
     std::cout << "Scenario could not be initialized: Dimension of the x-displacement could not be read." << std::endl;
     return;
   }
 
   // Read y-dimension of displacement
-  if ((y_displacement_ = NetCDFReader::getDimension(ncid, "y")) == 0)
+  if ((y_displacement_ = NetCDFReader::getDimension(ncid, nc_displacement_y_key_)) == 0)
   {
     std::cout << "Scenario could not be initialized: Dimension of the y-displacement could not be read." << std::endl;
     return;
@@ -107,7 +157,7 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
   // Get max and min x
   {
     double tmp[x_displacement_]{0};
-    if (NetCDFReader::readVariable1D(ncid, "x", tmp) == -1)
+    if (NetCDFReader::readVariable1D(ncid, nc_displacement_x_key_, tmp) == -1)
     {
         std::cout << "Scenario could not be initialized: Displacement x indices could not be read." << std::endl;
         return;
@@ -129,7 +179,7 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
   // Get max and min y
   {
     double tmp[y_displacement_]{0};
-    if (NetCDFReader::readVariable1D(ncid, "y", tmp) == -1)
+    if (NetCDFReader::readVariable1D(ncid, nc_displacement_y_key_, tmp) == -1)
     {
         std::cout << "Scenario could not be initialized: Displacement y indices could not be read." << std::endl;
         return;
@@ -151,7 +201,7 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
   displacement_ = new double[x_displacement_*y_displacement_];
 
   // Read displacement
-  if (NetCDFReader::readVariable2D(ncid, "z", displacement_, x_displacement_, y_displacement_) == -1)
+  if (NetCDFReader::readVariable2D(ncid, nc_displacement_displacement_key_, displacement_, x_displacement_, y_displacement_) == -1)
   {
     std::cout << "Scenario could not be initialized: Displacement could not be read." << std::endl;
     return;

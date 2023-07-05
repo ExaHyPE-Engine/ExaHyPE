@@ -6,7 +6,6 @@ namespace applications::exahype2::swe::parser::NetCDFHelper
     /**
      * @brief 
      * 
-     * @param i_dz mesh width of simulation space in z direction
      * @param i_z coordinate of dimension z in simulation space
      * @param i_nZ size of simulation space in z direction
      * @param i_min_z_cdf min index in cdf space

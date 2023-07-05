@@ -1,6 +1,8 @@
 #ifndef _applications_exahype2_swe_parser_TopologyParser_H_
 #define _applications_exahype2_swe_parser_TopologyParser_H_
+#ifndef ADJOINT
 #include "../Constants.h"
+#endif
 #include "NetCDFReader.hpp"
 #include "NetCDFHelper.hpp"
 
@@ -31,14 +33,45 @@ class applications::exahype2::swe::parser::TopologyParser {
     double min_y_displacement_ = 1;         /* lowest y-coordinate in displacement */
     double uq_displacement_origin_x = -1;   /* origin for displacment in x-dimension for uq */
     double uq_displacement_origin_y = -1;   /* origin for displacment in y-dimension for uq */
+    
+    const char *nc_bathymetry_x_key_;
+    const char *nc_bathymetry_y_key_;
+    const char *nc_bathymetry_bathymetry_key_;
+
+    const char *nc_displacement_x_key_;
+    const char *nc_displacement_y_key_;
+    const char *nc_displacement_displacement_key_;
 
   public:
   
-    TopologyParser(const char *bathymetry_file_path, const char *displacement_file_path, double i_uq_displacement_origin_x=INFINITY, double i_uq_displacement_origin_y=INFINITY);
+    TopologyParser(
+      const char *bathymetry_file_path, const char *displacement_file_path, 
+      double i_uq_displacement_origin_x=INFINITY, double i_uq_displacement_origin_y=INFINITY, 
+      const char *nc_bathymetry_x_key="x", const char *nc_bathymetry_y_key="y", const char *nc_bathymetry_bathymetry_key="z",
+      const char *nc_displacement_x_key="x", const char *nc_displacement_y_key="y", const char *nc_displacement_displacement_key="z"
+    );
+
+    TopologyParser(
+      const char *bathymetry_file_path, const char *displacement_file_path, 
+      const char *nc_bathymetry_x_key="x", const char *nc_bathymetry_y_key="y", const char *nc_bathymetry_bathymetry_key="z",
+      const char *nc_displacement_x_key="x", const char *nc_displacement_y_key="y", const char *nc_displacement_displacement_key="z"
+    );
+    
+    TopologyParser(
+      const char *bathymetry_file_path, 
+      double width_x, double width_y,
+      const char *nc_bathymetry_x_key="x", const char *nc_bathymetry_y_key="y", const char *nc_bathymetry_bathymetry_key="z"
+    );
     ~TopologyParser();
 
     void parse_bathymetry_file(const char *bathymetry_file_path);
     double sample_bathymetry(double x, double y);
+
+    double get_max_x_bathymetry(){ return max_x_bathymetry_; }
+    double get_min_x_bathymetry(){ return min_x_bathymetry_; }
+    double get_max_y_bathymetry(){ return max_y_bathymetry_; }
+    double get_min_y_bathymetry(){ return min_y_bathymetry_; }
+
     
     void parse_displacement_file(const char *displacement_file_path);
     double sample_displacement(double x, double y);

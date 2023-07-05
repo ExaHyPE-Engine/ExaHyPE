@@ -89,6 +89,13 @@ parser.add_argument("-probes",  nargs='+',             dest="probe_coordinates",
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   required=False,             help="Set order of time discretisation for Runge-Kutta scheme." )
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   required=False,             help="Set order of space discretisation for Discontinuous Galerkin." )
 
+parser.add_argument("-nc-key-bath-x",                  dest="nc_key_bath_x",  type=str,                   default="x",                help="Key for x dimension values in bathymetry netCDF file.")
+parser.add_argument("-nc-key-bath-y",                  dest="nc_key_bath_y",  type=str,                   default="y",                help="Key for y dimension values in bathymetry netCDF file.")
+parser.add_argument("-nc-key-bath-bath",               dest="nc_key_bath_bath",type=str,                  default="z",                help="Key for bathymetry values in bathymetry netCDF file.")
+parser.add_argument("-nc-key-displ-x",                 dest="nc_key_displ_x",  type=str,                  default="x",                help="Key for x dimension values in displacement netCDF file.")
+parser.add_argument("-nc-key-displ-y",                 dest="nc_key_displ_y",  type=str,                  default="y",                help="Key for y dimension values in displacement netCDF file.")
+parser.add_argument("-nc-key-displ-displ",             dest="nc_key_displ_displ",type=str,                default="z",                help="Key for displacement values in displacement netCDF file.")
+
 parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)." )
 parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR." )
 parser.add_argument(            "--uq-displacement-origin",dest="uq_displacement_origin",type=str,        required=False,             help="Move displacement for uncertainty quantification. Expected argument [x,y] denoting the center of the displacement file within the coordinate system of the bathymetry file. The coordinates are not checked against anything, so they might even move the displacment on dry land!")
@@ -253,11 +260,20 @@ if args.scenario == "Artificial_Tsunami" or args.scenario == "Circular_Island":
 
 if args.scenario == "Tsunami":
   my_solver.add_user_solver_includes("#include \"parser/TopologyParser.h\"")
+  topology_parser_parameters = "\"%s\", \"%s\"" % (args.bathymetry_file, args.displacement_file);
+
   if args.uq_displacement_origin is not None:
     displacement_origin_x, displacement_origin_y = parse_coordinate_pair(args.uq_displacement_origin)
-    my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(\"%s\", \"%s\", %f, %f);" % (args.bathymetry_file, args.displacement_file, displacement_origin_x, displacement_origin_y))
-  else:
-    my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(\"%s\", \"%s\");" % (args.bathymetry_file, args.displacement_file))
+    topology_parser_parameters += ", %f, %f" % (displacement_origin_x, displacement_origin_y)
+
+  topology_parser_parameters += ",\"%s\"" % args.nc_key_bath_x
+  topology_parser_parameters += ",\"%s\"" % args.nc_key_bath_y
+  topology_parser_parameters += ",\"%s\"" % args.nc_key_bath_bath
+  topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_x
+  topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_y
+  topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_displ
+  
+  my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(%s);" % topology_parser_parameters)
 
 #########################################
 # Set up solver implementation          #
