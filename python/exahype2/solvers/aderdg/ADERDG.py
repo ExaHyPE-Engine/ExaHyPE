@@ -352,7 +352,7 @@ class ADERDG( object ):
 
     self._action_set_AMR.priority = 2
     self._action_set_AMR_commit_without_further_analysis.priority = 2
-    self._action_set_postprocess_solution.priority = 3
+    self._action_set_postprocess_solution.priority = 2
 
 
   def create_readme_descriptor(self, domain_offset, domain_size):
