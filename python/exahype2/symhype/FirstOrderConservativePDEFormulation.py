@@ -43,8 +43,9 @@ class FirstOrderConservativePDEFormulation(PDE):
         for i in range(0, self.unknowns):
             result += "d_t(" + str(self.Q[i]) + "(x)) + div("
             result += str(self.F[i])
-            result += " + "
-            result += str(self.ncp[i])
+            if isinstance(self.ncp[i], numbers.Number):
+              result += " + "
+              result += str(self.ncp[i])
             result += ") = "
             result += str(self.sources[i]) + "\n"
         for i in range(0, self.unknowns):
@@ -61,8 +62,9 @@ class FirstOrderConservativePDEFormulation(PDE):
                 if j != 0:
                     result += ", "
                 result += str(self.F[i][j])
-                result += " + "
-                result += str(self.ncp[i][j])
+                if isinstance(self.ncp[i], numbers.Number):
+                  result += " + "
+                  result += str(self.ncp[i][j])
             result += ") & = & "
             result += str(self.sources[i]) + " \\\\"
         for i in range(0, self.unknowns):
@@ -104,7 +106,9 @@ class FirstOrderConservativePDEFormulation(PDE):
           before we pipe it into the output. If your expression is something numeric,
           then evalf will fail (as it is not defined for scalar quantities).
         """
-        result = self._implementation_of_mapping_onto_named_quantities(
+        result = "assertion(normal >= 0);\n"
+        result += "assertion(normal < Dimensions);\n"
+        result += self._implementation_of_mapping_onto_named_quantities(
             is_cell_mapping=False
         )
         result += "switch( normal ) {\n"
@@ -124,6 +128,7 @@ class FirstOrderConservativePDEFormulation(PDE):
                         + ";"
                     )
                 result += "\n"
+                result += "assertion(!std::isnan(F[" + str(i) + "]));\n"
             result += "  break;\n"
         result += "}\n"
         return result
@@ -136,7 +141,9 @@ class FirstOrderConservativePDEFormulation(PDE):
           before we pipe it into the output. If your expression is something numeric,
           then evalf will fail (as it is not defined for scalar quantities).
         """
-        result = self._implementation_of_mapping_onto_named_quantities(
+        result = "assertion(normal >= 0);\n"
+        result += "assertion(normal < Dimensions);\n"
+        result += self._implementation_of_mapping_onto_named_quantities(
             is_cell_mapping=False, has_delta=True
         )
         result += "switch( normal ) {\n"
@@ -175,7 +182,9 @@ class FirstOrderConservativePDEFormulation(PDE):
           before we pipe it into the output. If your expression is something numeric,
           then evalf will fail (as it is not defined for scalar quantities).
         """
-        result = self._implementation_of_mapping_onto_named_quantities(
+        result = "assertion(normal >= 0);\n"
+        result += "assertion(normal < Dimensions);\n"
+        result += self._implementation_of_mapping_onto_named_quantities(
             is_cell_mapping=False
         )
         result += "switch (normal) {\n"
@@ -206,7 +215,9 @@ class FirstOrderConservativePDEFormulation(PDE):
         """
         Return maximum eigenvalue
         """
-        result = self._implementation_of_mapping_onto_named_quantities(
+        result = "assertion(normal >= 0);\n"
+        result += "assertion(normal < Dimensions);\n"
+        result += self._implementation_of_mapping_onto_named_quantities(
             is_cell_mapping=False
         )
         result += "double lambda[" + str(self.unknowns) + "];\n"
@@ -228,6 +239,7 @@ class FirstOrderConservativePDEFormulation(PDE):
                         + ";"
                     )
                 result += "\n"
+                result += "assertion(!std::isnan(lambda[" + str(i) + "]));\n"
             result += "  break;\n"
         result += "}\n"
         result += "double result = 0.0;\n"
@@ -245,6 +257,8 @@ class FirstOrderConservativePDEFormulation(PDE):
         """
         Return implementation for sources as C code.
         """
+        result = "assertion(normal >= 0);\n"
+        result += "assertion(normal < Dimensions);\n"
         result = self._implementation_of_mapping_onto_named_quantities(
             is_cell_mapping=True
         )

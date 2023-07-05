@@ -119,6 +119,7 @@ class Project (object):
       print( "threw away all data and ran garbage collection" )
 
   def build(self,
+            make=True,
             make_clean_first=True,
             throw_away_data_after_build=False,
             number_of_parallel_builds=-1,
@@ -136,11 +137,14 @@ class Project (object):
       throw_away_data_after_build: Bool
         see generate()
     """
-    if number_of_parallel_builds<=0:
+    if number_of_parallel_builds <= 0:
         number_of_parallel_builds = multiprocessing.cpu_count()
 
     if not self.is_generated:
       self.generate()
+
+    if not make:
+      return
 
     if make_clean_first:
       print( "clean up project ..." )
