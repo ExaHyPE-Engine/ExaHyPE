@@ -12,7 +12,8 @@
 #include "exahype2/RefinementControlService.h"
 
 {% for item in TRACERS -%}
-#include "vertexdata/{{ item }}.h"
+#include "vertexdata/{{ item }}Set.h"
+#include "globaldata/{{ item }}.h"
 {# Comment to ensure that jinja2 adds a new line#}
 {%- endfor %}
 
@@ -207,7 +208,7 @@ void finishTimeStep() {
   {%- endfor %}
 
   {% for item in TRACERS -%}
-  vertexdata::{{ item }}::finishedTraversal();
+  vertexdata::{{ item }}Set::finishedTraversal();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
@@ -228,7 +229,7 @@ void finishGridConstructionStep() {
   {%- endfor %}
 
   {% for item in TRACERS -%}
-  vertexdata::{{ item }}::finishedTraversal();
+  vertexdata::{{ item }}Set::finishedTraversal();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
@@ -291,7 +292,7 @@ void finishGridInitialisationStep() {
   {%- endfor %}
 
   {% for item in TRACERS -%}
-  vertexdata::{{ item }}::finishedTraversal();
+  vertexdata::{{ item }}Set::finishedTraversal();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
@@ -307,7 +308,7 @@ void finishPlottingStep() {
   {%- endfor %}
 
   {% for item in TRACERS -%}
-  vertexdata::{{ item }}::finishedTraversal();
+  vertexdata::{{ item }}Set::finishedTraversal();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 

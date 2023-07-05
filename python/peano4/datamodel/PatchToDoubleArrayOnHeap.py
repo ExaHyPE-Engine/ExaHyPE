@@ -30,7 +30,7 @@ class PatchToDoubleArrayOnHeap(PatchToDoubleArray):
 
     def get_stack_container(self):
         return (
-            "peano4::stacks::STDVectorStackOverSmartPointers< "
+            "peano4::stacks::STDVectorStack< "
             + self.data.get_full_qualified_type()
             + " >"
         )
@@ -60,7 +60,7 @@ class PatchToDoubleArrayOnHeap(PatchToDoubleArray):
     def get_header_file_include(self):
         return (
             """
-#include "peano4/stacks/STDVectorStackOverSmartPointers.h"
+#include "peano4/stacks/STDVectorOverContainerOfPointers.h"
 #include \""""
             + self.data.namespace[-1]
             + """/"""
