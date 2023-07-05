@@ -132,48 +132,45 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             max_h,
         )
 
+        # Initialize default parameters.
+        #---------------------------------------
+
         # This is an SPH scheme.
         self._is_sph = True
         self._isSPH_cpp = "true"
         # Hardcoded this for now until we can switch flavours.
         self._sph_flavour = "minimal"
 
-        # TODO: change this later. These attributes need to be available
-        # in this class so users can access them.
-
         # Simulation properties
-        #  self._cfl_factor = cfl_factor
-        #  self._initial_time_step_size = initial_time_step_size
-
-        # Whether we want constant dt
-        #  if constant_time_step_size == True:
-        #      adjustTimeStepSize = "false"
-        #  else:
-        #      adjustTimeStepSize = "true"
-        #  self._adjustTimeStepSize = adjustTimeStepSize
-
+        self._cfl_factor = cfl_factor
+        self._initial_time_step_size = initial_time_step_size
+        self._constant_time_step_size = constant_time_step_size
 
         # SPH parameters (default values)
+        self._hydro_dimensions = dimensions_hydro
 
-        # needed in __init__
-        self._hydroDimensions = dimensions_hydro
-
-        #  self._eta_factor = 1.2348
-        # TODO MLADEN: Check these values later. Looks like this is only valid for specific setups.
-        #  self._h_hydro_min = 1e-6
-        #  self._h_hydro_max = 1.0 / 3.0 / 2  # Approximated value for coarsest grid level
-        #  self._h_tolerance = 1e-4
-        #  self._h_max_iterations = 10
+        self._eta_factor = 1.2348
+        self._h_hydro_min = 1e-6
+        self._h_hydro_max = 1.0 / 3.0 / 2  # Approximated value for coarsest grid level
+        self._h_tolerance = 1e-4
+        self._h_max_iterations = 10
 
         # Minimal SPH parameters
-        #  self._alpha_av = 0.8
-        #  self._beta_av = 3.0
+        self._alpha_av = 0.8
+        self._beta_av = 3.0
 
         # Project namespace to have consistent use of exported Constants in kernels
         # Not used right now.
         self._swift_project_namespace = swift_project_namespace
 
-        # Baseline particle properties --------------------------------------------------------------
+        # now set these parameters as dastgen attributes
+        self.set_parameters()
+
+
+        # Construct particle properties
+        #--------------------------------
+
+        # Baseline particle properties -------------------------------------------------
         self.mass = dastgen2.attributes.Double("mass")
         self.velocity = peano4.dastgen2.Peano4DoubleArray("v", "Dimensions")
         self.acceleration = peano4.dastgen2.Peano4DoubleArray("a", "Dimensions")
@@ -219,9 +216,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self.data.add_attribute(self.iteration_count)
         self.data.add_attribute(self.has_converged)
 
-        # Artificial viscosity scheme -------------------------------------------------
+        # Artificial viscosity scheme --------------------------------------------------
         self.balsara = dastgen2.attributes.Double("balsara")
-        if self._hydroDimensions == 3:
+        if self._hydro_dimensions == 3:
             self.rot_v = peano4.dastgen2.Peano4DoubleArray("rot_v", "Dimensions")
         else:  # Curl is a scalar in lower dimensions
             self.rot_v = dastgen2.attributes.Double(
@@ -252,84 +249,68 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self.data.add_attribute(self.Ncount)
         self.data.add_attribute(self.part_id)
 
-        # Algorithm Steps --------------------------------------------------------------
+        # Algorithm Steps ---------------------------------------------------------------
         self.algorithm_steps_dict = {}
         self._setup_algorithm_steps_dict()
-        # "Global variables" constants ----------------------------------------------
-        self.cfl_attr = dastgen2.attributes.Double("cfl", is_const_static=True, initval=cfl_factor)
-        self.data.add_attribute(self.cfl_attr)
 
-        self.initial_time_step_size_attr = dastgen2.attributes.Double("initialTimeStepSize", is_const_static=True, initval=initial_time_step_size)
-        self.data.add_attribute(self.initial_time_step_size_attr)
 
-        if constant_time_step_size == True:
+    def set_parameters(self):
+        """
+        This function translates "global" particle parameters which are
+        constant throughout the simulation (like CFL factor, minimal time step
+        size, viscosity parameters...) into dastgen attributes of the C++
+        particle class.
+        If you modify any of the attributes manually outside of the particle
+        initialisation, e.g. by invoking
+
+        ```
+        particle = SPHLeapfrogFixedSearchRadius(initial_time_step_size=ABC, ...)
+        particle.initial_time_step_size = XYZ
+        ```
+
+        you need to call this function manually so your changes propagate
+        into the generated C++ files.
+        """
+
+        cfl_attr = dastgen2.attributes.Double("cfl", is_const_static=True, initval=self._cfl_factor)
+        self.data.add_or_replace_attribute(cfl_attr)
+
+        initial_time_step_size_attr = dastgen2.attributes.Double("initialTimeStepSize", is_const_static=True, initval=self._initial_time_step_size)
+        self.data.add_or_replace_attribute(initial_time_step_size_attr)
+
+        if self._constant_time_step_size == True:
             adjustTimeStepSize = "false"
         else:
             adjustTimeStepSize = "true"
+        adjust_time_step_size_attr = dastgen2.attributes.Boolean("adjustTimeStepSize", is_const_static=True, initval=adjustTimeStepSize)
+        self.data.add_or_replace_attribute(adjust_time_step_size_attr)
 
-        self.adjust_time_step_size_attr = dastgen2.attributes.Boolean("adjustTimeStepSize", is_const_static=True, initval=adjustTimeStepSize)
-        self.data.add_attribute(self.adjust_time_step_size_attr)
+        is_sph_attr = dastgen2.attributes.Boolean("isSPH", is_const_static=True, initval=self._isSPH_cpp)
+        self.data.add_or_replace_attribute(is_sph_attr)
 
-        self.is_sph_attr = dastgen2.attributes.Boolean("isSPH", is_const_static=True, initval=self._isSPH_cpp)
-        self.data.add_attribute(self.is_sph_attr)
+        hydro_dimensions_attr = dastgen2.attributes.Double("hydroDimensions", is_const_static=True, initval=self._hydro_dimensions)
+        self.data.add_or_replace_attribute(hydro_dimensions_attr)
 
-        # There must be a better way to do this. Why aren't we accessing Constants.h?
-        self.hydro_dimensions_attr = dastgen2.attributes.Double("hydroDimensions", is_const_static=True, initval=dimensions_hydro)
-        self.data.add_attribute(self.hydro_dimensions_attr)
+        eta_factor_attr = dastgen2.attributes.Double("etaFactor", is_const_static=True, initval=self._eta_factor)
+        self.data.add_or_replace_attribute(eta_factor_attr)
 
-        self.eta_factor_attr = dastgen2.attributes.Double("etaFactor", is_const_static=True, initval="1.2348")
-        self.data.add_attribute(self.eta_factor_attr)
+        h_hydro_min_attr = dastgen2.attributes.Double("smlMin", is_const_static=True, initval=self._h_hydro_min)
+        self.data.add_or_replace_attribute(h_hydro_min_attr)
 
-        self.h_hydro_min_attr = dastgen2.attributes.Double("smlMin", is_const_static=True, initval="1e-6")
-        self.data.add_attribute(self.h_hydro_min_attr)
+        h_hydro_max_attr = dastgen2.attributes.Double("smlMax", is_const_static=True, initval=self._h_hydro_max)
+        self.data.add_or_replace_attribute(h_hydro_max_attr)
 
-        self.h_hydro_max_attr = dastgen2.attributes.Double("smlMax", is_const_static=True, initval="1.0 / 3.0 / 2.")
-        self.data.add_attribute(self.h_hydro_max_attr)
+        h_tolerance_attr = dastgen2.attributes.Double("smlTolerance", is_const_static=True, initval=self._h_tolerance)
+        self.data.add_or_replace_attribute(h_tolerance_attr)
 
-        self.h_tolerance_attr = dastgen2.attributes.Double("smlTolerance", is_const_static=True, initval="1e-4")
-        self.data.add_attribute(self.h_tolerance_attr)
+        h_max_iterations_attr = dastgen2.attributes.Integer("smlMaxIterations", is_const_static=True, initval=self._h_max_iterations)
+        self.data.add_or_replace_attribute(h_max_iterations_attr)
 
-        self.h_max_iterations_attr = dastgen2.attributes.Integer("smlMaxIterations", is_const_static=True, initval="1e-4")
-        self.data.add_attribute(self.h_max_iterations_attr)
+        alpha_av_attr = dastgen2.attributes.Double("alphaAV", is_const_static=True, initval=self._alpha_av)
+        self.data.add_or_replace_attribute(alpha_av_attr)
 
-        self.alpha_av_attr = dastgen2.attributes.Double("alphaAV", is_const_static=True, initval="0.8")
-        self.data.add_attribute(self.alpha_av_attr)
-
-        self.beta_av_attr = dastgen2.attributes.Double("betaAV", is_const_static=True, initval="3.0")
-        self.data.add_attribute(self.beta_av_attr)
-
-
-
-
-
-        # ------------------------------
-        self.myStaticDoubleVariable = dastgen2.attributes.Double(
-            "myStaticDoubleVariable", is_static=True, initval=2.3456
-        )
-        self.myStaticConstDoubleVariable = dastgen2.attributes.Double(
-            "myStaticConstDoubleVariable",
-            is_static=False,
-            is_const_static=True,
-            initval=1.2345,
-        )
-        self.myStaticIntVariable = dastgen2.attributes.Integer(
-            "myStaticIntVariable", is_static=True, initval=123
-        )
-        self.myStaticConstIntVariable = dastgen2.attributes.Integer(
-            "myStaticConstIntVariable",
-            is_static=False,
-            is_const_static=True,
-            initval=456,
-        )
-        self.myStaticBoolVariable = dastgen2.attributes.Boolean(
-            "myStaticBoolVariable", is_static=True, initval="true"
-        )
-        self.myStaticConstBoolVariable = dastgen2.attributes.Boolean(
-            "myStaticConstBoolVariable",
-            is_static=False,
-            is_const_static=True,
-            initval="false",
-        )
+        beta_av_attr = dastgen2.attributes.Double("betaAV", is_const_static=True, initval=self._beta_av)
+        self.data.add_or_replace_attribute(beta_av_attr)
 
         return
 
@@ -561,6 +542,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
         return
 
+
     def algorithm_steps(self):
         """!
 
@@ -594,6 +576,17 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         ]
 
     @property
+    def hydro_dimensions(self):
+        """
+        Forbid users to modify hydro dimensions on-the-fly.
+        """
+        return self._hydro_dimensions
+
+    @hydro_dimensions.setter
+    def hydro_dimensions(self, hydro_dimensions):
+        raise ValueError("Can't change hydro_dimensions now. Modify it while instantiating the class.")
+
+    @property
     def eta_factor(self):
         """
 
@@ -604,105 +597,94 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         """
         return self._eta_factor
 
-    #  @eta_factor.setter
-    #  def eta_factor(self, eta_factor):
-    #      print("Set eta_factor method called.")
-    #      if eta_factor <= 0:
-    #          raise ValueError("SPH eta factor value not valid.")
-    #      self._eta_factor = eta_factor
+    @eta_factor.setter
+    def eta_factor(self, eta_factor):
+        if eta_factor <= 0:
+            raise ValueError("SPH eta factor value not valid.")
+        self._eta_factor = eta_factor
 
-    #  @property
-    #  def alpha_av(self):
-    #      """
-    #
-    #      Viscosity parameters of the Minimal SPH model. Default SWIFT values are
-    #      alpha_av=0.8
-    #      and beta_av=3.
-    #
-    #      """
-    #      return self._alpha_av
+    @property
+    def alpha_av(self):
+        """
 
-    #  @alpha_av.setter
-    #  def alpha_av(self, alpha_av):
-        #  print("Set alpha_av method called.")
-        #  if alpha_av <= 0:
-        #      raise ValueError("Value for the alpha_av viscosiy parameter not valid.")
-        #  self._alpha_av = alpha_av
+        Viscosity parameters of the Minimal SPH model. Default SWIFT values are
+        alpha_av=0.8
+        and beta_av=3.
 
-    #  @property
-    #  def beta_av(self):
-    #      return self._alpha_av
+        """
+        return self._alpha_av
 
-    #  @beta_av.setter
-    #  def beta_av(self, beta_av):
-    #      print("Set beta_av method called.")
-    #      if beta_av <= 0:
-    #          raise ValueError("Value for the beta_av viscosiy parameter not valid.")
-    #      self._beta_av = beta_av
+    @alpha_av.setter
+    def alpha_av(self, alpha_av):
+        if alpha_av <= 0:
+            raise ValueError("Value for the alpha_av viscosiy parameter not valid.")
+        self._alpha_av = alpha_av
 
-#      @property
-    #  def h_hydro_min(self):
-    #      """
-    #
-    #      Set the limits allowed for the SPH smoothing length. Notice that the max value
-    #      is bounded by Peano's search radius as h_max = R_search_max = max_grid_size /
-    #      gamma_k, where gamma_k is the SPH kernel factor that relates h and H.
-    #      Typically gamma_k = 2, so h_max = max_grid_size / 2.
-    #
-    #      """
-    #      print("get h_hydro_min method called.")
-    #      return self._h_hydro_min
-    #
-    #  @h_hydro_min.setter
-    #  def h_hydro_min(self, h_hydro_min):
-    #      print("Set h_hydro_min method called.")
-    #      if h_hydro_min > self._h_hydro_max:
-    #          raise ValueError("Min value of smoothing length larger than max allowed.")
-    #      self._h_hydro_min = h_hydro_min
-    #
-    #  @property
-    #  def h_hydro_max(self):
-    #      print("get h_hydro_max method called.")
-    #      return self._h_hydro_max
-    #
-    #  @h_hydro_max.setter
-    #  def h_hydro_max(self, h_hydro_max):
-    #      print("Set h_hydro_max method called.")
-    #      if h_hydro_max < self._h_hydro_min:
-    #          raise ValueError("max value of smoothing length smaller than min allowed.")
-    #      self._h_hydro_max = h_hydro_max
-    #
-    #  @property
-    #  def h_tolerance(self):
-    #      """
-    #
-    #      Tolerance for Newton-Raphson convergence criterion.
-    #
-    #      """
-    #      print("get h_tolerance method called.")
-    #      return self._h_tolerance
-    #
-    #  @h_tolerance.setter
-    #  def h_tolerance(self, h_tolerance):
-    #      print("Set h_tolerance method called.")
-    #      if h_tolerance > 1:
-    #          raise ValueError("Value of h_tolerance cannot be larger than 1.")
-    #      self._h_tolerance = h_tolerance
-    #
-    #  @property
-    #  def h_max_iterations(self):
-    #      """
-    #      Max number of iterations to adapt the SPH smoothing length
-    #      """
-    #      print("get h_max_iterations method called.")
-    #      return self._h_max_iterations
-    #
-    #  @h_max_iterations.setter
-    #  def h_max_iterations(self, h_max_iterations):
-    #      print("set h_max_iterations method called.")
-    #      if h_max_iterations > 50:
-    #          raise ValueError("Value of h_max_iterations is too large.")
-#          self._h_max_iterations = h_max_iterations
+    @property
+    def beta_av(self):
+        return self._alpha_av
+
+    @beta_av.setter
+    def beta_av(self, beta_av):
+        if beta_av <= 0:
+            raise ValueError("Value for the beta_av viscosiy parameter not valid.")
+        self._beta_av = beta_av
+
+    @property
+    def h_hydro_min(self):
+        """
+
+        Set the limits allowed for the SPH smoothing length. Notice that the max value
+        is bounded by Peano's search radius as h_max = R_search_max = max_grid_size /
+        gamma_k, where gamma_k is the SPH kernel factor that relates h and H.
+        Typically gamma_k = 2, so h_max = max_grid_size / 2.
+
+        """
+        return self._h_hydro_min
+
+    @h_hydro_min.setter
+    def h_hydro_min(self, h_hydro_min):
+        if h_hydro_min > self._h_hydro_max:
+            raise ValueError("Min value of smoothing length larger than max allowed.")
+        self._h_hydro_min = h_hydro_min
+
+    @property
+    def h_hydro_max(self):
+        return self._h_hydro_max
+
+    @h_hydro_max.setter
+    def h_hydro_max(self, h_hydro_max):
+        if h_hydro_max < self._h_hydro_min:
+            raise ValueError("max value of smoothing length smaller than min allowed.")
+        self._h_hydro_max = h_hydro_max
+
+    @property
+    def h_tolerance(self):
+        """
+
+        Tolerance for Newton-Raphson convergence criterion.
+
+        """
+        return self._h_tolerance
+
+    @h_tolerance.setter
+    def h_tolerance(self, h_tolerance):
+        if h_tolerance > 1:
+            raise ValueError("Value of h_tolerance cannot be larger than 1.")
+        self._h_tolerance = h_tolerance
+
+    @property
+    def h_max_iterations(self):
+        """
+        Max number of iterations to adapt the SPH smoothing length
+        """
+        return self._h_max_iterations
+
+    @h_max_iterations.setter
+    def h_max_iterations(self, h_max_iterations):
+        if h_max_iterations > 50:
+            raise ValueError("Value of h_max_iterations is too large.")
+        self._h_max_iterations = h_max_iterations
 
     @property
     def mantissa_size(self):
@@ -717,7 +699,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
     @mantissa_size.setter
     def mantissa_size(self, mantissa_size):
-        print("Set mantissa_size method called.")
         if mantissa_size < 0:
             raise ValueError("Mantissa size has to be larger than 0.")
         self._mantissa_size = mantissa_size
@@ -742,17 +723,17 @@ class SPHLeapfrogFixedSearchRadius(Particle):
     def readme_descriptor(self):
         return (
             super(SPHLeapfrogFixedSearchRadius, self).readme_descriptor
-  #            + """
-  #
-  #  Time integrator: SPH Leapfrog
-  #
-  #  - search radius:                  fixed
-  #  - CFL factor:                     """
-            #  + str(self._cfl_factor)
-  #            + """
-  #  - dt_initial:                     """
-  #            + str(self._initial_time_step_size)
-  #            + """
-  #
-    #  """
+            + """
+
+  Time integrator: SPH Leapfrog
+
+  - search radius:                  fixed
+  - CFL factor:                     """
+            + str(self._cfl_factor)
+            + """
+  - dt_initial:                     """
+            + str(self._initial_time_step_size)
+            + """
+
+    """
         )
