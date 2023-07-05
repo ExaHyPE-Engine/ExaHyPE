@@ -56,9 +56,9 @@ class InsertParticlesFromHDF5File(ActionSet):
     std::vector <int>    PartidWithinVoxel          = _fileReaderHDF5.getParticleIDsWithinVoxel();
 
     int indexEntry = 0;
-    const globaldata::{{PARTICLE}} dummy;
-    const double hmin = dummy.getSmlMin();
-    const double hmax = dummy.getSmlMax();
+    const double hmin = globaldata::{{PARTICLE}}::getSmlMin();
+    const double hmax = globaldata::{{PARTICLE}}::getSmlMax();
+
 
     // Now loop over these particle coordinates
     for (auto& p: coords) {
