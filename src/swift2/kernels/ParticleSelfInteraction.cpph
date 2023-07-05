@@ -2,6 +2,7 @@
 #include "swift2/kernels/kernel_hydro.h"
 
 #include <iostream> // TODO: temporary
+#include <type_traits>
 
 
 template <typename ParticleContainer, typename Particle>
@@ -35,10 +36,10 @@ void swift2::kernels::prepareDensityCalculation(const ParticleContainer& localPa
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculation(const ParticleContainer& localParticles) {
 
-  const auto* dummyParticle = *localParticles.begin();
-  const int hydroDimensions = dummyParticle->getHydroDimensions();
-  const double etaFactor = dummyParticle->getEtaFactor();
-  const double alphaAV = dummyParticle->getAlphaAV();
+  /* Grab static parameters */
+  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
+  const double etaFactor = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
+  const double alphaAV = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
 
   assertionMsg(false, "Don't use this yet.");
   // define variables here until next MR that accesses the correct values properly
@@ -219,10 +220,10 @@ void swift2::kernels::endDensityCalculation(const ParticleContainer& localPartic
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const ParticleContainer& localParticles) {
 
-  const auto* dummyParticle = *localParticles.begin();
-  const int hydroDimensions = dummyParticle->getHydroDimensions();
-  const double etaFactor = dummyParticle->getEtaFactor();
-  const double alphaAV = dummyParticle->getAlphaAV();
+  /* Grab static parameters */
+  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
+  const double etaFactor = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
+  const double alphaAV = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
 
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
@@ -269,10 +270,10 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const Par
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSearchRadius(const ParticleContainer& localParticles) {
 
-  const auto* dummyParticle = *localParticles.begin();
-  const int hydroDimensions = dummyParticle->getHydroDimensions();
-  const double etaFactor = dummyParticle->getEtaFactor();
-  const double alphaAV = dummyParticle->getAlphaAV();
+  /* Grab static parameters */
+  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
+  const double etaFactor = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
+  const double alphaAV = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
 
   std::cout << "TESTING ";
   std::cout << hydroDimensions << " ";
@@ -323,9 +324,10 @@ void swift2::kernels::endDensityCalculationWithConstantSearchRadius(const Partic
 template <typename ParticleContainer>
 void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& localParticles) {
 
-  const auto* dummyParticle = *localParticles.begin();
-  const int hydroDimensions = dummyParticle->getHydroDimensions();
-  const double alphaAV = dummyParticle->getAlphaAV();
+  /* Grab static parameters */
+  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
+  // const double etaFactor = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
+  const double alphaAV = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
 
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
@@ -424,8 +426,8 @@ void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& loca
 template <typename ParticleContainer>
 void swift2::kernels::endHydroForceCalculation(const ParticleContainer& localParticles) {
 
-  const auto* dummyParticle = *localParticles.begin();
-  const int hydroDimensions = dummyParticle->getHydroDimensions();
+  /* Grab static parameters */
+  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
 
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {

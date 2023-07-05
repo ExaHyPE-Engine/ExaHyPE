@@ -130,7 +130,10 @@ void swift2::kernels::computeDensity(
   const ParticleContainer& localParticles, const ParticleContainer& activeParticles
 ) {
 
-  const int hydroDimensions = *localParticles.begin()->getHydroDimensions();
+  /* Grab static parameters */
+  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
+  // const double etaFactor = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
+  // const double alphaAV = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
 
   for (auto* localParticle : localParticles) {
     if (not localParticle->getCellHasUpdatedParticle()) {
@@ -216,9 +219,12 @@ void swift2::kernels::computeHydroForce(
   const ParticleContainer& activeParticles
 ) {
 
-  const auto* dummyParticle = *localParticles.begin();
-  const int hydroDimensions = dummyParticle->getHydroDimensions();
-  const double betaAV = dummyParticle->getBetaAV();
+  /* Grab static parameters */
+  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
+  // const double etaFactor = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
+  const double alphaAV = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
+  const double betaAV = std::remove_pointer<typename ParticleContainer::value_type>::type::getBetaAV();
+
 
   for (auto* localParticle : localParticles) {
     if (not localParticle->getCellHasUpdatedParticle()) {
