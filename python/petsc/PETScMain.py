@@ -18,7 +18,8 @@ class PETScMain(peano4.runner.DefaultSequence):
     super(PETScMain,self).__init__(project)
 
     self.overwrite     = True
-    
+
+    self.d[ "Project_Name"]  = project.project_name
     self.d[ "DomainOffset" ] = "{" + str(domain_offset[0])
     self.d[ "DomainSize" ]   = "{" + str(domain_size[0])
     for i in domain_offset[1:]:
