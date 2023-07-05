@@ -64,6 +64,21 @@ whose centre lies within the square/cube around the vertex with mesh size
 h. So this area goes h/2 along each each coordinate axis into the
 neighbouring cells.
 
+
+## Flattening of particle arrays
+
+The routine not only keeps track of how many particles we add per iteration.
+It also keeps track of the number of particles per vertex that have been 
+added. If you know that you work with a @ref page_toolbox_particles_mesh_storage "memory pool", i.e. a consecutive
+storage of particles, you can use this additional meta information within 
+your kernel invocations to work with loops over consecutive arrays (AoS)
+rather than sole link lists. You can exploit that you know something 
+about individual chunks indexed by the pointers.
+
+To exploit this additional information, you can read out _numberOfParticlesPerVertexAdded.
+It partitions all of your data.
+
+
     """
 
     def __init__(
@@ -176,9 +191,10 @@ neighbouring cells.
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
   _numberOfActiveParticlesAdded.push_back(0);
   for (int i=0; i<TwoPowerD; i++) {
+    _numberOfParticlesPerVertexAdded.push_back( fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size() );
+    _numberOfActiveParticlesAdded.back() += fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
       _activeParticles.push_back( p );
-      _numberOfActiveParticlesAdded.back()++;
     }
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
       bool append = marker.isContained( p->getX() );
@@ -201,9 +217,24 @@ neighbouring cells.
         """
   assertion( not _numberOfActiveParticlesAdded.empty() );
   assertion( _activeParticles.size()>=_numberOfActiveParticlesAdded.back() );
-  for (int i=0; i<_numberOfActiveParticlesAdded.back(); i++) {
-    _activeParticles.pop_back();
-  }
+  assertion( _numberOfParticlesPerVertexAdded.size()>=TwoPowerD.back() );
+  
+
+  // More elegant way to write
+  // -------------------------  
+  // for (int i=0; i<_numberOfActiveParticlesAdded.back(); i++) {
+  //  _activeParticles.pop_back();
+  //}
+  _activeParticles.erase( 
+    std::prev(_activeParticles.end(),_numberOfActiveParticlesAdded.back() ),
+    _activeParticles.end()
+  );
+    
+  _numberOfParticlesPerVertexAdded.erase( 
+    std::prev(_numberOfParticlesPerVertexAdded.end(),TwoPowerD ),
+    _numberOfParticlesPerVertexAdded.end()
+  );
+  
   _numberOfActiveParticlesAdded.pop_back();
 """
     )
@@ -268,6 +299,7 @@ neighbouring cells.
             """
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
   std::vector< int >                             _numberOfActiveParticlesAdded;
+  std::vector< int >                             _numberOfParticlesPerVertexAdded;
 """
         )
         return result.render(**self.d)
