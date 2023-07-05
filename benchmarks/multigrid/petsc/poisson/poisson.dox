@@ -150,6 +150,37 @@ peano4_project.generate()
   step. Each activity is a subclass of peano4.solversteps.ActionSet.
 
   @see peano4.petsc.actionsets.InitVertexDoFs for the actual initialisation phase.
+
+  ## Libraries
+
+  We compile with flag -lpetsc to ensure that the PETSc-specific libraries are available to us.
+  (not to be confused with -lPETSc). To ensure these are visible to the compiler, we must add
   
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+  -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+
+  to the CXXFLAGS. This assumes that PETSc is installed locally, and these environment variables
+  are set up. Furthermore. we add the following to the LDFLAGS:
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+  -Wl,-rpath,$PETSC_DIR/$PETSC_ARCH/lib -L$PETSC_DIR/$PETSC_ARCH/lib -L/usr/lib/gcc/x86_64-linux-gnu
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+
+  At time of writing, these can be seen in lines 788-815 of configure.ac, at the top level of Peano.
+
+  ## Current Workflow
+
+  During EnumerateAndInit stage, we request one index in the LocalToGlobalMap for each
+  degree of freedom. Each time this occurs, we increase the index count on each subtree.
+  At the end of the traversal, we merge the LocalToGlobalMaps from each subtree back into
+  the main map. We keep a std::map which tracks how many indices were used up by each subtree,
+  so we can issue global Indices sequentially. 
+
+  During InitVertexDof stage, we store each Value and Rhs that we encounter. 
+  When it comes to the InitPetsc stage, we send these values to PetscData class, 
+  which then uses these values to initialise two Petsc vectors. So far, we have implemented 
+  a method to return the values from the solution vector from PETSc back to c++.
+
   
  */
