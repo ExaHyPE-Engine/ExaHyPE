@@ -15,7 +15,7 @@ namespace tarch {
 /**
  * Create a lock around a boolean semaphore region
  *
- * @see tarch::multicore::BooleanSemaphore
+ * @see tarch::mpi::BooleanSemaphore
  */
 class tarch::mpi::Lock {
   private:

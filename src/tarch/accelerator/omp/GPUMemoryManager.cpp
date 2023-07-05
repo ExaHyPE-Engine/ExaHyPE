@@ -1,6 +1,6 @@
 #include "GPUMemoryManager.h"
 
-#if defined(GPUOffloadingOMP) and defined(_OPENMP) and not defined(__HIP_DEVICE_COMPILE__)
+#if defined(GPUOffloadingOMP)
 
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
@@ -25,7 +25,9 @@ void* tarch::accelerator::omp::GPUMemoryManager::allocateRawData( int size, int 
 
   // Is a free page left? If not, insert one
   if ( _deviceMemory.at(device).freePages[size].empty() ) {
-    _deviceMemory.at(device).freePages[size].push_back(omp_target_alloc(size, device));
+    _deviceMemory.at(device).freePages[size].push_back(
+      omp_target_alloc(size, device)
+    );
   }
 
   // Grab fitting page

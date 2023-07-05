@@ -18,6 +18,7 @@
 
 {% for item in SOLVERS -%}
 #include "{{ item[0] }}.h"
+{# Comment to ensure that jinja2 adds a new line#}
 {% endfor %}
 
 {% for item in NAMESPACE -%}
@@ -26,6 +27,7 @@
 
   {% for item in SOLVERS -%}
   extern {{ item[0] }}  {{ item[1] }};
+  {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
 

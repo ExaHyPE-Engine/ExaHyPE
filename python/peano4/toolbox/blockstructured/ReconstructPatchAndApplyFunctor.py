@@ -28,8 +28,10 @@ class ReconstructedArrayMemoryLocation(IntEnum):
   ManagedSharedAcceleratorDeviceMemoryThroughTarch = 5,
   ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete = 6
 
+
 class ReconstructPatchAndApplyFunctor(ActionSet):
-  """
+  """!
+  
   This class assumes that you have NxNxN patch within your block. It also assumes that
   you have an 2MxNxN patch on your faces. M<N. The code interprets these face-associated
   data as overlap with the patch, hooks into touchCellLastTime, and projects the cell's
@@ -41,9 +43,10 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   into this array (gather operation). After that, we can launch the passed functor
   giving it access to the temporary, large array plus the original patch data.
 
-  If you want to swap the functor, please replace
-
-  self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ]
+  If you want to swap the functor, please replace self.functor_implementation, 
+  and ensure that all external references (text replacements) are already
+  resolved. Consult _add_action_set_entries_to_dictionary() for details.
+  
   """
 
   def __init__(self,
@@ -54,7 +57,8 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
                guard="true", 
                add_assertions_to_halo_exchange = True
                ):
-    """
+    """!
+    
   patch: peano4.datamodel.Patch
     Patch which is to be used
 
@@ -62,7 +66,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     Consult remark above about how the dimensions of this overlap 
     patch have to match
 
-  <h2> Functor_implementation </h2> 
+  ## Functor_implementation 
 
   The functor implementation is a plain C/C++ 
 
@@ -75,13 +79,15 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 
     Both are plain double pointers.
 
-  <h2> Data validation </h2>
+  ## Data validation
 
   I use quite a lot of validitiy checks for the copied data via comparison to its self. This
   way, I can at least spot nans. I use the dictionary entries ASSERTION_WITH_X_ARGUMENTS to 
   realise this, and they are, by default, set to Peano's assertion macros. You can redefine 
   them.
+  
     """
+    super(ReconstructPatchAndApplyFunctor,self).__init__(priority=1,parallel=False)
     if patch_overlap.dim[0] % 2 != 0:
       print( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )
       assert( patch_overlap.dim[0] % 2 == 0 )
@@ -103,12 +109,42 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     self.add_assertions_to_halo_exchange     = add_assertions_to_halo_exchange
     self.reconstructed_array_memory_location = reconstructed_array_memory_location
 
+
   def _add_action_set_entries_to_dictionary(self,d):
+    """!
+    
+    Befill dictionary
+    
+    If you inherit from this class and specialise this routine, you can add
+    more entries to the dictionary. This is important if you change the 
+    actual compute kernels (templates) and use futher unknowns in there. If 
+    you specialise the function, i.e. overwrite it in a subclass, please
+    ensure that you use the superclass still.
+    
+    Please note that we do not replace entries in the functor implementation:
+    The overall code created by this action set consists of different parts
+    realised as different templates. The templates are subject to a text 
+    replacement system and then are concatenated. One of the things that is
+    replaced within the templates is the actual functor implementation 
+    (CELL_FUNCTOR_IMPLEMENTATION). If this one contains again free parameters,
+    it is your responsibility to first resolve those parameters, and then to 
+    reset the functor in this routine.
+    
+    If you want to replace the functor, you can hence either first call this
+    routine and then change d["CELL_FUNCTOR_IMPLEMENTATION"] or you set
+    self.functor_implementation and then you call this routine, i.e. the 
+    superclass.
+        
+    """
     d[ "GUARD" ]              = self.guard
+    
+    assert isinstance(self.no_of_unknowns,int)
+    assert isinstance(self.dofs_per_axis,int)
+    assert isinstance(self.total_overlap,int)
 
     d[ "UNKNOWNS" ]           = str(self.no_of_unknowns)
     d[ "DOFS_PER_AXIS" ]      = str(self.dofs_per_axis)
-    d[ "OVERLAP" ]            = str(self.total_overlap/2)
+    d[ "OVERLAP" ]            = str(int(self.total_overlap/2))
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ]      = str(self.no_of_unknowns * self.dofs_per_axis * self.dofs_per_axis)
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ]      = str(self.no_of_unknowns * self.dofs_per_axis * self.dofs_per_axis * self.dofs_per_axis)
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = str(self.no_of_unknowns * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis))

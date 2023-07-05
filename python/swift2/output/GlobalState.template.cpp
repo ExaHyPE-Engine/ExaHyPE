@@ -56,19 +56,19 @@ double getMaxTimeStamp() {
 }
 
 
-double getMinCutOffRadius() {
+double getMinSearchRadius() {
   double result = std::numeric_limits<double>::max();
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  result = std::min( result, globaldata::{{PARTICLE}}::getSpecies().getMinCutOffRadius() );
+  result = std::min( result, globaldata::{{PARTICLE}}::getSpecies().getMinSearchRadius() );
   {%- endfor %}
   return result;
 }
 
 
-double getMaxCutOffRadius() {
+double getMaxSearchRadius() {
   double result = 0.0;
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  result = std::max( result, globaldata::{{PARTICLE}}::getSpecies().getMaxCutOffRadius() );
+  result = std::max( result, globaldata::{{PARTICLE}}::getSpecies().getMaxSearchRadius() );
   {%- endfor %}
   return result;
 }
@@ -102,12 +102,15 @@ void startIntermediateStep() {
 }
 
 
-void startInitialisationStep() {
-  {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
-  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
-  {%- endfor %}
+void startInitialConditionStep() {
+  if (not ::swift2::commandlinesettings::enableDynamicLoadBalancing() ) {
+    loadBalancer.enable(false);
+  }
+  logTraceIn( "InitialConditionStep()" );
+}
 
+
+void startInitialisationStep() {
   if (not ::swift2::commandlinesettings::enableDynamicLoadBalancing() ) {
     loadBalancer.enable(false);
   }
@@ -115,19 +118,8 @@ void startInitialisationStep() {
 }
 
 
-void startSortingStep() {
-  {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
-  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
-  {%- endfor %}
-  logTraceIn( "SortingStep()" );
-}
-
-
 void startTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
-  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
   globaldata::{{PARTICLE}}::getSpecies().startTimeStep();
   {%- endfor %}
   logTraceIn( "TimeStep()" );
@@ -163,7 +155,7 @@ void finishTimeStep() {
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
-  logTraceIn( "TimeStep()" );
+  logTraceOut( "TimeStep()" );
 }
 
 
@@ -173,7 +165,7 @@ void finishGridConstructionStep() {
   {%- endfor %}
 
   loadBalancer.finishStep();
-  logTraceIn( "GridConstructionStep()" );
+  logTraceOut( "GridConstructionStep()" );
 }
 
 
@@ -184,18 +176,18 @@ void finishInitialisationStep() {
   {%- endfor %}
 
   loadBalancer.finishStep();
-  logTraceIn( "InitialisationStep()" );
+  logTraceOut( "InitialisationStep()" );
 }
 
 
-void finishSortingStep() {
+void finishInitialConditionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
-  logTraceIn( "SortingStep()" );
+  logTraceOut( "InitialConditionStep()" );
 }
 
 
@@ -203,7 +195,7 @@ void finishPlotStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
-  logTraceIn( "PlotStep()" );
+  logTraceOut( "PlotStep()" );
 }
 
 
@@ -211,7 +203,7 @@ void finishIntermediateStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
-  logTraceIn( "IntermediateStep()" );
+  logTraceOut( "IntermediateStep()" );
 }
 
 {% for item in NAMESPACE -%}

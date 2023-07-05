@@ -23,8 +23,10 @@ namespace {{namespaceName}} {
 {% for gemm,precision in gemmList %}
 {% if precision == "DP" %}
 void {{gemm}}(const double* A, const double* B, double* C);
-{% else %}
+{% elif precision == "SP"%}
 void {{gemm}}(const float* A, const float* B, float* C);
+{% else %}
+void {{gemm}}(const long double* A, const long double* B, long double* C);
 {% endif %}
 {% endfor %}
 

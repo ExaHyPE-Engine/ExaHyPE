@@ -12,6 +12,7 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 
 #include "peano4/maps/maps.h"
+#include "peano4/grid/grid.h"
 
 #include "TreeManagementMessage.h"
 
@@ -61,8 +62,6 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
         SpacetreeSet&                     _spacetreeSet;
         peano4::grid::TraversalObserver&  _observer;
         const bool                        _invertTreeTraversalDirectionBeforeWeStart;
-        
-        static int _typeId;
       public:
         TraverseTask( peano4::grid::Spacetree&  tree, SpacetreeSet& set, peano4::grid::TraversalObserver&  observer, bool invertTreeTraversalDirectionBeforeWeStart );
 
@@ -70,7 +69,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
          * I create the copy of the observer, run the traversal on my local
          * tree _spacetree and finally destroy the local observer copy.
          */
-        bool run() override;
+        virtual bool run() override;
     };
 
   public:
@@ -631,7 +630,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * See the description in mpi.h for a howto where this routine is
      * used and how to use it.
      */
-    void receiveDanglingMessages() override;
+    virtual void receiveDanglingMessages() override;
 
     /**
      * @see Spacetree::Spacetree()
@@ -643,7 +642,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
       const std::bitset<Dimensions>&               periodicBC = 0
     );
 
-    void shutdown() override;
+    virtual void shutdown() override;
 
     /**
      * Invoke traverse on all spacetrees in parallel.
@@ -690,21 +689,14 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      *
      * If the target tree shall be stored on the local node, then you pass
      *
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      * peano4::parallel::Node::getInstance().getRank(treeId)
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * as last argument. Splits on the local node allow Peano to exploit more
-     * cores on the node.
+     * cores on the node. The details of the total splitting procedure are
+     * discussed in @ref peano_domain_decomposition "Peano's generic domain decomposition" discussion.
      *
-     * The actual realisation of the splits is discussed in greater length
-     * in @ref peano_domain_decomposition "Peano's domain decomposition" discussion.
-     *
-     *
-     * It is not guaranteed that the splits are all successful. See the routine
-     * peano4::grid::Spacetree::isCellSplitCandidate() which identifies cells
-     * that can be split. Effectively, you might call split and not get any
-     * tree decomposition at all.
      *
      * @param treeId  Id of tree that should split, i.e. give away cells to a
      *   new tree
@@ -714,7 +706,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      *   count only with one towards this quota.
      * @param targetRank  Rank which should host the new tree.
      */
-    bool split(int treeId, int cells, int targetRank);
+    bool split(int treeId, const peano4::SplitInstruction& instruction, int targetRank);
 
     /**
      * Codes hold one spacetree set per rank. With this routine, you can find

@@ -1,22 +1,17 @@
 #ifndef EXASEIS_CARTESIAN_MESH_HEADER
 #define EXASEIS_CARTESIAN_MESH_HEADER
 
-
 #include "Mesh.h"
-#include "exahype2/aderdg/kernels/Basis/GaussLegendreBasis.h"
-#include "exahype2/aderdg/kernels/Utils/KernelUtils.h"
+#include "../../../ExaHyPE/kernels/GaussLegendreBasis.h"
+#include "../../../../ExaHyPE/kernels/KernelUtils.h"
 
-template<class Shortcuts, int basisSize>
-class CurvilinearMeshAnalytic : public Mesh<Shortcuts,basisSize>{
+template <class Shortcuts, int basisSize>
+class CurvilinearMeshAnalytic: public Mesh<Shortcuts, basisSize> {
 
 public:
+  CurvilinearMeshAnalytic(Topography* topography) { tranformation = new CurvilinearTransformation(topography); }
 
-  CurvilinearMeshAnalytic(Topography* topography){
-    tranformation = new CurvilinearTransformation(topography);
-  }
-
-
- private:
+private:
   CurvilinearTransormation transformation;
 };
 

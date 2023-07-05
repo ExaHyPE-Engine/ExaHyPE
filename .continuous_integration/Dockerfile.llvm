@@ -1,42 +1,90 @@
 FROM nvcr.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
 
+ARG SPACK_ROOT=/usr/local \
+  LLVM_DIR=/opt/llvm
 ENV FORCE_UNSAFE_CONFIGURE=1 \
-    SPACK_ROOT=/usr/local \
-    DEBIAN_FRONTEND=noninteractive \
-    TZ=Europe/Berlin \
-    DISPLAY=host.docker.internal:0.0 \
-    OMPI_ALLOW_RUN_AS_ROOT=1 \
-    OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+  DEBIAN_FRONTEND=noninteractive \
+  TZ=Europe/Berlin \
+  DISPLAY=host.docker.internal:0.0 \
+  OMPI_ALLOW_RUN_AS_ROOT=1 \
+  OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 \
+  PATH=${LLVM_DIR}/bin:${PATH} \
+  LD_LIBRARY_PATH=${LLVM_DIR}/lib:${LD_LIBRARY_PATH}
 
-COPY base-installation.sh /
-RUN chmod +x /base-installation.sh && ./base-installation.sh && rm ./base-installation.sh
-
-RUN mkdir -p /var/tmp && wget -q -nc --no-check-certificate -P /var/tmp https://github.com/Kitware/CMake/releases/download/v3.22.2/cmake-3.22.2-linux-x86_64.sh && \
-    mkdir -p /usr/local && \
-    /bin/sh /var/tmp/cmake-3.22.2-linux-x86_64.sh --prefix=/usr/local --skip-license && \
-    rm -rf /var/tmp/cmake-3.22.2-linux-x86_64.sh
-ENV PATH=/usr/local/bin:$PATH
+COPY install-packages.sh /
+RUN chmod +x /install-packages.sh && ./install-packages.sh && rm ./install-packages.sh
 
 RUN curl -s -L https://api.github.com/repos/spack/spack/tarball | tar xzC $SPACK_ROOT --strip 1 && \
-spack -L install environment-modules target=x86_64 && \
-spack -L install lmod target=x86_64 && \
+spack -L install environment-modules target=x86_64 lmod target=x86_64 && \
 spack -L clean -a && \
+echo "source $(spack location -i lmod)/lmod/lmod/init/bash" >> /etc/profile.d/spack.sh && \
+echo "source $(spack location -i environment-modules)/init/bash" >> /etc/profile.d/spack.sh && \
+echo "source $SPACK_ROOT/share/spack/setup-env.sh" >> /etc/profile.d/spack.sh && \
 rm -rf /tmp/root/spack-stage/
 
-RUN echo "source $(spack location -i lmod)/lmod/lmod/init/bash" >> /etc/profile.d/spack.sh && \
-    echo "source $(spack location -i environment-modules)/init/bash" >> /etc/profile.d/spack.sh && \
-    echo "source $SPACK_ROOT/share/spack/setup-env.sh" >> /etc/profile.d/spack.sh
+# https://llvm.org/docs/NVPTXUsage.html
+# https://llvm.org/docs/AMDGPUUsage.html
 
-RUN cd /opt && git clone https://github.com/llvm/llvm-project.git && \
-    mkdir /opt/llvm-project/build && \
-    cd /opt/llvm-project/build && \
-    cmake -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;openmp" \
-          -DLLVM_TARGETS_TO_BUILD="X86;NVPTX" \
-          -DCLANG_OPENMP_NVPTX_DEFAULT_ARCH=sm_75 \
-          -DLIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES=75,80,86 \
-          -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX=/usr/local/llvm ../llvm && \
-    make -j`getconf _NPROCESSORS_ONLN` > /opt/llvm-build-log 2>&1 && make check-clang && make install && \
-    ln -s /usr/local/llvm/bin/* /usr/local/bin && \
-    cd / && rm -rf /opt/llvm-project
+RUN git clone https://github.com/llvm/llvm-project.git && \
+  mkdir /llvm-project/build && cd /llvm-project/build && \
+  cmake -GNinja \
+    -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;openmp" \
+    -DLLVM_TARGETS_TO_BUILD="X86;NVPTX" \
+    -DLIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES="70;72;75;80;86;89;90" \
+    -DCMAKE_BUILD_TYPE:STRING=Release \
+    -DCMAKE_INSTALL_PREFIX=${LLVM_DIR} \
+    ../llvm && \
+  ninja -j`getconf _NPROCESSORS_ONLN` && ninja check-clang && \
+  mkdir /llvm-project/build_bootstrap && cd /llvm-project/build_bootstrap && \
+  CC=/llvm-project/build/bin/clang CXX=/llvm-project/build/bin/clang++ cmake -GNinja \
+    -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;openmp" \
+    -DLLVM_TARGETS_TO_BUILD="X86;NVPTX" \
+    -DLIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES="70;72;75;80;86;89;90" \
+    -DCMAKE_BUILD_TYPE:STRING=Release \
+    -DCMAKE_INSTALL_PREFIX=${LLVM_DIR} \
+    ../llvm && \
+  ninja -j`getconf _NPROCESSORS_ONLN` && ninja check-clang && ninja install && \
+  cd / && rm -rf /llvm-project
+
+RUN echo '#include <iostream>' > check_cuda_offload.cu && \
+echo '__global__ void kernel(int *a, int *b, int *c) { *c = *a + *b; }' >> check_cuda_offload.cu && \
+echo 'int main() {' >> check_cuda_offload.cu && \
+echo '  int a = 2, b = 3, c = 0;' >> check_cuda_offload.cu && \
+echo '  int *d_a, *d_b, *d_c;' >> check_cuda_offload.cu && \
+echo '  cudaMalloc(&d_a, sizeof(int));' >> check_cuda_offload.cu && \
+echo '  cudaMalloc(&d_b, sizeof(int));' >> check_cuda_offload.cu && \
+echo '  cudaMalloc(&d_c, sizeof(int));' >> check_cuda_offload.cu && \
+echo '  cudaMemcpy(d_a, &a, sizeof(int), cudaMemcpyHostToDevice);' >> check_cuda_offload.cu && \
+echo '  cudaMemcpy(d_b, &b, sizeof(int), cudaMemcpyHostToDevice);' >> check_cuda_offload.cu && \
+echo '  kernel<<<1,1>>>(d_a, d_b, d_c);' >> check_cuda_offload.cu && \
+echo '  cudaMemcpy(&c, d_c, sizeof(int), cudaMemcpyDeviceToHost);' >> check_cuda_offload.cu && \
+echo '  if (c == 5) {' >> check_cuda_offload.cu && \
+echo '    std::cout << "CUDA offloading is supported." << std::endl;' >> check_cuda_offload.cu && \
+echo '    return 0;' >> check_cuda_offload.cu && \
+echo '  } else {' >> check_cuda_offload.cu && \
+echo '    std::cout << "CUDA offloading is NOT supported. Make sure your GPU supports at least compute capability 7.0." << std::endl;' >> check_cuda_offload.cu && \
+echo '    return 1;' >> check_cuda_offload.cu && \
+echo '  }' >> check_cuda_offload.cu && \
+echo '}' >> check_cuda_offload.cu && \
+clang++ check_cuda_offload.cu -o check_cuda_offload -L/usr/local/cuda/lib64 -lcuda -lcudart
+
+RUN echo '#include <iostream>' > check_openmp_offload.cpp && \
+echo '#include <omp.h>' >> check_openmp_offload.cpp && \
+echo 'int main() {' >> check_openmp_offload.cpp && \
+echo '  int canOffload = 1;' >> check_openmp_offload.cpp && \
+echo '  #pragma omp target map(tofrom : canOffload)' >> check_openmp_offload.cpp && \
+echo '  {' >> check_openmp_offload.cpp && \
+echo '    if (!omp_is_initial_device()) {' >> check_openmp_offload.cpp && \
+echo '      canOffload = 0;' >> check_openmp_offload.cpp && \
+echo '    }' >> check_openmp_offload.cpp && \
+echo '  }' >> check_openmp_offload.cpp && \
+echo '  if (canOffload == 0) {' >> check_openmp_offload.cpp && \
+echo '    std::cout << "OpenMP offloading is supported." << std::endl;' >> check_openmp_offload.cpp && \
+echo '  } else {' >> check_openmp_offload.cpp && \
+echo '    std::cout << "OpenMP offloading is NOT supported. Make sure your GPU supports at least compute capability 7.0." << std::endl;' >> check_openmp_offload.cpp && \
+echo '  }' >> check_openmp_offload.cpp && \
+echo '  return canOffload;' >> check_openmp_offload.cpp && \
+echo '}' >> check_openmp_offload.cpp && \
+clang++ check_openmp_offload.cpp -o check_openmp_offload -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70
 
 ENTRYPOINT ["/bin/bash", "-l", "-c"]

@@ -4,6 +4,7 @@ import os
 import re
 
 from .Helper import write_file
+from .Helper import using_cuda_backend
 
 from .Overwrite import Overwrite
 
@@ -40,20 +41,29 @@ class TemplatedHeaderImplementationFilePair(object):
     self.d[ "INCLUDE_GUARD" ]             = self.d[ "FULL_QUALIFIED_CLASSNAME" ].replace( "::", "_" ).replace( "-", "_" ).upper()
 
   def generate_file(self,overwrite,full_qualified_filename,template_file):
+    cuda = using_cuda_backend()
+    if cuda:
+      full_qualified_filename = full_qualified_filename.replace(".cpp", ".cu")
+
     if template_file!=None and write_file(overwrite,self.default_overwrite,full_qualified_filename):
-      import inspect, os
+      import inspect
       print( "{} written by {}".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__))))
       with open( os.path.realpath(template_file), "r" ) as input:
         template = input.read()
-      with open( full_qualified_filename, "w" ) as output:
-        output.write( template.format(**self.d) )
+        with open( full_qualified_filename, "w" ) as output:
+          output.write( template.format(**self.d) )
 
   def generate(self,overwrite,directory):
     if not os.path.exists( directory + "/" + self.subdirectory ):
       os.mkdir(directory + "/" + self.subdirectory)
 
     header_filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h"
-    cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + ".cpp"
+
+    cuda = using_cuda_backend()
+    if not cuda:
+      cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + ".cpp"
+    else:
+      cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + ".cu"
 
     self.generate_file(overwrite,header_filename,self.headerfile_template)
     self.generate_file(overwrite,cpp_filename   ,self.cppfile_template)

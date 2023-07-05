@@ -1,0 +1,142 @@
+/**
+
+ @page page_exahype_gpu GPU support
+
+
+### GPU support {#section:exahype:gpu-support}
+
+ uses GPUs in a classic *offloading, accelerator style*. This means that
+it takes particular tasks, ships them to the GPU and then ships them
+back. This happens under the hood, and neither does data reside on the
+accelerator permanently nor is the accelerator used all the time.
+
+The whole approach assumes that there are computations (cell/patch
+updates) which can be done without any effect on global variables. It
+works if and only if we can ship a task to the GPU, and then get the
+solution data for this task back and no other global variabled changes.
+We furthermore assume that the computations that fit onto the GPU have
+no state. They can use some global, static variables, but they cannot
+access the solver's state which can change over time. We rely on code
+parts with *have no side effects and do not depend on the solver state*
+(minus global variables).
+
+This might not work for all patches: There are always patches which
+evaluate and analyse some global data, or build up global data
+structures. In this case,  only offloads the remaining, simple patches
+to the GPU.
+
+ supports GPUs via task offloading. To use GPUs, you have to follow the
+following steps:
+
+##### First, your environment has to be compiled with GPU support.
+
+For this, configure with the argument `–with-gpu` and select an
+appropriate GPU programming model. There is a brief discussion on this
+in Section
+[\[section:installation:configure\]](#section:installation:configure){reference-type="ref"
+reference="section:installation:configure"}. Rebuild the whole  core.
+
+If you want to profile or optimise your code, you might want to pick a
+particular vendor toolchain. See configure's help on `–with-toolchain`.
+
+##### Second, use an  solver which has support for GPUs and instruct it that you plan to have patch updates without access to the solver's internal state.
+
+The Finite Volume enclave solvers for example all support GPUs, but the
+versions without enclave tasking do not support them. The solver
+documentation should clarify which one to select. For most of these
+GPU-enabled solvers, it is sufficient to pass an additional flag
+(`pde_terms_without_state=True` for the FV variants, e.g.) that tells
+the solver that we have PDE terms which have no side effect which also
+do not need the solver object.
+
+##### Third, provide the additional PDE terms without state.
+
+To faciliate the offloading, we have to create alternative versions of
+our PDE term functions that can work independent of the solver object
+(and in return cannot modify it). Depending on which terms we have,
+we'll need stateless versions of the flux, the non-conservative product
+and the source term. We'll always needs the eigenvalue function. Per
+function, keep the original one and add a second one which is
+
+-   static;
+
+-   accepts an additional flag of type `Offloadable`. This is the last
+    argument, i.e. a static version of a function has exactly the same
+    arguments as the non-static, default variant but then has one more
+    argument. The last argument is solely there to be able to
+    distinguish the static version from the normal one, as C++ cannot
+    overload w.r.t. static vs. not static. `Offloadable` is
+    automatically defined in the abstract base class which 's Python API
+    generates.
+
+-   is embedded into
+
+    \#if defined(OpenMPGPUOffloading) \#pragma omp declare target
+    \#endif
+
+    my new static function variants
+
+    \#if defined(OpenMPGPUOffloading) \#pragma omp end declare target
+    \#endif
+
+    Though you can leave these annotations away if you use SYCL only.
+
+Very often, the standard flux and eigenvalue routines can invoke the
+static variants and you can thus eliminate code redundancies. For
+example, you might have the normal flux function and a static flux
+function with the additional `Offloadable` parameter, but the normal
+function just invokes the static cousin.
+
+In many of our codes, we take a function like
+
+void examples::exahype2::SSInfall::SSInfall::flux( \... )
+logTraceInWith4Arguments( \"flux(\...)\", faceCentre, volumeH, t, normal
+); assertion4( Q\[0\]\>0.0, faceCentre, volumeH, t, normal ); compute
+something; assertion4( F\[0\]\>0.0, faceCentre, volumeH, t, normal );
+logTraceOutWith4Arguments( \"flux(\...)\", faceCentre, volumeH, t,
+normal );
+
+and simply split it into two variants:
+
+void examples::exahype2::SSInfall::SSInfall::flux( \... )
+logTraceInWith4Arguments( \"flux(\...)\", faceCentre, volumeH, t, normal
+); assertion4( Q\[0\]\>0.0, faceCentre, volumeH, t, normal );
+flux(Q,faceCentre,volumeH,t,normal,F,Offloadable::Yes); assertion4(
+F\[0\]\>0.0, faceCentre, volumeH, t, normal );
+logTraceOutWith4Arguments( \"flux(\...)\", faceCentre, volumeH, t,
+normal );
+
+void examples::exahype2::SSInfall::SSInfall::flux( \..., Offloadable )
+compute something;
+
+The static version is used on the GPU. The normal one is used on the CPU
+yet defers immediately to the static version. Please note that GPUs are
+quite restrictive w.r.t. terminal outputs and assertions. You will have
+to remove both from your static routine versions. In the example above,
+the non-static version wraps the core functionality into assertions.
+Therefore, we have the assertions on the CPU, but the core part that
+goes to the GPU is free of assertions. The same holds for the logging.
+
+##### Finally, pick a threading backend which supports GPU offloading.
+
+The default threading model of  does not support task fusion or the
+offloading to GPUs. If you run the code with `–help`, it will report on
+various threading models. Use one that has `fuse` in its title, and you
+should finally get GPU offloading.
+
+If only some patches/cells can be offloaded to the GPU, then you can
+redefine the routine
+
+virtual bool patchCanUseStatelessPDETerms( const
+tarch::la::Vector\<Dimensions,double\>& patchCentre, const
+tarch::la::Vector\<Dimensions,double\>& patchH, double t, double dt )
+const;
+
+in your solver. By default, this routine returns `true` always. Here's
+the clue: This is a normal function, i.e. you can use the solver's state
+and make the result depend on this one.
+ 
+ 
+  */
+  
+  

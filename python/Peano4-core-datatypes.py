@@ -234,6 +234,9 @@ grid_vertex.add_attribute( peano4.dastgen2.Peano4IntegerArray( "backupOfAdjacent
 grid_vertex.add_attribute( dastgen2.attributes.Boolean( "hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep" ) )
 grid_vertex.add_attribute( dastgen2.attributes.Boolean( "isAntecessorOfRefinedVertexInCurrentTreeSweep" ) )
 
+grid_vertex.add_attribute( dastgen2.attributes.Boolean( "hasBeenParentOfSubtreeVertexInPreviousTreeSweep" ) )
+grid_vertex.add_attribute( dastgen2.attributes.Boolean( "isParentOfSubtreeVertexInCurrentTreeSweep" ) )
+
 # 0 <= value <= 2^d
 grid_vertex.add_attribute( dastgen2.attributes.Integer(
     "numberOfAdjacentRefinedLocalCells", min_value=0, max_value="TwoPowerD" ) )

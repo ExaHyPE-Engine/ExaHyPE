@@ -1,0 +1,239 @@
+/**
+
+ @page page_exahype_tracer Tracers
+
+
+ExaHyPE's tracers rely on Peano's particle and particle-in-dual-tree
+mechanism.
+They connect ExaHyPE with a completely
+different toolbox of Peano.
+To add tracer support for , you first have to reconfigure our run and
+add the
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure ... --enable-particles
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+## Add tracers to project
+
+Adding tracers is fairly simple. Each tracer has to have a name, and you
+also have to inform the project how many attributes you plan to track
+per tracer:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tracer_particles = project.add_tracer( name="MyFancyParticle" )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Study the in-code documentation of the involved classes. The exahype2.Project.add_tracer()
+factory method ensure that ExaHyPE keeps track of it and that it also is 
+printed whenever we write a snapshot. Tracers can
+track only some attributes, they can move or stay at one place, and they
+can also interact with each other.
+
+
+Next, you have add a few action sets to ExaHyPE's solver steps: 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesByCoordinates( 
+  particle_set=tracer_particles, 
+  coordinates=[ [x,x,x], [x,x,x] ]
+  ))
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In this example, we add the actual tracer insertion to the initialisation.
+There are different inserters shipped with ExaHyPE. Alternatively, you might
+want to write your own, bespoke particle seed. 
+There are seeds which insert tracers along a Cartesian topology,
+adds some random noise, or read tracer positions from a file. 
+
+Once
+inserted, you can run your code and visualise the particles. However,
+these particles do not track the actual data of
+interest. To facilitate this, you have to map your solution onto the
+particle first. 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+my_tracing = exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                thesolver,
+                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
+                                                )
+project.add_action_set_to_timestepping( my_tracing )
+project.add_action_set_to_initialisation( my_tracing )                                                
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Let `thesolver` be your  solver instance in the Python
+script. Not all solvers currently support tracers (efficiently), but we
+are continuously improving the tracer support. With the solver instance
+and the tracers, we can couple the two ingredients. You have to pick
+different coupling schemes depending on the type of your solver.
+Again, there are different interpolation schemes shipped with ExaHyPE. Please
+note that you will have to pick an interpolation that fits to your
+solver. In the snippet above, we use a Finite Volume solver and
+therefore pick a projection from the `exahype2::fv` namespace. Other
+discretisations will require other interpolation schemes.
+
+It is clear that you have to add the tracing to the time stepping. After
+each step, you want to have an updated solution dumped into the tracer.
+Further to that, we add the tracing to the initialisation. If we forget to
+do this, we will have garbage within the tracer prior to the first time 
+step. If we don't dump the initial conditions, you don't have to care
+about this step. 
+
+
+
+
+- See exahype2/fv/Tracer.h for an overview of pre-defined routines
+  that map the solution data from Finite Volumes onto particles. As 
+  our Finite Differences scheme is a cell-centered block-structured
+  discretisation, these routines all work for fd / Finite Differences,
+  too.
+- See exahype2/dg/Tracer.h for an overview of pre-defined routines
+  that map the solution data from Discontinuous Galerkin solvers onto 
+  particles. These routines also work for ADER-DG.
+
+
+## Dump tracer data into CSV database
+
+ExaHyPE's particle handling comes along with a set of standard postprocessing
+scripts.
+As we rely on this toolbox, you can use those scripts straightaway.
+They can be found in the directory
+peano4/toolbox/particles/postprocessing.
+To use it, you have to track data.
+
+The likely most important tool for many developers using only few
+particles is the fact that particles can dump their solution into a
+database:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTracerIntoDatabase(
+      particle_set=tracer_particles,
+      solver=self,
+      filename="Tracer-" + name,
+      number_of_entries_between_two_db_flushes=5000,
+      output_precision=10,
+      data_delta_between_two_snapsots=1e16,
+      time_delta_between_two_snapsots=0.01
+      ))
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Dumping tracers into a (CSV) database is attractive, as these files are
+easier to parse/postprocess than mesh data files. At the same time, you
+can dump particles more often than you plot data snapshots, and these
+dumps can even be adaptive, i.e. you dump if and only if a particle
+actually moves. The exahype2.tracer.DumpTracerIntoDatabase documentation provides
+more detail.
+
+The data format within the csv file is rather self-explaining.
+
+-   Each particle has a unique two-tuple of indices. We do not enumerate
+    the particles globally, but instead give them two numbers. The first
+    one is the tree that has originally generated a particle, and the
+    second number then is a continuous number, i.e. counts the particles
+    per tree. As we have two numbers, we don't have to synchronise any
+    global particle generation. Note that the two-tuple stays invariant
+    per particle. Therefore, a particle might be the 12th that's
+    generated on tree 7, and hence carry the index (7,11). If it moves
+    around, it might as well end up on three 4.
+
+-   Each particle entry is equipped with a time stamp.
+
+-   Each particle entry is equipped with the coordinates of the particle
+    per particle dump. If particles do not move, this is redundant
+    information.
+
+-   Each particle entry then enlists all the particle's data values at
+    the time when we dump.
+
+As we rely on Peano's infrastructure, you can use the script
+python/peano4/toolbox/particles/postprocessing/convert.py to convert the output
+files or to produce seismograms, e.g.
+Please note that each rank potentially writes sequences of databases, 
+i.e. whenever we dump a csv file, we clear the internal database. So 
+when you visualise the data, you have to concatenate databases first. 
+This is also explained in the underlying C++ class
+toolbox::particles::TrajectoryDatabase. As the convert.py script 
+above does support multiple input files, the merge itself is already 
+supported by premanufactured tools.
+
+
+## Make tracers move
+
+Every tracer particle has a unique position identified by a tracer
+argument x of type tarch::la::Vector. In ExaHyPE, the project_on_tracer_properties_kernel
+argument within the tracer projection is allowed to alter the particle 
+data as well as the particle position. You can make the particles
+move.
+
+
+To achieve this, you have to create your own project_on_tracer_properties_kernel.
+You then pass in this kernel instead of a premanufactured
+one:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~   
+project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                self,
+                                                project_on_tracer_properties_kernel="::mynamespace::mykernel"
+                                                ))
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If the arguments that the default kernel accepts are not sufficient or a fit, you can 
+define your own arguments by setting the tracer
+action set's projection_kernel_arguments string. This notably
+allows you to read out the time stamp associated with a cell:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~   
+project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                self,
+                                                project_on_tracer_properties_kernel="::mynamespace::mykernel",
+                                                projection_kernel_arguments="""
+  other args,                                             
+  fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize()
+  """
+                                                ))
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It would be possible to provide a lot of pre-manufactured kernels, but I do not do
+this, as any sophisticated time stepping for example requires the update to query
+the underlying solution field multiple times at different positions, and this is 
+something that cannot be covered in a generic way. 
+
+
+The only exception to the rule
+are a few extensions of the generic mapping routines with an explicit Euler which 
+takes mapped data values on the particle and reads them as velocities. This is a 
+very simple, special case. See the files exahype2/fv/Tracer.h and exahype2/dg/Tracer.h. 
+
+We emphasise that nothing stops users from additing additional fields to the 
+particles such as mass and acceleration, and to implement a time stepping using 
+those quantities.
+Basically, nothing from the infrastructure's point of view stops users from implementing
+their Particle-in-Cell code.
+
+
+
+### Encourage particles to spread out evenly
+
+
+@todo Requires update/revision
+
+You can make particles interact with eac other. This allows you, for
+example, to realise some SPH on top of the code. One of the most
+convenient features is to encourage tracers to align in a quasi-uniform
+way, i.e. they do follow the solution characteristics but at the same
+time try to space out evenly. This is allowed via a modified, inverted
+Lennard-Jones potential which is parameterised with a distance. If two
+particles are closer than that distance, they repulse each other. If
+they are further away than that distance, they attract each other.
+
+There are further particle-particle interaction scripts in the
+repository. If you want your particles to move, you have to ensure that
+they are sorted into the mesh properly, and that they are exchanged 
+between subpartitions via MPI and shared memory. 
+
+ */
+ 

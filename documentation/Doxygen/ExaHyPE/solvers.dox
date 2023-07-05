@@ -1,0 +1,51 @@
+/**
+
+@page page_exahype_solvers Solvers
+
+
+\li \subpage page_exahype_solvers_finite_volumes
+\li \subpage page_exahype_solvers_enclave_solvers
+\li \subpage page_exahype_solvers_aderdg
+
+##### Solver initialisation
+
+If you have a complex solver setup, you might want to run some complex
+initialisation at startup. However, important parts of the
+ infrastructure might not be up yet when the solver's constructor is
+invoked. So it is generally not a good idea to add too much setup
+routines to the constructor.
+
+Each solver has eight further routines that are of interest to squeeze
+in any initialisation or global state update:
+
+-   startGridConstructionStep
+
+-   finishGridConstructionStep
+
+-   startGridInitialisationStep
+
+-   finishGridInitialisationStep
+
+-   startTimeStep
+
+-   finishTimeStep
+
+-   startPlottingStep
+
+-   finishPlottingStep
+
+If you plug into these, please ensure you continue to call the original
+(superclass) routine still. A typical pattern we've seen is to run some
+initialisation just prior to the first grid construction step:
+
+class MyClass \... void startGridConstructionStep() override; \... ;
+
+void MyClass::startGridConstructionStep() // call superclass routine
+AbstractMyClass::startGridConstructionStep(); static bool isInitialised
+= false; if (not isInitialised) isInitialised = true; // your
+initialisation ;
+
+
+
+ */
+ 

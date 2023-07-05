@@ -115,7 +115,8 @@ namespace toolbox {
      * cyclles: If we repeatedly try to split the same
      * rank this means that we have tried to split it, have not been
      * successful, and tried again. This can happen, as not all trees
-     * can be split. See peano4::grid::Spacetree::isCellSplitCandidate()
+     * can be split. See  peano4::grid::Spacetree::isCellTopDownSplitCandidate()
+     * and  peano4::grid::Spacetree::isCellBottomUpSplitCandidate()
      * for a discussion which cells can be split and which can't. As
      * not all cells can't be given away, not all trees can be split up.
      *
@@ -132,6 +133,7 @@ namespace toolbox {
      *   assume that it still is splitting.
      */
     int getIdOfHeaviestLocalSpacetree();
+
 
     /**
      * Similar to getIdOfHeaviestLocalSpacetree() but you might get one of
@@ -151,6 +153,7 @@ namespace toolbox {
     int getIdOfHeaviestLocalSpacetree(
       double tolerance
     );
+
 
     /**
      * @return -1 if there is no local tree yet

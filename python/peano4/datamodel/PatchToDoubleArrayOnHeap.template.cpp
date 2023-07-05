@@ -4,24 +4,18 @@
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-  _dataSmartPointer(
-    tarch::allocateMemory< {{FLOAT_TYPE}} >( Cardinality, tarch::MemoryLocation::Heap ),
-    [] (auto p) {
-      tarch::freeMemory( p, tarch::MemoryLocation::Heap );
-    }
-  ) {
-  value = &( _dataSmartPointer[0] );
+  value( tarch::allocateMemory< {{FLOAT_TYPE}} >( Cardinality, tarch::MemoryLocation::Heap ) ) {
 }
 
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(const {{CLASSNAME}}& other) {
-  #if PeanoDebug>=1
-  _debugX = other._debugX;
-  _debugH = other._debugH;
-  #endif
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(const {{CLASSNAME}}& other):
+  value( tarch::allocateMemory< {{FLOAT_TYPE}} >( Cardinality, tarch::MemoryLocation::Heap ) ) {
+  clone(other);
+}
 
-  _dataSmartPointer = other._dataSmartPointer;
-  value = &( _dataSmartPointer[0] );
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {
+  tarch::freeMemory( value, tarch::MemoryLocation::Heap );
 }
 
 
@@ -40,14 +34,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}& {{NAMESPACE | join("::")}}::{{CLASSNAME}}::operator=(const {{CLASSNAME}}& other) {
-  #if PeanoDebug>=1
-  _debugX = other._debugX;
-  _debugH = other._debugH;
-  #endif
-
-  _dataSmartPointer = other._dataSmartPointer;
-  value = &( _dataSmartPointer[0] );
-  
+  clone(other);
   return *this;
 }
 
@@ -135,14 +122,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
 ) const {
   return {{STORE_PERSISTENT_CONDITION}};
 }
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::compute(
-  const peano4::datamanagement::VertexMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{COMPUTE_CONDITION}};
-}
 {% endif -%}
 
 
@@ -181,14 +160,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) const {
   return {{STORE_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::compute(
-  const peano4::datamanagement::FaceMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{COMPUTE_CONDITION}};
 }
 {% endif -%}
 
@@ -229,18 +200,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
 ) const {
   return {{STORE_PERSISTENT_CONDITION}};
 }
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::compute(
-  const peano4::datamanagement::CellMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{COMPUTE_CONDITION}};
-}
 {% endif -%}
-  
 
-  
+
 #ifdef Parallel
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   int errorCode = MPI_Type_vector(

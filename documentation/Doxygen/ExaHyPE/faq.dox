@@ -1,0 +1,29 @@
+/**
+
+ @page page_exahype_faq FAQ and troubleshooting
+ 
+ 
+ 
+ 
+ # Crashes
+
+- ***The code crashes almost immediately*** Fire up a debugger and see if it 
+  already terminates in a routine similar to
+  
+  ~~~~~~~~~~~~~~~~~~~~~~
+ 35   benchmarks::exahype2::ccz4::celldata::CCZ4SBH_FVQ  instances[2];
+(gdb) bt
+#0  0x00000000005355ec in benchmarks::exahype2::ccz4::celldata::CCZ4SBH_FVQ::initDatatype () at celldata/CCZ4SBH_FVQ.cpp:135
+  ~~~~~~~~~~~~~~~~~~~~~~
+
+  If even creating a simple array over your cells fails, then you likely work
+  with very large patches or large polynomial order. The patches simply do not
+  fit onto the call stacks anymore. In this case, you can either reduce the
+  order/patch size, or you switch to a heap-based storage scheme, where the 
+  actual cell data resides on the stack and is moved around passing smart 
+  pointers.   
+ 
+ 
+ */
+ 
+ 

@@ -55,16 +55,18 @@ class toolbox::loadbalancing::Configuration {
      * Minimum tree size.
      */
     virtual int getMinTreeSize(State state) = 0;
+
+    virtual std::string toString() const;
 };
 
 
 
 class toolbox::loadbalancing::DefaultConfiguration: public toolbox::loadbalancing::Configuration {
-  bool makeSplitDependOnMemory(State state) override;
+  virtual bool makeSplitDependOnMemory(State state) override;
 
-  int getMaxLocalTreesPerRank(State state) override;
+  virtual int getMaxLocalTreesPerRank(State state) override;
 
-  double getWorstCaseBalancingRatio(State state) override;
+  virtual double getWorstCaseBalancingRatio(State state) override;
 
-  int getMinTreeSize(State state) override;
+  virtual int getMinTreeSize(State state) override;
 };

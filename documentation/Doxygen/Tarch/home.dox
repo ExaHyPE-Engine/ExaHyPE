@@ -1,10 +1,11 @@
 /**
 
-@page tarch_home Technical architecture
+@page page_tarch_home Technical architecture (tarch)
 
 \tableofcontents
 
 \li \subpage tarch_logging
+\li \subpage tarch_plotting
 \li \subpage tarch_tests
 \li \subpage tarch_patch_files
 \li \subpage tarch_services

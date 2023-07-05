@@ -7,8 +7,8 @@ from enum import Enum
     
 
 class SolverVariant(Enum):
-  WithVirtualFunctions = 0,
-  Stateless            = 1,
+  WithVirtualFunctions = 0
+  Stateless            = 1
   Accelerator          = 2
 
 
@@ -617,7 +617,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   Template = jinja2.Template( """
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    void sourceTerm(
+    virtual void sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,

@@ -2,44 +2,124 @@
 
 @page swift_visualisation Visualisation
 
-Swift 2 relies on Peano's standard output routines to write file dumps. 
+# The Peano Way
+
+Swift 2 relies on Peano's standard output routines to write file dumps.
 As the files can be rather large, the simulation configuration allows you to
 specify exactly how often you want to see file dumps, and you can also add
 spatial filters.
 The latter help you to visualise only subdomains.
-As we rely on Peano's infrastructure, you can use the ```render.py``` script in
-python/peano4/visualisation to convert the output files into vtu files.
+As we rely on Peano's infrastructure, you can use the ``render.py`` script in
+``python/peano4/visualisation`` to convert the output files into vtu files.
 Consult also @ref tarch_patch_files "Peano's generic discussion" of various
 visualisation pathways.
 
 
-## Python support for vtu format
+# Python support for vtu format
 
 Besides the infrastructure that Peano provides, in Swift we very often require
 to visualise the different simulation quantities in detail, e.g. to compare the
 output of the simulation against a reference such as typically a known
 analytical solution.
-For this purpose, we have experimented with the 
-<a href="https://pypi.org/project/meshio/">
-meshio
-</a> 
-library, which can be install via pip, i.e. invoking 
+For this purpose, a rudimentary reader for particles (points) stored in ``.vtu``
+files is provided. To use it, the
+<a href="https://github.com/joergbuchwald/VTUinterface"> ``VTUInterface``</a>
+python library is required. The library can be installed using pip, i.e.  invoking
 
-```
-pip install meshio
-```
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
+pip install VTUinterface
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Then, the vtu file can be read as
+The reader provides two default options: Either read in a single vtu file, or provide
+it with the .pvd file and specify the time of the snapshot you want to extract.
 
-~~~~~~~~~~~~~~~~~~~~~
-        mesh = meshio.read( particles.vtu )
-~~~~~~~~~~~~~~~~~~~~~
+To read in a single vtu file, provide the filename as the keyword argument, e.g.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
+from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
+vtufile = "path/to/your/output_file.vtu"
+reader = ParticleVTUReader( vtufile=vtufile )
+partData = reader.load() # this is where the actual reading happens
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Particle data for a given snapshot may be stored in several .vtu files. Metadata about
+the storage is contained in the corresponding ``.pvd`` file.
+To read in all particle data of a given snapshot, you need to provide both the path
+to the ``.pvd`` file, as well as the time of the snapshot you want to extract, e.g.
+like so:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
+from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
+pvdfile = "path/to/your/output_file.pvd"
+reader = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=0.1)
+partData = reader.load() # this is where the actual reading happens
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The reader will return an object (``partData``) with attributes representing particle
+fields with the same name as they were set in the ``.vtu`` files, save for necessary
+changes to prevent illegal characters in attribute names. To display what the actual
+attribute names are, you can run ``partData.show_attribute_list()``:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
+from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
+pvdfile = "path/to/your/output_file.pvd"
+reader = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=0.1)
+partData = reader.load()
+
+# show me what particle fields are stored
+partData.show_attribute_list() # prints results to screen
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Below is a minimal full example that reads in data and creates three subplots of the
+particle densities, pressures, and internal energies:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.py}
+from matplotlib import pyplot as plt
+from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
+
+# read in data
+pvdfile = "path/to/your/output_file.pvd"
+reader = ParticleVTUReader(pvdfile=pvdfile, snapshot_time=0.1)
+partData = reader.load()
+
+# show me what particle fields are stored.
+# These are also the field names that you can access
+# as the `partData` object's attributes.
+partData.show_attribute_list()
+
+# Extract data into individual arrays for your convenience
+x = partData.x[:,0]
+y = partData.x[:,1]
+density = partData.density
+pressure = partData.pressure
+internal_energy = partData.u
+
+# Now plot them
+plt.figure()
+plt.subplot(1,3,1)
+plt.scatter(x, y, c=density)
+plt.title("Density")
+plt.colorbar()
+
+plt.subplot(1,3,2)
+plt.scatter(x, y, c=pressure)
+plt.title("Pressure")
+plt.colorbar()
+
+plt.subplot(1,3,3)
+plt.scatter(x, y, c=internal_energy)
+plt.title("Internal Energy")
+plt.colorbar()
+
+plt.show()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
 
 A few scripts are included among the SPH benchmarks, which can be used as
 reference.
-
-Notice that an error will be encountered if the vtu file is empty, which may
-prevent reading data from a set of vtu files.
-
 
 */
