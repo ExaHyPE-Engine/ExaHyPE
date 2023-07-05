@@ -33,14 +33,6 @@ parser.add_argument(
     help="Remove temporary directories before script starts",
 )
 parser.add_argument(
-    "-d",
-    "--dimensions",
-    dest="dimensions",
-    type=int,
-    default=2,
-    help="Spatial dimensions (default 2)",
-)
-parser.add_argument(
     "-np",
     "--particle-number",
     dest="particle_number",
@@ -122,8 +114,8 @@ project = swift2.Project(
 # independently for each case.
 
 name = "hydroPart"
-dimensions = args.dimensions
 
+dimensions = 2  # peano needs this for whatever reason...
 hydro_dimensions = 1  # dimensions for the hydro
 
 particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
@@ -137,10 +129,6 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     min_h=args.cell_size,
     max_h=args.cell_size,
 )
-
-
-
-
 
 
 ########################################################################################
@@ -184,6 +172,26 @@ if KERNEL == "M5" and HYDRO_DIMENSIONS == 2:
     KERNEL_SUPPORT_RAD = "1.977173"
 else:
     print(f"Unable to determine the kernel support radius. Please check.")
+
+
+# Additional Particle Parameters -----------------------------------------------
+hydro_h_max = args.cell_size / 2
+particle.h_hydro_max = hydro_h_max
+
+# particle.h_hydro_min = 1e-6
+# particle.h_max_iterations = 10
+# particle.h_tolerance = 1e-4
+# particle.eta_factor = 1.2348
+# particle.beta_av = 3.0
+# particle.alpha_av = 0.8
+# Optional: Reduce the mantissa size for particle attributes -------------------
+# Native size is 53 (double precision)
+# particle.mantissa_size = 23
+
+
+# deploy particle properties
+particle.set_parameters()
+
 
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
@@ -259,8 +267,8 @@ particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
     "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
 )
 particle_plotter.add_attribute_to_plot(particle.part_id, 1)
-particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
-particle_plotter.add_attribute_to_plot(particle.acceleration, dimensions)
+particle_plotter.add_attribute_to_plot(particle.velocity, hydro_dimensions)
+particle_plotter.add_attribute_to_plot(particle.acceleration, hydro_dimensions)
 particle_plotter.add_attribute_to_plot(particle.mass, 1)
 particle_plotter.add_attribute_to_plot(particle.density, 1)
 particle_plotter.add_attribute_to_plot(particle.pressure, 1)
@@ -299,7 +307,7 @@ print(f"Effective dimensions of the Simulation: {HYDRO_DIMENSIONS}")
 print(f"Global time-step size: {GLOBAL_TIME_STEP_SIZE}")
 print(f"Number of particles (1D): {HYDRO_PART_NUMBER}")
 print(f"Adiabatic index: {GAMMA}")
-#  print(f"Smoothing length free factor: {SMOOTH_ETA_FAC}")
+print(f"Smoothing length free factor: {particle.eta_factor}")
 print("-----------------------------------------------------------------------")
 
 
