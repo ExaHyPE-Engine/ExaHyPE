@@ -275,7 +275,7 @@ class PredictionOnHangingCell_kernelgenerator(AbstractAderDGActionSet):
         );
         {% endif %}
 
-        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<double>(
+        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
           lduh,
           &lFhbnd[2*d*fluxElementsPerFace],
           d, //direction
@@ -325,7 +325,7 @@ class PredictionOnHangingCell_kernelgenerator(AbstractAderDGActionSet):
         );
         {% endif %}
 
-        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<double>(
+        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
           lduh,
           &lFhbnd[(2*d+1)*fluxElementsPerFace],
           d, //direction
