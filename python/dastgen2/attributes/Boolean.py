@@ -45,7 +45,6 @@ class Boolean(Attribute):
         if not self.is_const_static:
             methods.append(("set" + accessor_name + "(bool value)", "void"))
 
-
         return methods
 
     def get_plain_C_attributes(self):

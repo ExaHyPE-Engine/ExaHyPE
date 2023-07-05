@@ -4,104 +4,104 @@ from .Attribute import Attribute
 
 
 class Enumeration(Attribute):
-  """
+    """
 
-  Wrapper around C++ enumerations which is not a datatype supported
-  natively by MPI.
+    Wrapper around C++ enumerations which is not a datatype supported
+    natively by MPI.
 
-  The attribute has two-fold meaning. It defines a enum class subtype
-  within the generated code and it creates a new attribute of this
-  type.
+    The attribute has two-fold meaning. It defines a enum class subtype
+    within the generated code and it creates a new attribute of this
+    type.
 
-  :Arguments:
+    :Arguments:
 
-  name: String
-     Something that can become a C++ identifier
+    name: String
+       Something that can become a C++ identifier
 
-  variants: [String]
-     Sequence of strings. The strings have to be something C++ accepts
-     as enumeration identifiers.
+    variants: [String]
+       Sequence of strings. The strings have to be something C++ accepts
+       as enumeration identifiers.
 
-  """
-  def __init__(self, name, variants, ifdefs=[]):
-    Attribute.__init__(self, name, ifdefs)
-    self._variants    = variants
-    self.compress     = True
+    """
 
+    def __init__(self, name, variants, ifdefs=[]):
+        Attribute.__init__(self, name, ifdefs)
+        self._variants = variants
+        self.compress = True
 
-  def _enum_name(self):
-    return self._name[:1].title() + self._name[1:]
+    def _enum_name(self):
+        return self._name[:1].title() + self._name[1:]
 
-
-  def get_public_fields(self):
-    result = """
-    enum class """ + self._enum_name() + """: int {
+    def get_public_fields(self):
+        result = (
+            """
+    enum class """
+            + self._enum_name()
+            + """: int {
       """
+        )
 
-    for i in self._variants:
-      if self._variants.index(i)!=0:
-        result += ", "
-      result += i
-      result += "="
-      result += str(self._variants.index(i))
+        for i in self._variants:
+            if self._variants.index(i) != 0:
+                result += ", "
+            result += i
+            result += "="
+            result += str(self._variants.index(i))
 
-    result += """
+        result += """
     };"""
-    return result
+        return result
 
+    def get_methods(self, _full_qualified_name, for_declaration=True):
+        accessor_name = self._name[:1].title() + self._name[1:]
+        return [
+            (
+                "get" + accessor_name + "() const",
+                _full_qualified_name + "::" + accessor_name,
+            ),
+            ("set" + accessor_name + "(" + accessor_name + " value)", "void"),
+        ]
 
-  def get_methods(self,_full_qualified_name, for_declaration=True):
-    accessor_name = self._name[:1].title() + self._name[1:]
-    return [
-      ("get" + accessor_name + "() const", _full_qualified_name + "::" + accessor_name),
-      ("set" + accessor_name + "(" + accessor_name + " value)", "void")
-    ]
+    def get_plain_C_attributes(self):
+        if self.compress:
+            return [("_" + self._name, self._enum_name(), "[[clang::pack]]")]
+        else:
+            return [("_" + self._name, self._enum_name(), "")]
 
+    def get_method_body(self, signature):
+        if signature.startswith("get") and self.use_data_store:
+            return "  return _dataStore._" + self._name + ";\n"
+        elif signature.startswith("set") and self.use_data_store:
+            return "  _dataStore._" + self._name + " = value;\n"
+        elif signature.startswith("get") and not self.use_data_store:
+            return "  return _" + self._name + ";\n"
+        elif signature.startswith("set") and not self.use_data_store:
+            return "  _" + self._name + " = value;\n"
+        else:
+            assert False
+        return ""
 
-  def get_plain_C_attributes(self):
-    if self.compress:
-      return [ ("_" + self._name, self._enum_name(), "[[clang::pack]]" ) ]
-    else:
-      return [ ("_" + self._name, self._enum_name(), "" ) ]
+    def get_native_MPI_type(self):
+        return [("MPI_INT", 1)]
 
+    def get_to_string(self):
+        """
 
-  def get_method_body(self,signature):
-    if signature.startswith( "get" ) and self.use_data_store:
-      return "  return _dataStore._" + self._name + ";\n"
-    elif signature.startswith( "set" ) and self.use_data_store:
-      return "  _dataStore._" + self._name + " = value;\n"
-    elif signature.startswith( "get" ) and not self.use_data_store:
-      return "  return _" + self._name + ";\n"
-    elif signature.startswith( "set" ) and not self.use_data_store:
-      return "  _" + self._name + " = value;\n"
-    else:
-      assert(False)
-    return ""
+        Return string representation of attribute.
 
-
-  def get_native_MPI_type(self):
-    return [ ("MPI_INT", 1) ]
-
-
-  def get_to_string(self):
-    """
-
-      Return string representation of attribute.
-
-    """
-    result  = ""
-    for i in self._variants:
-      if self._variants.index(i) != 0:
-        result += " << "
-      if self.use_data_store:
-        result += "(_dataStore._" + self._name + "=="
-      else:
-        result += "(_" + self._name + "=="
-      result += self._enum_name()
-      result += "::"
-      result += i
-      result += "? \""
-      result += i
-      result += "\" : \"\") "
-    return result
-
+        """
+        result = ""
+        for i in self._variants:
+            if self._variants.index(i) != 0:
+                result += " << "
+            if self.use_data_store:
+                result += "(_dataStore._" + self._name + "=="
+            else:
+                result += "(_" + self._name + "=="
+            result += self._enum_name()
+            result += "::"
+            result += i
+            result += '? "'
+            result += i
+            result += '" : "") '
+        return result
