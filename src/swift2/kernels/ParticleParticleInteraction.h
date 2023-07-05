@@ -36,11 +36,17 @@ namespace swift2 {
 
     /**
      * @brief The actual density kernel, which interacts a local particle and an active
-     * particle, and updated the local particle.
-     *
+     * particle, and updates the local particle.
      */
     template <typename Particle>
     void densityKernel(Particle* localParticle, const Particle* activeParticle);
+
+    /**
+     * @brief The actual force kernel, which interacts a local particle and an active
+     * particle, and updates the local particle.
+     */
+    template <typename Particle>
+    void forceKernel(Particle* localParticle, const Particle* activeParticle);
 
     /**
      * @brief Non-symmetric density calculation (as per Swift terminology).
