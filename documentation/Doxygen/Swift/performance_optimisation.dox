@@ -101,5 +101,15 @@ toolbox::particles::memorypool::GlobalContinuousMemoryPool.
 
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_GlobalContinuous.png
 
+
+### Using optimised kernels with coalescent memory access
+
+If you use one of the two memory pools as discussed above and you use the 
+active set construction via lists rather than sets (see two subsections above),
+you can switch to optimised kernels which exploit coalescent memory access.
+They might vectorise better. peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists
+discusses their usage. Not every SPH flavour/species provides such kernels.
+
+
  */
  
