@@ -33,6 +33,7 @@ if havesympy:
 import exahype2.tracer
 import exahype2.grid
 import exahype2.gpu
+import exahype2.postprocessing
 
 from .ExaHyPEMain import ExaHyPEMain
 from .Project import Project

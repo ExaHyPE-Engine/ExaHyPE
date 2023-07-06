@@ -236,7 +236,7 @@ void runBenchmarksOnHost(int numberOfPatches) {
   auto runStatelessVariantOnHost =
     [&](
       std::function<void(
-        exahype2::CellData & patchData,
+        ::exahype2::CellData & patchData,
         bool evaluateFlux,
         bool evaluateNonconservativeProduct,
         bool evaluateSource,
@@ -427,7 +427,7 @@ void runStatelessVariantOnDevice(
   }
 
   std::vector<double> timings;
-  for (unsigned int k = 0; k < TimeSteps; k++) {
+  for (unsigned int k = 0; k < EndTime; k++) {
     tarch::timing::Watch watch("::runBenchmarksOnDevice", "runStatelessVariantOnDevice(...)", false);
     kernel(
       device,
@@ -617,7 +617,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
   double*             a = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Heap);
   double*             b = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Heap);
 #pragma omp target enter data       map(alloc : a[0 : N], b[0 : N])
-  for (unsigned int k = 0; k < TimeSteps; k++) {
+  for (unsigned int k = 0; k < EndTime; k++) {
     tarch::timing::Watch watch("::runBenchmarksOnDevice", "measureBandwidth", false);
 // #pragma omp target loop
 #pragma omp target teams distribute parallel for simd

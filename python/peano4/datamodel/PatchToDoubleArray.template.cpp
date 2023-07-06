@@ -8,7 +8,15 @@
 #include "{{CLASSNAME}}.h"
 
 
+#include <cstring>
+
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
+#if Dimensions == 2
+  memset(value, 0, {{CARDINALITY_2D}} * sizeof({{FLOAT_TYPE}}));
+#elif Dimensions == 3
+  memset(value, 0, {{CARDINALITY_3D}} * sizeof({{FLOAT_TYPE}}));
+#endif
 }
 
 

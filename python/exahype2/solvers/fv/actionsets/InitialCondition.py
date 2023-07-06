@@ -8,22 +8,22 @@ import jinja2
 
 class InitialCondition(AbstractFVActionSet):
   TemplateInitialCondition = """
-  if ({{PREDICATE}}) { 
+  if ({{PREDICATE}}) {
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-        ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
+        ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume),
         ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
         {{GRID_IS_CONSTRUCTED}}
       );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
-  } 
+  }
 """
-  
+
   def __init__(self,solver,guard,grid_is_constructed):
     AbstractFVActionSet.__init__(self,solver)
     self.guard               = guard
@@ -36,10 +36,10 @@ class InitialCondition(AbstractFVActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]           = self.guard      
-      d[ "GRID_IS_CONSTRUCTED" ] = self.grid_is_constructed      
+      d[ "PREDICATE" ]           = self.guard
+      d[ "GRID_IS_CONSTRUCTED" ] = self.grid_is_constructed
       result = jinja2.Template(self.TemplateInitialCondition).render(**d)
-      pass 
+      pass
     return result
 
 
