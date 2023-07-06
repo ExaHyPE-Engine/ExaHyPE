@@ -1,4 +1,3 @@
-#include <iostream> // TODO: temporary
 #include <type_traits>
 
 #include "swift2/kernels/equation_of_state.h"
@@ -274,11 +273,6 @@ void swift2::kernels::endDensityCalculationWithConstantSearchRadius(const Partic
   const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
   const double etaFactor    = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
   const double alphaAV      = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
-
-  std::cout << "TESTING ";
-  std::cout << hydroDimensions << " ";
-  std::cout << etaFactor << " ";
-  std::cout << alphaAV << " \n";
 
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
