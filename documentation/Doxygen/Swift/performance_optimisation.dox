@@ -12,10 +12,6 @@ page.
 All of the recommendations there apply for SWIFT, too.
 
 
-## Translating algorithmic steps onto mesh traversals and on-node parallelisation
-
-To be written ...
-
 
 ## Maintaining the active sets
 
@@ -48,6 +44,8 @@ project.initialisation_steps_task_graph_compiler = swift2.graphcompiler.serialis
 
 These two lines alter the graph compiler in use.
 
+
+## Optimisting the single core performance of individual species
 
 ### Storage of particles and maintaining the particle-mesh association
 
@@ -104,13 +102,41 @@ toolbox::particles::memorypool::GlobalContinuousMemoryPool.
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_GlobalContinuous.png
 
 
+The code to switch the storage scheme is relatively easy. Capture the particle 
+set that the Swift 2 project returns when you add a particle species:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+particle_set = project.add_particle_species(particle)
+particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The line above changes the particle set generator, i.e. the class which maps the 
+particle set onto an implementation. 
+
+
+
 ### Using optimised kernels with coalescent memory access
 
-If you use one of the two memory pools as discussed above and you use the 
-active set construction via lists rather than sets (see two subsections above),
+If you use one of the two memory pools as discussed above for you particle
+species and if you use the 
+active set construction via lists rather than sets overall,
 you can switch to optimised kernels which exploit coalescent memory access.
-They might vectorise better. peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists
-discusses their usage. Not every SPH flavour/species provides such kernels.
+They might vectorise better. 
+
+For this, you actively have to manipulate your kernel invocations, and not 
+every solver supports this, i.e. has these optimisations built in. One 
+variant where you see this feature offered is swift2.particle.SPHLeapfrogFixedSearchRadius.
+Set its constructor's argument use_optimised_coalesced_memory_access_kernels,
+and you should get optimised kernels. Search the implementation for the 
+corresponding attribute _use_optimised_coalesced_memory_access_kernels, 
+and you see how the default kernel invocations are replaced with optimised
+variants.
+
+The implementation of these optimised variants is beyond scope here, but 
+peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists
+discusses their usage. Also, you might want to look into 
+::swift2::kernels::computeHydroForceWithCoalescedMemoryAccessOverContinuousParticleChunks()
+for an example of an optimised kernel.
 
 
  */

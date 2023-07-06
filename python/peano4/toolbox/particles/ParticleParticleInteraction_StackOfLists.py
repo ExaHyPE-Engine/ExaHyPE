@@ -148,7 +148,7 @@ for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
   std::advance( localParticlesIterator, localParticlesChunkSize );
 
   for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<localParticlesChunkSize; localParticleNumberInThisChunk++) {
-    if ( marker.isContained( localParticlesChunk[localParticleNumberInThisChunk].getX() ) {
+    if ( marker.isContained( localParticlesChunk[localParticleNumberInThisChunk].getX() )) {
     }
   }
 } 

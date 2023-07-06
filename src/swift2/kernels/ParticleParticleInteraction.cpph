@@ -362,3 +362,48 @@ void swift2::kernels::computeHydroForce(
     }
   }
 }
+
+
+template <typename ParticleContainer>
+void swift2::kernels::computeHydroForce(
+    const peano4::datamanagement::CellMarker&  marker,
+    const ParticleContainer&                   particlesAssociatedWithLocalVertices,
+    const std::vector<int>&                    numberOfParticlesPerLocalVertex,
+    const ParticleContainer&                   activeParticles,
+    const std::vector<int>&                    numberOfActiveParticlesPerVertexAdded
+) {
+  typename std::list< typename ParticleContainer::value_type >::const_iterator localParticlesIterator  = particlesAssociatedWithLocalVertices.begin();
+
+  #pragma nounroll
+  for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
+    typename ParticleContainer::value_type  localParticlesChunk = *localParticlesIterator;
+    std::advance( localParticlesIterator, localParticlesChunkSize );
+
+    #pragma nounroll
+    for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<localParticlesChunkSize; localParticleNumberInThisChunk++) {
+      if (
+        marker.isContained( localParticlesChunk[localParticleNumberInThisChunk].getX() )
+        and
+        not localParticlesChunk[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
+      ) {
+        typename std::list< typename ParticleContainer::value_type >::const_iterator activeParticlesIterator = activeParticles.begin();
+
+        #pragma nounroll
+        for (auto activeParticlesChunkSize: numberOfActiveParticlesPerVertexAdded) {
+          typename ParticleContainer::value_type  activeParticlesChunk = *activeParticlesIterator;
+          std::advance( activeParticlesIterator, activeParticlesChunkSize );
+
+          #pragma unroll
+          for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
+            swift2::kernels::forceKernel(
+              localParticlesChunk  + localParticleNumberInThisChunk,
+              activeParticlesChunk + activeParticleNumberInThisChunk
+            );
+          }
+        }
+      }
+    }
+  }
+}
+
+

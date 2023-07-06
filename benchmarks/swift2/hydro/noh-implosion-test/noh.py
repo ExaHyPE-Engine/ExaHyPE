@@ -145,6 +145,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=particles_per_cell,
     min_h=max_cell_size,
     max_h=max_cell_size,
+    use_optimised_coalesced_memory_access_kernels=True
 )
 
 
@@ -232,6 +233,7 @@ if args.mantissa_size > 0:
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
+particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
 
 if args.asserts:
     build_mode = peano4.output.CompileMode.Asserts

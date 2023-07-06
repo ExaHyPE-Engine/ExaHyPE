@@ -125,6 +125,35 @@ namespace swift2 {
     template <typename ParticleContainer>
     void computeHydroForce(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
 
+
+    /**
+     * Optimised alternative to computeHydroForce()
+     *
+     * Semantically, this operation does exactly the same as
+     * computeHydroForce(). However, there are a few differences how the
+     * function runs through the particles. The routine can be used if and only
+     * if you use a @ref toolbox_particles_memorypool "memory pool" as it is
+     * also discussed in the @ref page_swift_performance_optimisation "optimisation guidelines".
+     *
+     *
+     * The routine knows way more about the internal ordering of the particles
+     * through the explicit arguments particlesAssociatedWithLocalVertices and
+     * numberOfParticlesPerLocalVertex. It implicitly knows how the particles
+     * are stored through the naming convention/the fact that you have to use
+     * it with a memory pool. The Python class
+     * peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.ParticleParticleInteraction_StackOfLists
+     * provides a lot of information how we construct the passed lists over
+     * particles.
+     *
+     */
+    template <typename ParticleContainer>
+    void computeHydroForce(
+      const peano4::datamanagement::CellMarker&  marker,
+      const ParticleContainer&                   particlesAssociatedWithLocalVertices,
+      const std::vector<int>&                    numberOfParticlesPerLocalVertex,
+      const ParticleContainer&                   activeParticles,
+      const std::vector<int>&                    numberOfActiveParticlesPerVertexAdded
+    );
   } // namespace kernels
 } // namespace swift2
 
