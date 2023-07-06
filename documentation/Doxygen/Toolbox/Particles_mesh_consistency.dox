@@ -1,0 +1,130 @@
+/**
+
+@page page_toolbox_particles_mesh_consistency Mesh data consistency
+
+If a particle moves or changes its search radius, it might be associated
+to the wrong vertex. Consequently, it is important to be always aware of
+situations when the mesh-particle association is not consistent and to 
+understand how you can minimise the time spans in which data remains 
+messed up.
+
+
+
+# Particle sorting
+
+The particle sorting is realised through peano4.toolbox.particles.AbstractUpdateParticleGridAssociation
+and subclasses of this type. In principle all flavours work in a similar way
+and spread up the sorting over at least two mesh traversals. That is, once
+you have updated either a particle position or a particle's search radius,
+you have to ensure that there are two consecutive mesh traversals which 
+integrate a sorting action set. In the ideal case, you add this action set
+directly to the mesh traversal where you alter the particle state, and then
+you also add the sorting action set to the subsequent mesh sweep.
+
+
+It is important that you merge the two update
+action sets into the action set where you change the particle position (in the
+last access of a vertex) plus into the subsequent grid sweep:
+Once the particle position has changed, Peano tries to associate the particle
+again to the right vertex.
+If the associativity however has changed, it might (temporarily) move particles
+to a coarser level.
+It is the subsequent grid sweep that then sorts the particles again into the
+right resolution of the mesh plus associates it with the right vertex.
+So it needs access to UpdateParticleGridAssocation.
+
+
+A similar argument holds if you parallelise:
+If a particle leaves a domain, the owning tree sends it out by the end of the
+mesh sweep.
+The particle is now in transition.
+It is the subsequent grid sweep which works it into the target tree and updates
+its parallel state.
+
+
+
+
+While both a position update of a particle and an
+alteration of the search radius require resorts, mesh rebalancing
+does not require you to resort as Peano automatically transfers all data in 
+sync. Dynamic mesh refinement also does not mean that you have to resort:
+Particles residing within erased fine grid partitions are automatically 
+lifted to a coarser level. If you have added new AMR levels, the particles
+will simply reside on the coarser level until you decide to issue a new 
+sort anyway.
+
+
+# Tunneling
+
+Tunneling means that a particle moves more than one mesh cell per time
+step. They jump or tunning through cells.
+In the context of Peano's multiscale tree structure, this is equivalent to
+particles which travel more than their search radius per step.
+
+
+Tunneling arises if search radii change suddenly, and if meshes are extremely
+refined where they should likely not refine.
+It also arises if you have particles which do not or only weakly interact 
+with neighbours.
+Peano does support tunneling in principle, but you can tell the update script
+if you want to get a warning if particles tunnel - in some applications, this is
+unphysical.
+
+
+# Uniqueness of particle changes
+
+Most codes move a particle in touchVertexLastTime().
+This is convenient as we know that any particle associated with the respective
+vertex also has been touched for the last time.
+We can safely update it.
+However, if we change a particle's position and merge
+UpdateParticleGridAssociation into the respective algorithmic step,
+then the particle might immediately be associated to another vertex after it has
+been updated and this vertex might later on become subject of touchVertexLastTime().
+
+If you update particles with touchCell, you face a similar dilemma:
+A particle might reside in up to @f$ 2^d @f$ cells, as we work with 
+floating point data and hence the association with cells is not 
+unique.
+
+
+Consequently, it can happen that a particle is updated multiple times.
+To avoid this, I recommend that you add a boolean to each vertex:
+
+~~~~~~~~~~~~~~~~~
+            particle.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
+~~~~~~~~~~~~~~~~~
+
+
+You can then set the value of MoveState to NotMovedYet in
+touchVertexFirstTime(), set it to ```Moved``` once we update the
+position, but only update its position as long as it has not been moved yet.
+Peano's built-in re-assignment of positions does only move particles around
+when vertices are touched for the last time, so there's no risk here that you
+update a particle in touchVertexLastTime(), assign it to a particle which
+has not been used yet and then reset it wrongly to not moved again.
+Similar patterns hold for other state updates.
+
+
+
+# Timing of particle changes
+
+I recommend that you never alter the particle positions throughout the
+traversal. The only time you should set a new position is within
+touchVertexLastTime(). This gives Peano's particle toolbox the time to
+re-sort the particles in-between two traversals as long as you ensure 
+that every mesh sweep where you alter the particle position also resorts.
+
+As long as you alter particle positions only in touchVertexLastTime(),
+you can then assume that the mesh topology is consistent throughout the
+traversal. That is, all particles within the search readius are properly
+indexed and available. This implies that you also should not alter the 
+search radius throughout the mesh traversal. You can do so, but you have 
+to accept that the mesh then becomes inconsistent, i.e. you might see more
+or less particles than what you actually would require, as the particle-mesh
+association is not updated yet.
+
+
+
+*/
+ 

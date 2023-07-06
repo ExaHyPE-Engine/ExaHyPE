@@ -14,9 +14,16 @@ import os
 from enum import Enum
 
 class AbstractParticleSetGenerator(object):
-    def __init__(self, data):
-      self._data = data
+    def __init__(self, 
+                 data,
+                 gather_particles,
+                 ):
+      self._data            = data
+      self._gather_particles = gather_particles
 
+    @property
+    def gather_particles(self):
+      return self._gather_particles
 
     def get_stack_container(self):
         return (
@@ -62,7 +69,7 @@ Please consult @ref page_swift_performance_optimisation "the generic discussion 
     """
 
     def __init__(self, data):
-        super(ParticleSetGenerator_ScatteredOnHeap_IndexByList,self).__init__(data)
+        super(ParticleSetGenerator_ScatteredOnHeap_IndexByList,self).__init__(data,False)
 
     def construct_output(self, output):
         d = {
@@ -110,7 +117,7 @@ Please consult @ref page_swift_performance_optimisation "the generic discussion 
     """
 
     def __init__(self, data):
-        super(ParticleSetGenerator_ScatteredOnHeap_IndexByVector,self).__init__(data)
+        super(ParticleSetGenerator_ScatteredOnHeap_IndexByVector,self).__init__(data,False)
 
     def construct_output(self, output):
         d = {
@@ -138,56 +145,7 @@ Please consult @ref page_swift_performance_optimisation "the generic discussion 
         pass
 
 
-class ParticleSetGenerator_ContinuousPerVertex_IndexByVector(AbstractParticleSetGenerator):
-    """!
-
-Map a particle set onto heap objects indexed by an std::vector
-
-This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
-Peano's stacks are realised via std::vector from the C++ standard library.
-Each entry within this vector then resembles a C++ container over pointers
-to the heap. That is, all particles are stored on the heap. They are
-scattered. The C++ pointer per stack entry that's used to store all the
-particle pointers is realised through std::list.
-
-
-Please consult @ref page_swift_performance_optimisation "the generic discussion on the impact of storage schemes".
-
-@image html ParticleSetGenerator_ContinuousPerVertex.png
-
-
-    """
-
-    def __init__(self, data):
-        super(ParticleSetGenerator_ContinuousPerVertex_IndexByVector,self).__init__(data)
-
-    def construct_output(self, output):
-        d = {
-          "PARTICLE_TYPE": self._data.particle_model.name,
-          "STD_CONTAINER": "vector"
-        }
-
-        templatefile_prefix = (
-            os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
-        )
-
-        generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.h",
-            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.cpp",
-            self._data.name,
-            self._data.namespace,
-            self._data.namespace[-1],
-            d,
-            True,
-        )
-        output.add(generated_files)
-        output.makefile.add_cpp_file(
-            self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True
-        )
-        pass
-
-
-class ParticleSetGenerator_ContinuousPerVertex_IndexByList(AbstractParticleSetGenerator):
+class ParticleSetGenerator_ContinuousPerVertex(AbstractParticleSetGenerator):
     """!
 
 Map a particle set onto heap objects indexed by a list
@@ -206,12 +164,12 @@ Please consult @ref page_swift_performance_optimisation "the generic discussion 
     """
 
     def __init__(self, data):
-        super(ParticleSetGenerator_ContinuousPerVertex_IndexByList,self).__init__(data)
+        super(ParticleSetGenerator_ContinuousPerVertex,self).__init__(data,True)
 
     def construct_output(self, output):
         d = {
-          "PARTICLE_TYPE": self._data.particle_model.name,
-          "STD_CONTAINER": "list"
+          "PARTICLE_TYPE":      self._data.particle_model.name,
+          "MEMORY_POOL_TYPE":   "toolbox::particles::memorypool::VertexWiseContinuousMemoryPool"
         }
 
         templatefile_prefix = (
@@ -219,8 +177,8 @@ Please consult @ref page_swift_performance_optimisation "the generic discussion 
         )
 
         generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.h",
-            templatefile_prefix + "_ContinuousPerVertex_IndexedByStdContainer.template.cpp",
+            templatefile_prefix + "_MemoryPool.template.h",
+            templatefile_prefix + "_MemoryPool.template.cpp",
             self._data.name,
             self._data.namespace,
             self._data.namespace[-1],
@@ -233,6 +191,53 @@ Please consult @ref page_swift_performance_optimisation "the generic discussion 
         )
         pass
 
+
+
+class ParticleSetGenerator_GlobalContinuous(AbstractParticleSetGenerator):
+    """!
+
+Map a particle set onto heap objects indexed by a list
+
+This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+Peano's stacks are realised via std::vector from the C++ standard library.
+Each entry within this vector then resembles a C++ container over pointers
+to the heap. That is, all particles are stored on the heap. They are
+scattered. The C++ pointer per stack entry that's used to store all the
+particle pointers is realised through std::list.
+
+Please consult @ref page_swift_performance_optimisation "the generic discussion on the impact of storage schemes".
+
+@image html ParticleSetGenerator_GlobalContinuous.png
+
+    """
+
+    def __init__(self, data):
+        super(ParticleSetGenerator_GlobalContinuous,self).__init__(data,True)
+
+    def construct_output(self, output):
+        d = {
+          "PARTICLE_TYPE":      self._data.particle_model.name,
+          "MEMORY_POOL_TYPE":   "toolbox::particles::memorypool::GlobalContinuousMemoryPool"
+        }
+
+        templatefile_prefix = (
+            os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
+        )
+
+        generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            templatefile_prefix + "_MemoryPool.template.h",
+            templatefile_prefix + "_MemoryPool.template.cpp",
+            self._data.name,
+            self._data.namespace,
+            self._data.namespace[-1],
+            d,
+            True,
+        )
+        output.add(generated_files)
+        output.makefile.add_cpp_file(
+            self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True
+        )
+        pass
 
 
 class ParticleSet(DoF):
@@ -283,8 +288,8 @@ particle: Particle
         self.particle_model = particle
         #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
         #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
-        self.generator      = ParticleSetGenerator_ContinuousPerVertex_IndexByList(self)
-        #self.generator      = ParticleSetGenerator_ContinuousPerVertex_IndexByVector(self)
+        self.generator      = ParticleSetGenerator_ContinuousPerVertex(self)
+        #self.generator      = ParticleSetGenerator_GlobalContinuous(self)
 
 
     @property

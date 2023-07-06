@@ -7,7 +7,6 @@
 #pragma once
 
 
-#include <{{STD_CONTAINER}}>
 #include <list>
 
 #include "tarch/logging/Log.h"
@@ -19,6 +18,7 @@
 #include "peano4/grid/TraversalObserver.h"
 
 #include "toolbox/particles/ParticleSet.h"
+#include "toolbox/particles/memorypool/VertexWiseContinuousMemoryPool.h"
 
 
 {% for item in NAMESPACE -%}
@@ -47,14 +47,20 @@
                        {
     public:
       typedef toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >  Base;
-      typedef std::{{STD_CONTAINER}}< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >          Container;
+      typedef {{MEMORY_POOL_TYPE}}< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >          MemoryPool;
+      /**
+       * This is the container as it looks like from outside.
+       * Internally, we use instances of MemoryPool to administer
+       * the data.
+       */
+      typedef MemoryPool::Container          Container;
 
       /**
        * Expose C++ standard interface
        */
-      typedef Container::value_type      value_type;
-      typedef Container::iterator        iterator;
-      typedef Container::const_iterator  const_iterator;
+      typedef typename Container::value_type      value_type;
+      typedef typename Container::iterator        iterator;
+      typedef typename Container::const_iterator  const_iterator;
 
       {{CLASSNAME}}() = default;
 
@@ -126,13 +132,18 @@
        *
        * Plain delegate to superclass clear(), i.e. this routine clears a set
        * of pointers, but it does not delete the actual particles. If you want
-       * that behaviour, you have to call deleteParticles(). I merely introduce
-       * this wrapper to be able to add this comment on the shallow vs deep
-       * copy/clear mechanism.
+       * that behaviour, you have to call deleteParticles().
        *
-       * There's no need to redefine this one. I just wanted to highlight
-       * that it is a shallow copy, i.e. to add a comment, and so I
-       * "overwrote" it.
+       * As it is a shallow clear, we may assume that another stack holds a
+       * copy to "our" particles. What can now happen is the following: A mesh
+       * traversal consolidates all data structures, i.e. invokes gather() on
+       * its vertices. At the end, these gathered vertices are also pushed onto
+       * to parallel data exchange stacks. Here, we employ the default copy
+       * constructor/assignment operator. That means, the boundary stack now
+       * "thinks" it holds a continuous piece of memory. Actually, it does so,
+       * but it does not own this memory. Therefore, the clear() clears indeed
+       * the list of pointers, and it clears the container, but it does not
+       * free the underlying memory.
        */
       void clear();
 
@@ -212,12 +223,16 @@
       /**
        * Move particle from one container to the other one
        *
+       * I need a copy of the particle, as I might have to scatter
+       * sourceParticleSet and then redirect particle to an entry within a
+       * scattered set.
+       *
        * @return Iterator within sourceParticleSet which is returned after
        *   erasing it from this set.
        */
       Container::iterator grabParticle(
-        const Container::iterator&         particle,
-        {{CLASSNAME}}&                     sourceParticleSet
+        Container::iterator         particle,
+        {{CLASSNAME}}&              sourceParticleSet
       );
 
       /**
@@ -232,12 +247,28 @@
        *   however not efficient, i.e. it might point to begin() and any outer
        *   loop hence might restart to run over all particles again. 
        */
-      Container::iterator deleteParticle( const Container::iterator&   particle );
+      Container::iterator deleteParticle( Container::iterator  particle );
 
+      /**
+       * Gather particles
+       *
+       * This routine consolidates all the associated particles into one
+       * chunk. This is one of the two routines that we offer compared to a
+       * realisation which scatters particles over the heap.
+       */
+      void gather();
+
+      /**
+       * Are particles gathered atm
+       *
+       * Just a query. This is one of the two routines that we offer compared to a
+       * realisation which scatters particles over the heap.
+       */
+      bool isGathered() const;
     private:
       static tarch::logging::Log _log;
 
-      Container  _container;
+      MemoryPool  _memoryPool;
 };
 
 {% for item in NAMESPACE -%}
