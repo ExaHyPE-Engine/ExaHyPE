@@ -3,11 +3,12 @@
 
 examples::exahype2::elastic::VariableShortcuts sh;
 
+template<typename T>
 void loh::riemannSolver::riemannSolver(
-  double* const FL_,
-  double* const FR_,
-  const double* const QL_,
-  const double* const QR_,
+  T* const FL_,
+  T* const FR_,
+  const T* const QL_,
+  const T* const QR_,
   const double t,
   const double dt,
   const tarch::la::Vector<Dimensions, double>& lengthScale,
@@ -16,20 +17,20 @@ void loh::riemannSolver::riemannSolver(
   int faceIndex){
 
 #ifdef OPT_KERNELS
-  double FL[converter::getFFaceGenArraySize()];
-  double FR[converter::getFFaceGenArraySize()];
-  double QL[converter::getQFaceGenArraySize()];
-  double QR[converter::getQFaceGenArraySize()];
+  T FL[converter::getFFaceGenArraySize()];
+  T FR[converter::getFFaceGenArraySize()];
+  T QL[converter::getQFaceGenArraySize()];
+  T QR[converter::getQFaceGenArraySize()];
   
   converter::FFace_optimised2generic(FL_,FL);
   converter::FFace_optimised2generic(FR_,FR);
   converter::QFace_optimised2generic(QL_,QL);
   converter::QFace_optimised2generic(QR_,QR);
 #else
-  double* FL=FL_;
-  double* FR=FR_;
-  const double* QL=QL_;
-  const double* QR=QR_;
+  T* FL=FL_;
+  T* FR=FR_;
+  const T* QL=QL_;
+  const T* QR=QR_;
 #endif
 
   constexpr int numberOfVariables  = examples::exahype2::elastic::Abstractloh::NumberOfVariables;
@@ -42,25 +43,25 @@ void loh::riemannSolver::riemannSolver(
   kernels::idx3 idx_QLR(basisSize,basisSize,numberOfData);
   kernels::idx3 idx_FLR(basisSize,basisSize,numberOfVariables);
 
-  double n[3]={0,0,0};
+  T n[3]={0,0,0};
   n[normalNonZeroIndex]=1;
 
-  double n_p[3]={0,0,0};
-  double n_m[3]={0,0,0};
+  T n_p[3]={0,0,0};
+  T n_m[3]={0,0,0};
 
-  double m_p[3]={0,0,0};
-  double m_m[3]={0,0,0};
+  T m_p[3]={0,0,0};
+  T m_m[3]={0,0,0};
 
-  double l_p[3]={0,0,0};  
-  double l_m[3]={0,0,0};
+  T l_p[3]={0,0,0};  
+  T l_m[3]={0,0,0};
 
-  double norm_p_qr = 1.0;
-  double norm_m_qr = 1.0;
+  T norm_p_qr = 1.0;
+  T norm_m_qr = 1.0;
   
-  double FLn, FLm, FLl, FRn,FRm,FRl;
-  double FL_n,FL_m,FL_l,FR_n,FR_m,FR_l;
-  double FLx,FLy,FLz,FRx,FRy,FRz;
-  double FL_x,FL_y,FL_z,FR_x,FR_y,FR_z;
+  T FLn, FLm, FLl, FRn,FRm,FRl;
+  T FL_n,FL_m,FL_l,FR_n,FR_m,FR_l;
+  T FLx,FLy,FLz,FRx,FRy,FRz;
+  T FL_x,FL_y,FL_z,FR_x,FR_y,FR_z;
 
    for (int k = 0; k < 3; k++){
 
@@ -70,21 +71,21 @@ void loh::riemannSolver::riemannSolver(
 
   for (int i = 0; i < basisSize; i++) {
     for (int j = 0; j < basisSize; j++) {
-      double rho_p=QR[idx_QLR(i,j,9)];
-      double c_p_p=QR[idx_QLR(i,j,10)];
-      double c_s_p=QR[idx_QLR(i,j,11)];
-      double mu_p=c_s_p*c_s_p*rho_p;
-      double lam_p = rho_p*c_p_p*c_p_p-2*mu_p;      
+      T rho_p=QR[idx_QLR(i,j,9)];
+      T c_p_p=QR[idx_QLR(i,j,10)];
+      T c_s_p=QR[idx_QLR(i,j,11)];
+      T mu_p=c_s_p*c_s_p*rho_p;
+      T lam_p = rho_p*c_p_p*c_p_p-2*mu_p;      
 
-      double rho_m=QL[idx_QLR(i,j,9)];
-      double c_p_m=QL[idx_QLR(i,j,10)];
-      double c_s_m=QL[idx_QLR(i,j,11)];
-      double mu_m=c_s_m*c_s_m*rho_m;
-      double lam_m = rho_m*c_p_m*c_p_m-2*mu_m;      
+      T rho_m=QL[idx_QLR(i,j,9)];
+      T c_p_m=QL[idx_QLR(i,j,10)];
+      T c_s_m=QL[idx_QLR(i,j,11)];
+      T mu_m=c_s_m*c_s_m*rho_m;
+      T lam_m = rho_m*c_p_m*c_p_m-2*mu_m;      
   
 
-      double Tx_m,Ty_m,Tz_m,Tx_p,Ty_p,Tz_p;
-      double vx_m,vy_m,vz_m,vx_p,vy_p,vz_p;
+      T Tx_m,Ty_m,Tz_m,Tx_p,Ty_p,Tz_p;
+      T vx_m,vy_m,vz_m,vx_p,vy_p,vz_p;
       
       extract_tractions_and_particle_velocity(n_p,QR+idx_QLR(i,j,0),Tx_p,Ty_p,Tz_p,vx_p,vy_p,vz_p );
       extract_tractions_and_particle_velocity(n_m,QL+idx_QLR(i,j,0),Tx_m,Ty_m,Tz_m,vx_m,vy_m,vz_m ); 
@@ -92,8 +93,8 @@ void loh::riemannSolver::riemannSolver(
       localBasis(n_p, m_p, l_p, 3);
       localBasis(n_m, m_m, l_m, 3);
 
-      double Tn_m,Tm_m,Tl_m,vn_m,vm_m,vl_m;
-      double Tn_p,Tm_p,Tl_p,vn_p,vm_p,vl_p;
+      T Tn_m,Tm_m,Tl_m,vn_m,vm_m,vl_m;
+      T Tn_p,Tm_p,Tl_p,vn_p,vm_p,vl_p;
 
       // rotate fields into l, m, n basis
       rotate_into_orthogonal_basis(n_m,m_m,l_m,Tx_m,Ty_m,Tz_m,Tn_m,Tm_m,Tl_m);
@@ -103,10 +104,10 @@ void loh::riemannSolver::riemannSolver(
       
   
       // extract local s-wave and p-wave impedances
-      double zs_p=rho_p*c_s_p;
-      double zp_p=rho_p*c_p_p;
-      double zs_m=rho_m*c_s_m;
-      double zp_m=rho_m*c_p_m;
+      T zs_p=rho_p*c_s_p;
+      T zp_p=rho_p*c_p_p;
+      T zs_m=rho_m*c_s_m;
+      T zp_m=rho_m*c_p_m;
       
       // impedance must be greater than zero !
       if (zp_p <= 0.0 || zp_m <= 0.0){
@@ -118,13 +119,13 @@ void loh::riemannSolver::riemannSolver(
 
       // generate interface data preserving the amplitude of the outgoing charactertritics
       // and satisfying interface conditions exactly.
-      double vn_hat_p,vm_hat_p,vl_hat_p,Tn_hat_p,Tm_hat_p,Tl_hat_p;        
-      double vn_hat_m,vm_hat_m,vl_hat_m,Tn_hat_m,Tm_hat_m,Tl_hat_m;    
+      T vn_hat_p,vm_hat_p,vl_hat_p,Tn_hat_p,Tm_hat_p,Tl_hat_p;        
+      T vn_hat_m,vm_hat_m,vl_hat_m,Tn_hat_m,Tm_hat_m,Tl_hat_m;    
 
       if (isBoundaryFace) {
 	// 1 absorbing 0 free surface
-	double r= faceIndex==2 ? 1 : 0;
-	//	double r=1.;
+	T r= faceIndex==2 ? 1 : 0;
+	//	T r=1.;
 	riemannSolver_boundary(faceIndex,r,vn_m,vm_m,vl_m,Tn_m,Tm_m,Tl_m,zp_m,zs_m,vn_hat_m,vm_hat_m,vl_hat_m,Tn_hat_m,Tm_hat_m,Tl_hat_m);
 	riemannSolver_boundary(faceIndex,r,vn_p,vm_p,vl_p,Tn_p,Tm_p,Tl_p,zp_p,zs_p,vn_hat_p,vm_hat_p,vl_hat_p,Tn_hat_p,Tm_hat_p,Tl_hat_p);      
       }else {
@@ -204,22 +205,47 @@ void loh::riemannSolver::riemannSolver(
 
 }
 
+template void loh::riemannSolver::riemannSolver<float>(
+  float* const FL_,
+  float* const FR_,
+  const float* const QL_,
+  const float* const QR_,
+  const double t,
+  const double dt,
+  const tarch::la::Vector<Dimensions, double>& lengthScale,
+  const int normalNonZeroIndex, 
+  bool isBoundaryFace, 
+  int faceIndex);
+template void loh::riemannSolver::riemannSolver<double>(
+  double* const FL_,
+  double* const FR_,
+  const double* const QL_,
+  const double* const QR_,
+  const double t,
+  const double dt,
+  const tarch::la::Vector<Dimensions, double>& lengthScale,
+  const int normalNonZeroIndex, 
+  bool isBoundaryFace, 
+  int faceIndex);
+
 //Gram Schmidt orthonormalization
-void loh::riemannSolver::Gram_Schmidt(double* const y, double* const z){
-  double  a_yz = y[0]*z[0] + y[1]*z[1] + y[2]*z[2];
+template<typename T>
+void loh::riemannSolver::Gram_Schmidt(T* const y, T* const z){
+  T  a_yz = y[0]*z[0] + y[1]*z[1] + y[2]*z[2];
 
   for (int i = 0; i< 3; i++){
     z[i] = z[i] - a_yz*y[i];
   }
   
-  double norm_z = std::sqrt(z[0]*z[0] + z[1]*z[1] + z[2]*z[2]);
+  T norm_z = std::sqrt(z[0]*z[0] + z[1]*z[1] + z[2]*z[2]);
   
   for (int i = 0; i< 3; i++){
     z[i] =  z[i]/norm_z;
   }
 }
 
-void loh::riemannSolver::localBasis(double* const n, double* const m, double* const l, int d){
+template<typename T>
+void loh::riemannSolver::localBasis(T* const n, T* const m, T* const l, int d){
   if (d == 2){
       l[0] = 0.;
       l[1] = 0.;
@@ -229,7 +255,7 @@ void loh::riemannSolver::localBasis(double* const n, double* const m, double* co
       m[1] = -(n[0]*l[2]-n[2]*l[0]);
       m[2] = n[0]*l[1]-n[1]*l[0];
   }else if (d == 3){
-      double tol, diff_norm1, diff_norm2;
+      T tol, diff_norm1, diff_norm2;
       tol = 1e-12;
       m[0] = 0.;
       m[1] = 1.;
@@ -254,12 +280,13 @@ void loh::riemannSolver::localBasis(double* const n, double* const m, double* co
 
 
 
-void loh::riemannSolver::riemannSolver_Nodal(double v_p,double v_m, double sigma_p, double sigma_m, double z_p , double z_m, double& v_hat_p , double& v_hat_m, double& sigma_hat_p, double& sigma_hat_m){
-  double p=0;
-  double q=0;
-  double phi=0;
-  double v_hat=0;
-  double eta=0;
+template<typename T>
+void loh::riemannSolver::riemannSolver_Nodal(T v_p,T v_m, T sigma_p, T sigma_m, T z_p , T z_m, T& v_hat_p , T& v_hat_m, T& sigma_hat_p, T& sigma_hat_m){
+  T p=0;
+  T q=0;
+  T phi=0;
+  T v_hat=0;
+  T eta=0;
 
   p=z_m*v_p + sigma_p;
   q=z_p*v_m - sigma_m;
@@ -295,8 +322,9 @@ void loh::riemannSolver::riemannSolver_Nodal(double v_p,double v_m, double sigma
   }
  }
 
-void loh::riemannSolver::riemannSolver_BC0(double v, double sigma, double z,  double r, double& v_hat, double& sigma_hat){
-   double p = 0.5*(z*v + sigma);
+template<typename T>
+void loh::riemannSolver::riemannSolver_BC0(T v, T sigma, T z,  T r, T& v_hat, T& sigma_hat){
+   T p = 0.5*(z*v + sigma);
    if(z > 0){
      v_hat = (1+r)/z*p;
      sigma_hat = (1-r)*p;
@@ -306,8 +334,9 @@ void loh::riemannSolver::riemannSolver_BC0(double v, double sigma, double z,  do
    }
 }
 
-void loh::riemannSolver::riemannSolver_BCn(double v,double sigma, double z, double r, double& v_hat, double& sigma_hat){
-   double q = 0.5*(z*v - sigma);
+template<typename T>
+void loh::riemannSolver::riemannSolver_BCn(T v,T sigma, T z, T r, T& v_hat, T& sigma_hat){
+   T q = 0.5*(z*v - sigma);
    if(z > 0){
      v_hat = (1+r)/z*q;
      sigma_hat = -(1-r)*q;
@@ -319,13 +348,14 @@ void loh::riemannSolver::riemannSolver_BCn(double v,double sigma, double z, doub
 
 
 
-void loh::riemannSolver::extract_tractions_and_particle_velocity(double* const n,const double* const Q, double& Tx,double& Ty,double& Tz,double& vx,double& vy,double& vz ){
-  double sigma_xx = Q[3];
-  double sigma_yy = Q[4];
-  double sigma_zz = Q[5];
-  double sigma_xy = Q[6];
-  double sigma_xz = Q[7];
-  double sigma_yz = Q[8];
+template<typename T>
+void loh::riemannSolver::extract_tractions_and_particle_velocity(T* const n,const T* const Q, T& Tx,T& Ty,T& Tz,T& vx,T& vy,T& vz ){
+  T sigma_xx = Q[3];
+  T sigma_yy = Q[4];
+  T sigma_zz = Q[5];
+  T sigma_xy = Q[6];
+  T sigma_xz = Q[7];
+  T sigma_yz = Q[8];
   
   Tx = n[0]*sigma_xx + n[1]*sigma_xy + n[2]*sigma_xz;
   Ty = n[0]*sigma_xy + n[1]*sigma_yy + n[2]*sigma_yz;
@@ -336,27 +366,32 @@ void loh::riemannSolver::extract_tractions_and_particle_velocity(double* const n
   vz = Q[2];    
 }
 
-void loh::riemannSolver::rotate_into_orthogonal_basis(double* const n,double* const m,double* const l, double Tx,double Ty,double Tz, double& Tn, double& Tm, double& Tl){
+template<typename T>
+void loh::riemannSolver::rotate_into_orthogonal_basis(T* const n,T* const m,T* const l, T Tx,T Ty,T Tz, T& Tn, T& Tm, T& Tl){
     Tn= Tx*n[0] + Ty*n[1] + Tz*n[2];
     Tm= Tx*m[0] + Ty*m[1] + Tz*m[2];
     Tl= Tx*l[0] + Ty*l[1] + Tz*l[2];
 }
 
-void loh::riemannSolver::rotate_into_physical_basis(double* const n,double* const m,double* const l, double Fn,double Fm,double Fl, double& Fx, double& Fy, double& Fz){
+template<typename T>
+void loh::riemannSolver::rotate_into_physical_basis(T* const n,T* const m,T* const l, T Fn,T Fm,T Fl, T& Fx, T& Fy, T& Fz){
   Fx = n[0]*Fn + m[0]*Fm + l[0]*Fl;
   Fy = n[1]*Fn + m[1]*Fm + l[1]*Fl;
   Fz = n[2]*Fn + m[2]*Fm + l[2]*Fl;
 }
 
-void loh::riemannSolver::generate_fluctuations_left(double z,  double T,double T_hat,double v, double v_hat, double& F){
-  F = 0.5*(z*(v-v_hat) + (T-T_hat));
+template<typename T>
+void loh::riemannSolver::generate_fluctuations_left(T z,  T myT,T T_hat,T v, T v_hat, T& F){
+  F = 0.5*(z*(v-v_hat) + (myT-T_hat));
 }
 
-void loh::riemannSolver::generate_fluctuations_right(double z,  double T,double T_hat,double v, double v_hat, double& F){
-  F = 0.5*(z*(v-v_hat) - (T-T_hat));
+template<typename T>
+void loh::riemannSolver::generate_fluctuations_right(T z,  T myT,T T_hat,T v, T v_hat, T& F){
+  F = 0.5*(z*(v-v_hat) - (myT-T_hat));
 }
 
-void loh::riemannSolver::riemannSolver_boundary(int faceIndex,double r, double vn , double vm , double vl, double Tn , double Tm ,double Tl , double zp, double zs , double& vn_hat , double& vm_hat ,double& vl_hat , double& Tn_hat , double& Tm_hat ,double& Tl_hat)
+template<typename T>
+void loh::riemannSolver::riemannSolver_boundary(int faceIndex,T r, T vn , T vm , T vl, T Tn , T Tm ,T Tl , T zp, T zs , T& vn_hat , T& vm_hat ,T& vl_hat , T& Tn_hat , T& Tm_hat ,T& Tl_hat)
 {
   if (faceIndex % 2  == 0) {
     riemannSolver_BC0(vn, Tn, zp, r, vn_hat, Tn_hat);

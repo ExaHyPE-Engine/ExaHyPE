@@ -7,11 +7,12 @@
 namespace loh{
   namespace riemannSolver{
 
+    template<typename T>
     void riemannSolver(
-      double* const FL,
-      double* const FR,
-      const double* const QL,
-      const double* const QR,
+      T* const FL,
+      T* const FR,
+      const T* const QL,
+      const T* const QR,
       const double t,
       const double dt,
       const tarch::la::Vector<Dimensions, double>& h,
@@ -19,25 +20,37 @@ namespace loh{
       bool isBoundaryFace, 
       int faceIndex);
 
-    void extractTransformation(const double* const Q,
-			       double& q_x,double& q_y,double& q_z,
-			       double& r_x,double& r_y,double& r_z,
-			       double& s_x,double& s_y,double& s_z);
+    template<typename T>
+    void extractTransformation(const T* const Q,
+			       T& q_x,T& q_y,T& q_z,
+			       T& r_x,T& r_y,T& r_z,
+			       T& s_x,T& s_y,T& s_z);
 
-    void riemannSolver_Nodal(double v_p,double v_m, double sigma_p, double sigma_m, double z_p , double z_m, double& v_hat_p , double& v_hat_m, double& sigma_hat_p, double& sigma_hat_m);
-    void riemannSolver_boundary(int faceIndex,double r, double vn , double vm , double vl, double Tn , double Tm ,double Tl , double zp, double zs,  double& vn_hat , double& vm_hat ,double& vl_hat , double& Tn_hat , double& Tm_hat ,double& Tl_hat);
+    template<typename T>
+    void riemannSolver_Nodal(T v_p,T v_m, T sigma_p, T sigma_m, T z_p , T z_m, T& v_hat_p , T& v_hat_m, T& sigma_hat_p, T& sigma_hat_m);
+    template<typename T>
+    void riemannSolver_boundary(int faceIndex,T r, T vn , T vm , T vl, T Tn , T Tm ,T Tl , T zp, T zs,  T& vn_hat , T& vm_hat ,T& vl_hat , T& Tn_hat , T& Tm_hat ,T& Tl_hat);
     
-    void riemannSolver_BC0(double v, double sigma, double z,  double r, double& v_hat, double& sigma_hat);
-    void riemannSolver_BCn(double v, double sigma, double z,  double r, double& v_hat, double& sigma_hat);
+    template<typename T>
+    void riemannSolver_BC0(T v, T sigma, T z,  T r, T& v_hat, T& sigma_hat);
+    template<typename T>
+    void riemannSolver_BCn(T v, T sigma, T z,  T r, T& v_hat, T& sigma_hat);
 
-    void localBasis(double* const n, double* const m, double* const l, int d);
-    void Gram_Schmidt(double* const y, double* const z);
+    template<typename T>
+    void localBasis(T* const n, T* const m, T* const l, int d);
+    template<typename T>
+    void Gram_Schmidt(T* const y, T* const z);
     
-    void generate_fluctuations_right(double z,  double T,double T_hat,double v, double v_hat, double& F);
-    void generate_fluctuations_left(double z,  double T,double T_hat,double v, double v_hat, double& F);
-    void rotate_into_physical_basis(double* const n,double* const m,double* const l, double Fn,double Fm,double Fl, double& Fx, double& Fy, double& Fz);
-    void rotate_into_orthogonal_basis(double* const n,double* const m,double* const l, double Tx,double Ty,double Tz, double& Tn, double& Tm, double& Tl);
-    void extract_tractions_and_particle_velocity(double* const n, const double* const Q, double& Tx,double& Ty,double& Tz,double& vx,double& vy,double& vz );
+    template<typename T>
+    void generate_fluctuations_right(T z,  T myT,T T_hat,T v, T v_hat, T& F);
+    template<typename T>
+    void generate_fluctuations_left(T z,  T myT,T T_hat,T v, T v_hat, T& F);
+    template<typename T>
+    void rotate_into_physical_basis(T* const n,T* const m,T* const l, T Fn,T Fm,T Fl, T& Fx, T& Fy, T& Fz);
+    template<typename T>
+    void rotate_into_orthogonal_basis(T* const n,T* const m,T* const l, T Tx,T Ty,T Tz, T& Tn, T& Tm, T& Tl);
+    template<typename T>
+    void extract_tractions_and_particle_velocity(T* const n, const T* const Q, T& Tx,T& Ty,T& Tz,T& vx,T& vy,T& vz );
 
   }
 }
