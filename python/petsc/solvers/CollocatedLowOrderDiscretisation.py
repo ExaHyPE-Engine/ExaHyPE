@@ -6,10 +6,11 @@ import dastgen2
 
 import os
 
-from .Solver                             import Solver
-from petsc.actionsets.InitVertexDoFs     import InitVertexDoFs
-from petsc.actionsets.EnumerateVertices  import EnumerateVertices
+from .Solver                                    import Solver
+from petsc.actionsets.EnumerateVertices         import EnumerateVertices
+from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
+from petsc.actionsets.AssemblePETSCMatrix       import AssemblePetscMatrixOnVertices
 
 from abc import abstractmethod
 
@@ -28,9 +29,10 @@ class CollocatedLowOrderDiscretisation(Solver):
   """
   def __init__(self,
                name,
-               number_of_unknowns,
+               number_of_vertex_unknowns,
                min_h,
-               max_h):
+               max_h,
+               stencil):
     """!
    
  Test comment (C)
@@ -40,16 +42,16 @@ I wanna see if this one applies to the solver or hte init
     """
     super( CollocatedLowOrderDiscretisation, self ).__init__( name,
                                                               min_h,
-                                                              max_h )
-    
-    self._number_of_unknowns = number_of_unknowns
-    
-    self._dof = peano4.datamodel.DaStGen2( name )
-    self._dof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_unknowns) ) )
-    self._dof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(number_of_unknowns) ) )
-    self._dof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
-    self._dof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
+                                                              max_h
+                                                              )
+    self._number_of_vertex_unknowns = number_of_vertex_unknowns
+    self._vertexDof = peano4.datamodel.DaStGen2( name )
+    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_vertex_unknowns) ) )
+    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(number_of_vertex_unknowns) ) )
+    self._vertexDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
+    self._vertexDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
 
+    self.stencil = stencil
     pass
 
 
@@ -64,20 +66,20 @@ I wanna see if this one applies to the solver or hte init
     """
     observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
       filename       = "solution-" + self._name,
-      vertex_unknown = self._dof,
+      vertex_unknown = self._vertexDof,
       getter         = "getValue().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_vertex = self._number_of_unknowns,
+      number_of_unknows_per_vertex = self._number_of_vertex_unknowns,
       guard_predicate              = "true", 
       ))
     observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
       filename       = "rhs-" + self._name,
-      vertex_unknown = self._dof,
+      vertex_unknown = self._vertexDof,
       getter         = "getRhs().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_vertex = self._number_of_unknowns,
+      number_of_unknows_per_vertex = self._number_of_vertex_unknowns,
       guard_predicate              = "true", 
       ))
     pass
@@ -107,6 +109,7 @@ I wanna see if this one applies to the solver or hte init
   
   
   def add_to_assemble(self, observer):
+    observer.add_action_set( AssemblePetscMatrixOnVertices(self, self.stencil) )
     pass
   
 
@@ -116,12 +119,12 @@ I wanna see if this one applies to the solver or hte init
   
   
   def add_use_statements(self, observer):
-    observer.use_vertex( self._dof )
+    observer.use_vertex( self._vertexDof )
     pass
 
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
-    datamodel.add_vertex(self._dof)
+    datamodel.add_vertex(self._vertexDof)
 
 
   def add_implementation_files_to_project(self, namespace, output):
@@ -149,7 +152,7 @@ I wanna see if this one applies to the solver or hte init
         "SOLVER_INCLUDES": "",
         "MIN_H": self.min_h,
         "MAX_H": self.max_h,
-        "CARDINALITY": self._number_of_unknowns
+        "VERTEX_CARDINALITY": self._number_of_vertex_unknowns
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -180,5 +183,5 @@ I wanna see if this one applies to the solver or hte init
 
 
   @property
-  def number_of_unknowns(self):
-    return self._number_of_unknowns
+  def number_of_vertex_unknowns(self):
+    return self._number_of_vertex_unknowns
