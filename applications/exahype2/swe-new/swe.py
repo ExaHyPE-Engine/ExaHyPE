@@ -394,6 +394,10 @@ if args.scenario == "Tsunami":
   peano4_project.output.makefile.add_cpp_file("parser/NetCDFReader.cpp")
   peano4_project.output.makefile.add_cpp_file("parser/NetCDFHelper.cpp")
 
+  peano4_project.output.makefile.add_h_file("parser/TopologyParser.h")
+  peano4_project.output.makefile.add_h_file("parser/NetCDFReader.hpp")
+  peano4_project.output.makefile.add_h_file("parser/NetCDFHelper.hpp")
+
 # define project constants if necessary
 if args.scenario == "Artificial_Tsunami":
   peano4_project.constants.define("_USE_MATH_DEFINES")

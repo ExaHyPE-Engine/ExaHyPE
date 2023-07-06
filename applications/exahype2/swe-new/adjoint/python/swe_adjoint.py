@@ -197,7 +197,7 @@ def transform_index_simulation_to_cdf(z, max_z, min_z, max_z_cdf, min_z_cdf):
         
 solver = SWE_Adjoint_Solver(
     output_file_name="test.nc", 
-    bathymetry_file_path="../netCDFInputs/gebco_2023_n65.0_s10.0_w-180.0_e-120.0.nc", 
+    bathymetry_file_path="../../netCDFInputs/gebco_2023_n65.0_s10.0_w-180.0_e-120.0.nc", 
     width=[10,10], cell_size=0.1, 
     area_of_interest=[[-124.19083, 41.74111e0], [1e0, float('inf')]], 
     end_time = 0.1,
