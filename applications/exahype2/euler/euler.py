@@ -20,6 +20,16 @@ use_gpu                   = False # Requires a GPU enabled build
 make                      = True
 output_path               = "solution"
 
+scenarios = [
+  "PointExplosion",
+  "PointExplosionWithDynamicAMR",
+  "GaussianExplosion",
+  "GaussianExplosionWithDynamicAMR",
+  "BreakingDam",
+  "BreakingDamWithDynamicAMR",
+]
+scenario = "GaussianExplosion"
+
 fv_rusanov_solvers = {
   #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep, # admissible_time_step_size = min_h/patch_size*0.01
   #"FVRusanovGlobalFixedEnclave":exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
@@ -46,39 +56,29 @@ build_modes = {
 }
 build_mode = "Release"
 
-scenarios = [
-  "PointExplosion",
-  "PointExplosionWithDynamicAMR",
-  "GaussianExplosion",
-  "GaussianExplosionWithDynamicAMR",
-  "BreakingDam",
-  "BreakingDamWithDynamicAMR",
-]
-scenario = "GaussianExplosion"
-
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler Application Script')
 
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     default=solver,             help="|".join(solvers.keys()))
 parser.add_argument("-o",       "--output",            dest="output_path",    type=str,                   default=output_path,        help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default=build_mode,         help="|".join(build_modes.keys()))
-parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions" )
+parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
 
-parser.add_argument("-et",      "--end-time",          dest="end_time",       type=float,                 default=end_time,           help="End time of simulation")
 parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios,          default=scenario,           help="|".join(scenarios))
-parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch.")
+parser.add_argument("-et",      "--end-time",          dest="end_time",       type=float,                 default=end_time,           help="End time of simulation")
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
 
-parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. size of a finite volume cell." )
-parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=use_gpu,            help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
+parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. size of a finite volume cell.")
+parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=use_gpu,            help="Enable GPU support (stateless PDE terms). Requires a GPU build.")
 
-parser.add_argument("-pbc",     "--periodic-boundary-conditions",  dest="periodic_boundary_conditions",   action="store_true", help="Use periodic boundary conditions" )
+parser.add_argument("-pbc",     "--periodic-boundary-conditions",  dest="periodic_boundary_conditions",   action="store_true",        help="Use periodic boundary conditions" )
 
-parser.add_argument("-maxh",    "--max-cell-size",     dest="max_cell_size",  type=float,                 default=cell_size,          help="Maximum size of a single finite volume cell on each axis")
+parser.add_argument("-maxh",    "--max-cell-size",     dest="max_cell_size",  type=float,                 default=cell_size,          help="Maximum size of a single finite volume cell on each axis.")
+parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch.")
 
-parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   default=rk_order,           help="Order of time discretisation for Runge-Kutta scheme." )
-parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   default=dg_order,           help="Order of space discretisation for Discontinuous Galerkin." )
+parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   default=rk_order,           help="Order of time discretisation for Runge-Kutta scheme.")
+parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   default=dg_order,           help="Order of space discretisation for Discontinuous Galerkin.")
 
-parser.add_argument(            "--make",              dest="make",           action="store_true",        default=make,               help="Compile the code after generation" )
+parser.add_argument(            "--make",              dest="make",           action="store_true",        default=make,               help="Compile the code after generation")
 args = parser.parse_args()
 
 if args.dim not in [2, 3]:
@@ -207,7 +207,7 @@ if not os.path.exists(output_path):
   os.makedirs(output_path)
 
 my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
-my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode] )
+my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
 
