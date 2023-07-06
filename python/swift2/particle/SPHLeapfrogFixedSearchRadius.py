@@ -415,14 +415,14 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 self._hydroDimensions, self._alpha_av
             ),
             cell_kernel="""
-                                       ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-                                         activeParticles,
-                                         _numberOfActiveParticlesPerVertexAdded 
-                                       );
-                                       ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-                                         particlesAssociatedWithLocalVertices,
-                                         numberOfParticlesPerLocalVertex 
-                                       );
+                                       //::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
+                                       //  activeParticles,
+                                       //  _numberOfActiveParticlesPerVertexAdded 
+                                       //);
+                                       //::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
+                                       //  particlesAssociatedWithLocalVertices,
+                                       //  numberOfParticlesPerLocalVertex 
+                                       //);
                                        ::swift2::kernels::computeHydroForce(
                                          localParticles,
                                          activeParticles,
