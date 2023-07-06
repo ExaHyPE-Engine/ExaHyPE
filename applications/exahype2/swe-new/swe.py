@@ -43,8 +43,7 @@ build_modes = {
   "Debug":peano4.output.CompileMode.Debug,
 }
 
-supported_file_types_bathymetry = [".nc"]
-supported_file_types_displacement = [".nc"]
+supported_file_types = [".nc"]
 
 scenarios = [
   "Radial_Dam_Break", 
@@ -58,7 +57,7 @@ scenarios = [
   ]
 
 def parse_coordinate_pair(coords):
-  if re.search("^\[-?[0-9]+\.?[0-9]*\,-?[0-9]+\.?[0-9]*\]$", coords):
+  if re.search("^\[(-?[0-9]+\.?[0-9]*)|(inf)\,(-?[0-9]+\.?[0-9]*)|(inf)\]$", coords):
       splits = re.split("[\[ | \] | \( | \) | \,]", coords)
       return [float(splits[1]), float(splits[2])]
   else:
@@ -72,8 +71,8 @@ parser.add_argument("-o",       "--output",            dest="output_path",    ty
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default="Release",          help="|".join(build_modes.keys()) )
 
 parser.add_argument("-et",      "--end-time",          dest="end_time",       type=float,                 default=end_time,           help="End time of simulation")
-parser.add_argument("-bf",      "--bathymetry-file",   dest="bathymetry_file", type=str,                  required=False,             help="Path to file containing bathymetry relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_bathymetry)))
-parser.add_argument("-df",      "--displacement-file", dest="displacement_file",type=str,                 required=False,             help="Path to file containing displacement relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types_displacement)))
+parser.add_argument("-bf",      "--bathymetry-file",   dest="bathymetry_file", type=str,                  required=False,             help="Path to file containing bathymetry relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types)))
+parser.add_argument("-df",      "--displacement-file", dest="displacement_file",type=str,                 required=False,             help="Path to file containing displacement relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types)))
 parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios,          default="Radial_Dam_Break", help="|".join(scenarios))
 parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch.")
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
@@ -99,6 +98,11 @@ parser.add_argument("-nc-key-displ-displ",             dest="nc_key_displ_displ"
 parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)." )
 parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR." )
 parser.add_argument(            "--uq-displacement-origin",dest="uq_displacement_origin",type=str,        required=False,             help="Move displacement for uncertainty quantification. Expected argument [x,y] denoting the center of the displacement file within the coordinate system of the bathymetry file. The coordinates are not checked against anything, so they might even move the displacment on dry land!")
+parser.add_argument(            "--guided-amr",        dest="guided_amr",      action="store_true",       default=False,              help="Use guided amr, only available with the \"Tsunami\" scenario. Optionally pass in an already computed adjoint simulation file in netCDF format using the flag --amr-file.")
+parser.add_argument(            "--gamr-file",          dest="gamr_file",      type=str,                  required=False,             help="Pass in an already computed adjoint simulation output file in netCDF format. Expect to have keys \"x\",\"y\" and \"h\", \"hu\", \"hv\", \"b\"")
+parser.add_argument(            "--gamr-start-time",    dest="gamr_start_time",type=float,                default=0,                  help="Begin of temporal region of interest. Defaults to 0.")
+parser.add_argument(            "--gamr-checkpoints",   dest="gamr_checkpoints",type=int,                 default=0,                  help="Number of times output should be written in adjoint simulation. Defaults to 0 (=Infinity)")
+parser.add_argument("--gamr-area-of-interest", nargs="+",dest="gamr_area_of_interest",type=str,           required=False,             help="Define area of interest for guided amr. Pass in either a square [x1,x2] [y1,y2] or a circle [x1,y1] [r, inf]. Coordinates are in the same system as the bathymetry.")
 args = parser.parse_args()
 
 maximum_cell_size = args.max_cell_size
@@ -147,12 +151,14 @@ elif args.scenario == "Tsunami":
   # check whether files exist in the first place
   if not os.path.exists(args.bathymetry_file): raise FileNotFoundError()
   if not os.path.exists(args.displacement_file): raise FileNotFoundError()
+  if args.gamr_file is not None and not os.path.exists(args.gamr_file): raise FileNotFoundError() 
   
   # check for supported file extension
   bath_ext = os.path.splitext(args.bathymetry_file)[1]
   displ_ext = os.path.splitext(args.displacement_file)[1] 
-  if bath_ext not in supported_file_types_bathymetry: raise Exception("Unsupported file type of bathymetry file! Supported extensions are: %s" % ("|".join(supported_file_types_bathymetry)))
-  if displ_ext not in supported_file_types_displacement: raise Exception("Unsupported file type of displacement file! Supported extensions are: %s" % ("|".join(supported_file_types_displacement)))
+  if bath_ext not in supported_file_types: raise Exception("Unsupported file type of bathymetry file! Supported extensions are: %s" % ("|".join(supported_file_types)))
+  if displ_ext not in supported_file_types: raise Exception("Unsupported file type of displacement file! Supported extensions are: %s" % ("|".join(supported_file_types)))
+  if args.gamr_file is not None and os.path.splitext(args.gamr_file)[1] not in supported_file_types: raise Exception("Unsupported file type of guided amr file! Supported extensions are: %s" % ("|".join(supported_file_types)))
   
   if args.amr_levels > 0:
     print("Overwriting max_cell_size to fit finest mesh in data files!")
@@ -274,6 +280,39 @@ if args.scenario == "Tsunami":
   topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_displ
   
   my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(%s);" % topology_parser_parameters)
+
+  if args.guided_amr:
+    if args.gamr_area_of_interest is None:
+      raise Exception("No area of interest specified for guided amr!")
+
+    area_of_interest = []
+    for coords in args.gamr_area_of_interest:
+      area_of_interest.append(parse_coordinate_pair(coords))
+
+    if args.gamr_file is None:
+      my_solver.add_user_solver_includes("#include \"adjoint/cpp/SWEAdjoint.hpp\"")
+
+      swe_adjoint_parameters = "\"adjoint_%s\"" % args.bathymetry_file # output file name
+      swe_adjoint_parameters += ",\"%s\"" % args.bathymetry_file # bathymetry file
+
+      swe_adjoint_parameters += ", %f" % width[0] # width x
+      swe_adjoint_parameters += ", %f" % width[1] # width y
+      swe_adjoint_parameters += ", %f" % maximum_cell_size # cell size
+      swe_adjoint_parameters += ", %f" % args.end_time # end time
+
+      swe_adjoint_parameters += ", %f" % area_of_interest[0][0]
+      swe_adjoint_parameters += ", %f" % area_of_interest[0][1]
+      swe_adjoint_parameters += ", %f" % area_of_interest[1][0]
+      swe_adjoint_parameters += ", %f" % area_of_interest[1][1] if area_of_interest[1][1] != float('inf') else ", INFINITY"
+
+      swe_adjoint_parameters += ", %f" % args.gamr_start_time # start time
+      swe_adjoint_parameters += ", %d" % args.gamr_checkpoints # checkpoints
+
+      swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_x
+      swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_y
+      swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_bath
+      
+      my_solver.add_solver_constants("applications::exahype2::swe::adjoint::SWEAdjoint swe_adjoint = applications::exahype2::swe::adjoint::SWEAdjoint(%s);" % swe_adjoint_parameters)
 
 #########################################
 # Set up solver implementation          #
@@ -397,6 +436,17 @@ if args.scenario == "Tsunami":
   peano4_project.output.makefile.add_h_file("parser/TopologyParser.h")
   peano4_project.output.makefile.add_h_file("parser/NetCDFReader.hpp")
   peano4_project.output.makefile.add_h_file("parser/NetCDFHelper.hpp")
+
+  if args.guided_amr:
+    if args.gamr_file is None:
+      peano4_project.output.makefile.add_cpp_file("adjoint/cpp/SWEAdjoint.cpp")
+      peano4_project.output.makefile.add_cpp_file("adjoint/cpp/NetCDFWriter.cpp")
+      peano4_project.output.makefile.add_cpp_file("adjoint/cpp/DimensionalSplitting.cpp")
+
+      peano4_project.output.makefile.add_h_file("adjoint/cpp/NetCDFWriter.hpp")
+      peano4_project.output.makefile.add_h_file("adjoint/cpp/DimensionalSplitting.hpp")
+      peano4_project.output.makefile.add_h_file("adjoint/cpp/SWEAdjoint.hpp")
+      peano4_project.output.makefile.add_h_file("adjoint/cpp/AdjointSolver.hpp")
 
 # define project constants if necessary
 if args.scenario == "Artificial_Tsunami":
