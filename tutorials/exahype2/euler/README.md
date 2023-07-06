@@ -1,4 +1,4 @@
-# The Euler Equations: Tutorial
+# Tutorial: The Euler Equations
 
 ## Define and Build the Project
 Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the Euler project:

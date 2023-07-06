@@ -101,11 +101,11 @@ from pde import PDE
 my_pde = PDE(unknowns=dimensions + 2, auxiliary_variables=0, dimensions=dimensions)
 
 #
-# Since 'my_pde' only holds the Euler equations, we still need to properly define initial- and boundary conditions.
+# Since 'my_pde' only holds the PDE for the Euler equations without initial- or boundary conditions,
+# we still need to properly define initial- and boundary conditions.
 # This gives us then a complete description of a 'scenario'.
 #
 import sympy
-volume_centre = sympy.symbols("volume_centre")
 
 #
 # Initial conditions as specified in the README.md.
@@ -205,8 +205,8 @@ my_project = my_project.generate_Peano4_project(verbose=True)
 #
 my_project.build(make=make, make_clean_first=True, throw_away_data_after_build=True)
 
-print("PDE is: ")
-print(my_pde.__str__())
+print("\nPDE is: ")
+print(my_scenario.__str__())
 print("Executable is euler-" + str(dimensions) + "d")
 print("Clean object files via 'make clean'")
 print("(Re)compile the generated code via 'make -j'")

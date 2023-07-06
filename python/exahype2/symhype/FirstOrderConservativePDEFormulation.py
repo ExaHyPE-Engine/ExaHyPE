@@ -47,7 +47,11 @@ class FirstOrderConservativePDEFormulation(PDE):
               result += " + "
               result += str(self.ncp[i])
             result += ") = "
-            result += str(self.sources[i]) + "\n"
+            if isinstance(self.sources[i], numbers.Number):
+              result += str(self.sources[i]) + "\n"
+            else:
+              result += "0\n"
+        result += "\n"
         for i in range(0, self.unknowns):
             result += "\lambda_{max," + str(i) + "}(x) = "
             result += str(self.eigenvalues[i])
@@ -66,7 +70,10 @@ class FirstOrderConservativePDEFormulation(PDE):
                   result += " + "
                   result += str(self.ncp[i][j])
             result += ") & = & "
-            result += str(self.sources[i]) + " \\\\"
+            if isinstance(self.sources[i], numbers.Number):
+              result += str(self.sources[i]) + " \\\\"
+            else:
+              result += "0 \\\\"
         for i in range(0, self.unknowns):
             result += "\\lambda _{max," + str(i) + "}(x) & = & ["
             for j in range(0, len(self.eigenvalues[i])):
@@ -129,6 +136,7 @@ class FirstOrderConservativePDEFormulation(PDE):
                     )
                 result += "\n"
                 result += "assertion(!std::isnan(F[" + str(i) + "]));\n"
+                result += "nonCriticalAssertion(F[" + str(i) + "] == F[" + str(i) + "]);\n"
             result += "  break;\n"
         result += "}\n"
         return result
