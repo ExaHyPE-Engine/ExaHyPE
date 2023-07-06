@@ -91,7 +91,7 @@ but is more flexible if particle-associations change frequently.
 
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_ContinuousPerVertex.png
 
-We also hoffer a variant which @ref toolbox_particles_memorypool "stores the particles continuously within one memory chung per vertex".
+We also offer a variant which @ref toolbox_particles_memorypool "stores the particles continuously within one memory chunks per vertex".
 You can study toolbox::particles::memorypool::VertexWiseContinuousMemoryPool 
 for a discussion on its realisation.
 Finally, there's also a variant which tries to hold all the particles in one 
@@ -100,6 +100,16 @@ toolbox::particles::memorypool::GlobalContinuousMemoryPool.
 
 
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_GlobalContinuous.png
+
+
+### Using optimised kernels with coalescent memory access
+
+If you use one of the two memory pools as discussed above and you use the 
+active set construction via lists rather than sets (see two subsections above),
+you can switch to optimised kernels which exploit coalescent memory access.
+They might vectorise better. peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists
+discusses their usage. Not every SPH flavour/species provides such kernels.
+
 
  */
  

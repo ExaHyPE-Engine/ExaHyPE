@@ -20,6 +20,34 @@ through the underlying spacetree top down and builds up
 These sets can then be used to trigger mesh events. 
 
 
+The code is slightly more sophisticated compared to the set-based tree
+traversal approach, as it exposes more information:
+
+
+- ***marker*** The CellMarker is avaialable to a compute kernel and allows you
+  to query spatial information.
+- ***activeParticles*** The list of active particles is a list of pointers. It
+  follows the @ref page_toolbox_particles_mesh_storage "generic definition of active sets".
+- ***localParticles*** This is a list of local particles, i.e. particles within
+  the cell which are tied to the cell's adjacent vertices. While they reside on
+  the cell's level, we cannot be sure that they are not also local to a 
+  neighbouring octant within the spacetree, as we work with floating point
+  arithmetics and hence have no unique particle-cell assocation. In any case,
+  marker.isContained() holds for all particles within this set.
+- ***particlesAssociatedWithLocalVertices*** This additional list holds all
+  particles that are associated with adjacent vertices of the current cell. 
+  This is a superset of localParticles and also holds particles for which 
+  marker.isContained() does not hold.
+- ***_numberOfActiveParticlesPerVertexAdded*** is a sequence of integers
+  which tells you how many particles within activeParticles are added by one
+  particular vertex.
+- ***numberOfParticlesPerLocalVertex*** is a sequence of integers which 
+  tells you how many particles within particlesAssociatedWithLocalVertices are
+  added by each adjacent vertex.
+
+
+
+
 ## Different particles species
 
 Both active and local set are of the same type if you stick
@@ -63,6 +91,92 @@ active set (from the coarser level). Its local set is all the particles
 whose centre lies within the square/cube around the vertex with mesh size
 h. So this area goes h/2 along each each coordinate axis into the
 neighbouring cells.
+
+
+## Flattening of particle arrays
+
+The routine not only keeps track of how many particles we add per iteration.
+It also keeps track of the number of particles per vertex that have been 
+added. If you know that you work with a @ref page_toolbox_particles_mesh_storage "memory pool", i.e. a consecutive
+storage of particles, you can use this additional meta information within 
+your kernel invocations to work with loops over consecutive arrays (AoS)
+rather than sole link lists. You can exploit that you know something 
+about individual chunks indexed by the pointers.
+
+To exploit this additional information, you cannot use localParticles anymore,
+i.e. you have to use particlesAssociatedWithLocalVertices. This means, you 
+might have to check if a particle is contained within a cell manually. 
+Once you rewrite your kernels that way, you can exploit the integers
+_numberOfActiveParticlesPerVertexAdded and numberOfParticlesPerLocalVertex:
+
+@image html ParticleParticleInteraction_StackOfLists_continuous-memory.png
+
+Assume you enter a cell and you get the particlesAssociatedWithLocalVertices
+list hosting 19 pointers. Further to that, you receive the array 
+numberOfParticlesPerLocalVertex with four integer entries. You know that the
+first five entries point to one continuous chunk of particles in memory, the
+next seven do so as well, and so forth. This holds if and only if you work 
+with a memory pool which maintains vertex-local or globally continuous 
+particles.
+
+I do recommend to call toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks()
+for your data to ensure that the memory layout above is preserved. Simply
+add the calls 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
+  activeParticles,
+  _numberOfActiveParticlesPerVertexAdded 
+);
+::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
+  particlesAssociatedWithLocalVertices,
+  numberOfParticlesPerLocalVertex 
+);
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+to your cell-wise compute kernel.
+
+The actual compute kernels then typically look similar to the following code 
+snippet:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+typename std::list<T*>::const_iterator localParticlesIterator  = particlesAssociatedWithLocalVertices.begin();
+
+for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
+  T*  localParticlesChunk = *localParticlesIterator;
+  std::advance( localParticlesIterator, localParticlesChunkSize );
+
+  for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<localParticlesChunkSize; localParticleNumberInThisChunk++) {
+    if ( marker.isContained( localParticlesChunk[localParticleNumberInThisChunk].getX() ) {
+    }
+  }
+} 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+And if you want to iterate over the active particles within, you can do 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+typename std::list<T*>::const_iterator activeParticlesIterator = activeParticles.begin();
+for (auto activeParticlesChunkSize: _numberOfActiveParticlesPerVertexAdded) {
+  T*  activeParticlesChunk = *activeParticlesIterator;
+  std::advance( activeParticlesIterator, activeParticlesChunkSize );
+
+  for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
+  
+  // access activeParticlesChunk[activeParticleNumberInThisChunk]
+  
+  }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There is one more interesting optimisation: When you do a nested loop over 
+active and local chunks, and if activeParticlesChunk and localParticlesChunk,
+then you know that the chunks that you currently run through are different. 
+So you can label them with a restrict keyword and allow for even more 
+aggressive vectorisation.
+
 
     """
 
@@ -112,13 +226,6 @@ neighbouring cells.
 
           i.e. you will have a variable localParticle available in this kernel
           and it is a pointer.
-
-        use_biased_locality_check: Boolean
-          When we hit a cell, we have to decide what defines the active set within
-          this cell. For this, we can either use peano4::datamanagement::CellMarker::isContained()
-          or peano4::datamanagement::CellMarker::isContainedWithBias(). The the
-          documentation of these routines for further details.
-
 
 
         """
@@ -174,17 +281,28 @@ neighbouring cells.
     __Template_TouchCellFirstTime = jinja2.Template(
         """
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
+  std::list< globaldata::{{LOCAL_PARTICLE}}* >  particlesAssociatedWithLocalVertices;
+  std::vector< int >                            numberOfParticlesPerLocalVertex( TwoPowerD );
+  
   _numberOfActiveParticlesAdded.push_back(0);
   for (int i=0; i<TwoPowerD; i++) {
+    // Keep track of number of particles
+    _numberOfActiveParticlesPerVertexAdded.push_back( fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size() );
+    _numberOfActiveParticlesAdded.back() += fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
+    numberOfParticlesPerLocalVertex[i] = fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
+    
+    // Add particles to active particle set
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
       _activeParticles.push_back( p );
-      _numberOfActiveParticlesAdded.back()++;
     }
+    
+    // Construct the two local particle sets
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
       bool append = marker.isContained( p->getX() );
       if (append) {
-        localParticles.push_front( p );
+        localParticles.push_back( p );
       }
+      particlesAssociatedWithLocalVertices.push_back( p );
     }
   }
   
@@ -201,9 +319,24 @@ neighbouring cells.
         """
   assertion( not _numberOfActiveParticlesAdded.empty() );
   assertion( _activeParticles.size()>=_numberOfActiveParticlesAdded.back() );
-  for (int i=0; i<_numberOfActiveParticlesAdded.back(); i++) {
-    _activeParticles.pop_back();
-  }
+  assertion( _numberOfActiveParticlesPerVertexAdded.size()>=TwoPowerD );
+  
+
+  // More elegant way to write
+  // -------------------------  
+  // for (int i=0; i<_numberOfActiveParticlesAdded.back(); i++) {
+  //  _activeParticles.pop_back();
+  //}
+  _activeParticles.erase( 
+    std::prev(_activeParticles.end(),_numberOfActiveParticlesAdded.back() ),
+    _activeParticles.end()
+  );
+    
+  _numberOfActiveParticlesPerVertexAdded.erase( 
+    std::prev(_numberOfActiveParticlesPerVertexAdded.end(),TwoPowerD ),
+    _numberOfActiveParticlesPerVertexAdded.end()
+  );
+  
   _numberOfActiveParticlesAdded.pop_back();
 """
     )
@@ -268,6 +401,7 @@ neighbouring cells.
             """
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
   std::vector< int >                             _numberOfActiveParticlesAdded;
+  std::vector< int >                             _numberOfActiveParticlesPerVertexAdded;
 """
         )
         return result.render(**self.d)

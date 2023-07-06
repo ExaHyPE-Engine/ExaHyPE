@@ -415,6 +415,14 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 self._hydroDimensions, self._alpha_av
             ),
             cell_kernel="""
+                                       //::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
+                                       //  activeParticles,
+                                       //  _numberOfActiveParticlesPerVertexAdded 
+                                       //);
+                                       //::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
+                                       //  particlesAssociatedWithLocalVertices,
+                                       //  numberOfParticlesPerLocalVertex 
+                                       //);
                                        ::swift2::kernels::computeHydroForce(
                                          localParticles,
                                          activeParticles,
@@ -438,6 +446,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                        #include "swift2/kernels/ParticleSelfInteraction.h"
                                        #include "swift2/kernels/kernel_hydro.h"
                                        #include "swift2/kernels/equation_of_state.h"
+                                       #include "toolbox/particles/ParticleListValidation.h"
                                        """,
         )
         self.algorithm_steps_dict["Force"] = force
