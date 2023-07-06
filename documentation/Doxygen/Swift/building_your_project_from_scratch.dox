@@ -13,7 +13,7 @@ Hereby, it is important that you add the particles toolbox:
 
 If you want to use the HDF5 I/O functionalities, you also need to configure Peano with
 HDF5 enabled. How to do this is documented in @ref SwiftHDF5.
-Once Peano's core libraries are all built, you can start to write a proper Swift 
+Once Peano's core libraries are all built, you can start to write a proper Swift
 application:
 
 
@@ -62,7 +62,7 @@ You can find the source file for the project class in ``python/swift2/Project.py
 Next, we have to add a particle species. We need to define both the data that a
 particle species holds, as well as its life cycle, i.e. all the (algorithmic)
 steps it needs to go through over a single simulation step. For a concrete
-working example, see ``SPHLeapfrogFixedInteractionRadius.py``.
+working example, see ``SPHLeapfrogFixedSearchRadius.py``.
 
 
 
@@ -98,6 +98,13 @@ what fields are always present. If not, document what fields need to be present.
 
 
 
+## Generating Particle Parameters
+
+It may be useful to introduce parameters which are valid for your entire particle
+species. For example, you want need a particle independent CFL factor, or maximal
+smoothing length, or resolution, etc. This can easily be achieved through use of
+static (or even const static) class variables, which you can also generate using
+DaStGen2. See the corresponding documentation on \ref page_dastgen.
 
 
 

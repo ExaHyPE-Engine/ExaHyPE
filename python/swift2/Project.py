@@ -440,7 +440,11 @@ but it will never become closer than these constraints.
         )
         solver_steps = self.algorithm_steps_task_graph_compiler(
             species_sets                       = self._particle_species_set,
+<<<<<<< HEAD
             verbose                            = verbose
+=======
+            use_lists_to_construct_active_sets = False
+>>>>>>> refs/remotes/origin/particles
         )
 
         #

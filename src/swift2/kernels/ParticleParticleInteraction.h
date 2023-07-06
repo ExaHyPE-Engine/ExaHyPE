@@ -35,6 +35,20 @@ namespace swift2 {
     );
 
     /**
+     * @brief The actual density kernel, which interacts a local particle and an active
+     * particle, and updates the local particle.
+     */
+    template <typename Particle>
+    void densityKernel(Particle* localParticle, const Particle* activeParticle);
+
+    /**
+     * @brief The actual force kernel, which interacts a local particle and an active
+     * particle, and updates the local particle.
+     */
+    template <typename Particle>
+    void forceKernel(Particle* localParticle, const Particle* activeParticle);
+
+    /**
      * @brief Non-symmetric density calculation (as per Swift terminology).
      * In this, only the local particle is updated (in the symmetric case, both
      * are updated at the same time). This compute kernel is inserted by Peano's
@@ -62,9 +76,7 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeDensity(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
-    );
+    void computeDensity(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
 
     /**
      * @brief Same as computeDensity(...), but doesn't modify the particles' search radii.
@@ -72,7 +84,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSearchRadius(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
+      const ParticleContainer& localParticles, const ParticleContainer& activeParticles
     );
 
     /**
@@ -87,7 +99,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSmoothingLengths(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
+      const ParticleContainer& localParticles, const ParticleContainer& activeParticles
     );
 
     /** Hydro Force calculation particle-particle kernel
@@ -111,12 +123,7 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeHydroForce(
-      const ParticleContainer& localParticles,
-      const ParticleContainer& activeParticles,
-      const int                hydroDimensions,
-      const double             betaAV
-    );
+    void computeHydroForce(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
 
   } // namespace kernels
 } // namespace swift2
