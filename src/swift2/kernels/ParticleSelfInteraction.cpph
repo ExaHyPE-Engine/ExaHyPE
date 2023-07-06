@@ -1,3 +1,5 @@
+#include <type_traits>
+
 #include "swift2/kernels/equation_of_state.h"
 #include "swift2/kernels/kernel_hydro.h"
 
@@ -31,9 +33,12 @@ void swift2::kernels::prepareDensityCalculation(const ParticleContainer& localPa
 
 
 template <typename ParticleContainer>
-void swift2::kernels::endDensityCalculation(
-  const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
-) {
+void swift2::kernels::endDensityCalculation(const ParticleContainer& localParticles) {
+
+  /* Grab static parameters */
+  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
+  const double etaFactor    = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
+  const double alphaAV      = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
 
   assertionMsg(false, "Don't use this yet.");
   // define variables here until next MR that accesses the correct values properly
@@ -212,9 +217,13 @@ void swift2::kernels::endDensityCalculation(
 }
 
 template <typename ParticleContainer>
-void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
-  const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
-) {
+void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const ParticleContainer& localParticles) {
+
+  /* Grab static parameters */
+  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
+  const double etaFactor    = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
+  const double alphaAV      = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
+
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
 
@@ -258,9 +267,13 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
 
 
 template <typename ParticleContainer>
-void swift2::kernels::endDensityCalculationWithConstantSearchRadius(
-  const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
-) {
+void swift2::kernels::endDensityCalculationWithConstantSearchRadius(const ParticleContainer& localParticles) {
+
+  /* Grab static parameters */
+  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
+  const double etaFactor    = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
+  const double alphaAV      = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
+
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
 
@@ -303,9 +316,13 @@ void swift2::kernels::endDensityCalculationWithConstantSearchRadius(
 }
 
 template <typename ParticleContainer>
-void swift2::kernels::prepareHydroForceCalculation(
-  const ParticleContainer& localParticles, const int hydroDimensions, const double alphaAV
-) {
+void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& localParticles) {
+
+  /* Grab static parameters */
+  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
+  // const double etaFactor = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
+  const double alphaAV = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
+
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
 
@@ -401,7 +418,11 @@ void swift2::kernels::prepareHydroForceCalculation(
 }
 
 template <typename ParticleContainer>
-void swift2::kernels::endHydroForceCalculation(const ParticleContainer& localParticles, const int hydroDimensions) {
+void swift2::kernels::endHydroForceCalculation(const ParticleContainer& localParticles) {
+
+  /* Grab static parameters */
+  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
+
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
       particle->setHDot(particle->getHDot() * particle->getSmoothingLength() / hydroDimensions);

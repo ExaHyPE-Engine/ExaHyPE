@@ -121,8 +121,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         initial_time_step_size=1e-4,
         constant_time_step_size=True,
         swift_project_namespace="SPH",
-        sph_flavour="minimal",
-        is_sph=True,  # @todo THis is weird: If a class is called SPH, why is this an argument?
         particles_per_cell=0,  # makes no sense, and should likely be forbidden
         min_h=0.3,
         max_h=0.3,
@@ -134,31 +132,24 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             max_h,
         )
 
+        # Initialize default parameters.
+        # ---------------------------------------
+
+        # This is an SPH scheme.
+        self._is_sph = True
+        self._isSPH_cpp = "true"
+        # Hardcoded this for now until we can switch flavours.
+        self._sph_flavour = "minimal"
+
         # Simulation properties
         self._cfl_factor = cfl_factor
         self._initial_time_step_size = initial_time_step_size
-
-        # Whether we want constant dt
-        if constant_time_step_size == True:
-            adjustTimeStepSize = "false"
-        else:
-            adjustTimeStepSize = "true"
-        self._adjustTimeStepSize = adjustTimeStepSize
-
-        # SPH-check Boolean for Cpp kernels. Maybe these can be replaced by
-        # compiler directives to get better performance.
-        if is_sph == True:
-            isSPH = "true"
-        else:
-            isSPH = "false"
-        self._is_sph = isSPH
-
-        self._sph_flavour = sph_flavour
+        self._constant_time_step_size = constant_time_step_size
 
         # SPH parameters (default values)
-        self._hydroDimensions = dimensions_hydro
+        self._hydro_dimensions = dimensions_hydro
+
         self._eta_factor = 1.2348
-        # TODO MLADEN: Check these values later. Looks like this is only valid for specific setups.
         self._h_hydro_min = 1e-6
         self._h_hydro_max = 1.0 / 3.0 / 2  # Approximated value for coarsest grid level
         self._h_tolerance = 1e-4
@@ -172,7 +163,13 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         # Not used right now.
         self._swift_project_namespace = swift_project_namespace
 
-        # Baseline particle properties --------------------------------------------------------------
+        # now set these parameters as dastgen attributes
+        self.set_parameters()
+
+        # Construct particle properties
+        # --------------------------------
+
+        # Baseline particle properties -------------------------------------------------
         self.mass = dastgen2.attributes.Double("mass")
         self.velocity = peano4.dastgen2.Peano4DoubleArray("v", "Dimensions")
         self.acceleration = peano4.dastgen2.Peano4DoubleArray("a", "Dimensions")
@@ -218,9 +215,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self.data.add_attribute(self.iteration_count)
         self.data.add_attribute(self.has_converged)
 
-        # Artificial viscosity scheme -------------------------------------------------
+        # Artificial viscosity scheme --------------------------------------------------
         self.balsara = dastgen2.attributes.Double("balsara")
-        if self._hydroDimensions == 3:
+        if self._hydro_dimensions == 3:
             self.rot_v = peano4.dastgen2.Peano4DoubleArray("rot_v", "Dimensions")
         else:  # Curl is a scalar in lower dimensions
             self.rot_v = dastgen2.attributes.Double(
@@ -251,9 +248,93 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self.data.add_attribute(self.Ncount)
         self.data.add_attribute(self.part_id)
 
-        # Algorithm Steps --------------------------------------------------------------
+        # Algorithm Steps ---------------------------------------------------------------
         self.algorithm_steps_dict = {}
         self._setup_algorithm_steps_dict()
+
+    def set_parameters(self):
+        """
+        This function translates "global" particle parameters which are
+        constant throughout the simulation (like CFL factor, minimal time step
+        size, viscosity parameters...) into dastgen attributes of the C++
+        particle class.
+        If you modify any of the attributes manually outside of the particle
+        initialisation, e.g. by invoking
+
+        ```
+        particle = SPHLeapfrogFixedSearchRadius(initial_time_step_size=ABC, ...)
+        particle.initial_time_step_size = XYZ
+        ```
+
+        you need to call this function manually so your changes propagate
+        into the generated C++ files.
+        """
+
+        cfl_attr = dastgen2.attributes.Double(
+            "cfl", is_const_static=True, initval=self._cfl_factor
+        )
+        self.data.add_or_replace_attribute(cfl_attr)
+
+        initial_time_step_size_attr = dastgen2.attributes.Double(
+            "initialTimeStepSize",
+            is_const_static=True,
+            initval=self._initial_time_step_size,
+        )
+        self.data.add_or_replace_attribute(initial_time_step_size_attr)
+
+        if self._constant_time_step_size == True:
+            adjustTimeStepSize = "false"
+        else:
+            adjustTimeStepSize = "true"
+        adjust_time_step_size_attr = dastgen2.attributes.Boolean(
+            "adjustTimeStepSize", is_const_static=True, initval=adjustTimeStepSize
+        )
+        self.data.add_or_replace_attribute(adjust_time_step_size_attr)
+
+        is_sph_attr = dastgen2.attributes.Boolean(
+            "isSPH", is_const_static=True, initval=self._isSPH_cpp
+        )
+        self.data.add_or_replace_attribute(is_sph_attr)
+
+        hydro_dimensions_attr = dastgen2.attributes.Double(
+            "hydroDimensions", is_const_static=True, initval=self._hydro_dimensions
+        )
+        self.data.add_or_replace_attribute(hydro_dimensions_attr)
+
+        eta_factor_attr = dastgen2.attributes.Double(
+            "etaFactor", is_const_static=True, initval=self._eta_factor
+        )
+        self.data.add_or_replace_attribute(eta_factor_attr)
+
+        h_hydro_min_attr = dastgen2.attributes.Double(
+            "smlMin", is_const_static=True, initval=self._h_hydro_min
+        )
+        self.data.add_or_replace_attribute(h_hydro_min_attr)
+
+        h_hydro_max_attr = dastgen2.attributes.Double(
+            "smlMax", is_const_static=True, initval=self._h_hydro_max
+        )
+        self.data.add_or_replace_attribute(h_hydro_max_attr)
+
+        h_tolerance_attr = dastgen2.attributes.Double(
+            "smlTolerance", is_const_static=True, initval=self._h_tolerance
+        )
+        self.data.add_or_replace_attribute(h_tolerance_attr)
+
+        h_max_iterations_attr = dastgen2.attributes.Integer(
+            "smlMaxIterations", is_const_static=True, initval=self._h_max_iterations
+        )
+        self.data.add_or_replace_attribute(h_max_iterations_attr)
+
+        alpha_av_attr = dastgen2.attributes.Double(
+            "alphaAV", is_const_static=True, initval=self._alpha_av
+        )
+        self.data.add_or_replace_attribute(alpha_av_attr)
+
+        beta_av_attr = dastgen2.attributes.Double(
+            "betaAV", is_const_static=True, initval=self._beta_av
+        )
+        self.data.add_or_replace_attribute(beta_av_attr)
 
         return
 
@@ -291,13 +372,10 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
             touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
                       localParticles, 1, {} );""".format(
-                self._is_sph
+                self._isSPH_cpp
             ),
-            prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>({},{},{});""".format(
+            prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>();""".format(
                 self.name,
-                self._cfl_factor,
-                self._initial_time_step_size,
-                self._adjustTimeStepSize,
             ),
             includes="""
                                        #include "Constants.h"
@@ -351,9 +429,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
             touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
             touch_vertex_last_time_kernel="""::swift2::timestepping::computePredictHydro(
-                      localParticles, {} );""".format(
-                self._hydroDimensions
-            ),
+                      localParticles, {} );""",
             includes="""
                                        #include "Constants.h"
                                        #include "swift2/timestepping/Leapfrog.h"
@@ -374,23 +450,12 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                        """,
             cell_kernel="""
                                        ::swift2::kernels::computeDensityWithConstantSearchRadius(
-                                         localParticles,
-                                         activeParticles,
-                                         {}
+                                         localParticles, activeParticles
                                        );
-                                       """.format(
-                self._hydroDimensions
-            ),
+                                       """,
             touch_vertex_last_time_kernel="""
-                                       ::swift2::kernels::endDensityCalculationWithConstantSearchRadius(
-                                           localParticles,
-                                           {},
-                                           {},
-                                           {}
-                                           );
-                                       """.format(
-                self._hydroDimensions, self._eta_factor, self._alpha_av
-            ),
+                                       ::swift2::kernels::endDensityCalculationWithConstantSearchRadius(localParticles);
+                                       """,
             includes="""
                                        #include "Constants.h"
                                        #include "swift2/kernels/ParticleParticleInteraction.h"
@@ -406,40 +471,23 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
             touch_vertex_first_time_kernel="""
-                                       ::swift2::kernels::prepareHydroForceCalculation(
-                                           localParticles,
-                                           {},
-                                           {}
-                                           );
-                                       """.format(
-                self._hydroDimensions, self._alpha_av
-            ),
+                                       ::swift2::kernels::prepareHydroForceCalculation(localParticles);
+                                       """,
             cell_kernel="""
                                        //::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
                                        //  activeParticles,
-                                       //  _numberOfActiveParticlesPerVertexAdded 
+                                       //  _numberOfActiveParticlesPerVertexAdded
                                        //);
                                        //::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
                                        //  particlesAssociatedWithLocalVertices,
-                                       //  numberOfParticlesPerLocalVertex 
+                                       //  numberOfParticlesPerLocalVertex
                                        //);
-                                       ::swift2::kernels::computeHydroForce(
-                                         localParticles,
-                                         activeParticles,
-                                         {},
-                                         {}
-                                       );
-                                       """.format(
-                self._hydroDimensions, self._beta_av
-            ),
+                                       ::swift2::kernels::computeHydroForce(localParticles, activeParticles);
+                                       """,
             touch_vertex_last_time_kernel="""
                                        ::swift2::kernels::endHydroForceCalculation(
-                                           localParticles,
-                                           {}
-                                           );
-                                       """.format(
-                self._hydroDimensions
-            ),
+                                           localParticles);
+                                       """,
             includes="""
                                        #include "Constants.h"
                                        #include "swift2/kernels/ParticleParticleInteraction.h"
@@ -458,7 +506,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
             touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
                       localParticles, 2, {} );""".format(
-                self._is_sph
+                self._isSPH_cpp
             ),
             includes="""
                                        #include "Constants.h"
@@ -476,8 +524,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
             touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-            touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
-                      localParticles );""",
+            touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(localParticles);""",
             includes="""
                                        #include "Constants.h"
                                        #include "swift2/timestepping/Leapfrog.h"
@@ -551,6 +598,19 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         ]
 
     @property
+    def hydro_dimensions(self):
+        """
+        Forbid users to modify hydro dimensions on-the-fly.
+        """
+        return self._hydro_dimensions
+
+    @hydro_dimensions.setter
+    def hydro_dimensions(self, hydro_dimensions):
+        raise ValueError(
+            "Can't change hydro_dimensions now. Modify it while instantiating the class."
+        )
+
+    @property
     def eta_factor(self):
         """
 
@@ -563,7 +623,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
     @eta_factor.setter
     def eta_factor(self, eta_factor):
-        print("Set eta_factor method called.")
         if eta_factor <= 0:
             raise ValueError("SPH eta factor value not valid.")
         self._eta_factor = eta_factor
@@ -581,7 +640,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
     @alpha_av.setter
     def alpha_av(self, alpha_av):
-        print("Set alpha_av method called.")
         if alpha_av <= 0:
             raise ValueError("Value for the alpha_av viscosiy parameter not valid.")
         self._alpha_av = alpha_av
@@ -592,7 +650,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
     @beta_av.setter
     def beta_av(self, beta_av):
-        print("Set beta_av method called.")
         if beta_av <= 0:
             raise ValueError("Value for the beta_av viscosiy parameter not valid.")
         self._beta_av = beta_av
@@ -607,24 +664,20 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         Typically gamma_k = 2, so h_max = max_grid_size / 2.
 
         """
-        print("get h_hydro_min method called.")
         return self._h_hydro_min
 
     @h_hydro_min.setter
     def h_hydro_min(self, h_hydro_min):
-        print("Set h_hydro_min method called.")
         if h_hydro_min > self._h_hydro_max:
             raise ValueError("Min value of smoothing length larger than max allowed.")
         self._h_hydro_min = h_hydro_min
 
     @property
     def h_hydro_max(self):
-        print("get h_hydro_max method called.")
         return self._h_hydro_max
 
     @h_hydro_max.setter
     def h_hydro_max(self, h_hydro_max):
-        print("Set h_hydro_max method called.")
         if h_hydro_max < self._h_hydro_min:
             raise ValueError("max value of smoothing length smaller than min allowed.")
         self._h_hydro_max = h_hydro_max
@@ -636,12 +689,10 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         Tolerance for Newton-Raphson convergence criterion.
 
         """
-        print("get h_tolerance method called.")
         return self._h_tolerance
 
     @h_tolerance.setter
     def h_tolerance(self, h_tolerance):
-        print("Set h_tolerance method called.")
         if h_tolerance > 1:
             raise ValueError("Value of h_tolerance cannot be larger than 1.")
         self._h_tolerance = h_tolerance
@@ -651,12 +702,10 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         """
         Max number of iterations to adapt the SPH smoothing length
         """
-        print("get h_max_iterations method called.")
         return self._h_max_iterations
 
     @h_max_iterations.setter
     def h_max_iterations(self, h_max_iterations):
-        print("set h_max_iterations method called.")
         if h_max_iterations > 50:
             raise ValueError("Value of h_max_iterations is too large.")
         self._h_max_iterations = h_max_iterations
@@ -674,7 +723,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
     @mantissa_size.setter
     def mantissa_size(self, mantissa_size):
-        print("Set mantissa_size method called.")
         if mantissa_size < 0:
             raise ValueError("Mantissa size has to be larger than 0.")
         self._mantissa_size = mantissa_size

@@ -27,7 +27,7 @@ Usually the compact support radius is denoted with `H`. Not to be confused with 
 respect to the particle separation, and specifies the spatial resolution of the simulation. They enter
 the actual equations of SPH. The smoothing length is directly proportional to the compact support radius
 of a kernel. The proportionality constant depends on the specific kernel used.
-See <a href=https://arxiv.org/abs/1204.2471">Denhen & Aly 2012</a>. Usually the smoothing length is denoted with `h`.
+See <a href="https://arxiv.org/abs/1204.2471">Denhen & Aly 2012</a>. Usually the smoothing length is denoted with `h`.
 
 - **SPH kernel**: the core of SPH relies on weighted sums (actually discretized convolutions) of
 particle values with a weighting function. This weighting function is called a *kernel*, or *SPH kernel*.
@@ -43,7 +43,7 @@ For an introduction into the topic, see e.g. <a href="https://arxiv.org/abs/1012
 Internal Terminology
 =========================
 
-- **kernel** : see *"swift kernel"*
+- **kernel** : see *swift kernel*
 
 - **search radius** : The radius within which to search for neighbour particles. Naturally, the
 search radius must be greater than or equal to the interaction radius for each particle. Not to
