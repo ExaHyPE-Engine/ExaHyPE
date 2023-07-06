@@ -143,8 +143,10 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         result = "("
         is_first = True
         for attribute in self._attributes:
-            if attribute.is_static or attribute.is_const_static:
+            if attribute._is_static or attribute._is_const_static:
                 continue
+            elif attribute._is_const or attribute._is_constexpr:
+                raise NotImplementedError
             for entry in attribute.get_constructor_arguments():
                 if not is_first:
                     result += ", "
@@ -258,9 +260,12 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 
         output.write("{\n")
         for attribute in self._attributes:
-            if attribute.is_static or attribute.is_const_static:
+            if attribute._is_static or attribute._is_const_static:
                 # no need to copy static class fields.
                 continue
+            elif attribute._is_const or attribute._is_constexpr:
+                raise NotImplementedError
+
             if attribute.ifdefs != []:
                 output.write(dastgen2.construct_ifdef_string(attribute.ifdefs))
             output.write(
@@ -310,9 +315,11 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
             + "& copy ) {\n"
         )
         for attribute in self._attributes:
-            if attribute.is_static or attribute.is_const_static:
+            if attribute._is_static or attribute._is_const_static:
                 # no need to copy static class fields.
                 continue
+            elif attribute._is_const or attribute._is_constexpr:
+                raise NotImplementedError
             if attribute.ifdefs != []:
                 output.write(dastgen2.construct_ifdef_string(attribute.ifdefs))
             uppercase_name = attribute.name[0].upper() + attribute.name[1:]

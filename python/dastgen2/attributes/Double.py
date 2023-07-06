@@ -12,15 +12,7 @@ class Double(Attribute):
 
     """
 
-    def __init__(
-        self,
-        name,
-        valid_mantissa_bits=None,
-        ifdefs=[],
-        is_static=False,
-        is_const_static=False,
-        initval=None,
-    ):
+    def __init__(self, name, valid_mantissa_bits=None, ifdefs=[], qualifier = Attribute.Qualifier.NONE, initval=None):
         """
 
         @Pawel Can you add some docu?
@@ -30,8 +22,7 @@ class Double(Attribute):
             self,
             name,
             ifdefs,
-            is_static=is_static,
-            is_const_static=is_const_static,
+            qualifier = qualifier,
             initval=initval,
         )
         self._valid_mantissa_bits = valid_mantissa_bits
@@ -40,24 +31,33 @@ class Double(Attribute):
         accessor_name = self._name[:1].title() + self._name[1:]
         methods = []
 
-        qualifiers = ""
-
-        if self.is_static and for_declaration:
-            qualifiers = "static "
-        if self.is_const_static:
+        if self._is_static:
             if for_declaration:
-                qualifiers = "static const "
+                getter = ("get" + accessor_name + "()", "static double")
             else:
-                qualifiers = "const "
+                getter = ("get" + accessor_name + "()", "double")
 
-        if self.is_static or self.is_const_static:
-            getter = ("get" + accessor_name + "()", qualifiers + "double")
+        elif self._is_const_static:
+            if for_declaration:
+                getter = ("get" + accessor_name + "()", "const static double")
+            else:
+                getter = ("get" + accessor_name + "()", "const double")
+
+        elif self._is_const:
+            getter = ("get" + accessor_name + "()", "const double")
+
+        elif self._is_constexpr:
+            getter = ("get" + accessor_name + "()", "constexpr double")
+
         else:
+            # default case.
             getter = ("get" + accessor_name + "() const", "double")
 
         methods.append(getter)
 
-        if not self.is_const_static:
+        # TODO: test this
+        # Add a setter method, if it makes sense.
+        if not (self._is_const_static or self._is_const or self._is_constexpr):
             methods.append(("set" + accessor_name + "(double value)", "void"))
 
         return methods
@@ -66,13 +66,17 @@ class Double(Attribute):
         typestring = "double"
         namestring = "_" + self._name
         # add const/static qualifiers and initialization values, if needed
-        if self.is_static:
+        if self._is_static:
             typestring = "inline static double"
             if self._initval is not None:
                 namestring += " = " + str(self._initval)
-        elif self.is_const_static:
+        elif self._is_const_static:
             typestring = "inline const static double"
             namestring += " = " + str(self._initval)
+        elif self._is_const:
+            raise NotImplementedError
+        elif self._is_constexpr:
+            raise NotImplementedError
 
         if self._valid_mantissa_bits is None:
             return [(namestring, typestring, "")]

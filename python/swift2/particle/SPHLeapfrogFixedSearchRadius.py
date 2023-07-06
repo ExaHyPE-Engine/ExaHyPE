@@ -270,14 +270,14 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         into the generated C++ files.
         """
 
-        cfl_attr = dastgen2.attributes.Double(
-            "cfl", is_const_static=True, initval=self._cfl_factor
-        )
+        const_static = dastgen2.attributes.Attribute.Qualifier.CONST_STATIC
+
+        cfl_attr = dastgen2.attributes.Double("cfl", qualifier=const_static, initval=self._cfl_factor)
         self.data.add_or_replace_attribute(cfl_attr)
 
         initial_time_step_size_attr = dastgen2.attributes.Double(
             "initialTimeStepSize",
-            is_const_static=True,
+            qualifier=const_static,
             initval=self._initial_time_step_size,
         )
         self.data.add_or_replace_attribute(initial_time_step_size_attr)
@@ -287,52 +287,60 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         else:
             adjustTimeStepSize = "true"
         adjust_time_step_size_attr = dastgen2.attributes.Boolean(
-            "adjustTimeStepSize", is_const_static=True, initval=adjustTimeStepSize
+            "adjustTimeStepSize",
+            qualifier=const_static,
+            initval=adjustTimeStepSize
         )
         self.data.add_or_replace_attribute(adjust_time_step_size_attr)
 
         is_sph_attr = dastgen2.attributes.Boolean(
-            "isSPH", is_const_static=True, initval=self._isSPH_cpp
+            "isSPH",
+            qualifier=const_static,
+            initval=self._isSPH_cpp
         )
         self.data.add_or_replace_attribute(is_sph_attr)
 
         hydro_dimensions_attr = dastgen2.attributes.Double(
-            "hydroDimensions", is_const_static=True, initval=self._hydro_dimensions
+            "hydroDimensions",
+            qualifier=const_static,
+            initval=self._hydro_dimensions
         )
         self.data.add_or_replace_attribute(hydro_dimensions_attr)
 
         eta_factor_attr = dastgen2.attributes.Double(
-            "etaFactor", is_const_static=True, initval=self._eta_factor
+            "etaFactor",
+            qualifier=const_static,
+            initval=self._eta_factor
         )
         self.data.add_or_replace_attribute(eta_factor_attr)
 
         h_hydro_min_attr = dastgen2.attributes.Double(
-            "smlMin", is_const_static=True, initval=self._h_hydro_min
+            "smlMin", qualifier=const_static, initval=self._h_hydro_min
         )
         self.data.add_or_replace_attribute(h_hydro_min_attr)
 
         h_hydro_max_attr = dastgen2.attributes.Double(
-            "smlMax", is_const_static=True, initval=self._h_hydro_max
+            "smlMax", qualifier=const_static, initval=self._h_hydro_max
         )
         self.data.add_or_replace_attribute(h_hydro_max_attr)
 
         h_tolerance_attr = dastgen2.attributes.Double(
-            "smlTolerance", is_const_static=True, initval=self._h_tolerance
+            "smlTolerance", qualifier=const_static, initval=self._h_tolerance
         )
         self.data.add_or_replace_attribute(h_tolerance_attr)
 
         h_max_iterations_attr = dastgen2.attributes.Integer(
-            "smlMaxIterations", is_const_static=True, initval=self._h_max_iterations
+            "smlMaxIterations", qualifier=const_static, initval=self._h_max_iterations
         )
         self.data.add_or_replace_attribute(h_max_iterations_attr)
 
         alpha_av_attr = dastgen2.attributes.Double(
-            "alphaAV", is_const_static=True, initval=self._alpha_av
+            "alphaAV", qualifier=const_static, initval=self._alpha_av
         )
         self.data.add_or_replace_attribute(alpha_av_attr)
 
         beta_av_attr = dastgen2.attributes.Double(
-            "betaAV", is_const_static=True, initval=self._beta_av
+            "betaAV", qualifier=const_static, initval=self._beta_av
         )
         self.data.add_or_replace_attribute(beta_av_attr)
 
