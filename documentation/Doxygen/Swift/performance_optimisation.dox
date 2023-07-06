@@ -91,7 +91,7 @@ but is more flexible if particle-associations change frequently.
 
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_ContinuousPerVertex.png
 
-We also hoffer a variant which @ref toolbox_particles_memorypool "stores the particles continuously within one memory chung per vertex".
+We also offer a variant which @ref toolbox_particles_memorypool "stores the particles continuously within one memory chunks per vertex".
 You can study toolbox::particles::memorypool::VertexWiseContinuousMemoryPool 
 for a discussion on its realisation.
 Finally, there's also a variant which tries to hold all the particles in one 

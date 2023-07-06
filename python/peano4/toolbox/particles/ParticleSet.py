@@ -287,8 +287,8 @@ particle: Particle
 
         self.particle_model = particle
         #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
-        #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
-        self.generator      = ParticleSetGenerator_ContinuousPerVertex(self)
+        self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
+        #self.generator      = ParticleSetGenerator_ContinuousPerVertex(self)
         #self.generator      = ParticleSetGenerator_GlobalContinuous(self)
 
 
