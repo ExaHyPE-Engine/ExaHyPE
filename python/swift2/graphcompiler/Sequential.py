@@ -142,9 +142,10 @@ def translate_one_step_of_species_into_mesh_traversal(
     mesh_traversals.append(new_step)
 
 
-def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
-    species_sets, use_lists_to_construct_active_sets, verbose=True
-):
+def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets, 
+                                                                      use_lists_to_construct_active_sets, 
+                                                                      verbose,
+                                                                      ):
     """!
 
     Simpest graph compiler mapping each step per particle onto one mesh traversal
@@ -232,9 +233,10 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
     return mesh_traversals
 
 
-def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(
-    species_sets, verbose=True
-):
+def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species_sets, 
+                                                                         use_lists_to_construct_active_sets, 
+                                                                         verbose,
+                                                                         ):
     """!
 
     Translate each initialisation step for each particle into a separate mesh sweep
@@ -299,3 +301,41 @@ def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(
         )
 
     return mesh_traversals
+
+
+
+def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets(species_sets,
+                                                                                                            verbose,
+                                                                                                            ):
+    return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
+                                                                             use_lists_to_construct_active_sets = True,
+                                                                             verbose = verbose
+                                                                             )
+
+                                                                                                         
+def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_use_stlsets_to_construct_active_sets(species_sets,
+                                                                                                           verbose,
+                                                                                                           ):
+    return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
+                                                                             use_lists_to_construct_active_sets = False,
+                                                                             verbose = verbose
+                                                                             )
+
+def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets(species_sets, 
+                                                                                                               verbose,
+                                                                                                               ):
+    return serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
+                                                                                use_lists_to_construct_active_sets = True,
+                                                                                verbose = verbose
+                                                                                )
+
+def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_use_stlsets_to_construct_active_sets(species_sets, 
+                                                                                                              verbose,
+                                                                                                              ):
+    return serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
+                                                                                use_lists_to_construct_active_sets = False,
+                                                                                verbose = verbose
+                                                                                )
+
+
+

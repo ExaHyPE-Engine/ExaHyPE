@@ -17,15 +17,7 @@ All of the recommendations there apply for SWIFT, too.
 To be written ...
 
 
-## Single core performance per species
-
-Our code base offers a variety of algorithmic variants per solver species. We 
-do not yet know or even think that there is one combination of different 
-variants that performs for all solver for all setups. Therefore, you might have
-to run through some trial and error.
-
-
-### Maintaining the active sets
+## Maintaining the active sets
 
 There are two different versions how to maintain the active sets: We can either
 build them up as proper sets and add particles to the set whenever we 
@@ -44,7 +36,17 @@ remains invariant. If in doubt, we might have to use some dummy mesh traversals.
 Whether or not to use one variant or the other is a decision that's made by the 
 graph compiler. Some compiler flavours support different active set 
 construction variants, others are tied to one variant only.
+By default, the project initialises its graph compiler with the variant
+swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_use_stlsets_to_construct_active_sets().
+You can alter that in your code:
 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets
+project.initialisation_steps_task_graph_compiler = swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These two lines alter the graph compiler in use.
 
 
 ### Storage of particles and maintaining the particle-mesh association
