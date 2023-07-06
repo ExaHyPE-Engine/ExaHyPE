@@ -565,7 +565,7 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 
 template<typename T>
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const T*__restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const T*__restrict__ deltaQ, //deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions, double> &volumeX,
