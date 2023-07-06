@@ -1,4 +1,3 @@
-// we need a .cpp for scons and testing
 #include "NetCDFReader.hpp"
 
 

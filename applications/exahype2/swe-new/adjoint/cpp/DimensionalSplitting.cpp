@@ -11,15 +11,15 @@ l_dy_(l_dy)
     this->hv_ = hv;
     this->b_ = b;
 
-    this->h_net_updates_above_ = new double[(l_nX_ + 2)*(l_nY_ * 2)];
-    this->h_net_updates_below_ = new double[(l_nX_ + 2)*(l_nY_ * 2)];
-    this->h_net_updates_left_ = new double[(l_nX_ + 2)*(l_nY_ * 2)];
-    this->h_net_updates_right_ = new double[(l_nX_ + 2)*(l_nY_ * 2)];
+    this->h_net_updates_above_ = new double[(l_nX_ + 2)*(l_nY_ * 2)]();
+    this->h_net_updates_below_ = new double[(l_nX_ + 2)*(l_nY_ * 2)]();
+    this->h_net_updates_left_ = new double[(l_nX_ + 2)*(l_nY_ * 2)]();
+    this->h_net_updates_right_ = new double[(l_nX_ + 2)*(l_nY_ * 2)]();
 
-    this->hu_net_updates_left_ = new double[(l_nX_ + 2)*(l_nY_ * 2)];
-    this->hu_net_updates_right_ = new double[(l_nX_ + 2)*(l_nY_ * 2)];
-    this->hv_net_updates_above_ = new double[(l_nX_ + 2)*(l_nY_ * 2)];
-    this->hv_net_updates_below_ = new double[(l_nX_ + 2)*(l_nY_ * 2)];
+    this->hu_net_updates_left_ = new double[(l_nX_ + 2)*(l_nY_ * 2)]();
+    this->hu_net_updates_right_ = new double[(l_nX_ + 2)*(l_nY_ * 2)]();
+    this->hv_net_updates_above_ = new double[(l_nX_ + 2)*(l_nY_ * 2)]();
+    this->hv_net_updates_below_ = new double[(l_nX_ + 2)*(l_nY_ * 2)]();
 }
 
 applications::exahype2::swe::adjoint::Dimensional_Splitting::~Dimensional_Splitting()
@@ -50,11 +50,11 @@ double applications::exahype2::swe::adjoint::Dimensional_Splitting::compute_nume
             double max_edge_speed = 0.0;
 
             applications::exahype2::swe::adjoint::Adjoint_Solver::compute_net_updates(
-                h_[j * (l_nX_ + 2) + i - 1], h_[j * (l_nX_ + 2) + i],
-                hu_[j * (l_nX_ + 2) + i - 1], hu_[j * (l_nX_ + 2) + i],
-                b_[j * (l_nX_ + 2) + i - 1], b_[j * (l_nX_ + 2) + i],
-                h_net_updates_left_[j * (l_nX_ + 2) + i - 1], h_net_updates_right_[j * (l_nX_ + 2) + i - 1],
-                hu_net_updates_left_[j * (l_nX_ + 2) + i - 1], hu_net_updates_right_[j * (l_nX_ + 2) + i - 1],
+                h_[(i - 1) * (l_nY_ + 2) + j], h_[i * (l_nY_ + 2) + j],
+                hu_[(i - 1) * (l_nY_ + 2) + j], hu_[i * (l_nY_ + 2) + j],
+                b_[(i - 1) * (l_nY_ + 2) + j], b_[i * (l_nY_ + 2) + j],
+                h_net_updates_left_[(i - 1) * (l_nY_ + 2) + j], h_net_updates_right_[(i - 1) * (l_nY_ + 2) + j],
+                hu_net_updates_left_[(i - 1) * (l_nY_ + 2) + j], hu_net_updates_right_[(i - 1) * (l_nY_ + 2) + j],
                 max_edge_speed);
 
             //update the maximum wave speed of the x-sweep
@@ -77,11 +77,11 @@ double applications::exahype2::swe::adjoint::Dimensional_Splitting::compute_nume
             double max_edge_speed = 0.0;
 
             applications::exahype2::swe::adjoint::Adjoint_Solver::compute_net_updates(
-                h_[(j - 1) * (l_nX_ + 2) + i], h_[j * (l_nX_ + 2) + i],
-                hv_[(j - 1) * (l_nX_ + 2) + i], hv_[j * (l_nX_ + 2) + i],
-                b_[j * (l_nX_ + 2) + i - 1], b_[j * (l_nX_ + 2) + i],
-                h_net_updates_below_[(j - 1) * (l_nX_ + 2) + i], h_net_updates_above_[(j - 1) * (l_nX_ + 2) + i],
-                hv_net_updates_below_[(j - 1) * (l_nX_ + 2) + i], hv_net_updates_above_[(j - 1) * (l_nX_ + 2) + i],
+                h_[i * (l_nY_ + 2) + (j - 1)], h_[i * (l_nY_ + 2) + j],
+                hv_[i * (l_nY_ + 2) + (j - 1)], hv_[i * (l_nY_ + 2) + j],
+                b_[i * (l_nY_ + 2) + (j - 1)], b_[i * (l_nY_ + 2) + j],
+                h_net_updates_below_[i * (l_nY_ + 2) + (j - 1)], h_net_updates_above_[i * (l_nY_ + 2) + (j - 1)],
+                hv_net_updates_below_[i * (l_nY_ + 2) + (j - 1)], hv_net_updates_above_[i * (l_nY_ + 2) + (j - 1)],
                 max_edge_speed);
 
             //update the maximum wave speed of the x-sweep
@@ -111,8 +111,8 @@ void applications::exahype2::swe::adjoint::Dimensional_Splitting::update_unknown
         for (int j = 0; j < l_nY_ + 2; j++)
         {
             // -dx/dt * (Update of left cell to the right + Update of right cell to the left)
-            h_[j * (l_nX_ + 2) + i] -= factordx * (h_net_updates_right_[j * (l_nX_ + 2) + i - 1] + h_net_updates_left_[j * (l_nX_ + 2) + i]);
-            hu_[j * (l_nX_ + 2) + i] -= factordx * (hu_net_updates_right_[j * (l_nX_ + 2) + i - 1] + hu_net_updates_left_[j * (l_nX_ + 2) + i]);
+            h_[i * (l_nY_ + 2) + j] -= factordx * (h_net_updates_right_[(i - 1) * (l_nY_ + 2) + j] + h_net_updates_left_[i * (l_nY_ + 2) + j]);
+            hu_[i * (l_nY_ + 2) + j] -= factordx * (hu_net_updates_right_[(i-1) * (l_nY_ + 2) + j] + hu_net_updates_left_[i * (l_nY_ + 2) + j]);
         }
     }
 }
@@ -129,8 +129,8 @@ void applications::exahype2::swe::adjoint::Dimensional_Splitting::update_unknown
         for (int i = 1; i < l_nY_ + 1; i++)
         {
             // -dy/dt * (Update of cell above to below + Update of cell below to above)
-            h_[j * (l_nX_ + 2) + i] -= factor_dy * (h_net_updates_above_[(j - 1) * (l_nX_ + 2) + i] + h_net_updates_below_[j * (l_nX_ + 2) + i]);
-            hv_[j * (l_nX_ + 2) + i] -= factor_dy * (hv_net_updates_above_[(j - 1) * (l_nX_ + 2) + i] + hv_net_updates_below_[j * (l_nX_ + 2) + i]);
+            h_[i * (l_nY_ + 2) + j] -= factor_dy * (h_net_updates_above_[i * (l_nY_ + 2) + (j - 1)] + h_net_updates_below_[i * (l_nY_ + 2) + j]);
+            hv_[i * (l_nY_ + 2) + j] -= factor_dy * (hv_net_updates_above_[i * (l_nY_ + 2) + (j - 1)] + hv_net_updates_below_[i * (l_nY_ + 2) + j]);
         }
     }
 }

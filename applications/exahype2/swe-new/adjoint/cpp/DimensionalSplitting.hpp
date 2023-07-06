@@ -1,6 +1,7 @@
-#ifndef applications_exahype2_swe_adjoint_dimensional_splitting_h_
-#define applications_exahype2_swe_adjoint_dimensional_splitting_h_
+#ifndef applications_exahype2_swe_adjoint_DimensionalSplitting_h_
+#define applications_exahype2_swe_adjoint_DimensionalSplitting_h_
 #include "AdjointSolver.hpp"
+#include <omp.h>
 namespace applications::exahype2::swe::adjoint
 {
     class Dimensional_Splitting
