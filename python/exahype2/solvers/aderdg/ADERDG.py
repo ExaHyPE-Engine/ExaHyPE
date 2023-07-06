@@ -136,6 +136,10 @@ class ADERDG( object ):
     self._corrector_computation_precision        = PrecisionType["double"]
     self._solution_persistent_storage_precision  = PrecisionType["double"]
 
+    #determines whether to hold respectively the cells and faces on the stack or heap (with smart pointers)
+    self._hold_cell_data_on_heap_with_smart_pointer = False
+    self._hold_face_data_on_heap_with_smart_pointer = False
+
     #whether or not to plot information about the grid as well as information about the content of the patches
     self._plot_grid_properties = plot_grid_properties
     self.plot_description = ""
@@ -239,11 +243,19 @@ class ADERDG( object ):
     
     self._number_of_face_projections = 1
 
-    #current time step contains the solution, projections are respectively the projection of the solution and of the fluxes as predicted by the space-time predictor
+    #current time step contains the solution, projections are respectively the projection of the solution and of the fluxes on the faces as predicted by the space-time predictor
     self._current_time_step             = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier(), self._solution_persistent_storage_precision )
-    self._current_update                = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier()+"lduh", self._solution_persistent_storage_precision )
+    # self._current_update                = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier()+"lduh", self._solution_persistent_storage_precision )
     self._rhs_estimates_projection      = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates", self._corrector_computation_precision )
     self._flux_estimates_projection     = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns, self._unknown_identifier() + "FluxEstimates", self._corrector_computation_precision )
+
+    #if user has specified that they want the data on the heap
+    if self._hold_cell_data_on_heap_with_smart_pointer:
+      self._current_time_step.generator         = peano4.datamodel.PatchToDoubleArrayOnHeap(self._current_time_step, self._solution_persistent_storage_precision )
+    if self._hold_face_data_on_heap_with_smart_pointer:
+      # self._current_update.generator            = peano4.datamodel.PatchToDoubleArrayOnHeap(self._current_update, self._solution_persistent_storage_precision )
+      self._rhs_estimates_projection.generator  = peano4.datamodel.PatchToDoubleArrayOnHeap(self._rhs_estimates_projection, self._corrector_computation_precision )
+      self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._flux_estimates_projection, self._corrector_computation_precision )
 
     #custom merge implementation takes into account that the faces project such that the left cell projects to the left half of the face and the right cell projects to the right half
     self._rhs_estimates_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._rhs_estimates_projection)
@@ -261,8 +273,8 @@ class ADERDG( object ):
     self._current_time_step.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._current_time_step.generator.load_persistent_condition  = self._load_cell_data_default_guard()
 
-    self._current_update.generator.store_persistent_condition = self._store_cell_data_default_guard()
-    self._current_update.generator.load_persistent_condition  = self._load_cell_data_default_guard()    
+    # self._current_update.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    # self._current_update.generator.load_persistent_condition  = self._load_cell_data_default_guard()    
     
     self._rhs_estimates_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._rhs_estimates_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
@@ -281,9 +293,9 @@ class ADERDG( object ):
 #include "../repositories/SolverRepository.h"
 """
 
-    self._current_update.generator.includes  += """
-#include "../repositories/SolverRepository.h"
-"""
+#     self._current_update.generator.includes  += """
+# #include "../repositories/SolverRepository.h"
+# """
 
     self._rhs_estimates_projection.generator.includes  += """
 #include "../repositories/SolverRepository.h"
@@ -437,7 +449,7 @@ class ADERDG( object ):
     """  
     datamodel.add_cell(self._cell_label)
     datamodel.add_cell(self._current_time_step)
-    datamodel.add_cell(self._current_update)
+    # datamodel.add_cell(self._current_update)
     datamodel.add_face(self._face_label)
     datamodel.add_face(self._rhs_estimates_projection)
     datamodel.add_face(self._flux_estimates_projection)
@@ -445,7 +457,7 @@ class ADERDG( object ):
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     step.use_cell(self._cell_label)
     step.use_cell(self._current_time_step)
-    step.use_cell(self._current_update)
+    # step.use_cell(self._current_update)
     step.use_face(self._face_label)
     step.use_face(self._rhs_estimates_projection)
     step.use_face(self._flux_estimates_projection)
@@ -877,6 +889,8 @@ class ADERDG( object ):
     solution_persistent_storage_precision="double",
     precision_criterion_implementation  = PDETerms.None_Implementation,
     riemann_solver_implementation = PDETerms.None_Implementation,
+    hold_cell_data_on_heap_with_smart_pointer = False,
+    hold_face_data_on_heap_with_smart_pointer = False,
     use_vectorized_PDE = False,
     architecture = "noarch",
     use_CERK_guess=False,
@@ -918,6 +932,10 @@ class ADERDG( object ):
 
     if riemann_solver_implementation is not PDETerms.None_Implementation:
       self._riemann_solver_implementation = riemann_solver_implementation
+
+    #move data to heap if requested
+    self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
+    self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
 
     if(use_CERK_guess or use_split_CK or use_vectorized_PDE or predictor_recompute):
       raise Exception("The option you have chosen has not yet been implemented, it currently only exists in the code as a placeholder for future expansion")
