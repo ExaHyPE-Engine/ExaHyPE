@@ -95,7 +95,6 @@ void swift2::kernels::densityKernel(Particle* localParticle, const Particle* act
 
 template <typename Particle>
 void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activeParticle) {
-
   // Grab static parameters
   const int    hydroDimensions = localParticle->getHydroDimensions();
   const double alphaAV         = localParticle->getAlphaAV();
@@ -364,31 +363,6 @@ void swift2::kernels::computeHydroForce(
 }
 
 
-template <typename Particle>
-void computeHydroForceInnerLoop(
-    const peano4::datamanagement::CellMarker&  marker,
-    Particle* __restrict__                       particlesAssociatedWithLocalVertex, // das ist falsch
-    int                                        numberOfLocalParticles,
-    Particle* __restrict__                                 activeParticles,
-    int                                        numberOfActiveParticles
-) {
-  /*
-  unrolling cannot work here, as the loop count is not known a prioricd
-  */
-  for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<numberOfLocalParticles; localParticleNumberInThisChunk++)
-  for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<numberOfActiveParticles; activeParticleNumberInThisChunk++) {
-      particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk].setF( 14.0 );
-/*
-          particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk].getF()
-          *
-          activeParticles[activeParticleNumberInThisChunk].getF()
-      );
-*/
-  }
-
-}
-
-
 template <typename ParticleContainer>
 void swift2::kernels::computeHydroForce(
     const peano4::datamanagement::CellMarker&  marker,
@@ -399,53 +373,21 @@ void swift2::kernels::computeHydroForce(
 ) {
   typename std::list< typename ParticleContainer::value_type >::const_iterator localParticlesIterator  = particlesAssociatedWithLocalVertices.begin();
 
-  #pragma nounroll
   for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
     typename ParticleContainer::value_type  localParticlesChunk = *localParticlesIterator;
     std::advance( localParticlesIterator, localParticlesChunkSize );
 
     typename std::list< typename ParticleContainer::value_type >::const_iterator activeParticlesIterator = activeParticles.begin();
-    #pragma nounroll
     for (auto activeParticlesChunkSize: numberOfActiveParticlesPerVertexAdded) {
       typename ParticleContainer::value_type  activeParticlesChunk = *activeParticlesIterator;
       std::advance( activeParticlesIterator, activeParticlesChunkSize );
 
-      computeHydroForceInnerLoop(
-        marker,
-        localParticlesChunk,
-        localParticlesChunkSize,
-        activeParticlesChunk,
-        activeParticlesChunkSize
-      );
-
-/*
-#pragma omp simd
-      for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<localParticlesChunkSize; localParticleNumberInThisChunk++)
-      for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
-          localParticlesChunk[localParticleNumberInThisChunk].setF(
-              localParticlesChunk[localParticleNumberInThisChunk].getF()
-              *
-              activeParticlesChunk[activeParticleNumberInThisChunk].getF()
-          );
-      }
-*/
-      // @todo
-    }
-  }
-}
-/*
-
-    #pragma nounroll
-    for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<localParticlesChunkSize; localParticleNumberInThisChunk++) {
-      if (
-        marker.isContained( localParticlesChunk[localParticleNumberInThisChunk].getX() )
-        and
-        not localParticlesChunk[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
-      ) {
-
-        #pragma nounroll
-
-          #pragma unroll
+      for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<localParticlesChunkSize; localParticleNumberInThisChunk++) {
+        if (
+          marker.isContained(localParticlesChunk[localParticleNumberInThisChunk].getX())
+          and
+          not localParticlesChunk[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
+        ) {
           for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
             swift2::kernels::forceKernel(
               localParticlesChunk  + localParticleNumberInThisChunk,
@@ -456,4 +398,5 @@ void swift2::kernels::computeHydroForce(
       }
     }
   }
-*/
+}
+
