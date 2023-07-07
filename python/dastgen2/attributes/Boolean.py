@@ -8,14 +8,14 @@ class Boolean(Attribute):
         self,
         name,
         ifdefs=[],
-        qualifier = Attribute.Qualifier.NONE,
+        qualifier=Attribute.Qualifier.NONE,
         initval=None,
     ):
         Attribute.__init__(
             self,
             name,
             ifdefs,
-            qualifier = qualifier,
+            qualifier=qualifier,
             initval=initval,
         )
 

@@ -12,7 +12,14 @@ class Double(Attribute):
 
     """
 
-    def __init__(self, name, valid_mantissa_bits=None, ifdefs=[], qualifier = Attribute.Qualifier.NONE, initval=None):
+    def __init__(
+        self,
+        name,
+        valid_mantissa_bits=None,
+        ifdefs=[],
+        qualifier=Attribute.Qualifier.NONE,
+        initval=None,
+    ):
         """
 
         @Pawel Can you add some docu?
@@ -22,7 +29,7 @@ class Double(Attribute):
             self,
             name,
             ifdefs,
-            qualifier = qualifier,
+            qualifier=qualifier,
             initval=initval,
         )
         self._valid_mantissa_bits = valid_mantissa_bits

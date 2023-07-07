@@ -272,7 +272,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
         const_static = dastgen2.attributes.Attribute.Qualifier.CONST_STATIC
 
-        cfl_attr = dastgen2.attributes.Double("cfl", qualifier=const_static, initval=self._cfl_factor)
+        cfl_attr = dastgen2.attributes.Double(
+            "cfl", qualifier=const_static, initval=self._cfl_factor
+        )
         self.data.add_or_replace_attribute(cfl_attr)
 
         initial_time_step_size_attr = dastgen2.attributes.Double(
@@ -287,30 +289,22 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         else:
             adjustTimeStepSize = "true"
         adjust_time_step_size_attr = dastgen2.attributes.Boolean(
-            "adjustTimeStepSize",
-            qualifier=const_static,
-            initval=adjustTimeStepSize
+            "adjustTimeStepSize", qualifier=const_static, initval=adjustTimeStepSize
         )
         self.data.add_or_replace_attribute(adjust_time_step_size_attr)
 
         is_sph_attr = dastgen2.attributes.Boolean(
-            "isSPH",
-            qualifier=const_static,
-            initval=self._isSPH_cpp
+            "isSPH", qualifier=const_static, initval=self._isSPH_cpp
         )
         self.data.add_or_replace_attribute(is_sph_attr)
 
         hydro_dimensions_attr = dastgen2.attributes.Double(
-            "hydroDimensions",
-            qualifier=const_static,
-            initval=self._hydro_dimensions
+            "hydroDimensions", qualifier=const_static, initval=self._hydro_dimensions
         )
         self.data.add_or_replace_attribute(hydro_dimensions_attr)
 
         eta_factor_attr = dastgen2.attributes.Double(
-            "etaFactor",
-            qualifier=const_static,
-            initval=self._eta_factor
+            "etaFactor", qualifier=const_static, initval=self._eta_factor
         )
         self.data.add_or_replace_attribute(eta_factor_attr)
 

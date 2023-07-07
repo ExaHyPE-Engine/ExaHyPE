@@ -143,7 +143,11 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         result = "("
         is_first = True
         for attribute in self._attributes:
-            if attribute._is_static or attribute._is_const_static or attribute._is_constexpr:
+            if (
+                attribute._is_static
+                or attribute._is_const_static
+                or attribute._is_constexpr
+            ):
                 continue
             elif attribute._is_const:
                 raise NotImplementedError
@@ -260,7 +264,11 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 
         output.write("{\n")
         for attribute in self._attributes:
-            if attribute._is_static or attribute._is_const_static or  attribute._is_constexpr:
+            if (
+                attribute._is_static
+                or attribute._is_const_static
+                or attribute._is_constexpr
+            ):
                 # no need to copy static class fields.
                 continue
             elif attribute._is_const:
@@ -315,7 +323,11 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
             + "& copy ) {\n"
         )
         for attribute in self._attributes:
-            if attribute._is_static or attribute._is_const_static or  attribute._is_constexpr:
+            if (
+                attribute._is_static
+                or attribute._is_const_static
+                or attribute._is_constexpr
+            ):
                 # no need to copy static class fields.
                 continue
             elif attribute._is_const:

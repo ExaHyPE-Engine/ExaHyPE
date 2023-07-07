@@ -5,7 +5,6 @@ from enum import Enum
 from dastgen2.Utils import construct_ifdef_string
 
 
-
 class Attribute(object):
     """!
 
@@ -24,17 +23,17 @@ class Attribute(object):
     """
 
     class Qualifier(Enum):
-       """!
-       classifies attribute qualifiers.
-       """
-       NONE = 0
-       STATIC = 1
-       CONST = 2
-       CONST_STATIC = 3
-       CONSTEXPR = 4
+        """!
+        classifies attribute qualifiers.
+        """
 
+        NONE = 0
+        STATIC = 1
+        CONST = 2
+        CONST_STATIC = 3
+        CONSTEXPR = 4
 
-    def __init__(self, name, ifdefs=[], qualifier = Qualifier.NONE, initval=None):
+    def __init__(self, name, ifdefs=[], qualifier=Qualifier.NONE, initval=None):
         self._name = name
         self.use_data_store = False
         self.ifdefs = ifdefs
@@ -63,7 +62,6 @@ class Attribute(object):
     @property
     def _is_constexpr(self):
         return self.qualifier == self.Qualifier.CONSTEXPR
-
 
     def get_public_fields(self):
         """!

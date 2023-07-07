@@ -15,7 +15,15 @@ class BooleanArray(Boolean):
 
     """
 
-    def __init__(self, name, cardinality, compress=False, ifdefs=[], qualifier = Attribute.Qualifier.NONE, initval=None):
+    def __init__(
+        self,
+        name,
+        cardinality,
+        compress=False,
+        ifdefs=[],
+        qualifier=Attribute.Qualifier.NONE,
+        initval=None,
+    ):
         """
 
         C++ offers the bitset to accommodate an array of boolean flags. While
@@ -39,7 +47,9 @@ class BooleanArray(Boolean):
 
         """
         if qualifier != Attribute.Qualifier.NONE:
-            raise NotImplementedError(f"Attribute {name}: This data type can't work with qualifiers (yet)")
+            raise NotImplementedError(
+                f"Attribute {name}: This data type can't work with qualifiers (yet)"
+            )
         Boolean.__init__(self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initva)
         self._cardinality = cardinality
         self.compress = compress

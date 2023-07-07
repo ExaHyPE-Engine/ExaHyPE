@@ -20,10 +20,19 @@ class DoubleArray(Double):
 
     """
 
-    def __init__(self, name, cardinality, valid_mantissa_bits=None, ifdefs=[], qualifier = Attribute.Qualifier.NONE, initval=None):
-
+    def __init__(
+        self,
+        name,
+        cardinality,
+        valid_mantissa_bits=None,
+        ifdefs=[],
+        qualifier=Attribute.Qualifier.NONE,
+        initval=None,
+    ):
         if qualifier != Attribute.Qualifier.NONE:
-            raise NotImplementedError(f"Attribute {name}: This data type can't work with qualifiers (yet)")
+            raise NotImplementedError(
+                f"Attribute {name}: This data type can't work with qualifiers (yet)"
+            )
         Double.__init__(self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initval)
 
         self._cardinality = cardinality

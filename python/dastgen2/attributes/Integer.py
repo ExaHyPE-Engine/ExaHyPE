@@ -10,7 +10,7 @@ class Integer(Attribute):
         min_value=None,
         max_value=None,
         ifdefs=[],
-        qualifier = Attribute.Qualifier.NONE,
+        qualifier=Attribute.Qualifier.NONE,
         initval=None,
     ):
         """
@@ -24,7 +24,7 @@ class Integer(Attribute):
             self,
             name,
             ifdefs,
-            qualifier = qualifier,
+            qualifier=qualifier,
             initval=initval,
         )
         self._min_value = min_value

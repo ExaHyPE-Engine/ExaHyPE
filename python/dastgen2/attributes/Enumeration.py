@@ -24,10 +24,21 @@ class Enumeration(Attribute):
 
     """
 
-    def __init__(self, name, variants, ifdefs=[], qualifier = Attribute.Qualifier.NONE, initval=None):
+    def __init__(
+        self,
+        name,
+        variants,
+        ifdefs=[],
+        qualifier=Attribute.Qualifier.NONE,
+        initval=None,
+    ):
         if qualifier != Attribute.Qualifier.NONE:
-            raise NotImplementedError(f"Attribute {name}: This data type can't work with qualifiers (yet)")
-        Attribute.__init__(self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initval)
+            raise NotImplementedError(
+                f"Attribute {name}: This data type can't work with qualifiers (yet)"
+            )
+        Attribute.__init__(
+            self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initval
+        )
         self._variants = variants
         self.compress = True
 
