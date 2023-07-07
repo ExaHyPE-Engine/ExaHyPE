@@ -26,6 +26,9 @@ from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
 
+BlackHoleRegion = 1.0
+
+
 def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
     """!
 
@@ -54,7 +57,7 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
                 max_volume_h=max_cell_size / self.SubPatchSize,
                 use_heap_storage=False,
             )
-            self.double_constants["BlackHoleFVRegion"] = 1.0
+            self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
 
             self._user_action_set_includes += """
 #include "toolbox/blockstructured/Restriction.h"        
@@ -194,6 +197,9 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """
+
+            self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
+            
 
         def create_action_sets(self):
             """!
@@ -688,6 +694,8 @@ if __name__ == "__main__":
         "ccz4",
         executable="peano_sbh_" + str(args.cell_size),
     )
+    
+    max_cell_size = 4.0
 
     added_limiter = False
     if "fd4-rk1-ps-" in args.solver:
@@ -697,10 +705,12 @@ if __name__ == "__main__":
         added_limiter = False
     elif "fd4-rk1-limited-ps-" in args.solver:
         FD4PatchSize = int(args.solver[-1])
-        my_primary_solver = construct_limited_FD4_solver(args.cell_size, args.cell_size)
-        my_secondary_solver = construct_FV_limiter_for_FD4(
-            args.cell_size, args.cell_size
-        )
+        my_primary_solver = construct_limited_FD4_solver(min_cell_size = args.cell_size, 
+                                                         max_cell_size = max_cell_size
+                                                         )
+        my_secondary_solver = construct_FV_limiter_for_FD4(min_cell_size = args.cell_size, 
+                                                           max_cell_size = args.cell_size
+                                                           )
         project.add_solver(my_primary_solver)
         project.add_solver(my_secondary_solver)
         added_limiter = True
