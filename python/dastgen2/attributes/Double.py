@@ -62,7 +62,6 @@ class Double(Attribute):
 
         methods.append(getter)
 
-        # TODO: test this
         # Add a setter method, if it makes sense.
         if not (self._is_const_static or self._is_const or self._is_constexpr):
             methods.append(("set" + accessor_name + "(double value)", "void"))
