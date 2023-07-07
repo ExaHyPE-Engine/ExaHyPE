@@ -262,10 +262,14 @@ if args.gpu:
 my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".format("true" if args.dynamic_amr else "false"))
 
 if args.scenario == "Artificial_Tsunami" or args.scenario == "Circular_Island":
-  my_solver.add_user_solver_includes("#include <cmath>")
+  my_solver.add_user_solver_includes("""
+                                     #include <cmath>
+                                     """)
 
 if args.scenario == "Tsunami":
-  my_solver.add_user_solver_includes("#include \"parser/TopologyParser.h\"")
+  my_solver.add_user_solver_includes("""
+                                     #include \"parser/TopologyParser.h\"
+                                     """)
   topology_parser_parameters = "\"%s\", \"%s\"" % (args.bathymetry_file, args.displacement_file);
 
   if args.uq_displacement_origin is not None:
@@ -290,7 +294,9 @@ if args.scenario == "Tsunami":
       area_of_interest.append(parse_coordinate_pair(coords))
 
     if args.gamr_file is None:
-      my_solver.add_user_solver_includes("#include \"adjoint/cpp/SWEAdjoint.hpp\"")
+      my_solver.add_user_solver_includes("""
+                                         #include \"adjoint/cpp/SWEAdjoint.hpp\"
+                                         """)
 
       swe_adjoint_parameters = "\"adjoint_%s\"" % args.bathymetry_file # output file name
       swe_adjoint_parameters += ",\"%s\"" % args.bathymetry_file # bathymetry file
@@ -307,6 +313,7 @@ if args.scenario == "Tsunami":
 
       swe_adjoint_parameters += ", %f" % args.gamr_start_time # start time
       swe_adjoint_parameters += ", %d" % args.gamr_checkpoints # checkpoints
+      swe_adjoint_parameters += ", 0" # flush
 
       swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_x
       swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_y
