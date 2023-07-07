@@ -65,7 +65,7 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
     if (
       refinementCriterion==::exahype2::RefinementCommand::Refine 
       and 
-      tarch::la::smaller( tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
+      tarch::la::smaller( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
     ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
@@ -89,7 +89,7 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
     if (
       refinementCriterion==::exahype2::RefinementCommand::Refine 
       and 
-      tarch::la::smaller( tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
+      tarch::la::smaller( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
     ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 

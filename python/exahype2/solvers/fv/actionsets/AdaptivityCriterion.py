@@ -70,7 +70,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
     if (
       refinementCriterion==::exahype2::RefinementCommand::Refine 
       and 
-      tarch::la::smaller( tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
+      tarch::la::smaller( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
     ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
@@ -98,7 +98,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
     if (
       refinementCriterion==::exahype2::RefinementCommand::Refine 
       and 
-      tarch::la::smaller( tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
+      tarch::la::smaller( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
     ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
