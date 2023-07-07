@@ -135,8 +135,11 @@ variants.
 The implementation of these optimised variants is beyond scope here, but 
 peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists
 discusses their usage. Also, you might want to look into 
-::swift2::kernels::computeHydroForceWithCoalescedMemoryAccessOverContinuousParticleChunks()
-for an example of an optimised kernel.
+::swift2::kernels::computeHydroForce() for an example of an optimised kernel.
+
+Before you start, I recommend to read through @ref page_peano_performance_optimisation "the generic performance analysis"
+comments. Notably the remarks on compiler feedback (with the Intel toolchain)
+are of great value and can support any optimisation.
 
 
  */
