@@ -113,6 +113,8 @@ namespace swift2 {
      * dx : Vector separating the two particles (x_loc - x_act)
      * r  : Distance between the two particles  (|| dx ||)
      *
+     * @todo Mladen: check docu once this is fixed.
+     *
      *
      * @param ParticleContainer Typicaly either
      *         std::list<Particle *>
