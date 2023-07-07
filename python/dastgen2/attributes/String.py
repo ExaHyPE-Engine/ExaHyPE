@@ -17,8 +17,10 @@ class String(Attribute):
 
     """
 
-    def __init__(self, name, max_length=80, ifdefs=[]):
-        Attribute.__init__(self, name, ifdefs)
+    def __init__(self, name, max_length=80, ifdefs=[], qualifier = Attribute.Qualifier.NONE, initval=None):
+        if qualifier != Attribute.Qualifier.NONE:
+            raise NotImplementedError(f"Attribute {name}: This data type can't work with qualifiers (yet)")
+        Attribute.__init__(self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initval)
         self._max_length = max_length
 
     def get_methods(self, _full_qualified_name, for_declaration=True):
