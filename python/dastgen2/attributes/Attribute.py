@@ -41,8 +41,7 @@ class Attribute(object):
         self.qualifier = qualifier
         self._initval = initval
 
-
-        if self._is_const_static and self._initval is None:
+        if (self._is_const_static or self._is_constexpr) and self._initval is None:
             raise ValueError(
                 "Attribute",
                 self._name,

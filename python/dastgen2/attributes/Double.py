@@ -76,7 +76,8 @@ class Double(Attribute):
         elif self._is_const:
             raise NotImplementedError
         elif self._is_constexpr:
-            raise NotImplementedError
+            typestring = "constexpr static double"
+            namestring += " = " + str(self._initval)
 
         if self._valid_mantissa_bits is None:
             return [(namestring, typestring, "")]

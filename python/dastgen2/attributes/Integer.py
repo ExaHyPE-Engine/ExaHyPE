@@ -79,7 +79,8 @@ class Integer(Attribute):
         elif self._is_const:
             raise NotImplementedError
         elif self._is_constexpr:
-            raise NotImplementedError
+            typestring = "constexpr static int"
+            namestring += " = " + str(self._initval)
 
         if self._min_value is None and self._max_value is None:
             return [(namestring, typestring, "")]
@@ -96,10 +97,10 @@ class Integer(Attribute):
     def get_method_body(self, signature):
         if signature.startswith("get") and self.use_data_store:
             return "  return _dataStore._" + self._name + ";\n"
-        elif signature.startswith("set") and self.use_data_store:
-            return "  _dataStore._" + self._name + " = value;\n"
         elif signature.startswith("get") and not self.use_data_store:
             return "  return _" + self._name + ";\n"
+        elif signature.startswith("set") and self.use_data_store:
+            return "  _dataStore._" + self._name + " = value;\n"
         elif signature.startswith("set") and not self.use_data_store:
             return "  _" + self._name + " = value;\n"
         else:

@@ -188,10 +188,10 @@ void """
         )
 
         for i in self._data_model._attributes:
-            if i._is_static or i._is_const_static:
+            if i._is_static or i._is_const_static or i._is_constexpr:
                 # No comms for static members
                 continue
-            elif i._is_const or i._is_constexpr:
+            elif i._is_const:
                 raise NotImplementedError
             if i.ifdefs != []:
                 result += construct_ifdef_string(i.ifdefs)
@@ -208,10 +208,10 @@ void """
 """
 
         for i in self._data_model._attributes:
-            if i._is_static or i._is_const_static:
+            if i._is_static or i._is_const_static or i._is_constexpr:
                 # No comms for static members
                 continue
-            elif i._is_const or i._is_constexpr:
+            elif i._is_const:
                 raise NotImplementedError
             if i.ifdefs != []:
                 result += construct_ifdef_string(i.ifdefs)
@@ -232,10 +232,10 @@ void """
 """
 
         for i in self._data_model._attributes:
-            if i._is_static or i._is_const_static:
+            if i._is_static or i._is_const_static or i._is_constexpr:
                 # no comms for static members
                 continue
-            elif i._is_const or i._is_constexpr:
+            elif i._is_const:
                 raise NotImplementedError
             if i.ifdefs != []:
                 result += "\n"
