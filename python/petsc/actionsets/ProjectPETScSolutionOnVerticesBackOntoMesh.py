@@ -21,19 +21,24 @@ corresponding entry in the solution vector reads like.
   
   
   TemplateInitVertex = """
+{% if SOLVER_NAME=="Poisson" %}
   if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
-    
-    for (int i=0; i<{{CARDINALITY}}; i++) {
+
+    for (int i=0; i<{{VERTEX_CARDINALITY}}; i++) {
       std::pair<int,int> localIndex( _spacetreeId, fineGridVertex{{SOLVER_NAME}}.getNumber()+i );
       int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
-      // @todo ask PETSc what the value is and set it into 
-      double newValue = 23;
-      fineGridVertex{{SOLVER_NAME}}.getValue().data()[i] = newValue;
+
+      // ask our instance of Petsc the value stored in the solution vector here.
+      double val = repositories::instanceOfPetsc.getX(globalIndex);
+      //fineGridVertex{{SOLVER_NAME}}.getValue().data()[i] = val;
+      fineGridVertex{{SOLVER_NAME}}.setValue(0, val);
+
     }
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
-  } 
+  }
+{% endif %}
 """
   
   def __init__(self,
@@ -51,9 +56,10 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     """
     super( ProjectPETScSolutionOnVerticesBackOntoMesh, self ).__init__()
     self.d = {}
-    self.d["SOLVER_INSTANCE"] = solver.instance_name()
-    self.d["SOLVER_NAME"]     = solver.typename()
-    self.d["CARDINALITY"]     = solver.number_of_unknowns
+    self.d["SOLVER_INSTANCE"]        = solver.instance_name()
+    self.d["SOLVER_NAME"]            = solver.typename()
+    self.d["VERTEX_CARDINALITY"]     = solver.number_of_vertex_unknowns
+
 
 
   def get_body_of_operation(self,operation_name):

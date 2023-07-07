@@ -2,10 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <list>
 #include <vector>
-
 
 namespace swift2 {
   namespace statistics {
@@ -15,13 +13,8 @@ namespace swift2 {
      * overwite the .
      */
     template <typename Particle>
-    void reduceVelocityAndCutOffRadius(
-      const std::list< Particle* >&  localParticles
-    );
-  }
-}
-
+    void reduceVelocityAndSearchRadius(const std::list<Particle*>& localParticles);
+  } // namespace statistics
+} // namespace swift2
 
 #include "Statistics.cpph"
-
-

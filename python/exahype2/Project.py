@@ -197,27 +197,27 @@ class Project(object):
 
 ### ExaHyPE 2
 
-This code uses ExaHyPE in its second generation. The first generation of the 
-code was developed through an EU FET HPC project called ExaHyPE. This first  
-generation was built on top of Peano in its third generation. The present    
-code uses ExaHyPE 2 which is a complete rewrite built on top of Peano 4. We  
-do not yet have a release paper for this second generation of ExaHyPE, and   
+This code uses ExaHyPE in its second generation. The first generation of the
+code was developed through an EU FET HPC project called ExaHyPE. This first
+generation was built on top of Peano in its third generation. The present
+code uses ExaHyPE 2 which is a complete rewrite built on top of Peano 4. We
+do not yet have a release paper for this second generation of ExaHyPE, and
 thus appreciate any citation of the original release paper
 
-       @article{Reinarz:2020:ExaHyPE,   
-         title = {ExaHyPE: An engine for parallel dynamically adaptive simulations of wave problems},   
-         journal = {Computer Physics Communications},   
-         volume = {254},   
-         pages = {107251},   
-         year = {2020},   
-         issn = {0010-4655},   
-         doi = {https://doi.org/10.1016/j.cpc.2020.107251},   
-         url = {https://www.sciencedirect.com/science/article/pii/S001046552030076X},   
-         author = {Anne Reinarz and Dominic E. Charrier and Michael Bader and Luke Bovard and Michael Dumbser and Kenneth Duru and Francesco Fambri and Alice-Agnes Gabriel and Jean-Matthieu Gallard and Sven K\"oppel and Lukas Krenz and Leonhard Rannabauer and Luciano Rezzolla and Philipp Samfass and Maurizio Tavelli and Tobias Weinzierl},   
-         keywords = {Hyperbolic, PDE, ADER-DG, Finite volumes, AMR, MPI, TBB, MPI+X},   
-         abstract = {ExaHyPE (An Exascale Hyperbolic PDE Engine) is a software engine for solving systems of first-order hyperbolic partial differential equations (PDEs). Hyperbolic PDEs are typically derived from the conservation laws of physics and are useful in a wide range of application areas. Applications powered by ExaHyPE can be run on a student's laptop, but are also able to exploit thousands of processor cores on state-of-the-art supercomputers. The engine is able to dynamically increase the accuracy of the simulation using adaptive mesh refinement where required. Due to the robustness and shock capturing abilities of ExaHyPE's numerical methods, users of the engine can simulate linear and non-linear hyperbolic PDEs with very high accuracy. Users can tailor the engine to their particular PDE by specifying evolved quantities, fluxes, and source terms. A complete simulation code for a new hyperbolic PDE can often be realised within a few hours - a task that, traditionally, can take weeks, months, often years for researchers starting from scratch. In this paper, we showcase ExaHyPE's workflow and capabilities through real-world scenarios from our two main application areas: seismology and astrophysics.   
-           Program summary   
-           Program title: ExaHyPE-Engine Program Files doi: http://dx.doi.org/10.17632/6sz8h6hnpz.1 Licensing provisions: BSD 3-clause Programming languages: C++, Python, Fortran Nature of Problem: The ExaHyPE PDE engine offers robust algorithms to solve linear and non-linear hyperbolic systems of PDEs written in first order form. The systems may contain both conservative and non-conservative terms. Solution method: ExaHyPE employs the discontinuous Galerkin (DG) method combined with explicit one-step ADER (arbitrary high-order derivative) time-stepping. An a-posteriori limiting approach is applied to the ADER-DG solution, whereby spurious solutions are discarded and recomputed with a robust, patch-based finite volume scheme. ExaHyPE uses dynamical adaptive mesh refinement to enhance the accuracy of the solution around shock waves, complex geometries, and interesting features. 
+       @article{Reinarz:2020:ExaHyPE,
+         title = {ExaHyPE: An engine for parallel dynamically adaptive simulations of wave problems},
+         journal = {Computer Physics Communications},
+         volume = {254},
+         pages = {107251},
+         year = {2020},
+         issn = {0010-4655},
+         doi = {https://doi.org/10.1016/j.cpc.2020.107251},
+         url = {https://www.sciencedirect.com/science/article/pii/S001046552030076X},
+         author = {Anne Reinarz and Dominic E. Charrier and Michael Bader and Luke Bovard and Michael Dumbser and Kenneth Duru and Francesco Fambri and Alice-Agnes Gabriel and Jean-Matthieu Gallard and Sven K\"oppel and Lukas Krenz and Leonhard Rannabauer and Luciano Rezzolla and Philipp Samfass and Maurizio Tavelli and Tobias Weinzierl},
+         keywords = {Hyperbolic, PDE, ADER-DG, Finite volumes, AMR, MPI, TBB, MPI+X},
+         abstract = {ExaHyPE (An Exascale Hyperbolic PDE Engine) is a software engine for solving systems of first-order hyperbolic partial differential equations (PDEs). Hyperbolic PDEs are typically derived from the conservation laws of physics and are useful in a wide range of application areas. Applications powered by ExaHyPE can be run on a student's laptop, but are also able to exploit thousands of processor cores on state-of-the-art supercomputers. The engine is able to dynamically increase the accuracy of the simulation using adaptive mesh refinement where required. Due to the robustness and shock capturing abilities of ExaHyPE's numerical methods, users of the engine can simulate linear and non-linear hyperbolic PDEs with very high accuracy. Users can tailor the engine to their particular PDE by specifying evolved quantities, fluxes, and source terms. A complete simulation code for a new hyperbolic PDE can often be realised within a few hours - a task that, traditionally, can take weeks, months, often years for researchers starting from scratch. In this paper, we showcase ExaHyPE's workflow and capabilities through real-world scenarios from our two main application areas: seismology and astrophysics.
+           Program summary
+           Program title: ExaHyPE-Engine Program Files doi: http://dx.doi.org/10.17632/6sz8h6hnpz.1 Licensing provisions: BSD 3-clause Programming languages: C++, Python, Fortran Nature of Problem: The ExaHyPE PDE engine offers robust algorithms to solve linear and non-linear hyperbolic systems of PDEs written in first order form. The systems may contain both conservative and non-conservative terms. Solution method: ExaHyPE employs the discontinuous Galerkin (DG) method combined with explicit one-step ADER (arbitrary high-order derivative) time-stepping. An a-posteriori limiting approach is applied to the ADER-DG solution, whereby spurious solutions are discarded and recomputed with a robust, patch-based finite volume scheme. ExaHyPE uses dynamical adaptive mesh refinement to enhance the accuracy of the solution around shock waves, complex geometries, and interesting features.
          }
        }
 """
@@ -339,8 +339,8 @@ thus appreciate any citation of the original release paper
         Add a tracer to the project
 
         We rely on the particle toolbox. Therefore, our particles have
-        already a position x, a cut off radius (which we don't usually
-        use here), and a (parallel) state. The cut-off radius determines
+        already a position x, a search radius (which we don't usually
+        use here), and a (parallel) state. The search radius determines
         how Peano sorts particles within the tree, and we can set it to
         zero here. This ensures that the particle has no real volume and
         thus is always sieved through to the finest grid level.
@@ -500,7 +500,7 @@ thus appreciate any citation of the original release paper
         self.plot_solution.add_action_set(update_particle_association_action_set)
         self.plot_solution.add_action_set(update_particle_parallel_state_action_set)
 
-        self._tracer_particles.append(particles)
+        self._tracer_particles.append(particle)
 
         return particles
 
