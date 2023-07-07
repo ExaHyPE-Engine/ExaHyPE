@@ -153,7 +153,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self._h_hydro_min = 1e-6
         self._h_hydro_max = 1.0 / 3.0 / 2  # Approximated value for coarsest grid level
         self._h_tolerance = 1e-4
-        self._h_max_iterations = 10
+        self._h_max_iterations = 30
 
         # Minimal SPH parameters
         self._alpha_av = 0.8

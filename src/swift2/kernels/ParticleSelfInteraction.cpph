@@ -2,6 +2,7 @@
 
 #include "swift2/kernels/equation_of_state.h"
 #include "swift2/kernels/kernel_hydro.h"
+#include "swift2/kernels/SmoothingLengthComputation.h"
 
 
 template <typename ParticleContainer, typename Particle>
@@ -18,15 +19,7 @@ template <typename ParticleContainer>
 void swift2::kernels::prepareDensityCalculation(const ParticleContainer& localParticles) {
   for (auto* particle : localParticles) {
     if (not particle->getIsBoundaryParticle()) {
-      particle->setDensity(0.0);
-      particle->setWcount(0.0);
-      particle->setRho_dh(0.0);
-      particle->setWcount_dh(0.0);
-      particle->setDiv_v(0.0);
-      particle->setRot_v(0.0);
-
-      /* Not originally in SWIFT */
-      particle->setNcount(0);
+      swift2::kernels::hydro_prepare_density(particle);
     }
   }
 }
@@ -34,6 +27,8 @@ void swift2::kernels::prepareDensityCalculation(const ParticleContainer& localPa
 
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculation(const ParticleContainer& localParticles) {
+
+  assertionMsg(false, "Don't use this. It's not implemented properly yet.");
 
   /* Grab static parameters */
   const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
@@ -219,6 +214,8 @@ void swift2::kernels::endDensityCalculation(const ParticleContainer& localPartic
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const ParticleContainer& localParticles) {
 
+  assertionMsg(false, "Don't use this. It's not implemented properly yet.");
+
   /* Grab static parameters */
   const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
   const double etaFactor    = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
@@ -268,6 +265,8 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const Par
 
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSearchRadius(const ParticleContainer& localParticles) {
+
+  return;
 
   /* Grab static parameters */
   const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
