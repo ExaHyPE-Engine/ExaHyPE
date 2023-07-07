@@ -282,7 +282,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         )
         self.data.add_or_replace_attribute(initial_time_step_size_attr)
 
-        if self._constant_time_step_size == True:
+        if self._constant_time_step_size:
             adjustTimeStepSize = "false"
         else:
             adjustTimeStepSize = "true"
