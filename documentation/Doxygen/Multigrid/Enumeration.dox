@@ -1,0 +1,110 @@
+/**
+
+@page multigrid_enumeration Enumeration Order
+
+Here we provide some details on the way Peano enumerates its vertices and faces. 
+It is an enumeration pattern that works in any number of dimensions.
+In many situations that we aim to solve, each of our faces and cells will have multiple 
+degrees of freedom upon them, and we shall reuse this enumeration order to allow
+users to figure out their spatial ordering.
+
+Vertex Enumeration
+======================
+
+
+First we describe how the vertices are enumerated in 2D and 3D, before describing how
+we reuse this pattern in higher dimensions.
+
+See: 
+
+@image html ../../../src/peano4/datamanagement/VertexEnumerator.png
+
+Our general pattern is:
+
+\li x axis, y axis then z axis, greedily assigning indices until each axis is saturated
+\li Left, bottom and then front first
+
+
+We describe this pattern, first in 2D. Let our vertices lie in the (x,y) plane. Assign vertices as follows:
+
+1. We assign index 0 to the vertex which has the "most negative" x and y coordinates, ie the vertex in the bottom left\n 
+2. We then move along the x axis, assigning indices until this axis is saturated (ie we move to the right, and assign index 1). We then return to the vertex at which we began at the start of this step. \n
+3. We then take one step along the y axis, assigning index 2. \n 
+4. We repeat step 2, until this axis is saturated (ie, move to the right and assign index 3). Return to the index where we began this step. 
+
+In 2D we are now done.
+
+In 3D, it's much the same. We undertake steps 1-4 as above, before returning to vertex 0. Then, take a step in the z direction, and 
+repeat steps 1-4 again. 
+
+Note that if we have some 4th dimension w, all we need to do is repeat these steps again along this dimension, greedily assigning indices
+along the x axis first, and then the y axis etc.
+
+
+Face Enumeration
+======================
+
+
+See: 
+
+@image html ../../../src/peano4/datamanagement/FaceEnumerator.png
+
+We proceed with a similar pattern to vertices, except we use the unit normal to the face.
+First, we assign the index 0 to the face whose unit normal points in the negative x direction.
+We assign the next index to the face whose unit normal points in the negative y direction,
+before assigning the next to the face that points in the negative z direction.
+
+Following this, we assign subsequent indices to the faces who unit normal vectors point in the
+positive x, y and then z directions. This extends to any number of dimensions, as long as the 
+dimensions are strictly ordered (x, y, z, etc)
+
+Degree of freedom enumeration on faces
+======================
+
+
+We describe here how we enumerate the degrees of freedom on the faces. 
+In the current setup, we aim for @f$ 3^{(d-1)} @f$ degrees of freedom per face.
+Our face degree of freedom enumeration works as follows:
+
+We assign each face an index as above. Note, for a d-dimensional cell,
+our face is of (d-1) dimensions. We describe here the d=3 situation, meaning that
+we span two dimensions for our DoF enumeration.
+
+Then, we assign face DoFs as follows:
+
+On each face, we assign DoF-index 0 to the
+DoF which lies in the bottom left of the face (most negative in the x, y and z directions).
+The face which it lies upon will point in the x, y or z direction, meaning that our 
+face will lie in the other two dimensions. Without loss of generality, we describe here
+the situation that the face we enumerate upon has its normal pointing in the x direction,
+meaning that we move in the y and z directions to perform our enumeration. Note that if we 
+were moving across any other pair of directions, we just need to perform the same steps, 
+keeping the strict ordering of dimensions (x axis, then y axis, then z axis, then further dimensions).
+
+1. Assign index 0 to the DoF that lies in the most negative position (most negative y and z coordinates)\n
+2. Move along the y axis, assigning subsequent indices until saturated. Return to index where we began at the start of this step\n
+3. Move one unit along z axis to assign the next index. If there is nowhere to go, we are then done.\n
+4. Repeat step 2 \n
+
+We then repeat the same procedure for each of the faces, keeping the enumeration order for the faces.
+ 
+@image html faceEnum.png
+
+Degree of freedom enumeration on cells
+======================
+
+
+Here we once again have a similar pattern. 
+
+1. Start with the DoF that is positioned with the most negative (x,y,z) coordinates.\n
+2. Move along the x axis, assigning indices until saturated. Once complete, return to the index first encountered at the start of this step.\n
+3. Take one step along the y axis, and repeat step 2. Once complete, return to the index first encountered at the start of this step. \n
+4. Repeat steps 2 and 3 until the (x,y) plane of this layer is saturated.\n 
+5. Return to where we began. Take one step in the z direction, and repeat steps 2-4 until saturated.
+
+The final product should look something like this:
+
+@image html cellEnum.png
+
+
+*/

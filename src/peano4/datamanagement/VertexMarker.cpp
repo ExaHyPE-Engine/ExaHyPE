@@ -83,7 +83,7 @@ tarch::la::Vector<Dimensions,double> peano4::datamanagement::VertexMarker::x() c
 
 std::string peano4::datamanagement::VertexMarker::toString() const {
   std::ostringstream msg;
-  msg << "(" << _cellCentre << "," << _h << ",hanging=" << _isHanging << ",select=" << _select << ")";
+  msg << "(cell-centre=" << _cellCentre << ",cell-h=" << _h << ",hanging=" << _isHanging << ",select=" << _select << ")";
   return msg.str();
 }
 
