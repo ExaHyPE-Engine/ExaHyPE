@@ -2,8 +2,11 @@
 
 @page multigrid_continuous_galerkin_tutorial Ritz-Galerkin Tutorial 
 
+Stuff to fix:
+\li yet to be seen but i'm pretty sure my cell vs test function indexing is off by one
+
 We write here a tutorial on the continuous Galerkin method. Hopefully it will shine some light on what goes on inside the 
-DG code. 
+DG code. I found the [notes by M. Bader quite helpful here](https://www5.in.tum.de/lehre/vorlesungen/sci_comp/ws16/pde_fem.pdf).
 
 # Formulation
 
@@ -27,6 +30,7 @@ the following situation:
 \li A 1D domain, cut up into discrete chunks of width @f$ h @f$
 \li We pick test functions @f$ \phi @f$ that are piecewise linear, and each span two cells. Furthermore normalised to a maximum height of 1
 \li We have a value for @f$ u @f$ at the boundary of each cell 
+\li Although not (currently) on the sketch, we have a value for @f$ f @f$ at the boundary of each cell 
 
 What we aim to do here is to show how we update @f$ u @f$, based on our formulation.
 
@@ -55,15 +59,130 @@ Next, let's discretise. Rather than taking an integral across the whole domain, 
   = \sum_{i, \ k} \ \int_{c_k} \ (\nabla \phi_i, \ \nabla \phi) dx \ \ \ \forall \phi
 \f}
 
-Now we are working on a cell-by-cell basis, let us examine the @f$ 0^{th} @f$ cell.
-We note that only @f$ \phi_0 @f$ is non-zero here, so our original equation reduces to:
-
-
-
 <!-- 
-next, note what has support in each cell
+WE COMMENT THIS OUT. I DON'T THINK IT'S READY YET
+
+Now we are working on a cell-by-cell basis, let us examine the @f$ 1^{st} @f$ cell.
+We note that only @f$ \phi_0 @f$ and @f$ \phi_1 @f$ are non-zero here, so our original equation reduces to:
+
+\f{eqnarray*}{
+ u_1 \ \sum_{k=1,2} \int_{c_k} (\nabla \phi_0, \ \phi_0) \ + \
+  
+   dx \ = \ 
+  \int_{c_0} (f, \ \phi_0) dx
+\f}
+
+and we drop the @f$ \forall \phi @f$ requirement since only @f$ \phi_0 @f$ is non-zero here. In effect, this
+
+@f$ \int_{c_0} (\nabla \phi_0, \ \phi_0) dx \ = \ \int_{c_0} (f, \ \phi_0) dx @f$ 
+
+will become our matrix element, as we shall see shortly.
 -->
 
+
+## The nodal basis 
+
+The basis of functions that we use in this example are piecewise linear functions, defined in 
+each cell (which is an interval of width @f$ h @f$):
+
+\f{eqnarray*}{
+  \phi_i(x) \ = \
+\begin{cases}
+  \frac{1}{h}(x - x_{i-1}) &\text{if} \ x_{i-1} \ < \ x < \ x_i \\
+  \frac{1}{h}(x_{i+1} - x) &\text{if} \ x_{i} \ < \ x < \ x_{i+1} \\
+  0                        &\text{otherwise}
+\end{cases}
+\f}
+
+And from this we can write down @f$ \nabla \phi_i @f$:
+
+\f{eqnarray*}{
+  \nabla \phi_i(x) \ = \
+\begin{cases}
+  \frac{1}{h} &\text{if} \ x_{i-1} \ < \ x < \ x_i \\
+  - \frac{1}{h} &\text{if} \ x_{i} \ < \ x < \ x_{i+1} \\
+  0                        &\text{otherwise}
+\end{cases}
+\f}
+
+And finally compute the overlap integrals. Here we integrate over the entire domain (every cell):
+
+\f{eqnarray*}{
+
+\int (\nabla \phi_i, \ \nabla \phi_i) dx \ &=& \ \int_{c_{i}} \frac{1}{h} \cdot \frac{1}{h} dx
+    + \int_{c_{i+1}} \frac{-1}{h} \cdot \frac{-1}{h} dx \ = \ \frac{2}{h} \\
+\int (\nabla \phi_i, \ \nabla \phi_{i+1}) dx \ &=& \ \int_{c{i+1}} \frac{-1}{h} \cdot \frac{1}{h} dx \ = \ \frac{1}{h}
+
+
+\f}
+
+With all other being 0, due to the lack of overlap. We used here implicitly that the cell had a width of @f$ h @f$.
+
+## Constructing our matrix elements
+
+Now it's time to properly construct our matrix. Most linear algebra problems state problems in the 
+form @f$ Au \ = \ f @f$, for some known @f$ A @f$ and @f$ f @f$, and it is our job to work
+out what @f$ u @f$ should be. We start off by fixing @f$ u0 \ \text{and} \ u_{n+1} @f$ to be 0 
+(we use Dirichlet boundary conditions).
+
+We summarise some key points:
+
+\li @f$ u_1 @f$ and @f$ u_2 @f$ lie at our end points
+\li Only \phi_1 and \phi_2 are non-zero here 
+
+<!--
+\f{eqnarray*}{
+
+  \int_{c_1} (\nabla u, \ \nabla \phi) dx \ &=& \int_{c_1} (f, \phi ) \ \ \ \forall \phi
+
+\f}
+
+-->
+We want the equation above to hold for all @f$ \phi @f$ indeed, but since we are constructing matrix elements,
+let's investigate the @f$ j \ = \ 1 @f$ element first. 
+
+
+\f{eqnarray*}{
+  \int (\nabla u, \ \nabla \phi_1) dx &=& \int (f, \phi_1) dx \\
+  \int (u_i \sum \nabla \phi_i, \ \nabla \phi_1) dx &=& \int (f, \phi_1) dx \\
+\f}
+
+We note that @f$ \phi_1 @f$ only has overlap with @f$ \phi_2 @f$ and itself:
+
+\f{eqnarray*}{
+ 
+  \int (u_1 \sum \nabla \phi_1, \ \nabla \phi_1) dx +
+  \int (u_2 \sum \nabla \phi_2, \ \nabla \phi_1) dx 
+    &=& \int (f, \phi_1) dx \\
+
+  \frac{2}{h} u_1 \ - \  \frac{1}{h} &=& \int (f, \phi_1) dx
+\f}
+
+And we can thus start constructing our problem matrix:
+
+\f{eqnarray*}{
+
+  \begin{pmatrix}
+  \int (\nabla \phi_1, \ \nabla \phi_1) dx & \int (\nabla \phi_2, \ \nabla \phi_1) & 0 & 0  & ... \\
+  ... & ... & ... & .. & ... \\
+  \end{pmatrix}
+
+  \begin{pmatrix}
+  u_1 \\
+  u_2 \\
+  u_3 \\
+  u_4\\
+  ... 
+  \end{pmatrix} \\
+
+
+\f}
+
+ADD IN THE ACTUAL VALUES IN PLACE ON ANOTHER LINE
+
+
+
+## Constructing our right-hand-side
 
 
 ## Why did we drop the surface integral?
