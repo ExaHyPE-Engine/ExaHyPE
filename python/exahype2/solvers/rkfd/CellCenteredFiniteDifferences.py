@@ -320,8 +320,8 @@ The spacetree will thus span at most """
 ExaHyPE 2 embeds """
             + str(self._patch_size)
             + """^d patches of compute cells into the finest tree level. 
-We refer to elements of this level as octant above.
-They are squares/cubes and many papers refer to them as cells, but they are not 
+In the text above, we refer to the elements of this level of the tree as octants.
+The octants are squares/cubes and many papers refer to them as cells, but they are not 
 the actual compute data structure. The compute data structure is the cells that
 are embedded into these finest level spacetree cells. We therefore prefer the 
 term octant for the latter, whereas we use the term (compute) cell for the 

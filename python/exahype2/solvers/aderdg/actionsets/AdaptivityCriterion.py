@@ -63,7 +63,11 @@ class AdaptivityCriterion(AbstractAderDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
     );
      
-    if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH ) {
+    if (
+      refinementCriterion==::exahype2::RefinementCommand::Refine 
+      and 
+      tarch::la::smaller( tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
+    ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
     else if (refinementCriterion==::exahype2::RefinementCommand::Erase ) {
@@ -83,7 +87,11 @@ class AdaptivityCriterion(AbstractAderDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
     );
      
-    if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH ) {
+    if (
+      refinementCriterion==::exahype2::RefinementCommand::Refine 
+      and 
+      tarch::la::smaller( tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissibleCellH )
+    ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
     else if (refinementCriterion==::exahype2::RefinementCommand::Erase and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleCellH ) {
