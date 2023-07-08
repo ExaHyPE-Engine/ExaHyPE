@@ -106,7 +106,7 @@ double getMinMeshSize() {
 
 
 double getMaxMeshSize() {
-  double result = 0.0;
+  double result = 0;
   {% for item in SOLVERS -%}
   result = std::max( result, {{ item[1] }}.getMaxMeshSize() );
   {# Comment to ensure that jinja2 adds a new line#}
@@ -116,9 +116,9 @@ double getMaxMeshSize() {
 
 
 double getMaxAdmissibleMeshSize() {
-  double result = 0.0;
+  double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
-  result = std::max( result, {{ item[1] }}.MaxAdmissibleCellH );
+  result = std::min( result, {{ item[1] }}.MaxAdmissibleCellH );
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
