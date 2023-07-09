@@ -445,6 +445,16 @@ namespace peano4 {
        * Sort has to work purely spatially. Otherwise, we would never be
        * able to handle strong AMR.
        *
+       * ## Comparison operator
+       *
+       * The comparison operator represents a < operator. First of all, we
+       * distinguish events that trigger different mesh sizes. That is, if
+       * you request a mesh size of h=0.1 and then of h=0.001, then the latter
+       * request is always bigger than the first one. If two events request
+       * the same mesh resolution, we first sort along the x-axis, then along
+       * the y-axis, and so forth. This way, we ensure that merges (which
+       * always merge two events next to each other) are deterministic.
+       *
        * @see merge() for a discussion
        * @param events Input and output set of grid control events
        */
