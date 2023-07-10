@@ -1,6 +1,7 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import abc
+from enum import Enum
 from dastgen2.Utils import construct_ifdef_string
 
 
@@ -21,27 +22,46 @@ class Attribute(object):
       mandatory if is_const_static = True.
     """
 
-    def __init__(
-        self, name, ifdefs=[], is_static=False, is_const_static=False, initval=None
-    ):
+    class Qualifier(Enum):
+        """!
+        classifies attribute qualifiers.
+        """
+
+        NONE = 0
+        STATIC = 1
+        CONST = 2
+        CONST_STATIC = 3
+        CONSTEXPR = 4
+
+    def __init__(self, name, ifdefs=[], qualifier=Qualifier.NONE, initval=None):
         self._name = name
         self.use_data_store = False
         self.ifdefs = ifdefs
-        self.is_static = is_static
-        self.is_const_static = is_const_static
+        self.qualifier = qualifier
         self._initval = initval
 
-        if self.is_static and self.is_const_static:
-            raise ValueError(
-                "Attribute", self._name, ": Can't be static and const static. Pick one."
-            )
-
-        if self.is_const_static and self._initval is None:
+        if (self._is_const_static or self._is_constexpr) and self._initval is None:
             raise ValueError(
                 "Attribute",
                 self._name,
                 ": You need to provide an initialisation value for a static attribute",
             )
+
+    @property
+    def _is_static(self):
+        return self.qualifier == self.Qualifier.STATIC
+
+    @property
+    def _is_const_static(self):
+        return self.qualifier == self.Qualifier.CONST_STATIC
+
+    @property
+    def _is_const(self):
+        return self.qualifier == self.Qualifier.CONST
+
+    @property
+    def _is_constexpr(self):
+        return self.qualifier == self.Qualifier.CONSTEXPR
 
     def get_public_fields(self):
         """!

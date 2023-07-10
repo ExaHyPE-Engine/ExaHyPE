@@ -6,3 +6,4 @@ from .Enumeration import Enumeration
 from .Integer import Integer
 from .IntegerArray import IntegerArray
 from .String import String
+from .Attribute import Attribute

@@ -1,5 +1,6 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+from .Attribute import Attribute
 from .Boolean import Boolean
 from dastgen2.Utils import LLVMSymbol
 
@@ -14,7 +15,15 @@ class BooleanArray(Boolean):
 
     """
 
-    def __init__(self, name, cardinality, compress=False, ifdefs=[]):
+    def __init__(
+        self,
+        name,
+        cardinality,
+        compress=False,
+        ifdefs=[],
+        qualifier=Attribute.Qualifier.NONE,
+        initval=None,
+    ):
         """
 
         C++ offers the bitset to accommodate an array of boolean flags. While
@@ -37,7 +46,11 @@ class BooleanArray(Boolean):
           use native array of boolean.
 
         """
-        Boolean.__init__(self, name, ifdefs=ifdefs)
+        if qualifier != Attribute.Qualifier.NONE:
+            raise NotImplementedError(
+                f"Attribute {name}: This data type can't work with qualifiers (yet)"
+            )
+        Boolean.__init__(self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initva)
         self._cardinality = cardinality
         self.compress = compress
 
