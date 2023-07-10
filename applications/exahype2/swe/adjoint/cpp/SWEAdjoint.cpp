@@ -70,7 +70,6 @@ void inline applications::exahype2::swe::adjoint::SWEAdjoint::run_simulation()
             checkpoint++;
         }
     }
-    exit(0);
 }
 
 applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
@@ -175,6 +174,8 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
                 << "output_file_name: " << output_file_name << std::endl
                 << "checkpoints: " << number_of_checkpoints_ << std::endl;
     this->run_simulation();
+    netcdf_writer_->~NetCDFWriter();
+    exit(0);
 }
 
 applications::exahype2::swe::adjoint::SWEAdjoint::~SWEAdjoint()
