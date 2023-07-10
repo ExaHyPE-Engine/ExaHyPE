@@ -272,6 +272,7 @@ Under the hood:
 \verbatim
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 double answer;
+int    counter;
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 \endverbatim
 

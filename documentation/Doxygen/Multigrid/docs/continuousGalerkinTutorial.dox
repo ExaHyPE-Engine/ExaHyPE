@@ -3,7 +3,6 @@
 @page multigrid_continuous_galerkin_tutorial Ritz-Galerkin Tutorial 
 
 Stuff to fix:
-\li yet to be seen but i'm pretty sure my cell vs test function indexing is off by one
 
 We write here a tutorial on the continuous Galerkin method. Hopefully it will shine some light on what goes on inside the 
 DG code. I found the [notes by M. Bader quite helpful here](https://www5.in.tum.de/lehre/vorlesungen/sci_comp/ws16/pde_fem.pdf).
@@ -44,14 +43,17 @@ as the @f$ u_i @f$. Concretely:
 Returning to the integral above, we can integrate by parts to obtain:
 
 \f{eqnarray*}{
-  &\int& ( \nabla u, \ \nabla \phi )dx \ \ \ \forall \phi \\
-  =\sum_i u_i \ &\int& (\nabla \phi_i, \ \nabla \phi) dx \ \ \ \forall \phi
+  &\int_\text{cell}& ( \nabla u, \ \nabla \phi )dx + \int_\text{face} (\nabla u \cdot \hat{n}, \ \phi) dS(x)
+   \ \ \ \forall \phi \\
+  =\sum_i u_i \ &\int& (\nabla \phi_i, \ \nabla \phi) dx 
+  + \int_\text{face} (\nabla u \cdot \hat{n}, \ \phi) dS(x)
+  \ \ \ \forall \phi
 
 \f}
 
 where in the second line we exchanged the definition of @f$ u @f$ for its expansion
-in basis functions. We also dropped the second term (the surface integral), for 
-reasons which we will explain further on. 
+in basis functions. From here onwards, we drop the surface integral term, for reasons we shall 
+explain later. 
 
 Next, let's discretise. Rather than taking an integral across the whole domain, we work cell-by-cell. We label each cell with index @f$ k @f$:
 

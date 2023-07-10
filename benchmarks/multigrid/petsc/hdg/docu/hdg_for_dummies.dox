@@ -10,15 +10,26 @@ do these come from, and what fixes the number of them?
 
 2. How do these aforementioned degrees of freedom interact with one another?
 
-3. ....
+3. How do we construct our problem matrix @f$ A @f$ and our right-hand-side @f$ u @f$?
 
 At time of writing, this document is being typed up based on discussion between TW and SB. This document
 will be, for at least much of July 2023, highly variable whilst details are ironed out. This message
 should be gone by the time there is some nice working code available.
 
 Our aim, once we clarify all of the mathematics within this setup, is to describe the machinery
-that will go into place behind the scenes. Let's begin.
+that will go into place behind the scenes. Compared to the continuous Galerkin tutorial
+(\ref multigrid_continuous_galerkin_tutorial), this tutorial will be a blend of theory and
+implementation.
+Let's begin.
 
+# How does this differ from the continuous case?
+
+Before, we required that our test functions were linear. See \ref multigrid_continuous_galerkin_tutorial. 
+Now, we drop this requirement. There's every chance we could get a more accurate solution
+by using piecewise functions that don't "connect" with each other.
+
+We now have twice as many degrees of freedom to fix: in our situation before, each test 
+function neatly spanned two cells. **Now we have a slightly different scenario**
 
 Some formulation
 ======================
@@ -45,7 +56,7 @@ The DG formulation means that we have, for a given polynomial degree @f$ n @f$, 
 
 \li @f$ (n+1)^{d} @f$ degrees of freedom per cell
 
-We note that @f$ (n+1)^{d-1} @f$ of these Dofs will then reside on the faces of this cell.
+We note that @f$ (n+1)^{d-1} @f$ Dofs will reside on each face.
 We arrange these points spatially in a Gauss-Lobatto pattern for the duration of this tutorial.
 
 @image html gaussLobatto.png
@@ -64,23 +75,28 @@ function @f$ \psi @f$, and then integrate over the cell:
 
 @f$ \int_\text{cell} ( -\text{div} \ \phi, \psi ) dxdy = \int_\text{cell} ( f, \psi ) dxdy @f$.
 
-The test function we typically use, at every point we have a degree of freedom, is the test function that is 1 at the spatial position of the degree of freedom, and 0 elsewhere.
+Obviously, we will want to integrate over the whole domain. But for now we just consider this 
+integral in each cell, as we can sum over them eventually.
+
+The test functions we use are piecewise linear, scaled such that @f$ \psi_i @f$ is 1 right above @f$ u_i @f$ and 0 elsewhere
+
+*THIS DOESN'T SQUARE WITH THERE BEING TWICE AS MANY TEST FUNCTIONS AS BEFORE. FIX THIS*
 
 Next, we want to just consider the left-hand integral. Let's integrate by parts:
 
 \f{eqnarray*}{
-      \int_\text{cell} ( -\text{div} \ \phi, \psi ) dxdy &=& \int_\text{cell} ( \phi, \text{div} \ \psi ) dxdy - \int_\text{cell} \text{div} ( \phi \psi ) dx dy \\ 
+      \int_\text{cell} ( -\text{div} \ \phi, \psi ) dxdy &=& \int_\text{cell} ( \phi, \text{div} \ \psi ) dxdy - \int_\text{cell} \text{div} ( \phi \psi ) dx dy \ \ \ \forall \psi \\ 
 
-       &=& \int_\text{cell} ( \phi, \nabla \psi ) dxdy - \int_{\partial c} \phi \cdot \hat{n} \ \psi dS(x)
+       &=& \int_\text{cell} ( \phi, \text{div} \ \psi ) dxdy - \int_{\partial c} \phi \cdot \hat{n} \ \psi dS(x) \ \ \ \forall \psi
 \f}
 
-where in the second line we use Guass divergence theorem to turn the second integral into an integral over the 
+where in the second line we use Gauss divergence theorem to turn the second integral into an integral over the 
 boundary of the cell (in other words over the face).
 
-** we don't make an approx. we introduce the approximation because phi doesn't exist on the face. add picture to demo right here **
-
 We note crucially that @f$ \phi @f$ does not exist on the face. This is because our approximate solution to @f$ u @f$ is discontinuous,
-meaning we have a jump in the gradient. So, we introduce a new variable @f$ \hat{\phi} :=  [[ \phi \cdot \hat{n} ]]@f$, which is the
+meaning we have a jump in the gradient. This is where we begin to diverge from the calculations 
+demonstrated in \ref multigrid_continuous_galerkin_tutorial.
+So, we introduce a new variable @f$ \hat{\phi} :=  [[ \phi \cdot \hat{n} ]]@f$, which is the
 average of @f$ \phi @f$ in the left cell and the right cell. Below is a simplistic depiction, with a 1D cell.
 
 @image html phiHat.png
@@ -88,15 +104,22 @@ average of @f$ \phi @f$ in the left cell and the right cell. Below is a simplist
 Having introduced this, we can rewrite the right-hand integral as:
 
 \f{eqnarray*}{
-      &\approx& \int_\text{cell} ( \phi, \nabla \psi ) dxdy - \int_\text{face} [[ \phi \cdot \hat{n} ]] \cdot \psi dS(x)
+      &\approx& \int_\text{cell} ( \phi, \nabla \psi ) \ dxdy - \int_\text{face} [[ \phi \cdot \hat{n} ]] \cdot \psi \ dS(x)
 \f}
 
 Let's now discuss how we update @f$ u @f$ every step, using this formulation.
 
+## How do we choose the basis functions this time?
+
+Again, we have piecewise linear functions, but this time they are no longer continuous.
+See the sketch below.
+
+@image html testFunctionDG.png
+
 ## The Face Integral
 
 
-If we solve our equation correctly, then our @f$ \hat{\phi} @f$ should end up in the middle. We think of this as another contraint we are placing on the solution.
+If we solve our equation correctly, then our @f$ \hat{\phi} @f$ should end up in the middle. We think of this as another constraint we are placing on the solution.
 We note also that when we enter each cell to perform some solver steps, we already
 know our approximate solution @f$ u @f$, meaning we can drop the use of our helper
 variable @f$ \phi @f$. Our solution will rest on correctly updating @f$ u @f$ and 
@@ -175,8 +198,8 @@ TEST FUNCTION ARE RITZ GALERKIN. TAKEN FROM SAME FUNCTION SPACE WE HAVE THE u so
 ## The cell integral
 
 The first term tells us about the cell-cell coupling, and the second tells us about cell-face and face-cell. This is an integral over the whole cell, which we shall take as being 2D for this demo.
-We look to update the components of @f$ \phi @f$ **should this be instead psi, the test function?**
 
+<!--
 Let's first note what the gradient along the @f$ x @f$ direction is along the bottom face. At the 
 endpoint, we have the value @f$ u^1 @f$, and at the start we have @f$ u^0 @f$. Hence the gradient along
 this face is simply @f$ (u^1 - u^0) / h @f$.
@@ -202,6 +225,68 @@ the value of the gradient on the bottom face and the value at the top face. Henc
 
   dy
 \f}
+
+-->
+
+Let's revisit the cell integral. What we are really trying to evaluate is:
+
+\f{eqnarray*}{
+  \int_\text{cell} (\phi, \ \text{div}\psi) dx \ \ \forall \psi
+
+\f}
+
+so that we can construct the problem matrix. This follows on from the continuous Galerkin
+tutorial, but we put in some implementation details here.
+
+### In theory
+
+Here we basically repeat what was in the last chapter. Make the change from 
+@f$ u @f$ to @f$ \sum_i u_i \psi_i @f$, and then write down what the matrix elements should be.
+
+
+### In practice
+
+**include a note about how we need to fetch global indices first**
+
+Recall that @f$ \phi \ = \ \nabla u \ = \ (\partial_x u, \ \partial_y u )@f$. 
+We demonstrate here how we will construct the matrix elements and/or stencil 
+when we evaluate over one cell in particular. So, taking our cell (pictured above), with 
+4 unknowns, we can first construct @f$ \phi @f$ at every point.
+
+\f{eqnarray*}{
+  \phi_x^0 \ = \ \phi_x^1 &=& \ \frac{u^1 - u^0}{h}\\
+  \phi_x^2 \ = \ \phi_x^3 &=& \ \frac{u^3 - u^2}{h}\\
+\f}
+
+where we used the fact that our approximation is piecewise linear, and so the gradient
+along each face is the same. 
+
+<--!
+We can do the same for the y-direction:
+
+\f{eqnarray*}{
+  \phi_y^0 \ = \ \phi_y^2 &=& \ \frac{u^2 - u^0}{h}\\
+  \phi_y^1 \ = \ \phi_y^3 &=& \ \frac{u^3 - u^1}{h}\\
+
+\f}
+
+TECHNICALLY CORRECT - WE CAN DO THIS IN THE Y DIRECTION. BUT INSTEAD 
+WE WILL WORK IT OUT ON THE BOTTOM FACE AND TOP FACE,
+THEN INTERPOLATE ACROSS
+
+-->
+
+#### What about the gradient of the test functions?
+
+This is slightly more interesting. 
+
+
+
+
+
+# What happens when we have a higher degree i.e. more than 1 unknown per vertex?
+
+
 
 Concluding remarks (this is how we think of things)
 ======================
