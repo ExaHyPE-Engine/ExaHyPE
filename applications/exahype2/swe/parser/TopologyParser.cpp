@@ -93,7 +93,7 @@ void applications::exahype2::swe::parser::TopologyParser::parse_bathymetry_file(
 
   bathymetry_ = new double[x_bathymetry_*y_bathymetry_];
   // Read bathymetry
-  if (NetCDFReader::readVariable2D(ncid, nc_bathymetry_bathymetry_key_, bathymetry_, x_bathymetry_, y_bathymetry_) == -1)
+  if (NetCDFReader::readVariable2D(ncid, nc_bathymetry_bathymetry_key_, bathymetry_) == -1)
   {
     std::cout << "Scenario could not be initialized: Bathymetry could not be read." << std::endl;
     return;
@@ -201,7 +201,7 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
   displacement_ = new double[x_displacement_*y_displacement_];
 
   // Read displacement
-  if (NetCDFReader::readVariable2D(ncid, nc_displacement_displacement_key_, displacement_, x_displacement_, y_displacement_) == -1)
+  if (NetCDFReader::readVariable2D(ncid, nc_displacement_displacement_key_, displacement_) == -1)
   {
     std::cout << "Scenario could not be initialized: Displacement could not be read." << std::endl;
     return;

@@ -17,22 +17,22 @@ class applications::exahype2::swe::parser::TopologyParser {
     double* bathymetry_ = nullptr;
     double* displacement_ = nullptr;
 
-    size_t x_bathymetry_ = 0;               /* length of bathymetry in x-dimension */
-    size_t y_bathymetry_ = 0;               /* length of bathymetry in y-dimension */
-    size_t x_displacement_ = 0;             /* length of displacement in x-dimension */
-    size_t y_displacement_ = 0;             /* length of displacement in y-dimension */
-    double l_nX_ = -1;                      /* length of simulation in x-dimension */
-    double l_nY_ = -1;                      /* length of simulation in y-dimension */
-    double max_x_bathymetry_ = -1;          /* highest x-coordinate in bathymetry */
-    double max_y_bathymetry_ = -1;          /* highest y-coordinate in bathymetry */
-    double min_x_bathymetry_ = 1;           /* lowest x-coordinate in bathymetry */
-    double min_y_bathymetry_ = 1;           /* lowest y-coordinate in bathymetry */
-    double max_x_displacement_ = -1;        /* highest x-coordinate in displacement */
-    double max_y_displacement_ = -1;        /* highest y-coordinate in displacement */
-    double min_x_displacement_ = 1;         /* lowest x-coordinate in displacement */
-    double min_y_displacement_ = 1;         /* lowest y-coordinate in displacement */
-    double uq_displacement_origin_x = -1;   /* origin for displacment in x-dimension for uq */
-    double uq_displacement_origin_y = -1;   /* origin for displacment in y-dimension for uq */
+    size_t x_bathymetry_ = 0;                     /* length of bathymetry in x-dimension */
+    size_t y_bathymetry_ = 0;                     /* length of bathymetry in y-dimension */
+    size_t x_displacement_ = 0;                   /* length of displacement in x-dimension */
+    size_t y_displacement_ = 0;                   /* length of displacement in y-dimension */
+    double l_nX_ = -1;                            /* length of simulation in x-dimension */
+    double l_nY_ = -1;                            /* length of simulation in y-dimension */
+    double max_x_bathymetry_ = -1;                /* highest x-coordinate in bathymetry */
+    double max_y_bathymetry_ = -1;                /* highest y-coordinate in bathymetry */
+    double min_x_bathymetry_ = 1;                 /* lowest x-coordinate in bathymetry */
+    double min_y_bathymetry_ = 1;                 /* lowest y-coordinate in bathymetry */
+    double max_x_displacement_ = -1;              /* highest x-coordinate in displacement */
+    double max_y_displacement_ = -1;              /* highest y-coordinate in displacement */
+    double min_x_displacement_ = 1;               /* lowest x-coordinate in displacement */
+    double min_y_displacement_ = 1;               /* lowest y-coordinate in displacement */
+    double uq_displacement_origin_x = INFINITY;   /* origin for displacment in x-dimension for uq */
+    double uq_displacement_origin_y = INFINITY;   /* origin for displacment in y-dimension for uq */
     
     const char *nc_bathymetry_x_key_;
     const char *nc_bathymetry_y_key_;

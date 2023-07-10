@@ -55,6 +55,15 @@ namespace applications::exahype2::swe::parser::NetCDFReader
     float *getGlobalAttFloat(int ncid, const char *name);
 
     /**
+     * @brief reads the global attribute name of type double and returns an array containing all the associated values.
+     * 
+     * @param ncid id of the netCDF file.
+     * @param name name of the attribute.
+     * @return double* array with the values stored in the attribute or nullptr if unsuccessfull.
+     */
+    double *getGlobalAttDouble(int ncid, const char *name);
+
+    /**
      * @brief reads the global attribute name of type text and returns an array containing all the associated values.
      * 
      * @param ncid id of the netCDF file.
@@ -91,11 +100,9 @@ namespace applications::exahype2::swe::parser::NetCDFReader
      * @param ncid Pointer to location where returned netCDF ID is to be stored.
      * @param key variable name for which data is loaded.
      * @param variable Array where data is stored.
-     * @param rows count of rows of the array.
-     * @param cols count of columns of the array.
      * @return 0 iff successfull, -1 otherwise.
      */
-    int readVariable2D(int ncid, const char *key, double *variable, size_t rows, size_t cols);
+    int readVariable2D(int ncid, const char *key, double *variable);
 
     /**
      * @brief Read contents of a 2D double variable from netCDF file into 2D array starting at a specified first-dimension value.

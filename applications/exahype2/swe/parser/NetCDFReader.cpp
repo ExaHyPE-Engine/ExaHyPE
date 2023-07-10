@@ -57,6 +57,19 @@
         return tmp;
     }
 
+    double* applications::exahype2::swe::parser::NetCDFReader::getGlobalAttDouble(int ncid, const char *name)
+    {
+        size_t len;
+        if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR || len == 0)
+            return nullptr;
+
+        double *tmp = new double[len];
+        if (nc_get_att_double(ncid, NC_GLOBAL, name, tmp) != NC_NOERR)
+            return nullptr;
+
+        return tmp;
+    }
+
     char* applications::exahype2::swe::parser::NetCDFReader::getGlobalAttText(int ncid, const char *name)
     {
         size_t len;
@@ -101,7 +114,7 @@
         return 0;
     }
 
-    int applications::exahype2::swe::parser::NetCDFReader::readVariable2D(int ncid, const char *key, double *variable, size_t rows, size_t cols)
+    int applications::exahype2::swe::parser::NetCDFReader::readVariable2D(int ncid, const char *key, double *variable)
     {
         int varidkey;
         if (nc_inq_varid(ncid, key, &varidkey) != NC_NOERR)
