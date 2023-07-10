@@ -11,6 +11,11 @@ import peano4.dastgen2.MPI
 from peano4.output.Helper import using_cuda_backend
 
 class DaStGen2Generator(object):
+  """! 
+  
+  Simple generator mapping a DaStGen2 object onto a plain C++ class
+  
+  """  
   def __init__(self,data):
     self._data = data
     
@@ -47,7 +52,7 @@ class DaStGen2Generator(object):
 
 
 class DaStGen2(DoF):
-  """
+  """!
   
     A DaStGen2 data type generator. To add fields to this object, just
     use the DaStGen2 instance data of this field, i.e. data.add_attribute().

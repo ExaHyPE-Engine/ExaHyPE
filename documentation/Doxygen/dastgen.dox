@@ -29,7 +29,7 @@ natively via MPI. Further to that, Peano defines further plug-ins (aspects) that
 you can add if an object represents face or vertex data, e.g. In this case,
 Peano will expect the created routines to provide merge routines which specify
 how to merge copies at the domain boundaries, or it needs some boolean functions
-which point out whether to exchange boundary data or not. This can be done in
+which point out whether to exchange bou\ndary data or not. This can be done in
 Python by adding the corresponding aspects which in turn just inject additional
 C++ functions into the generated code.
 
@@ -81,5 +81,25 @@ create a DaStGen2 model. The returned object then host the right aspects
 already. You can nevertheless add further aspects.
 
 
+
+# Aggressive vectorisation
+
+Most compilers need aggressive inlining before they can start to vectorise.
+Inlining is - without IPO - only possible if the setters and getters are all
+in the header, i.e. if they are exposed. DaStGen by default produces clean
+C++ code with a clear separation of headers and implementation. If you want 
+the tool to abandon that principle, you have to set the expose_in_header 
+flag for your attributes.
+
+If you want this to happen for all attributes, call
+dastgen2.DataModel.expose_all_attributes_in_header_file(). The routine runs
+over all attributes and sets the expose flag.
+
+I do not make expose the default, as we know that all-in-the-header code
+typically produces vast executables and long compilation time. For a lot of 
+routines, it is also not required, and for GPUs it seems not to play a role
+anyway, as you can always inline later via IPO. Finally, we hope for IPO to
+become, on the long term, universally supported everywhere such that we can 
+return to a clear separation of declaration and definition.
 
 */

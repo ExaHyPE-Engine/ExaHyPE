@@ -139,7 +139,17 @@ discusses their usage. Also, you might want to look into
 
 Before you start, I recommend to read through @ref page_peano_performance_optimisation "the generic performance analysis"
 comments. Notably the remarks on compiler feedback (with the Intel toolchain)
-are of great value and can support any optimisation.
+are of great value and can support any optimisation. Furthermore, study the 
+@ref page_dastgen "DaStGen documentation" for remarks how to move getters and
+settings into the header, as almost all C++ compilers will need this for 
+aggressive vectorisation. Notably study the semantics of the function
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+particle.data.expose_all_attributes_in_header_file()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which moves all attribute setters and getters into the header and hence 
+facilitiates very aggressive inlining via copy n paste.
 
 
  */

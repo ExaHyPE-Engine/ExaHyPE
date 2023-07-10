@@ -9,6 +9,8 @@ class Attribute(object):
     """!
 
     Represents one attribute.
+    
+    This is the superclass of all attributes tied 
 
     is_static: bool
       if True, make attribute static.
@@ -33,12 +35,48 @@ class Attribute(object):
         CONST_STATIC = 3
         CONSTEXPR = 4
 
-    def __init__(self, name, ifdefs=[], qualifier=Qualifier.NONE, initval=None):
+    def __init__(self, 
+                 name, 
+                 ifdefs=[], 
+                 qualifier=Qualifier.NONE, 
+                 initval=None,
+                 expose_in_header_file=False,
+                 ):
+        """
+
+name: String
+  This is a plain string which has to follow the C++ naming conventions, i.e. 
+  it is case-sensitive and may not contain any special characters besides the
+  underscore. If also has to be unique within the enclosing data model.
+  However, this uniqueness is a C++ constraint. A DaStGen model can hold the 
+  same attribute multiple times, as long as their ifdefs are different and 
+  hence mask them out, i.e. ensure that only version is "active" at any 
+  compile run.
+ 
+ifdefs: [String]
+  A set of strings which have to hold at compile time to determine if this 
+  attribute does exist or not.
+  
+qualifier: Qualifier
+  An additional qualifier.
+  
+initval
+  Initial value. The type depends on underlying type. But you can always pass
+  in a string that evaluates to the correct type.
+
+expose_in_header_file: Boolean
+  Flag that determines if an attribute's setters and getters should have an 
+  implementation within the header or if the generated C++ code should strictly
+  separate declaration and definition and stick the latter into a separate 
+  implementation and hence object file.
+
+        """
         self._name = name
         self.use_data_store = False
         self.ifdefs = ifdefs
         self.qualifier = qualifier
         self._initval = initval
+        self.expose_in_header_file = expose_in_header_file
 
         if (self._is_const_static or self._is_constexpr) and self._initval is None:
             raise ValueError(
@@ -81,9 +119,14 @@ class Attribute(object):
         entry is a tuple. Its first entry is the signature of the function
         (not including the semicolon), the second entry is the return type.
 
-        for_declaration: bool
+        for_declaration: Boolean
             if True, assume we want method names for function declaration, not
-            definition.
+            definition. Some generators might - for example - add additional
+            annotations for the declaration such as Clang attributes. The 
+            most frequently used use case for this flag is the static 
+            annotation. To make a function a class function, you have to 
+            declare it as static. But the definition does not allow you to 
+            repeat that static keyword again.
 
         """
         return

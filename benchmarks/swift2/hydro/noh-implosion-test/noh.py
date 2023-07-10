@@ -229,6 +229,8 @@ if args.mantissa_size > 0:
     particle.v_full.valid_mantissa_bits = args.mantissa_size
     particle.u_full.valid_mantissa_bits = args.mantissa_size
 
+particle.data.expose_all_attributes_in_header_file()
+
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
