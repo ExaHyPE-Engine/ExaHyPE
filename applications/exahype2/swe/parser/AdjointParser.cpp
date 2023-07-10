@@ -11,11 +11,15 @@ applications::exahype2::swe::parser::AdjointParser::AdjointParser(const char *ad
 }
 
 applications::exahype2::swe::parser::AdjointParser::~AdjointParser(){
-    delete this->eta_;
-    delete this->timestamps_; 
+    delete this->adjoint_h_;
+    delete this->adjoint_hu_;
+    delete this->adjoint_hv_;
+    delete this->adjoint_b_;
+    delete this->adjoint_timestamps_; 
 }
 
 void applications::exahype2::swe::parser::AdjointParser::interpolate_values(size_t i_index, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b, double *interpolated_values){
+    // TODO: Either reverse time in time dependet adjoint arrays OR access them from end to start! 
     return;
 }
 
@@ -25,11 +29,15 @@ double applications::exahype2::swe::parser::AdjointParser::calculate_inner_produ
 
     double interpolated_values[4]{0};
     interpolate_values(i_index, i_x, i_y, i_eta, i_hu, i_hv, i_b, interpolated_values);
+    // interpolated_values[0] is h
+    // interpolated_values[1] is hu
+    // interpolated_values[2] is hv
+    // interpolated_values[3] is bathymetry
 
-    if(interpolated_values[3] - interpolated_values[0] >= 0.f)
+    if(interpolated_values[3] >= 0.f)
         return 0.f;
     
-    return std::abs(i_eta * interpolated_values[3] 
+    return std::abs(i_eta * (interpolated_values[0] + interpolate_values[3])
                     + i_hu * interpolated_values[1]
                     + i_hv * interpolated_values[2]);
 }
@@ -40,12 +48,11 @@ double applications::exahype2::swe::parser::AdjointParser::max_inner_product(dou
     {
         double t_nm = 0.f;
         if(i > 0)
-            t_nm = timestamps_[i-1];
+            t_nm = adjoint_timestamps_[i-1];
         
-        // TODO: Parse t_f and t_s from netCDF file
         // Is i_t smaller than next timestamp in adjoint solution
         // AND is i_t in the time window for guided AMR?
-        if(i_t < timestamps_[i] && t_nm <= i_t + (t_f - t_s))
+        if(i_t < adjoint_timestamps_[i] && t_nm <= i_t + (t_f - t_s))
         {
             double inner_product_previous = 0.f;
             double inner_product_current = calculate_inner_product(i, i_x, i_y, i_eta, i_hu, i_hv, i_b);
@@ -76,64 +83,107 @@ void applications::exahype2::swe::parser::AdjointParser::parse_adjoint_file(cons
         return;
     }
 
-    timestamps_ = new double[number_timestamps_]
+    adjoint_timestamps_ = new double[number_timestamps_]
 
     // Read time of the last checkpoint written in netCDF.
     {
-        if (NetCDFReader::readVariable1D(ncid, "time", timestamps_) != 0)
+        if (NetCDFReader::readVariable1D(ncid, "time", adjoint_timestamps_) != 0)
         {
             std::cout << "Guided AMR could not be initialized: Timestamps not found." << std::endl;
             return;
         }
     }
 
-    // TODO: Timestamps might have to be reversed? Since adjoint simulation goes from end to beginning.
-    // I.e.: double tmp = timestamps_[i]; timestamps_[i] = t_f - timestamps_[len-1-i]; timestamps[len-1-i] = t_f - tmp;
-
     // Read x-dimension of adjoint data
-    if ((x_eta_ = NetCDFReader::getDimension(ncid, "x")) == 0)
+    if ((size_x_adjoint_ = NetCDFReader::getDimension(ncid, "x")) == 0)
     {
     std::cout << "Guided AMR could not be initialized: Dimension of the x-Adjoint could not be read." << std::endl;
     return;
     }
 
     // Read y-dimension of adjoint data
-    if ((y_eta_ = NetCDFReader::getDimension(ncid, "y")) == 0)
+    if ((size_y_adjoint_ = NetCDFReader::getDimension(ncid, "y")) == 0)
     {
     std::cout << "Guided AMR could not be initialized: Dimension of the y-Adjoint could not be read." << std::endl;
     return;
     }
 
-    eta_ = new double[number_timestamps_*x_eta_*y_eta_];
-    // Read eta
-    if (NetCDFReader::readVariable3DHyperslab(ncid, "eta", eta_, x_eta_, y_eta_, 0, number_timestamps_) == -1)
+    adjoint_h_ = new double[number_timestamps_*size_x_adjoint_*size_y_adjoint_];
+    // Read h
+    if (NetCDFReader::readVariable3DHyperslab(ncid, "h", adjoint_h_, size_x_adjoint_, size_y_adjoint_, 0, number_timestamps_) == -1)
     {
-    std::cout << "Guided AMR could not be initialized: Eta could not be read." << std::endl;
+    std::cout << "Guided AMR could not be initialized: Adjoint h could not be read." << std::endl;
+    return;
+    }
+
+    adjoint_hu_ = new double[number_timestamps_*size_x_adjoint_*size_y_adjoint_];
+    // Read hu
+    if (NetCDFReader::readVariable3DHyperslab(ncid, "hu", adjoint_hu_, size_x_adjoint_, size_y_adjoint_, 0, number_timestamps_) == -1)
+    {
+    std::cout << "Guided AMR could not be initialized: Adjoint hu could not be read." << std::endl;
+    return;
+    }
+
+    adjoint_hv_ = new double[number_timestamps_*size_x_adjoint_*size_y_adjoint_];
+    // Read hv
+    if (NetCDFReader::readVariable3DHyperslab(ncid, "hv", adjoint_hv_, size_y_adjoint_, size_x_adjoint_, 0, number_timestamps_) == -1)
+    {
+    std::cout << "Guided AMR could not be initialized: Adjoint hv could not be read." << std::endl;
+    return;
+    }
+    
+    adjoint_b_ = new double[size_x_adjoint_*size_y_adjoint_];
+    // Read b
+    if (NetCDFReader::readVariable2D(ncid, "b", adjoint_b_) == -1)
+    {
+    std::cout << "Guided AMR could not be initialized: Adjoint bathymetry could not be read." << std::endl;
     return;
     }
 
     // Get max and min x
     {
-    double tmp[x_eta_]{0};
+    double tmp[size_x_adjoint_]{0};
     if (NetCDFReader::readVariable1D(ncid, "x", tmp) == -1)
     {
         std::cout << "Guided AMR could not be initialized: Adjoint x indices could not be read." << std::endl;
         return;
     }
-    min_x_eta_ = tmp[0];
-    max_x_eta_ = tmp[x_eta_ - 1];
+    min_x_adjoint_ = tmp[0];
+    max_x_adjoint_ = tmp[size_x_adjoint_ - 1];
     }
 
     // Get max and min y
     {
-    double tmp[y_eta_]{0};
+    double tmp[size_y_adjoint_]{0};
     if (NetCDFReader::readVariable1D(ncid, "y", tmp) == -1)
     {
         std::cout << "Guided AMR could not be initialized: Adjoint y indices could not be read." << std::endl;
         return;
     }
-    min_y_eta_ = tmp[0];
-    max_y_eta_ = tmp[y_eta_ - 1];
+    min_y_adjoint_ = tmp[0];
+    max_y_adjoint_ = tmp[size_y_adjoint_ - 1];
+    }
+
+    // Read end time
+    {
+        double *tmp = nullptr;
+        if((tmp = NetCDFReader::getGlobalAttDouble(ncid, "end_time")) == nullptr)
+        {
+            std::cout << "Guided AMR could not be initialized: Adjoint end_time could not be read." << std::endl;
+            return;
+        }
+        t_f_ = tmp[0];
+    }
+
+    // Read start time
+    {
+        double *tmp = nullptr;
+        if((tmp = NetCDFReader::getGlobalAttDouble(ncid, "start_time")) == nullptr)
+        {
+            std::cout << "Guided AMR could not be initialized: Adjoint start_time could not be read." << std::endl;
+            return;
+        }
+        t_s_ = tmp[0];
     }
 
     // Close adjoint netCDF file
