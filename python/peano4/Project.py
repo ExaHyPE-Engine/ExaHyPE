@@ -162,7 +162,7 @@ class Project (object):
         from peano4.output.Helper import find_CMake_build_dir
         cmake_build_dir = find_CMake_build_dir()
         if cmake_build_dir != "":
-          command = f"cd {cmake_build_dir} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
+          command = f"cd {cmake_build_dir} && cmake .. && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
           process = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
           process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)

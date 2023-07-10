@@ -97,7 +97,7 @@ FORTRAN_MODULE_OBJS={% for module in FORTRAN_MODULES -%} {{module | replace(".f9
 
 {% if USING_CMAKE %}
 all:
-	bash -c "{{CMAKE_MAKE_COMMAND}} && cmake .. && make $(MAKEFLAGS) {{EXECUTABLENAME}}"
+	bash -c "{{CMAKE_MAKE_COMMAND}} && cmake .. && cmake .. && make $(MAKEFLAGS) {{EXECUTABLENAME}}"
 {% else %}
 all: solver
 {% endif %}
