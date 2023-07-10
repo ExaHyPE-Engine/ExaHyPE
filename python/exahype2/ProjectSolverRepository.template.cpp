@@ -155,6 +155,14 @@ double getMaxTimeStepSize() {
 }
 
 
+void suspendSolversForOneGridSweep() {
+  {% for item in SOLVERS -%}
+  {{ item[1] }}.suspendSolversForOneGridSweep();
+  {# Comment to ensure that jinja2 adds a new line#}
+  {%- endfor %}
+}
+
+
 void startGridConstructionStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.startGridConstructionStep();

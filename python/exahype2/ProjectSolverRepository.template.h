@@ -107,6 +107,8 @@
   bool isFirstGridSweepOfTimeStep();
   bool isLastGridSweepOfTimeStep();
 
+  void suspendSolversForOneGridSweep();
+
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}
