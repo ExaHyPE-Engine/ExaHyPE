@@ -8,16 +8,14 @@ class Boolean(Attribute):
         self,
         name,
         ifdefs=[],
-        is_static=False,
-        is_const_static=False,
+        qualifier=Attribute.Qualifier.NONE,
         initval=None,
     ):
         Attribute.__init__(
             self,
             name,
             ifdefs,
-            is_static=is_static,
-            is_const_static=is_const_static,
+            qualifier=qualifier,
             initval=initval,
         )
 
@@ -27,22 +25,32 @@ class Boolean(Attribute):
         accessor_name = self._name[:1].title() + self._name[1:]
         methods = []
 
-        if self.is_static and for_declaration:
-            qualifiers = "static "
-        if self.is_const_static:
+        if self._is_static:
             if for_declaration:
-                qualifiers = "static const "
+                getter = ("get" + accessor_name + "()", "static bool")
             else:
-                qualifiers = "const "
+                getter = ("get" + accessor_name + "()", "bool")
 
-        if self.is_static or self.is_const_static:
-            getter = ("get" + accessor_name + "()", qualifiers + "bool")
+        elif self._is_const_static:
+            if for_declaration:
+                getter = ("get" + accessor_name + "()", "const static bool")
+            else:
+                getter = ("get" + accessor_name + "()", "const bool")
+
+        elif self._is_const:
+            getter = ("get" + accessor_name + "()", "const bool")
+
+        elif self._is_constexpr:
+            getter = ("get" + accessor_name + "()", "constexpr bool")
+
         else:
+            # default case.
             getter = ("get" + accessor_name + "() const", "bool")
 
         methods.append(getter)
 
-        if not self.is_const_static:
+        # Add a setter method, if it makes sense.
+        if not (self._is_const_static or self._is_const or self._is_constexpr):
             methods.append(("set" + accessor_name + "(bool value)", "void"))
 
         return methods
@@ -51,12 +59,17 @@ class Boolean(Attribute):
         typestring = "bool"
         namestring = "_" + self._name
         # add const/static qualifiers and initialization values, if needed
-        if self.is_static:
+        if self._is_static:
             typestring = "inline static bool"
             if self._initval is not None:
                 namestring += " = " + str(self._initval)
-        elif self.is_const_static:
+        elif self._is_const_static:
             typestring = "inline const static bool"
+            namestring += " = " + str(self._initval)
+        elif self._is_const:
+            raise NotImplementedError
+        elif self._is_constexpr:
+            typestring = "constexpr static bool"
             namestring += " = " + str(self._initval)
 
         if self.compress:

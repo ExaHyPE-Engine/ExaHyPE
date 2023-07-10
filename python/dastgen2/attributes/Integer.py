@@ -10,8 +10,7 @@ class Integer(Attribute):
         min_value=None,
         max_value=None,
         ifdefs=[],
-        is_static=False,
-        is_const_static=False,
+        qualifier=Attribute.Qualifier.NONE,
         initval=None,
     ):
         """
@@ -25,8 +24,7 @@ class Integer(Attribute):
             self,
             name,
             ifdefs,
-            is_static=is_static,
-            is_const_static=is_const_static,
+            qualifier=qualifier,
             initval=initval,
         )
         self._min_value = min_value
@@ -36,24 +34,32 @@ class Integer(Attribute):
         accessor_name = self._name[:1].title() + self._name[1:]
         methods = []
 
-        qualifiers = ""
-
-        if self.is_static and for_declaration:
-            qualifiers = "static "
-        if self.is_const_static:
+        if self._is_static:
             if for_declaration:
-                qualifiers = "static const "
+                getter = ("get" + accessor_name + "()", "static int")
             else:
-                qualifiers = "const "
+                getter = ("get" + accessor_name + "()", "int")
 
-        if self.is_static or self.is_const_static:
-            getter = ("get" + accessor_name + "()", qualifiers + "int")
+        elif self._is_const_static:
+            if for_declaration:
+                getter = ("get" + accessor_name + "()", "const static int")
+            else:
+                getter = ("get" + accessor_name + "()", "const int")
+
+        elif self._is_const:
+            getter = ("get" + accessor_name + "()", "const int")
+
+        elif self._is_constexpr:
+            getter = ("get" + accessor_name + "()", "constexpr int")
+
         else:
+            # default case.
             getter = ("get" + accessor_name + "() const", "int")
 
         methods.append(getter)
 
-        if not self.is_const_static:
+        # Add a setter method, if it makes sense.
+        if not (self._is_const_static or self._is_const or self._is_constexpr):
             methods.append(("set" + accessor_name + "(int value)", "void"))
 
         return methods
@@ -62,12 +68,17 @@ class Integer(Attribute):
         typestring = "int"
         namestring = "_" + self._name
         # add const/static qualifiers and initialization values, if needed
-        if self.is_static:
+        if self._is_static:
             typestring = "inline static int"
             if self._initval is not None:
                 namestring += " = " + str(self._initval)
-        elif self.is_const_static:
+        elif self._is_const_static:
             typestring = "inline const static int"
+            namestring += " = " + str(self._initval)
+        elif self._is_const:
+            raise NotImplementedError
+        elif self._is_constexpr:
+            typestring = "constexpr static int"
             namestring += " = " + str(self._initval)
 
         if self._min_value is None and self._max_value is None:
@@ -85,10 +96,10 @@ class Integer(Attribute):
     def get_method_body(self, signature):
         if signature.startswith("get") and self.use_data_store:
             return "  return _dataStore._" + self._name + ";\n"
-        elif signature.startswith("set") and self.use_data_store:
-            return "  _dataStore._" + self._name + " = value;\n"
         elif signature.startswith("get") and not self.use_data_store:
             return "  return _" + self._name + ";\n"
+        elif signature.startswith("set") and self.use_data_store:
+            return "  _dataStore._" + self._name + " = value;\n"
         elif signature.startswith("set") and not self.use_data_store:
             return "  _" + self._name + " = value;\n"
         else:
