@@ -39,7 +39,7 @@ What we aim to do here is to show how we update @f$ u @f$, based on our formulat
 From here onwards, we pick our @f$ u @f$ to be a member of some space of polynomials, and we label the coefficients/weights
 as the @f$ u_i @f$. Concretely:
 
-@f$ u = \sum u_i \ \phi_i @f$.
+@f$ u = \sum_i u_i \ \phi_i @f$.
 
 Returning to the integral above, we can integrate by parts to obtain:
 
@@ -111,7 +111,7 @@ And finally compute the overlap integrals. Here we integrate over the entire dom
 
 \int (\nabla \phi_i, \ \nabla \phi_i) dx \ &=& \ \int_{c_{i}} \frac{1}{h} \cdot \frac{1}{h} dx
     + \int_{c_{i+1}} \frac{-1}{h} \cdot \frac{-1}{h} dx \ = \ \frac{2}{h} \\
-\int (\nabla \phi_i, \ \nabla \phi_{i+1}) dx \ &=& \ \int_{c{i+1}} \frac{-1}{h} \cdot \frac{1}{h} dx \ = \ \frac{1}{h}
+\int (\nabla \phi_i, \ \nabla \phi_{i+1}) dx \ &=& \ \int_{c_{i+1}} \frac{-1}{h} \cdot \frac{1}{h} dx \ = \ \frac{1}{h}
 
 
 \f}
@@ -122,13 +122,13 @@ With all other being 0, due to the lack of overlap. We used here implicitly that
 
 Now it's time to properly construct our matrix. Most linear algebra problems state problems in the 
 form @f$ Au \ = \ f @f$, for some known @f$ A @f$ and @f$ f @f$, and it is our job to work
-out what @f$ u @f$ should be. We start off by fixing @f$ u0 \ \text{and} \ u_{n+1} @f$ to be 0 
+out what @f$ u @f$ should be. We start off by fixing @f$ u_0 \ \text{and} \ u_{n+1} @f$ to be 0 
 (we use Dirichlet boundary conditions).
 
 We summarise some key points:
 
 \li @f$ u_1 @f$ and @f$ u_2 @f$ lie at our end points
-\li Only \phi_1 and \phi_2 are non-zero here 
+\li Only @f$\phi_1@f$ and @f$\phi_2@f$ are non-zero here 
 
 <!--
 \f{eqnarray*}{
@@ -138,6 +138,8 @@ We summarise some key points:
 \f}
 
 -->
+
+### The j = 1 Element
 We want the equation above to hold for all @f$ \phi @f$ indeed, but since we are constructing matrix elements,
 let's investigate the @f$ j \ = \ 1 @f$ element first. 
 
@@ -151,20 +153,40 @@ We note that @f$ \phi_1 @f$ only has overlap with @f$ \phi_2 @f$ and itself:
 
 \f{eqnarray*}{
  
-  \int (u_1 \sum \nabla \phi_1, \ \nabla \phi_1) dx +
-  \int (u_2 \sum \nabla \phi_2, \ \nabla \phi_1) dx 
+  \int (u_1 \nabla \phi_1, \ \nabla \phi_1) dx +
+  \int (u_2 \nabla \phi_2, \ \nabla \phi_1) dx 
     &=& \int (f, \phi_1) dx \\
 
-  \frac{2}{h} u_1 \ - \  \frac{1}{h} &=& \int (f, \phi_1) dx
+  \frac{2}{h} u_1 \ - \  \frac{1}{h}u_2 &=& \int (f, \phi_1) dx
 \f}
 
+
+### The j = 2 Element
+
+Let's do the same thing again. This time we have overlap with @f$ \phi_1 @f$ and @f$ \phi_3 @f$:
+
+\f{eqnarray*}{
+  \int (\nabla u, \ \nabla \phi_2) dx &=& \int (f, \phi_2) dx \\
+  \int (u_i \sum \nabla \phi_i, \ \nabla \phi_2) dx &=& \int (f, \phi_2) dx \\
+  \int (u_1 \nabla \phi_1, \ \nabla \phi_1) dx +
+  \int (u_2 \nabla \phi_2, \ \nabla \phi_2) dx +
+  \int (u_2 \nabla \phi_2, \ \nabla \phi_3) dx 
+    &=& \int (f, \phi_2) dx \\
+
+  -\frac{1}{h} u_1 \ + \frac{2}{h} u_2 \ - \  \frac{1}{h}u_3 &=& \int (f, \phi_2) dx
+  
+\f}
+
+We can see here where the well-known 1D Poisson stencil (-1, 2, -1) comes from.
+
+##The Problem Matrix
 And we can thus start constructing our problem matrix:
 
 \f{eqnarray*}{
 
-  \begin{pmatrix}
-  \int (\nabla \phi_1, \ \nabla \phi_1) dx & \int (\nabla \phi_2, \ \nabla \phi_1) & 0 & 0  & ... \\
-  ... & ... & ... & .. & ... \\
+  &\begin{pmatrix}
+  \int (\nabla \phi_1, \ \nabla \phi_1) dx & \int (\nabla \phi_2, \ \nabla \phi_1) dx & 0 & 0  & ... \\
+  \int (\nabla \phi_1, \ \nabla \phi_2) dx & \int (\nabla \phi_2, \ \nabla \phi_2) dx & \int (\nabla \phi_3, \ \nabla \phi_2) dx & 0  & ... \\
   \end{pmatrix}
 
   \begin{pmatrix}
@@ -175,17 +197,69 @@ And we can thus start constructing our problem matrix:
   ... 
   \end{pmatrix} \\
 
+= \frac{1}{h} &\begin{pmatrix}
+  2 & 1 & 0 & 0 & ... \\
+  -1 & 2 & -1 & 0 & ... \\
+\end{pmatrix}
+
+  \begin{pmatrix}
+  u_1 \\
+  u_2 \\
+  u_3 \\
+  u_4\\
+  ... 
+  \end{pmatrix} \\
 
 \f}
 
-ADD IN THE ACTUAL VALUES IN PLACE ON ANOTHER LINE
+In particular, our matrix elements will be:
 
+\f{eqnarray*}{
 
+A_{ij} = \int (\nabla \phi_j, \ \nabla \phi_i) dx 
+
+\f}
+
+By construction, this will be a sparse matrix, as these basis functions are chosen to not overlap
+with each other almost everywhere. In other words, they have only local support.
 
 ## Constructing our right-hand-side
 
+We can read off the right hand side values, by taking our known right-hand-side @f$ f @f$ and 
+integrating against an appropriate test function:
+
+\f{eqnarray*}{
+  f_i = \int (f, \phi_i) dx
+
+\f}
+
+Please excuse the slight abuse of notation here. There should probably be a clearer indication that
+we move from a known, continuous @f$ f @f$ to some discrete @f$ f_i @f$.
 
 ## Why did we drop the surface integral?
 
+We can demonstrate simply. It's worth doing, as when we discuss the discontinuous version of this
+scenario, it will no longer disappear.
+
+We take our left-hand-side and discretise it; we integrate over each cell and then take the sum 
+across each of the cells. We also consider the terms that enter the @f$ k^{th} @f$ row, so we 
+are integrating with @f$ \phi_k @f$:
+
+\f{eqnarray*}{
+  \int (-\Delta u, \ \phi_k) dx 
+    = \sum_j &\int_{c_j}& (\nabla u, \ \nabla \phi_k) dx \\
+    - &\int_{\partial c_j^-}& (\nabla u \cdot \hat{n_{j_-}}, \ \phi_k) dS(c_j^-) \\
+    - &\int_{\partial c_j^+}& (\nabla u \cdot \hat{n_{j_+}}, \ \phi_k) dS(c_j^+)
+\f}
+
+### What do all these terms mean? 
+
+\li @f$ \partial c_j^\pm @f$ denotes the right and left boundaries of the cell, respectively.
+\li @f$ \hat{n_{j_\pm}} @f$ denotes the vector that is normal to the cell at the right and left boundaries respectively.
+
+We can afford to lose these last two terms, since they will both appear in consecutive terms of 
+the sum across @f$ j @f$, but with opposite signs; 
+@f$ \hat{n_{j_+}} \ = \ -\hat{n_{{n+1}_-}} @f$,
+hence each of these terms will disappear in a telescopic fashion.
 
 */
