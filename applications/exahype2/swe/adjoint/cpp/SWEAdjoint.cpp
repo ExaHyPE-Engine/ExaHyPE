@@ -54,10 +54,11 @@ bool inline applications::exahype2::swe::adjoint::SWEAdjoint::hump_criterion_cir
 
 void inline applications::exahype2::swe::adjoint::SWEAdjoint::run_simulation()
 {
-    auto dimensional_splitting = Dimensional_Splitting(l_nX_, l_nY_, cell_size_, cell_size_, h_, hu_, hv_, b_);
+    auto dimensional_splitting = DimensionalSplitting(l_nX_, l_nY_, cell_size_, cell_size_, h_, hu_, hv_, b_);
     double t = 0.0;
     size_t checkpoint = 0;
-    // TODO write to file
+    netcdf_writer_->writeTimeStep(h_, hu_, hv_, t, checkpoint);
+    exit(0);
     checkpoint++;
     while(t < end_time_)
     {
@@ -93,12 +94,18 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
     area_of_interest_coord_2_(area_of_interest_coord_2),
     area_of_interest_coord_3_(area_of_interest_coord_3),
     start_time_(start_time),
-    number_of_checkpoints_(checkpoints),
-    topology_parser_(new applications::exahype2::swe::parser::TopologyParser(bathymetry_file_path, width_x, width_y, nc_key_x, nc_key_y, nc_key_bathymetry))
+    number_of_checkpoints_(checkpoints)
 {
     // calculate number of cells for each dimension
     l_nX_ = floor(width_x_ / cell_size_);
     l_nY_ = floor(width_y_ / cell_size_);
+
+    topology_parser_ = new applications::exahype2::swe::parser::TopologyParser(bathymetry_file_path, l_nX_, l_nY_, nc_key_x, nc_key_y, nc_key_bathymetry);
+
+    this->max_x_bathymetry_ = topology_parser_->get_max_x_bathymetry();
+    this->min_x_bathymetry_ = topology_parser_->get_min_x_bathymetry();
+    this->max_y_bathymetry_ = topology_parser_->get_max_y_bathymetry();
+    this->min_y_bathymetry_ = topology_parser_->get_min_y_bathymetry();
 
     // create arrays to hold values of simulation
     h_ = new double[(l_nX_ + 2) * (l_nY_ + 2)];
@@ -112,16 +119,18 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
     // initialize bathymetry column wise
     // initialize water height using bathymetry (and hump criterion in area of interest)
     #pragma omp parallel for collapse(2) schedule(static)
-    for(int j = 1; j < l_nY_ + 1; j++)
+    for(int i = 1; i < l_nX_ + 1; i++)
     {
-        for(int i = 1; i < l_nX_ + 1; i++)
+        for(int j = 1; j < l_nY_ + 1; j++)
         {
-            double x = (i - 1) + 0.5 * cell_size_;
-            double y = (j - 1) + 0.5 * cell_size_;
+            double x = i;
+            double y = j;
             b_[i * (l_nY_ + 2) + j] = topology_parser_->sample_bathymetry(x, y);
             h_[i * (l_nY_ + 2) + j] = std::max((this->*hump_criterion)(x,y) * 1.0 - b_[i * (l_nY_ + 2) + j], 0.0);
         }
     }
+
+    //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 0 -et 0.01 -bf netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_bath.nc -df netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_displ.nc --guided-amr --gamr-area-of-interest [-100000,100000] [-200000,200000]
 
     // delete topology parser, no longer needed
     delete topology_parser_;
@@ -165,6 +174,7 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
                 << "hump_criterion: " << (hump_criterion == &applications::exahype2::swe::adjoint::SWEAdjoint::hump_criterion_circle ? "circle" : "square") << std::endl
                 << "output_file_name: " << output_file_name << std::endl
                 << "checkpoints: " << number_of_checkpoints_ << std::endl;
+    this->run_simulation();
 }
 
 applications::exahype2::swe::adjoint::SWEAdjoint::~SWEAdjoint()
