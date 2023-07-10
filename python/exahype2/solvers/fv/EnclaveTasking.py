@@ -311,11 +311,40 @@ class EnclaveTasking(FV):
         which uses this field.
         """
         self._name = name
-
+        
         self._fused_compute_kernel_call_cpu = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
         self._fused_compute_kernel_call_gpu = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
         self._pde_terms_without_state = pde_terms_without_state
 
+        super(EnclaveTasking, self).__init__(
+            name,
+            patch_size,
+            overlap,
+            unknowns,
+            auxiliary_variables,
+            min_volume_h,
+            max_volume_h,
+            plot_grid_properties,
+            kernel_namespace,
+        )
+        self._solver_template_file_class_name = "EnclaveTasking"
+
+        additional_includes = """
+#include "exahype2/EnclaveBookkeeping.h"
+#include "exahype2/EnclaveTask.h"
+"""
+
+        self.add_user_action_set_includes(additional_includes)
+
+
+    def _create_guards(self):
+        """!
+        
+        All the internal logic depends on guards, i.e. boolean predicates. We 
+        want to be able to alter them in subclasses, but we need a certain 
+        baseline. It is defined in this routine.
+        
+        """
         self._initialisation_sweep_guard = (
             "("
             + "repositories::"
@@ -356,74 +385,41 @@ class EnclaveTasking(FV):
             + ")"
         )
 
-        self._primary_sweep_or_plot_guard = (
-            "("
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::Primary or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::PrimaryAfterGridInitialisation or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::PlottingInitialCondition or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::Plotting "
-            + ")"
+        self._primary_sweep_or_plot_guard = """(
+             repositories::{}.getSolverState()=={}::SolverState::Primary
+          or repositories::{}.getSolverState()=={}::SolverState::PrimaryAfterGridInitialisation
+          or repositories::{}.getSolverState()=={}::SolverState::Plotting
+          or repositories::{}.getSolverState()=={}::SolverState::PlottingInitialCondition
+          or repositories::{}.getSolverState()=={}::SolverState::Suspended
+        )""".format(
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
         )
 
-        self._primary_or_initialisation_sweep_guard = (
-            "("
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::GridInitialisation or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::Primary or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::PrimaryAfterGridInitialisation"
-            + ")"
+
+        self._primary_or_initialisation_sweep_guard = """(
+             repositories::{}.getSolverState()=={}::SolverState::GridInitialisation 
+          or repositories::{}.getSolverState()=={}::SolverState::Primary 
+          or repositories::{}.getSolverState()=={}::SolverState::PrimaryAfterGridInitialisation
+        )""".format(
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
         )
 
-        self._primary_or_grid_construction_or_initialisation_sweep_guard = (
-            "("
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::GridInitialisation or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::Primary or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::PrimaryAfterGridInitialisation or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::GridConstruction"
-            + ")"
+        self._primary_or_grid_construction_or_initialisation_sweep_guard = """(
+            repositories::{}.getSolverState()=={}::SolverState::GridInitialisation 
+         or repositories::{}.getSolverState()=={}::SolverState::Primary
+         or repositories::{}.getSolverState()=={}::SolverState::PrimaryAfterGridInitialisation 
+         or repositories::{}.getSolverState()=={}::SolverState::GridConstruction
+        )""".format(
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
         )
 
         self._secondary_sweep_guard = (
@@ -466,50 +462,21 @@ class EnclaveTasking(FV):
             + ")"
         )
 
-        self._secondary_sweep_or_grid_initialisation_or_plot_guard = (
-            "("
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::Secondary or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::GridInitialisation or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::PlottingInitialCondition or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::Plotting "
-            + ")"
-        )
+        self._secondary_sweep_or_grid_initialisation_or_plot_guard = """(
+            repositories::{}.getSolverState()=={}::SolverState::Secondary 
+         or repositories::{}.getSolverState()=={}::SolverState::GridInitialisation 
+         or repositories::{}.getSolverState()=={}::SolverState::PlottingInitialCondition 
+         or repositories::{}.getSolverState()=={}::SolverState::Plotting
+         or repositories::{}.getSolverState()=={}::SolverState::Suspended
+        )""".format(
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            )
+        
 
-        super(EnclaveTasking, self).__init__(
-            name,
-            patch_size,
-            overlap,
-            unknowns,
-            auxiliary_variables,
-            min_volume_h,
-            max_volume_h,
-            plot_grid_properties,
-            kernel_namespace,
-        )
-        self._solver_template_file_class_name = "EnclaveTasking"
-
-        additional_includes = """
-#include "exahype2/EnclaveBookkeeping.h"
-#include "exahype2/EnclaveTask.h"
-"""
-
-        self.add_user_action_set_includes(additional_includes)
 
     def create_data_structures(self):
         """
@@ -520,6 +487,8 @@ class EnclaveTasking(FV):
         further, you have to alter them before you invoke this class' create_data_structures().
         """
         super(EnclaveTasking, self).create_data_structures()
+        
+        self._create_guards()
 
         self._patch_overlap_new.generator.send_condition = (
             self._secondary_sweep_or_grid_initialisation_or_plot_guard
