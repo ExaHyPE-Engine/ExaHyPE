@@ -1,6 +1,6 @@
 #include "DimensionalSplitting.hpp"
 
-applications::exahype2::swe::adjoint::Dimensional_Splitting::Dimensional_Splitting(size_t l_nX, size_t l_nY, double l_dx, double l_dy, double *h, double *hu, double *hv, double *b) :
+applications::exahype2::swe::adjoint::DimensionalSplitting::DimensionalSplitting(size_t l_nX, size_t l_nY, double l_dx, double l_dy, double *h, double *hu, double *hv, double *b) :
 l_nX_(l_nX),
 l_nY_(l_nY),
 l_dx_(l_dx),
@@ -22,7 +22,7 @@ l_dy_(l_dy)
     this->hv_net_updates_below_ = new double[(l_nX_ + 2)*(l_nY_ * 2)]();
 }
 
-applications::exahype2::swe::adjoint::Dimensional_Splitting::~Dimensional_Splitting()
+applications::exahype2::swe::adjoint::DimensionalSplitting::~DimensionalSplitting()
 {
     delete this->h_net_updates_above_;
     delete this->h_net_updates_below_;
@@ -35,7 +35,7 @@ applications::exahype2::swe::adjoint::Dimensional_Splitting::~Dimensional_Splitt
     delete this->hv_net_updates_below_;
 }
 
-double applications::exahype2::swe::adjoint::Dimensional_Splitting::compute_numerical_fluxes()
+double applications::exahype2::swe::adjoint::DimensionalSplitting::compute_numerical_fluxes()
 {
     double max_wave_speed = 0.0;
 
@@ -99,7 +99,7 @@ double applications::exahype2::swe::adjoint::Dimensional_Splitting::compute_nume
     return max_wave_speed;
 }
 
-void applications::exahype2::swe::adjoint::Dimensional_Splitting::update_unknowns_x_sweep(double dt)
+void applications::exahype2::swe::adjoint::DimensionalSplitting::update_unknowns_x_sweep(double dt)
 {
     // update cells x-sweep
     const double factordx = dt / l_dx_;
@@ -117,7 +117,7 @@ void applications::exahype2::swe::adjoint::Dimensional_Splitting::update_unknown
     }
 }
 
-void applications::exahype2::swe::adjoint::Dimensional_Splitting::update_unknowns_y_sweep(double dt)
+void applications::exahype2::swe::adjoint::DimensionalSplitting::update_unknowns_y_sweep(double dt)
 {
     // update cells x-sweep
     const double factor_dy = dt / l_dy_;

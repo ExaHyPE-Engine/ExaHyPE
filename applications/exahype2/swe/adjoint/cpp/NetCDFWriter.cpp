@@ -50,30 +50,32 @@ applications::exahype2::swe::adjoint::NetCDFWriter::NetCDFWriter(const char *out
     nc_put_att_double(file_id_, NC_GLOBAL, "start_time", NC_DOUBLE, 1, &start_time);
 
     //setup grid size
-	double s_dx = cell_size;
-	double gridPosition =  0.5 * s_dx;
+	double gridPosition =  0;
 	for (size_t i = 0; i < l_nX_; i++)
 	{
 		nc_put_var1_double(file_id_, varid_x, &i, &gridPosition);
-		gridPosition += s_dx;
+		gridPosition += 1.0;
 	}
 
-	double s_dy = cell_size;
-	gridPosition =  0.5 * s_dy;
+	gridPosition = 0;
 	for (size_t j = 0; j < l_nY_; j++)
 	{
+		
 		nc_put_var1_double(file_id_, varid_y, &j, &gridPosition);
-		gridPosition += s_dy;
+		gridPosition += 1.0;
 	}
 
     size_t start[] = {0, 0};
-    size_t count[] = {l_nY_, l_nX_};
-    if(nc_put_vara_double(file_id_, varid_b_, start, count, b) != NC_NOERR)
-    {
-        std::cout << "Bathymetry could not be written to netCDF output file!" << std::endl;
-        return;
-    }
-
+    size_t count[] = {l_nY_, 1};
+	for(unsigned int i = 1; i < l_nX_ + 1; i++)
+	{
+		start[1] = i - 1;
+		if(nc_put_vara_double(file_id_, varid_b_, start, count, &b[i * (l_nY_ + 2) + 1]) != NC_NOERR)
+    	{
+			std::cout << "Bathymetry could not be written to netCDF output file!" << std::endl;
+			return;
+    	}
+	}
 }
 
 applications::exahype2::swe::adjoint::NetCDFWriter::~NetCDFWriter()
@@ -84,22 +86,26 @@ applications::exahype2::swe::adjoint::NetCDFWriter::~NetCDFWriter()
 void applications::exahype2::swe::adjoint::NetCDFWriter::writeTimeStep(double *h, double *hu, double *hv, double t, size_t checkpoint)
 {
     size_t start[] = {checkpoint, 0, 0};
-    size_t count[] = {1, l_nY_, l_nX_};
-    if(nc_put_vara_double(file_id_, varid_h_, start, count, h) != NC_NOERR)
+    size_t count[] = {1, l_nY_, 1};
+	for(unsigned int i = 1; i < l_nX_ + 1; i++)
     {
-        std::cout << "h could not be written to output for timestep: " << t << "!" << std::endl;
-        return;
-    }
-    if(nc_put_vara_double(file_id_, varid_hu_, start, count, hu) != NC_NOERR)
-    {
-        std::cout << "hu could not be written to output for timestep: " << t << "!" << std::endl;
-        return;
-    } 
-    if(nc_put_vara_double(file_id_, varid_hv_, start, count, hv) != NC_NOERR)
-    {
-        std::cout << "hv could not be written to output for timestep: " << t << "!" << std::endl;
-        return;
-    } 
+		start[2] = i - 1;
+		if(nc_put_vara_double(file_id_, varid_h_, start, count, &h[i * (l_nY_ + 2) + 1]) != NC_NOERR)
+		{
+			std::cout << "h could not be written to output for timestep: " << t << "!" << std::endl;
+			return;
+		}
+		if(nc_put_vara_double(file_id_, varid_hu_, start, count, &hu[i * (l_nY_ + 2) + 1]) != NC_NOERR)
+		{
+			std::cout << "hu could not be written to output for timestep: " << t << "!" << std::endl;
+			return;
+		} 
+		if(nc_put_vara_double(file_id_, varid_hv_, start, count, &hv[i * (l_nY_ + 2) + 1]) != NC_NOERR)
+		{
+			std::cout << "hv could not be written to output for timestep: " << t << "!" << std::endl;
+			return;
+		} 
+	}
     nc_put_var1_double(file_id_, time_id_, &checkpoint, &t);
 
 	if(flush > 0 && checkpoint % flush == 0)

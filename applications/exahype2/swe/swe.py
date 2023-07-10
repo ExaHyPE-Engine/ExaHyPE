@@ -103,6 +103,7 @@ parser.add_argument(            "--gamr-file",          dest="gamr_file",      t
 parser.add_argument(            "--gamr-start-time",    dest="gamr_start_time",type=float,                default=0,                  help="Begin of temporal region of interest. Defaults to 0.")
 parser.add_argument(            "--gamr-checkpoints",   dest="gamr_checkpoints",type=int,                 default=0,                  help="Number of times output should be written in adjoint simulation. Defaults to 0 (=Infinity)")
 parser.add_argument("--gamr-area-of-interest", nargs="+",dest="gamr_area_of_interest",type=str,           required=False,             help="Define area of interest for guided amr. Pass in either a square [x1,x2] [y1,y2] or a circle [x1,y1] [r, inf]. Coordinates are in the same system as the bathymetry.")
+parser.add_argument(            "--gamr-writer-flush",  dest="gamr_writer_flush", type=int,               default=0,                  help="Define after how many writer operations the writer flushes the buffer to the disk.")
 args = parser.parse_args()
 
 maximum_cell_size = args.max_cell_size
@@ -256,6 +257,23 @@ if args.gpu:
   my_solver.set_pde_terms_without_state(True)
 
 #########################################
+# Set up solver implementation          #
+#########################################
+
+my_solver.set_implementation(
+  initial_conditions    = my_pde.implementation_of_initial_conditions(),
+  boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
+  flux                  = my_pde.implementation_of_flux(),
+  eigenvalues           = my_pde.implementation_of_max_eigenvalue(),
+  ncp                   = my_pde.implementation_of_ncp(),
+  refinement_criterion  = my_pde.implementation_of_refinement_criterion(),
+  source_term           = my_pde.implementation_of_sources()
+)
+
+executable_name = "swe-application-2d-solver-name-%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (solver_name, args.scenario, patch_size, args.amr_levels, maximum_cell_size, args.end_time)
+output_path = args.output_path+"output-%s/" % executable_name
+
+#########################################
 # Add solver constants if necessary     #
 #########################################
 
@@ -298,7 +316,7 @@ if args.scenario == "Tsunami":
                                          #include \"adjoint/cpp/SWEAdjoint.hpp\"
                                          """)
 
-      swe_adjoint_parameters = "\"adjoint_%s\"" % args.bathymetry_file # output file name
+      swe_adjoint_parameters = "\"./%s-adjoint.nc\"" % executable_name # output file name
       swe_adjoint_parameters += ",\"%s\"" % args.bathymetry_file # bathymetry file
 
       swe_adjoint_parameters += ", %f" % width[0] # width x
@@ -313,30 +331,13 @@ if args.scenario == "Tsunami":
 
       swe_adjoint_parameters += ", %f" % args.gamr_start_time # start time
       swe_adjoint_parameters += ", %d" % args.gamr_checkpoints # checkpoints
-      swe_adjoint_parameters += ", 0" # flush
+      swe_adjoint_parameters += ", %d" % args.gamr_writer_flush # flush
 
       swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_x
       swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_y
       swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_bath
       
       my_solver.add_solver_constants("applications::exahype2::swe::adjoint::SWEAdjoint swe_adjoint = applications::exahype2::swe::adjoint::SWEAdjoint(%s);" % swe_adjoint_parameters)
-
-#########################################
-# Set up solver implementation          #
-#########################################
-
-my_solver.set_implementation(
-  initial_conditions    = my_pde.implementation_of_initial_conditions(),
-  boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
-  flux                  = my_pde.implementation_of_flux(),
-  eigenvalues           = my_pde.implementation_of_max_eigenvalue(),
-  ncp                   = my_pde.implementation_of_ncp(),
-  refinement_criterion  = my_pde.implementation_of_refinement_criterion(),
-  source_term           = my_pde.implementation_of_sources()
-)
-
-executable_name = "swe-application-2d-solver-name-%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (solver_name, args.scenario, patch_size, args.amr_levels, maximum_cell_size, args.end_time)
-output_path = args.output_path+"output-%s/" % executable_name
 
 #########################################
 # Set up exahype2 project               #

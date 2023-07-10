@@ -1,10 +1,9 @@
 #ifndef applications_exahype2_swe_adjoint_DimensionalSplitting_h_
 #define applications_exahype2_swe_adjoint_DimensionalSplitting_h_
 #include "AdjointSolver.hpp"
-#include <omp.h>
 namespace applications::exahype2::swe::adjoint
 {
-    class Dimensional_Splitting
+    class DimensionalSplitting
     {
         private:
             size_t l_nX_ = 0;
@@ -43,8 +42,8 @@ namespace applications::exahype2::swe::adjoint
             void update_unknowns_y_sweep(double dt);
         
         public:
-            Dimensional_Splitting(size_t l_nX, size_t l_nY, double l_dx, double l_dy, double *h, double *hu, double *hv, double *b);
-            ~Dimensional_Splitting();
+            DimensionalSplitting(size_t l_nX, size_t l_nY, double l_dx, double l_dy, double *h, double *hu, double *hv, double *b);
+            ~DimensionalSplitting();
 
             /**
              * @brief computes numerical fluxes for one time step of the simulation.
