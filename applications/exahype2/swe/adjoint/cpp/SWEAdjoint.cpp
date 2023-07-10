@@ -58,7 +58,6 @@ void inline applications::exahype2::swe::adjoint::SWEAdjoint::run_simulation()
     double t = 0.0;
     size_t checkpoint = 0;
     netcdf_writer_->writeTimeStep(h_, hu_, hv_, t, checkpoint);
-    exit(0);
     checkpoint++;
     while(t < end_time_)
     {
@@ -71,6 +70,7 @@ void inline applications::exahype2::swe::adjoint::SWEAdjoint::run_simulation()
             checkpoint++;
         }
     }
+    exit(0);
 }
 
 applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
@@ -185,28 +185,3 @@ applications::exahype2::swe::adjoint::SWEAdjoint::~SWEAdjoint()
     delete b_;
     delete netcdf_writer_;
 }
-
-/*
-int main(int argc, char **argv)
-{
-    //output_file_name="test.nc", 
-    //bathymetry_file_path="../netCDFInputs/gebco_2023_n65.0_s10.0_w-180.0_e-120.0.nc", 
-    //width=[10,10], cell_size=0.1, 
-    //area_of_interest=[[-124.19083, 41.74111e0], [1e0, float('inf')]], 
-    //end_time = 0.1,
-    //nc_key_x='lon',
-    //nc_key_y='lat',
-    //nc_key_bathymetry='elevation')
-    
-    auto swe_adjoint = applications::exahype2::swe::adjoint::SWEAdjoint(
-        "test.nc",
-        "../../netCDFInputs/gebco_2023_n65.0_s10.0_w-180.0_e-120.0.nc",
-        10.0, 10.0,
-        0.1,
-        0.1,
-        -124.19083, 41.75111, 1.0, INFINITY,
-        0.0, 0, 0,"lon", "lat", "elevation"
-    );
-    return 0;
-}
-*/
