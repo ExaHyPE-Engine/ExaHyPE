@@ -302,32 +302,28 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
       repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0 or
       repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
       repositories::{}.getSolverState()=={}::SolverState::Plotting
+      repositories::{}.getSolverState()=={}::SolverState::Suspended
     )""".format(
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
         )
+          
 
         last_sweep_of_time_step_or_plotting_initialisation = """(
       repositories::{}.getSolverState()=={}::SolverState::GridInitialisation or
       repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{} or
       repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
-      repositories::{}.getSolverState()=={}::SolverState::Plotting
-    )""".format(
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
-            self.number_of_Runge_Kutta_steps() - 1,
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
+      repositories::{}.getSolverState()=={}::SolverState::Plotting or
+      repositories::{}.getSolverState()=={}::SolverState::Suspended
+      )""".format(
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name, self.number_of_Runge_Kutta_steps() - 1,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
         )
 
         self._patch_estimates.generator.store_persistent_condition = (
