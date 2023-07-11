@@ -71,6 +71,13 @@ namespace swift2 {
      * It is not clear if this operation is faster than forceKernel, but it
      * delivers more flops due to the excessive vectorisation.
      *
+     * The big if in the straightforward forceKernel() is challenging for the
+     * vectoriser. Hence, I compute one scalar which is either set to 1.0 if we
+     * should update and otherwise 0.0. By multiplying all updates with this
+     * scalar, we can effectively mask out the kernel or keep its action. This
+     * works in the present case, as all updates are additive, i.e. we take the
+     * existing value and add something onto it.
+     *
      * @todo This routine does not support boundary particles. But we wanted to
      *   remove this flag anyway.
      */

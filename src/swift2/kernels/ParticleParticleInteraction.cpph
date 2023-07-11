@@ -237,6 +237,15 @@ void swift2::kernels::forceKernelVectorised(
   Particle*       __restrict__   localParticle,
   const Particle* __restrict__   activeParticle
 ) {
+  //  @todo This is a fake, just to ensure that the compiler doesn't eliminate the code
+  //        completely
+  tarch::la::Vector<Dimensions, double>  newA = localParticle->getA();
+  localParticle->setA( newA * 2.0 );
+
+
+  /*
+
+
   // Grab static parameters
   const int    hydroDimensions = localParticle->getHydroDimensions();
   const double alphaAV         = localParticle->getAlphaAV();
@@ -334,43 +343,34 @@ void swift2::kernels::forceKernelVectorised(
   );
   assertion3(std::isfinite(sph_acc_term), sph_acc_term, localParticle->toString(), activeParticle->toString());
 
-  // @todo
-  //  if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle()) {
-  tarch::la::Vector<Dimensions, double>  newA = localParticle->getA() - m_b * acc * dx;
+  assertion( tarch::la::greater(r, 0.0) );
+  const double updateScaling = tarch::la::smaller(r, iactR) ? 1.0 : 0.0;
 
-//  bool update = tarch::la::smaller(r, iactR);
+  // Use the force
+  localParticle->setA( localParticle->getA() - updateScaling * m_b * acc * dx );
 
-    // @todo bullshit
-//    localParticle->setF(localParticle->getF() * activeParticle->getF());
+  // Get the time derivative for u.
+  const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * wa_dr;
 
-    // Use the force
-    // @todo bullshit
-//    localParticle->setA(localParticle->getA() - m_b * acc * dx);
-    localParticle->setA(localParticle->getA()*2.0);
+  // Viscosity term
+  const double visc_du_term = 0.5 * visc_acc_term * dvdr;
 
-    /*
-    // Get the time derivative for u.
-    const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * wa_dr;
+  // Assemble the energy equation term
+  const double du_dt_a = sph_du_term_a + visc_du_term;
 
-    // Viscosity term
-    const double visc_du_term = 0.5 * visc_acc_term * dvdr;
+  const double udot = localParticle->getUDot();
 
-    // Assemble the energy equation term
-    const double du_dt_a = sph_du_term_a + visc_du_term;
+  // Internal energy time derivative
+  localParticle->setUDot(localParticle->getUDot() + updateScaling * m_b * du_dt_a);
 
-    const double udot = localParticle->getUDot();
+  // Get the time derivative for h.
+  localParticle->setHDot(localParticle->getHDot() - updateScaling * m_b * dvdr * r_inv / rho_b * wa_dr * f_ab);
 
-    // Internal energy time derivative
-    localParticle->setUDot(localParticle->getUDot() + m_b * du_dt_a);
+  // Update the signal velocity
+  localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), updateScaling * v_sig));
 
-    // Get the time derivative for h.
-    localParticle->setHDot(localParticle->getHDot() - m_b * dvdr * r_inv / rho_b * wa_dr * f_ab);
-
-    // Update the signal velocity
-    localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), v_sig));
-
-    assertion6(not std::isnan(localParticle->getHDot()), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba);
-    assertion7(
+  assertion6(not std::isnan(localParticle->getHDot()), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba);
+  assertion7(
       not tarch::la::isEntryNan(localParticle->getA()),
       localParticle->toString(),
       sph_acc_term,
@@ -379,8 +379,8 @@ void swift2::kernels::forceKernelVectorised(
       f_ba,
       activeParticle->getF(),
       activeParticle->getIsBoundaryParticle()
-    );
-    */
+  );
+  */
 }
 
 
