@@ -54,7 +54,7 @@ namespace peano4 {
  * - static bool send(const peano4::datamanagement::VertexMarker& marker);
  * - static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
  * - static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
- * - static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
+ * - static LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::VertexMarker& marker);
  *
  * The ...Debug... routines are not required in release mode.
  * Finally, the type T has to provide a typedef DoFType which says to which the
@@ -154,7 +154,7 @@ namespace peano4 {
  * ## General remarks
  *
  * Ensure that the underlying static routines T::send(),
- * T::receiveAndMerge(), T::storePersistently() and T::loadPersistently() all
+ * T::receiveAndMerge(), T::loadStoreComputeFlag() all
  * return true. Otherwise, no data exchange will be triggered by Peano's trees.
  *
  *

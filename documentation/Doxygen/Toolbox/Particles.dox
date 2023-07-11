@@ -102,8 +102,7 @@ These are operations each vertex offers:
 
   - send(const peano4::datamanagement::VertexMarker& marker)
   - receiveAndMerge(const peano4::datamanagement::VertexMarker& marker)
-  - storePersistently(const peano4::datamanagement::VertexMarker& marker)
-  - loadPersistently(const peano4::datamanagement::VertexMarker& marker)
+  - ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::VertexMarker& marker)
   - If we run in debug mode, we further require the x and h values
   - A toString() routine
 
