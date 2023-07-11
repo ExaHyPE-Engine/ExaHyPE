@@ -262,6 +262,7 @@ where we used the fact that our approximation is piecewise linear, and so the gr
 along each face is the same. 
 
 <--!
+
 We can do the same for the y-direction:
 
 \f{eqnarray*}{
