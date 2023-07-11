@@ -44,9 +44,41 @@ namespace swift2 {
     /**
      * @brief The actual force kernel, which interacts a local particle and an active
      * particle, and updates the local particle.
+     *
+     * ## Vectorisation
+     *
+     * This operation struggles to vectorise, as we have the statement
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *   if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle()) {
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * in there. This if statement encapsulates quite a lot of operations. The
+     * Intel compiler therefore cannot vectorise this routine anymore.
+     *
+     *
+     * @see forceKernelVectorised()
      */
     template <typename Particle>
     void forceKernel(Particle* localParticle, const Particle* activeParticle);
+
+    /**
+     * Vectorised alternative implementation of forceKernel()
+     *
+     * This routine is a vectorised variant of forceKernel() which you can use
+     * if and only if you know that localParticle and activeParticle never ever
+     * can point to the same object, i.e. if you know that there is no aliasing.
+     * It is not clear if this operation is faster than forceKernel, but it
+     * delivers more flops due to the excessive vectorisation.
+     *
+     * @todo This routine does not support boundary particles. But we wanted to
+     *   remove this flag anyway.
+     */
+    template <typename Particle>
+    void forceKernelVectorised(
+      Particle* __restrict__         localParticle,
+      const Particle* __restrict__   activeParticle
+    );
 
     /**
      * @brief Non-symmetric density calculation (as per Swift terminology).
