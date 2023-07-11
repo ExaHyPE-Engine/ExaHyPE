@@ -21,7 +21,7 @@ import exahype2
 # We first create a new ExaHyPE2 project.
 # For this, we specify the (nested) namespaces, the name of our main file and our executable name.
 #
-my_project = exahype2.Project( ["tutorials", "exahype2", "swe"], "SWETutorial", ".", executable="swe" )
+my_project = exahype2.Project( ["applications", "exahype2", "avalanche"], "avalanche", ".", executable="avalanche" )
 
 #
 # Add the Finite Volumes solver using named arguments.
@@ -44,15 +44,64 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 #
 my_solver.plot_description = "h, hu, hv, b"
 
-#
-# Specifiy which implementation our solvers uses.
-# Here we want to use a user-defined C++ implementation.
-# For this, we create a C++ file "SWESolver.cpp" (same as our solver name from above),
-# where we can use ExaHyPE's API to fill out the necessary implementations.
-# The code generator recognises that we have a custom-made implementation
-# of this solver (the name of the file is important here) and therefore does not
-# generate a solver on its own (which would be empty as we specify a user-defined implementation here).
-#
+my_solver._preprocess_reconstructed_patch = """
+        const int patchSize = """ + str( my_solver._patch.dim[0] ) + """;
+        int aux_var=""" + str( my_solver._auxiliary_variables ) + """;
+        int real_var=3;
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
+        dfor(cell,patchSize) {
+          tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+          const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
+          // hello
+          // Lets look left vs right and compute the gradient. Then, lets
+          // loop up and down. So we look three times for the respective
+          // directional gradients
+          for (int d=0; d<2; d++) {
+            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+            leftCell(d)  -= 1;
+            rightCell(d) += 1;
+            const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
+            const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+            for (int i=0; i<real_var; i++) {
+              //std::cout<<"d = "<<d<<" i = "<<i<<" "<<currentCell<<": "<<oldQWithHalo[cellSerialised*(real_var+aux_var)+i]<<std::endl;
+              //std::cout<<"d = "<<d<<" i = "<<i<<" "<<leftCell<<": "<<oldQWithHalo[leftCellSerialised*(real_var+aux_var)+i]<<std::endl;
+              //std::cout<<"d = "<<d<<" i = "<<i<<" "<<rightCell<<": "<<oldQWithHalo[rightCellSerialised*(real_var+aux_var)+i]<<std::endl;
+              if(currentCell(0)==1 && currentCell(1)==1 && d==1){
+                
+                oldQWithHalo[(leftCellSerialised-1)*(real_var+aux_var)+i] = 0.5*(oldQWithHalo[leftCellSerialised*(real_var+aux_var)+i]+oldQWithHalo[(cellSerialised-1)*(real_var+aux_var)+i]);
+                //std::cout<<"FOUND A CORNER (0,0) "<<"d = "<<d<<" i = "<<i<<" "<<oldQWithHalo[(leftCellSerialised-1)*(real_var+aux_var)+i]<<std::endl;
+              }
+              else if(currentCell(0)==3 && currentCell(1)==1 && d==1){
+                
+                oldQWithHalo[(leftCellSerialised+1)*(real_var+aux_var)+i] = 0.5*(oldQWithHalo[leftCellSerialised*(real_var+aux_var)+i]+oldQWithHalo[(cellSerialised+1)*(real_var+aux_var)+i]);
+                //std::cout<<"FOUND A CORNER (4,0) "<<"d = "<<d<<" i = "<<i<<" "<<oldQWithHalo[(leftCellSerialised+1)*(real_var+aux_var)+i]<<std::endl;
+      
+              }
+
+              else if(currentCell(0)==1 && currentCell(1)==3 && d==1){
+                
+                oldQWithHalo[(rightCellSerialised-1)*(real_var+aux_var)+i] = 0.5*(oldQWithHalo[rightCellSerialised*(real_var+aux_var)+i]+oldQWithHalo[(cellSerialised-1)*(real_var+aux_var)+i]);
+                //std::cout<<"FOUND A CORNER (0,4) "<<"d = "<<d<<" i = "<<i<<" "<<oldQWithHalo[(rightCellSerialised-1)*(real_var+aux_var)+i]<<std::endl;
+
+      
+              }
+
+              else if(currentCell(0)==3 && currentCell(1)==3 && d==1){
+                
+                oldQWithHalo[(rightCellSerialised+1)*(real_var+aux_var)+i] = 0.5*(oldQWithHalo[rightCellSerialised*(real_var+aux_var)+i]+oldQWithHalo[(cellSerialised+1)*(real_var+aux_var)+i]);
+                //std::cout<<"FOUND A CORNER (4,4) "<<"d = "<<d<<" i = "<<i<<" "<<oldQWithHalo[(rightCellSerialised+1)*(real_var+aux_var)+i]<<std::endl;
+      
+              }
+
+              //std::cout<<std::endl;
+
+            }
+          }
+        }
+    """
+
+
 my_solver.set_implementation(
   ncp                   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   flux                  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -95,8 +144,8 @@ my_project.set_global_simulation_parameters(
   dimensions            = 2,
   size                  = [2.0, 2.0],
   offset                = [-1.0, -1.0],
-  min_end_time          = 2,
-  max_end_time          = 2,
+  min_end_time          = 0.05,
+  max_end_time          = 0.05,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = 0.005, # snapshot interval
   periodic_BC           = [False, False, False]
@@ -123,7 +172,7 @@ my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "
 # Additionally, we specify the build mode which you can also change to a different mode.
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-my_project.set_Peano4_installation( "../../../", mode=peano4.output.CompileMode.Release )
+my_project.set_Peano4_installation( "../../../", mode=peano4.output.CompileMode.Debug )
 
 #
 # We generate and grab the underlying core project of 'Peano4'.
