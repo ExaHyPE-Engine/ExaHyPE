@@ -15,10 +15,11 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     In all other cases, please extend scenario.py and pde.py, and implement the required given methods.
     """
     @abstractmethod
-    def __init__(self):
+    def __init__(self, refinement_tolerance:float):
         super().__init__()
         self.definition_of_ncp()
         super().outflow_boundary_conditions()
+        self.amr_tol = refinement_tolerance
     
     def definition_of_ncp(self):
         grad_b = self.grad(self.b)
@@ -33,21 +34,16 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
         self.ncp[2, 1] = self.g * self.h * grad_b
         
     def implementation_of_refinement_criterion(self):
-        # Implementing https://doi.org/10.1007%2Fs00024-016-1412-y could be interesting
-        # Maybe also Richardson Extrapolation Error?
         return """
-        return ::exahype2::RefinementCommand::Keep;
-        """
-        """
         ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-        if (Q[0] > 1e-8 && std::abs(Q[0] + Q[3]) >= 0.05) { 
+        if (Q[0] > 0.0 && std::abs(Q[0] + Q[3]) >= %f) { 
             result = ::exahype2::RefinementCommand::Refine;
         }
-        //else if(Q[0] > 1e-8 && std::abs(Q[0] + Q[3]) <= 0.01) {
-            //result = ::exahype2::RefinementCommand::Erase;
-        //}
+        else {
+            result = ::exahype2::RefinementCommand::Erase;
+        }
         return result;
-        """
+        """ % (self.amr_tol)
     
     def implementation_of_sources(self):
         return PDETerms.None_Implementation

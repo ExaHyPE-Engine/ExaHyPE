@@ -6,8 +6,8 @@ class Oscillating_Lake(scenarios.template_scenario.Template_Scenario):
     """
     Taken from https://doi.org/10.48550/arXiv.1607.04547
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, refinement_tolerance):
+        super().__init__(refinement_tolerance)
         super().reflective_boundary_conditions()
 
         self.initial_values[1] = 0.0

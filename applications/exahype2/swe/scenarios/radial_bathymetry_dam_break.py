@@ -2,8 +2,8 @@ import scenarios.template_scenario, sympy
 
 
 class Radial_Bathymetry_Dam_Break(scenarios.template_scenario.Template_Scenario):
-    def __init__(self, width):
-        super().__init__()
+    def __init__(self, width, refinement_tolerance):
+        super().__init__(refinement_tolerance)
 
         self.initial_values[0] = 1.0 
         self.initial_values[1] = 0.0

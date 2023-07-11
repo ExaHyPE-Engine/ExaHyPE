@@ -5,8 +5,8 @@ class Artificial_Tsunami(scenarios.template_scenario.Template_Scenario):
     This class provides an artificial tsunami scenario. 
     The equation detailing the displacement is taken from the materials of the IN0012 Tsunami Simulation lab course at TUM held in WS21/22.
     """
-    def __init__(self, width):
-        super().__init__()
+    def __init__(self, width, refinement_tolerance):
+        super().__init__(refinement_tolerance)
         self.initial_values[0] = 100.0
         self.initial_values[1] = 0.0
         self.initial_values[2] = 0.0

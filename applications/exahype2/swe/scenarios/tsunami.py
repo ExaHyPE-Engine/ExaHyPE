@@ -6,8 +6,9 @@ class Tsunami(scenarios.template_scenario.Template_Scenario):
     This class provides a tsunami scenario. 
     Bathymetry and displacement are read from files provided by the user.
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, refinement_tolerance, use_guided_amr:bool=False):
+        super().__init__(refinement_tolerance)
+        self.guided_amr = use_guided_amr
         pass
 
     def implementation_of_initial_conditions(self):
@@ -28,3 +29,21 @@ class Tsunami(scenarios.template_scenario.Template_Scenario):
         Q[2] = 0.0;
         Q[3] = combined_bathymetry; 
         """
+    
+    def implementation_of_refinement_criterion(self):
+        if not self.guided_amr:
+            return super().implementation_of_refinement_criterion()
+        else:
+            return self.implementation_of_guided_amr_criterion()
+        
+    def implementation_of_guided_amr_criterion(self):
+        return """
+        ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+        if (Q[0] > 0.0 && adjoint_parser.max_inner_product(t, volumeCentre(0), volumeCentre(1), Q[0] + Q[3], Q[1], Q[2], Q[3]) >= %f) { 
+            result = ::exahype2::RefinementCommand::Refine;
+        }
+        else {
+            result = ::exahype2::RefinementCommand::Erase;
+        }
+        return result;
+        """ % (self.amr_tol)

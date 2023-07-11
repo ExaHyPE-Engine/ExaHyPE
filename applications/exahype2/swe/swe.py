@@ -87,6 +87,7 @@ parser.add_argument("-probes",  nargs='+',             dest="probe_coordinates",
 
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   required=False,             help="Set order of time discretisation for Runge-Kutta scheme." )
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   required=False,             help="Set order of space discretisation for Discontinuous Galerkin." )
+parser.add_argument("-amr-tol", "--amr-tolerance",     dest="amr_tol",        type=float,                 default=0.05,               help="When using AMR, please set a surface tolerance above which shall be refined and otherwise coarsened. Default is 0.05. Also used for guided AMR.")
 
 parser.add_argument("-nc-key-bath-x",                  dest="nc_key_bath_x",  type=str,                   default="x",                help="Key for x dimension values in bathymetry netCDF file.")
 parser.add_argument("-nc-key-bath-y",                  dest="nc_key_bath_y",  type=str,                   default="y",                help="Key for y dimension values in bathymetry netCDF file.")
@@ -98,11 +99,11 @@ parser.add_argument("-nc-key-displ-displ",             dest="nc_key_displ_displ"
 parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)." )
 parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR." )
 parser.add_argument(            "--uq-displacement-origin",dest="uq_displacement_origin",type=str,        required=False,             help="Move displacement for uncertainty quantification. Expected argument [x,y] denoting the center of the displacement file within the coordinate system of the bathymetry file. The coordinates are not checked against anything, so they might even move the displacment on dry land!")
-parser.add_argument(            "--guided-amr",        dest="guided_amr",      action="store_true",       default=False,              help="Use guided amr, only available with the \"Tsunami\" scenario. Optionally pass in an already computed adjoint simulation file in netCDF format using the flag --amr-file.")
+parser.add_argument(            "--guided-amr",        dest="guided_amr",      action="store_true",       default=False,              help="Use guided AMR, only available with the \"Tsunami\" scenario. Optionally pass in an already computed adjoint simulation file in netCDF format using the flag --amr-file.")
 parser.add_argument(            "--gamr-file",          dest="gamr_file",      type=str,                  required=False,             help="Pass in an already computed adjoint simulation output file in netCDF format. Expect to have keys \"x\",\"y\" and \"h\", \"hu\", \"hv\", \"b\"")
 parser.add_argument(            "--gamr-start-time",    dest="gamr_start_time",type=float,                default=0,                  help="Begin of temporal region of interest. Defaults to 0.")
 parser.add_argument(            "--gamr-checkpoints",   dest="gamr_checkpoints",type=int,                 default=0,                  help="Number of times output should be written in adjoint simulation. Defaults to 0 (=Infinity)")
-parser.add_argument("--gamr-area-of-interest", nargs="+",dest="gamr_area_of_interest",type=str,           required=False,             help="Define area of interest for guided amr. Pass in either a square [x1,x2] [y1,y2] or a circle [x1,y1] [r, inf]. Coordinates are in the same system as the bathymetry.")
+parser.add_argument("--gamr-area-of-interest", nargs="+",dest="gamr_area_of_interest",type=str,           required=False,             help="Define area of interest for guided AMR. Pass in either a square [x1,x2] [y1,y2] or a circle [x1,y1] [r, inf]. Coordinates are in the same system as the bathymetry.")
 parser.add_argument(            "--gamr-writer-flush",  dest="gamr_writer_flush", type=int,               default=0,                  help="Define after how many writer operations the writer flushes the buffer to the disk.")
 args = parser.parse_args()
 
@@ -118,30 +119,30 @@ if not args.output_path.endswith("/"):
 my_pde = None
 if args.scenario == "Radial_Bathymetry_Dam_Break":
   from scenarios.radial_bathymetry_dam_break import Radial_Bathymetry_Dam_Break
-  my_pde = Radial_Bathymetry_Dam_Break(width=width)
+  my_pde = Radial_Bathymetry_Dam_Break(width=width, refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Artificial_Tsunami":
   from scenarios.artificial_tsunami import Artificial_Tsunami
-  my_pde = Artificial_Tsunami(width=width)
+  my_pde = Artificial_Tsunami(width=width, refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Sea_At_Rest":
   from scenarios.sea_at_rest import Sea_At_Rest
-  my_pde = Sea_At_Rest(width=width)
+  my_pde = Sea_At_Rest(width=width, refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Oscillating_Lake":
   width = [4, 4]
   from scenarios.oscillating_lake import Oscillating_Lake
-  my_pde = Oscillating_Lake()
+  my_pde = Oscillating_Lake(refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Three_Mounds_Channel":
   width = [75, 30]
   from scenarios.three_mounds_channel import Three_Mounds_Channel
-  my_pde = Three_Mounds_Channel()
+  my_pde = Three_Mounds_Channel(refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Circular_Island":
   width = [25, 30]
   from scenarios.circular_island import Circular_Island
-  my_pde = Circular_Island()
+  my_pde = Circular_Island(refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Tsunami":
 
@@ -179,12 +180,12 @@ elif args.scenario == "Tsunami":
         maximum_cell_size = min(width)/args.max_dimension_netcdf
 
   from scenarios.tsunami import Tsunami
-  my_pde = Tsunami()
+  my_pde = Tsunami(refinement_tolerance=args.amr_tol, use_guided_amr=args.guided_amr)
 
 else:
   # This is the default scenario
   from scenarios.radial_dam_break import Radial_Dam_Break
-  my_pde = Radial_Dam_Break(width=width)
+  my_pde = Radial_Dam_Break(width=width, refinement_tolerance=args.amr_tol)
 
 my_pde.substitute_expression(my_pde.g, 9.81)
 
@@ -288,6 +289,7 @@ if args.scenario == "Tsunami":
   my_solver.add_user_solver_includes("""
                                      #include \"parser/TopologyParser.h\"
                                      """)
+  
   topology_parser_parameters = "\"%s\", \"%s\"" % (args.bathymetry_file, args.displacement_file);
 
   if args.uq_displacement_origin is not None:
@@ -305,7 +307,6 @@ if args.scenario == "Tsunami":
 
   # Use guided AMR?
   if args.guided_amr:
-    
     my_solver.add_user_solver_includes("""
                                       #include \"parser/AdjointParser.h\"
                                       """)
@@ -315,7 +316,6 @@ if args.scenario == "Tsunami":
       adjoint_parser_parameters = "\"%s\"" % args.gamr_file
     else:
       adjoint_parser_parameters = "\"./%s-adjoint.nc\"" % executable_name
-
     my_solver.add_solver_constants("applications::exahype2::swe::parser::AdjointParser adjoint_parser = applications::exahype2::swe::parser::AdjointParser(%s);" % adjoint_parser_parameters)
 
     # Is no file provided?
