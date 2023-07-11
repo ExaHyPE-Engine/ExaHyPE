@@ -1,5 +1,5 @@
 import numpy as np
-from adjoint.python.adjoint_solver import compute_net_updates
+from adjoint_solver import compute_net_updates
 
 def set_up_update_variables(nx, ny, cell_size) -> None:
     """
