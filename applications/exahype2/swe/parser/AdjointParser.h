@@ -86,5 +86,5 @@ class applications::exahype2::swe::parser::AdjointParser {
      * @return double maximum inner product of current cell and interpolated adjoint solution
      */
     double max_inner_product(double i_t, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b);
-}
+};
 #endif

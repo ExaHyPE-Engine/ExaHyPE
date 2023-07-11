@@ -301,20 +301,36 @@ if args.scenario == "Tsunami":
   topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_y
   topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_displ
   
-  my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser parser = applications::exahype2::swe::parser::TopologyParser(%s);" % topology_parser_parameters)
+  my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser topology_parser = applications::exahype2::swe::parser::TopologyParser(%s);" % topology_parser_parameters)
 
+  # Use guided AMR?
   if args.guided_amr:
-    if args.gamr_area_of_interest is None:
-      raise Exception("No area of interest specified for guided amr!")
+    
+    my_solver.add_user_solver_includes("""
+                                      #include \"parser/AdjointParser.h\"
+                                      """)
 
-    area_of_interest = []
-    for coords in args.gamr_area_of_interest:
-      area_of_interest.append(parse_coordinate_pair(coords))
+    adjoint_parser_parameters = ""
+    if args.gamr_file is not None:
+      adjoint_parser_parameters = "\"%s\"" % args.gamr_file
+    else:
+      adjoint_parser_parameters = "\"./%s-adjoint.nc\"" % executable_name
 
+    my_solver.add_solver_constants("applications::exahype2::swe::parser::AdjointParser adjoint_parser = applications::exahype2::swe::parser::AdjointParser(%s);" % adjoint_parser_parameters)
+
+    # Is no file provided?
     if args.gamr_file is None:
+      # Add code for simulating adjoint problem 
       my_solver.add_user_solver_includes("""
                                          #include \"adjoint/cpp/SWEAdjoint.hpp\"
                                          """)
+      
+      if args.gamr_area_of_interest is None:
+        raise Exception("No area of interest specified for guided amr!")
+
+      area_of_interest = []
+      for coords in args.gamr_area_of_interest:
+        area_of_interest.append(parse_coordinate_pair(coords))
 
       swe_adjoint_parameters = "\"./%s-adjoint.nc\"" % executable_name # output file name
       swe_adjoint_parameters += ",\"%s\"" % args.bathymetry_file # bathymetry file
@@ -455,6 +471,9 @@ if args.scenario == "Tsunami":
       peano4_project.output.makefile.add_h_file("adjoint/cpp/DimensionalSplitting.hpp")
       peano4_project.output.makefile.add_h_file("adjoint/cpp/SWEAdjoint.hpp")
       peano4_project.output.makefile.add_h_file("adjoint/cpp/AdjointSolver.hpp")
+
+    peano4_project.output.makefile.add_cpp_file("parser/AdjointParser.cpp")
+    peano4_project.output.makefile.add_h_file("parser/AdjointParser.h")
 
 # define project constants if necessary
 if args.scenario == "Artificial_Tsunami":

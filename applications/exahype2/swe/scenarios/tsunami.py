@@ -12,8 +12,8 @@ class Tsunami(scenarios.template_scenario.Template_Scenario):
 
     def implementation_of_initial_conditions(self):
         return """
-        double bath = parser.sample_bathymetry(volumeCentre(0), volumeCentre(1));
-        double displ = parser.sample_displacement(volumeCentre(0), volumeCentre(1));
+        double bath = topology_parser.sample_bathymetry(volumeCentre(0), volumeCentre(1));
+        double displ = topology_parser.sample_displacement(volumeCentre(0), volumeCentre(1));
         double combined_bathymetry = bath+displ;
 
         /* Might need this for proper boundary conditions 

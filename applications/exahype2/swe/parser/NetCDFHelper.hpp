@@ -4,7 +4,7 @@
 namespace applications::exahype2::swe::parser::NetCDFHelper
 {
     /**
-     * @brief 
+     * @brief Transforms coordinate from simulation plane to netCDF plane.
      * 
      * @param i_z coordinate of dimension z in simulation space
      * @param i_nZ size of simulation space in z direction
@@ -15,7 +15,7 @@ namespace applications::exahype2::swe::parser::NetCDFHelper
     double transformIndexSimulationToCDFRange(double i_z, double i_nZ, double i_min_z_cdf, double i_max_z_cdf);
 
     /**
-     * @brief Transform index from cdf value to input data
+     * @brief Transforms coordinate pair from netCDF plane to 1D row-wise array index.
      * 
      * @param i_x x-coordinate in the netCDF mesh
      * @param i_y y-coordinate in the netCDF mesh
