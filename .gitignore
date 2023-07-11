@@ -295,7 +295,6 @@ UnitTests2d
 UnitTests3d
 
 .gitignore
-/documentation/
 
 *.tmp 
 *.trs 
