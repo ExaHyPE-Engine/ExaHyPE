@@ -1,5 +1,6 @@
 #include "AdjointParser.h"
 #include <iostream>
+#include <omp.h>
 using namespace applications::exahype2::swe::parser::NetCDFHelper;
 
 applications::exahype2::swe::parser::AdjointParser::AdjointParser(const char *adjoint_file_path){
@@ -53,6 +54,7 @@ double applications::exahype2::swe::parser::AdjointParser::calculate_inner_produ
 
 double applications::exahype2::swe::parser::AdjointParser::max_inner_product(double i_t, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b){
     double max_inner_product = -1.f;
+    #pragma omp parallel for reduction(max: max_inner_product) schedule(static)
     for(size_t i = 0; i < number_timestamps_; i++)
     {
         double t_nm = 0.f;
