@@ -162,6 +162,10 @@ class Project (object):
         from peano4.output.Helper import find_CMake_build_dir
         cmake_build_dir = find_CMake_build_dir()
         if cmake_build_dir != "":
+          # Configuring twice is necessary because of the following
+          # Generated application needs to be added as a target, this forces cmake .. unless the user calls from the bash
+          # Generated applications CMakeLists might change the CMAKE_BUILD_TYPE for the change the generate the new possible targets
+          # The second cmake .. is necessary
           command = f"cd {cmake_build_dir} && cmake .. && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
           process = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
