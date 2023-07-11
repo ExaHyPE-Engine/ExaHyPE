@@ -497,6 +497,10 @@ def construct_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """
+            ## For compatibility. Name makes no sense. But the value
+            ## guides the AMR pattern
+            self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
+            
 
         def create_action_sets(self):
             """!
@@ -763,9 +767,10 @@ if __name__ == "__main__":
         my_primary_solver.add_tracer(
             name="PrimaryTracer", coordinates=tracer_coordinates, project=project
         )
-        my_secondary_solver.add_tracer(
-            name="SecondaryTracer", coordinates=tracer_coordinates, project=project
-        )
+        if added_limiter:
+            my_secondary_solver.add_tracer(
+                name="SecondaryTracer", coordinates=tracer_coordinates, project=project
+            )
 
     # project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
     project.set_load_balancing(
