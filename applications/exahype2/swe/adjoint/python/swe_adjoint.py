@@ -197,12 +197,12 @@ def transform_index_simulation_to_cdf(z, max_z, min_z, max_z_cdf, min_z_cdf):
         
 solver = SWE_Adjoint_Solver(
     output_file_name="test.nc", 
-    bathymetry_file_path="../../netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_bath.nc", 
+    bathymetry_file_path="../../netCDFInputs/gebco_2023_n65.0_s10.0_w-180.0_e-120.0.nc", 
     width=[10,10], cell_size=0.1, 
-    area_of_interest= [[2500000,3000000], [-200000,200000]], 
+    area_of_interest= [[-124.19083, 41.74111], [1.0, float('inf')]], # [[-124.19083, 41.74111], [1.0, float('inf')]]
     end_time = 0.1,
-    nc_key_x='x', # lon
-    nc_key_y='y', # lat
-    nc_key_bathymetry='z' # elevation
+    nc_key_x='lon', # lon
+    nc_key_y='lat', # lat
+    nc_key_bathymetry='elevation' # elevation
     )
 solver.run_simulation()
