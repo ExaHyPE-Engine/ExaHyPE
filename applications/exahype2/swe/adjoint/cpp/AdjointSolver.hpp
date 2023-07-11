@@ -6,7 +6,7 @@ namespace applications::exahype2::swe::adjoint
     class Adjoint_Solver
     {
         public:
-            inline static void compute_net_updates(double &m_h_l, double &m_h_r, double &m_hu_l, double &m_hu_r, double bat_l, double bat_r, double &h_netup_l,
+            inline static void compute_net_updates(double m_h_l, double m_h_r, double m_hu_l, double m_hu_r, double bat_l, double bat_r, double &h_netup_l,
                                                     double &h_netup_r, double &hu_netup_l, double &hu_netup_r, double &maxEdgeSpeed)
             {
                 // Steady states && land mass
