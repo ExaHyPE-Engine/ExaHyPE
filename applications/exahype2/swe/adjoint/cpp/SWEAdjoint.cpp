@@ -66,6 +66,7 @@ void inline applications::exahype2::swe::adjoint::SWEAdjoint::run_simulation()
         set_ghost_layer();
         if(checkpoints_ == nullptr || checkpoints_[checkpoint] <= t)
         {
+            std::cout << "Writing time step to file" << std::endl;
             netcdf_writer_->writeTimeStep(h_, hu_, hv_, t, checkpoint);
             checkpoint++;
         }
@@ -130,6 +131,8 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
     }
 
     //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 0 -et 0.01 -bf netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_bath.nc -df netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_displ.nc --guided-amr --gamr-area-of-interest [-100000,100000] [-200000,200000]
+    //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 0 -et 0.01 -bf netCDFInputs/gebco_2023_n65.0_s10.0_w-180.0_e-120.0.nc -df netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_displ.nc --guided-amr --gamr-area-of-interest [-124.19083,41.74111], [1.0,inf] -nc-key-bath-x lon -nc-key-bath-y lat -nc-key-bath-bath elevation
+
 
     // delete topology parser, no longer needed
     delete topology_parser_;
@@ -157,7 +160,7 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
     // calculate checkpoints, if not every timestep results in output
     if(number_of_checkpoints_ > 0)
     {
-        checkpoints_[number_of_checkpoints_ + 1];
+        checkpoints_ = new double[number_of_checkpoints_ + 1];
         double time_width = end_time_ / number_of_checkpoints_;
         for(int i = 0; i <= number_of_checkpoints_; i++)
             checkpoints_[i] =  time_width * i;
@@ -172,7 +175,7 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
                 << "end_time: " << end_time_ << std::endl
                 << "hump_criterion: " << (hump_criterion == &applications::exahype2::swe::adjoint::SWEAdjoint::hump_criterion_circle ? "circle" : "square") << std::endl
                 << "output_file_name: " << output_file_name << std::endl
-                << "checkpoints: " << number_of_checkpoints_ << std::endl;
+                << "checkpoints: " << (number_of_checkpoints_ > 0 ? "" + number_of_checkpoints_ : "inf") << std::endl;
     this->run_simulation();
     netcdf_writer_->~NetCDFWriter();
     exit(0);
@@ -185,4 +188,5 @@ applications::exahype2::swe::adjoint::SWEAdjoint::~SWEAdjoint()
     delete hv_;
     delete b_;
     delete netcdf_writer_;
+    delete checkpoints_;
 }
