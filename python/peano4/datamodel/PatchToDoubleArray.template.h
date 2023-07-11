@@ -82,7 +82,6 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     const peano4::datamanagement::VertexMarker& marker
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
   ) const;
-  bool compute(const peano4::datamanagement::VertexMarker& marker) const;
   {% endif -%}
 
   {% if DATA_ASSOCIATION == 2 -%}
@@ -103,10 +102,6 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     const peano4::datamanagement::FaceMarker& marker
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
   ) const;
-  bool compute(
-    const peano4::datamanagement::FaceMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
   {% endif -%}
 
   {% if DATA_ASSOCIATION == 3 -%}
@@ -124,10 +119,6 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
   );
   bool storePersistently(
-    const peano4::datamanagement::CellMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
-  bool compute(
     const peano4::datamanagement::CellMarker& marker
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
   ) const;

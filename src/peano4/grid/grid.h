@@ -2,18 +2,87 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include <vector>
+#include <list>
 #include <map>
 #include <set>
-#include <list>
-
+#include <vector>
 
 #include "GridVertex.h"
 
-
 namespace peano4 {
-  typedef std::map< int, int >  SplitSpecification;
+  /**
+   * Instruction to split
+   *
+   * An instruction to split always holds the number of splits that we should
+   * fork off, and it also contains an instruction how we want the tree to
+   * split the data off. We can either do the bottom up scheme, where we try
+   * to find exactly the right number of fine grid cells on the finest level
+   * and then assign refined cells to remote trees where it is a fit. The
+   * realisation of these splitting variants is discussed in peano4::grid::Spacetree::isCellBottomUpSplitCandidate(),
+   * ::grid::Spacetree::isCellTopDownSplitCandidate()
+   * and peano4::grid::Spacetree::splitOrJoinCell(). The underlying algorithmic
+   * considerations are documented in @ref peano_domain_decomposition "the domain decomposition overview".
+   *
+   * I have no constructor for this struct, but you can easily create one via
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~
+   * SplitInstruction{24,SplitInstruction::Mode::AggressiveTopDown}
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * using the brace initialisation of C++.
+   */
+  struct SplitInstruction {
+    enum class Mode { AggressiveTopDown, BottomUp };
+
+    int  numberOfFineGridCells;
+    Mode mode;
+
+    static std::string toString(Mode mode);
+    std::string        toString() const;
+  };
+
+  enum class DataStorageScheme {
+    LoadFromInputStream_ProvideToCalculations_StoreToOutputStream,
+    LoadFromInputStream_ProvideToCalculations_Discard,
+    CreateDummy_ProvideToCalculations_StoreToOutputStream,
+    CreateDummy_ProvideToCalculations_Discard,
+    NoData
+  };
+
+  /**
+   * Constructs a data storage scheme
+   *
+   * Same as the other constructor, assuming that its predicateToUseData
+   * holds all the time.
+   */
+  DataStorageScheme dataStorageScheme(bool predicateForLoad, bool predicateForStore);
+
+  /**
+   * Constructs a data storage scheme
+   *
+   * Same as the other constructor, assuming that its predicateToUseData
+   * holds all the time.
+   *
+   * predicateToUseData | predicateForLoad | predicateForStore |  Result        | Description
+   * -------------------|------------------|-------------------|----------------|-------------
+   * False              | False            | False             | NoData         | Just ignore the data, as it is not
+   * used False              | True             | False             | LoadFromInputStream_ProvideToCalculations_Discard
+   * | Load it (and keep it as you've loaded it anyway) but then throw it away, as it is not used False              |
+   * False            | True              | CreateDummy_ProvideToCalculations_StoreToOutputStream | It will not be used,
+   * but create a dummy, as it has to be stored eventually False              | True             | True              |
+   * assertion      | Makes no sense True               | False            | False             |
+   * CreateDummy_ProvideToCalculations_Discard | Data is required temporarily throughout calculations but not persistent
+   * in-between two grid sweeps True               | True             | False             |
+   * LoadFromInputStream_ProvideToCalculations_Discard | Data flow-wisely the same as False, True, False True | False |
+   * True              | CreateDummy_ProvideToCalculations_StoreToOutputStream | Introduce a new piece of data into the
+   * data flow. Same as false, false, true True               | True             | True              |
+   * LoadFromInputStream_ProvideToCalculations_StoreToOutputStream | Proper piece of data that's held persistently
+   * in-between two mesh sweeps
+   *
+   */
+  DataStorageScheme dataStorageScheme(bool predicateToUseData, bool predicateForLoad, bool predicateForStore);
+
+  typedef std::map<int, SplitInstruction> SplitSpecification;
 
   /**
    * @namespace peano4::grid
@@ -54,7 +123,7 @@ namespace peano4 {
      * The term clear() is not 100% correct, as the number of stationary traversals
      * is not reset to a dummy but instead incremented.
      */
-    void clear( GridStatistics& statistics, bool isGlobalMasterTree );
+    void clear(GridStatistics& statistics, bool isGlobalMasterTree);
 
     /**
      * Merge set of refinement/coarsening commands
@@ -73,7 +142,7 @@ namespace peano4 {
      * ## Algorithm
      *
      * The algorithm works in multiple steps:
-     * 
+     *
      * - We separate erase from refine events.
      * - We remove those erase events which are overwritten by refinement
      *   events. As we work conservatively, refinement events are always
@@ -107,11 +176,6 @@ namespace peano4 {
      *
      *        (r_111,r1_112,r_121,r_122,r_211,r1_212,r_221,r_222)
      *
-     * Due to the SFC that we employ for the mesh traversal, it is reasonable
-     * to assume that the refinement events already align in a localised order.
-     * Therefore, I apply a simple bubble sort.
-     *
-     *
      *
      * ##  Erasing the mesh (again)
      *
@@ -140,8 +204,17 @@ namespace peano4 {
      *
      * The algorithm has to be idempotent, i.e. if we invoke it multiple times
      * over the input set, the outcome should always remain the same.
+     *
+     * @param events Set of events which we try to merge
+     *
+     * @param Tolerance Relative tolerance passed into the actual merger, i.e.
+     *   the tolerance at which two events are merged, even though they might
+     *   not exactly be adjacent. A default of 10% (relative tolerance) is
+     *   sufficient for most cases, but there might be situation where a larger
+     *   tolerance is reasonable to ensure that some events which are slightly
+     *   disjoint are actually merged, too.
      */
-    std::vector< GridControlEvent > merge( std::vector< GridControlEvent>  events, const double Tolerance = 0.1 );
+    std::vector<GridControlEvent> merge(std::vector<GridControlEvent> events, const double Tolerance = 0.1);
 
     /**
      * Factory mechanism
@@ -163,16 +236,16 @@ namespace peano4 {
      *
      * @image html grid_createVertex.png
      *
-     * @param adjacentRanks  Typically the result from Spacetree::getAdjacentRanksForNewVertex(coarseGridVertices,vertexPositionWithin3x3Patch).
+     * @param adjacentRanks  Typically the result from
+     * Spacetree::getAdjacentRanksForNewVertex(coarseGridVertices,vertexPositionWithin3x3Patch).
      */
     GridVertex createVertex(
       GridVertex::State                            state,
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions, double>& x,
       int                                          level,
-      const tarch::la::Vector<TwoPowerD,int>&      adjacentRanks,
+      const tarch::la::Vector<TwoPowerD, int>&     adjacentRanks,
       bool                                         isNewFineGridVertex
     );
-
 
     /**
      * A spacetree node is refined if any of its adjacent vertices holds one of
@@ -187,19 +260,19 @@ namespace peano4 {
      * - erasing If none of the other vertices holds another flag of this list,
      *     then this cell is to be removed.
      */
-    bool isSpacetreeNodeRefined(GridVertex  vertices[TwoPowerD]);
+    bool isSpacetreeNodeRefined(GridVertex vertices[TwoPowerD]);
 
     /**
      * A vertex will be refined if it is already refined or currently refining.
      * It also will be refined if the erase is only triggered.
      */
-    bool willVertexBeRefined(const GridVertex&  vertex);
+    bool willVertexBeRefined(const GridVertex& vertex);
 
     /**
      * A vertex has been refined if it is (already) refined or is erasing or
      * the erase has been triggered.
      */
-    bool hasVertexBeenRefined(const GridVertex&  vertex);
+    bool hasVertexBeenRefined(const GridVertex& vertex);
 
     /**
      * A vertex is unrefined if it is hanging.
@@ -208,9 +281,8 @@ namespace peano4 {
      *   find out whether a cell is refined, you can compare the result to zero.
      *   You can also use isSpacetreeNodeRefined() instead.
      */
-    std::bitset<TwoPowerD> willVerticesBeRefined(GridVertex  vertices[TwoPowerD]);
-    std::bitset<TwoPowerD> haveVerticesBeenRefined(GridVertex  vertices[TwoPowerD]);
-
+    std::bitset<TwoPowerD> willVerticesBeRefined(GridVertex vertices[TwoPowerD]);
+    std::bitset<TwoPowerD> haveVerticesBeenRefined(GridVertex vertices[TwoPowerD]);
 
     /**
      * A spacetree node as 2^d adjacent vertices. So there are 2^d integers
@@ -227,40 +299,20 @@ namespace peano4 {
      * two.
      */
     bool isSpacetreeNodeLocal(
-      GridVertex    vertices[TwoPowerD],
-      bool          splittingIsConsideredLocal,
-      bool          joiningIsConsideredLocal,
-      int           id
+      GridVertex vertices[TwoPowerD], bool splittingIsConsideredLocal, bool joiningIsConsideredLocal, int id
     );
 
+    enum class VertexType { New, Hanging, Persistent, Delete };
 
-    enum class VertexType {
-      New,
-      Hanging,
-      Persistent,
-      Delete
-    };
+    enum class FaceType { New, Hanging, Persistent, Delete };
 
-    enum class FaceType {
-      New,
-      Hanging,
-      Persistent,
-      Delete
-    };
+    enum class CellType { New, Persistent, Delete };
 
-    enum class CellType {
-      New,
-      Persistent,
-      Delete
-    };
-
-
-    std::string toString( VertexType type );
-    std::string toString( FaceType type );
-    std::string toString( CellType type );
+    std::string toString(VertexType type);
+    std::string toString(FaceType type);
+    std::string toString(CellType type);
 
     constexpr int InvalidRank(-1);
-
 
     enum class SpacetreeState {
       /**
@@ -288,10 +340,10 @@ namespace peano4 {
       Joined
     };
 
-    std::string toString( SpacetreeState state );
+    std::string toString(SpacetreeState state);
 
-    bool overlaps( const tarch::la::Vector<Dimensions,double>& x, const GridControlEvent& event );
-    bool overlaps( const AutomatonState& x, const GridControlEvent& event );
+    bool overlaps(const tarch::la::Vector<Dimensions, double>& x, const GridControlEvent& event);
+    bool overlaps(const AutomatonState& x, const GridControlEvent& event);
 
     /**
      * isContained() is defined over the closed interval, i.e. we look if x is
@@ -299,7 +351,7 @@ namespace peano4 {
      *
      * @return x is completely embedded into event. x is subject to a re-calibration.
      */
-    bool isContained( const AutomatonState& x, const GridControlEvent& event, double upscaleAutomatonState=1.0 );
+    bool isContained(const AutomatonState& x, const GridControlEvent& event, double upscaleAutomatonState = 1.0);
 
     /**
      * Peano 4 does not reduce any grid control events globally. If you
@@ -310,10 +362,10 @@ namespace peano4 {
      * it at exactly the same time. Use it with care. In ExaHyPE 2, e.g.,
      * I prefer a more anarchic exchange of grid control events.
      */
-    void reduceGridControlEvents( std::vector<GridControlEvent>& events );
+    void reduceGridControlEvents(std::vector<GridControlEvent>& events);
 
-    std::string toString( const std::vector<GridControlEvent>& events );
-    std::string toString( const std::list<GridControlEvent>& events );
+    std::string toString(const std::vector<GridControlEvent>& events);
+    std::string toString(const std::list<GridControlEvent>& events);
 
     namespace internal {
       /**
@@ -324,34 +376,35 @@ namespace peano4 {
        * flag those events within eraseEvents which have to go.
        */
       void removeEraseEventsThatAreCancelledByRefineEvents(
-        const std::list< peano4::grid::GridControlEvent >&  refineEvents,
-        std::list< peano4::grid::GridControlEvent >&        eraseEvents
+        const std::list<peano4::grid::GridControlEvent>& refineEvents,
+        std::list<peano4::grid::GridControlEvent>&       eraseEvents
       );
 
       /**
+       * Merge adjacent events
+       *
        * This routine merges adjacent events, i.e. events of the same time which
        * share a common face and can be combined into one larger, rectangular
        * event. The routine does not distinguish refine from coarsen events, i.e.
        * you should only pass in events of the same type.
        *
-       * ## Algorithm
-       *
-       * It is basically a huge while loop. As long as we can merge any two events,
-       * we have to continue to try to merge further. Any merge might produce a new,
-       * larger area which then in turn might be a fit to another refinement area.
-       *
+       * To make this routine faster, we first sort() the events geometrically.
+       * After that, we sweep over them and merge. As we have sorted the elements,
+       * we can "only" consider neighbouring events. Once a sweep has completed,
+       * we have to decide to rerun the whole procedure. This is necessary if
+       * something has changed within the list.
        *
        * @see createBoundingBoxEvent()
        * @see twoEventsAreAdjacent()
        */
-      void mergeAdjacentRefinementEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents );
+      void mergeAdjacentRefinementEvents(std::list<peano4::grid::GridControlEvent>& inputEvents, int Tolerance);
 
       /**
        * Helper function which helps us throughout the merge.
        */
-      bool twoEventsOverlap( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
+      bool twoEventsOverlap(const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs);
 
-      bool equals( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
+      bool equals(const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs);
 
       /**
        * A refinement event overrules the coarsening if
@@ -359,29 +412,52 @@ namespace peano4 {
        * - The two events overlap
        * - The refine event defines a way coarser mesh then the coarse event.
        */
-      bool refinementEventOverrulesCoarsening( const peano4::grid::GridControlEvent& refineEvent, const peano4::grid::GridControlEvent& eraseEvent );
+      bool refinementEventOverrulesCoarsening(
+        const peano4::grid::GridControlEvent& refineEvent, const peano4::grid::GridControlEvent& eraseEvent
+      );
 
       /**
+       * Are two events adjacent
+       *
        * Two events are adjacent if they have the same h, and if the sum of
        * their bounding box volumes is roughly the same as the bounding box
        * volume of the merger. We notice that the name is slightly wrong:
        * We are not only flagging adjacent events, we are even searching for
        * adjacent events of the same size.
        */
-      bool twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
+      bool twoEventsAreAdjacent(
+        const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs, double Tolerance
+      );
 
       /**
-       * In-situ sort (bubble sort)
+       * Sort grid control events geometrically
+       *
+       * Very simplistic sorting algorithm. The only "interesting" thing
+       * here is the fact that we provide the actual comparison operator. In a
+       * real C++ world, we would define the operator < over GridControlEvent.
+       * This GridControlEvent class however is usually generated, i.e. we
+       * dump it through Python. It would be a little bit of a headache to
+       * add the operator (it would have to be defined in Python, and then
+       * piped into the C++ code), so I decided to wrap one here manually.
+       *
+       * The routine defines a natural order over the individual coordinates.
+       *
+       * Sort has to work purely spatially. Otherwise, we would never be
+       * able to handle strong AMR.
        *
        * @see merge() for a discussion
+       * @param events Input and output set of grid control events
        */
-      void sort( std::list< peano4::grid::GridControlEvent >& events );
+      void sort(std::list<peano4::grid::GridControlEvent>& events);
 
-      peano4::grid::GridControlEvent createBoundingBoxEvent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
-    }
-  }
-}
+      peano4::grid::GridControlEvent createBoundingBoxEvent(
+        const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs
+      );
+    } // namespace internal
+  }   // namespace grid
+} // namespace peano4
 
+peano4::grid::GridStatistics operator+(peano4::grid::GridStatistics lhs, peano4::grid::GridStatistics rhs);
 
-peano4::grid::GridStatistics operator+( peano4::grid::GridStatistics lhs, peano4::grid::GridStatistics rhs );
-
+std::ostream& operator<<(std::ostream& out, const peano4::SplitInstruction& instruction);
+std::ostream& operator<<(std::ostream& out, const peano4::SplitInstruction::Mode& mode);

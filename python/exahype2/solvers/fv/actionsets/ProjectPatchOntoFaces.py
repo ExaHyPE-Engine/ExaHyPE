@@ -23,7 +23,8 @@ class ProjectPatchOntoFaces( peano4.toolbox.blockstructured.ProjectPatchOntoFace
    
    not marker.hasBeenRefined()
    
-   if we want to support dynamic coarsening.
+   if we want to support dynamic coarsening. See exahype2.solvers.fv.FV.add_actions_to_init_grid() 
+   for details on the ordering of the action sets.
       
   """
   def __init__(self,solver, guard):

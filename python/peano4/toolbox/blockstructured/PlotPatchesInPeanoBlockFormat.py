@@ -6,7 +6,10 @@ import jinja2
 
 
 class PlotPatchesInPeanoBlockFormat(ActionSet):
-  """
+  """!
+  
+  Simple patch plotter
+  
   Very simple plotter that should be used in combination with Patches.
   Patches with varying datatypes are supported via the "dataType" parameter,
   but this defaults to doubles. This parameter should contain the C-style-
@@ -50,6 +53,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
         You can make the plotter only plot some of the dofs of interest
            
     """
+    super(PlotPatchesInPeanoBlockFormat,self).__init__(priority=1,parallel=False)
 
     valid_datatypes = {"float", "double", "long double"}
 
@@ -323,6 +327,6 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
   def get_static_initialisations(self,full_qualified_classname):
     return """
-tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + "::_semaphore(\"""" + full_qualified_classname + """\");
+tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + """::_semaphore;
 """
     

@@ -247,6 +247,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.formatting_python_env/
 
 # Spyder project settings
 .spyderproject
@@ -282,13 +283,18 @@ cython_debug/
 # Misc
 .DS_Store
 /Debug/
-/documentatio.synctex.gz
+
+# Generated documentation
+doxygen-html/
+
+submodules/
 
 compile_commands.json
 
 UnitTests2d
 UnitTests3d
 
+.gitignore
 /documentation/
 
 *.tmp 

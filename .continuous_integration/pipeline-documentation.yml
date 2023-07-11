@@ -1,0 +1,23 @@
+documentation:
+  stage: build
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  image:
+    name: "${IMAGE_REGISTRY_USER}/gcc:${IMAGE_TAG}"
+    entrypoint: ["/bin/bash", "-l", "-c"]
+  script:
+    - pwd
+    - ls
+    - whoami
+    - hostname
+    - lscpu
+    - echo $CI_COMMIT_SHA
+    - echo $CI_COMMIT_BRANCH
+    - echo "Running CI with $(nproc) cores"
+    - cd documentation
+    - make pdf
+  artifacts:
+    paths:
+      - documentation/guidebook/documentation.pdf
+  retry: 2

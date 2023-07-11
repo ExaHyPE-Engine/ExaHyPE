@@ -1,7 +1,8 @@
 #include "Hardcoded.h"
-#include "tarch/multicore/Tasks.h"
+
 #include <limits>
 
+#include "tarch/multicore/Tasks.h"
 
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createBSP() {
   return new Hardcoded(
@@ -10,10 +11,10 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     0,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
-    false                            // processPendingTasksWhileWaiting
+    false,                           // processPendingTasksWhileWaiting
+    1
   );
 }
-
 
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createNative() {
   return new Hardcoded(
@@ -22,10 +23,10 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     0,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
-    false                            // processPendingTasksWhileWaiting
+    false,                           // processPendingTasksWhileWaiting
+    1
   );
 }
-
 
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createBackfill() {
   return new Hardcoded(
@@ -34,22 +35,24 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     0,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
-    true                             // processPendingTasksWhileWaiting
+    true,                            // processPendingTasksWhileWaiting
+    1
   );
 }
 
-
-tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createFuseAll(int numberOfTasksToFuse, bool fuseImmediately, bool processTasksWhileWaitingInBSPArea, int targetDevice) {
+tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createFuseAll(
+  int numberOfTasksToFuse, bool fuseImmediately, bool processTasksWhileWaitingInBSPArea, int targetDevice
+) {
   return new Hardcoded(
-    std::numeric_limits<int>::max(),  // numberOfTasksToHoldBack
-    numberOfTasksToFuse,              // tasksToFuse
-    numberOfTasksToFuse,              // tasksToFuse
-    targetDevice,                     // deviceForFusedTasks
-    fuseImmediately,                  // fuseTasksImmediatelyWhenSpawned
-    processTasksWhileWaitingInBSPArea // processPendingTasksWhileWaiting
+    std::numeric_limits<int>::max(),   // numberOfTasksToHoldBack
+    numberOfTasksToFuse,               // tasksToFuse
+    numberOfTasksToFuse,               // tasksToFuse
+    targetDevice,                      // deviceForFusedTasks
+    fuseImmediately,                   // fuseTasksImmediatelyWhenSpawned
+    processTasksWhileWaitingInBSPArea, // processPendingTasksWhileWaiting
+    1
   );
 }
-
 
 tarch::multicore::orchestration::Hardcoded::Hardcoded(
   int  numberOfTasksToHoldBack,
@@ -57,37 +60,41 @@ tarch::multicore::orchestration::Hardcoded::Hardcoded(
   int  maxTasksToFuse,
   int  deviceForFusedTasks,
   bool fuseTasksImmediatelyWhenSpawned,
-  bool processPendingTasksWhileWaiting
+  bool processPendingTasksWhileWaiting,
+  int  maxNestedConcurrency
 ):
   _numberOfTasksToHoldBack(numberOfTasksToHoldBack),
   _minTasksToFuse(minTasksToFuse),
   _maxTasksToFuse(maxTasksToFuse),
   _deviceForFusedTasks(deviceForFusedTasks),
   _fuseTasksImmediatelyWhenSpawned(fuseTasksImmediatelyWhenSpawned),
-  _processPendingTasksWhileWaiting(processPendingTasksWhileWaiting) {}
+  _processPendingTasksWhileWaiting(processPendingTasksWhileWaiting),
+  _maxNestedConcurrency(maxNestedConcurrency) {}
 
+void tarch::multicore::orchestration::Hardcoded::startBSPSection(int nestedParallelismLevel) {}
 
-void tarch::multicore::orchestration::Hardcoded::startBSPSection() {}
+void tarch::multicore::orchestration::Hardcoded::endBSPSection(int nestedParallelismLevel) {}
 
+int tarch::multicore::orchestration::Hardcoded::getNumberOfTasksToHoldBack() { return _numberOfTasksToHoldBack; }
 
-void tarch::multicore::orchestration::Hardcoded::endBSPSection() {}
-
-
-int tarch::multicore::orchestration::Hardcoded::getNumberOfTasksToHoldBack() {
-  return _numberOfTasksToHoldBack;
+tarch::multicore::orchestration::Hardcoded::FuseInstruction tarch::multicore::orchestration::Hardcoded::
+  getNumberOfTasksToFuseAndTargetDevice() {
+  return tarch::multicore::orchestration::Hardcoded::FuseInstruction(
+    _deviceForFusedTasks, _minTasksToFuse, _maxTasksToFuse
+  );
 }
-
-
-tarch::multicore::orchestration::Hardcoded::FuseInstruction tarch::multicore::orchestration::Hardcoded::getNumberOfTasksToFuseAndTargetDevice() {
-  return tarch::multicore::orchestration::Hardcoded::FuseInstruction( _deviceForFusedTasks, _minTasksToFuse, _maxTasksToFuse );
-}
-
 
 bool tarch::multicore::orchestration::Hardcoded::fuseTasksImmediatelyWhenSpawned() {
   return _fuseTasksImmediatelyWhenSpawned;
 }
 
-
-bool tarch::multicore::orchestration::Hardcoded::processPendingTasksWhileWaitingInBSPSection() {
-  return _processPendingTasksWhileWaiting;
+tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::Hardcoded::
+  paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {
+  if (nestedParallelismLevel > _maxNestedConcurrency) {
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunSerially;
+  } else if (nestedParallelismLevel <= 1) {
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel;
+  } else {
+    return tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndIgnoreWithholdSubtasks;
+  }
 }

@@ -12,7 +12,7 @@ tarch::logging::Log  toolbox::loadbalancing::Hardcoded::_log( "toolbox::loadbala
 
 
 toolbox::loadbalancing::Hardcoded::Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks, bool handOutOnePartitionPerCore):
-  LoadBalancing( nullptr, false ),
+  AbstractLoadBalancing( nullptr, false ),
   _currentTimeStamp(0),
   _handOutOnePartitionPerCore(handOutOnePartitionPerCore) {
   assertionEquals4( timeStamps.size(),       numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
@@ -83,7 +83,11 @@ void toolbox::loadbalancing::Hardcoded::finishStep() {
           ", as lb is told not to overbook local cores"
         );
       }
-      else if (not peano4::parallel::SpacetreeSet::getInstance().split(split.splittingTree,split.numberOfCells,split.destinationRank)) {
+      else if (not peano4::parallel::SpacetreeSet::getInstance().split(
+        split.splittingTree,
+        peano4::SplitInstruction{split.numberOfCells,peano4::SplitInstruction::Mode::BottomUp},
+        split.destinationRank
+      )) {
         logWarning(
           "finishStep()",
           "had been told to split " << split.numberOfCells << " cell(s) from tree " <<

@@ -2,18 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "Strategy.h"
-
 
 namespace tarch {
   namespace multicore {
     namespace orchestration {
       class BackfillAndDeployRoundRobin;
-    }
-  }
-}
-
+    } // namespace orchestration
+  }   // namespace multicore
+} // namespace tarch
 
 /**
  * Backfill strategy with GPU offloading
@@ -47,31 +44,30 @@ namespace tarch {
  * GPUs in a round-robin fashion.
  */
 class tarch::multicore::orchestration::BackfillAndDeployRoundRobin: public tarch::multicore::orchestration::Strategy {
-  private:
-    int  _minTasksToFuse;
-    int  _nextDeviceToUse;
-    bool _inBSPSection;
+private:
+  int  _minTasksToFuse;
+  int  _nextDeviceToUse;
+  bool _inBSPSection;
 
-    void toggleDevice();
-  public:
-    /**
-     * Set up orchestration
-     *
-     * By default, the first device the code will use is the host. After that,
-     * it will start to deploy tasks in a round robin fashion. It is important
-     * at this point that we do not ask the core object something, as the
-     * Core singleton might not be configured yet.
-     */
-    BackfillAndDeployRoundRobin(
-      int  minTasksToFuse
-    );
-    virtual ~BackfillAndDeployRoundRobin() = default;
+  void toggleDevice();
 
-    void startBSPSection() override;
-    void endBSPSection()   override;
-    int getNumberOfTasksToHoldBack() override;
-    FuseInstruction getNumberOfTasksToFuseAndTargetDevice()     override;
-    bool fuseTasksImmediatelyWhenSpawned() override;
-    bool processPendingTasksWhileWaitingInBSPSection() override;
+public:
+  /**
+   * Set up orchestration
+   *
+   * By default, the first device the code will use is the host. After that,
+   * it will start to deploy tasks in a round robin fashion. It is important
+   * at this point that we do not ask the core object something, as the
+   * Core singleton might not be configured yet.
+   */
+  BackfillAndDeployRoundRobin(int minTasksToFuse);
+  virtual ~BackfillAndDeployRoundRobin() = default;
+
+  virtual void            startBSPSection(int nestedParallelismLevel) override;
+  virtual void            endBSPSection(int nestedParallelismLevel) override;
+  virtual int             getNumberOfTasksToHoldBack() override;
+  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice() override;
+  virtual bool            fuseTasksImmediatelyWhenSpawned() override;
+  virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType)
+    override;
 };
-

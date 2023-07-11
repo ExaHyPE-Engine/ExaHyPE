@@ -12,11 +12,13 @@ ToolboxLoadBalancing_SOURCES = \
   Configuration.cpp \
   Hardcoded.cpp \
   loadbalancing.cpp \
-  LoadBalancing.cpp \
+  AbstractLoadBalancing.cpp \
   NoLoadBalancing.cpp \
   RecursiveBipartition.cpp \
+  SplitOversizedTree.cpp \
   SpreadOut.cpp \
   SpreadOutHierarchically.cpp \
+  SpreadOutOnceGridStagnates.cpp \
   State.cpp \
   Statistics.cpp
   

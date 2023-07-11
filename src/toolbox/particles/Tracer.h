@@ -2,13 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include "peano4/utils/Globals.h"
 #include "peano4/datamanagement/CellMarker.h"
+#include "peano4/utils/Globals.h"
 
-
-//#include <concepts>
-
+// #include <concepts>
 
 namespace toolbox {
   namespace particles {
@@ -20,55 +17,36 @@ namespace toolbox {
      * the particle passed.
      */
     template <typename Particle>
-    void staticPosition(
-      const Particle&  particle,
-      double           timeStepSize
-    ) {}
-
+    void staticPosition(const Particle& particle, double timeStepSize) {}
 
     /**
      *
      */
     template <typename ParticleAccessor>
-    concept ParticleTimeSteppingAccessor = requires {
-      typename ParticleAccessor::Particle;
-    };
+    concept ParticleTimeSteppingAccessor = requires { typename ParticleAccessor::Particle; };
 
+    /*
 
+     //(ParticleAccessor accessor, ) {
 
+          accessor.x(Particle&)       -> tarch::la::Vector< Dimensions, double>&;
+          accessor.x(const Particle&) -> const tarch::la::Vector< Dimensions, double>&;
 
-/*
-
- //(ParticleAccessor accessor, ) {
-
-      accessor.x(Particle&)       -> tarch::la::Vector< Dimensions, double>&;
-      accessor.x(const Particle&) -> const tarch::la::Vector< Dimensions, double>&;
-
-      accessor.v(Particle&)       -> tarch::la::Vector< Dimensions, double>&;
-      accessor.v(const Particle&) -> const tarch::la::Vector< Dimensions, double>&;
-*/
-//    };
-
+          accessor.v(Particle&)       -> tarch::la::Vector< Dimensions, double>&;
+          accessor.v(const Particle&) -> const tarch::la::Vector< Dimensions, double>&;
+    */
+    //    };
 
     template <typename Particle>
     struct ParticleAccessorIdentity {
-      static tarch::la::Vector< Dimensions, double>& x(Particle& particle) {
-        return particle.x();
-      }
+      static tarch::la::Vector<Dimensions, double>& x(Particle& particle) { return particle.x(); }
 
-      static const tarch::la::Vector< Dimensions, double>& x(const Particle& particle) {
-        return particle.x();
-      }
+      static const tarch::la::Vector<Dimensions, double>& x(const Particle& particle) { return particle.x(); }
 
-      static tarch::la::Vector< Dimensions, double>& v(Particle& particle) {
-        return particle.v();
-      }
+      static tarch::la::Vector<Dimensions, double>& v(Particle& particle) { return particle.v(); }
 
-      static const tarch::la::Vector< Dimensions, double>& v(const Particle& particle) {
-        return particle.v();
-      }
+      static const tarch::la::Vector<Dimensions, double>& v(const Particle& particle) { return particle.v(); }
     };
-
 
     /**
      * Simple explicit Euler
@@ -103,16 +81,8 @@ namespace toolbox {
      * respectively.
      */
     template <typename Particle>
-    void explicitEuler(
-      Particle&                                 particle,
-      double                                    timeStepSize,
-      const ParticleTimeSteppingAccessor auto&  accessor
-    );
-  }
-}
+    void explicitEuler(Particle& particle, double timeStepSize);
+  } // namespace particles
+} // namespace toolbox
 
-
-
-//#include "Tracer.cpph"
-
-
+// #include "Tracer.cpph"

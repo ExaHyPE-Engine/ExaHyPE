@@ -2,68 +2,28 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include <functional>
+#include <limits>
+#include <list>
+#include <string>
+#include <vector>
 
 #include "multicore.h"
 #include "tarch/multicore/orchestration/Strategy.h"
 
-
-#include <functional>
-#include <vector>
-#include <list>
-#include <string>
-#include <limits>
-
-
 namespace tarch {
-  /**
-   * Our tasking layer wraps around various tasking backends. The most popular backend is
-   * OpenMP, but you can also use Intel's OneTBB or C++ tasking. Per thread in the system,
-   * we have one task queue within Peano. Furthermore, we have a global task queue. The
-   * global system's behaviour is controlled via an orchestration object which tells
-   * Peano's tasking how to handle individual tasks.
-   *
-   * ## Orchestration flavours
-   *
-   * If you set a BSP-type task orchestration, the code will spawn one task per subdomain
-   * on a rank and immediately process any enclave tasks, i.e. individual tasks, when they
-   * drop into the tasking subsystem. In this case, Peano's own task queues will be empty
-   * all the time. They are not used.
-   *
-   * There is a native orchestration type which immediately spawns all tasks into the
-   * underlying tasking system. Again, Peano's internal task queues are not used.
-   *
-   * All other orchestration flavours dump their individual tasks into the thread-local
-   * queue first. This can be done without any semaphore or similar as there's one task
-   * queue per thread. Once a local BSP section has finished completely, the thread-local
-   * task queues are copied over into the global task queue. It again depends on the
-   * orchestration strategy how we proceed with this global task queue from hereon.
-   *
-   * While a BSP section is waiting it can poll its thread-local task queues (again without
-   * any additional lock) and process tasks from there, or it can poll the global task
-   * queue which might have been befilled by someone else.
-   *
-   * Whenever we think we could fuse tasks into one large task assembly, we first commit
-   * the thread-local task queue into the global task queue and then we try to combine
-   * the tasks there.
-   *
-   * The three-layer approach with a thread-local queue, a global queue and the actual
-   * tasking subsystem is necessary. We need Peano's specific queues to be able to merge
-   * tasks on-the-fly. We need the thread-local queues to be fast. With only one global
-   * queue, we found that a lot of codes basically compete for the locks to spanwn tasks
-   * into this queue.
-   *
-   *
-   * @see tarch::multicore::orchestration::StrategyFactory
-   */
   namespace multicore {
-    void setOrchestration( tarch::multicore::orchestration::Strategy* realisation );
+    void setOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
     /**
+     * Swap the active orchestration
+     *
      * Different to setOrchestration(), this operation does not delete
      * the current orchestration. It swaps them, so you can use setOrchestration()
      * with the result afterwards and re-obtain the original strategy.
      */
-    tarch::multicore::orchestration::Strategy* swapOrchestration( tarch::multicore::orchestration::Strategy* realisation );
+    tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation
+    );
 
     /**
      * Usually called directly by EnclaveTask.
@@ -94,106 +54,87 @@ namespace tarch {
      * Abstract super class for a job.
      */
     class Task {
-      protected:
-        const int   _id;
-        const int   _taskType;
-        int         _priority;
-      public:
-        static constexpr int DefaultPriority = 0;
-        static constexpr int Host            = -1;
+    protected:
+      const int _taskType;
+      int       _priority;
 
-        /**
-         * @param id       Unique number of the task
-         * @param taskType Unique task (type) number for this task. All tasks that do 
-         *        the same, i.e. are of the same type, should have the same task type
-         *        integer marker. However, they all should have different ids.
-         */
-        Task( int id, int taskType, int priority );
+    public:
+      static constexpr int DefaultPriority = 0;
+      static constexpr int Host            = -1;
+      static constexpr int DontFuse        = -1;
 
-        virtual ~Task() {}
+      /**
+       * @param taskType Unique task (type) number for this task. All tasks that do
+       *        the same, i.e. are of the same type, should have the same task type
+       *        integer marker. Peano's tarch can use multiple tasks of the same
+       *        type and fuse/batch them into one task call. However, if you don't
+       *        want Peano to even thing about task fusion, pass in DontFuse as
+       *        argument.
+       * @param priority Integer value that indicates what priority you want to
+       *        assign a task. Not all tasking backends support priorities.
+       */
+      Task(int taskType, int priority);
 
-        int getTaskType() const;
-        int getTaskId() const;
-        int getPriority() const;
-        void setPriority( int priority );
+      virtual ~Task() {}
 
-        virtual bool run() = 0;
+      int  getTaskType() const;
+      int  getPriority() const;
+      void setPriority(int priority);
 
-        /**
-         * Fuse multiple tasks
-         *
-         * Fuse the task with a list of further tasks. The routine is guaranteed to 
-         * be called only for tasks with the same taskType. So if you carefully 
-         * distinguish your tasks, you can downcast all the arguments, as you might
-         * know the real type.
-         *
-         * This operation is invoked on a task. However, it is also given N=otherTasks.size
-         * further tasks of the same type. You have two options now:
-         *
-         * - You can process the N tasks in one rush. In this case, the original
-         *   task, i.e. the object on which fuse() is called, remains intact and
-         *   has not been processed yet. You have to return true.
-         * - You can process the N+1 tasks in one rush, i.e. all tasks from
-         *   otherTasks and the task represented by the actual object on which
-         *   fuse is called. In this case, you return false, as the task on which
-         *   fuse has been called can be destroyed straightaway by the runtime.
-         *
-         * No matter which route you follow, you always have to delete all the tasks
-         * stores within otherTasks, as these have to be processed by fuse().
-         *
-         * <h2> Default implementation </h2>
-         * 
-         * My default implementation executes all the passed tasks and then returns 
-         * the original task back, i.e. this one is not executed. This is the first
-         * execution pattern described above.
-         *
-         * <h2> Memory ownership </h2>
-         * 
-         * See above: fuse() has to delete all the instances within otherTasks.
-         * The calling routine does not have to delete anything there anymore.
-         * But it has to destroy the owning object, i.e. the object on which is
-         * has called fuse(), manually no matter whether we return true or false.
-         *
-         * @return Is the present task still to be executed or can the runtime 
-         *         destroy it straightaway?
-         * @param otherTasks List of tasks to fuse and process. Will all have the
-         *         same type as the present object. It is the tasks responsibility
-         *         to get these tasks done. So either span some new tasks or handle
-         *         them straightaway.
-         * @param targetDevice On which device should the task be processed? A
-         *         negative number means local host anything greater or equal to
-         *         zero denotes an accelerator.
-         */
-        virtual bool fuse( const std::list<Task*>& otherTasks, int targetDevice=Host );
+      /**
+       * @return true if the taskType is not DontFuse.
+       */
+      virtual bool canFuse() const;
 
-        /**
-         * Is off by default.
-         */
-        virtual bool canFuse() const;
+      virtual bool run() = 0;
 
-        /**
-         * Follows the signature of fuse(). Please hand in an (empty) list
-         * of producedTasks which is befilled by split(). The routine returns
-         * true if the original task that is split still has to be executed.
-         * It returns false if you can safely delete the task.
-         *
-         * We require a strict parent-child relation on the splitting, i.e.
-         *
-         * todo: Alles nicht ausgegoren!
-         *
-         * @return Is the present task still to be executed or can the runtime
-         *         destroy it straightaway?
-         */
-        virtual bool split(std::list<Task*>& producedTasks);
-        virtual bool canSplit() const;
-
-        /**
-         * If this attributes holds (default is false), then it is safe for
-         * the scheduler to cast the task object into a SmartMPI task.
-         */
-        virtual bool isSmartMPITask() const;
+      /**
+       * Fuse multiple tasks
+       *
+       * Fuse the task with a list of further tasks. The routine is guaranteed to
+       * be called only for tasks with the same taskType. So if you carefully
+       * distinguish your tasks, you can downcast all the arguments, as you might
+       * know the real type.
+       *
+       * This operation is invoked on a task. However, it is also given N=otherTasks.size
+       * further tasks of the same type. You have two options now:
+       *
+       * - You can process the N tasks in one rush. In this case, the original
+       *   task, i.e. the object on which fuse() is called, remains intact and
+       *   has not been processed yet. You have to return true.
+       * - You can process the N+1 tasks in one rush, i.e. all tasks from
+       *   otherTasks and the task represented by the actual object on which
+       *   fuse is called. In this case, you return false, as the task on which
+       *   fuse has been called can be destroyed straightaway by the runtime.
+       *
+       * No matter which route you follow, you always have to delete all the tasks
+       * stores within otherTasks, as these have to be processed by fuse().
+       *
+       * <h2> Default implementation </h2>
+       *
+       * My default implementation executes all the passed tasks and then returns
+       * the original task back, i.e. this one is not executed. This is the first
+       * execution pattern described above.
+       *
+       * <h2> Memory ownership </h2>
+       *
+       * See above: fuse() has to delete all the instances within otherTasks.
+       * The calling routine does not have to delete anything there anymore.
+       * But it has to destroy the owning object, i.e. the object on which is
+       * has called fuse(), manually no matter whether we return true or false.
+       *
+       * @return Is the present task still to be executed or can the runtime
+       *         destroy it straightaway?
+       * @param otherTasks List of tasks to fuse and process. Will all have the
+       *         same type as the present object. It is the tasks responsibility
+       *         to get these tasks done. So either span some new tasks or handle
+       *         them straightaway.
+       * @param targetDevice On which device should the task be processed? A
+       *         negative number means local host anything greater or equal to
+       *         zero denotes an accelerator.
+       */
+      virtual bool fuse(const std::list<Task*>& otherTasks, int targetDevice = Host);
     };
-
 
     /**
      * Helper class if you wanna administer tasks with in a queue
@@ -202,52 +143,49 @@ namespace tarch {
      * with pointers.
      */
     class TaskComparison {
-      public:
-        bool operator() (const Task& lhs, const Task& rhs) const;
-        bool operator() (Task* lhs, Task* rhs) const;
+    public:
+      bool operator()(const Task& lhs, const Task& rhs) const;
+      bool operator()(Task* lhs, Task* rhs) const;
     };
 
     /**
      * Frequently used implementation for job with a functor.
      */
     class TaskWithCopyOfFunctor: public Task {
-      private:
-  	   /**
-           * See the outer class description for an explanation why this is an
-           * attribute, i.e. why we copy the functor here always.
-           */
-        std::function<bool()>   _taskFunctor;
-      public:
-        TaskWithCopyOfFunctor( int id, int taskType, int priority, const std::function<bool()>& taskFunctor );
+    private:
+      /**
+       * See the outer class description for an explanation why this is an
+       * attribute, i.e. why we copy the functor here always.
+       */
+      std::function<bool()> _taskFunctor;
 
-        bool run() override;
+    public:
+      TaskWithCopyOfFunctor()                             = delete;
+      TaskWithCopyOfFunctor(const TaskWithCopyOfFunctor&) = delete;
+      TaskWithCopyOfFunctor(int taskType, int priority, const std::function<bool()>& taskFunctor);
+
+      virtual bool run() override;
     };
-
 
     /**
      * Frequently used implementation for job with a functor.
      */
     class TaskWithoutCopyOfFunctor: public Task {
-      private:
-        /**
-         * See the outer class description for an explanation why this is an
-         * attribute, i.e. why we copy the functor here always.
-         */
-        std::function<bool()>&   _taskFunctor;
-      public:
-        TaskWithoutCopyOfFunctor( int id, int taskType, int priority, std::function<bool()>& taskFunctor );
+    private:
+      /**
+       * See the outer class description for an explanation why this is an
+       * attribute, i.e. why we copy the functor here always.
+       */
+      std::function<bool()>& _taskFunctor;
 
-        bool run() override;
+    public:
+      TaskWithoutCopyOfFunctor()                                = delete;
+      TaskWithoutCopyOfFunctor(const TaskWithoutCopyOfFunctor&) = delete;
+
+      TaskWithoutCopyOfFunctor(int taskType, int priority, std::function<bool()>& taskFunctor);
+
+      virtual bool run() override;
     };
-
-
-    /**
-     * @param threadCount -1 if you are interested in global number of tasks or a
-     *   non-negative integer if you are only interested in one particular thread
-     *   and its specific tasks.
-     */
-    int getNumberOfPendingTasks(int threadCount);
-
 
     /**
      * Process a few tasks from my backlog of tasks
@@ -259,6 +197,10 @@ namespace tarch {
      * routine will starve. As such, it is absolutely fine if the implementation
      * of processPendingTasks() suspends the actual thread, as long as this thread
      * is not permanently suspended.
+     *
+     * This routine invokes internal::copyInternalTaskQueuesOverIntoGlobalQueue()
+     * first of all to maximise the number of tasks in the local queue.
+     *
      *
      * @param maxTasks Specify how many tasks to process at most. By constraining
      *  this number, you can realise some polling where you check for a condition.
@@ -272,8 +214,7 @@ namespace tarch {
      *
      * @return There have been tasks
      */
-    bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max(), bool fifo=true);
-
+    bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max(), bool fifo = true);
 
     /**
      * Spawns a single task in a non-blocking fashion
@@ -281,52 +222,164 @@ namespace tarch {
      * Ownership goes over to Peano's job namespace, i.e. you don't have
      * to delete the pointer.
      *
-     * <h2> Behaviour </h2>
+     * The realisation is straightforward:
      *
-     * There are two different types of behaviour, depending on your runtime's state:
-     * If the taskProgressionStrategy is equal to TaskProgressionStrategy::MapOntoNativeTask,
-     * the thin layer forwards the task straightaway to the language-specific back-end. The
-     * task thus is mapped 1:1 to OpenMP, e.g. Otherwise, the routine does take the task and
-     * enqueues is the local queue nonblockingTasks.
+     * 1. If SmartMPI is enabled and the task should be sent away, do so.
+     * 2. If the current orchestration strategy (an implementation of
+     *    tarch::multicore::orchestration::Strategy says that we should
+     *    hold back tasks, but the current number of tasks in the
+     *    thread-local queue exceeds already this threshold, invoke
+     *    the native tarch::multicore::native::spawnTask(task).
+     * 3. If none of these ifs apply, enqueue the task in the thread-local
+     *    queue.
+     * 4. If we came through route (3), doublecheck if we should fuse
+     *    tasks into GPUs.
      *
-     *
-     * <h2> SmartMPI </h2>
-     *
-     * If you compile with SmartMPI, this is the one and only point where the control flow
-     * diverges: If a task is smart, the routine takes the task and forwards it to SmartMPI.
-     *
+     * spawnTask() will ***never*** commit a task to the global task
+     * queue and therefore is inherently thread-safe.
      *
      * @see tarch::multicore::spawnAndWait()
      * @see processPendingTasks(int)
      *
-     * @param someoneWillWaitForThisTaskNumber Memorise future. A task that asks to be
-     *   re-scheduled always has to pass false.
      */
-    void spawnTask(Task*  job);
+    void spawnTask(Task* job);
 
     /**
-     * - Tell the orchestration that a BSP section starts
-     * - Invoke the native implementation (and tell it what orchestration
-     *   strategy is to be used)
+     * Run a bunch of tasks
+     *
+     * The realisation is relatively straightforward:
+     *
+     * - Maintain nestedSpawnAndWaits which is incremented for every fork-join
+     *   section that we enter.
+     * - Tell the orchestration that a BSP section starts.
+     * - Ask the orchestration which realisation to pick.
+     * - Either run through the task set sequentially or invoke the native
+     *   parallel implementation.
+     * - If there are task pending and the orchestration instructs us to do so,
+     *   map them onto native tasks.
      * - Tell the orchestration that the BSP section has terminated
-     * - If there are task pending and the orchestration restricts the
-     *   number of tasks to hold back, map them onto native tasks.
+     * - Tell the orchestration that a BSP section ends.
+     * - Maintain nestedSpawnAndWaits which is decremented whenever we leave a
+     *   fork-join section.
+     *
+     *
+     * ## Scheduling variants
+     *
+     * The precise behaviour of the implementation is controlled through the
+     * orchestration. At the moment, we support three different variants:
+     *
+     * 1. The serial variant tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunSerially runs
+     *    through all the tasks one by one. Our rationale is that a good
+     *    orchestration picks this variant for very small task sets where the
+     *    overhead of the join-fork makes a parallelisation counterproductive.
+     *
+     * 2. The parallel variant tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel runs
+     *    through all the tasks in parallel. Once all tasks are completed, the
+     *    code commits all the further tasks that have been spawned into a
+     *    global queue and then studies if to fuse them further or if to map
+     *    them onto native tasks. This behaviour has to be studied in the
+     *    context of tarch::multicore::spawnTask() which might already have
+     *    mapped tasks onto native tasks or GPU tasks, i.e. at this point no
+     *    free subtasks might be left over in the local queues even though
+     *    there had been some. It is important to be careful with this "commit
+     *    all tasks after the traversal" approach: In OpenMP, it can lead to
+     *    deadlocks if the taskwait is realised via busy polling. See the bug
+     *    description below.
+     *
+     * 3. The parallel variant
+     * tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallelAndIgnoreWithholdSubtasks runs through all
+     * the tasks in parallel. Different to tarch::multicore::orchestration::Strategy::ExecutionPolicy::RunParallel, it
+     * does not try to commit any further subtasks or to fuse them. This variant allows the scheduler to run task sets
+     * in parallel but to avoid the overhead introduced by the postprocessing.
+     *
+     * I would appreciate if we could distinguish busy polling from task
+     * scheduling in the taskwait, but such a feature is not available within
+     * OpenMP, and we haven't studied TBB in this context yet.
+     *
+     *
+     * ## Implementation flaws in OpenMP and bugs burried within the sketch
+     *
+     * In OpenMP, the taskwait pragma allows the scheduler to process other
+     * tasks as it is a scheduling point. This way, it should keep cores busy
+     * all the time as long as there are enough tasks in the system. If a
+     * fork-join task spawns a lot of additional subtasks, and if the
+     * orchestration does not tell Peano to hold them back, the OpenMP runtime
+     * might switch to the free tasks rather than continue with the actual
+     * fork-join tasks. Which is not what we want and introduces runtime flaws
+     * later down the line. This phenomenon is described in our
+     * 2021 IWOMP paper by H. Schulz et al.
+     *
+     * A more severe problem arises the other way round: Several groups have
+     * reported that the taskwait does not continue with other tasks. See in
+     * particular
+     *
+     * Jones, Christopher Duncan (Fermilab): Using OpenMP for HEP Framework Algorithm Scheduling.
+     * http://cds.cern.ch/record/2712271
+     *
+     * Their presentation slides can be found at https://zenodo.org/record/3598796#.X6eVv8fgqV4.
+     *
+     * This paper clarifies that some OpenMP runtimes do (busy) waits within
+     * the taskwait construct to be able to continue immediately. They do not
+     * process other tasks meanwhile. Our own ExaHyPE 2 POP review came to the
+     * same conclusion.
+     *
+     * This can lead to a deadlock in applications such as ExaHyPE which spawn
+     * bursts of enclave tasks and then later on wait for their results to drop
+     * in. The consuming tasks will issue a taskyield() but this will not help,
+     * if the taskyield() now permutes through all the other traversal tasks.
+     *
+     * If you suffer from that, you have to ensure that all enclave tasks
+     * have finished prior to the next traversal.
+     *
+     *
+     * ## Statistics
+     *
+     * It is important to know how many BSP sections are active at a point. I
+     * therefore use the stats interface to maintain the BSP counters. However,
+     * I disable any statistics sampling, so I get a spot-on overview of the
+     * number of forked subtasks at any point.
+     *
+     *
+     *
+     * @todo Speak to OpenMP. It would be totally great, if we could say that
+     *   the task wait shall not(!) issue a new scheduling point. We would like
+     *   to distinguish taskwaits which priorities throughput vs algorithmic
+     *   latency.
+     *
+     * @todo Speak to OpenMP that we would like a taskyield() which does not (!)
+     *   continue with a sibling. This is important for producer-consumer
+     *   patterns.
      */
-    void spawnAndWait(
-      const std::vector< Task* >&  tasks
-    );
+    void spawnAndWait(const std::vector<Task*>& tasks);
 
     namespace native {
+      /**
+       * Spawn a ready task into the runtime system of choice.
+       */
       void spawnTask(Task* task);
-      void spawnAndWait(
-        const std::vector< Task* >&  tasks,
-        orchestration::Strategy*     strategy
-      );
+
+      /**
+       * Map onto native tasking
+       *
+       * Run over the tasks and issue native tasks. If the tasks spawn, in
+       * return, further subtasks, these will either end up in a thread-local
+       * queue or will be mapped onto native tasks. The behaviour here depends
+       * on decisions within tarch::multicore::spawnTask() guided by the
+       * orchestration. If the subtasks enqueue tasks into the thread-local
+       * queue, they will remain there. This routine does not touch the
+       * thread-local queue.
+       *
+       * @param tasks Set of tasks. Is guaranteed to be non-empty.
+       */
+      void spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks);
+
       /**
        * Process a fused task
        *
-       * A fused task is a task (which can be fused) and a list of further tasks which
-       * are of the same type and, hence, can be fused, too. The list can be empty.
+       * A fused task is a task (which can be fused) and a list of further
+       * tasks which are of the same type and, hence, can be fused, too. The
+       * list can be empty. Efficient implementations should spawn the fused
+       * tasks as a further ready task and return immediately.
        *
        * @param firstTask First task. This is a task which can be fused. The pointer
        *   is valid. The ownership of firstTask is handed over to the called routine,
@@ -337,88 +390,38 @@ namespace tarch {
        * @param device Target device on which the fused tasks should be executed. Can
        *   be host if the tasks should end up on the host.
        */
-      void processFusedTask(Task*  firstTask, const std::list< tarch::multicore::Task* >& otherTasks, int device);
-      int getNumberOfPendingTasks();
+      void processFusedTask(Task* firstTask, const std::list<tarch::multicore::Task*>& otherTasks, int device);
 
       /**
-       * This routine is used by processPendingTasks() whenever there are no other tasks
-       * left anymore.
+       * Drain all task queues
        */
-      void deferRunningThreadAndContinueWithOtherTasks();
-    }
+      void drainTaskQueues();
 
+      /**
+       * These are the non-blocking (ready) tasks submitted via spawnTask()
+       */
+      int getNumberOfPendingTasks();
+    } // namespace native
 
     namespace internal {
       /**
-       * Progression routine within spawnAndWaitAsExplicitTasksWithPolling()
-       *
-       * This function has to be called within spawnAndWaitAsExplicitTasksWithPolling()
-       * whenever a thread has finished its local partition and should now
-       * process further tasks. The polling thing consists of three parts:
-       *
-       * - A guard loop ensures that we don't poll too long or too often.
-       * - First, I find out which thread I'm running on and how many tasks
-       *   I may fuse. These two things potentially are expensive to find out
-       *   and they don't change, so I do this only once.
-       * - The actual loop body ensures that we progress tasks.
-       *
-       *
-       * ## Guard loop
-       *
-       * The guard loop consists of three checks that all have to hold:
-       *
-       * - If the number of pending (BSP) tasks equals zero, we terminate
-       *   immediately. That is, we only continue to progress while another
-       *   thread traverses a subdomain and hence might produce new tasks.
-       * - If the number of pending tasks is bigger or equal to the number
-       *   of physical threads, we terminate immediately. This can happen
-       *   if we have more subdomains that have to be mapped onto tasks than
-       *   we have actual threads. So better terminate this task immediately
-       *   to give the runtime the opportunity to process real compute tasks.
-       * - If not all tasks have been spawned yet, we also terminate
-       *   immediately. If the runtime hasn't had the opportunity yet to
-       *   kick off the other tasks, we better ensure that happens asap.
-       *
-       * I originally wanted to integrate this guard loop into the routine.
-       * However, that does not work. The task loop is defined over some
-       * atomics, and the type of such atomics depends on the chosen
-       * environment. They have a different type for OpenMP vs TBB, e.g. So
-       * the user has to wrap the function call into a code snippet similar
-       * to
-       *
-       *          bool continueToProcessPendingTasks =
-       *            pendingTasks>0
-       *            and
-       *            pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
-       *            and
-       *            spawnedTasks==NumberOfThreads;
-       *          while ( continueToProcessPendingTasks ) {
-       *            continueToProcessPendingTasks = ::tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
-       *             strategy
-       *            );
-       *          }
-       *
-       * This snippet highlights a fourth consideration: If we have tried to
-       * process a pending task but failed, then we terminate as well. This is
-       * not necessary for all solvers, but
-       *
-       * - if other compute kernels/tasks fork further, an active polling keeps
-       *   the current thread busy, i.e. strips those other kernels off the
-       *   opportunity to grab threads in return. So active polling severely
-       *   slows down the calculation. In the worst case, it leads to deadlocks.
-       * - if there is an extreme ill-balance, a lot of threads will end up
-       *   competing for the global lock. In return, the task still computing
-       *   will struggle to enqueue new tasks rapidly. Once again, aggressive
-       *   polling would slow down the simulation even though it should, in
-       *   theory, be faster.
-       *
-       * @return Has processed some tasks
+       * @return Global number of pending tasks in the pipeline
        */
-      bool progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
-        tarch::multicore::orchestration::Strategy*     strategy
-      );
+      int getNumberOfWithholdPendingTasks();
 
-      int  mapPendingTasksOntoNativeTasks(int maxTasks);
+      /**
+       * Take up to maxTasks tasks that are internally buffered and throw them
+       * into the native runtime
+       *
+       * This routine should submit the tasks LIFO, as we assume that Peano's
+       * traversals produce tasks and the follow-up traversal
+       * then consumes the outcome. In the Peano world, two subsequent mesh
+       * traversals run through the grid in inverted order, so submitting tasks
+       * LIFO makes sense once we assume that most runtimes will kind of stick
+       * to the task submission order unless there are dependencies between the
+       * tasks.
+       */
+      int mapPendingTasksOntoNativeTasks(int maxTasks);
 
       /**
        *
@@ -434,14 +437,18 @@ namespace tarch {
        * The method locks and unlocks the queue. So don't lock it yourself.
        *
        */
-      bool fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction);
+      bool fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction& fuseInstruction);
 
       /**
+       * Set up internal queues
+       *
        * Set up the internal queues that our wrapper around the tasking back-end
        * requires. If we worked with only one task queue, this would not be
-       * necessary, but we found such a solution deterimental. Instead, it is
+       * necessary, but we found such a solution detrimental. Instead, it is
        * way better to work with one queue per thread, so we can spawn enclave
        * tasks without any additional locks.
+       *
+       * This routine only evermakes the number of queues grow, never shrink.
        */
       void configureInternalTaskQueues(int numberOfTasks);
 
@@ -449,59 +456,21 @@ namespace tarch {
        * Commit local task queues into global queue
        *
        * If we work with thread-local queues, we have to flush them over into the
-       * global queue eventually. To do so, this routine is to be called either
-       * per thread or with a -1 to roll all local queues over into the one global
-       * task queue.
-       *
-       * ## Deadlocks
+       * global queue eventually.
        *
        * We found that the commitment to the global queue is prone to starvation
        * effects: If we have 127 threads hammering the global queue for work and
        * if there's one thread left over, the one thread will struggle to get its
        * message into the global queue. This is particularly cumbersome, if the
-       * local thread doesn't have any message:
-       *
-       * My original implementation locked the global queue and then copied the
-       * local tasks over. If the local tasks are empty, the copy is becoming a
-       * trivial operation. In the situation sketched above, it however is
-       * problematic, as I still would request a global lock, even though nothing
-       * will be copied over. Therefore, we found it advantageous to add a separate
-       * case distinction: If we don't have a local task, we should not even lock
-       * the queue (and, obviously, don't have to copy over either).
-       *
-       * This insight materialises in
-       *
-       *           else if ( not localNonblockingTasks[threadNumber].empty() ) {
-       *
-       *
-       * ## Flush all queues
-       *
-       * In line with the observation above (and in terms of code redundancy), we
-       * might make the flush a loop over all queues and then call the individual
-       * flush per queue. This would mean that we potentially lock the global
-       * queue p times for p threads.
-       *
+       * local thread doesn't have any message.
        * I usually flush all queues if and only if I'm at the end of a BSP section.
-       * So I avoid repeated locks, lock once and then flush all of the task queues
-       * in one go before I release the lock.
-       *
-       *
-       * @param threadNumber -1 if you want to flush all thread buffers
+       * You can however veto this behaviour.
        */
-      void copyInternalTaskQueuesOverIntoGlobalQueue(int threadNumber);
+      void copyInternalTaskQueuesOverIntoGlobalQueue();
 
-      /**
-       * Take one task that is tied to the thread-local queue, i.e. not yet committed
-       * to the global queue, and process it. As we assume that we work thread-local,
-       * there's no need for a global semaphore when we access the queue.
-       */
-      bool processThreadLocalTask(int threadNumber);
-    }
-  }
-}
+      void copyInternalTaskQueueOverIntoGlobalQueue(int threadNumber);
+    } // namespace internal
+  }   // namespace multicore
+} // namespace tarch
 
-
-bool operator<( const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs );
-
-
-
+bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs);

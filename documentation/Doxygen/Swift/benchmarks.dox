@@ -3,6 +3,7 @@
 @page swift_benchmarks Benchmarks
 
 \li \subpage benchmarks_swift2_planet_orbit
+\li \subpage benchmarks_swift2_hydro_noh_imposion_test
 \li \subpage benchmarks_swift2_hydro_simple_sph_noh
 \li \subpage benchmarks_swift2_hydro_simple_sph_sod_1d
 \li \subpage benchmarks_swift2_hydro_simple_sph_sedov_blast

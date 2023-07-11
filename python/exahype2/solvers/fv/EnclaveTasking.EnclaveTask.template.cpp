@@ -77,21 +77,6 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   {% endif %}
 }
 
-{% if STATELESS_PDE_TERMS %}
-#if defined(GPUOffloadingOMP)
-bool checkOMPOffloading() {
-  bool canOffload = true;
-  #pragma omp target map(tofrom : canOffload)
-  {
-    if (!omp_is_initial_device()) {
-      canOffload = true;
-    }
-  }
-  return canOffload;
-}
-#endif
-{% endif %}
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
@@ -127,13 +112,23 @@ bool checkOMPOffloading() {
 {
 {% if STATELESS_PDE_TERMS %}
 #if defined(GPUOffloadingOMP)
-  if (!checkOMPOffloading()) {
+  bool canOffload = false;
+  #pragma omp target map(tofrom : canOffload)
+  {
+    if (!omp_is_initial_device()) {
+      canOffload = true;
+    }
+  }
+
+  if (not canOffload) {
     throw std::runtime_error("ExaHyPE 2 was built with OpenMP GPU offloading support, but the chosen solver cannot offload to the GPU.");
   }
 #endif
 {% endif %}
 }
 
+
+#ifdef UseSmartMPI
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
   #ifdef UseSmartMPI
   return true;
@@ -142,7 +137,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
   #endif
 }
 
-#ifdef UseSmartMPI
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
   computeTask();
   if (_remoteTaskId != -1) {
@@ -328,6 +323,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 #endif
 
 {% if STATELESS_PDE_TERMS %}
+
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
   return repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
     _marker.x(),
@@ -351,7 +347,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     patchData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
     patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
-    patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_id;
+    patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
     patchData.QOut[currentTask]        = tarch::allocateMemory<double>( _numberOfResultValues, tarch::MemoryLocation::Heap );
     delete p;
     currentTask++;
@@ -361,7 +357,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   patchData.cellSize[currentTask]    = _marker.h();
   patchData.t[currentTask]           = _t;
   patchData.dt[currentTask]          = _dt;
-  patchData.id[currentTask]          = _id;
+  patchData.id[currentTask]          = _taskNumber;
   patchData.QOut[currentTask]        = tarch::allocateMemory<double>( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
   //
@@ -370,7 +366,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // ==============
   //
   bool foundOffloadingBranch = false;
-
 
   #if defined(GPUOffloadingOMP)
   if (targetDevice>=0) {
@@ -389,7 +384,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #if defined(GPUOffloadingSYCL)
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
-
     ::exahype2::fv::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
@@ -397,7 +391,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #if defined(GPUOffloadingCPP)
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
-
     ::exahype2::fv::{{KERNEL_NAMESPACE}}::cpp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
@@ -405,7 +398,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   if (not foundOffloadingBranch) {
     ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
   }
-
 
   //
   // ==================
@@ -417,7 +409,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
   }
 
-  // Don't rerun, so return false
+  // Don't rerun, so return false.
   return false;
 }
+
 {% endif %}

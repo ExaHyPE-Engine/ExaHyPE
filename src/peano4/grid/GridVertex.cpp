@@ -7,12 +7,14 @@
 
 
 
-peano4::grid::GridVertex::GridVertex(State  __state, tarch::la::Vector<TwoPowerD,int>  __adjacentRanks, tarch::la::Vector<TwoPowerD,int>  __backupOfAdjacentRanks, bool  __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, bool  __isAntecessorOfRefinedVertexInCurrentTreeSweep, int  __numberOfAdjacentRefinedLocalCells, tarch::la::Vector<Dimensions,double>  __x, int  __level){
+peano4::grid::GridVertex::GridVertex(State  __state, tarch::la::Vector<TwoPowerD,int>  __adjacentRanks, tarch::la::Vector<TwoPowerD,int>  __backupOfAdjacentRanks, bool  __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, bool  __isAntecessorOfRefinedVertexInCurrentTreeSweep, bool  __hasBeenParentOfSubtreeVertexInPreviousTreeSweep, bool  __isParentOfSubtreeVertexInCurrentTreeSweep, int  __numberOfAdjacentRefinedLocalCells, tarch::la::Vector<Dimensions,double>  __x, int  __level){
 setState( __state);
 setAdjacentRanks( __adjacentRanks);
 setBackupOfAdjacentRanks( __backupOfAdjacentRanks);
 setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep( __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep);
 setIsAntecessorOfRefinedVertexInCurrentTreeSweep( __isAntecessorOfRefinedVertexInCurrentTreeSweep);
+setHasBeenParentOfSubtreeVertexInPreviousTreeSweep( __hasBeenParentOfSubtreeVertexInPreviousTreeSweep);
+setIsParentOfSubtreeVertexInCurrentTreeSweep( __isParentOfSubtreeVertexInCurrentTreeSweep);
 setNumberOfAdjacentRefinedLocalCells( __numberOfAdjacentRefinedLocalCells);
 #if PeanoDebug>0
 setX( __x);
@@ -28,6 +30,8 @@ peano4::grid::GridVertex::GridVertex( const GridVertex& copy ) {
   setBackupOfAdjacentRanks( copy.getBackupOfAdjacentRanks() );
   setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep( copy.getHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep() );
   setIsAntecessorOfRefinedVertexInCurrentTreeSweep( copy.getIsAntecessorOfRefinedVertexInCurrentTreeSweep() );
+  setHasBeenParentOfSubtreeVertexInPreviousTreeSweep( copy.getHasBeenParentOfSubtreeVertexInPreviousTreeSweep() );
+  setIsParentOfSubtreeVertexInCurrentTreeSweep( copy.getIsParentOfSubtreeVertexInCurrentTreeSweep() );
   setNumberOfAdjacentRefinedLocalCells( copy.getNumberOfAdjacentRefinedLocalCells() );
 #if PeanoDebug>0
   setX( copy.getX() );
@@ -51,6 +55,10 @@ std::string peano4::grid::GridVertex::toString() const {
   out << "hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=" << _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
   out << ","; 
   out << "isAntecessorOfRefinedVertexInCurrentTreeSweep=" << _isAntecessorOfRefinedVertexInCurrentTreeSweep;
+  out << ","; 
+  out << "hasBeenParentOfSubtreeVertexInPreviousTreeSweep=" << _hasBeenParentOfSubtreeVertexInPreviousTreeSweep;
+  out << ","; 
+  out << "isParentOfSubtreeVertexInCurrentTreeSweep=" << _isParentOfSubtreeVertexInCurrentTreeSweep;
   out << ","; 
   out << "numberOfAdjacentRefinedLocalCells=" << _numberOfAdjacentRefinedLocalCells;
 #if PeanoDebug>0
@@ -145,6 +153,26 @@ void   peano4::grid::GridVertex::setIsAntecessorOfRefinedVertexInCurrentTreeSwee
 }
 
 
+bool   peano4::grid::GridVertex::getHasBeenParentOfSubtreeVertexInPreviousTreeSweep() const {
+  return _hasBeenParentOfSubtreeVertexInPreviousTreeSweep;
+}
+
+
+void   peano4::grid::GridVertex::setHasBeenParentOfSubtreeVertexInPreviousTreeSweep(bool value) {
+  _hasBeenParentOfSubtreeVertexInPreviousTreeSweep = value;
+}
+
+
+bool   peano4::grid::GridVertex::getIsParentOfSubtreeVertexInCurrentTreeSweep() const {
+  return _isParentOfSubtreeVertexInCurrentTreeSweep;
+}
+
+
+void   peano4::grid::GridVertex::setIsParentOfSubtreeVertexInCurrentTreeSweep(bool value) {
+  _isParentOfSubtreeVertexInCurrentTreeSweep = value;
+}
+
+
 int   peano4::grid::GridVertex::getNumberOfAdjacentRefinedLocalCells() const {
   return _numberOfAdjacentRefinedLocalCells;
 }
@@ -202,41 +230,6 @@ void   peano4::grid::GridVertex::setLevel(int value) {
 
 
 #ifdef Parallel
-void peano4::grid::GridVertex::sendAndPollDanglingMessages(const peano4::grid::GridVertex& message, int destination, int tag, MPI_Comm communicator ) {
-  peano4::grid::GridVertex::send(
-    message, destination, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridVertex", "sendAndPollDanglingMessages()",destination, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridVertex", "sendAndPollDanglingMessages()", destination, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-
-
-void peano4::grid::GridVertex::receiveAndPollDanglingMessages(peano4::grid::GridVertex& message, int source, int tag, MPI_Comm communicator ) {
-  peano4::grid::GridVertex::receive(
-    message, source, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridVertex", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridVertex", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-#endif
-    
-#ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype peano4::grid::GridVertex::Datatype;
@@ -289,6 +282,8 @@ void peano4::grid::GridVertex::initDatatype() {
   NumberOfAttributes++;
   NumberOfAttributes++;
   NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
 #if PeanoDebug>0
   NumberOfAttributes++;
 #endif 
@@ -307,6 +302,12 @@ void peano4::grid::GridVertex::initDatatype() {
   counter++;
   subtypes[counter] = MPI_INT;
   blocklen[counter] = TwoPowerD;
+  counter++;
+  subtypes[counter] = MPI_BYTE;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_BYTE;
+  blocklen[counter] = 1;
   counter++;
   subtypes[counter] = MPI_BYTE;
   blocklen[counter] = 1;
@@ -341,6 +342,10 @@ void peano4::grid::GridVertex::initDatatype() {
   MPI_Get_address( &(instances[0]._hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep), &disp[counter] );
   counter++;
   MPI_Get_address( &(instances[0]._isAntecessorOfRefinedVertexInCurrentTreeSweep), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._hasBeenParentOfSubtreeVertexInPreviousTreeSweep), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._isParentOfSubtreeVertexInCurrentTreeSweep), &disp[counter] );
   counter++;
   MPI_Get_address( &(instances[0]._numberOfAdjacentRefinedLocalCells), &disp[counter] );
   counter++;
@@ -454,3 +459,39 @@ void peano4::grid::GridVertex::receive(
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
 #endif
+
+#ifdef Parallel
+void peano4::grid::GridVertex::sendAndPollDanglingMessages(const peano4::grid::GridVertex& message, int destination, int tag, MPI_Comm communicator ) {
+  peano4::grid::GridVertex::send(
+    message, destination, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridVertex", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridVertex", "sendAndPollDanglingMessages()", destination, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+
+
+void peano4::grid::GridVertex::receiveAndPollDanglingMessages(peano4::grid::GridVertex& message, int source, int tag, MPI_Comm communicator ) {
+  peano4::grid::GridVertex::receive(
+    message, source, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridVertex", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridVertex", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+#endif
+    

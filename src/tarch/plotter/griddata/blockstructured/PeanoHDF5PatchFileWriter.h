@@ -95,14 +95,14 @@ class tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter: publi
           *              interface.
           * @param value Value for the cell.
           */
-         void plotCell( int index, double value ) override;
-         void plotCell( int index, double* values ) override;
+        virtual void plotCell( int index, double value ) override;
+        virtual void plotCell( int index, double* values ) override;
 
-         void close() override;
+        virtual void close() override;
 
-         void assignRemainingCellsDefaultValues() override;
+        virtual void assignRemainingCellsDefaultValues() override;
 
-         int getFirstCellWithinPatch(int index) const override;
+        virtual int getFirstCellWithinPatch(int index) const override;
      };
 
      class VertexDataWriter: public tarch::plotter::griddata::blockstructured::PatchWriter::VertexDataWriter {
@@ -131,17 +131,17 @@ class tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter: publi
           *              interface.
           * @param value Value for the cell.
           */
-         void plotVertex( int index, double value ) override;
-         void plotVertex( int index, double* values ) override;
+         virtual void plotVertex( int index, double value ) override;
+         virtual void plotVertex( int index, double* values ) override;
 
-         void close() override;
+         virtual void close() override;
 
          /**
           * @see close()
           */
-         void assignRemainingVerticesDefaultValues() override;
+         virtual void assignRemainingVerticesDefaultValues() override;
 
-         int getFirstVertexWithinPatch(int index) const override;
+         virtual int getFirstVertexWithinPatch(int index) const override;
      };
 
     PeanoHDF5PatchFileWriter(
@@ -156,29 +156,29 @@ class tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter: publi
     /**
      * Caller has to destroy this instance manually.
      */
-    CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description ) override;
-    CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData ) override;
+    virtual CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description ) override;
+    virtual CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData ) override;
 
     /**
      * The mapping is an additional field that has d * (n+1)^d doubles that
      * describe how the vertices within a unit cube are distributed. d is the
      * dimension of the plotter, n is the number of cells per axis.
      */
-    CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData, double* mapping ) override;
+    virtual CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData, double* mapping ) override;
 
     /**
      * Caller has to destroy this instance manually.
      */
-    VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description ) override;
-    VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description, const std::string& metaData  ) override;
-    VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description, const std::string& metaData, double* mapping ) override;
+    virtual VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description ) override;
+    virtual VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description, const std::string& metaData  ) override;
+    virtual VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description, const std::string& metaData, double* mapping ) override;
 
-    int plotPatch(
+    virtual int plotPatch(
       const tarch::la::Vector<2,double>& offset,
       const tarch::la::Vector<2,double>& size
     ) override;
 
-    int plotPatch(
+    virtual int plotPatch(
       const tarch::la::Vector<3,double>& offset,
       const tarch::la::Vector<3,double>& size
     ) override;
@@ -186,19 +186,19 @@ class tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter: publi
     /**
      * @return Write has been successful
      */
-    bool writeToFile() override;
+    virtual bool writeToFile() override;
 
     /**
      * @return Whether writer is ready to accept data.
      */
-    bool isOpen() override;
+    virtual bool isOpen() override;
 
     /**
      * Clear the writer, i.e. erase all the data. However, as the writer does
      * not track how many vertex and cell writers you've created, it's up to
      * you to ensure that none of these instances is left.
      */
-    void clear() override;
+    virtual void clear() override;
 
     void addMetaData(const std::string& metaData);
 };

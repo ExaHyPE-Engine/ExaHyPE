@@ -19,7 +19,7 @@
 
 
 tarch::logging::Log           peano4::grid::TraversalVTKPlotter::_log( "peano4::grid::TraversalVTKPlotter" );
-tarch::mpi::BooleanSemaphore  peano4::grid::TraversalVTKPlotter::_sempahore( "peano4::grid::TraversalVTKPlotter" );
+tarch::mpi::BooleanSemaphore  peano4::grid::TraversalVTKPlotter::_sempahore;
 
 
 peano4::grid::TraversalVTKPlotter::TraversalVTKPlotter( const std::string& filename, int treeId ):

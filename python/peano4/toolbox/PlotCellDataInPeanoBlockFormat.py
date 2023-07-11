@@ -48,6 +48,8 @@ class PlotCellDataInPeanoBlockFormat(ActionSet):
         Has to match to the getter. You can hand in a CastToDouble which instructs the 
         plotter to explicitly cast the entry to double.
     """
+    super( PlotCellDataInPeanoBlockFormat, self ).__init__()
+    
     self.d = {}
     self.d[ "FILENAME" ]            = filename
     self.d[ "CELL_UNKNOWN_NAME" ] = cell_unknown.name
@@ -206,6 +208,6 @@ if ( {{GUARD_PREDICATE}} ) {
 
   def get_static_initialisations(self,full_qualified_classname):
     return """
-tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + "::_semaphore(\"""" + full_qualified_classname + """\");
+tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + """::_semaphore;
 """
     

@@ -48,7 +48,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
      *  Therefore, Q usually is only evaluated by dynamic AMR codes
      *  which make the solution follow
      */
-    ::exahype2::RefinementCommand refinementCriterion(
+    virtual ::exahype2::RefinementCommand refinementCriterion(
       const double * __restrict__                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
@@ -58,7 +58,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
 
 
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
-    void initialCondition(
+    virtual void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,

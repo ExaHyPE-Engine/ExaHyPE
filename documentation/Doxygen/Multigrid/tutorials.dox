@@ -4,6 +4,8 @@
 
 \li \subpage benchmark_multigrid_petsc_poisson
 \li \subpage benchmark_multigrid_petsc_hdg
+\li \subpage benchmark_multigrid_petsc_hdg_discretisation
+\li \subpage multigrid_continuous_galerkin_tutorial
 
 Here are some very simple multigrid tutorials:
 

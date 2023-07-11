@@ -21,7 +21,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
   bool                    evaluateSource,
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
-#if defined(GPUOffloadingOMP) and defined(_OPENMP) and not defined(__HIP_DEVICE_COMPILE__)
+#if defined(GPUOffloadingOMP)
   constexpr int solversHaloSize = 1;
 
   const auto hostId = omp_get_initial_device();
@@ -48,7 +48,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
   const int QInCount = hostPatchData.numberOfCells * QInHostEnumerator.size();
   double* mappedPointersToQIns = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(QInCount, targetDevice );
   std::vector<double> tmpQIn(QInCount);
-   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
+  for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
     std::memcpy(&tmpQIn[patchIndex * QInHostEnumerator.size()], hostPatchData.QIn[patchIndex], QInHostEnumerator.size() * sizeof(double));
   }
   omp_target_memcpy(mappedPointersToQIns, &tmpQIn[0], QInCount * sizeof(double), 0, 0, targetDevice, hostId);

@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 import gc
 import os
+import re
 import sys
 import subprocess
 import multiprocessing
@@ -154,25 +155,38 @@ class Project (object):
     if not self.is_built:
       print( "start to compile with concurrency level of " + str(number_of_parallel_builds) + " ..." )
       try:
-        from peano4.output.Helper import find_cmake_build_dir
-        cmake_build_dir = find_cmake_build_dir()
+        from peano4.output.Helper import find_CMake_build_dir
+        cmake_build_dir = find_CMake_build_dir()
         if cmake_build_dir != "":
           command = f"cd {cmake_build_dir} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
-          result = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          process = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
-          result = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if result.returncode==0:
-          print( result.stdout.decode("utf-8") )
-          print( "compile completed successfully" )
-        else:
-          print( result.stderr.decode("utf-8") )
-          print( "compile not successful" )
+          process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Extract warnings and errors from error message
+        error_message = process.stderr.decode().strip()
+        warnings = re.findall(r"(?i)warning:.*", error_message)
+        errors = re.findall(r"(?i)error:.*", error_message)
+        # Print warnings into the terminal
+        if warnings:
+          print("\nWarnings ({}):".format(len(warnings)))
+          print("\n".join(warnings))
+        if errors:
+          print("\nErrors ({}):".format(len(errors)))
+          error_message = "\n".join(errors)
+        # Check the return code for linker errors
+        # Raise exception with errors
+        if process.returncode != 0:
+          linker_error_message = process.stdout.decode().strip() + "\n" + error_message
+          raise Exception(linker_error_message)
+        print("compile completed successfully")
         self.is_built = True
         self.build_was_successful = True
       except Exception as e:
-        print( "compile was not successful: " + str(e) )
         self.is_built = True
         self.build_was_successful = False
+        print(str(e))
+        print("compile was not successful")
+        sys.exit(1)
     else:
       print( "cannot build as code generation has not been successful" )
 

@@ -30,6 +30,8 @@ class PlotGridInPeanoBlockFormat(ActionSet):
          or CountTimeSteps.         
           
     """
+    super( PlotGridInPeanoBlockFormat, self ).__init__()
+    
     self.d = {}
     self.d[ "FILENAME" ]     = filename
     self.d[ "CELL_WRAPPER" ] = "Cell"
@@ -182,7 +184,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 
   def get_static_initialisations(self,full_qualified_classname):
     return """
-tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + "::_semaphore(\"""" + full_qualified_classname + """\");
+tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + """::_semaphore;
 """
     
 

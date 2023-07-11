@@ -1,9 +1,9 @@
 #include "FileReaderHDF5.h"
 
-#include <fstream>
 
 #include <stdio.h>
 #include <string.h>
+#include <numeric>
 
 
 tarch::logging::Log  toolbox::particles::FileReaderHDF5::_log( "toolbox::particles::FileReaderHDF5" );
@@ -57,6 +57,10 @@ void toolbox::particles::FileReaderHDF5::readHDF5File( const std::string& filena
 
   // Read Internal Energy (U)
   _InternalEnergy = toolbox::particles::FileReaderHDF5::readDoubleScalar( file, GROUP_NAME, DATASET_NAME5 );
+
+  // Keep track of the particles' index in the vectors
+  _ParticleIndex = std::list <int> (_SmoothingLength.size());
+  std::iota(_ParticleIndex.begin(), _ParticleIndex.end(), 0);
 
   // Read ParticleIDs
   _ParticleIDs = toolbox::particles::FileReaderHDF5::readIntScalar( file, GROUP_NAME, DATASET_NAME6 );
@@ -499,6 +503,22 @@ std::vector< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileRead
 
 #endif
 
+void toolbox::particles::FileReaderHDF5::clearVoxel() {
+  _VelocityWithinVoxel.clear();
+  _MassWithinVoxel.clear();
+  _SmoothingLengthWithinVoxel.clear();
+  _InternalEnergyWithinVoxel.clear();
+  _ParticleIDsWithinVoxel.clear();
+}
+
+bool toolbox::particles::FileReaderHDF5::isVoxelEmpty() const {
+  return (_VelocityWithinVoxel.empty() &&
+          _MassWithinVoxel.empty() &&
+          _SmoothingLengthWithinVoxel.empty() &&
+          _InternalEnergyWithinVoxel.empty() &&
+          _ParticleIDsWithinVoxel.empty());
+}
+
 std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReaderHDF5::getParticlesWithinVoxel(
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
@@ -507,8 +527,10 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
   std::list< tarch::la::Vector<Dimensions,double> > result;
 
   std::list< tarch::la::Vector<Dimensions,double> >::iterator p = _Coordinates.begin();
+  std::list<int>::iterator pind = _ParticleIndex.begin();
 
-  _index = 0; 
+  // Make sure we're starting with a clean slate.
+  if (!isVoxelEmpty()) clearVoxel();
 
   /* Loop over all coordinates that have been read in. When you find a 
    * particle that belongs in this voxel, remove it from the list of particles
@@ -526,36 +548,27 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
       /* Store coordinates */
       result.push_back(*p);
 
-      /* Also store other fields.
-       * This current version will make Voxel arrays grow in size beyond the
-       * size of the returned result (coordinates). @TODO Improve this so these
-       * have the same size.
-       */
-      _VelocityWithinVoxel.push_back       ( _Velocity       [_index] );
-      _MassWithinVoxel.push_back           ( _Mass           [_index] );
-      _SmoothingLengthWithinVoxel.push_back( _SmoothingLength[_index] );
-      _InternalEnergyWithinVoxel.push_back ( _InternalEnergy [_index] );
-      _ParticleIDsWithinVoxel.push_back    ( _ParticleIDs    [_index] );
-
-      logDebug( "getParticlesWithinVoxel()", "_VelocityWithinVoxel:        " << _VelocityWithinVoxel.back() );
-      logDebug( "getParticlesWithinVoxel()", "_MassWithinVoxel:            " << _MassWithinVoxel.back() );
-      logDebug( "getParticlesWithinVoxel()", "_SmoothingLengthWithinVoxel: " << _SmoothingLengthWithinVoxel.back() );
-      logDebug( "getParticlesWithinVoxel()", "_InternalEnergyWithinVoxel:  " << _InternalEnergyWithinVoxel.back() );
-      logDebug( "getParticlesWithinVoxel()", "_ParticleIDsWithinVoxel:     " << _ParticleIDsWithinVoxel.back() );
+      /* Also store other fields. */
+      _VelocityWithinVoxel.push_back       ( _Velocity       [*pind] );
+      _MassWithinVoxel.push_back           ( _Mass           [*pind] );
+      _SmoothingLengthWithinVoxel.push_back( _SmoothingLength[*pind] );
+      _InternalEnergyWithinVoxel.push_back ( _InternalEnergy [*pind] );
+      _ParticleIDsWithinVoxel.push_back    ( _ParticleIDs    [*pind] );
 
       if (remove) {
         p = _Coordinates.erase(p);
+        pind = _ParticleIndex.erase(pind);
       }
       else {
         p++;
+        pind++;
       }
-    }
+    } // overlaps == true
     else {
       p++;
+      pind++;
     }
-    
-    _index++;
-  }
+  } // loop over particle coordinates
 
   return result;
 }
@@ -563,6 +576,11 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
 
 void toolbox::particles::FileReaderHDF5::clear() {
   _Coordinates.clear();
+  _Mass.clear();
+  _SmoothingLength.clear();
+  _InternalEnergy.clear();
+  _ParticleIDs.clear();
+  _ParticleIndex.clear();
 }
 
 
