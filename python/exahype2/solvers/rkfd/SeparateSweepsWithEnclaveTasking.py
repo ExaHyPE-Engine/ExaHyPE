@@ -345,24 +345,19 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
             )
         self._primary_sweep_guard += ")"
 
-        self._primary_sweep_or_plot_guard = (
-            "("
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::PlottingAfterGridInitialisation or "
-            + "repositories::"
-            + self.get_name_of_global_instance()
-            + ".getSolverState()=="
-            + self._name
-            + "::SolverState::Plotting "
-        )
+        self._primary_sweep_or_plot_guard = """(
+       repositories::{}.getSolverState()=={}::SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation 
+    or repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation 
+    or repositories::{}.getSolverState()=={}::SolverState::Plotting
+    or repositories::{}.getSolverState()=={}::SolverState::Suspended
+  )""".format(
+          self.get_name_of_global_instance(), self._name,
+          self.get_name_of_global_instance(), self._name,
+          self.get_name_of_global_instance(), self._name,
+          self.get_name_of_global_instance(), self._name,
+          )
+
+        
         for step in range(0, self.number_of_Runge_Kutta_steps()):
             self._primary_sweep_or_plot_guard += " or repositories::{}.getSolverState()=={}::SolverState::RungeKuttaPrimarySubStep{}".format(
                 self.get_name_of_global_instance(), self._name, step
@@ -465,28 +460,26 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
       repositories::{}.getSolverState()=={}::SolverState::GridInitialisation or
       repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
       repositories::{}.getSolverState()=={}::SolverState::Plotting or
+      repositories::{}.getSolverState()=={}::SolverState::Suspended or
       repositories::{}.isLastGridSweepOfTimeStep()
-    )
-    """.format(
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
+    )""".format(
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
             self.get_name_of_global_instance(),
         )
+
         primary_sweep_or_plotting = """(
       repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
       repositories::{}.getSolverState()=={}::SolverState::Plotting or
+      repositories::{}.getSolverState()=={}::SolverState::Suspended or
       repositories::{}.isFirstGridSweepOfTimeStep()
-    )
-    """.format(
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
+    )""".format(
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), 
         )
 
         self._patch_overlap_new.generator.send_condition = (
@@ -499,28 +492,27 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         first_sweep_of_time_step_or_plotting_guard = """(
       repositories::{}.isFirstGridSweepOfTimeStep() or
       repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
-      repositories::{}.getSolverState()=={}::SolverState::Plotting
+      repositories::{}.getSolverState()=={}::SolverState::Plotting or
+      repositories::{}.getSolverState()=={}::SolverState::Suspended
     )""".format(
-            self.get_name_of_global_instance(),
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
+            self.get_name_of_global_instance(), 
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
         )
 
         last_sweep_of_time_step_or_plotting_or_initialisation = """(
       repositories::{}.getSolverState()=={}::SolverState::GridInitialisation or
-      repositories::{}.isLastGridSweepOfTimeStep() or
       repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
-      repositories::{}.getSolverState()=={}::SolverState::Plotting
+      repositories::{}.getSolverState()=={}::SolverState::Plotting or
+      repositories::{}.getSolverState()=={}::SolverState::Suspended or
+      repositories::{}.isLastGridSweepOfTimeStep()
     )""".format(
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), 
         )
 
         self._patch_estimates.generator.store_persistent_condition = (

@@ -26,7 +26,10 @@ from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
 
-def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
+BlackHoleRegion = 0.1
+
+
+def construct_FV_limiter_for_FD4():
     """!
 
     Construct the Finite Volume (limiter) scheme
@@ -36,6 +39,11 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
     accuracy) match this patch size, we have to employ a 16 times finer
     mesh.
 
+    It is interesting to see that the limiter does not really have a min
+    and max mesh size. The point is that the higher order solver dictates
+    the mesh structure, and we then follow this structure with the 
+    Finite Volume scheme.
+
     """
 
     class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
@@ -44,17 +52,15 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
         def __init__(
             self,
             name,
-            min_cell_size,
-            max_cell_size,
         ):
             super(Limiter, self).__init__(
                 name=name + "_FV",
                 patch_size=self.SubPatchSize,
-                min_volume_h=min_cell_size / self.SubPatchSize,
-                max_volume_h=max_cell_size / self.SubPatchSize,
+                min_volume_h=1.0/65536,
+                max_volume_h=65536,
                 use_heap_storage=False,
             )
-            self.double_constants["BlackHoleFVRegion"] = 1.0
+            self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
 
             self._user_action_set_includes += """
 #include "toolbox/blockstructured/Restriction.h"        
@@ -133,8 +139,6 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
 
     my_solver = Limiter(
         name="CCZ4SBH",
-        min_cell_size=min_cell_size,
-        max_cell_size=max_cell_size,
     )
 
     my_solver.set_implementation(
@@ -194,6 +198,9 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """
+
+            self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
+            
 
         def create_action_sets(self):
             """!
@@ -689,6 +696,12 @@ if __name__ == "__main__":
         executable="peano_sbh_" + str(args.cell_size),
     )
 
+    dimensions = 3
+    offset = [-9, -9, -9]
+    domain_size = [18, 18, 18]
+
+    max_cell_size = domain_size[0]/3.0
+
     added_limiter = False
     if "fd4-rk1-ps-" in args.solver:
         FD4PatchSize = int(args.solver[-1])
@@ -697,10 +710,10 @@ if __name__ == "__main__":
         added_limiter = False
     elif "fd4-rk1-limited-ps-" in args.solver:
         FD4PatchSize = int(args.solver[-1])
-        my_primary_solver = construct_limited_FD4_solver(args.cell_size, args.cell_size)
-        my_secondary_solver = construct_FV_limiter_for_FD4(
-            args.cell_size, args.cell_size
-        )
+        my_primary_solver = construct_limited_FD4_solver(min_cell_size = args.cell_size, 
+                                                         max_cell_size = max_cell_size
+                                                         )
+        my_secondary_solver = construct_FV_limiter_for_FD4()
         project.add_solver(my_primary_solver)
         project.add_solver(my_secondary_solver)
         added_limiter = True
@@ -715,10 +728,6 @@ if __name__ == "__main__":
         build_mode = peano4.output.CompileMode.Asserts
     else:
         build_mode = peano4.output.CompileMode.Release
-
-    dimensions = 3
-    offset = [-9, -9, -9]
-    domain_size = [18, 18, 18]
 
     if args.plot:
         plot_interval = args.end_time / 60.0

@@ -199,6 +199,7 @@ std::vector<peano4::grid::GridControlEvent> peano4::grid::merge(
 void peano4::grid::internal::sort(std::list<peano4::grid::GridControlEvent>& events) {
 
   auto compare = [](const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs) -> bool {
+    if ( tarch::la::smaller( tarch::la::volume(lhs.getH()), tarch::la::volume(rhs.getH()) ) ) return true; 
     for (int d = 0; d < Dimensions; d++) {
       if (tarch::la::smaller(lhs.getOffset(d), rhs.getOffset(d)))
         return true;
@@ -454,7 +455,7 @@ void peano4::grid::reduceGridControlEvents(std::vector<GridControlEvent>& events
     totalSize += sizes[i];
   }
   events.resize(totalSize);
-  logInfo(
+  logDebug(
     "reduceGridControlEvents(...)",
     "we have "
       << totalSize << " grid control event(s) over all ranks, while the local rank hosts " << events.size()
