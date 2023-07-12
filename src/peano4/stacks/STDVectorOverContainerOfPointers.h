@@ -163,6 +163,9 @@ namespace peano4 {
  *
  * @param T Is usually a std::vector over pointers or any class providing a
  *   similar signature.
+ *
+ * @see peano4::stacks::STDVectorStackOverSmartPointers for a discussion of the
+ *  constructor and semantics of ObjectConstruction::NoData.
  */
 template <class T>
 class peano4::stacks::STDVectorOverContainerOfPointers: public peano4::stacks::STDVectorStack<T> {

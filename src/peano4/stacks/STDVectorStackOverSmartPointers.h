@@ -56,29 +56,6 @@ namespace peano4 {
  * The present container works with the "native" STL container.
  *
  *
- * ## Signature of hosted objects
- *
- * In principle, all we assume is that the hosted objects work internally with
- * smart pointers. However, we expect them to provide one more constructor,
- * which looks similar to
- *
- * ~~~~~~~~~~~~~~~~~~~~~~~~~
- * class MyClass {
- *   public:
- *     enum ObjectConstruction {
- *       NoData
- *     };
- *
- *     MyClass( ObjectConstruction );
- * };
- * ~~~~~~~~~~~~~~~~~~~~~~~~~
- *
- * The enum here has no semantics of its own. It is simply there to allow us
- * to specify a special constructor which should not allocate any data. A
- * similar pattern is used within Intel's TBB to define special-semantics
- * constructor.
- *
- *
  * @param T Hosts usually pointer which is backed up by a smart pointer, i.e.
  *   deleted as soon as noone needs it anymore. T has to provide a clone()
  *   operation.

@@ -6,8 +6,8 @@ import jinja2
 import dastgen2
 
 
-class MPI( dastgen2.aspects.MPI ):
-  """ 
+class MPIAndStorageAspect( dastgen2.aspects.MPI ):
+  """!
   
   Represents Peano's MPI and storage aspect injected into a DaStGen model. 
   
@@ -46,13 +46,13 @@ class MPI( dastgen2.aspects.MPI ):
   
   """
   def __init__(self, dof_association_):
-    super( MPI, self ).__init__()
-    self.dof_association      = dof_association_
-    self.merge_implementation = ""
-    self.receive_predicate    = "true"
-    self.send_predicate       = "true"
-    self.load_store_compute_flag      = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
-    self.includes             = ""
+    super( MPIAndStorageAspect, self ).__init__()
+    self.dof_association          = dof_association_
+    self.merge_implementation     = ""
+    self.receive_predicate        = "true"
+    self.send_predicate           = "true"
+    self.load_store_compute_flag  = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
+    self.includes                 = ""
     pass
 
 
@@ -83,11 +83,11 @@ class MPI( dastgen2.aspects.MPI ):
 
 
   def get_include(self):
-    result = super(MPI,self).get_include() + """
+    result = super(MPIAndStorageAspect,self).get_include() + """
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-#include "peano4/grid/grid.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
 #include "peano4/utils/Globals.h"
 #include "peano4/grid/TraversalObserver.h"
 """
@@ -105,8 +105,17 @@ class MPI( dastgen2.aspects.MPI ):
   def get_method_declarations(self,full_qualified_name):
     d = {
       "full_qualified_name":              full_qualified_name,
+      "name":                             full_qualified_name.split( "::" )[-1],
     }    
-    result = super(MPI,self).get_method_declarations(full_qualified_name) +  """
+    result = super(MPIAndStorageAspect,self).get_method_declarations(full_qualified_name) +  """
+
+    enum ObjectConstruction {
+      NoData
+    };
+
+    {{name}}( ObjectConstruction ):
+        {{name}}() {}
+    
 #ifdef Parallel
     static void sendAndPollDanglingMessages(const {{full_qualified_name}}& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages({{full_qualified_name}}& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
@@ -157,7 +166,7 @@ class MPI( dastgen2.aspects.MPI ):
     }    
         
       
-    result = super(MPI,self).get_implementation(full_qualified_name) + """
+    result = super(MPIAndStorageAspect,self).get_implementation(full_qualified_name) + """
 #ifdef Parallel
 void {{full_qualified_name}}::sendAndPollDanglingMessages(const {{full_qualified_name}}& message, int destination, int tag, MPI_Comm communicator ) {
   {{full_qualified_name}}::send(

@@ -57,6 +57,13 @@
       typedef Container::iterator        iterator;
       typedef Container::const_iterator  const_iterator;
 
+      enum ObjectConstruction {
+        NoData
+      };
+
+      {{CLASSNAME}}( ObjectConstruction ):
+        {{CLASSNAME}}() {}
+
       {{CLASSNAME}}() = default;
 
       /**

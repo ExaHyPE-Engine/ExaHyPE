@@ -7,7 +7,6 @@
 #include <set>
 #include <vector>
 
-#include "GridVertex.h"
 
 namespace peano4 {
   /**
@@ -77,6 +76,8 @@ namespace peano4 {
 
     class AutomatonState;
     class GridControlEvent;
+
+    class GridVertex;
 
     /**
      * The term clear() is not 100% correct, as the number of stationary traversals
@@ -260,58 +261,6 @@ namespace peano4 {
     bool isSpacetreeNodeLocal(
       GridVertex vertices[TwoPowerD], bool splittingIsConsideredLocal, bool joiningIsConsideredLocal, int id
     );
-
-    enum class LoadStoreComputeFlag {
-      LoadFromInputStream_ProvideToCalculations_StoreToOutputStream,
-      LoadFromInputStream_ProvideToCalculations_Discard,
-      CreateDummy_ProvideToCalculations_StoreToOutputStream,
-      CreateDummy_ProvideToCalculations_Discard,
-      NoData
-    };
-
-    bool loadPersistently(LoadStoreComputeFlag flag);
-    bool storePersistently(LoadStoreComputeFlag flag);
-
-    // @todo gibt es nicht
-    //bool computeOnData(LoadStoreComputeFlag flag);
-
-    std::string toString(LoadStoreComputeFlag flag);
-
-    /**
-     * Constructs a data storage scheme
-     *
-     * Same as the other constructor, assuming that its predicateToUseData
-     * holds all the time.
-     */
-    LoadStoreComputeFlag constructDataStorageScheme(bool predicateForLoad, bool predicateForStore);
-
-    /**
-     * Constructs a data storage scheme
-     *
-     * Same as the other constructor, assuming that its predicateToUseData
-     * holds all the time. This routine is often used by user code to construct
-     * the enum, i.e. it is a sole helper routine. Peano itself does not
-     * directly use it.
-     *
-     *
-     * predicateToUseData | predicateForLoad | predicateForStore |  Result        | Description
-     * -------------------|------------------|-------------------|----------------|-------------
-     * False              | False            | False             | NoData         | Just ignore the data, as it is not
-     * used False              | True             | False             | LoadFromInputStream_ProvideToCalculations_Discard
-     * | Load it (and keep it as you've loaded it anyway) but then throw it away, as it is not used False              |
-     * False            | True              | CreateDummy_ProvideToCalculations_StoreToOutputStream | It will not be used,
-     * but create a dummy, as it has to be stored eventually False              | True             | True              |
-     * assertion      | Makes no sense True               | False            | False             |
-     * CreateDummy_ProvideToCalculations_Discard | Data is required temporarily throughout calculations but not persistent
-     * in-between two grid sweeps True               | True             | False             |
-     * LoadFromInputStream_ProvideToCalculations_Discard | Data flow-wisely the same as False, True, False True | False |
-     * True              | CreateDummy_ProvideToCalculations_StoreToOutputStream | Introduce a new piece of data into the
-     * data flow. Same as false, false, true True               | True             | True              |
-     * LoadFromInputStream_ProvideToCalculations_StoreToOutputStream | Proper piece of data that's held persistently
-     * in-between two mesh sweeps
-     *
-     */
-    LoadStoreComputeFlag constructDataStorageScheme(bool predicateToUseData, bool predicateForLoad, bool predicateForStore);
 
     enum class VertexType { New, Hanging, Persistent, Delete };
 

@@ -490,21 +490,25 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
       peano4::datamanagement::VertexMarker  marker(event,outVertexStackPosition);
 
-      const bool gridTopologyImpliesVertexHoldsData = 
+      bool dataResidesOnIntermediateStack = not peano4::grid::PeanoCurve::isInOutStack(inVertexStack);
+      bool dataResidesOnInputStack        = 
         inVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
         inVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         and
-        inVertexStack!=peano4::grid::TraversalObserver::NoData;
-      const bool userImpliesVertexHoldsData = ::peano4::grid::loadPersistently( {{full_qualified_type}}::loadStoreComputeFlag(
+        inVertexStack!=peano4::grid::TraversalObserver::NoData
+        and
+        ::peano4::grid::loadPersistently( {{full_qualified_type}}::loadStoreComputeFlag(
           marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
         ));
-      if (
-        gridTopologyImpliesVertexHoldsData
-        and
-        not peano4::grid::PeanoCurve::isInOutStack(inVertexStack)
-      ) {
+      bool initialiseStackContentForNewData = 
+        ::peano4::grid::computeOnData( {{full_qualified_type}}::loadStoreComputeFlag(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ));
+
+      if ( dataResidesOnIntermediateStack or dataResidesOnInputStack ) {
         assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->empty(), event.toString(), peano4::datamanagement::VertexMarker(event).toString(), _spacetreeId, inVertexStack);
         {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->pop() );
         #if PeanoDebug>0
@@ -515,11 +519,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         #endif
         view.set(outVertexStackPosition,data);
       }
-      else if ( 
-        gridTopologyImpliesVertexHoldsData 
-        and
-        userImpliesVertexHoldsData
-      ) {
+      else if ( initialiseStackContentForNewData ) {
         {{full_qualified_type}} data;
         #if PeanoDebug>0
         logDebug( "loadCell(...)", "initialise meta data of new vertex {{name}} with " << marker.x(outVertexStackPosition) << " x " << marker.h() );
@@ -617,21 +617,25 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
       peano4::datamanagement::FaceMarker  marker(event,outFaceStackPosition);
 
-      const bool gridTopologyImpliesFaceHoldsData = 
+      bool dataResidesOnIntermediateStack = not peano4::grid::PeanoCurve::isInOutStack(inFaceStack);
+      bool dataResidesOnInputStack        = 
         inFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
         inFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         and
-        inFaceStack!=peano4::grid::TraversalObserver::NoData;
-      const bool userImpliesFaceHoldsData = ::peano4::grid::loadPersistently( {{full_qualified_type}}::loadStoreComputeFlag(
+        inFaceStack!=peano4::grid::TraversalObserver::NoData
+        and
+        ::peano4::grid::loadPersistently( {{full_qualified_type}}::loadStoreComputeFlag(
           marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
         ));
-      if (
-        gridTopologyImpliesFaceHoldsData
-        and
-        not peano4::grid::PeanoCurve::isInOutStack(inFaceStack) 
-      ) {
+      bool initialiseStackContentForNewData = 
+        ::peano4::grid::computeOnData( {{full_qualified_type}}::loadStoreComputeFlag(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ));
+
+      if ( dataResidesOnIntermediateStack or dataResidesOnInputStack ) {
         assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), event.toString(), peano4::datamanagement::FaceMarker(event).toString(), _spacetreeId,inFaceStack );
         logDebug("loadCell(...)", "grab data from intermediate stack " << inFaceStack );
         {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->pop() );
@@ -643,11 +647,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         #endif
         view.set(outFaceStackPosition,data);
       }
-      else if ( 
-        gridTopologyImpliesFaceHoldsData 
-        and
-        userImpliesFaceHoldsData
-      ) {
+      else if ( initialiseStackContentForNewData ) {
         {{full_qualified_type}} data;
         #if PeanoDebug>0
         logDebug( "loadCell(...)", "initialise meta data of new face {{name}} with " << marker.x(outFaceStackPosition) << " x " << marker.h() );
@@ -755,19 +755,22 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
     ) << ")" );
 
-    const bool gridTopologyImpliesCellHoldsData = 
+    bool dataResidesOnInputStack        = 
       inCellStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
       and
-      inCellStack!=peano4::grid::TraversalObserver::NoData;
-    const bool userImpliesCellHoldsData = ::peano4::grid::loadPersistently( {{full_qualified_type}}::loadStoreComputeFlag(
-        marker
-        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-      ));
-    if (
-      gridTopologyImpliesCellHoldsData
+      inCellStack!=peano4::grid::TraversalObserver::NoData
       and
-      not peano4::grid::PeanoCurve::isInOutStack(inCellStack)
-    ) {
+      ::peano4::grid::loadPersistently( {{full_qualified_type}}::loadStoreComputeFlag(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      ));
+    bool initialiseStackContentForNewData = 
+      ::peano4::grid::computeOnData( {{full_qualified_type}}::loadStoreComputeFlag(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      ));
+ 
+   if ( dataResidesOnInputStack ) {
       assertion3( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
       {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop() );
 
@@ -778,11 +781,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
       view.set(0,data);
     }
-    else if ( 
-      gridTopologyImpliesCellHoldsData 
-      and
-      userImpliesCellHoldsData
-    ) {
+    else if ( initialiseStackContentForNewData ) {
       {{full_qualified_type}} data;
 
       #if PeanoDebug>0

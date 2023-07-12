@@ -6,24 +6,34 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#pragma once
+#ifndef _INCLUDE_TARCH_MPI_INTEGERMESSAGE_
+#define _INCLUDE_TARCH_MPI_INTEGERMESSAGE_
 
 #include <string>
-
-#include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/services/ServiceRepository.h"
+  
 
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
 
+#include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/services/ServiceRepository.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
+#include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
+
+
+  
 namespace tarch{
 namespace mpi{
+
   struct IntegerMessage;
 }
 }
+
+
 
 struct tarch::mpi::IntegerMessage {
   public:
@@ -38,15 +48,7 @@ struct tarch::mpi::IntegerMessage {
     IntegerMessage(const IntegerMessage& copy) = default;
 
 
-#ifdef Parallel
-    static void sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(tarch::mpi::IntegerMessage& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
-#endif
-    
-
     #ifdef Parallel
-    PRAGMA_PUSH
-    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -66,8 +68,8 @@ struct tarch::mpi::IntegerMessage {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    PRAGMA_POP
-
+    
+    
     /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
@@ -107,10 +109,25 @@ struct tarch::mpi::IntegerMessage {
     #endif
 
 
+    enum ObjectConstruction {
+      NoData
+    };
+
+    IntegerMessage( ObjectConstruction ):
+        IntegerMessage() {}
+    
+#ifdef Parallel
+    static void sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(tarch::mpi::IntegerMessage& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+#endif
+    
+
     std::string toString() const;
   
   private:
-    int   _value;
+      int   _value;
+
+
 
     #ifdef Parallel
     private:
@@ -126,4 +143,10 @@ struct tarch::mpi::IntegerMessage {
       static MPI_Datatype  Datatype;
       #endif
     #endif
+
+
+
 };
+
+#endif
+  

@@ -66,41 +66,6 @@ void   peano4::parallel::TreeManagementMessage::setAction(Action value) {
 
 
 #ifdef Parallel
-void peano4::parallel::TreeManagementMessage::sendAndPollDanglingMessages(const peano4::parallel::TreeManagementMessage& message, int destination, int tag, MPI_Comm communicator ) {
-  peano4::parallel::TreeManagementMessage::send(
-    message, destination, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::parallel::TreeManagementMessage", "sendAndPollDanglingMessages()",destination, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::parallel::TreeManagementMessage", "sendAndPollDanglingMessages()", destination, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-
-
-void peano4::parallel::TreeManagementMessage::receiveAndPollDanglingMessages(peano4::parallel::TreeManagementMessage& message, int source, int tag, MPI_Comm communicator ) {
-  peano4::parallel::TreeManagementMessage::receive(
-    message, source, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::parallel::TreeManagementMessage", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::parallel::TreeManagementMessage", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-#endif
-    
-#ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype peano4::parallel::TreeManagementMessage::Datatype;
@@ -281,3 +246,39 @@ void peano4::parallel::TreeManagementMessage::receive(
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
 #endif
+
+#ifdef Parallel
+void peano4::parallel::TreeManagementMessage::sendAndPollDanglingMessages(const peano4::parallel::TreeManagementMessage& message, int destination, int tag, MPI_Comm communicator ) {
+  peano4::parallel::TreeManagementMessage::send(
+    message, destination, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::parallel::TreeManagementMessage", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::parallel::TreeManagementMessage", "sendAndPollDanglingMessages()", destination, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+
+
+void peano4::parallel::TreeManagementMessage::receiveAndPollDanglingMessages(peano4::parallel::TreeManagementMessage& message, int source, int tag, MPI_Comm communicator ) {
+  peano4::parallel::TreeManagementMessage::receive(
+    message, source, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::parallel::TreeManagementMessage", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::parallel::TreeManagementMessage", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+#endif
+    

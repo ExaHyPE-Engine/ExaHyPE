@@ -6,23 +6,23 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#pragma once
+#ifndef _INCLUDE_PEANO4_GRID_GRIDTRAVERSALEVENT_
+#define _INCLUDE_PEANO4_GRID_GRIDTRAVERSALEVENT_
 
 #include <string>
   
-
-#include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/services/ServiceRepository.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
-
 
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
+
+#include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/services/ServiceRepository.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
+#include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
   
@@ -114,15 +114,7 @@ struct peano4::grid::GridTraversalEvent {
     GridTraversalEvent(const GridTraversalEvent& copy);
 
 
-#ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(peano4::grid::GridTraversalEvent& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
-#endif
-    
-
     #ifdef Parallel
-    PRAGMA_PUSH
-    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -142,7 +134,7 @@ struct peano4::grid::GridTraversalEvent {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    PRAGMA_POP
+    
     
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -183,11 +175,22 @@ struct peano4::grid::GridTraversalEvent {
     #endif
 
 
+    enum ObjectConstruction {
+      NoData
+    };
+
+    GridTraversalEvent( ObjectConstruction ):
+        GridTraversalEvent() {}
+    
+#ifdef Parallel
+    static void sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::grid::GridTraversalEvent& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+#endif
+    
+
     std::string toString() const;
   
   private:
-    PRAGMA_PUSH
-    SILENCE_UNKNOWN_ATTRIBUTE
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
     [[clang::truncate_mantissa(23)]]  double   _x[Dimensions];
 #endif
@@ -251,7 +254,8 @@ struct peano4::grid::GridTraversalEvent {
 #endif
     [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _invokingSpacetree;
     [[clang::pack]]  bool   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
-    PRAGMA_POP
+
+
 
     #ifdef Parallel
     private:
@@ -267,6 +271,10 @@ struct peano4::grid::GridTraversalEvent {
       static MPI_Datatype  Datatype;
       #endif
     #endif
+
+
+
 };
 
+#endif
   
