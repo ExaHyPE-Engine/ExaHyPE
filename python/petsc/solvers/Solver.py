@@ -106,6 +106,14 @@ vertex for the first time of a mesh traversal, e.g.
     """
     assert False, "should not be called"
 
+  @abstractmethod
+  def add_to_init_quadrature(self, observer):
+    """!
+    
+    Add whatever action set you want to use to observer.
+    
+    """
+    assert False, "should not be called"
   
   @abstractmethod
   def add_to_enumerate_and_init_solution(self, observer):

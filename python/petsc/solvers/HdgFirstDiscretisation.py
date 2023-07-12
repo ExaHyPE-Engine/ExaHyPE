@@ -8,6 +8,7 @@ import os
 
 from .Solver                                    import Solver
 from petsc.actionsets.EnumerateCellsAndFaces    import EnumerateCellsAndFaces
+from petsc.actionsets.InitQuadrature            import InitQuadrature
 from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
@@ -127,13 +128,15 @@ class HdgFirstDiscretisation(Solver):
 
 
   def add_to_create_grid(self, observer):
-    observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h),False)
+    observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h))
     pass
 
-  
   def add_to_enumerate(self, observer):
     pass
   
+  def add_to_init_quadrature(self, observer):
+    observer.add_action_set( InitQuadrature(self) )
+    pass
   
   def add_to_enumerate_and_init_solution(self, observer):
     """!
