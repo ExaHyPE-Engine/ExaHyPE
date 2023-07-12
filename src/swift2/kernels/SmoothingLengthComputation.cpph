@@ -62,9 +62,16 @@ void swift2::kernels::hydro_prepare_density(Particle& localParticle){
 }
 
 
+#define PRINTOUT 1
+#define PROBLEMPART 801
+
 template <typename Particle, typename ParticleContainer>
 void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
     Particle& localParticle, const ParticleContainer& activeParticles){
+
+  // TODO: DEBUGGING ONLY
+  // if (localParticle->getPartid() == PROBLEMPART && PRINTOUT) std::cout << "part 861 resetting SML from "<<localParticle->getSmoothingLength() << " to 0.012348" << std::endl;
+  // localParticle->setSmoothingLength(0.012348);
 
   /* Grab static parameters */
   const int hydro_dimensions = localParticle->getHydroDimensions();
@@ -72,43 +79,66 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
   /* Initialize some variables */
   const double hydro_h_max = localParticle->getSmlMax();
   const double hydro_h_min = localParticle->getSmlMin();
+  // const double hydro_h_max = 1e300;
+  // const double hydro_h_min = 0.;
   const double sml_tolerance_epsilon = localParticle->getSmlTolerance();
   const double eta = localParticle->getEtaFactor();
   const double eta_dim = std::pow(eta, hydro_dimensions);
   const int max_iterations = localParticle->getSmlMaxIterations();
 
-  const double h_init = localParticle->getSmoothingLength();
+  // std::cout << "hydro_h_max " << hydro_h_max << std::endl;
+  // std::cout << "hydro_h_min " << hydro_h_min << std::endl;
+  // std::cout << "eps " << sml_tolerance_epsilon << std::endl;
+  // std::cout << "eta " << eta << std::endl;
+  // std::cout << "eta_dim " << eta_dim << std::endl;
+
+  // const double h_init = localParticle->getSmoothingLength();
 
   double left = 0.;
   double right = hydro_h_max;
 
   // Iteration vars
-  bool converged = false;
   int iteration = 0;
 
   // hydro_end_Density is being called now for localParticle in swift
 
-  while (not converged and iteration < max_iterations) {
+  while (iteration < max_iterations) {
     iteration++;
 
+    // Prepare density computation
     swift2::kernels::hydro_prepare_density(localParticle);
 
+    // Do density interaction
     for (auto* activeParticle : activeParticles) {
       swift2::kernels::densityKernel(localParticle, activeParticle);
     }
 
-    double h_old = localParticle->getSmoothingLength();
-    double h_old_dim = std::pow(localParticle->getSmoothingLength(), hydro_dimensions);
-    double h_old_dim_minus_one = std::pow(localParticle->getSmoothingLength(), hydro_dimensions-1);
-    double h_new;
+    // Finish density computation
+    swift2::kernels::hydro_end_density(localParticle);
 
-    // if (localParticle.getWcount() < 1.e-5 * kernel_root) {
+    // Now on to the smoothing length computation
+
+    const double h_old = localParticle->getSmoothingLength();
+    const double h_old_dim = std::pow(h_old, hydro_dimensions);
+    const double h_old_dim_minus_one = std::pow(h_old, hydro_dimensions-1);
+    double h_new;
+    /* TODO: remove this after debugging */
+    const double h_current = localParticle->getSmoothingLength();
+
+
+if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
+  std::cout << "ENTERING iter " << iteration << " h_old " <<
+    h_old << " h_new " << localParticle->getSmoothingLength() << std::endl;
+
+    // make sure this fails even without debug mode
+    if (localParticle->getWcount() < 1.e-5 * kernel_root){
+      std::cout << "GOT NO NEIGHBOURS " << localParticle->toString() << std::endl;
+      std::abort();
+    }
     //   [> No neighbours case <]
     //   [> Double h and try again <]
     //   h_new = 2.f * h_old;
-    // } else {
-
-    swift2::kernels::hydro_end_density(localParticle);
+    //  // else {
 
     // If we are using alternative definition of number of neighbours, e.g.
     // mass weighted, then we'd need to make adaptations here.
@@ -120,56 +150,87 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
     const double n_sum = wcount * h_old_dim;
     const double n_target = eta_dim;
     const double f = n_sum - n_target;
-    const double f_prime = localParticle->getWcount_dh() * h_old_dim + hydro_dimensions * wcount * h_old_dim_minus_one;
+    const double f_prime =
+      localParticle->getWcount_dh() * h_old_dim +
+      hydro_dimensions * wcount * h_old_dim_minus_one;
+
+if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
+  std::cout << "NR iter " << iteration <<
+    " wcount " << wcount <<
+    " n_sum " <<  n_sum <<
+    " n_target " << n_target <<
+    " f " << f << " f_prime " << f_prime
+    << std::endl;
 
     // Improve the bisection bounds
-    if (n_sum < n_target)
+    if (n_sum < n_target){
       left = std::max(left, h_old);
-    else if (n_sum > n_target)
+    } else if (n_sum > n_target){
       right = std::min(right, h_old);
+    }
 
-    assertion4(left < right, "Invalid left=", left, "and right=", right);
+    assertion4(left < right, "Invalid left=", left, " and right=", right);
 
     // Skip if h is already h_max and we don't have enough neighbours
     // Same if we are below h_min
-    if (((localParticle->getSmoothingLength() >= hydro_h_max) && (f < 0.f)) ||
-        ((localParticle->getSmoothingLength() <= hydro_h_min) && (f > 0.f))) {
-      // converged = true;
+    if (((h_current >= hydro_h_max) && (f < 0.)) ||
+        ((h_current <= hydro_h_min) && (f > 0.))) {
+      if ( not localParticle->getIsBoundaryParticle()){
+        std::cout << "EARLY EXIT ABCDEF " << localParticle->toString() << std::endl;
+      }
       break;
     }
 
+    // Normal case: Use Newton-Raphson to get a better value of h
+
+    // Avoid floating point exception from f_prime = 0
+    // TODO: fix 1e-30 later
+    h_new = h_old - f / (f_prime + 1e-30);
 
 
-          // Normal case: Use Newton-Raphson to get a better value of h
+if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
+  std::cout << "AFTER NR iter " << iteration << " h_old " <<
+    h_old << " h_new " << h_new  << std::endl;
 
-          // Avoid floating point exception from f_prime = 0
-          h_new = h_old - f / (f_prime + DBL_MIN);
+    // Be verbose about the particles that struggle to converge
+    // if (iteration > max_iterations - 10) {
+    //   message(
+    //       "Smoothing length convergence problem: iter=%d p->id=%lld "
+    //       "h_init=%12.8e h_old=%12.8e h_new=%12.8e f=%f f_prime=%f "
+    //       "n_sum=%12.8e n_target=%12.8e left=%12.8e right=%12.8e",
+    //       num_reruns, p->id, h_init, h_old, h_new, f, f_prime, n_sum,
+    //       n_target, left[i], right[i]);
+    // }
 
-          // Be verbose about the particles that struggle to converge
-          // if (iteration > max_iterations - 10) {
-          //   message(
-          //       "Smoothing length convergence problem: iter=%d p->id=%lld "
-          //       "h_init=%12.8e h_old=%12.8e h_new=%12.8e f=%f f_prime=%f "
-          //       "n_sum=%12.8e n_target=%12.8e left=%12.8e right=%12.8e",
-          //       num_reruns, p->id, h_init, h_old, h_new, f, f_prime, n_sum,
-          //       n_target, left[i], right[i]);
-          // }
+    assertion1(
+        not (((f > 0. && h_new > h_old) || (f < 0. && h_new < h_old)) && (h_old < 0.999 * h_max)),
+        "Smoothing length correction not going in the right direction");
 
-          assertion1(
-              not (((f > 0.f && h_new > h_old) || (f < 0.f && h_new < h_old)) && (h_old < 0.999 * h_max)),
-              "Smoothing length correction not going in the right direction");
+    // Safety check: truncate to the range [ h_old/2 , 2h_old ].
+    h_new = std::min(h_new, 2. * h_old);
+    h_new = std::max(h_new, 0.5 * h_old);
 
-          // Safety check: truncate to the range [ h_old/2 , 2h_old ].
-          h_new = std::min(h_new, 2. * h_old);
-          h_new = std::max(h_new, 0.5 * h_old);
+    // Verify that we are actually progressing towards the answer
+    h_new = std::max(h_new, left);
+    h_new = std::min(h_new, right);
+  // } // if no neighbours
 
-          // Verify that we are actually progressing towards the answer
-          h_new = std::max(h_new, left);
-          h_new = std::min(h_new, right);
-        // } // if no neighbours
 
-        // Check whether the particle has an inappropriate smoothing length
-        if (std::abs(h_new - h_old) > sml_tolerance_epsilon * h_old) {
+if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
+  std::cout << "AFTER NR CLEANUP iter " << iteration << " h_old " <<
+    h_old << " h_new " << h_new  << std::endl;
+
+      // Check whether the particle has an inappropriate smoothing length
+        if (std::abs(h_new - h_old) < sml_tolerance_epsilon * h_old) {
+          // we're done. Note that in SWIFT, they check the other way around.
+          break;
+        }
+
+
+if (localParticle->getPartid() == PROBLEMPART && PRINTOUT){
+  std::cout << "INAPPROPRIATE iter " << iteration << " h_old " <<
+    h_old << " h_new " << h_new  << " diff " << h_new - h_old << " " <<std::abs(h_new - h_old) << " tol " << sml_tolerance_epsilon * h_old << std::endl;
+}
 
           // Ok, correct then
 
@@ -177,24 +238,42 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
           if ((h_new == left && h_old == right) || (h_old == left && h_new == right)) {
 
             // Bisect the remaining interval
+            const double temp =  0.5 * ( std::pow(left, hydro_dimensions) +
+                std::pow(right, hydro_dimensions) );
             localParticle->setSmoothingLength(
-                std::pow( 0.5 * ( std::pow(left, hydro_dimensions) + std::pow(right, hydro_dimensions) ), -hydro_dimensions )
+                1./std::pow(temp, hydro_dimensions)
             );
+
+
+if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
+  std::cout << "BISECT iter " << iteration << " h_old " <<
+    h_old << " h_new " << localParticle->getSmoothingLength()  << std::endl;
 
           } else {
 
             /* Normal case */
             localParticle->setSmoothingLength(h_new);
+
+if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
+  std::cout << "NOBISECT iter " << iteration << " h_old " <<
+    h_old << " h_new " << localParticle->getSmoothingLength()  << std::endl;
+
           }
 
           // If within the allowed range, try again
           if (localParticle->getSmoothingLength() < hydro_h_max && localParticle->getSmoothingLength() > hydro_h_min) {
             // SWIFT calls hydro_init_part here. We do that at the start at the loop.
+
+if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
+  std::cout << "REDO iter " << iteration << " h_old " <<
+    h_old << " h_new " << localParticle->getSmoothingLength() << std::endl;
+
             continue;
           } else if (localParticle->getSmoothingLength() >= hydro_h_max) {
 
             // Ok, this particle is a lost cause...
             localParticle->setSmoothingLength(hydro_h_max);
+std::cout << "setting smoothing length to max ID " << localParticle->getPartid() << std::endl;
             // Do some damage control if no neighbours at all were found
             // if (has_no_neighbours) {
             //   ...
@@ -205,7 +284,6 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
             abort();
           }
 
-        } // particle has inappropriate smoothing length
 
 
         /* We now have a particle whose smoothing length has converged */
@@ -219,9 +297,9 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
 
   if (iteration == max_iterations) {
     // TODO: temporary msg
-    std::cout << "STOPPED ITERATIONS DUE TO MAX ITERATIONS EXCEEDED" << std::endl;
+    std::cout << "STOPPED ITERATIONS DUE TO MAX ITERATIONS EXCEEDED ID " << localParticle->getPartid() << std::endl;
+    std::abort();
   }
-
 
 }
 
