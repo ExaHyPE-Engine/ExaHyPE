@@ -164,7 +164,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self._eta_factor = 1.2348
         self._h_hydro_min = 1e-6
         self._h_hydro_max = 1.0 / 3.0 / 2  # Approximated value for coarsest grid level
-        self._h_tolerance = 1e-4
+        self._h_tolerance = 1e-6
         self._h_max_iterations = 30
 
         # Minimal SPH parameters
@@ -460,7 +460,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
             touch_vertex_first_time_kernel="""
-                                       ::swift2::kernels::prepareDensityCalculation( localParticles );
+                                       // ::swift2::kernels::prepareDensityCalculation( localParticles );
                                        """,
             cell_kernel="""
                                        ::swift2::kernels::computeDensityWithConstantSearchRadius(
@@ -468,7 +468,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                        );
                                        """,
             touch_vertex_last_time_kernel="""
-                                       ::swift2::kernels::endDensityCalculationWithConstantSearchRadius(localParticles);
+                                       // ::swift2::kernels::endDensityCalculationWithConstantSearchRadius(localParticles);
                                        """,
             includes="""
                                        #include "Constants.h"
@@ -551,6 +551,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             name="Kick2",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+            prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>();""".format(
+                self.name,
+                ), # TODO: temporary solution
             touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
             touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
                       localParticles, 2, {} );""".format(
@@ -634,8 +637,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
         return [
             self.algorithm_steps_dict["FlagBoundaryParticles"],
-            self.algorithm_steps_dict["Kick1"],
-            self.algorithm_steps_dict["Kick1Extra"],
             self.algorithm_steps_dict["Drift"],
             self.algorithm_steps_dict["PredictHydro"],
             self.algorithm_steps_dict["Density"],
@@ -643,6 +644,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             self.algorithm_steps_dict["Kick2"],
             self.algorithm_steps_dict["Kick2Extra"],
             self.algorithm_steps_dict["ReduceGlobalQuantities"],
+            self.algorithm_steps_dict["Kick1"],
+            self.algorithm_steps_dict["Kick1Extra"],
         ]
 
     @property
@@ -788,7 +791,11 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
     def initialisation_steps(self):
         return [
+            self.algorithm_steps_dict["FlagBoundaryParticles"],
             self.algorithm_steps_dict["Density"],
+            self.algorithm_steps_dict["Force"],
+            self.algorithm_steps_dict["Kick2"],
+            self.algorithm_steps_dict["Kick2Extra"],
         ]
 
     @property

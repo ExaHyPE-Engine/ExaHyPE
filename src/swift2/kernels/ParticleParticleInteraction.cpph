@@ -46,11 +46,13 @@ void swift2::kernels::densityKernel(Particle* localParticle, const Particle* act
     tarch::la::smaller( r, iactR )
     and
     tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */
-    and
-    not localParticle->getIsBoundaryParticle()
+    // and
+    // not localParticle->getIsBoundaryParticle()
     )
     {
 
+if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
+  std::cout << "iact " << localParticle->getPartid() << " and " << activeParticle->getPartid() << " x= " << activeParticle->getX()[0] << std::endl;
     // Evaluate kernel and its derivative
 
     /* SWIFT KERNEL */
@@ -123,7 +125,8 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
   // Get actual interaction radius
   const double iactR = kernel_gamma * h_a;
 
-  if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle()) {
+  if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0)  ) {
+      // and not localParticle->getIsBoundaryParticle()) {
 
     // Dimensionless distance to evaluate kernel
     const double h_a_inv = 1. / h_a;
@@ -447,8 +450,8 @@ void swift2::kernels::computeDensity(
           tarch::la::smaller( r, iactR )
           and
           tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */
-          and
-          not localParticle->getIsBoundaryParticle()
+          // and
+          // not localParticle->getIsBoundaryParticle()
           )
           {
 

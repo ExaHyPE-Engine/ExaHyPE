@@ -15,8 +15,12 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
       not particle->getIsBoundaryParticle()
     ) {
 
-      /* Drift the particle (update position for a full time-step) */
-      particle->setX(particle->getX() + timeStepSize * particle->getV());
+      // Drift the particle (update position for a full time-step)
+      // it's important to take the "V_full" here, not the fluid velocity V.
+      // V_full doesn't get touched outside of kicks. V will be interpolated/
+      // integrated in time as the time step progresses. V_full is the correct
+      // choice here.
+      particle->setX(particle->getX() + timeStepSize * particle->getV_full());
 
       /* Flag this particle as Moved */
       particle->setMoveState(std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved);
@@ -34,8 +38,8 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
   for (auto* particle : localParticles) {
     if (
       particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-      and
-      not particle->getIsBoundaryParticle()
+      // and
+      // not particle->getIsBoundaryParticle()
     ) {
 
       if (isSPH) {
@@ -80,15 +84,14 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
 template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
   /* In principle, this time-step could be different than that used for normal kick */
-  double dt_therm = 0.5
-                    * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                        .getMinTimeStepSize();
+  double dt_therm = 0.5 * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
 
+// std::cout << "dt_therm " << dt_therm << std::endl;
   for (auto* particle : localParticles) {
     if(
       particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-      and
-      not particle->getIsBoundaryParticle()
+      // and
+      // not particle->getIsBoundaryParticle()
     ) {
 
       /* Integrate the internal energy forward in time */
@@ -116,13 +119,13 @@ void swift2::timestepping::computePredictHydro(const ParticleContainer& localPar
   const double dt_therm      = dt_kick_hydro;
 
   // @TODO: Mladen: This is only valid for the "Minimal" SPH scheme
-  // Needs cleanup
+  // Needs cleanup. Should be moved to a "swift kernels" file.
 
   for (auto* particle : localParticles) {
     if (
       particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-      and
-      not particle->getIsBoundaryParticle()
+      // and
+      // not particle->getIsBoundaryParticle()
     ) {
 
       /* Predict velocities for hydro terms */

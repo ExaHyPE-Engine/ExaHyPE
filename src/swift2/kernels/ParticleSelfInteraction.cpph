@@ -18,9 +18,9 @@ void swift2::kernels::genericSelfInteraction(
 template <typename ParticleContainer>
 void swift2::kernels::prepareDensityCalculation(const ParticleContainer& localParticles) {
   for (auto* particle : localParticles) {
-    if (not particle->getIsBoundaryParticle()) {
+    // if (not particle->getIsBoundaryParticle()) {
       swift2::kernels::hydro_prepare_density(particle);
-    }
+    // }
   }
 }
 
@@ -42,7 +42,7 @@ void swift2::kernels::endDensityCalculation(const ParticleContainer& localPartic
   const double hHydroMax  = 1.;
 
   for (auto* particle : localParticles) {
-    if (not particle->getIsBoundaryParticle()) {
+    // if (not particle->getIsBoundaryParticle()) {
 
       // @TODO add adds/multiplies the cosmological terms if need be.
 
@@ -207,7 +207,7 @@ void swift2::kernels::endDensityCalculation(const ParticleContainer& localPartic
         }
 
       } /* End of Newton-Raphson */
-    }
+    // } is boundary particle
   }
 }
 
@@ -222,7 +222,7 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const Par
   const double alphaAV      = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
 
   for (auto* particle : localParticles) {
-    if (not particle->getIsBoundaryParticle()) {
+    // if (not particle->getIsBoundaryParticle()) {
 
       /* Retrieve some properties */
       const double m_a = particle->getMass();
@@ -258,7 +258,7 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const Par
       assertion1(particle->getWcount() >= 0., particle->toString());
       assertion1(std::isfinite(particle->getRho_dh()), particle->toString());
       assertion1(std::isfinite(particle->getWcount_dh()), particle->toString());
-    }
+    // } is boundary particle
   }
 }
 
@@ -274,7 +274,7 @@ void swift2::kernels::endDensityCalculationWithConstantSearchRadius(const Partic
   const double alphaAV      = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
 
   for (auto* particle : localParticles) {
-    if (not particle->getIsBoundaryParticle()) {
+    // if (not particle->getIsBoundaryParticle()) {
 
       /* Retrieve some properties */
       const double m_a = particle->getMass();
@@ -310,7 +310,7 @@ void swift2::kernels::endDensityCalculationWithConstantSearchRadius(const Partic
       assertion1(particle->getWcount() >= 0., particle->toString());
       assertion1(std::isfinite(particle->getRho_dh()), particle->toString());
       assertion1(std::isfinite(particle->getWcount_dh()), particle->toString());
-    }
+    // } is boundary particle
   }
 }
 
@@ -323,7 +323,7 @@ void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& loca
   const double alphaAV = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
 
   for (auto* particle : localParticles) {
-    if (not particle->getIsBoundaryParticle()) {
+    // if (not particle->getIsBoundaryParticle()) {
 
       /* Retrieve basic properties of local and active particles */
       const double rho_a = particle->getDensity();
@@ -412,7 +412,7 @@ void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& loca
       particle->setUDot(0.0);
       particle->setHDot(0.0);
       particle->setV_sig_AV(2.0 * particle->getSoundSpeed());
-    }
+    // } is boundary particle
   }
 }
 
@@ -423,11 +423,11 @@ void swift2::kernels::endHydroForceCalculation(const ParticleContainer& localPar
   const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
 
   for (auto* particle : localParticles) {
-    if (not particle->getIsBoundaryParticle()) {
+    // if (not particle->getIsBoundaryParticle()) {
       particle->setHDot(particle->getHDot() * particle->getSmoothingLength() / hydroDimensions);
 
       assertion2(std::isfinite(particle->getHDot()), particle->toString(), particle->getSmoothingLength());
-    }
+    // }
   }
 }
 
@@ -439,6 +439,9 @@ void swift2::kernels::flagBoundaryParticles(
   const tarch::la::Vector<Dimensions, double>& domainSize,
   const tarch::la::Vector<Dimensions, double>& domainOffset
 ) {
+
+  return;
+
   /* TODO MLADEN: Document parameters? */
   for (auto* particle : localParticles) {
     if(
