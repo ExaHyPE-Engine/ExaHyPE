@@ -49,8 +49,7 @@ class MPIAndStorage(object):
     self.merge_implementation = ""
     self.receive_predicate    = "true"
     self.send_predicate       = "true"
-    self.store_predicate      = "true"
-    self.load_predicate       = "true"
+    self.load_store_compute_flag = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
     pass
 
 
@@ -72,8 +71,7 @@ class MPIAndStorage(object):
       result += ",empty-merge-impl"
       
     result += ",store="    + self.store_predicate
-    result += ",load="     + self.load_predicate
-    result += ",send="     + self.send_predicate
+    result += ",load-store-compute flag="     + self.load_store_compute_flag
     result += ",receive="  + self.receive_predicate
       
     result += ")"
@@ -89,6 +87,7 @@ class MPIAndStorage(object):
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 #include "peano4/utils/Globals.h"
+#include "peano4/grid/grid.h"
 #include "peano4/grid/TraversalObserver.h"
 """
     if self.dof_association!=DoFAssociation.Generic:
@@ -116,8 +115,7 @@ class MPIAndStorage(object):
     
     static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
     static bool send(const peano4::datamanagement::VertexMarker& marker);
-    static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
-    static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
+    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::VertexMarker& marker);
 """ 
     elif self.dof_association==DoFAssociation.Face:
       result += """
@@ -125,8 +123,7 @@ class MPIAndStorage(object):
 
     static bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker);
     static bool send(const peano4::datamanagement::FaceMarker& marker);
-    static bool storePersistently(const peano4::datamanagement::FaceMarker& marker);
-    static bool loadPersistently(const peano4::datamanagement::FaceMarker& marker);
+    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::FaceMarker& marker);
 """ 
     elif self.dof_association==DoFAssociation.Cell:
       result += """
@@ -134,8 +131,7 @@ class MPIAndStorage(object):
 
     static bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker);
     static bool send(const peano4::datamanagement::CellMarker& marker);
-    static bool storePersistently(const peano4::datamanagement::CellMarker& marker);
-    static bool loadPersistently(const peano4::datamanagement::CellMarker& marker);
+    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::CellMarker& marker);
 """ 
       pass
     elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:
@@ -202,16 +198,9 @@ bool """ + full_qualified_name + """::send(const peano4::datamanagement::VertexM
 }
 
 
-bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::VertexMarker& marker) {
-  return """ + self.store_predicate + """;
+::peano4::grid::LoadStoreComputeFlag """ + full_qualified_name + """::loadStoreComputeFlag(const peano4::datamanagement::VertexMarker& marker) {
+  return """ + self.load_store_compute_flag + """;
 }
-
-
-bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
-  return """ + self.load_predicate + """;
-}
-
-
 """ 
     elif self.dof_association==DoFAssociation.Face:
       result += """
@@ -230,13 +219,8 @@ bool """ + full_qualified_name + """::send(const peano4::datamanagement::FaceMar
 }
 
 
-bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::FaceMarker& marker) {
-  return """ + self.store_predicate + """;
-}
-
-
-bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::FaceMarker& marker) {
-  return """ + self.load_predicate + """;
+::peano4::grid::LoadStoreComputeFlag """ + full_qualified_name + """::loadStoreComputeFlag(const peano4::datamanagement::FaceMarker& marker) {
+  return """ + self.load_store_compute_flag + """;
 }
 """ 
     elif self.dof_association==DoFAssociation.Cell:
@@ -256,13 +240,8 @@ bool """ + full_qualified_name + """::send(const peano4::datamanagement::CellMar
 }
 
 
-bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::CellMarker& marker) {
-  return """ + self.store_predicate + """;
-}
-
-
-bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::CellMarker& marker) {
-  return """ + self.load_predicate + """;
+::peano4::grid::LoadStoreComputeFlag  """ + full_qualified_name + """::loadStoreComputeFlag(const peano4::datamanagement::CellMarker& marker) {
+  return """ + self.load_store_compute_flag + """;
 }
 """      
     elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:

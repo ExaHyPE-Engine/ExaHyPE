@@ -269,6 +269,12 @@ namespace peano4 {
       NoData
     };
 
+    bool loadPersistently(LoadStoreComputeFlag flag);
+    bool storePersistently(LoadStoreComputeFlag flag);
+
+    // @todo gibt es nicht
+    //bool computeOnData(LoadStoreComputeFlag flag);
+
     std::string toString(LoadStoreComputeFlag flag);
 
     /**

@@ -14,6 +14,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/mpi.h"
 
+#include "peano4/grid/grid.h"
 #include "peano4/utils/Globals.h"
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/grid/TraversalObserver.h"
@@ -83,8 +84,7 @@
 
       static bool send(const peano4::datamanagement::VertexMarker& marker);
       static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
-      static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
-      static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
+      static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::VertexMarker& marker);
 
       /**
        * Deep clone

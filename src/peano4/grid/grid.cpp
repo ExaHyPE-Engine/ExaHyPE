@@ -32,6 +32,74 @@ std::string peano4::grid::toString(peano4::grid::LoadStoreComputeFlag flag) {
   return "<undef>";
 }
 
+bool peano4::grid::loadPersistently(LoadStoreComputeFlag flag) {
+  switch (flag) {
+    case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream:
+      return true;
+      break;
+    case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_Discard:
+      return true;
+      break;
+    case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_StoreToOutputStream:
+      return false;
+      break;
+    case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_Discard:
+      return false;
+      break;
+    case LoadStoreComputeFlag::NoData:
+      return false;
+      break;
+  }
+  assertion(false);
+  return false;
+}
+
+bool peano4::grid::storePersistently(LoadStoreComputeFlag flag) {
+  switch (flag) {
+    case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream:
+      return true;
+      break;
+    case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_Discard:
+      return false;
+      break;
+    case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_StoreToOutputStream:
+      return true;
+      break;
+    case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_Discard:
+      return false;
+      break;
+    case LoadStoreComputeFlag::NoData:
+      return false;
+      break;
+  }
+  assertion(false);
+  return false;
+}
+
+/*
+bool peano4::grid::computeOnData(LoadStoreComputeFlag flag) {
+  switch (flag) {
+    case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream:
+      return true;
+      break;
+    case LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_Discard:
+      return true;
+      break;
+    case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_StoreToOutputStream:
+      return true;
+      break;
+    case LoadStoreComputeFlag::CreateDummy_ProvideToCalculations_Discard:
+      return true;
+      break;
+    case LoadStoreComputeFlag::NoData:
+      return false;
+      break;
+  }
+  assertion(false);
+  return false;
+}
+*/
+
 peano4::grid::LoadStoreComputeFlag peano4::grid::constructDataStorageScheme(bool predicateForLoad, bool predicateForStore) {
   return constructDataStorageScheme(true, predicateForLoad, predicateForStore);
 }
