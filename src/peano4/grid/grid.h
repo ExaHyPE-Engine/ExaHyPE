@@ -7,6 +7,7 @@
 #include <set>
 #include <vector>
 
+#include "GridVertex.h"
 
 namespace peano4 {
   /**
