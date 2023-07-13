@@ -3,7 +3,17 @@
 
 template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
-  double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
+  // In principle, the time step sizes for drifts should all be equal.
+  // However in SWIFT cosmological factors of the expansion (rate) get
+  // directly factored into the time step size, and the fluid quantities
+  // are all assumed to be in the comoving frame (in the cosmological sense).
+  // See Section 1.4, eqns. 29 and 31 in swiftsim/theory/Cosmology/cosmology.pdf
+  // So while we don't have cosmological integration yet, we separate the
+  // two "different" time step sizes nonetheless to avoid headaches down
+  // the line.
+  const double timeStepSizeDrift = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
+                          .getMinTimeStepSize();
+  const double timeStepSizeKick = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
                           .getMinTimeStepSize();
 
   for (auto* particle : localParticles) {
@@ -15,12 +25,12 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
       not particle->getIsBoundaryParticle()
     ) {
 
-      // Drift the particle (update position for a full time-step)
-      // it's important to take the "V_full" here, not the fluid velocity V.
-      // V_full doesn't get touched outside of kicks. V will be interpolated/
-      // integrated in time as the time step progresses. V_full is the correct
-      // choice here.
-      particle->setX(particle->getX() + timeStepSize * particle->getV_full());
+      // Drift the particle (update position for a full time-step). It's important
+      // to take the "V_full" here, not the fluid velocity V. V_full doesn't get
+      // touched outside of kicks. V will be interpolated/integrated in time as the
+      // time step progresses. V_full is the correct choice here.
+      particle->setX(particle->getX() + timeStepSizeDrift * particle->getV_full());
+      particle->setV(particle->getV() + timeStepSizeKick * particle->getA());
 
       /* Flag this particle as Moved */
       particle->setMoveState(std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved);
@@ -32,9 +42,7 @@ template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
   const ParticleContainer& localParticles, const int kickNumber, const bool isSPH
 ) {
-  const double timeStepSizeKick = 0.5
-                                  * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                                      .getMinTimeStepSize();
+  const double timeStepSizeKick = 0.5 * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
   for (auto* particle : localParticles) {
     if (
       particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
@@ -117,6 +125,9 @@ void swift2::timestepping::computePredictHydro(const ParticleContainer& localPar
   const double dt_kick_hydro = 0.5 * timeStepSize;
   const double dt_drift      = timeStepSize;
   const double dt_therm      = dt_kick_hydro;
+  // const double dt_kick_hydro = 0.;
+  // const double dt_drift      = 0.;
+  // const double dt_therm      = 0.;
 
   // @TODO: Mladen: This is only valid for the "Minimal" SPH scheme
   // Needs cleanup. Should be moved to a "swift kernels" file.
@@ -127,6 +138,9 @@ void swift2::timestepping::computePredictHydro(const ParticleContainer& localPar
       // and
       // not particle->getIsBoundaryParticle()
     ) {
+
+      // This corresponds to hydro_predict_extra() in original SWIFT.
+      // TODO: move into SWIFT file.
 
       /* Predict velocities for hydro terms */
       particle->setV(particle->getV() + particle->getA() * dt_kick_hydro);
