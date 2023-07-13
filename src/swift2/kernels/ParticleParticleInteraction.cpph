@@ -25,22 +25,13 @@ void swift2::kernels::densityKernel(Particle* localParticle, const Particle* act
 
   /* Retrieve basic properties of local and active particles */
   const double h_a = localParticle->getSmoothingLength();
-  const double m_a = localParticle->getMass();
-  const double m_b = activeParticle->getMass();
 
   /* Distance between the particles */
-  tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
-  const double                          r  = tarch::la::norm2(dx);
-
-  /* Normalized distance to evaluate kernel */
-  const double q_a = r / h_a;
+  const tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
+  const double r  = tarch::la::norm2(dx);
 
   /* Compute the actual interaction radius */
   const double iactR = kernel_gamma * h_a;
-
-  /* Velocity terms for viscosity */
-  tarch::la::Vector<Dimensions, double> dv_ab;
-  tarch::la::Vector<Dimensions, double> curlvr(0.0);
 
   if(
     tarch::la::smaller( r, iactR )
@@ -51,39 +42,49 @@ void swift2::kernels::densityKernel(Particle* localParticle, const Particle* act
     )
     {
 
-if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
-  std::cout << "iact " << localParticle->getPartid() << " and " << activeParticle->getPartid() << " x= " << activeParticle->getX()[0] << std::endl;
+    // const double m_a = localParticle->getMass();
+    const double m_b = activeParticle->getMass();
+    const double h_a_inv = 1./h_a;
+    // Normalized distance to evaluate kernel
+    const double qa = r / h_a;
+
     // Evaluate kernel and its derivative
+    double w_a, dwa_dx;
+    kernel_deval(qa, w_a, dwa_dx);
+    const double dwa_dh = -(hydroDimensions * w_a + qa * dwa_dx);
 
-    /* SWIFT KERNEL */
-    double w_a, dwa_dx, dwa_dh;
-    kernel_deval(q_a, w_a, dwa_dx);
-    dwa_dh = -(hydroDimensions * w_a + q_a * dwa_dx);
-
-    /* Increment density */
+    // Increment density
     localParticle->setDensity(localParticle->getDensity() + m_b * w_a);
 
-    /* Increment drho/dh */
+    // Increment drho/dh. Note that minus sign was absorbed into dwa_dh
     localParticle->setRho_dh(localParticle->getRho_dh() + m_b * dwa_dh);
 
-    /* Increment fractional number density */
+    // Increment fractional number density
     localParticle->setWcount(localParticle->getWcount() + w_a);
 
-    /* Increment dWcount/dh */
+    // Increment dWcount/dh. Note that minus sign was absorbed into dwa_dh
     localParticle->setWcount_dh(localParticle->getWcount_dh() + dwa_dh);
+
+
+    // Compute dv dot r
+    // Velocity terms for viscosity
+    tarch::la::Vector<Dimensions, double> dv;
+    tarch::la::Vector<Dimensions, double> curlvr(0.0);
+
+// if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
+//   std::cout << "iact " << localParticle->getPartid() << " and " << activeParticle->getPartid() << " x= " << activeParticle->getX()[0] << std::endl;
 
     /* Now we need to compute the div terms */
     const double r_inv = r ? 1.0 / r : 0.0;
     const double fac_a = m_b * dwa_dx * r_inv;
 
-    /* Compute dv dot r */
-    dv_ab             = localParticle->getV() - activeParticle->getV();
-    const double dvdr = tarch::la::dot(dv_ab, dx);
+    dv = localParticle->getV() - activeParticle->getV();
+    const double dvdr = tarch::la::dot(dv, dx);
     localParticle->setDiv_v(localParticle->getDiv_v() - fac_a * dvdr);
 
     /* Compute dv cross r */
     /* 2D Term only has 1 component (z) */
-    const double curlvr2D = dv_ab[0] * dx[1] - dv_ab[1] * dx[0];
+    const double curlvr2D = dv[0] * dx[1] - dv[1] * dx[0];
     localParticle->setRot_v(localParticle->getRot_v() + fac_a * curlvr2D);
     // @TODO Mladen: Implement 3D curl
     if (hydroDimensions == 3)
@@ -103,18 +104,9 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
   const double alphaAV         = localParticle->getAlphaAV();
   const double betaAV          = localParticle->getBetaAV();
 
-  // Retrieve basic properties of local and active particles
-  const double rho_a = localParticle->getDensity();
-  const double rho_b = activeParticle->getDensity();
-
-  const double P_a = localParticle->getPressure();
-  const double P_b = activeParticle->getPressure();
-
-  const double m_a = localParticle->getMass();
-  const double m_b = activeParticle->getMass();
-
-  const double h_a = localParticle->getSmoothingLength();
-  const double h_b = activeParticle->getSmoothingLength();
+  // No cosmology yet: a^{(3 gamma - 5 )/ 2} = 1.
+  const double fac_mu = 1.;
+  const double a2_Hubble = 1.; // a**2 * H
 
   // Distance between the two particles
   tarch::la::Vector<Dimensions, double> dx    = localParticle->getX() - activeParticle->getX();
@@ -123,29 +115,41 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
   const double                          r_inv = r ? 1.0 / r : 0.0;
 
   // Get actual interaction radius
+  const double h_a = localParticle->getSmoothingLength();
   const double iactR = kernel_gamma * h_a;
 
   if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0)  ) {
       // and not localParticle->getIsBoundaryParticle()) {
 
-    // Dimensionless distance to evaluate kernel
+    // Retrieve basic properties of local and active particles
+    const double m_a = localParticle->getMass();
+    const double m_b = activeParticle->getMass();
+
+    const double rho_a = localParticle->getDensity();
+    const double rho_b = activeParticle->getDensity();
+
+    const double P_a = localParticle->getPressure();
+    const double P_b = activeParticle->getPressure();
+
+    // Get kernel for ha
     const double h_a_inv = 1. / h_a;
-    const double h_b_inv = 1. / h_b;
-    const double q_a     = r * h_a_inv;
-    const double q_b     = r * h_b_inv;
-
-    double wa, wb;
-    double wa_dr, wb_dr;
-    double dw_dqa, dw_dqb;
-
+    const double h_a_inv_dp1 = std::pow(h_a_inv, hydroDimensions + 1); // 1/h^{dim + 1}
+    const double qa = r * h_a_inv;
+    double wa, dwa_dqa;
     // Evaluate kernel and its derivative for particle a
-    kernel_deval(q_a, wa, dw_dqa);
+    kernel_deval(qa, wa, dwa_dqa);
+    const double dwa_dr = dwa_dqa * h_a_inv_dp1;
 
+
+    // Dimensionless distance to evaluate kernel
+    const double h_b = activeParticle->getSmoothingLength();
+    const double h_b_inv = 1. / h_b;
+    const double h_b_inv_dp1 = std::pow(h_b_inv, hydroDimensions + 1); // 1/h^{dim + 1}
+    const double qb = r * h_b_inv;
+    double wb, dwb_dqb;
     // Evaluate kernel and its derivative for particle b
-    kernel_deval(q_b, wb, dw_dqb);
-
-    wa_dr = dw_dqa * std::pow(h_a_inv, (hydroDimensions + 1));
-    wb_dr = dw_dqb * std::pow(h_b_inv, (hydroDimensions + 1));
+    kernel_deval(qb, wb, dwb_dqb);
+    const double dwb_dr = dwb_dqb * h_b_inv_dp1;
 
     // Variable smoothing length term
 
@@ -160,26 +164,22 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
     // Compute dv dot r.
     double dvdr = tarch::la::dot((localParticle->getV() - activeParticle->getV()), dx);
 
-    // Are the particles moving towards each others ?
-    const double omega_ab = std::min(dvdr, 0.0);
-    const double mu_ab    = r_inv * omega_ab;
+    // Add Hublle flow: Skipped for now
+    const double dvdr_Hubble = 0.;
 
-    // Compute sound speeds and signal velocity
-    const double v_sig = localParticle->getSoundSpeed() + activeParticle->getSoundSpeed() - betaAV * mu_ab;
+    /* Are the particles moving towards each others ? */
+    const double omega_ab = std::min(dvdr, dvdr_Hubble);
+    const double mu_ab    = fac_mu * r_inv * omega_ab; /* This is 0 or negative */
 
-    // Balsara term
-    const double balsara_a = localParticle->getBalsara();
-    const double balsara_b = activeParticle->getBalsara();
+    /* Compute sound speeds and signal velocity */
+    const double v_sig
+      = localParticle->getSoundSpeed() + activeParticle->getSoundSpeed() - betaAV * mu_ab;
 
-    // Construct the full viscosity term
-    const double rho_ab = 0.5 * (rho_a + rho_b);
-    const double visc   = -0.25 * v_sig * mu_ab * (balsara_a + balsara_b) / rho_ab;
+    /* Convolve with the kernel */
+    const double visc_acc_term = 0.5 * visc * (dwa_dr * f_ab + dwb_dr * f_ba) * r_inv;
 
-    // Convolve with the kernel
-    const double visc_acc_term = 0.5 * visc * (wa_dr * f_ab + wb_dr * f_ba) * r_inv;
-
-    // SPH acceleration term
-    const double sph_acc_term = (P_over_rho2_a * wa_dr + P_over_rho2_b * wb_dr) * r_inv;
+    /* SPH acceleration term */
+    const double sph_acc_term = (P_over_rho2_a * dwa_dr + P_over_rho2_b * dwb_dr) * r_inv;
 
     // Assemble the acceleration
     const double acc = sph_acc_term + visc_acc_term;
@@ -201,11 +201,11 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
     // Use the force
     localParticle->setA(localParticle->getA() - m_b * acc * dx);
 
-    // Get the time derivative for u.
-    const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * wa_dr;
+    /* Get the time derivative for u. */
+    const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * dwa_dr;
 
-    // Viscosity term
-    const double visc_du_term = 0.5 * visc_acc_term * dvdr;
+    /* Viscosity term */
+    const double visc_du_term = 0.5 * visc_acc_term * dvdr_Hubble;
 
     // Assemble the energy equation term
     const double du_dt_a = sph_du_term_a + visc_du_term;
@@ -215,8 +215,8 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
     // Internal energy time derivative
     localParticle->setUDot(localParticle->getUDot() + m_b * du_dt_a);
 
-    // Get the time derivative for h.
-    localParticle->setHDot(localParticle->getHDot() - m_b * dvdr * r_inv / rho_b * wa_dr * f_ab);
+    /* Get the time derivative for h. */
+    localParticle->setHDot(localParticle->getHDot() - m_b * dvdr * r_inv / rho_b * dwa_dr * f_ab);
 
     // Update the signal velocity
     localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), v_sig));

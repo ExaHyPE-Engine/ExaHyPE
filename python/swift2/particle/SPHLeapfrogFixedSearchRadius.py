@@ -551,14 +551,14 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             name="Kick2",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>();""".format(
-                self.name,
-                ), # TODO: temporary solution
             touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
             touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
                       localParticles, 2, {} );""".format(
                 self._isSPH_cpp
             ),
+            prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>();""".format(
+                self.name,
+                ), # TODO: temporary solution for initialization step
             includes="""
                                        #include "Constants.h"
                                        #include "swift2/timestepping/Leapfrog.h"
@@ -683,8 +683,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         """
 
         Viscosity parameters of the Minimal SPH model. Default SWIFT values are
-        alpha_av=0.8
-        and beta_av=3.
+        alpha_av=0.8 and beta_av=3.
 
         """
         return self._alpha_av
@@ -794,6 +793,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             self.algorithm_steps_dict["FlagBoundaryParticles"],
             self.algorithm_steps_dict["Density"],
             self.algorithm_steps_dict["Force"],
+            #  self.algorithm_steps_dict["Kick1"],
+            #  self.algorithm_steps_dict["Kick1Extra"],
             self.algorithm_steps_dict["Kick2"],
             self.algorithm_steps_dict["Kick2Extra"],
         ]
