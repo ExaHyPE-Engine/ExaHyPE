@@ -274,6 +274,13 @@ Define body of constructor
     _stencilBottomLeft  = {{_stencil(2,0)/1.0, _stencil(2,1)/2.0, _stencil(1,1)/4.0, _stencil(1,1)/2.0 }};
 """
 
+
+'''
+
+we leave the class below in place. We can rewrite soon to fit our needs
+
+'''
+
 class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
   ## add templates
   TemplateInitCell = """

@@ -47,11 +47,7 @@ class HdgFirstDiscretisation(Solver):
                cell_dofs,
                face_dofs,
                min_h,
-               max_h,
-               stencilFF,
-               stencilsCF,
-               stencilsFC,
-               stencilCC):
+               max_h):
     """!
    
  Test comment (C)
@@ -90,10 +86,6 @@ class HdgFirstDiscretisation(Solver):
     self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     
-    self.stencilsFF = stencilFF
-    self.stencilsCF = stencilsCF
-    self.stencilsFC = stencilsFC
-    self.stencilCC  = stencilCC
     pass
 
 
@@ -155,7 +147,7 @@ class HdgFirstDiscretisation(Solver):
   
   
   def add_to_assemble(self, observer):
-    observer.add_action_set( AssemblePETSCMatrixOnCellsAndFaces(self) )
+    # observer.add_action_set( AssemblePETSCMatrixOnCellsAndFaces(self) )
     pass
   
 

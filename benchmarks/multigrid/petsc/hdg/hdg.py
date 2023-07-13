@@ -37,35 +37,6 @@ set the number of cell and face dofs
 cellDofs = (args.degree + 1) **  args.dimensions 
 faceDofs = (args.degree + 1) ** (args.dimensions - 1)
 
-'''
-add some stencils
-'''
-
-from stencils import stencilsCF, stencilsFC, stencilCC, stencilsFF
-
-for stencil in stencilsFF:
-  if len(stencil)    != faceDofs \
-  or len(stencil[0]) != faceDofs:
-    print("incorrect dimensions for stencilFF")
-    exit()
-
-for stencil in stencilsCF:
-  if len(stencil)    != cellDofs \
-  or len(stencil[0]) != faceDofs:
-    print("incorrect dimensions for stencilCF")
-    exit()
-
-for stencil in stencilsFC:
-  if len(stencil)    != faceDofs \
-  or len(stencil[0]) != cellDofs:
-    print("incorrect dimensions for stencilFC")
-    exit()
-
-
-if len(stencilCC)    != cellDofs \
-or len(stencilCC[0]) != cellDofs:
-  print("incorrect dimensions for stencilCC")
-  exit()
 
 if args.degree != 1:
   print('for now, we just want to get visualisation working with degree = 1')
@@ -82,10 +53,6 @@ solver = petsc.solvers.HdgFirstDiscretisation("HDG",
                                               faceDofs,
                                               args.meshsize,
                                               args.meshsize,
-                                              stencilsFF,
-                                              stencilsCF,
-                                              stencilsFC,
-                                              stencilCC
                                               )
 
 project.add_solver( solver )
