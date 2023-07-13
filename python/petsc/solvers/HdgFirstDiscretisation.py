@@ -43,6 +43,7 @@ class HdgFirstDiscretisation(Solver):
   """
   def __init__(self,
                name,
+               polynomial_degree,
                cell_dofs,
                face_dofs,
                min_h,
@@ -62,7 +63,7 @@ class HdgFirstDiscretisation(Solver):
                                                     max_h
                                                   )
 
-
+    self.polynomial_degree = polynomial_degree
 
     #hardcode one unknown on vertices for now
     self._vertex_unknowns = 1

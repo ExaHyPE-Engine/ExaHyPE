@@ -76,7 +76,8 @@ project = petsc.Project(project_name = "HDG",
                         ) 
                         
                         
-solver = petsc.solvers.HdgFirstDiscretisation("HDG", 
+solver = petsc.solvers.HdgFirstDiscretisation("HDG",
+                                              args.degree,
                                               cellDofs,
                                               faceDofs,
                                               args.meshsize,

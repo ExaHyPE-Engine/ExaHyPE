@@ -35,6 +35,7 @@ Gauss-Legendre points in each cell
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
     self.d["VERTEX_CARDINALITY"]     = solver.number_of_vertex_unknowns
+    self.d["POLYNOMIAL_DEGREE"]      = solver.polynomial_degree
 
 
   def get_body_of_operation(self,operation_name):
@@ -84,17 +85,10 @@ Python class name.
 
   def get_attributes(self):
     """!
-    
-Define the local map
-
-Every action set has excactly one attribute and that's an instance of
-petsc::LocalToGlobalMap. Before we run through a local mesh partition,
-the corresponding observer object will create a copy of the action set
-for this traversal. In the corresponding constructor, we initialise
-our thread-local copy of the map with the correct tree number.
-    
+    this ends up in header file
     """
-    return """
+    return f"""
+    const int polynomialDegree = {self.d["POLYNOMIAL_DEGREE"]};
 """
       
   def get_constructor_body(self):
