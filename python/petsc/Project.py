@@ -73,7 +73,7 @@ mark these steps as private via a leading underscore.
     self._solver_instances = []
 
     self.algorithm_step_create_grid                  = peano4.solversteps.Step( "CreateGrid",                False )
-    self.algorithm_step_init_quadratures             = peano4.solversteps.Step( "InitQuadratures",                False )
+    self.algorithm_step_init_quadratures             = peano4.solversteps.Step( "InitQuadratures",           False )
     self.algorithm_step_enumerate_and_init_solution  = peano4.solversteps.Step( "EnumerateAndInitSolution",  False )
     self._algorithm_step_init_petsc                  = peano4.solversteps.Step( "InitPETSc",                 False )
     self.algorithm_step_assemble                     = peano4.solversteps.Step( "Assemble",                  False )

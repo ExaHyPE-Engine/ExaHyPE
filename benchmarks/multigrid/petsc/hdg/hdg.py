@@ -1,6 +1,8 @@
 """
 
- Simple Poisson solver on the unit cube.
+FOR NOW, WE FIX THE NUMBER OF DOFS TO BE THE SAME AS 
+THE NUMBER OF GAUSSIAN POINTS
+
 
 """
 

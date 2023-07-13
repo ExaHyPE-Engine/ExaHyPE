@@ -19,8 +19,9 @@ Gauss-Legendre points in each cell
 
   """
   
-  TemplateEnumerateVertex="""
-  std::cout << "here we are inside\\n";
+  TemplateInitCellQuadrature="""
+
+
   """
 
   
@@ -34,24 +35,18 @@ Gauss-Legendre points in each cell
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
-    self.d["VERTEX_CARDINALITY"]     = solver.number_of_vertex_unknowns
     self.d["POLYNOMIAL_DEGREE"]      = solver.polynomial_degree
 
 
   def get_body_of_operation(self,operation_name):
     """!
 
-Provide C++ code snippet for peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME  
-  
-Only touchVertexFirstTime is an event where this action set actually
-does something: It inserts the template TemplateInitVertex and 
-replaces it with entries from the dictionary. The latter is befilled
-in init().
+    insert our templates into the c++ code.
     
     """
     result = ""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.TemplateEnumerateVertex).render(**self.d)
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.TemplateInitCellQuadrature).render(**self.d)
       pass 
 
     return result

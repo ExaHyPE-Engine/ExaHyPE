@@ -74,6 +74,7 @@ class HdgFirstDiscretisation(Solver):
     self._cellDof = peano4.datamodel.DaStGen2( name )
     self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(cell_dofs) ) )
     self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(cell_dofs) ) )
+    
     self._cellDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     # self._cellDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["interior", "exterior"] ) )
 
