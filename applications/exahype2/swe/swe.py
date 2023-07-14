@@ -290,17 +290,6 @@ if args.scenario == "Tsunami":
 
   # Use guided AMR?
   if args.guided_amr:
-    my_solver.add_user_solver_includes("""
-                                      #include \"parser/AdjointParser.h\"
-                                      """)
-
-    adjoint_parser_parameters = ""
-    if args.gamr_file is not None:
-      adjoint_parser_parameters = "\"%s\"" % args.gamr_file
-    else:
-      adjoint_parser_parameters = "\"./%s-adjoint.nc\"" % executable_name
-    my_solver.add_solver_constants("applications::exahype2::swe::parser::AdjointParser adjoint_parser = applications::exahype2::swe::parser::AdjointParser(%s);" % adjoint_parser_parameters)
-
     # Is no file provided?
     if args.gamr_file is None:
       # Add code for simulating adjoint problem 
@@ -337,12 +326,21 @@ if args.scenario == "Tsunami":
       swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_bath
       
       my_solver.add_solver_constants("applications::exahype2::swe::adjoint::SWEAdjoint swe_adjoint = applications::exahype2::swe::adjoint::SWEAdjoint(%s);" % swe_adjoint_parameters)
+    
+    my_solver.add_user_solver_includes("""
+                                      #include \"parser/AdjointParser.h\"
+                                      """)
+    adjoint_parser_parameters = ""
+    if args.gamr_file is not None:
+      adjoint_parser_parameters = "\"%s\"" % args.gamr_file
+    else:
+      adjoint_parser_parameters = "\"./%s-adjoint.nc\"" % executable_name
+    my_solver.add_solver_constants("applications::exahype2::swe::parser::AdjointParser adjoint_parser = applications::exahype2::swe::parser::AdjointParser(%s);" % adjoint_parser_parameters)
 
 
   my_solver.add_user_solver_includes("""
                                      #include \"parser/TopologyParser.h\"
                                      """)
-  
   topology_parser_parameters = "\"%s\", \"%s\"" % (args.bathymetry_file, args.displacement_file);
 
   if args.uq_displacement_origin is not None:
