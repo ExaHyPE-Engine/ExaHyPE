@@ -14,10 +14,11 @@ offset                = [0, 0] # this is fixed to [0, 0]
 end_time              = 0.02
 time_step_relaxation  = 0.5 # taken from tutorial
 plot_interval         = 0.005 # taken from tutorial
-patch_size            = 32
+patch_size            = 4 # 32
 maximum_cell_size     = 0.1
 amr_levels            = 3 
 auxiliary_variables   = 1 # bathymetry, this is fixed to 1 in pde.py
+amr_tolerance         = 1e-3
 
 fv_rusanov_solvers = {
   #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
@@ -87,7 +88,7 @@ parser.add_argument("-probes",  nargs='+',             dest="probe_coordinates",
 
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   required=False,             help="Set order of time discretisation for Runge-Kutta scheme." )
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   required=False,             help="Set order of space discretisation for Discontinuous Galerkin." )
-parser.add_argument("-amr-tol", "--amr-tolerance",     dest="amr_tol",        type=float,                 default=0.05,               help="When using AMR, please set a surface tolerance above which shall be refined and otherwise coarsened. Default is 0.05. Also used for guided AMR.")
+parser.add_argument("-amr-tol", "--amr-tolerance",     dest="amr_tol",        type=float,                 default=amr_tolerance,      help="When using AMR, please set a surface tolerance above which shall be refined and otherwise coarsened. Default is 0.05. Also used for guided AMR.")
 
 parser.add_argument("-nc-key-bath-x",                  dest="nc_key_bath_x",  type=str,                   default="x",                help="Key for x dimension values in bathymetry netCDF file.")
 parser.add_argument("-nc-key-bath-y",                  dest="nc_key_bath_y",  type=str,                   default="y",                help="Key for y dimension values in bathymetry netCDF file.")
@@ -97,14 +98,16 @@ parser.add_argument("-nc-key-displ-y",                 dest="nc_key_displ_y",  t
 parser.add_argument("-nc-key-displ-displ",             dest="nc_key_displ_displ",type=str,                default="z",                help="Key for displacement values in displacement netCDF file.")
 
 parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)." )
-parser.add_argument(            "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR." )
 parser.add_argument(            "--uq-displacement-origin",dest="uq_displacement_origin",type=str,        required=False,             help="Move displacement for uncertainty quantification. Expected argument [x,y] denoting the center of the displacement file within the coordinate system of the bathymetry file. The coordinates are not checked against anything, so they might even move the displacment on dry land!")
+parser.add_argument(            "--no-dynamic-h",      dest="dynamic_h",      action="store_false",       default=True,               help="Dynamically adapt max cell size for highest netCDF resolution. On by default.")
+
 parser.add_argument(            "--guided-amr",        dest="guided_amr",      action="store_true",       default=False,              help="Use guided AMR, only available with the \"Tsunami\" scenario. Optionally pass in an already computed adjoint simulation file in netCDF format using the flag --amr-file.")
 parser.add_argument(            "--gamr-file",          dest="gamr_file",      type=str,                  required=False,             help="Pass in an already computed adjoint simulation output file in netCDF format. Expect to have keys \"x\",\"y\" and \"h\", \"hu\", \"hv\", \"b\"")
 parser.add_argument(            "--gamr-start-time",    dest="gamr_start_time",type=float,                default=0,                  help="Begin of temporal region of interest. Defaults to 0.")
 parser.add_argument(            "--gamr-checkpoints",   dest="gamr_checkpoints",type=int,                 default=0,                  help="Number of times output should be written in adjoint simulation. Defaults to 0 (=Infinity)")
 parser.add_argument("--gamr-area-of-interest", nargs="+",dest="gamr_area_of_interest",type=str,           required=False,             help="Define area of interest for guided AMR. Pass in either a square [x1,x2] [y1,y2] or a circle [x1,y1] [r, inf]. Coordinates are in the same system as the bathymetry.")
 parser.add_argument(            "--gamr-writer-flush",  dest="gamr_writer_flush", type=int,               default=0,                  help="Define after how many writer operations the writer flushes the buffer to the disk.")
+parser.add_argument(            "--adjoint-only",       dest="adjoint_only",    action="store_true",      default=False,              help="Set to only run adjoint simulation and no forward simulation. Used to simply generate file for guided amr.")
 args = parser.parse_args()
 
 maximum_cell_size = args.max_cell_size
@@ -162,7 +165,7 @@ elif args.scenario == "Tsunami":
   if displ_ext not in supported_file_types: raise Exception("Unsupported file type of displacement file! Supported extensions are: %s" % ("|".join(supported_file_types)))
   if args.gamr_file is not None and os.path.splitext(args.gamr_file)[1] not in supported_file_types: raise Exception("Unsupported file type of guided amr file! Supported extensions are: %s" % ("|".join(supported_file_types)))
   
-  if args.amr_levels > 0:
+  if args.amr_levels > 0 and args.dynamic_h:
     print("Overwriting max_cell_size to fit finest mesh in data files!")
     try:
       import netCDF4
@@ -277,8 +280,6 @@ output_path = args.output_path+"output-%s/" % executable_name
 #########################################
 # Add solver constants if necessary     #
 #########################################
-
-my_solver.add_solver_constants("static constexpr bool useDynamicAMR = {};".format("true" if args.dynamic_amr else "false"))
 
 if args.scenario == "Artificial_Tsunami" or args.scenario == "Circular_Island":
   my_solver.add_user_solver_includes("""
@@ -474,6 +475,9 @@ if args.scenario == "Tsunami":
 
     peano4_project.output.makefile.add_cpp_file("parser/AdjointParser.cpp")
     peano4_project.output.makefile.add_h_file("parser/AdjointParser.h")
+
+    if args.adjoint_only:
+      peano4_project.constants.define("ADJOINT_ONLY")
 
 # define project constants if necessary
 if args.scenario == "Artificial_Tsunami":
