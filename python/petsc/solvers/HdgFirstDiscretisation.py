@@ -6,6 +6,11 @@ import dastgen2
 
 import os
 
+#stuff we need to compute the quadratures
+import numpy as np
+from numpy.polynomial.legendre  import leggauss
+from scipy.interpolate import lagrange
+
 from .Solver                                    import Solver
 from petsc.actionsets.EnumerateCellsAndFaces    import EnumerateCellsAndFaces
 from petsc.actionsets.InitQuadrature            import InitQuadrature
@@ -61,6 +66,9 @@ class HdgFirstDiscretisation(Solver):
 
     self.polynomial_degree = polynomial_degree
 
+    self.quadrature_points, self.weights, self.poly_coeffs = \
+      self.initGaussLobatto()
+      
     #hardcode one unknown on vertices for now
     self._vertex_unknowns = 1
     self._vertexDof = peano4.datamodel.DaStGen2( name )
@@ -239,3 +247,22 @@ class HdgFirstDiscretisation(Solver):
   def number_of_face_unknowns(self):
     return self._face_unknowns
   
+
+  '''
+  use numpy/scipy to calculate gaussian quadratures correctly
+  returns: points, weights and an (n+1) * (n+1) array of 
+    polynomial coefficients
+  '''
+  def initGaussLobatto(self):
+    #construct poly coeffs first
+    coeffs = []
+    x = np.linspace(-1,1, self.polynomial_degree + 1)
+    for j in range(self.polynomial_degree + 1):
+      y = np.zeros_like(x)
+      y[j] = 1.0
+      coeffs.append( list( lagrange(x,y).coeffs ) )
+    
+    #finally construct the points and weights
+    points, weights = leggauss( self.polynomial_degree + 1 )
+
+    return points, weights, coeffs

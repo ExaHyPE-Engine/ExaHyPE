@@ -238,6 +238,16 @@ This yet has to be written.
     dictionary = {}
     dictionary[ "SOLVER_INSTANCES"] = self._solver_instances
     
+    dictionary[ "QUADRATURE_POINTS"] = self.convertArrayToCppVector(self.quadrature_points)
+    dictionary[ "WEIGHTS"]           = self.convertArrayToCppVector(self.weights)
+    
+    #slightly more fiddly; we have an array of arrays
+    dictionary[ "POLY_COEFFS"]       = "{ "
+    for array in self.poly_coeffs:
+      dictionary[ "POLY_COEFFS"] += self.convertArrayToCppVector( array )
+      dictionary[ "POLY_COEFFS"] += ", \n"
+    dictionary[ "POLY_COEFFS"]   += " }"
+
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     template_name       = templatefile_prefix + ".SolverRepository.template"
     generated_repository_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -256,7 +266,10 @@ This yet has to be written.
       
   def __generate_data_repository(self):
     dictionary = {}
-    dictionary[ "SOLVER_INSTANCES"] = self._solver_instances
+    dictionary[ "SOLVER_INSTANCES"]  = self._solver_instances
+
+
+
     templatefile_prefix = os.path.dirname(__file__) + "/petscData/"
     template_name       = templatefile_prefix + "PETScData.template"
     generated_repository_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -285,6 +298,11 @@ This yet has to be written.
     print( "Create data for solver " +solver._name  )
     print( "---------------------------------------")
     print( str(solver) )
+
+    #add in points, weight and poly coeffs
+    self.quadrature_points = solver.quadrature_points
+    self.weights           = solver.weights
+    self.poly_coeffs       = solver.poly_coeffs 
       
     solver.add_to_Peano4_datamodel( self._project.datamodel, verbose=False )
     
@@ -308,4 +326,11 @@ This yet has to be written.
     self._solver_instances.append( (solver.typename(), solver.instance_name()) )
     pass
 
+  @staticmethod
+  def convertArrayToCppVector(array):
+    output = "{" + str(array[0])
+    for el in array[1:]:
+      output += f", {str(el)}"
+    output += "}"
+    return output
 

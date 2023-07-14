@@ -54,6 +54,14 @@ namespace {{N}} {
     */
     int getGlobalCellIndex(std::pair<int,int> localIndex);
     int getGlobalFaceIndex(std::pair<int,int> localIndex);
+
+    /*
+    * store points, weight and coefficients for gaussian
+    * quadratures. aligned left to right / bottom to top
+    */
+    const inline std::vector<double> quadPoints              = {{QUADRATURE_POINTS}};
+    const inline std::vector<double> quadWeights             = {{WEIGHTS}};
+    const inline std::vector<std::vector<double>> polyCoeffs = {{POLY_COEFFS}};
     {% endif %}
 
   }
