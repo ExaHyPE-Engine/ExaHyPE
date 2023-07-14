@@ -62,6 +62,30 @@ namespace {{N}} {
     const inline std::vector<double> quadPoints              = {{QUADRATURE_POINTS}};
     const inline std::vector<double> quadWeights             = {{WEIGHTS}};
     const inline std::vector<std::vector<double>> polyCoeffs = {{POLY_COEFFS}};
+
+    const int polynomialDegree = {{POLY_DEGREE}};
+
+    /*
+    method to evaluate polynomial at given point, given a set of coefficients
+    */
+    double evalPoly( const std::vector<double>& coeffs, const double& quadPoint );
+
+    /*
+    we have n+1 different polynomials. use this overload to specify which one
+    you mean.
+    */
+    inline double evalPoly( const int& index, const double& quadPoint ){
+      if (index < 0
+          or
+          index > polynomialDegree + 1) throw std::runtime_error("bad index used!");
+      return evalPoly( polyCoeffs[index], quadPoint );
+    }
+
+    /*
+    method to eval 2 polynomials and return them
+    */
+    double evalPoly( const int& indexX, const int& indexY, const double& quadPoint );
+
     {% endif %}
 
   }

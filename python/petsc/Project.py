@@ -246,6 +246,8 @@ This yet has to be written.
       dictionary[ "POLY_COEFFS"] += ", \n"
     dictionary[ "POLY_COEFFS"]   += " }"
 
+    dictionary["POLY_DEGREE"] = self.polynomial_degree
+
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     template_name       = templatefile_prefix + ".SolverRepository.template"
     generated_repository_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -300,7 +302,8 @@ This yet has to be written.
     #add in points, weight and poly coeffs
     self.quadrature_points = solver.quadrature_points
     self.weights           = solver.weights
-    self.poly_coeffs       = solver.poly_coeffs 
+    self.poly_coeffs       = solver.poly_coeffs
+    self.polynomial_degree = solver.polynomial_degree
       
     solver.add_to_Peano4_datamodel( self._project.datamodel, verbose=False )
     

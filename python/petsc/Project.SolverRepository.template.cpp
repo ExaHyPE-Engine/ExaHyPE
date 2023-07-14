@@ -78,4 +78,16 @@ int {{NAMESPACE | join("::")}}::repositories::getGlobalFaceIndex(std::pair<int,i
   return result;
 }
 
+double {{NAMESPACE | join("::")}}::repositories::evalPoly( const std::vector<double>& coeffs, const double& quadPoint ){
+  double output = 0;
+  double x      = 1;
+  //coeffs are ordered from highest degree to lowest degree,
+  //so iterate from back to front
+  for (auto iter=coeffs.crbegin(); iter!=coeffs.crend(); iter++){
+    output += (*iter) * x;
+    x *= quadPoint;
+  }
+  return output;
+}
+
 {% endif %}
