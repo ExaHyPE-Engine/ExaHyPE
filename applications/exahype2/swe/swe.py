@@ -287,24 +287,6 @@ if args.scenario == "Artificial_Tsunami" or args.scenario == "Circular_Island":
                                      """)
 
 if args.scenario == "Tsunami":
-  my_solver.add_user_solver_includes("""
-                                     #include \"parser/TopologyParser.h\"
-                                     """)
-  
-  topology_parser_parameters = "\"%s\", \"%s\"" % (args.bathymetry_file, args.displacement_file);
-
-  if args.uq_displacement_origin is not None:
-    displacement_origin_x, displacement_origin_y = parse_coordinate_pair(args.uq_displacement_origin)
-    topology_parser_parameters += ", %f, %f" % (displacement_origin_x, displacement_origin_y)
-
-  topology_parser_parameters += ",\"%s\"" % args.nc_key_bath_x
-  topology_parser_parameters += ",\"%s\"" % args.nc_key_bath_y
-  topology_parser_parameters += ",\"%s\"" % args.nc_key_bath_bath
-  topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_x
-  topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_y
-  topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_displ
-  
-  my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser topology_parser = applications::exahype2::swe::parser::TopologyParser(%s);" % topology_parser_parameters)
 
   # Use guided AMR?
   if args.guided_amr:
@@ -355,6 +337,26 @@ if args.scenario == "Tsunami":
       swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_bath
       
       my_solver.add_solver_constants("applications::exahype2::swe::adjoint::SWEAdjoint swe_adjoint = applications::exahype2::swe::adjoint::SWEAdjoint(%s);" % swe_adjoint_parameters)
+
+
+  my_solver.add_user_solver_includes("""
+                                     #include \"parser/TopologyParser.h\"
+                                     """)
+  
+  topology_parser_parameters = "\"%s\", \"%s\"" % (args.bathymetry_file, args.displacement_file);
+
+  if args.uq_displacement_origin is not None:
+    displacement_origin_x, displacement_origin_y = parse_coordinate_pair(args.uq_displacement_origin)
+    topology_parser_parameters += ", %f, %f" % (displacement_origin_x, displacement_origin_y)
+
+  topology_parser_parameters += ",\"%s\"" % args.nc_key_bath_x
+  topology_parser_parameters += ",\"%s\"" % args.nc_key_bath_y
+  topology_parser_parameters += ",\"%s\"" % args.nc_key_bath_bath
+  topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_x
+  topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_y
+  topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_displ
+  
+  my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser topology_parser = applications::exahype2::swe::parser::TopologyParser(%s);" % topology_parser_parameters)
 
 #########################################
 # Set up exahype2 project               #
