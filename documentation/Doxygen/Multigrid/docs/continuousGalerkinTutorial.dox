@@ -9,7 +9,7 @@ DG code. I found the [notes by M. Bader quite helpful here](https://www5.in.tum.
 
 # Formulation
 
-As ever we aim to solve:
+As ever we aim to solve
 
 @f$ -\Delta u \ = \ f @f$.
 
@@ -29,7 +29,6 @@ the following situation:
 \li A 1D domain, cut up into discrete chunks of width @f$ h @f$
 \li We pick test functions @f$ \phi @f$ that are piecewise linear, and each span two cells. Furthermore normalised to a maximum height of 1
 \li We have a value for @f$ u @f$ at the boundary of each cell 
-\li Although not (currently) on the sketch, we have a value for @f$ f @f$ at the boundary of each cell 
 
 What we aim to do here is to show how we update @f$ u @f$, based on our formulation.
 
@@ -40,12 +39,12 @@ as the @f$ u_i @f$. Concretely:
 
 @f$ u = \sum_i u_i \ \phi_i @f$.
 
-Returning to the integral above, we can integrate by parts to obtain:
+Returning to the integral above, we can integrate by parts to obtain
 
 \f{eqnarray*}{
   &\int_\text{cell}& ( \nabla u, \ \nabla \phi )dx + \int_\text{face} (\nabla u \cdot \hat{n}, \ \phi) dS(x)
    \ \ \ \forall \phi \\
-  =\sum_i u_i \ &\int& (\nabla \phi_i, \ \nabla \phi) dx 
+  =\sum_i u_i \ &\int_\text{cell}& (\nabla \phi_i, \ \nabla \phi) dx 
   + \int_\text{face} (\nabla u \cdot \hat{n}, \ \phi) dS(x)
   \ \ \ \forall \phi
 
@@ -120,6 +119,13 @@ And finally compute the overlap integrals. Here we integrate over the entire dom
 
 With all other being 0, due to the lack of overlap. We used here implicitly that the cell had a width of @f$ h @f$.
 
+## Where does the stencil notation come from?
+
+Explain here how the stencil is just one standalone test.
+Further explain how we can evaluate a stencil for the rhs by taking
+@f$ f = f_1 \phi_1 + f_2 \phi_2 @f$
+
+
 ## Constructing our matrix elements
 
 Now it's time to properly construct our matrix. Most linear algebra problems state problems in the 
@@ -179,7 +185,7 @@ Let's do the same thing again. This time we have overlap with @f$ \phi_1 @f$ and
   
 \f}
 
-We can see here where the well-known 1D Poisson stencil (-1, 2, -1) comes from.
+We can see here where the well-known 1D Poisson stencil @f$ \frac{1}{h} [-1, 2, -1] @f$ comes from.
 
 ##The Problem Matrix
 And we can thus start constructing our problem matrix:
@@ -189,6 +195,7 @@ And we can thus start constructing our problem matrix:
   &\begin{pmatrix}
   \int (\nabla \phi_1, \ \nabla \phi_1) dx & \int (\nabla \phi_2, \ \nabla \phi_1) dx & 0 & 0  & ... \\
   \int (\nabla \phi_1, \ \nabla \phi_2) dx & \int (\nabla \phi_2, \ \nabla \phi_2) dx & \int (\nabla \phi_3, \ \nabla \phi_2) dx & 0  & ... \\
+  ... & ... & ... & ... \\
   \end{pmatrix}
 
   \begin{pmatrix}
@@ -200,7 +207,7 @@ And we can thus start constructing our problem matrix:
   \end{pmatrix} \\
 
 = \frac{1}{h} &\begin{pmatrix}
-  2 & 1 & 0 & 0 & ... \\
+  2 & -1 & 0 & 0 & ... \\
   -1 & 2 & -1 & 0 & ... \\
 \end{pmatrix}
 
@@ -262,6 +269,11 @@ are integrating with @f$ \phi_k @f$:
 We can afford to lose these last two terms, since they will both appear in consecutive terms of 
 the sum across @f$ j @f$, but with opposite signs; 
 @f$ \hat{n_{j_+}} \ = \ -\hat{n_{{n+1}_-}} @f$,
-hence each of these terms will disappear in a telescopic fashion.
+hence each of these terms will cancel out in a telescopic fashion.
+
+
+
+
+# Towards dimensions 2 and above
 
 */
