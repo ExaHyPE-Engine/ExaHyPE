@@ -73,7 +73,6 @@ mark these steps as private via a leading underscore.
     self._solver_instances = []
 
     self.algorithm_step_create_grid                  = peano4.solversteps.Step( "CreateGrid",                False )
-    self.algorithm_step_init_quadratures             = peano4.solversteps.Step( "InitQuadratures",           False )
     self.algorithm_step_enumerate_and_init_solution  = peano4.solversteps.Step( "EnumerateAndInitSolution",  False )
     self._algorithm_step_init_petsc                  = peano4.solversteps.Step( "InitPETSc",                 False )
     self.algorithm_step_assemble                     = peano4.solversteps.Step( "Assemble",                  False )
@@ -204,7 +203,6 @@ The function runs through various steps:
                                    )
 
     self._project.solversteps.add_step(self.algorithm_step_create_grid)
-    self._project.solversteps.add_step(self.algorithm_step_init_quadratures)
     self._project.solversteps.add_step(self.algorithm_step_enumerate_and_init_solution)
     self._project.solversteps.add_step(self._algorithm_step_init_petsc)
     self._project.solversteps.add_step(self.algorithm_step_assemble)
@@ -307,7 +305,6 @@ This yet has to be written.
     solver.add_to_Peano4_datamodel( self._project.datamodel, verbose=False )
     
     solver.add_use_statements(self.algorithm_step_create_grid)
-    solver.add_use_statements(self.algorithm_step_init_quadratures)
     solver.add_use_statements(self.algorithm_step_enumerate_and_init_solution)
     solver.add_use_statements(self._algorithm_step_init_petsc)
     solver.add_use_statements(self.algorithm_step_assemble)
@@ -315,7 +312,6 @@ This yet has to be written.
     solver.add_use_statements(self.algorithm_step_plot)
 
     solver.add_to_create_grid                (self.algorithm_step_create_grid)
-    solver.add_to_init_quadrature            (self.algorithm_step_init_quadratures)
     solver.add_to_enumerate_and_init_solution(self.algorithm_step_enumerate_and_init_solution)
     solver.add_to_assemble                   (self.algorithm_step_assemble)
     solver.add_to_map_solution_onto_mesh     (self.algorithm_step_map_solution_onto_mesh)

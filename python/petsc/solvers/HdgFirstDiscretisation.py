@@ -13,7 +13,6 @@ from scipy.interpolate import lagrange
 
 from .Solver                                    import Solver
 from petsc.actionsets.EnumerateCellsAndFaces    import EnumerateCellsAndFaces
-from petsc.actionsets.InitQuadrature            import InitQuadrature
 from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
@@ -68,7 +67,7 @@ class HdgFirstDiscretisation(Solver):
 
     self.quadrature_points, self.weights, self.poly_coeffs = \
       self.initGaussLobatto()
-      
+
     #hardcode one unknown on vertices for now
     self._vertex_unknowns = 1
     self._vertexDof = peano4.datamodel.DaStGen2( name )
@@ -134,10 +133,6 @@ class HdgFirstDiscretisation(Solver):
     pass
 
   def add_to_enumerate(self, observer):
-    pass
-  
-  def add_to_init_quadrature(self, observer):
-    observer.add_action_set( InitQuadrature(self) )
     pass
   
   def add_to_enumerate_and_init_solution(self, observer):

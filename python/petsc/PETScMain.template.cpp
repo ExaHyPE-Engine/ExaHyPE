@@ -1,7 +1,6 @@
 #include "{{MAIN_NAME}}.h"
 
 #include "observers/CreateGrid.h"
-#include "observers/InitQuadratures.h"
 #include "observers/EnumerateAndInitSolution.h"
 #include "observers/Assemble.h"
 #include "observers/Solve.h"
@@ -75,18 +74,12 @@ bool selectNextAlgorithmicStep() {
     switch ( stepName ) {
       case repositories::StepRepository::Steps::CreateGrid:
         {
-          peano4::parallel::Node::getInstance().setNextProgramStep(
-              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitQuadratures )
-          );
-        }
-        break;
-      case repositories::StepRepository::StepRepository::Steps::InitQuadratures:
-        {
             peano4::parallel::Node::getInstance().setNextProgramStep(
               repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::EnumerateAndInitSolution )
             );
         }
-        break;      
+        break;
+     
       case repositories::StepRepository::Steps::EnumerateAndInitSolution:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
@@ -183,17 +176,6 @@ void step() {
       }
       break;
     
-    case repositories::StepRepository::Steps::InitQuadratures:
-      {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-quadratures" );
-
-        observers::InitQuadratures  observer;
-        watch.start();
-        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        watch.stop();
-        createGridMeasurement.setValue( watch.getCalendarTime() );
-      }
-      break;
     case repositories::StepRepository::Steps::EnumerateAndInitSolution:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "enumerate-and-init-solution" );
