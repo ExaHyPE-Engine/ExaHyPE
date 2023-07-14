@@ -1,4 +1,5 @@
 #include "DimensionalSplitting.hpp"
+#include "tarch/multicore/multicore.h"
 
 applications::exahype2::swe::adjoint::DimensionalSplitting::DimensionalSplitting(size_t l_nX, size_t l_nY, double l_dx, double l_dy, double *h, double *hu, double *hv, double *b) :
 l_nX_(l_nX),
@@ -41,7 +42,9 @@ double applications::exahype2::swe::adjoint::DimensionalSplitting::compute_numer
 
     double max_x_wave_speed = 0.0;
     // for all columns
-    #pragma omp parallel for reduction(max: max_x_wave_speed) schedule(runtime)
+    #ifdef SharedOMP
+    #pragma omp parallel for collapse(2) reduction(max: max_x_wave_speed) schedule(runtime)
+    #endif
     for (int i = 1; i < l_nX_ + 2; i++)
     {
         // for all rows
@@ -68,7 +71,9 @@ double applications::exahype2::swe::adjoint::DimensionalSplitting::compute_numer
 
     double max_y_wave_speed = 0.0;
     // for all rows
-    #pragma omp parallel for reduction(max: max_y_wave_speed) schedule(runtime)
+    #ifdef SharedOMP
+    #pragma omp parallel for collapse(2) reduction(max: max_y_wave_speed) schedule(runtime)
+    #endif
     for (int j = 1; j < l_nY_ + 2; j++)
     {
         // for all columns except most left and right ones (ghost layer)
@@ -104,7 +109,9 @@ void applications::exahype2::swe::adjoint::DimensionalSplitting::update_unknowns
     // update cells x-sweep
     const double factordx = dt / l_dx_;
     // for all inner columns
+    #ifdef SharedOMP
     #pragma omp parallel for collapse(2) schedule(static)
+    #endif
     for (int i = 1; i < l_nX_ + 1; i++)
     {
         // for all rows
@@ -122,7 +129,9 @@ void applications::exahype2::swe::adjoint::DimensionalSplitting::update_unknowns
     // update cells x-sweep
     const double factor_dy = dt / l_dy_;
     // for all inner columns
+    #ifdef SharedOMP
     #pragma omp parallel for collapse(2) schedule(static)
+    #endif
      for (int j = 1; j < l_nY_ + 1; j++)
     {
         // for all inner columns

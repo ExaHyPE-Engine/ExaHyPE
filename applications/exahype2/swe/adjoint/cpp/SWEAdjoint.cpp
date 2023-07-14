@@ -1,9 +1,12 @@
 #include "SWEAdjoint.hpp"
+#include "tarch/multicore/multicore.h"
 
 void inline applications::exahype2::swe::adjoint::SWEAdjoint::set_ghost_layer()
 {
     // set ghost layer in 0th row and (l_nY_ + 1)th row
+    #ifdef SharedOMP
     #pragma omp parallel for schedule(static)
+    #endif
     for(int i = 0; i < l_nX_ + 2; i++)
     {
         h_[i * (l_nY_ + 2)] = h_[i * (l_nY_ + 2) + 1];
@@ -16,7 +19,9 @@ void inline applications::exahype2::swe::adjoint::SWEAdjoint::set_ghost_layer()
     }
 
     // set ghost layer in 0th column and (l_nX_ + 1)th column
+    #ifdef SharedOMP
     #pragma omp parallel for schedule(static)
+    #endif
     for(int j = 0; j < l_nY_ + 2; j++)
     {
         h_[j] = h_[l_nY_ + 2 + j];
@@ -118,7 +123,9 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
 
     // initialize bathymetry column wise
     // initialize water height using bathymetry (and hump criterion in area of interest)
+    #ifdef SharedOMP
     #pragma omp parallel for collapse(2) schedule(static)
+    #endif
     for(int i = 1; i < l_nX_ + 1; i++)
     {
         for(int j = 1; j < l_nY_ + 1; j++)
@@ -132,6 +139,10 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
 
     //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 0 -et 0.01 -bf netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_bath.nc -df netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_displ.nc --guided-amr --gamr-area-of-interest [-100000,100000] [-200000,200000]
     //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 0 -et 0.01 -bf netCDFInputs/gebco_2023_n65.0_s10.0_w-180.0_e-120.0.nc -df netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_displ.nc --guided-amr --gamr-area-of-interest [-124.19083,41.74111], [1.0,inf] -nc-key-bath-x lon -nc-key-bath-y lat -nc-key-bath-bath elevation
+    //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 0 -maxh 0.05 -et 3600 -bf netCDFInputs/gebco_2023_n65.0_s10.0_w-180.0_e-120.0.nc -df netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_displ.nc --guided-amr --gamr-area-of-interest [-124.19083,41.74111], [1.0,inf] -nc-key-bath-x lon -nc-key-bath-y lat -nc-key-bath-bath elevation --adjoint-only
+    // Artificial Tsunami
+    //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 3 -et 0.725 --guided-amr --gamr-area-of-interest [-4800,0] [50,inf] -bf netCDFInputs/artificialtsunami_bathymetry_1000.nc -df netCDFInputs/artificialtsunami_displ_1000.nc --gamr-checkpoints 60 --adjoint-only
+    //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 3 -et 0.725 --guided-amr --gamr-file ./swe-application-2d-solver-name-SWESolverFVRusanovGlobalAdaptive-scenario-Tsunami-patch-size-4-amr-3-cell-size-0.100000-end-time-0.725000-adjoint.nc -bf netCDFInputs/artificialtsunami_bathymetry_1000.nc -df netCDFInputs/artificialtsunami_displ_1000.nc --no-dynamic-h
 
 
     // delete topology parser, no longer needed
@@ -139,7 +150,9 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
 
     // set ghost layers for bathymetry
     // for 0th column and (l_nX_ + 1)th column
+    #ifdef SharedOMP
     #pragma omp parallel for schedule(static)
+    #endif
     for(int j = 0; j < l_nY_ + 2; j++)
     {
         b_[j] = b_[l_nY_ + 2 + j];
@@ -147,7 +160,9 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
     }
 
     // set ghost layer for 0th row and (l_nY_ + 1)th row
+    #ifdef SharedOMP
     #pragma omp parallel for schedule(static)
+    #endif
     for(int i = 0; i < l_nX_ + 2; i++)
     {
         b_[i * (l_nY_ + 2)] = b_[i * (l_nY_ + 2) + 1];
@@ -178,7 +193,9 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
                 << "checkpoints: " << (number_of_checkpoints_ > 0 ? "" + number_of_checkpoints_ : "inf") << std::endl;
     this->run_simulation();
     netcdf_writer_->~NetCDFWriter();
+    #ifdef ADJOINT_ONLY
     exit(0);
+    #endif
 }
 
 applications::exahype2::swe::adjoint::SWEAdjoint::~SWEAdjoint()
