@@ -25,7 +25,7 @@ void applications::exahype2::swe::parser::AdjointParser::interpolate_values(size
     if(x_cdf < min_x_adjoint_ || x_cdf > max_x_adjoint_ || y_cdf < min_y_adjoint_ || y_cdf > max_y_adjoint_)
         return;
     int array_index = NetCDFHelper::transformIndexCDFRangeToArray(x_cdf, y_cdf, min_x_adjoint_, min_y_adjoint_, max_x_adjoint_, max_y_adjoint_, size_x_adjoint_, size_y_adjoint_);
-    int array_index_shift = (number_timestamps_ - i_index) * array_index; // reverese time as adjoint simulation has to be backwards in time but is computed forwards in time
+    int array_index_shift = (number_timestamps_ - i_index - 1) * array_index; // reverese time as adjoint simulation has to be backwards in time but is computed forwards in time
     interpolated_values[0] = adjoint_h_[array_index_shift]; // get h of adjoint
     interpolated_values[1] = adjoint_hu_[array_index_shift]; // get hu of adjoint
     interpolated_values[2] = adjoint_hv_[array_index_shift]; // get hv of adjoint
@@ -53,28 +53,48 @@ double applications::exahype2::swe::parser::AdjointParser::calculate_inner_produ
 }
 
 double applications::exahype2::swe::parser::AdjointParser::max_inner_product(double i_t, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b){
-    double max_inner_product = -1.f;
-    #pragma omp parallel for reduction(max: max_inner_product) schedule(static)
-    for(size_t i = 0; i < number_timestamps_; i++)
-    {
-        double t_nm = 0.f;
-        if(i > 0)
-            t_nm = adjoint_timestamps_[i-1];
-        
-        // Is i_t smaller than next timestamp in adjoint solution
-        // AND is i_t in the time window for guided AMR?
-        if(i_t < adjoint_timestamps_[i] && t_nm <= i_t + (t_f_ - t_s_))
-        {
-            double inner_product_previous = 0.f;
-            double inner_product_current = calculate_inner_product(i, i_x, i_y, i_eta, i_hu, i_hv, i_b);
 
-            if(i > 0)
-                inner_product_previous = calculate_inner_product(i-1, i_x, i_y, i_eta, i_hu, i_hv, i_b);
-            
-            max_inner_product = std::max(std::max(inner_product_current, inner_product_previous), max_inner_product);
-        }
+    if(i_t != t_last_call_)
+    {
+        t_last_call_ = i_t;
+        set_next_timestamp(i_t);
     }
+
+    double t_nm = inner_product_start_index_ > 0 ? adjoint_timestamps_[inner_product_start_index_-1] : 0.0;
+
+    double t_current;
+    double inner_product_current;
+    double t_comp = i_t + (t_f_ - t_s_);
+    double max_inner_product = inner_product_start_index_  > 0 ? calculate_inner_product(inner_product_start_index_-1, i_x, i_y, i_eta, i_hu, i_hv, i_b) : 0.0;
+
+    for(size_t i = inner_product_start_index_; i < number_timestamps_; i++)
+    {
+        t_current = adjoint_timestamps_[i];
+        if(i_t < t_current && t_nm <= t_comp)
+        {
+            inner_product_current = calculate_inner_product(i, i_x, i_y, i_eta, i_hu, i_hv, i_b);
+            max_inner_product = std::max(inner_product_current, max_inner_product);
+            t_nm = t_current;
+        }
+        else
+            break;
+    }
+    if(max_inner_product > 0 && false)
+        std::cout << "max_inner_product: " << max_inner_product << std::endl;
     return max_inner_product;
+}
+
+void applications::exahype2::swe::parser::AdjointParser::set_next_timestamp(double i_t){
+    double t_nm = 0.0;
+    for(size_t i = inner_product_start_index_; i < number_timestamps_; i++)
+    {
+        if(t_nm <= i_t + (t_f_ - t_s_) && adjoint_timestamps_[i] > i_t)
+        {
+            inner_product_start_index_ = i;
+            return;
+        }
+        t_nm = adjoint_timestamps_[i];
+    }
 }
 
 void applications::exahype2::swe::parser::AdjointParser::parse_adjoint_file(const char *adjoint_file_path){

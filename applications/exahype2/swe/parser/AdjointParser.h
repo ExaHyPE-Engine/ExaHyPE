@@ -32,6 +32,9 @@ class applications::exahype2::swe::parser::AdjointParser {
     double t_f_ = -1;                /* end time for adjoint solution  */
     double t_s_ = -1;                /* start time for adjoint solution */
 
+    size_t inner_product_start_index_ = 0;
+    double t_last_call_ = -1.0;
+
     /**
      * @brief 
      * 
@@ -66,6 +69,8 @@ class applications::exahype2::swe::parser::AdjointParser {
      * @param adjoint_file_path path to pre-computed adjoint solution netCDF file
      */
     void parse_adjoint_file(const char *adjoint_file_path);
+
+    void set_next_timestamp(double i_t);
   
   public:
     AdjointParser(const char *adjoint_file_path);
