@@ -34,32 +34,8 @@ class TsunamiModel(umbridge.Model):
         
         print("Checking whether build directory is on path...")
         if("build" not in operating_directory.rsplit(root_directory,maxsplit=1)[1]):  
-            print("Not in build directory.")
-            operating_directory = operating_directory.rsplit(root_directory,maxsplit=1)[0]+root_directory
-
-            print("Checking whether build directory exist...")
-            if(not isdir(operating_directory + "build/")):
-                print("Build directory does not exist, attempt to create it.")
-                run(["mkdir", "build"], cwd=operating_directory).check_returncode()
-                print("Created build directory at " + operating_directory+"build/")
-
-            print("Changed into build directory.")
-            operating_directory = operating_directory + "build/"
-
-            print("Checking whether ExaHyPE is already compiled in release mode...")
-            if(len(glob(operating_directory+"*release*")) == 0):
-                print("ExaHyPE not compiled in release mode, will now attempt to compile.")
-                print("WARNING: The compiled version of ExaHyPE may not feature everything the user might wish for.")
-                print("Therefore, the user is adviced to compile ExaHyPE themselves!")
-                cmake_instructions = ["cmake", 
-                                      "..",
-                                      "-DCMAKE_BUILD_TYPE=Release"] # TODO this seems to work but maybe needs to be specified more
-
-                run(cmake_instructions, cwd=operating_directory).check_returncode()
-                run(["make", "-j", "8"], cwd=operating_directory).check_returncode()
-            
-            print("Changed into swe directory in the build folder.")
-            operating_directory = operating_directory + realpath(__file__).rsplit(root_directory,maxsplit=1)[1].split(basename(__file__))[0]
+            print("ExaHyPE not compiled! Please first compile ExaHyPE and call this script from within the build directory!")
+            return []
         else:
             print("Build directory already on path.")
 
