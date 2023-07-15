@@ -29,16 +29,17 @@ namespace tarch::accelerator {
     std::vector<std::vector<std::string>> devInfo;
 #if defined(GPUOffloadingCPP)
     tarch::accelerator::cpp::queryDeviceInformation(devInfo);
+    tarch::accelerator::runBenchmarks(devInfo);
 #elif defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
     tarch::accelerator::cuda::queryDeviceInformation(devInfo);
+    tarch::accelerator::runBenchmarks(devInfo);
 #elif defined(GPUOffloadingSYCL)
     tarch::accelerator::sycl::queryDeviceInformation(devInfo);
+    tarch::accelerator::runBenchmarks(devInfo);
 #elif defined(GPUOffloadingOMP)
     tarch::accelerator::omp::queryDeviceInformation(devInfo);
-#else
-    return devInfo;
-#endif
     tarch::accelerator::runBenchmarks(devInfo);
+#endif
     return devInfo;
   }
 
@@ -165,12 +166,9 @@ namespace tarch::accelerator {
         "None of the found GPUs could successfully launch GPU Kernels (Check for wrong compile configuration)"
       );
     }
-#else
-    // Print noinformation since we do not have an accelerator
-    logInfo("offloadCapabiltiyTest()", "No GPU Accelerator Backend is enabled. The code will run on CPUs.");
-    return;
 #endif
 
+#if defined(GPUOffloadingCUDA) or defined(GPUOffloadingSYCL) or  defined(GPUOffloadingOMP) or defined(GPUOffloadingCPP)
     unsigned int offloadCapableGPUCount = 0;
     std::string  failMessage;
     for (unsigned int i = 0; i < testResults.size(); i++) {
@@ -197,6 +195,10 @@ namespace tarch::accelerator {
         "Peano 4 was configured to run on accelerators, but no offloading capable GPU were found."
       );
     }
+#else
+    // Print noinformation since we do not have an accelerator
+    logInfo("offloadCapabiltiyTest()", "No GPU Accelerator Backend is enabled. The code will run on CPUs.");
+#endif
   }
 
   void runBenchmarks(std::vector<std::vector<std::string>>& propertyMatrix) {
