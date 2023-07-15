@@ -994,8 +994,6 @@ int main(int argc, char** argv) {
   );
   logInfo("main()", "Dimensions: " << Dimensions);
 
-  peano4::runTestsAndBenchmarks();
-
   int numberOfPatches = 1;
   if constexpr (WithScaling) {
     numberOfPatches = tarch::multicore::Core::getInstance().getNumberOfThreads();
