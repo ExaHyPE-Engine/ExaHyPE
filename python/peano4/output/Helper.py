@@ -25,6 +25,16 @@ def write_file(overwrite,overwrite_is_default,full_qualified_filename):
     return True
 
 def find_CMake_build_dir():
+  """
+  This function searches for the CMake build directory by iteratively checking parent directories. 
+  Starting from the callers directory (using getcwd), iterating until root directory of peano and
+  this is computed using the location of this file therefore adapt the code if the file is moved 
+  somewhere else. Using CMake means that it was configured before, and therefore a CMakeCache.txt 
+  exists.
+
+  :return: The path to the CMake build directory if found, or an empty string otherwise.
+  :rtype: str
+  """
   if find_CMake_build_dir.CMake_build_dir_check_done:
     return find_CMake_build_dir.saved_CMake_build_dir
   else:
@@ -48,7 +58,16 @@ def find_CMake_build_dir():
 find_CMake_build_dir.CMake_build_dir_check_done = False
 find_CMake_build_dir.saved_CMake_build_dir = ""
 
+
 def using_cuda_backend():
+  """
+  This function checks if the CUDA backend. Caches the result, after the first call calling this
+  function will have no cost as it returns a cached value. It checks the value for the GPU backend
+  saved in the CMakeCache.txt whether it is set to CUDA
+
+  :return: True if the CUDA backend is being used, False otherwise.
+  :rtype: bool
+  """
   if using_cuda_backend.using_cuda_backend_check_done:
     return using_cuda_backend.using_cuda_backend_cached_value
   else:
