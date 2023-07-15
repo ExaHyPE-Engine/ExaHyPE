@@ -10,8 +10,6 @@ namespace tarch::accelerator {
 } // namespace tarch::accelerator
 
 namespace tarch::accelerator::cpp {
-  static tarch::logging::Log _log("tarch::accelerator::cpp");
-
   /**
    * Queries device information for ISO C++ GPU accelerator  backend.
    *
