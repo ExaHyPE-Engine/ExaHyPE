@@ -152,10 +152,10 @@ namespace tarch::accelerator::cuda {
         // Copy Kernel inside GPU
         cudaEventRecord(start, 0);
         copyKernelLauncher(a_dev, b_dev, N);
-        cudaDeviceSynchronize();
         cudaEventRecord(stop, 0);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&executionTime, start, stop);
+        cudaDeviceSynchronize();
         if (i > 0) {
           benchmarkResult.GPUtoGPUCopy += static_cast<uint64_t>(executionTime * 1e6);
         }
