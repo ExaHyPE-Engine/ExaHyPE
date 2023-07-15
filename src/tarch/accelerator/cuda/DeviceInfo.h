@@ -10,7 +10,6 @@ namespace tarch::accelerator {
 } // namespace tarch::accelerator
 
 namespace tarch::accelerator::cuda {
-  static tarch::logging::Log _log("tarch::accelerator::cuda");
 
   /**
    * Queries device information for CUDA GPU accelerator  backend.

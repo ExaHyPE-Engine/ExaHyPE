@@ -9,8 +9,6 @@ namespace tarch::accelerator {
   struct BenchmarkResultInNanoSeconds;
 } // namespace tarch::accelerator
 namespace tarch::accelerator::omp {
-  static tarch::logging::Log _log("tarch::accelerator::omp");
-
   /**
    * Queries device information for OpenMP GPU accelerator  backend.
    *

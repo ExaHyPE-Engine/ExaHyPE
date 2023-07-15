@@ -10,8 +10,6 @@ namespace tarch::accelerator {
 } // namespace tarch::accelerator
 
 namespace tarch::accelerator::sycl {
-  static tarch::logging::Log _log("tarch::accelerator::sycl");
-
   /**
    * Queries device information for Sycl GPU accelerator  backend.
    *

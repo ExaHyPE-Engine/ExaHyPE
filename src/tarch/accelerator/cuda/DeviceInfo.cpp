@@ -12,7 +12,8 @@
 
 #if defined(GPUOffloadingCUDA)
 std::vector<bool> testKernelLauncher();
-void              copyKernelLauncher(const float* a, float* b, size_t N);
+void              copyKernelLauncher(const float* a, float* b, size_t N, int gridSize, int blockSize);
+void              maxPotentialBlockSize(int* minGridSize, int* blockSize);
 
 #define CHECK_CUDA_ERROR() \
   { check_error(__FILE__, __LINE__); }
@@ -93,6 +94,20 @@ namespace tarch::accelerator::cuda {
     for (int deviceId = 0; deviceId < numberOfDevices; deviceId++) {
       tarch::accelerator::BenchmarkResultInNanoSeconds& benchmarkResult = benchmarkResults[deviceId];
       benchmarkResult.repeats                                           = repeats;
+
+      // Copy Kernel inside GPU
+      int blockSize;   // The launch configurator returned block size
+      int minGridSize; // The minimum grid size needed to achieve the
+                      // maximum occupancy for a full device launch
+      int gridSize;    // The actual grid size needed, based on input size
+
+      maxPotentialBlockSize(&minGridSize, &blockSize);
+
+      // Round up according to array size
+      gridSize = (N + blockSize - 1) / blockSize;
+
+      logInfo("copyKernel()", "gridSize: " << gridSize << ", blockSize: " << blockSize);
+
       for (uint i = 0; i < repeats + 1; i++) {
         // Copy Benchmark -> use ~80% of Memory's Available Memory for total array size
         // size_t free;
@@ -149,13 +164,12 @@ namespace tarch::accelerator::cuda {
         }
         CHECK_CUDA_ERROR();
 
-        // Copy Kernel inside GPU
         cudaEventRecord(start, 0);
-        copyKernelLauncher(a_dev, b_dev, N);
-        cudaDeviceSynchronize();
+        copyKernelLauncher(a_dev, b_dev, N, gridSize, blockSize);
         cudaEventRecord(stop, 0);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&executionTime, start, stop);
+        cudaDeviceSynchronize();
         if (i > 0) {
           benchmarkResult.GPUtoGPUCopy += static_cast<uint64_t>(executionTime * 1e6);
         }
