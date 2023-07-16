@@ -314,35 +314,31 @@ class ADERDG(object):
 #include "repositories/SolverRepository.h" 
 """
 
-        self._current_time_step.generator.store_persistent_condition = (
-            self._store_cell_data_default_guard()
-        )
-        self._current_time_step.generator.load_persistent_condition = (
-            self._load_cell_data_default_guard()
-        )
-
-        self._current_update.generator.store_persistent_condition = (
-            self._store_cell_data_default_guard()
-        )
-        self._current_update.generator.load_persistent_condition = (
-            self._load_cell_data_default_guard()
+        self._current_time_step.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
         )
 
-        self._rhs_estimates_projection.generator.store_persistent_condition = (
-            self._store_face_data_default_guard()
+        self._current_update.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
         )
-        self._rhs_estimates_projection.generator.load_persistent_condition = (
-            self._load_face_data_default_guard()
+
+        self._rhs_estimates_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_face_data_default_guard(),
+            self._store_face_data_default_guard(),
         )
 
         # get overwritten in subclasses to take into account when to send or receive faces
         self._rhs_estimates_projection.generator.send_condition = "false"
         self._rhs_estimates_projection.generator.receive_and_merge_condition = "false"
 
-        self._flux_estimates_projection.generator.store_persistent_condition = (
-            self._store_face_data_default_guard()
-        )
-        self._flux_estimates_projection.generator.load_persistent_condition = (
+        self._flux_estimates_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_face_data_to_compute_kernels_default_guard(),
+            self._store_face_data_default_guard(),
             self._load_face_data_default_guard()
         )
 
@@ -492,6 +488,26 @@ class ADERDG(object):
             + "::SolverState::GridConstruction"
         )
 
+    def _provide_cell_data_to_compute_kernels_default_guard(self):
+        return (
+                    "not marker.willBeRefined() "
+                    + "and repositories::"
+                    + self.get_name_of_global_instance()
+                    + ".getSolverState()!="
+                    + self._name
+                    + "::SolverState::GridConstruction"
+                )
+
+    def _provide_face_data_to_compute_kernels_default_guard(self):
+        return (
+                    "not marker.willBeRefined() "
+                    + "and repositories::"
+                    + self.get_name_of_global_instance()
+                    + ".getSolverState()!="
+                    + self._name
+                    + "::SolverState::GridConstruction"
+                )
+            
     def _load_cell_data_default_guard(self):
         return (
             "not marker.hasBeenRefined() "

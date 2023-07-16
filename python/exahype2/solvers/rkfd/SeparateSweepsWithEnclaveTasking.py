@@ -515,19 +515,18 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
             self.get_name_of_global_instance(), 
         )
 
-        self._patch_estimates.generator.store_persistent_condition = (
-            self._store_cell_data_default_guard()
-            + """
-      and not ("""
-            + last_sweep_of_time_step_or_plotting_or_initialisation
-            + ")"
-        )
-        self._patch_estimates.generator.load_persistent_condition = (
+        self._patch_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
             self._load_cell_data_default_guard()
             + """
       and not ("""
             + first_sweep_of_time_step_or_plotting_guard
-            + ")"
+            + ")",
+            self._store_cell_data_default_guard()
+            + """
+      and not ("""
+            + last_sweep_of_time_step_or_plotting_or_initialisation
+            + ")",
         )
 
     def create_action_sets(self):

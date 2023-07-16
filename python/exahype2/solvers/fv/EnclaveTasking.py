@@ -525,17 +525,16 @@ class EnclaveTasking(FV):
         @todo There's no equivalent routine for FD4 and RKDG yet
 
         """
-        self._patch.generator.store_persistent_condition = (
-            self._store_cell_data_default_guard()
-            + " and ("
-            + self._secondary_sweep_or_grid_initialisation_or_plot_guard
-            + " or marker.willBeSkeletonCell())"
-        )
-        self._patch.generator.load_persistent_condition = (
+        self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
             self._load_cell_data_default_guard()
             + " and ("
             + self._primary_sweep_or_plot_guard
-            + " or marker.hasBeenSkeletonCell())"
+            + " or marker.hasBeenSkeletonCell())",
+            self._store_cell_data_default_guard()
+            + " and ("
+            + self._secondary_sweep_or_grid_initialisation_or_plot_guard
+            + " or marker.willBeSkeletonCell())",
         )
 
     def create_action_sets(self):

@@ -509,9 +509,22 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         ::peano4::grid::computeOnData( {{full_qualified_type}}::loadStoreComputeFlag(
           marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-        ));
+        ))
+        or
+        inVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
+        or
+        inVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
+        ;
 
       if ( dataResidesOnIntermediateStack or dataResidesOnInputStack ) {
+        logDebug( 
+          "loadCell(...)", 
+          "load data of vertex {{name}} with " << marker.x(outVertexStackPosition) << " x " << marker.h() << 
+          ": " << ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
+              marker
+              {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+            ))
+        );
         assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->empty(), event.toString(), peano4::datamanagement::VertexMarker(event).toString(), _spacetreeId, inVertexStack);
         {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->pop() );
         #if PeanoDebug>0
@@ -525,7 +538,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       else if ( initialiseStackContentForNewData ) {
         {{full_qualified_type}} data;
         #if PeanoDebug>0
-        logDebug( "loadCell(...)", "initialise meta data of new vertex {{name}} with " << marker.x(outVertexStackPosition) << " x " << marker.h() );
+        logDebug( 
+          "loadCell(...)", 
+          "initialise meta data of new vertex {{name}} with " << marker.x(outVertexStackPosition) << " x " << marker.h() << 
+          ": " << ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
+              marker
+              {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+            ))
+        );
         data.setDebugX( marker.x(outVertexStackPosition) );
         data.setDebugH( marker.h() );
         #endif
@@ -533,7 +553,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       }
       else {
         #if PeanoDebug>0
-        logDebug( "loadCell(...)", "initialise meta data of vertex {{name}} with " << marker.x(outVertexStackPosition) << " x " << marker.h() );
+        logDebug( 
+          "loadCell(...)", 
+          "initialise meta data of unused vertex {{name}} with " << marker.x(outVertexStackPosition) << " x " << marker.h() << 
+          ": " << ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
+              marker
+              {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+            ))
+        );
         view.get(outVertexStackPosition).setDebugX( marker.x(outVertexStackPosition) );
         view.get(outVertexStackPosition).setDebugH( marker.h() );
         #endif
@@ -639,11 +666,32 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         ::peano4::grid::computeOnData( {{full_qualified_type}}::loadStoreComputeFlag(
           marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-        ));
+        ))
+        or
+        inFaceStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
+        or
+        inFaceStack==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
+        ;
 
       if ( dataResidesOnIntermediateStack or dataResidesOnInputStack ) {
-        assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), event.toString(), peano4::datamanagement::FaceMarker(event).toString(), _spacetreeId,inFaceStack );
-        logDebug("loadCell(...)", "grab data from intermediate stack " << inFaceStack );
+        logDebug( 
+          "loadCell(...)", 
+          "load data of face {{name}} with " << marker.x(outFaceStackPosition) << " x " << marker.h() << 
+          ": " << ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
+              marker
+              {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+            ))
+        );
+        assertion5( 
+          not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), 
+          event.toString(), 
+          peano4::datamanagement::FaceMarker(event).toString(), 
+          _spacetreeId, inFaceStack,
+          ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
+                        marker
+                        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+          ))
+        );
         {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->pop() );
         #if PeanoDebug>0
         if ( peano4::grid::PeanoCurve::isInOutStack(inFaceStack) ) {
@@ -656,7 +704,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       else if ( initialiseStackContentForNewData ) {
         {{full_qualified_type}} data;
         #if PeanoDebug>0
-        logDebug( "loadCell(...)", "initialise meta data of new face {{name}} with " << marker.x(outFaceStackPosition) << " x " << marker.h() );
+        logDebug( 
+          "loadCell(...)", 
+          "initialise meta data of new face {{name}} with " << marker.x(outFaceStackPosition) << " x " << marker.h() << 
+          ": " << ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
+              marker
+              {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+            ))
+        );
         data.setDebugX( marker.x(outFaceStackPosition) );
         data.setDebugH( marker.h() );
         #endif
@@ -664,7 +719,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       }
       else {
         #if PeanoDebug>0
-        logDebug( "loadCell(...)", "initialise meta data of face {{name}} with " << marker.x(outFaceStackPosition) << " x " << marker.h() );
+        logDebug( 
+          "loadCell(...)", 
+          "initialise meta data of unused face {{name}} with " << marker.x(outFaceStackPosition) << " x " << marker.h() << 
+          ": " << ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
+              marker
+              {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+            ))
+        );
         view.get(outFaceStackPosition).setDebugX( marker.x(outFaceStackPosition) );
         view.get(outFaceStackPosition).setDebugH( marker.h() );
         #endif
@@ -756,10 +818,6 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
     const int inCellStack  = event.getCellData();
     const int outCellStack = peano4::grid::PeanoCurve::CallStack;
-    logDebug("loadCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack << "(" << {{full_qualified_type}}::loadPersistently(
-      marker
-      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-    ) << ")" );
 
     bool dataResidesOnInputStack        = 
       inCellStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
@@ -774,9 +832,20 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       ::peano4::grid::computeOnData( {{full_qualified_type}}::loadStoreComputeFlag(
           marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-      ));
+      ))
+      or
+      inCellStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
+      ;
  
-   if ( dataResidesOnInputStack ) {
+    if ( dataResidesOnInputStack ) {
+      logDebug( 
+        "loadCell(...)", 
+        "load data of cell {{name}} with " << marker.toString() << 
+        ": " << ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
+           marker
+           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ))
+      );
       assertion3( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
       {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop() );
 
@@ -791,7 +860,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       {{full_qualified_type}} data;
 
       #if PeanoDebug>0
-      logDebug( "loadCell(...)", "initialise meta data of new cell {{name}} with " << marker.x() << " x " << marker.h()  << " (" << marker.toString() << ")");
+      logDebug( 
+        "loadCell(...)", 
+        "initialise meta data of new cell {{name}} with " << marker.toString() << 
+        ": " << ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
+            marker
+            {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+          ))
+      );
       data.setDebugX( marker.x() );
       data.setDebugH( marker.h() );
       #endif
@@ -799,7 +875,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
     }
     else {
       #if PeanoDebug>0
-      logDebug( "loadCell(...)", "initialise meta data of cell {{name}} with " << marker.x() << " x " << marker.h()  << " (" << marker.toString() << ")");
+      logDebug( 
+        "loadCell(...)", 
+        "initialise meta data of unused cell {{name}} with " << marker.toString() << 
+        ": " << ::peano4::grid::toString( {{full_qualified_type}}::loadStoreComputeFlag(
+            marker
+            {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+          ))
+      );
       view.get(0).setDebugX( marker.x() );
       view.get(0).setDebugH( marker.h() );
       #endif
