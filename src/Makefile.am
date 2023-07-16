@@ -198,8 +198,6 @@ Tarch_SOURCES= tarch/tarch.cpp \
 
 CUDA_SRC= tarch/accelerator/cuda/TestKernels.cu
 
-CUDA_OBJS= $(CUDA_SRC:.cu=.o)
-
 CUDA_OBJS_RELEASE=  tarch/accelerator/cuda/libTarch_a-TestKernels.o
 CUDA_OBJS_STATS=  tarch/accelerator/cuda/libTarch_stats_a-TestKernels.o
 CUDA_OBJS_TRACE=  tarch/accelerator/cuda/libTarch_trace_a-TestKernels.o
@@ -245,11 +243,11 @@ $(CUDA_OBJS_DEBUG) : $(CUDA_SRC)
 #
 # Map defined source sequences onto libraries
 #
-libTarch_a_SOURCES         = $(Tarch_SOURCES)
-libTarch_stats_a_SOURCES   = $(Tarch_SOURCES)
-libTarch_trace_a_SOURCES   = $(Tarch_SOURCES)
-libTarch_asserts_a_SOURCES = $(Tarch_SOURCES)
-libTarch_debug_a_SOURCES   = $(Tarch_SOURCES)
+libTarch_a_SOURCES         = $(Tarch_SOURCES) $(CUDA_SRC)
+libTarch_stats_a_SOURCES   = $(Tarch_SOURCES) $(CUDA_SRC)
+libTarch_trace_a_SOURCES   = $(Tarch_SOURCES) $(CUDA_SRC)
+libTarch_asserts_a_SOURCES = $(Tarch_SOURCES) $(CUDA_SRC)
+libTarch_debug_a_SOURCES   = $(Tarch_SOURCES) $(CUDA_SRC)
 
 libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
