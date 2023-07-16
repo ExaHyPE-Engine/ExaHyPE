@@ -286,7 +286,7 @@ if test "$gpu" == cuda; then
     fi
 
     CUDA_INCLUDE_FLAGS="-I$with_cuda/include"
-    CUDA_LDADD="-L$with_cuda/lib64 -L$with_cuda/lib -lcudart"
+    CUDA_LDADD="-L$(with_cuda)/lib64 -lcudart"
     NVCC="$with_cuda/bin/nvcc"
     CUDA_PATH="$with_cuda"
 
@@ -310,12 +310,6 @@ if test "$gpu" == cuda; then
   LDADD_TARCH_ASSERTS=" $CUDA_LDADD" 
   LDADD_TARCH_TRACE="   $CUDA_LDADD"
   LDADD_TARCH_DEBUG="   $CUDA_LDADD"
-
-  LDFLAGS_TARCH_RELEASE+=" -static"
-  LDFLAGS_TARCH_STATS+="   -static"
-  LDFLAGS_TARCH_ASSERTS+=" -static"
-  LDFLAGS_TARCH_TRACE+="   -static"
-  LDFLAGS_TARCH_DEBUG+="   -static"
 
   CXXFLAGS_PEANO_2D_RELEASE=" $CXXFLAGS_PEANO_2D_RELEASE $CXXFLAGS_TARCH_RELEASE"
   CXXFLAGS_PEANO_2D_STATS="   $CXXFLAGS_PEANO_2D_STATS   $CXXFLAGS_TARCH_STATS"

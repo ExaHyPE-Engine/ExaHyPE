@@ -196,6 +196,29 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/services/Service.cpp \
  tarch/services/ServiceRepository.cpp 
 
+
+# For the poor soul in the future that my need to change this code
+# The pattern syntax is necessary to compile cuda source files to multiple targets
+# Pattern syntax is a GNU extension therefore we can't use it (due to treat warnings as error)
+# Therefore we need to statistically list all of the object files
+# Any kind of for loops are GNU extensions too, therefore one has to do it per hand and
+# due to the limitations of the pattern rule, the rules have to be defined per directory
+
+# I will give some examples for GNU extensions, as one will surely ask, why do not use a for loop?
+# CUDA_OBJS_RELEASE = $(addprefix libTarch_a-, $(CUDA_OBJS))
+# $(foreach item,$(ITEMS),libTarch_stats_a-$(item)) is a GNU extension
+# CUDA_OBJS_RELEASE = $(patsubst %.cu,libTarch_a-%.o,$(ITEMS))
+# libTarch_debug_a-%.o: %.cu again a GNU extension (% is a GNU Extension) unless 
+# $(CUDA_OBJS_RELEASE): libTarch_a-%.o: %.cu (static pattern)
+# also see here:
+# https://stackoverflow.com/questions/27975545/how-to-deal-with-autoconf-warning-style-pattern-rules-are-a-gnu-make-extens
+# These are all GNU extensions that I could not use
+
+# Therefore we need to list CUDA_SRCs and OBJs per directory and define the appropriate rule
+# And then add the objects to other objects to be linked by adding them to LIBADD or LDADD
+# Since currently there is a cuda file only in one directory, and therefore I did nto want to
+# bloat the variable names.
+
 CUDA_SRC= tarch/accelerator/cuda/TestKernels.cu
 
 CUDA_OBJS_RELEASE=  tarch/accelerator/cuda/libTarch_a-TestKernels.o
@@ -204,50 +227,42 @@ CUDA_OBJS_TRACE=  tarch/accelerator/cuda/libTarch_trace_a-TestKernels.o
 CUDA_OBJS_ASSERTS=  tarch/accelerator/cuda/libTarch_asserts_a-TestKernels.o
 CUDA_OBJS_DEBUG=  tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
 
-# Again warning on GNU Extension here
-#CUDA_OBJS_RELEASE=$(addprefix libTarch_a-, $(CUDA_OBJS))
-#CUDA_OBJS_STATS =$(addprefix libTarch_stats_a-, $(CUDA_OBJS))
-#CUDA_OBJS_TRACE =$(addprefix libTarch_trace_a-, $(CUDA_OBJS))
-#CUDA_OBJS_ASSERTS =$(addprefix libTarch_asserts_a-, $(CUDA_OBJS))
-#CUDA_OBJS_DEBUG =$(addprefix libTarch_debug_a-, $(CUDA_OBJS))
+# Define the rules per target and directory
+$(CUDA_OBJS_RELEASE): tarch/accelerator/cuda/libTarch_a-%.o: tarch/accelerator/cuda/%.cu
+	@echo "NVCC $@"
+	$(NVCC) -Xcompiler “-fPIC -DPIC” -c $< -o $@ 
 
-# $(foreach item,$(ITEMS),libTarch_stats_a-$(item)) is GNU extension
-#CUDA_OBJS_RELEASE = $(patsubst %.cu,libTarch_a-%.o,$(ITEMS))
-#CUDA_OBJS_RELEASE = $(addprefix $(CURDIR)/,$(CUDA_OBJS_RELEASE))
-#CUDA_OBJS_STATS = $(patsubst %.cu,libTarch_stats_a-%.o,$(ITEMS))
-#CUDA_OBJS_STATS = $(addprefix $(CURDIR)/,$(CUDA_OBJS_STATS))
-#CUDA_OBJS_TRACE = $(patsubst %.cu,libTarch_trace_a-%.o,$(ITEMS))
-#CUDA_OBJS_TRACE = $(addprefix $(CURDIR)/,$(CUDA_OBJS_TRACE))
-#CUDA_OBJS_ASSERTS = $(patsubst %.cu,libTarch_a-%.o,$(ITEMS))
-#CUDA_OBJS_ASSERTS = $(addprefix $(CURDIR)/,$(CUDA_OBJS_ASSERTS))
-#CUDA_OBJS_DEBUG = $(patsubst %.cu,libTarch_a-%.o,$(ITEMS))
-#CUDA_OBJS_DEBUG = $(addprefix $(CURDIR)/,$(CUDA_OBJS_DEBUG))
+$(CUDA_OBJS_STATS): tarch/accelerator/cuda/libTarch_stats_a-%.o: tarch/accelerator/cuda/%.cu
+	@echo "NVCC $@"
+	$(NVCC) -Xcompiler “-fPIC -DPIC” -c $< -o $@ 
 
-# libTarch_debug_a-%.o: %.cu again a GNU extension (% is a GNU Extension)
+$(CUDA_OBJS_TRACE): tarch/accelerator/cuda/libTarch_trace_a-%.o: tarch/accelerator/cuda/%.cu
+	@echo "NVCC $@"
+	$(NVCC) -Xcompiler “-fPIC -DPIC” -c $< -o $@ 
 
-$(CUDA_OBJS_TRACE) : $(CUDA_SRC)
-	$(NVCC) -c -o $@ $^
+$(CUDA_OBJS_ASSERTS): tarch/accelerator/cuda/libTarch_asserts_a-%.o: tarch/accelerator/cuda/%.cu
+	@echo "NVCC $@"
+	$(NVCC) -Xcompiler “-fPIC -DPIC” -c $< -o $@ 
 
-$(CUDA_OBJS_ASSERTS) : $(CUDA_SRC)
-	$(NVCC) -c -o $@ $^
-
-$(CUDA_OBJS_RELEASE) : $(CUDA_SRC)
-	$(NVCC) -c -o $@ $^
-
-$(CUDA_OBJS_STATS) : $(CUDA_SRC)
-	$(NVCC) -c -o $@ $^
-
-$(CUDA_OBJS_DEBUG) : $(CUDA_SRC)
-	$(NVCC) -c -o $@ $^
+$(CUDA_OBJS_DEBUG): tarch/accelerator/cuda/libTarch_debug_a-%.o: tarch/accelerator/cuda/%.cu
+	@echo "NVCC $@"
+	$(NVCC) -Xcompiler “-fPIC -DPIC” -c $< -o $@ 
 
 #
 # Map defined source sequences onto libraries
 #
+# CUDA sources are then needed to be added
 libTarch_a_SOURCES         = $(Tarch_SOURCES) $(CUDA_SRC)
 libTarch_stats_a_SOURCES   = $(Tarch_SOURCES) $(CUDA_SRC)
 libTarch_trace_a_SOURCES   = $(Tarch_SOURCES) $(CUDA_SRC)
 libTarch_asserts_a_SOURCES = $(Tarch_SOURCES) $(CUDA_SRC)
 libTarch_debug_a_SOURCES   = $(Tarch_SOURCES) $(CUDA_SRC)
+
+libTarch_a_LIBADD         = $(CUDA_OBJS_RELEASE) #$(LDADD_TARCH_RELEASE)
+libTarch_stats_a_LIBADD   = $(CUDA_OBJS_STATS) #$(LDADD_TARCH_STATS)
+libTarch_trace_a_LIBADD   = $(CUDA_OBJS_TRACE) #$(LDADD_TARCH_TRACE)
+libTarch_asserts_a_LIBADD = $(CUDA_OBJS_ASSERTS) #$(LDADD_TARCH_ASSERTS)
+libTarch_debug_a_LIBADD   = $(CUDA_OBJS_DEBUG) #$(LDADD_TARCH_DEBUG)
 
 libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
@@ -260,9 +275,3 @@ libPeano4Core3d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core3d_asserts_a_SOURCES = $(Peano4Core_SOURCES)
 libPeano4Core3d_debug_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core3d_stats_a_SOURCES   = $(Peano4Core_SOURCES)
-
-libTarch_a_LIBADD         = $(CUDA_OBJS_RELEASE) $(LDADD_TARCH_RELEASE)
-libTarch_stats_a_LIBADD   = $(CUDA_OBJS_STATS) $(LDADD_TARCH_STATS)
-libTarch_trace_a_LIBADD   = $(CUDA_OBJS_TRACE) $(LDADD_TARCH_TRACE)
-libTarch_asserts_a_LIBADD = $(CUDA_OBJS_ASSERTS) $(LDADD_TARCH_ASSERTS)
-libTarch_debug_a_LIBADD   = $(CUDA_OBJS_DEBUG) $(LDADD_TARCH_DEBUG)
