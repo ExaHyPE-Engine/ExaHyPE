@@ -171,8 +171,9 @@ Relaxation coefficient: {}
     self._data_model.data.add_attribute( dastgen2.attributes.Double("u") )
     self._data_model.data.add_attribute( dastgen2.attributes.Double("residual") )
     
-    self._data_model.generator.store_persistent_condition   = "true"
-    self._data_model.generator.load_persistent_condition    = "true"
+    self._data_model.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+        "true", "true", "true"
+        )
 
     self._data_model.generator.send_condition               = "true"
     self._data_model.generator.receive_and_merge_condition  = "true"
