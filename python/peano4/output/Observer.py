@@ -490,13 +490,16 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
       peano4::datamanagement::VertexMarker  marker(event,outVertexStackPosition);
 
-      bool dataResidesOnIntermediateStack = not peano4::grid::PeanoCurve::isInOutStack(inVertexStack);
-      bool dataResidesOnInputStack        = 
+      bool dataResidesOnIntermediateStack = 
+        not peano4::grid::PeanoCurve::isInOutStack(inVertexStack)
+        and
         inVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
         inVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         and
-        inVertexStack!=peano4::grid::TraversalObserver::NoData
+        inVertexStack!=peano4::grid::TraversalObserver::NoData;
+      bool dataResidesOnInputStack        = 
+        peano4::grid::PeanoCurve::isInOutStack(inVertexStack)
         and
         ::peano4::grid::loadPersistently( {{full_qualified_type}}::loadStoreComputeFlag(
           marker
@@ -617,13 +620,16 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
       peano4::datamanagement::FaceMarker  marker(event,outFaceStackPosition);
 
-      bool dataResidesOnIntermediateStack = not peano4::grid::PeanoCurve::isInOutStack(inFaceStack);
-      bool dataResidesOnInputStack        = 
+      bool dataResidesOnIntermediateStack = 
+        not peano4::grid::PeanoCurve::isInOutStack(inFaceStack)
+        and
         inFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
         inFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         and
-        inFaceStack!=peano4::grid::TraversalObserver::NoData
+        inFaceStack!=peano4::grid::TraversalObserver::NoData;
+      bool dataResidesOnInputStack        = 
+        peano4::grid::PeanoCurve::isInOutStack(inFaceStack)
         and
         ::peano4::grid::loadPersistently( {{full_qualified_type}}::loadStoreComputeFlag(
           marker
@@ -1072,18 +1078,21 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( 1 );
 
-    const bool userImpliesCellHoldsData = ::peano4::grid::storePersistently( {{full_qualified_type}}::loadStoreComputeFlag(
-        marker
-        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-      ));
+    bool dataShallBePushedOntoIntermediateStack = 
+        not peano4::grid::PeanoCurve::isInOutStack(outCellStack)
+        and
+        outCellStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
+        and
+        outCellStack!=peano4::grid::TraversalObserver::NoData;
+    bool dataShallBePushedOntoOutputStack        = 
+        peano4::grid::PeanoCurve::isInOutStack(outCellStack)
+        and
+        ::peano4::grid::storePersistently( {{full_qualified_type}}::loadStoreComputeFlag(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ));
 
-    if (
-      outCellStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
-      and
-      outCellStack!=peano4::grid::TraversalObserver::NoData
-      and
-      (not peano4::grid::PeanoCurve::isInOutStack(outCellStack) or userImpliesCellHoldsData)
-    ) {
+    if ( dataShallBePushedOntoIntermediateStack or dataShallBePushedOntoOutputStack ) {
       repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,outCellStack))->push( view.get(0) );
     }
     else {
@@ -1177,20 +1186,23 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
       {{full_qualified_type}}& data = view.get(inFaceStackPosition);
 
-      const bool userImpliesFaceHoldsData = ::peano4::grid::storePersistently( {{full_qualified_type}}::loadStoreComputeFlag(
-        marker
-        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-      ));
-
-      if (
+      bool dataShallBePushedOntoIntermediateStack = 
+        not peano4::grid::PeanoCurve::isInOutStack(outFaceStack)
+        and
         outFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
         outFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         and
-        outFaceStack!=peano4::grid::TraversalObserver::NoData
+        outFaceStack!=peano4::grid::TraversalObserver::NoData;
+      bool dataShallBePushedOntoOutputStack        = 
+        peano4::grid::PeanoCurve::isInOutStack(outFaceStack)
         and
-        (not peano4::grid::PeanoCurve::isInOutStack(outFaceStack) or userImpliesFaceHoldsData)
-      ) {
+        ::peano4::grid::storePersistently( {{full_qualified_type}}::loadStoreComputeFlag(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ));
+      
+      if ( dataShallBePushedOntoIntermediateStack or dataShallBePushedOntoOutputStack ) {
         logDebug( "storeCell(...)", "store face {{name}} with " << marker.x(inFaceStackPosition) << " x " << marker.h() );
         repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,outFaceStack))->push(data);
       }
@@ -1276,20 +1288,24 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
       {{full_qualified_type}}& data = view.get(inVertexStackPosition);
 
-      const bool userImpliesVertexHoldsData = ::peano4::grid::storePersistently( {{full_qualified_type}}::loadStoreComputeFlag(
-        marker
-        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-      ));
 
-      if (
+      bool dataShallBePushedOntoIntermediateStack = 
+        not peano4::grid::PeanoCurve::isInOutStack(outVertexStack)
+        and
         outVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
         outVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         and
-        outVertexStack!=peano4::grid::TraversalObserver::NoData
+        outVertexStack!=peano4::grid::TraversalObserver::NoData;
+      bool dataShallBePushedOntoOutputStack        = 
+        peano4::grid::PeanoCurve::isInOutStack(outVertexStack)
         and
-        (not peano4::grid::PeanoCurve::isInOutStack(outVertexStack) or userImpliesVertexHoldsData)
-      ) {
+        ::peano4::grid::storePersistently( {{full_qualified_type}}::loadStoreComputeFlag(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ));
+
+      if ( dataShallBePushedOntoIntermediateStack or dataShallBePushedOntoOutputStack ) {
         logDebug( "storeCell(...)", "store vertex {{name}} with " << marker.x(inVertexStackPosition) << " x " << marker.h() );
         repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(repositories::DataRepository::DataKey(_spacetreeId,outVertexStack))->push(data);
       }
@@ -1595,6 +1611,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano
       ))
       and
       data.send(marker)
+      or
+      context == TraversalObserver::SendReceiveContext::ForkDomain
+      or
+      context == TraversalObserver::SendReceiveContext::JoinDomain
     ) {
       logDebug( "sendVertex(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " for marker " << marker.toString() );
 
@@ -1634,6 +1654,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4:
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       )
+      or
+      context == TraversalObserver::SendReceiveContext::ForkDomain
+      or
+      context == TraversalObserver::SendReceiveContext::JoinDomain
     ) {
       logDebug( "sendFace(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " for marker " << marker.toString() );
 
@@ -1671,6 +1695,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::Travers
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       )
+      or
+      context == TraversalObserver::SendReceiveContext::ForkDomain
+      or
+      context == TraversalObserver::SendReceiveContext::JoinDomain
     ) {
 
       logDebug( "sendCell(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId );
