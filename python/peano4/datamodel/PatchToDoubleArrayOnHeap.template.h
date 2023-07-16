@@ -64,151 +64,136 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     tarch::la::Vector<Dimensions,double> getDebugX() const;
     tarch::la::Vector<Dimensions,double> getDebugH() const;
     #endif
-
-  /**
-   * This is an alias to the actual data stored within _dataSmartPointer. We
-   * need this alias, as a lot of code snippets in Peano work with raw pointers
-   * including pointer arithmetics. The latter are not supported by smart
-   * pointers. SO the actual data is held via the smart pointer, but the
-   * content can also be accessed through this attribute.
-   */
-  {{FLOAT_TYPE}}*   value;
   
+    /**
+     * Actual data as stored on the heap. As we work with a pointer,
+     * we have to carefully define constructors, copy constructors, copy
+     * operators and the destructor.
+     */
+    {{FLOAT_TYPE}}*   value;
 
-  /**
-   * Create new instance
-   *
-   * The routine creates a new smart pointer data set and then sets the value
-   * pointer to the smart pointer's raw data. It does not set the debug values,
-   * which you have to initialise separately.
-   *
-   * This routine is used by all creational events, i.e. create a vertex for
-   * example uses it as well as create a hanging vertex.
-   *
-   *
-   * ## Implementation
-   *
-   * The constructor requires us to pass in a pointer to the actual array, and
-   * then the constructor will wrap that in the smart pointer meta data structures.
-   *
-   * Since I use a user-defined allocator (which might take care of all
-   * alignment, e.g.), I also have to provide a user-defined free. These two
-   * should match. By default, the smart pointer uses
-   *
-   *       delete[] p;
-   *
-   * and that's not what we want here.
-   *
-   *
-   * Further information can be found at
-   * https://en.cppreference.com/w/cpp/memory/shared_ptr/shared_ptr.
-   */
-  {{CLASSNAME}}();
 
-  /**
-   * Shallow copy
-   */
-  {{CLASSNAME}}(const {{CLASSNAME}}& other);
+    /**
+     * Create new instance
+     *
+     * The routine allocates new data on the heap via tarch::allocateMemory()
+     * and stores the outcome within the value pointer.
+     */
+    {{CLASSNAME}}();
 
-  ~{{CLASSNAME}}();
+    /**
+     * Deep copy
+     *
+     * We allocate new data within value and then invoke clone() to actually
+     * copy the content of the heaps from other over into this new data field.
+     */
+    {{CLASSNAME}}(const {{CLASSNAME}}& other);
 
-  /**
-   * Clone content. Assume other and present class have their own smart pointer
-   *
-   * This routine is used by the deep copies of the stack.
-   */
-  void clone(const {{CLASSNAME}}& other);
+    /**
+     * Destructor
+     *
+     * Free memory allocated in the two constructors.
+     */
+    ~{{CLASSNAME}}();
 
-  /**
-   * Shallow copy
-   */
-  {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other);
+    /**
+     * Clone content. Assume other and present class have their own smart pointer
+     *
+     * This routine is used by the deep copies of the stack. It is also used by
+     * the copy constructor and the assignment operator.
+     */
+    void clone(const {{CLASSNAME}}& other);
 
-  std::string toString() const;
+    /**
+     * Delegate to clone().
+     */
+    {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other);
+
+    std::string toString() const;
+
+    {% if DATA_ASSOCIATION == 1 -%}
+    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
+    bool send(
+      const peano4::datamanagement::VertexMarker& marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+    ) const;
+    bool receiveAndMerge(
+      const peano4::datamanagement::VertexMarker& marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+    ) const;
+    static bool loadPersistently(
+      const peano4::datamanagement::VertexMarker& marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+    );
+    bool storePersistently(
+      const peano4::datamanagement::VertexMarker& marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+    ) const;
+    {% endif -%}
   
-  {% if DATA_ASSOCIATION == 1 -%}
-  void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
-  bool send(
-    const peano4::datamanagement::VertexMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
-  bool receiveAndMerge(
-    const peano4::datamanagement::VertexMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
-  static bool loadPersistently(
-    const peano4::datamanagement::VertexMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  );
-  bool storePersistently(
-    const peano4::datamanagement::VertexMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
-  {% endif -%}
+    {% if DATA_ASSOCIATION == 2 -%}
+    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker);
+    bool send(
+      const peano4::datamanagement::FaceMarker& marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+    ) const;
+    bool receiveAndMerge(
+      const peano4::datamanagement::FaceMarker& marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+    ) const;
+    static bool loadPersistently(
+      const peano4::datamanagement::FaceMarker& marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+    );
+    bool storePersistently(
+      const peano4::datamanagement::FaceMarker& marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+    ) const;
+    {% endif -%}
+  
+    {% if DATA_ASSOCIATION == 3 -%}
+    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker);
+    bool send(
+      const peano4::datamanagement::CellMarker& marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+    ) const;
+    bool receiveAndMerge(
+      const peano4::datamanagement::CellMarker& marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+    ) const;
+    static bool loadPersistently(
+      const peano4::datamanagement::CellMarker& marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+    );
+    bool storePersistently(
+      const peano4::datamanagement::CellMarker& marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+    ) const;
+    {% endif -%}
 
-  {% if DATA_ASSOCIATION == 2 -%}
-  void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker);
-  bool send(
-    const peano4::datamanagement::FaceMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
-  bool receiveAndMerge(
-    const peano4::datamanagement::FaceMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
-  static bool loadPersistently(
-    const peano4::datamanagement::FaceMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  );
-  bool storePersistently(
-    const peano4::datamanagement::FaceMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
-  {% endif -%}
-
-  {% if DATA_ASSOCIATION == 3 -%}
-  void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker);
-  bool send(
-    const peano4::datamanagement::CellMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
-  bool receiveAndMerge(
-    const peano4::datamanagement::CellMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
-  static bool loadPersistently(
-    const peano4::datamanagement::CellMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  );
-  bool storePersistently(
-    const peano4::datamanagement::CellMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
-  {% endif -%}
   
   
+    #ifdef Parallel
+    /**
+     * Initialises the MPI datatype.
+     */
+    static void initDatatype();
   
-  #ifdef Parallel
-  /**
-   * Initialises the MPI datatype.
-   */
-  static void initDatatype();
+    /**
+     * Free MPI datatype.
+     */
+    static void shutdownDatatype();
 
-  /**
-   * Free MPI datatype.
-   */
-  static void shutdownDatatype();
-  
-  /**
-   * Different to the vanilla version of the patch to double mapping, the datatype here
-   * does never (!) include any meta data.
-   */
-  static MPI_Datatype  getForkDatatype();
-  static MPI_Datatype  getJoinDatatype();
-  static MPI_Datatype  getBoundaryExchangeDatatype();
-  static MPI_Datatype  getMultiscaleDataExchangeDatatype();
-  static MPI_Datatype  getGlobalCommunciationDatatype();
-  #endif
+    /**
+     * Different to the vanilla version of the patch to double mapping, the datatype here
+     * does never (!) include any meta data.
+     */
+    static MPI_Datatype  getForkDatatype();
+    static MPI_Datatype  getJoinDatatype();
+    static MPI_Datatype  getBoundaryExchangeDatatype();
+    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
+    static MPI_Datatype  getGlobalCommunciationDatatype();
+    #endif
 };
 
 

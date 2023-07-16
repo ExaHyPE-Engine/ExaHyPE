@@ -438,6 +438,16 @@ did search for a file """
             self.hfiles.remove(filename)
 
     def add_cu_file(self, filename, generated=False):
+        """
+        Adds a CUDA (.cu) file to the list of files. If the file is not generated, it is assumed that the
+        file was existing at time of the call (a generated file will be generated later) therefore we need
+        two separate lists for both files
+
+        :param filename: The name of the CUDA file to add.
+        :type filename: str
+        :param generated: Indicates whether the file is generated (True) or not (False). Default is False.
+        :type generated: bool
+        """
         if generated:
             if (
                 self.generated_cufiles.count(filename) == 0
@@ -466,6 +476,11 @@ did search for a file """
         All the standard Peano 4 routines rely on this function to add their
         generated files to the build environment. Nothing stops you however to
         add more files yourself.
+
+        Since the GPU code is templated, using CUDA backend means that the main file and the
+        subsequent compilation units need to be CUDA (.cu) files. To preserve backward 
+        compatability and seamless user experience; this call generates CUDA (.cu) files
+        instead of C++ (.cpp) files when using CUDA backend.
 
         filename: String
            Filename of a C++ file. They usually should have the .cpp/.cxx extension.
@@ -591,6 +606,22 @@ then this message can typically be ignored.
             self.add_Fortran_module(i)
 
     def generate(self, overwrite, directory):
+        """
+        Generates build files and other project-related files based on templates.
+
+        If using the Automake then a Makefile is generated, if using CMake then
+        a CMakeLists.txt for the generated application is generated. A 
+        GeneratedSubdirectories.cmake is generated to add the target to the project.
+        In the CMake backend a modified Makefile is produced where calling make will 
+        change directories and call the cmake's defined make command.
+
+        A .gitignore is also generated depending on the project files.
+
+        :param overwrite: Specifies whether existing files should be overwritten.
+        :type overwrite: bool
+        :param directory: The directory where the generated files will be placed.
+        :type directory: str
+        """
         cmake_build_dir = find_CMake_build_dir()
         self.d["CMAKE_BUILD_DIR"] = cmake_build_dir
         self.d["H_HEADERS"] = self.hfiles

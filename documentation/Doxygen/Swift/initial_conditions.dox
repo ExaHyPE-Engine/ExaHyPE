@@ -6,7 +6,7 @@ Swift 2 always runs through the same sequence of setup steps prior to the
 actual calculation:
 
 1. Create a regular mesh that is just as fine that it can accommodate the
-   largest predicted cut-off radius of all particles.
+   largest predicted search radius of all particles.
 2. Insert the particles (initial condition).
 3. Run a set of initialisation steps, where particles can define some
    "warm up" calculation steps and are also sorted once more, should they
@@ -15,7 +15,7 @@ actual calculation:
 # The initial (regular) mesh
 
 The first step is important, even though particles are allowed to change
-their cut-off radius. It is important to tell the code base right from
+their search radius. It is important to tell the code base right from
 the start what the biggest and smallest radius might be, but the radius
 can change freely in-between those thresholds. Actually the radius might
 even become smaller, but the mesh width you pass in initially is used to
@@ -32,7 +32,7 @@ might still change both the load balancing and the mesh structure. But we
 have to start somewhere.
 
 By default, the initial grid is a regular mesh controlled by the potential
-maximal particle cut-off radius. As pointed out: this cut-off radius can
+maximal particle search radius. As pointed out: this search radius can
 change over time and thus is solely an initial indicator. You can alter the
 initial mesh and hence start with an adaptive one right from the start. For
 this, you can take the step algorithm_step_create_grid which is an attribute
@@ -46,10 +46,10 @@ parts.
 # Initial conditions
 
 The initial conditions are added by one mesh sweep modelled by the project's
-attribute algorithm_step_initial_conditions. It represents the grid sweep, 
-i.e. mesh sweep, which sets up the inition condition. That is, if you 
+attribute algorithm_step_initial_conditions. It represents the grid sweep,
+i.e. mesh sweep, which sets up the inition condition. That is, if you
 want to insert particles, you have to add action sets to this algorithm
-step calling add_action_set(). The passed action sets have to 
+step calling add_action_set(). The passed action sets have to
 throw all the particles you want to have into your mesh.
 There are two mainstream ways to implement initial conditions for the
 simulations:

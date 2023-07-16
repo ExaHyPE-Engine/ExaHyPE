@@ -9,6 +9,9 @@ namespace {{N}} {
     {% for SOLVER in SOLVER_INSTANCES %}
     {{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
+    // ::petsc::PetscData instanceOfPetsc;
+    PetscData instanceOfPetsc;
+
   }
 {% for N in NAMESPACE %}
 }
@@ -17,7 +20,12 @@ namespace {{N}} {
 
 void {{NAMESPACE | join("::")}}::repositories::computeLocalToGlobalMapsForAllSolvers() {
   {% for SOLVER in SOLVER_INSTANCES %}
-  {{SOLVER[1]}}.getLocalToGlobalMap().computeLocalToGlobalMap();
+  {% if SOLVER_INSTANCES[0][0]=="HDG" %}
+    {{SOLVER[1]}}.getFaceLocalToGlobalMap().computeLocalToGlobalMap();
+    {{SOLVER[1]}}.getCellLocalToGlobalMap().computeLocalToGlobalMap();
+  {% else %}
+    {{SOLVER[1]}}.getLocalToGlobalMap().computeLocalToGlobalMap();
+  {% endif %}
   {% endfor %}
 }
 
@@ -25,10 +33,49 @@ void {{NAMESPACE | join("::")}}::repositories::computeLocalToGlobalMapsForAllSol
 int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom() {
   int result = 0;
   {% for SOLVER in SOLVER_INSTANCES %}
+  {% if SOLVER_INSTANCES[0][0]=="HDG" %}
+  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getTotalNumberOfIndices();
+  result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getTotalNumberOfIndices();
+  {% else %}
   result += {{SOLVER[1]}}.getLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endif %}
   {% endfor %}
   return result;
 }
 
+{% if SOLVER_INSTANCES[0][0]=="HDG" %}
 
+int {{NAMESPACE | join("::")}}::repositories::getTotalFaceDofs() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
 
+int {{NAMESPACE | join("::")}}::repositories::getTotalCellDofs() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalCellIndex(std::pair<int,int> localIndex) {
+  int result;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getGlobalIndex(localIndex);
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalFaceIndex(std::pair<int,int> localIndex) {
+  int result;
+  result += getTotalCellDofs();
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getGlobalIndex(localIndex);
+  {% endfor %}
+  return result;
+}
+
+{% endif %}

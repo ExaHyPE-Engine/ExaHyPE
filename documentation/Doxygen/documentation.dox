@@ -218,4 +218,146 @@ rendered once again as source code. You have to remove the indentation sometimes
 that this mainly affects the Python code, but not the C++ documentation.
 
 
+Brief doxygen cheat sheet
+======================
+
+Creating new chapters within the page (note what appears in the dropdown on the left
+hand side) is done with the "=" symbol. The above chapter above is written under 
+the hood as:
+
+\verbatim
+
+Brief doxygen cheat sheet
+======================
+
+\endverbatim
+
+## Headings
+
+Bold headings such as the one above are created with two hash symbols. This creates
+a "secondary" chapter.
+The above line, under the hood, reads:
+
+\verbatim
+## Headings
+\endverbatim
+
+## Code snippets
+
+If you want code to appear neatly on the page, you have two options.
+
+You can either use tilde (~):
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+double answer;
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Under the hood:
+
+\verbatim
+~~~~~~~~~~~~~~~~~~~~~~~~~
+double answer;
+~~~~~~~~~~~~~~~~~~~~~~~~~
+\endverbatim
+
+You also have the much more powerful "verbatim" keyword:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\verbatim
+
+Anything in here is rendered exactly as written. Keywords and all.
+
+\endverbatim
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Inline "code snippets" can be done like so:
+
+\verbatim
+```import peano4```
+\endverbatim
+
+## TeX
+
+Inline math environments can be done as normal. If we want to write
+@f$ \int_a^b f(x) dx @f$, then we must write:
+
+\verbatim
+
+@f$ \int_a^b f(x) dx @f$
+
+Note the change $ -> @f$
+
+\endverbatim
+
+You can also render a lot more fancy equations as well. This is the expected output, if 
+you have a proper build of Latex on your system:
+
+\f{eqnarray*}{
+      g &=& \frac{Gm_2}{r^2} \\ 
+        &=& \frac{(6.673 \times 10^{-11}\,\mbox{m}^3\,\mbox{kg}^{-1}\,
+            \mbox{s}^{-2})(5.9736 \times 10^{24}\,\mbox{kg})}{(6371.01\,\mbox{km})^2} \\ 
+        &=& 9.82066032\,\mbox{m/s}^2
+\f}
+
+The pattern is something like:
+
+\verbatim
+
+\f{eqnarray*}{
+	Anything between these braces is rendered in the math environment. 
+	Make sure to end your lines with \\
+\f}
+
+\endverbatim
+
+[You can read further on the Doxygen website here.](https://www.doxygen.nl/manual/formulas.html)
+
+## Including hyperlinks
+
+Recall that a page typically begins with 
+
+\verbatim
+
+...
+@page page_ref Page Title
+...
+
+\endverbatim
+
+You can then reference this page from any other. Just state:
+
+\verbatim
+
+... for further reference please see \ref page_ref ...
+
+\endverbatim
+
+We can do the same for weblinks, like [this one to the gitlab](https://gitlab.lrz.de/hpcsoftware/Peano):
+
+\verbatim
+
+[this one to the gitlab](https://gitlab.lrz.de/hpcsoftware/Peano)
+
+\endverbatim
+
+
+## Including images 
+
+Simply write:
+
+\verbatim
+
+@image html relative/path/to/file.png
+
+\endverbatim
+
+
+## Misc
+
+You can enumerate lists by starting each new line with \verbatim \li \endverbatim
+
+The standard newline character \verbatim \n \endverbatim works as expected.
+
 */

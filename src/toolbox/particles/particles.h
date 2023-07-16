@@ -3,13 +3,35 @@
 #pragma once
 
 
-#include "tarch/la/Vector.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexEnumerator.h"
+#include "tarch/la/Vector.h"
 
 
 namespace toolbox {
   namespace particles {
+    /**
+     * Default tolerance to decide when two particles are the same.
+     *
+     * @see eliminateSpatialDuplicates()
+     */
+    constexpr double SpatialDuplicateTolerance = 1e-6;
+
+    /**
+     * Check if there's already a particle at p's position in the set.
+     *
+     * As we return a non-const iterator, the operation may not be labelled
+     * as const. It is essential
+     *
+     *
+     * @param particle You want to search the container identified by begin
+     *   and end for this particle.
+     * @return container's end() if there is no duplicate. Otherwise, return
+     *   iterator pointing to existing particle.
+     */
+    template <typename Iterator>
+    Iterator particleIsDuplicate(const typename Iterator::value_type& particle, Iterator begin, const Iterator& end);
+
     /**
      * Return true if and only if
      *
@@ -20,8 +42,8 @@ namespace toolbox {
     template <typename Particle>
     bool particleWillStayWithinComputationalDomain(
       const Particle&                              particle,
-      const tarch::la::Vector<Dimensions,double>&  domainOffset,
-      const tarch::la::Vector<Dimensions,double>&  domainWidth
+      const tarch::la::Vector<Dimensions, double>& domainOffset,
+      const tarch::la::Vector<Dimensions, double>& domainWidth
     );
 
 
@@ -33,11 +55,11 @@ namespace toolbox {
      * other insertParticleIntoCell() operation per particle.
      *
      */
-    template <typename Particle, typename ParticleSet >
+    template <typename Particle, typename ParticleSet>
     void insertParticlesIntoCell(
-      const peano4::datamanagement::CellMarker&                 marker,
-      const std::vector< Particle* >&                           newParticles,
-      peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
+      const peano4::datamanagement::CellMarker&              marker,
+      const std::vector<Particle*>&                          newParticles,
+      peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices
     );
 
 
@@ -69,16 +91,14 @@ namespace toolbox {
      * - Set the particle state to local. As we know that we insert only into
      *   local cells, we can do this without any fear.
      */
-    template <typename Particle, typename ParticleSet >
+    template <typename Particle, typename ParticleSet>
     void insertParticleIntoCell(
-      const peano4::datamanagement::CellMarker&                 marker,
-      Particle*                                                 newParticles,
-      peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
+      const peano4::datamanagement::CellMarker&              marker,
+      Particle*                                              newParticles,
+      peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices
     );
-  }
-}
+  } // namespace particles
+} // namespace toolbox
 
 
 #include "particles.cpph"
-
-
