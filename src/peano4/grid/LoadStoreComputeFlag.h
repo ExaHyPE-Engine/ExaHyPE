@@ -65,7 +65,7 @@ namespace peano4 {
      * Same as the other constructor, assuming that its predicateToUseData
      * holds all the time.
      */
-    LoadStoreComputeFlag constructDataStorageScheme(bool predicateForLoad, bool predicateForStore);
+    LoadStoreComputeFlag constructLoadStoreComputeFlag(bool predicateForLoad, bool predicateForStore);
 
     /**
      * Constructs a data storage scheme
@@ -93,6 +93,6 @@ namespace peano4 {
      * in-between two mesh sweeps
      *
      */
-    LoadStoreComputeFlag constructDataStorageScheme(bool predicateToUseData, bool predicateForLoad, bool predicateForStore);
+    LoadStoreComputeFlag constructLoadStoreComputeFlag(bool predicateToUseData, bool predicateForLoad, bool predicateForStore);
   }
 }

@@ -92,11 +92,11 @@ bool peano4::grid::computeOnData(LoadStoreComputeFlag flag) {
 }
 
 
-peano4::grid::LoadStoreComputeFlag peano4::grid::constructDataStorageScheme(bool predicateForLoad, bool predicateForStore) {
-  return constructDataStorageScheme(true, predicateForLoad, predicateForStore);
+peano4::grid::LoadStoreComputeFlag peano4::grid::constructLoadStoreComputeFlag(bool predicateForLoad, bool predicateForStore) {
+  return constructLoadStoreComputeFlag(true, predicateForLoad, predicateForStore);
 }
 
-peano4::grid::LoadStoreComputeFlag peano4::grid::constructDataStorageScheme(
+peano4::grid::LoadStoreComputeFlag peano4::grid::constructLoadStoreComputeFlag(
   bool predicateToUseData, bool predicateForLoad, bool predicateForStore
 ) {
   if (not predicateToUseData and not predicateForLoad and not predicateForStore)
