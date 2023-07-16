@@ -161,7 +161,6 @@ class MPIAndStorageAspect( dastgen2.aspects.MPI ):
       "merge_implementation":  self.merge_implementation,
       "receive_predicate":     self.receive_predicate,
       "send_predicate":        self.send_predicate,
-      "load_store_compute_flag":        self.load_store_compute_flag,
       "load_store_compute_flag":       self.load_store_compute_flag,
     }    
         
