@@ -16,7 +16,7 @@
 #include "tarch/mpi/mpi.h"
 
 #include "peano4/utils/Globals.h"
-#include "peano4/grid/grid.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
