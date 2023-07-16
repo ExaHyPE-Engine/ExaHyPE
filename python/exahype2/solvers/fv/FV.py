@@ -795,14 +795,24 @@ The finest mesh width of """
         )
 
     def _provide_cell_data_to_compute_kernels_default_guard(self):
-        return (
-                        "not marker.willBeRefined() "
-                        + "and repositories::"
-                        + self.get_name_of_global_instance()
-                        + ".getSolverState()!="
-                        + self._name
-                        + "::SolverState::GridConstruction"
-                )
+        """! Default logic when to create cell data or not
+            
+        ExaHyPE allows you to define when you want to load or store data, and
+        you can also define if you need some grid data for your computations. 
+        You might have some temporary data per cell which is neither stored 
+        nor loaded, but that has to be there while you compute. Or there might
+        be cells which don't need to store a particular piece of data. See
+        ::peano4::grid::LoadStoreComputeFlag for some details. This predicate
+        here is a default. Particular solvers will take it as a starting point
+        to make more detailed rules: an enclave solver for example might 
+        decide to take the information where to store data, but to toggle the 
+        storage on and off depending on the solver phase.
+    
+        """
+        return "not marker.willBeRefined() and repositories::{}.getSolverState()!={}::SolverState::GridConstruction".format(
+                   self.get_name_of_global_instance(),
+                   self._name
+               )
 
     def _provide_face_data_to_compute_kernels_default_guard(self):
         return (

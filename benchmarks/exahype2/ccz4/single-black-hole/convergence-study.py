@@ -89,28 +89,38 @@ def construct_FV_limiter_for_FD4():
                 + self._name
                 + ".isCellOverlappingWithBHImpactArea(marker) )"
             )
+                
+        def _provide_cell_data_to_compute_kernels_default_guard(self):
+            return (
+                """("""
+                + super(Limiter,self)._provide_cell_data_to_compute_kernels_default_guard()
+                + " and repositories::InstanceOf"
+                + self._name
+                + ".isCellOverlappingWithBHImpactArea(marker) )"
+            )
+           
+        def _provide_face_data_to_compute_kernels_default_guard(self):
+            return (
+                """("""
+                + super(Limiter,self)._provide_face_data_to_compute_kernels_default_guard()
+                + """
+                    and repositories::InstanceOf"""
+                + self._name
+                + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
+                  )"""
+            )
 
         def _store_face_data_default_guard(self):
-            return (
-                """("""
-                + super(Limiter, self)._store_face_data_default_guard()
-                + """
-                    and repositories::InstanceOf"""
-                + self._name
-                + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
-                  )"""
-            )
+            return "({} and repositories::InstanceOf{}.areAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
+                    super(Limiter, self)._store_face_data_default_guard(),
+                    self._name
+                )
 
         def _load_face_data_default_guard(self):
-            return (
-                """("""
-                + super(Limiter, self)._load_face_data_default_guard()
-                + """
-                    and repositories::InstanceOf"""
-                + self._name
-                + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
-                  )"""
-            )
+            return "({} and repositories::InstanceOf{}..areAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
+                    super(Limiter, self)._load_face_data_default_guard(),
+                    self._name
+                )
 
         def create_action_sets(self):
             """!
