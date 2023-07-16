@@ -117,7 +117,7 @@ def construct_FV_limiter_for_FD4():
                 )
 
         def _load_face_data_default_guard(self):
-            return "({} and repositories::InstanceOf{}..areAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
+            return "({} and repositories::InstanceOf{}.areAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
                     super(Limiter, self)._load_face_data_default_guard(),
                     self._name
                 )
