@@ -16,7 +16,7 @@
 #include "tarch/mpi/mpi.h"
 
 #include "peano4/utils/Globals.h"
-#include "peano4/grid/grid.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
@@ -73,6 +73,10 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
      */
     {{FLOAT_TYPE}}*   value;
 
+    enum ObjectConstruction {
+      NoData
+    };
+
 
     /**
      * Create new instance
@@ -81,6 +85,8 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
      * and stores the outcome within the value pointer.
      */
     {{CLASSNAME}}();
+
+    {{CLASSNAME}}(ObjectConstruction flag);
 
     /**
      * Deep copy

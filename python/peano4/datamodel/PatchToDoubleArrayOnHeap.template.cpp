@@ -8,6 +8,11 @@
 }
 
 
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(ObjectConstruction flag):
+  value( nullptr ) {
+}
+
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(const {{CLASSNAME}}& other):
   value( tarch::allocateMemory< {{FLOAT_TYPE}} >( Cardinality, tarch::MemoryLocation::Heap ) ) {
   clone(other);
@@ -15,7 +20,9 @@
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {
-  tarch::freeMemory( value, tarch::MemoryLocation::Heap );
+  if (value!=nullptr) {
+    tarch::freeMemory( value, tarch::MemoryLocation::Heap );
+  }
 }
 
 
