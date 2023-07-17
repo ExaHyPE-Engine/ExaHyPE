@@ -13,7 +13,8 @@ DIMENSIONS = {{DIM}}
 {% if MODE=="RELEASE" and DIM=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_RELEASE}}
 LDFLAGS  += {{LDFLAGS_PEANO_RELEASE}} {{LDFLAGS}} 
-LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_RELEASE}} {{LIBS}}
+LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_RELEASE}} {{LIBS}} {{CUDA_LIBS}}
+CUDA_OBJS_RELEASE={{CUDA_OBJS_RELEASE}}
 {% endif %}
 
 {% if MODE=="STATS" and DIM=="2" %}
@@ -124,7 +125,7 @@ all: solver
 # depend objects right but not the other way round.
 #
 solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS)
-	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o {{EXECUTABLENAME}}
+	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(GPU_OBJS) $(CU_OBJS) $(LDFLAGS) $(LIBS) -o {{EXECUTABLENAME}}
 
 {#{% if USING_CMAKE %}
 clean:

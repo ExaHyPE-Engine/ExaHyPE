@@ -229,24 +229,24 @@ CUDA_OBJS_DEBUG=  tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
 
 # Define the rules per target and directory
 $(CUDA_OBJS_RELEASE): tarch/accelerator/cuda/libTarch_a-%.o: tarch/accelerator/cuda/%.cu
-	@echo "NVCC $@"
-	$(NVCC) -Xcompiler “-fPIC -DPIC” -c $< -o $@ 
+	@echo "  NVCC     $@"
+	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_RELEASE)" -c $< -o $@ 
 
 $(CUDA_OBJS_STATS): tarch/accelerator/cuda/libTarch_stats_a-%.o: tarch/accelerator/cuda/%.cu
-	@echo "NVCC $@"
-	$(NVCC) -Xcompiler “-fPIC -DPIC” -c $< -o $@ 
+	@echo "  NVCC     $@"
+	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_STATS)" -c $< -o $@ 
 
 $(CUDA_OBJS_TRACE): tarch/accelerator/cuda/libTarch_trace_a-%.o: tarch/accelerator/cuda/%.cu
-	@echo "NVCC $@"
-	$(NVCC) -Xcompiler “-fPIC -DPIC” -c $< -o $@ 
+	@echo "  NVCC     $@"
+	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_TRACE)" -c $< -o $@ 
 
 $(CUDA_OBJS_ASSERTS): tarch/accelerator/cuda/libTarch_asserts_a-%.o: tarch/accelerator/cuda/%.cu
-	@echo "NVCC $@"
-	$(NVCC) -Xcompiler “-fPIC -DPIC” -c $< -o $@ 
+	@echo "  NVCC     $@"
+	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_ASSERTS)" -c $< -o $@ 
 
 $(CUDA_OBJS_DEBUG): tarch/accelerator/cuda/libTarch_debug_a-%.o: tarch/accelerator/cuda/%.cu
-	@echo "NVCC $@"
-	$(NVCC) -Xcompiler “-fPIC -DPIC” -c $< -o $@ 
+	@echo "  NVCC     $@"
+	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_DEBUG)" -c $< -o $@ 
 
 #
 # Map defined source sequences onto libraries
@@ -258,11 +258,11 @@ libTarch_trace_a_SOURCES   = $(Tarch_SOURCES) $(CUDA_SRC)
 libTarch_asserts_a_SOURCES = $(Tarch_SOURCES) $(CUDA_SRC)
 libTarch_debug_a_SOURCES   = $(Tarch_SOURCES) $(CUDA_SRC)
 
-libTarch_a_LIBADD         = $(CUDA_OBJS_RELEASE) #$(LDADD_TARCH_RELEASE)
-libTarch_stats_a_LIBADD   = $(CUDA_OBJS_STATS) #$(LDADD_TARCH_STATS)
-libTarch_trace_a_LIBADD   = $(CUDA_OBJS_TRACE) #$(LDADD_TARCH_TRACE)
-libTarch_asserts_a_LIBADD = $(CUDA_OBJS_ASSERTS) #$(LDADD_TARCH_ASSERTS)
-libTarch_debug_a_LIBADD   = $(CUDA_OBJS_DEBUG) #$(LDADD_TARCH_DEBUG)
+#libTarch_a_LIBADD         = $(CUDA_OBJS_RELEASE)
+#libTarch_stats_a_LIBADD   = $(CUDA_OBJS_STATS)
+#libTarch_trace_a_LIBADD   = $(CUDA_OBJS_TRACE)
+#libTarch_asserts_a_LIBADD = $(CUDA_OBJS_ASSERTS)
+#libTarch_debug_a_LIBADD   = $(CUDA_OBJS_DEBUG)
 
 libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
