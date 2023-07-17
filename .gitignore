@@ -6,6 +6,7 @@
 *.lo
 *.o
 *.obj
+*.tsm
 
 # Precompiled Headers
 *.gch
@@ -247,7 +248,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.black_formatting_env/
+.formatting_python_env/
 
 # Spyder project settings
 .spyderproject
@@ -295,4 +296,12 @@ UnitTests2d
 UnitTests3d
 
 .gitignore
-/documentation/
+
+*.tmp 
+*.trs 
+*.sh
+
+*patch-file*
+*.pvd
+*.err
+*.out

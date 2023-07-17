@@ -5,7 +5,7 @@
 
 \li \subpage page_exahype_solvers_finite_volumes
 \li \subpage page_exahype_solvers_enclave_solvers
-
+\li \subpage page_exahype_solvers_aderdg
 
 ##### Solver initialisation
 

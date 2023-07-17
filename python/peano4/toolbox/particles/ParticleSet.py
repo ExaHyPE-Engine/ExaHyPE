@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 import peano4.datamodel.DaStGen2
 
-from peano4.datamodel.DoF      import DoF
+from peano4.datamodel.DoF import DoF
 from peano4.datamodel.DaStGen2 import DaStGen2Generator
 
 from .Particle import Particle
@@ -11,78 +11,199 @@ import dastgen2
 import os
 
 
-class ParticleSetGenerator(object):
-  def __init__(self,data):
-    self._data = data
+from enum import Enum
 
 
-  def get_stack_container(self):
-    return "peano4::stacks::STDVectorOverContainerOfPointers< " + self._data.get_full_qualified_type() + " >";
+class ParticleSetGenerator_ScatteredOnHeap_IndexByList(object):
+    """!
 
-    
-  def get_header_file_include(self):
-    return """
+    Map a particle set onto heap objects indexed by a list
+
+    This class is tied to peano4::stacks::STDVectorOverContainerOfPointers, i.e.
+    Peano's stacks are realised via std::vector from the C++ standard library.
+    Each entry within this vector then resembles a C++ container over pointers
+    to the heap. That is, all particles are stored on the heap. They are
+    scattered. The C++ pointer per stack entry that's used to store all the
+    particle pointers is realised through std::list.
+
+    """
+
+    def __init__(self, data):
+        self._data = data
+
+    def get_stack_container(self):
+        return (
+            "peano4::stacks::STDVectorOverContainerOfPointers< "
+            + self._data.get_full_qualified_type()
+            + " >"
+        )
+
+    def get_header_file_include(self):
+        return (
+            """
 #include "peano4/stacks/STDVectorOverContainerOfPointers.h"
-#include "../globaldata/""" + self._data.particle_model.name + """.h"
-#include \"""" + self._data.namespace[-1] + """/""" + self._data.name + """.h"
+#include "../globaldata/"""
+            + self._data.particle_model.name
+            + """.h"
+#include \""""
+            + self._data.namespace[-1]
+            + """/"""
+            + self._data.name
+            + """.h"
 """
+        )
+
+    def construct_output(self, output):
+        d = {"PARTICLE_TYPE": self._data.particle_model.name}
+
+        templatefile_prefix = (
+            os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
+        )
+
+        generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByList.template.h",
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByList.template.cpp",
+            self._data.name,
+            self._data.namespace,
+            self._data.namespace[-1],
+            d,
+            True,
+        )
+        output.add(generated_files)
+        output.makefile.add_cpp_file(
+            self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True
+        )
+        pass
 
 
-  def construct_output(self,output):
-    d = { 
-      "PARTICLE_TYPE": self._data.particle_model.name
-    } 
+class ParticleSetGenerator_ScatteredOnHeap_IndexByVector(object):
+    """!
 
-    templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
-    generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-      templatefile_prefix+".template.h",
-      templatefile_prefix+".template.cpp",
-      self._data.name, 
-      self._data.namespace,
-      self._data.namespace[-1],
-      d, 
-      True)
-    output.add(generated_files)
-    output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True )
-    pass
-    
+    Map a particle set onto heap objects indexed by a vector
+
+    Very similar to ParticleSetGenerator_ScatteredOnHeap_IndexByList, but this
+    time the container over pointers is realised by a vector. This means slightly
+    more memory movements when we resort particles, but otherwise is a little bit
+    faster.
+
+    """
+
+    def __init__(self, data):
+        self._data = data
+
+    def get_stack_container(self):
+        return (
+            "peano4::stacks::STDVectorOverContainerOfPointers< "
+            + self._data.get_full_qualified_type()
+            + " >"
+        )
+
+    def get_header_file_include(self):
+        return (
+            """
+#include "peano4/stacks/STDVectorOverContainerOfPointers.h"
+#include "../globaldata/"""
+            + self._data.particle_model.name
+            + """.h"
+#include \""""
+            + self._data.namespace[-1]
+            + """/"""
+            + self._data.name
+            + """.h"
+"""
+        )
+
+    def construct_output(self, output):
+        d = {"PARTICLE_TYPE": self._data.particle_model.name}
+
+        templatefile_prefix = (
+            os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")
+        )
+
+        generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByVector.template.h",
+            templatefile_prefix + "_ScatteredOnHeap_IndexedByVector.template.cpp",
+            self._data.name,
+            self._data.namespace,
+            self._data.namespace[-1],
+            d,
+            True,
+        )
+        output.add(generated_files)
+        output.makefile.add_cpp_file(
+            self._data.namespace[-1] + "/" + self._data.name + ".cpp", generated=True
+        )
+        pass
 
 
 class ParticleSet(DoF):
-  """
-  
-    :Attributes:
-    
+    """!
+
+    Represents a particle set
+
+    A particle set is, in principle, a very simple container tied to a vertex.
+    It allows each vertex to point to the particles around. While the
+    realisation on the Python side is simple - after all, the Python model is
+    solely the data model - interesting questions arise once we discuss how the
+    data model is mapped onto C++. This information is not directly stored
+    within the ParticleSet objects, i.e. this class is solely a presentation
+    of the data topology.
+
+    The information how the association is mapped onto Peano's C++ code is held
+    within the generator. By default, this generator maps each particle set onto
+    a vector which in turn hosts particles on the heap. However, there are
+    alternative implementations which you might want to pick by setting the
+    generator attribute to a different value.
+
+    - Study ParticleSetGenerator_ScatteredOnHeap_IndexByList to obtain some
+      information about Peano's default storage scheme.
+    - The generator ParticleSetGenerator_ScatteredOnHeap_IndexByVector is
+      a slightly more memory-compact version.
+
+
+    ## Attributes
+
     name: String
       Name of the particle. Has to be a valid C++ class name.
 
     particle: Particle
       Link to particle definition
-  
-  """
-  def __init__(self,particle):
-    DoF.__init__(self,particle.name + "Set")
-    
-    if particle.association != peano4.datamodel.DoFAssociation.Global:
-      print( "Warning: particle " + particle.name + " is not (yet) added to project via add_global_object() and thus has invalid DoF association" )
-    
-    self.particle_model   = particle
-    self.generator        = ParticleSetGenerator(self)
+
+    """
+
+    def __init__(self, particle):
+        DoF.__init__(self, particle.name + "Set")
+
+        if particle.association != peano4.datamodel.DoFAssociation.Global:
+            print(
+                "Warning: particle "
+                + particle.name
+                + " is not (yet) added to project via add_global_object() and thus has invalid DoF association"
+            )
+
+        self.particle_model = particle
+        self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByList(self)
+        #self.generator      = ParticleSetGenerator_ScatteredOnHeap_IndexByVector(self)
 
 
-  @property
-  def readme_descriptor(self):
-    return """
-### Particle set """ + self.particle_model.name + """
+    @property
+    def readme_descriptor(self):
+        return (
+            """
+### Particle set """
+            + self.particle_model.name
+            + """
 
-The particle set is administered through the container """ + self.generator.get_stack_container() + """.
+The particle set is administered through the container """
+            + self.generator.get_stack_container()
+            + """.
 
-""" 
+"""
+        )
 
-
-  @property
-  def readme_package_descriptor(self):
-    return """
+    @property
+    def readme_package_descriptor(self):
+        return """
 
 ### Particle handling 
                                                                             
@@ -104,4 +225,3 @@ as published in the paper below:
        }
 
 """
-    

@@ -428,6 +428,8 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidArguments;
   }
 
+  peano4::runTestsAndBenchmarks();
+
   repositories::DataRepository::initDatatypes();
 
 //#ifdef UseFenv

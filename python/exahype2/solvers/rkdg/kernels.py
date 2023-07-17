@@ -1,27 +1,31 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import jinja2
 
 from enum import Enum
 
 from exahype2.solvers.fv.PDETerms import PDETerms
+import exahype2
 
 from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
 
 
 class SolverVariant(Enum):
-  WithVirtualFunctions = 0,
-  Stateless            = 1,
-  Accelerator          = 2
+    WithVirtualFunctions = 0
+    Stateless = 1
+    Accelerator = 2
 
 
-def create_abstract_solver_declarations(flux_implementation,
-                                        ncp_implementation,
-                                        eigenvalues_implementation,
-                                        source_term_implementation,
-                                        point_source_implementation,
-                                        pde_terms_without_state):
-  Template = jinja2.Template( """
+def create_abstract_solver_declarations(
+    flux_implementation,
+    ncp_implementation,
+    eigenvalues_implementation,
+    source_term_implementation,
+    point_source_implementation,
+    pde_terms_without_state,
+):
+    Template = jinja2.Template(
+        """
   public:
     {% if EIGENVALUES_IMPLEMENTATION=="<none>" %}
     #error eigenvalue implementation cannot be none
@@ -197,24 +201,30 @@ def create_abstract_solver_declarations(flux_implementation,
       double * __restrict__ S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
-""", undefined=jinja2.DebugUndefined)
+""",
+        undefined=jinja2.DebugUndefined,
+    )
 
-  d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
-  return Template.render(**d)
+    d = {}
+    d["FLUX_IMPLEMENTATION"] = flux_implementation
+    d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
+    d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
+    d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
+    d["STATELESS_PDE_TERMS"] = pde_terms_without_state
+    return Template.render(**d)
 
-def create_abstract_solver_definitions(flux_implementation,
-                                       ncp_implementation,
-                                       eigenvalues_implementation,
-                                       source_term_implementation,
-                                       point_source_implementation,
-                                       pde_terms_without_state):
-  Template = jinja2.Template( """
+
+def create_abstract_solver_definitions(
+    flux_implementation,
+    ncp_implementation,
+    eigenvalues_implementation,
+    source_term_implementation,
+    point_source_implementation,
+    pde_terms_without_state,
+):
+    Template = jinja2.Template(
+        """
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -401,24 +411,30 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 #pragma omp end declare target
 #endif
 {% endif %}
-""", undefined=jinja2.DebugUndefined)
+""",
+        undefined=jinja2.DebugUndefined,
+    )
 
-  d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
-  return Template.render(**d)
+    d = {}
+    d["FLUX_IMPLEMENTATION"] = flux_implementation
+    d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
+    d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
+    d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
+    d["STATELESS_PDE_TERMS"] = pde_terms_without_state
+    return Template.render(**d)
 
-def create_solver_declarations(flux_implementation,
-                               ncp_implementation,
-                               eigenvalues_implementation,
-                               source_term_implementation,
-                               point_source_implementation,
-                               pde_terms_without_state):
-  Template = jinja2.Template( """
+
+def create_solver_declarations(
+    flux_implementation,
+    ncp_implementation,
+    eigenvalues_implementation,
+    source_term_implementation,
+    point_source_implementation,
+    pde_terms_without_state,
+):
+    Template = jinja2.Template(
+        """
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     virtual void sourceTerm(
@@ -641,23 +657,29 @@ def create_solver_declarations(flux_implementation,
     #pragma omp end declare target
     #endif
     {% endif %}
-""", undefined=jinja2.DebugUndefined)
-  d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
-  return Template.render(**d)
+""",
+        undefined=jinja2.DebugUndefined,
+    )
+    d = {}
+    d["FLUX_IMPLEMENTATION"] = flux_implementation
+    d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
+    d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
+    d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
+    d["STATELESS_PDE_TERMS"] = pde_terms_without_state
+    return Template.render(**d)
 
-def create_solver_definitions(flux_implementation,
-                              ncp_implementation,
-                              eigenvalues_implementation,
-                              source_term_implementation,
-                              point_source_implementation,
-                              pde_terms_without_state):
-  Template = jinja2.Template( """
+
+def create_solver_definitions(
+    flux_implementation,
+    ncp_implementation,
+    eigenvalues_implementation,
+    source_term_implementation,
+    point_source_implementation,
+    pde_terms_without_state,
+):
+    Template = jinja2.Template(
+        """
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -820,25 +842,29 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
     #pragma omp end declare target
     #endif
 {% endif %}
-""", undefined=jinja2.DebugUndefined)
-  d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state  
-  return Template.render(**d)
+""",
+        undefined=jinja2.DebugUndefined,
+    )
+    d = {}
+    d["FLUX_IMPLEMENTATION"] = flux_implementation
+    d["NCP_IMPLEMENTATION"] = ncp_implementation
+    d["EIGENVALUES_IMPLEMENTATION"] = eigenvalues_implementation
+    d["SOURCE_TERM_IMPLEMENTATION"] = source_term_implementation
+    d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
+    d["STATELESS_PDE_TERMS"] = pde_terms_without_state
+    return Template.render(**d)
+
 
 def get_face_merge_implementation(patch_overlap):
-  assert False, "I don't think this one is used anymore. @todo Remove"
+    assert False, "I don't think this one is used anymore. @todo Remove"
 
-  d = {
-    "OVERLAP": patch_overlap.dim[0]/2, #assumed to always be two, but present here anyway
-    "DOFS_PER_AXIS": patch_overlap.dim[1],
-    "UNKNOWNS": patch_overlap.no_of_unknowns
+    d = {
+        "OVERLAP": patch_overlap.dim[0]
+        / 2,  # assumed to always be two, but present here anyway
+        "DOFS_PER_AXIS": patch_overlap.dim[1],
+        "UNKNOWNS": patch_overlap.no_of_unknowns,
     }
-  template = """
+    template = """
   
   #if Dimensions==2
   constexpr int nodesPerFace = {DOFS_PER_AXIS};
@@ -860,14 +886,18 @@ def get_face_merge_implementation(patch_overlap):
 
 """
 
-  return template.format(**d)
+    return template.format(**d)
 
-def create_start_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
-  """
-  We roll over all reduced data after the last time step, and we 
-  plot status info in the first step.
-  """
-  return """
+
+def create_start_time_step_implementation_for_fixed_time_stepping(
+    normalised_time_step_size,
+):
+    """
+    We roll over all reduced data after the last time step, and we
+    plot status info in the first step.
+    """
+    return (
+        """
   if (
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
     and
@@ -881,32 +911,39 @@ def create_start_time_step_implementation_for_fixed_time_stepping(normalised_tim
     logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
     logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
   }
-  _timeStepSize  = """ + str(normalised_time_step_size) + """;
+  _timeStepSize  = """
+        + str(normalised_time_step_size)
+        + """;
 """
+    )
+
 
 def create_volumetric_solver_call(polynomial_basis, solver_variant):
-  """
-  A set of default volumetric kernel calls. You might want to use different
-  solver calls in your code depending on the context.
+    """
+    A set of default volumetric kernel calls. You might want to use different
+    solver calls in your code depending on the context.
 
-  ## Difference to Finite Volume (FV) implementation
+    ## Difference to Finite Volume (FV) implementation
 
-  In the FV code base, I need the implementation routines as argument: As we work
-  with FV, the generic FV class does not know which implementations are around. If
-  you work with a domain-specific Rusanov solver, e.g., then there is no such
-  thing as an ncp.
+    In the FV code base, I need the implementation routines as argument: As we work
+    with FV, the generic FV class does not know which implementations are around. If
+    you work with a domain-specific Rusanov solver, e.g., then there is no such
+    thing as an ncp.
 
-  For the DG schemes, things are different: Every DG solver in ExaHyPE 2 in principle
-  supports the ncp. So the base Python class already instantiates the corresponding
-  dictionary entries, and we can use them straightaway.
+    For the DG schemes, things are different: Every DG solver in ExaHyPE 2 in principle
+    supports the ncp. So the base Python class already instantiates the corresponding
+    dictionary entries, and we can use them straightaway.
 
-  ## Arguments
+    ## Arguments
 
-  solver_variant: SolverVariant
-    Picks different implementation variants
-  """
-  if isinstance( polynomial_basis, GaussLegendreBasis) and solver_variant==SolverVariant.WithVirtualFunctions:
-    return """cellIntegral_patchwise_in_situ_GaussLegendre_functors(
+    solver_variant: SolverVariant
+      Picks different implementation variants
+    """
+    if (
+        isinstance(polynomial_basis, GaussLegendreBasis)
+        and solver_variant == SolverVariant.WithVirtualFunctions
+    ):
+        return """cellIntegral_patchwise_in_situ_GaussLegendre_functors(
       cellData,
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},
@@ -970,8 +1007,11 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }} //usePointSource
     );
 """
-  elif isinstance( polynomial_basis, GaussLegendreBasis) and solver_variant==SolverVariant.Stateless:
-    return """cellIntegral_patchwise_in_situ_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+    elif (
+        isinstance(polynomial_basis, GaussLegendreBasis)
+        and solver_variant == SolverVariant.Stateless
+    ):
+        return """cellIntegral_patchwise_in_situ_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
       cellData,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},           //useNCP
@@ -979,8 +1019,11 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }}  //usePointSource
     );
 """
-  elif isinstance( polynomial_basis, GaussLegendreBasis) and solver_variant==SolverVariant.Accelerator:
-    return """cellIntegral_patchwise_in_situ_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+    elif (
+        isinstance(polynomial_basis, GaussLegendreBasis)
+        and solver_variant == SolverVariant.Accelerator
+    ):
+        return """cellIntegral_patchwise_in_situ_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
       targetDevice,
       cellData,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux
@@ -989,12 +1032,13 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }}  //usePointSource
     );
 """
-  else:
-    return "#solver variant not implemented yet"
+    else:
+        return "#solver variant not implemented yet"
+
 
 def create_add_solver_contributions_call(polynomial_basis):
-  if isinstance( polynomial_basis, GaussLegendreBasis):
-    return """integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
+    if isinstance(polynomial_basis, GaussLegendreBasis):
+        return """integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     #if Dimensions==2
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).value, //right
@@ -1017,12 +1061,13 @@ def create_add_solver_contributions_call(polynomial_basis):
       dQdt
     );
 """
-  else:
-    return "#error Not supported yet"
+    else:
+        return "#error Not supported yet"
 
-def create_multiply_with_inverted_mass_matrix_call( polynomial_basis):
-  if isinstance( polynomial_basis, GaussLegendreBasis):
-    return """multiplyWithInvertedMassMatrix_GaussLegendre(
+
+def create_multiply_with_inverted_mass_matrix_call(polynomial_basis):
+    if isinstance(polynomial_basis, GaussLegendreBasis):
+        return """multiplyWithInvertedMassMatrix_GaussLegendre(
       cellData,
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},
@@ -1030,5 +1075,5 @@ def create_multiply_with_inverted_mass_matrix_call( polynomial_basis):
       repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d
     );
 """
-  else:
-    return "#error Not supported yet"
+    else:
+        return "#error Not supported yet"

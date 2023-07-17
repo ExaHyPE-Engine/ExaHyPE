@@ -1,0 +1,117 @@
+/**
+
+ @page page_exahype_amr Adaptive mesh refinement 
+
+### Adding adaptive mesh refinement (AMR)
+
+AMR is application- and numerics-specific. Therefore, the signatures of
+the routines discussed below might change if you switch from Finite
+Volumes to ADER-DG, e.g. The discussed principles however always are the
+same.
+
+By default,  solvers operate on a regular grid. To facilitate an
+adaptive mesh, you have to ensure that your solver is aware that you
+operate with different $h_{\text{max}}>h_{\text{min}}$. So you have to
+alter these two flags of your solver instantiation. As  operates with
+three-partitioning, you have to pick
+$h_{\text{min}} \leq \frac{1}{3} h_{\text{max}}$ to switch on
+adaptivity.
+
+Once AMR is, in principle enabled, you still have to supplement a
+refinement and/or coarsening criterion:
+
+##### Supplementing the refinement criterion
+
+On the Python side, dynamic adaptivity is added via a one-liner:
+
+Once you did rerun your Python script, you have to add your solver a new
+routine:
+
+If this is the first time you create your solver,  adds this routine
+into the solver blueprint. If you add AMR to an existing solver, you
+have to add the routine manually, as 's code generator never overwrites
+a user solver. A simple default implementation of this routine resembles
+
+This version does not (yet) any adaptivity. Your solver returns `Keep`
+all the time, so  will create a mesh that just matches $h_{\text{max}}$
+as specified via the solver and then keep this match. Once you return
+`Refine`, it will however refine. If your mesh however becomes finer
+than your solver's $h_{\text{min}}$,  will ignore the refinement request
+of your  solver.
+
+`Keep` keeps the mesh as it is. That is, if you return `Keep` for an
+adaptive grid part, this part will not change. You have to invoke
+`Erase`[^1]. Both erase and keep are only recommendations to --- will
+try to meet these requests, but will always make the mesh slightly finer
+or not refine if the minimum mesh size would be violated too harshly.
+That is, if some parts of the mesh ask for a refinement and direct
+neighbours want to coarsen, the refinement gets higher priority. Along
+the same lines, erase instructions will simply be ignored if the
+resulting mesh would be coarser than $h_{\text{max}}$.
+
+It is important to keep in mind that refinement requests are not
+immediately realised by . Refinements are requested in one time step,
+and then realised in the subsequent one. Also,  will try to accommodate
+coarsening requests, but if there are any issues (with mesh partitioning
+or balancing, e.g.), then these considerations willl have higher
+priority and  might decide to continue with a finer mesh than requested.
+
+Different solvers come along with different interpolation and
+restriction seems. The discussion around Finite Volume solvers for
+example can be found on page .
+
+
+Interpolation and restriction schemes for Finite Volumes {#section:exahype:finite-volumes:interpolation-schemes}
+--------------------------------------------------------
+
+If you employ adaptive mesh refinement, you have to project coarser
+resolutions onto finer resolutions (interpolation), and you have to
+couple back fine grid solutions to coarser regions of the mesh
+(restriction). By default, all  Finite Volume solvers employ a
+piece-wise constant interpolation and simple averaging as restriction.
+If you require a better inter-grid transfer scheme or if you want to
+introduce your own one, you have to do the following steps:
+
+-   Make your solver (in Python) use another interpolation scheme. I
+    present a variant here where you want to use linear interpolation:
+
+-   For a different restriction scheme use the routine
+    `switch_interpolation_scheme()`.
+
+-   Call the solver's `create_action_sets()`. If you omit this call,
+    your switch of the scheme is not "committed", i.e. taken into
+    account (though subsequent changes of the solver state might in turn
+    call `create_action_sets()` and thus implicitly make your switch
+    known to the class).
+
+-   Depending on your Finite Volume scheme, you might have to change the
+    size of the halo layer. The Rusanov solvers for example all work
+    with a halo layer of 1. They don't need larger overlaps between
+    neighbouring volumes, as the Rusanov Riemann solver only needs the
+    solution left and right of a face. If you want to use a higher-order
+    interpolation however, you need larger overlaps. In this case, you
+    have to extend the halo layer used:
+
+##### Realisation and available schemes
+
+All the interpolation and restriction schemes that we offer can be found
+in the file `toolbox/blockstructured/Interpolation.h`. The documentation
+within this file[^3] explains how the actual realisations work. 's
+philosophy is that you implement the inter-grid transfer operators
+within this header, and the Python API then helps you to pick from the
+routines therein.
+
+At the moment, we have only implemented `averaging` for the restriction.
+For the interpolation, we offer the following routines:
+
+  **scheme**                                                             description
+  ---------------------------------------------------------------------- ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  `piecewise_constant`                                                   Interpolate piece-wise constant (default)
+  `linear_with_constant_extrapolation`                                   Interpolate linear (2d) or bi-linear (3d) along faces and use constant extrapolation along diagonals and patch boundaries.
+  `linear_with_linear_extrapolation`                                     Interpolate linear (2d) or bi-linear (3d) along faces and use constant extrapolation along diagonals and patch boundaries.
+  `linear_with_constant_extrapolation_and_linear_normal_interpolation`   Variation of `constant_with_constant_extrapolation` where we interplate linearly between restricted (coarsened) voxel data and the adjacent real coarse grid values.
+  `linear_with_linear_extrapolation_and_linear_normal_interpolation`     Variation of `linear_with_constant_extrapolation`
+
+  
+   */
+   

@@ -19,14 +19,14 @@
 
 #include "{{solverHeader}}"
 
-template<typename pStoreType, typename cCompType>
+template<typename cCompType>
 void {{codeNamespace}}::boundaryConditions(
   {{solverName}}&                             solver,
   cCompType*                                  fluxOut,
-  pStoreType*                                 stateOut,
+  cCompType*                                 stateOut,
   const cCompType* const                      fluxIn,
-  const pStoreType* const                     stateIn,
-  const pStoreType* const                     gradStateIn,
+  const cCompType* const                     stateIn,
+  const cCompType* const                     gradStateIn,
   const tarch::la::Vector<Dimensions,double>& cellCentre,
   const tarch::la::Vector<Dimensions,double>& cellSize,
   const double t,const double                 dt,
@@ -100,10 +100,10 @@ void {{codeNamespace}}::boundaryConditions(
 template void {{codeNamespace}}::boundaryConditions(
   {{solverName}}& solver,
   {{correctorComputePrecision}}* fluxOut,
-  {{predictorStoragePrecision}}* stateOut,
+  {{correctorComputePrecision}}* stateOut,
   const {{correctorComputePrecision}}* const fluxIn,
-  const {{predictorStoragePrecision}}* const stateIn,
-  const {{predictorStoragePrecision}}* const gradStateIn,
+  const {{correctorComputePrecision}}* const stateIn,
+  const {{correctorComputePrecision}}* const gradStateIn,
   const tarch::la::Vector<Dimensions,double>& cellCentre,
   const tarch::la::Vector<Dimensions,double>& cellSize,
   const double t,const double dt,

@@ -2,17 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include <list>
+#include <vector>
 
 #include "peano4/grid/GridControlEvent.h"
-#include <vector>
-#include <list>
-
 
 namespace swift2 {
   /**
    * @todo write some docu
    */
-  extern std::vector< peano4::grid::GridControlEvent >   committedGridControlEvents;
+  extern std::vector<peano4::grid::GridControlEvent> committedGridControlEvents;
 
   /**
    * Commmit a new set of events
@@ -28,5 +27,5 @@ namespace swift2 {
    *
    * You still have to clear the passed data if you wanna reuse the argument container.
    */
-  void commitGridControlEvents( const std::list< peano4::grid::GridControlEvent >& events );
-}
+  void commitGridControlEvents(const std::list<peano4::grid::GridControlEvent>& events);
+} // namespace swift2

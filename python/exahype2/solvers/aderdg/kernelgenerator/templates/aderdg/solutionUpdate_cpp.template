@@ -40,13 +40,15 @@ void {{codeNamespace}}::solutionUpdate(
  
 }
 
+{% for precision_num in range(0,predictorComputePrecisions|length) %}
 template void {{codeNamespace}}::solutionUpdate( 
   {{correctorStoragePrecision}}* __restrict__ luh,
   const {{correctorStoragePrecision}}* __restrict__ const luhOld,
-  const {{predictorComputePrecision}}* __restrict__ const lduh, 
+  const {{predictorComputePrecisions[precision_num]}}* __restrict__ const lduh, 
   const double dt);
+{% endfor %}  
 
-{% if correctorComputePrecision != predictorComputePrecision%}
+{% if correctorComputePrecision not in predictorComputePrecisions%}
 template void {{codeNamespace}}::solutionUpdate( 
   {{correctorStoragePrecision}}* __restrict__ luh,
   const {{correctorStoragePrecision}}* __restrict__ const luhOld,

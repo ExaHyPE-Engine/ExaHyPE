@@ -19,8 +19,10 @@ info  peano4                               -1     white always-on
 info  examples                             -1     white always-on
 info  exahype2                             -1     white always-on
 info  toolbox                              -1     white always-on
-info examples::exahype2::euler::observers  -1     white always-on
+info  bencharks                            -1     white always-on
  
+info   exahype2::RefinementControlService  -1    black always-on
+
 trace  tarch                               -1     black always-on    
 trace  peano4                              -1     black always-on
 trace  benchmarks                          -1     black always-on
