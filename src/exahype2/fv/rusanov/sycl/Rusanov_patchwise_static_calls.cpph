@@ -61,7 +61,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
   double* tempEigenvalueY             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
   double* tempEigenvalueZ             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
 
-  ::std::chrono::duration<double> end = ::std::chrono::system_clock::now() - before;
+  //::std::chrono::duration<double> end = ::std::chrono::system_clock::now() - before;
   //::std::cout << "Temp data malloc time:" << end.count() << ::std::endl;
 
   const std::size_t numberOfPatches = hostPatchData.numberOfCells;

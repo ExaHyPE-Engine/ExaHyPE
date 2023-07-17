@@ -973,9 +973,12 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidArguments;
   }
 
+::std::cout << "checkpoint1" << std::endl;
   peano4::runTestsAndBenchmarks();
+  std::cout << "checkpoint 2" << std::endl;
 
   repositories::startSimulation();
+  std::cout << "checkpoint 3" << std::endl;
 
   otterTraceInitialise();
 
@@ -986,7 +989,7 @@ int main(int argc, char** argv) {
 
 #if defined(GPUOffloadingSYCL)
   if (tarch::accelerator::Device::getInstance().getNumberOfDevices() > 0) {
-    logWarning("main()", "you might have to set ZE_SERIALIZE=1|2|3 before you start the benchmark");
+    //logWarning("main()", "you might have to set ZE_SERIALIZE=1|2|3 before you start the benchmark");
   }
 #endif
 
