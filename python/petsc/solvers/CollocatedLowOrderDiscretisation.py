@@ -86,7 +86,7 @@ I wanna see if this one applies to the solver or hte init
 
 
   def add_to_create_grid(self, observer):
-    observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h),False)
+    observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h))
     pass
 
   

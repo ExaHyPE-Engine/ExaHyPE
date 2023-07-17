@@ -236,17 +236,22 @@ This yet has to be written.
     dictionary = {}
     dictionary[ "SOLVER_INSTANCES"] = self._solver_instances
     
-    dictionary[ "QUADRATURE_POINTS"] = self.convertArrayToCppVector(self.quadrature_points)
-    dictionary[ "WEIGHTS"]           = self.convertArrayToCppVector(self.weights)
-    
-    #slightly more fiddly; we have an array of arrays
-    dictionary[ "POLY_COEFFS"]       = "{ "
-    for array in self.poly_coeffs:
-      dictionary[ "POLY_COEFFS"] += self.convertArrayToCppVector( array )
-      dictionary[ "POLY_COEFFS"] += ", \n"
-    dictionary[ "POLY_COEFFS"]   += " }"
+    '''
+    put in a guard clause to skip over CollocatedLowOrderDiscretisation
+    if it has one, it should have the others
+    '''
+    if hasattr(self, 'quadrature_points'):
+      dictionary[ "QUADRATURE_POINTS"] = self.convertArrayToCppVector(self.quadrature_points)
+      dictionary[ "WEIGHTS"]           = self.convertArrayToCppVector(self.weights)
+      
+      #slightly more fiddly; we have an array of arrays
+      dictionary[ "POLY_COEFFS"]       = "{ "
+      for array in self.poly_coeffs:
+        dictionary[ "POLY_COEFFS"] += self.convertArrayToCppVector( array )
+        dictionary[ "POLY_COEFFS"] += ", \n"
+      dictionary[ "POLY_COEFFS"]   += " }"
 
-    dictionary["POLY_DEGREE"] = self.polynomial_degree
+      dictionary["POLY_DEGREE"] = self.polynomial_degree
 
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     template_name       = templatefile_prefix + ".SolverRepository.template"
@@ -299,11 +304,15 @@ This yet has to be written.
     print( "---------------------------------------")
     print( str(solver) )
 
-    #add in points, weight and poly coeffs
-    self.quadrature_points = solver.quadrature_points
-    self.weights           = solver.weights
-    self.poly_coeffs       = solver.poly_coeffs
-    self.polynomial_degree = solver.polynomial_degree
+    #add in points, weight and poly coeffs, but only if
+    #this class has the attribute. We put in a guard clause
+    #for CollacatedLowOrderDiscretisation
+    if hasattr(solver, 'quadrature_points'):
+      #if it has one, it should have all the others
+      self.quadrature_points = solver.quadrature_points
+      self.weights           = solver.weights
+      self.poly_coeffs       = solver.poly_coeffs
+      self.polynomial_degree = solver.polynomial_degree
       
     solver.add_to_Peano4_datamodel( self._project.datamodel, verbose=False )
     

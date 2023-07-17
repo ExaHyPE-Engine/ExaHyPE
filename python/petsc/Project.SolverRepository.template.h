@@ -73,8 +73,10 @@ namespace {{N}} {
     /*
     we have n+1 different polynomials. use this overload to specify which one
     you mean.
+    leave its implementation in header file since it's so simple.
     */
     inline double evalPoly( const int& index, const double& quadPoint ){
+      // todo: put in a proper check
       if (index < 0
           or
           index > polynomialDegree + 1) throw std::runtime_error("bad index used!");
@@ -82,9 +84,23 @@ namespace {{N}} {
     }
 
     /*
-    method to eval 2 polynomials and return them
+    method to eval 2 polynomials and return them.
+    leave its implementation in header file since it's so simple
+
+    For now, we make a 2d basis by making a 1d basis, but multiplying together, eg,
+    a poly for the x axis and another for the y axis
     */
-    double evalPoly( const int& indexX, const int& indexY, const double& quadPoint );
+    inline double evalPoly( const int& indexX, const int& indexY, const double& quadPoint ){
+      // todo: put in a proper check
+      if (indexX < 0
+          or
+          indexX > polynomialDegree + 1
+          or
+          indexY < 0
+          or
+          indexY > polynomialDegree + 1) throw std::runtime_error("bad index used!");
+      return evalPoly( polyCoeffs[indexX], quadPoint ) * evalPoly( polyCoeffs[indexY], quadPoint );
+    }
 
     {% endif %}
 
