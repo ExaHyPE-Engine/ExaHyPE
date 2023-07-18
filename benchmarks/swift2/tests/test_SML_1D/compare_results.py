@@ -11,107 +11,10 @@ import argparse
 import sys
 import peano4
 from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
+import swift2.sphtools
 
 
-
-kernel = "quartic_spline"
-#  KERNEL_GAMMA = 1.936492
 comparison_tolerance = 1e-4
-h_tolerance = 1e-12
-eta =  1.5492085688967474
-
-
-
-from sph_kernels import sph_kernel_W, sph_kernel_dWdr, sph_kernel_get_H
-
-def neighbour_loop(r: np.ndarray, h:float, kernel: str, ndim:int):
-    """!
-    TODO: docu
-    """
-    wcount = 0.
-    wcount_dh = 0.
-    H = sph_kernel_get_H(h, kernel)
-
-    # Collect neighbour values
-    for n in range(r.shape[0]):
-        q = r[n] / H
-        w =  sph_kernel_W(r[n], h, kernel, ndim)
-        dwdr =  sph_kernel_dWdr(r[n], h, kernel, ndim)
-        wcount += w
-        wcount_dh -= (ndim * w + q * dwdr)
-
-    #  pi->density.wcount_dh -= (hydro_dimension * wi + ui * wi_dx);
-
-    # Add self contribution
-    w = sph_kernel_W(0., h, kernel, ndim)
-    dwdr =  sph_kernel_dWdr(0., h, kernel, ndim)
-    wcount += w
-    wcount_dh -= dwdr
-
-    return wcount, wcount_dh
-
-
-
-
-
-def find_smoothing_length(xp: np.ndarray, xn: np.ndarray, kernel: str, eta: float = 1.2348, h_tolerance: float = 1e-4, ndim=3):
-    """!
-    Determine the smoothing length of a particle with coordinates xp
-
-    TODO: finish documentation
-
-    Parameters
-    ----------
-
-
-    Returns
-    -------
-
-    h: float
-        the smoothing length
-    """
-
-
-    # get distances between particles
-    dx = xn - xp
-    r2 = dx[:,0]**2 + dx[:,1]**2 + dx[:,2]**2
-    r = np.sqrt(r2)
-
-    # Initial guess
-    h = 0.5 * r.max()
-
-    iteration = 0
-    n_target = eta ** ndim
-
-    while iteration < 100:
-        iteration += 1
-
-        h_dim = h**ndim
-        h_dim_minus_one = h**(ndim-1.)
-        wcount, wcount_dh = neighbour_loop(r, h, kernel, ndim)
-
-        n_sum = wcount * h_dim
-        f = n_sum - n_target
-        f_prime = wcount_dh * h_dim + ndim * wcount * h_dim_minus_one
-
-        h_new = h - f / f_prime
-
-        diff = 1. - h_new / h
-
-        if abs(diff < h_tolerance):
-            print("Finished! iter=", iteration)
-            return h_new
-            break
-        else:
-            print("iter = {0:4d} diff = {1:.4e}".format(iteration, diff))
-            h = h_new
-
-    print("DIDN'T CONVERGE.")
-
-    return h
-
-
-
 
 parser = argparse.ArgumentParser(description="Compare Smoothing Length Results With Expectations")
 parser.add_argument(
@@ -129,11 +32,39 @@ parser.add_argument(
     default=5,
     help="Number of neighbours to search for",
 )
-args = parser.parse_args()
+parser.add_argument(
+    "-ht",
+    "--h-tolerance",
+    dest="h_tol",
+    type=float,
+    default=1.e-6,
+    help="Threshold for convergence of smoothing length",
+)
+parser.add_argument(
+    "-k",
+    "--kernel",
+    dest="kernel",
+    type=str,
+    default="quartic_spline",
+    help="SPH kernel function to use.",
+    choices=swift2.sphtools.sph_kernel_list,
+)
 
+args = parser.parse_args()
 icfile = args.ic_filename
 nneigh = args.nneigh
+h_tolerance = args.h_tol
+kernel = args.kernel
+eta = swift2.sphtools.eta_from_number_of_neighbours(nneigh, kernel=kernel, ndim=1)
 
+
+print(" Running comparison")
+print(" --- IC file:                    ", icfile)
+print(" --- SPH Kernel:                 ", kernel)
+print(" --- Target number of neighbours:", nneigh)
+print(" --- Target eta:                 ", eta)
+print(" --- h tolerance:                ", h_tolerance)
+print(" --- comparison tolerance:       ", comparison_tolerance)
 
 # Get IC data
 # -------------------------
@@ -143,12 +74,6 @@ gas = hfile["PartType0"]
 coords = gas["Coordinates"][:]
 ids = gas["ParticleIDs"][:]
 hfile.close()
-
-
-# Make problem 1D
-#  coords = coords[:,0]
-# KDTree needs at least 2dim data
-#  coords = np.reshape(coords, (coords.shape[0], 1))
 
 # Sort by particle ID
 sort_ic = np.argsort(ids)
@@ -174,7 +99,7 @@ for i in range(npart):
     # it is stored at the first index, with distance 0.
     xp = neighbours[i,0,:]
     xn = neighbours[i,1:,:]
-    h = find_smoothing_length(xp, xn, kernel = kernel, eta=eta, h_tolerance=h_tolerance, ndim = 1)
+    h = swift2.sphtools.find_smoothing_length(xp, xn, kernel = kernel, eta=eta, h_tolerance=h_tolerance, ndim = 1)
     sml_python[i] = h
 
 
@@ -216,18 +141,20 @@ for i in range(npart):
 print(f"\nSummary run with {nneigh} neighbours:")
 print(f"Finished with {errors} errors.")
 if errors > 0:
-    print("Before you panic: Are you using the correct KERNEL_GAMMA in this script?")
-    print("                  They vary from kernel to kernel, and for different dimensions")
+    print("Before you panic:")
+    print(" - Are you using the correct KERNEL_GAMMA in this script?")
+    print("   They vary from kernel to kernel, and for different dimensions.")
+    print(" - Are you using the correct resolution eta in this script?")
     print("Other ToDo's left for this script: ")
     print(" - corrections for periodic wrapping ")
 
 
 
-outputfile = "sml_peano.txt"
-f = open(outputfile, "w")
-for i in range(sml_peano.shape[0]):
-    f.write("{0:8d},{1:12.6f}\n".format(ids[i], sml_peano[i]))
-f.close()
+#  outputfile = "sml_peano.txt"
+#  f = open(outputfile, "w")
+#  for i in range(sml_peano.shape[0]):
+#      f.write("{0:8d},{1:12.6f}\n".format(ids[i], sml_peano[i]))
+#  f.close()
 
 sys.exit(errors)
 
