@@ -291,6 +291,18 @@ class EnclaveTasking(FV):
     add_entries_to_text_replacement_dictionary().
 
 
+    ## Task priorities
+
+    Use the attributes self.enclave_task_priority to change the priority of the 
+    task. This value can either be a string that C++ can evaluate into a 
+    priority or a plain numerical value. I set it to 
+
+           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority"
+            
+    by default.
+
+
+
     """
 
     def __init__(
@@ -335,6 +347,7 @@ class EnclaveTasking(FV):
 """
 
         self.add_user_action_set_includes(additional_includes)
+        self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority"
 
 
     def _create_guards(self):
@@ -712,6 +725,7 @@ class EnclaveTasking(FV):
             self._name
         )
         d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
+        d["ENCLAVE_TASK_PRIORITY"] = self.enclave_task_priority
 
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
         super(EnclaveTasking, self).add_actions_to_create_grid(

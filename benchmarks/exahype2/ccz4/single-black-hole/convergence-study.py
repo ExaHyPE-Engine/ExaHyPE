@@ -67,6 +67,8 @@ def construct_FV_limiter_for_FD4():
 #include "toolbox/blockstructured/Interpolation.h"        
 """
 
+            self.enclave_task_priority = "2*tarch::multicore::Task::DefaultPriority"
+
         def _store_cell_data_default_guard(self):
             """!
 

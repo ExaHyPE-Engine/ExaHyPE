@@ -207,34 +207,39 @@ mesh management of Peano so far does not know that ExaHyPE might not need the
 data. ExaHyPE has to let Peano know.
 
 
-The principles behind such a localisation @ref page_peano_localisation "are discussed on a generic Peano page of its own".
-Every solver in ExaHyPE has a routine create_data_structures(). Depending on 
-the type of your solver, you might have a pretty deep inheritance hierarchy
-where every subclass specialises and augments the basic numerical scheme. It
-is the base class' create_data_structures() usually which defines all the data structures over 
-the mesh which are used by the different solver (sub-)flavours. 
-Therefore, it is this class, where you decide if and how you localise the 
-data stored.
+The technical principles behind such a localisation @ref page_peano_localisation "are discussed on a generic Peano page of its own".
+ExaHyPE builds up pretty deep inheritance hierarchy
+where every subclass specialises and augments the basic numerical scheme, and 
+also implements additional guards when data is stored or not.
+However, most of these subclasses rely on only six routines to control
+the data flow:
+
+- _provide_cell_data_to_compute_kernels_default_guard(),
+- _load_cell_data_default_guard(),
+- _store_cell_data_default_guard(),
+- _provide_face_data_to_compute_kernels_default_guard(),
+- _load_face_data_default_guard(),
+- _store_face_data_default_guard(),
 
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
-self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The implementation then uses these predicates to puzzle the actual storage
+scheme together via calls similar to
 
+~~~~~~~~~~~~~~~~~~~~~~~~
+        self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
+        )
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 By default, most solvers only store data for unrefined 
 cells. They mask coarser levels with in the tree out.    
 Subclasses such as enclave tasking variations augment the guards
-further. Therefore, it makes sense to plug into _store_cell_data_default_guard()
-and _load_cell_data_default_guard() if we want to restrict our solver spatially.
-Just take the existing logic, and add another and correlation.
+further such that not all data are stored all the time. Nothing stops you
+from adding further constraints and to use a solver only in a certain 
+subdomain for example.
 
-
-If you work with data (patches) which are administered via smart pointers, it 
-makes a lot of sense to ensure that these smart pointers are allocated if and 
-only if you actually need them in your code. Study the respective subsection
-@ref page_peano_localisation "within the generic localisation discussion".
 
 
 ### The actual solution coupling

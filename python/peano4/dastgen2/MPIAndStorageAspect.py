@@ -27,7 +27,8 @@ class MPIAndStorageAspect( dastgen2.aspects.MPI ):
   The aspect also determines how and
   if we store data or not in Peano. Therefore, it covers more than 
   solely MPI. Use the store and load attribute to control these 
-  predicates.
+  predicates. Please study @ref page_peano_localisation for further
+  documentation.
     
   
   ## Usage
