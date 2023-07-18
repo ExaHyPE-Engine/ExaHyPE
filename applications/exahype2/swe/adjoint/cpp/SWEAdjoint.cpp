@@ -181,7 +181,16 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
             checkpoints_[i] =  time_width * i;
     }
     
-    netcdf_writer_ = new applications::exahype2::swe::adjoint::NetCDFWriter(output_file_name, bathymetry_file_path, l_nX_, l_nY_, cell_size_, b_, end_time, start_time_, flush);
+    netcdf_writer_ = new applications::exahype2::swe::adjoint::NetCDFWriter(
+        output_file_name, 
+        bathymetry_file_path, 
+        l_nX_, l_nY_, 
+        cell_size_, 
+        b_, 
+        area_of_interest_coord_0_, area_of_interest_coord_1_, area_of_interest_coord_2_, area_of_interest_coord_3_,
+        end_time, start_time_, 
+        flush
+        );
 
     std::cout << "Starting simulation with the following parameters:" << std::endl
                 << "width: [" << width_x_ << ", " << width_y_ << "]" << std::endl

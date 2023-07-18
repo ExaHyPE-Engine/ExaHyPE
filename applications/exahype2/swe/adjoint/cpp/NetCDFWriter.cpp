@@ -4,6 +4,8 @@ applications::exahype2::swe::adjoint::NetCDFWriter::NetCDFWriter(const char *out
                     unsigned int i_nX, unsigned int i_nY,
                     double cell_size,
                     double *b,
+					double area_of_interest_coord_0, double area_of_interest_coord_1, 
+					double area_of_interest_coord_2, double area_of_interest_coord_3,
                     double end_time,
                     double start_time,
                     unsigned int flush):
@@ -48,6 +50,8 @@ applications::exahype2::swe::adjoint::NetCDFWriter::NetCDFWriter(const char *out
 
 	nc_put_att_double(file_id_, NC_GLOBAL, "end_time", NC_DOUBLE, 1, &end_time);
     nc_put_att_double(file_id_, NC_GLOBAL, "start_time", NC_DOUBLE, 1, &start_time);
+	double area_of_interest[4] = {area_of_interest_coord_0, area_of_interest_coord_1, area_of_interest_coord_2, area_of_interest_coord_3};
+	nc_put_att_double(file_id_, NC_GLOBAL, "area_of_interest", NC_DOUBLE, 4, area_of_interest);
 
     //setup grid size
 	double gridPosition =  0;

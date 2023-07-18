@@ -39,6 +39,8 @@ namespace applications::exahype2::swe::adjoint{
                         unsigned int i_nX, unsigned int i_nY,
                         double cell_size,
                         double *b,
+                        double area_of_interest_coord_0, double area_of_interest_coord_1, 
+                        double area_of_interest_coord_2, double area_of_interest_coord_3,
                         double end_time,
                         double start_time = 0,
                         unsigned int flush = 0);
