@@ -296,3 +296,12 @@ UnitTests3d
 
 .gitignore
 /documentation/
+
+*.tmp 
+*.trs 
+*.sh
+
+*patch-file*
+*.pvd
+*.err
+*.out

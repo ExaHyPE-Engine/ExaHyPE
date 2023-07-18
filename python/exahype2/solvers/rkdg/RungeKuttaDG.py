@@ -1649,6 +1649,9 @@ We use RK("""
         @see create_data_structures()
 
         """
+        assert isinstance(cell_data_storage, Storage)
+        assert isinstance(face_data_storage, Storage)
+        
         self._cell_data_storage = cell_data_storage
         self._face_data_storage = face_data_storage
 
