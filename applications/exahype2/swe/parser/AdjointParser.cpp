@@ -1,7 +1,5 @@
 #include "AdjointParser.h"
 #include <iostream>
-#include "NetCDFReader.hpp"
-#include "NetCDFHelper.hpp"
 using namespace applications::exahype2::swe::parser::NetCDFHelper;
 
 applications::exahype2::swe::parser::AdjointParser::AdjointParser(const char *adjoint_file_path){

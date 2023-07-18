@@ -1,5 +1,7 @@
 #ifndef _applications_exahype2_swe_parser_AdjointParser_H_
 #define _applications_exahype2_swe_parser_AdjointParser_H_
+#include "NetCDFReader.hpp"
+#include "NetCDFHelper.hpp"
 
 namespace applications::exahype2::swe::parser {
   class AdjointParser;
