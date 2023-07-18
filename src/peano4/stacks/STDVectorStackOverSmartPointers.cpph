@@ -66,14 +66,17 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::clone(const STDVectorSt
 
 template <class T>
 void peano4::stacks::STDVectorStackOverSmartPointers<T>::gatherMetaData() {
-    prepareMetaDataReceiveBuffer();
+    prepareMetaDataBuffers();
 
     assertion( _gatheredMetaData!=nullptr );
     assertion( _gatheredDebugMetaData!=nullptr );
+    assertion( T::Cardinality>0 );
 
     for (int i = 0; i < size(); i++) {
       _gatheredMetaData[i] = _data[i].value==nullptr ? 0 : T::Cardinality;
     }
+
+    logDebug( "gatherMetaData()", "gathered meta data which identifies nullptrs vs real data" );
 
 #if PeanoDebug >= 1
   for (int i = 0; i < size(); i++) {
@@ -91,11 +94,12 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::gatherMetaData() {
 }
 
 template <class T>
-void peano4::stacks::STDVectorStackOverSmartPointers<T>::prepareMetaDataReceiveBuffer() {
+void peano4::stacks::STDVectorStackOverSmartPointers<T>::prepareMetaDataBuffers() {
   _gatheredMetaData = tarch::allocateMemory<int>(size(), tarch::MemoryLocation::Heap);
 #if PeanoDebug >= 1
   _gatheredDebugMetaData = tarch::allocateMemory(Dimensions * 2 * size(), tarch::MemoryLocation::Heap);
 #endif
+  logDebug( "prepareMetaDataBuffers()", "prepared meta data buffer with " << size() << " entries and debug meta data buffer with " << (Dimensions*2*size()) << " entries (if debug info available)" );
 }
 
 template <class T>
@@ -151,21 +155,23 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::scatter() {
 
 template <class T>
 void peano4::stacks::STDVectorStackOverSmartPointers<T>::gather() {
-  prepareReceiveBuffer();
+  prepareGatheredDataBuffer();
 
   assertion(_gatheredMetaData!=nullptr);
 
   for (int i = 0; i < size(); i++) {
     if ( _gatheredMetaData[i]!=0 ) {
+      assertion( _data[i].value!=nullptr );
+      logDebug( "gather()", "gather data from " << _data[i].toString() );
       std::copy_n(_data[i].value, T::Cardinality, _gatheredData + T::Cardinality * i);
     }
   }
 }
 
 template <class T>
-void peano4::stacks::STDVectorStackOverSmartPointers<T>::prepareReceiveBuffer() {
+void peano4::stacks::STDVectorStackOverSmartPointers<T>::prepareGatheredDataBuffer() {
   logDebug(
-    "prepareReceiveBuffer()",
+    "prepareGatheredDataBuffer()",
     "allocate (temporary) receive of size "
       << (size() * T::Cardinality) << ". " << size() << " local entries with " << T::Cardinality << " values per entry"
   );
@@ -233,8 +239,8 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::startReceive(
   _data.clear();
   _data.resize(numberOfElements, T(T::ObjectConstruction::NoData));
 
-  prepareMetaDataReceiveBuffer();
-  prepareReceiveBuffer();
+  prepareMetaDataBuffers();
+  prepareGatheredDataBuffer();
 
 #if PeanoDebug >= 1
   _ioDebugMetaDataMPIRequest = new MPI_Request();
