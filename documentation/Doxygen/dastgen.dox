@@ -29,7 +29,7 @@ natively via MPI. Further to that, Peano defines further plug-ins (aspects) that
 you can add if an object represents face or vertex data, e.g. In this case,
 Peano will expect the created routines to provide merge routines which specify
 how to merge copies at the domain boundaries, or it needs some boolean functions
-which point out whether to exchange bou\ndary data or not. This can be done in
+which point out whether to exchange boundary data or not. This can be done in
 Python by adding the corresponding aspects which in turn just inject additional
 C++ functions into the generated code.
 
