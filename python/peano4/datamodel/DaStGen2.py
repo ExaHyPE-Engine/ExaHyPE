@@ -5,7 +5,7 @@ from .DoF                 import DoF
 
 import dastgen2
 
-import peano4.dastgen2.MPI
+import peano4.dastgen2.MPIAndStorageAspect
 
 
 from peano4.output.Helper import using_cuda_backend
@@ -54,6 +54,8 @@ class DaStGen2Generator(object):
 class DaStGen2(DoF):
   """!
   
+    Default superclass for any data model in Peano which is stored within the grid
+  
     A DaStGen2 data type generator. To add fields to this object, just
     use the DaStGen2 instance data of this field, i.e. data.add_attribute().
 
@@ -63,7 +65,7 @@ class DaStGen2(DoF):
     data: dastgen2.DataModel
       Add elements to this guy to enrich your data model.
     
-    peano4_mpi_and_storage_aspect: peano4.dastgen2.MPI
+    peano4_mpi_and_storage_aspect: peano4.dastgen2.MPIAndStorageAspect
       This aspect adds the Peano-specific MPI routines to the data type, 
       i.e. routines used for boundary and re-balancing exchange. Modify 
       this one if you want to control certain data exchange or merge
@@ -143,7 +145,7 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
     self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugX", "Dimensions", ifdefs=["PeanoDebug>0"] ) )
     self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugH", "Dimensions", ifdefs=["PeanoDebug>0"] ) )
     
-    self.peano4_mpi_and_storage_aspect = peano4.dastgen2.MPI(peano4.datamodel.DoFAssociation.Undef)
+    self.peano4_mpi_and_storage_aspect = peano4.dastgen2.MPIAndStorageAspect(peano4.datamodel.DoFAssociation.Undef)
 
     self.data.add_aspect( self.peano4_mpi_and_storage_aspect )
 

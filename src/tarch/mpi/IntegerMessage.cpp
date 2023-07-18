@@ -40,41 +40,6 @@ void   tarch::mpi::IntegerMessage::setValue(int value) {
 
 
 #ifdef Parallel
-void tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag, MPI_Comm communicator ) {
-  tarch::mpi::IntegerMessage::send(
-    message, destination, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::IntegerMessage", "sendAndPollDanglingMessages()",destination, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::IntegerMessage", "sendAndPollDanglingMessages()", destination, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-
-
-void tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(tarch::mpi::IntegerMessage& message, int source, int tag, MPI_Comm communicator ) {
-  tarch::mpi::IntegerMessage::receive(
-    message, source, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::IntegerMessage", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::IntegerMessage", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-#endif
-    
-#ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype tarch::mpi::IntegerMessage::Datatype;
@@ -243,3 +208,39 @@ void tarch::mpi::IntegerMessage::receive(
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
 #endif
+
+#ifdef Parallel
+void tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag, MPI_Comm communicator ) {
+  tarch::mpi::IntegerMessage::send(
+    message, destination, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::IntegerMessage", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::IntegerMessage", "sendAndPollDanglingMessages()", destination, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+
+
+void tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(tarch::mpi::IntegerMessage& message, int source, int tag, MPI_Comm communicator ) {
+  tarch::mpi::IntegerMessage::receive(
+    message, source, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::IntegerMessage", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::IntegerMessage", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+#endif
+    

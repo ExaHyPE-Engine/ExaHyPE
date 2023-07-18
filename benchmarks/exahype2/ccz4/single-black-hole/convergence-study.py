@@ -26,7 +26,10 @@ from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
 
-def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
+BlackHoleRegion = 0.1
+
+
+def construct_FV_limiter_for_FD4():
     """!
 
     Construct the Finite Volume (limiter) scheme
@@ -36,6 +39,11 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
     accuracy) match this patch size, we have to employ a 16 times finer
     mesh.
 
+    It is interesting to see that the limiter does not really have a min
+    and max mesh size. The point is that the higher order solver dictates
+    the mesh structure, and we then follow this structure with the 
+    Finite Volume scheme.
+
     """
 
     class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
@@ -44,22 +52,22 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
         def __init__(
             self,
             name,
-            min_cell_size,
-            max_cell_size,
         ):
             super(Limiter, self).__init__(
                 name=name + "_FV",
                 patch_size=self.SubPatchSize,
-                min_volume_h=min_cell_size / self.SubPatchSize,
-                max_volume_h=max_cell_size / self.SubPatchSize,
+                min_volume_h=1.0/65536,
+                max_volume_h=65536,
                 use_heap_storage=False,
             )
-            self.double_constants["BlackHoleFVRegion"] = 1.0
+            self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
 
             self._user_action_set_includes += """
 #include "toolbox/blockstructured/Restriction.h"        
 #include "toolbox/blockstructured/Interpolation.h"        
 """
+
+            self.enclave_task_priority = "2*tarch::multicore::Task::DefaultPriority"
 
         def _store_cell_data_default_guard(self):
             """!
@@ -83,28 +91,33 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
                 + self._name
                 + ".isCellOverlappingWithBHImpactArea(marker) )"
             )
+                
+        def _provide_cell_data_to_compute_kernels_default_guard(self):
+            return (
+                """("""
+                + super(Limiter,self)._provide_cell_data_to_compute_kernels_default_guard()
+                + " and repositories::InstanceOf"
+                + self._name
+                + ".isCellOverlappingWithBHImpactArea(marker) )"
+            )
+           
+        def _provide_face_data_to_compute_kernels_default_guard(self):
+            return "{} and repositories::InstanceOf{}.isOneAdjacentCellOverlappingWithBHImpactArea(marker)" .format(
+                    super(Limiter,self)._provide_face_data_to_compute_kernels_default_guard(),
+                    self._name
+                )
 
         def _store_face_data_default_guard(self):
-            return (
-                """("""
-                + super(Limiter, self)._store_face_data_default_guard()
-                + """
-                    and repositories::InstanceOf"""
-                + self._name
-                + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
-                  )"""
-            )
+            return "({} and repositories::InstanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
+                    super(Limiter, self)._store_face_data_default_guard(),
+                    self._name
+                )
 
         def _load_face_data_default_guard(self):
-            return (
-                """("""
-                + super(Limiter, self)._load_face_data_default_guard()
-                + """
-                    and repositories::InstanceOf"""
-                + self._name
-                + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
-                  )"""
-            )
+            return "({} and repositories::InstanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
+                    super(Limiter, self)._load_face_data_default_guard(),
+                    self._name
+                )
 
         def create_action_sets(self):
             """!
@@ -133,8 +146,6 @@ def construct_FV_limiter_for_FD4(min_cell_size, max_cell_size):
 
     my_solver = Limiter(
         name="CCZ4SBH",
-        min_cell_size=min_cell_size,
-        max_cell_size=max_cell_size,
     )
 
     my_solver.set_implementation(
@@ -194,6 +205,9 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """
+
+            self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
+            
 
         def create_action_sets(self):
             """!
@@ -343,32 +357,32 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
       interpolatedFVDataWithHalo,
       repositories::InstanceOf"""
                 + self._name_without_FD4_extension
-                + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,0) ? dummyFace0 : fineGridFaces"""
+                + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,0) ? dummyFace0 : fineGridFaces"""
                 + self._name_without_FD4_extension
                 + """_FVQNew(0).value,
       repositories::InstanceOf"""
                 + self._name_without_FD4_extension
-                + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,1) ? dummyFace1 : fineGridFaces"""
+                + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,1) ? dummyFace1 : fineGridFaces"""
                 + self._name_without_FD4_extension
                 + """_FVQNew(1).value,
       repositories::InstanceOf"""
                 + self._name_without_FD4_extension
-                + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,2) ? dummyFace2 : fineGridFaces"""
+                + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,2) ? dummyFace2 : fineGridFaces"""
                 + self._name_without_FD4_extension
                 + """_FVQNew(2).value,
       repositories::InstanceOf"""
                 + self._name_without_FD4_extension
-                + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,3) ? dummyFace3 : fineGridFaces"""
+                + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,3) ? dummyFace3 : fineGridFaces"""
                 + self._name_without_FD4_extension
                 + """_FVQNew(3).value,
       repositories::InstanceOf"""
                 + self._name_without_FD4_extension
-                + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,4) ? dummyFace4 : fineGridFaces"""
+                + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,4) ? dummyFace4 : fineGridFaces"""
                 + self._name_without_FD4_extension
                 + """_FVQNew(4).value,
       repositories::InstanceOf"""
                 + self._name_without_FD4_extension
-                + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,5) ? dummyFace5 : fineGridFaces"""
+                + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,5) ? dummyFace5 : fineGridFaces"""
                 + self._name_without_FD4_extension
                 + """_FVQNew(5).value
     );
@@ -490,6 +504,10 @@ def construct_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """
+            ## For compatibility. Name makes no sense. But the value
+            ## guides the AMR pattern
+            self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
+            
 
         def create_action_sets(self):
             """!
@@ -689,6 +707,12 @@ if __name__ == "__main__":
         executable="peano_sbh_" + str(args.cell_size),
     )
 
+    dimensions = 3
+    offset = [-9, -9, -9]
+    domain_size = [18, 18, 18]
+
+    max_cell_size = domain_size[0]/3.0
+
     added_limiter = False
     if "fd4-rk1-ps-" in args.solver:
         FD4PatchSize = int(args.solver[-1])
@@ -697,10 +721,10 @@ if __name__ == "__main__":
         added_limiter = False
     elif "fd4-rk1-limited-ps-" in args.solver:
         FD4PatchSize = int(args.solver[-1])
-        my_primary_solver = construct_limited_FD4_solver(args.cell_size, args.cell_size)
-        my_secondary_solver = construct_FV_limiter_for_FD4(
-            args.cell_size, args.cell_size
-        )
+        my_primary_solver = construct_limited_FD4_solver(min_cell_size = args.cell_size, 
+                                                         max_cell_size = max_cell_size
+                                                         )
+        my_secondary_solver = construct_FV_limiter_for_FD4()
         project.add_solver(my_primary_solver)
         project.add_solver(my_secondary_solver)
         added_limiter = True
@@ -715,10 +739,6 @@ if __name__ == "__main__":
         build_mode = peano4.output.CompileMode.Asserts
     else:
         build_mode = peano4.output.CompileMode.Release
-
-    dimensions = 3
-    offset = [-9, -9, -9]
-    domain_size = [18, 18, 18]
 
     if args.plot:
         plot_interval = args.end_time / 60.0
@@ -754,9 +774,10 @@ if __name__ == "__main__":
         my_primary_solver.add_tracer(
             name="PrimaryTracer", coordinates=tracer_coordinates, project=project
         )
-        my_secondary_solver.add_tracer(
-            name="SecondaryTracer", coordinates=tracer_coordinates, project=project
-        )
+        if added_limiter:
+            my_secondary_solver.add_tracer(
+                name="SecondaryTracer", coordinates=tracer_coordinates, project=project
+            )
 
     # project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
     project.set_load_balancing(
