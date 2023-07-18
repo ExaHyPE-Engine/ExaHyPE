@@ -304,7 +304,7 @@ if args.scenario == "Tsunami":
       for coords in args.gamr_area_of_interest:
         area_of_interest.append(parse_coordinate_pair(coords))
 
-      swe_adjoint_parameters = "\"./%s-adjoint.nc\"" % executable_name # output file name
+      swe_adjoint_parameters = "\"%s-adjoint.nc\"" % output_path # output file name
       swe_adjoint_parameters += ",\"%s\"" % args.bathymetry_file # bathymetry file
 
       swe_adjoint_parameters += ", %f" % width[0] # width x
