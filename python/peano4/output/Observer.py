@@ -1693,11 +1693,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       ))
       and
-      data.send(marker)
-      or
-      context == TraversalObserver::SendReceiveContext::ForkDomain
-      or
-      context == TraversalObserver::SendReceiveContext::JoinDomain
+      (
+        data.send(marker)
+        or
+        context == TraversalObserver::SendReceiveContext::ForkDomain
+        or
+        context == TraversalObserver::SendReceiveContext::JoinDomain
+      )
     ) {
       logDebug( "sendVertex(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " for marker " << marker.toString() );
 
@@ -1733,14 +1735,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4:
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       ))
       and
-      data.send(
-        marker
-        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      (data.send(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        )
+        or
+        context == TraversalObserver::SendReceiveContext::ForkDomain
+        or
+        context == TraversalObserver::SendReceiveContext::JoinDomain
       )
-      or
-      context == TraversalObserver::SendReceiveContext::ForkDomain
-      or
-      context == TraversalObserver::SendReceiveContext::JoinDomain
     ) {
       logDebug( "sendFace(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " for marker " << marker.toString() );
 
@@ -1774,16 +1777,17 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::Travers
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       ))
       and
-      data.send(
-        marker
-        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      (
+        data.send(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        )
+        or
+        context == TraversalObserver::SendReceiveContext::ForkDomain
+        or
+        context == TraversalObserver::SendReceiveContext::JoinDomain
       )
-      or
-      context == TraversalObserver::SendReceiveContext::ForkDomain
-      or
-      context == TraversalObserver::SendReceiveContext::JoinDomain
     ) {
-
       logDebug( "sendCell(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId );
 
       repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
