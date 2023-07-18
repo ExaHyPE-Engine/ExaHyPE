@@ -392,23 +392,23 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         )
         self.algorithm_steps_dict["Kick1"] = kick1
 
-        kick1Extra = AlgorithmStep(
-            name="Kick1Extra",
-            dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-            touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
-                      localParticles );""",
-            includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/timestepping/Leapfrog.h"
-                                       #include "swift2/timestepping/GlobalTimeStepping.h"
-                                       #include "swift2/timestepping/TimeStepping.h"
-                                       #include "swift2/kernels/kernel_hydro.h"
-                                       #include "swift2/kernels/equation_of_state.h"
-                                       """,
-        )
-        self.algorithm_steps_dict["Kick1Extra"] = kick1Extra
+        #  kick1Extra = AlgorithmStep(
+        #      name="Kick1Extra",
+        #      dependencies=AlgorithmStep.Dependencies.SELF,
+        #      effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+        #      touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+        #      touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
+        #                localParticles );""",
+        #      includes="""
+        #                                 #include "Constants.h"
+        #                                 #include "swift2/timestepping/Leapfrog.h"
+        #                                 #include "swift2/timestepping/GlobalTimeStepping.h"
+        #                                 #include "swift2/timestepping/TimeStepping.h"
+        #                                 #include "swift2/kernels/kernel_hydro.h"
+        #                                 #include "swift2/kernels/equation_of_state.h"
+        #                                 """,
+        #  )
+        #  self.algorithm_steps_dict["Kick1Extra"] = kick1Extra
 
         drift = AlgorithmStep(
             name="Drift",
@@ -556,22 +556,22 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         )
         self.algorithm_steps_dict["Kick2"] = kick2
 
-        kick2Extra = AlgorithmStep(
-            name="KickExtra2",
-            dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-            touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(localParticles);""",
-            includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/timestepping/Leapfrog.h"
-                                       #include "swift2/timestepping/GlobalTimeStepping.h"
-                                       #include "swift2/timestepping/TimeStepping.h"
-                                       #include "swift2/kernels/kernel_hydro.h"
-                                       #include "swift2/kernels/equation_of_state.h"
-                                       """,
-        )
-        self.algorithm_steps_dict["Kick2Extra"] = kick2Extra
+        #  kick2Extra = AlgorithmStep(
+        #      name="KickExtra2",
+        #      dependencies=AlgorithmStep.Dependencies.SELF,
+        #      effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+        #      touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+        #      touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(localParticles);""",
+        #      includes="""
+        #                                 #include "Constants.h"
+        #                                 #include "swift2/timestepping/Leapfrog.h"
+        #                                 #include "swift2/timestepping/GlobalTimeStepping.h"
+        #                                 #include "swift2/timestepping/TimeStepping.h"
+        #                                 #include "swift2/kernels/kernel_hydro.h"
+        #                                 #include "swift2/kernels/equation_of_state.h"
+        #                                 """,
+        #  )
+        #  self.algorithm_steps_dict["Kick2Extra"] = kick2Extra
 
         reduceGlobals = AlgorithmStep(
             name="ReduceGlobalQuantities",
@@ -628,10 +628,10 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             self.algorithm_steps_dict["Density"],
             self.algorithm_steps_dict["Force"],
             self.algorithm_steps_dict["Kick2"],
-            self.algorithm_steps_dict["Kick2Extra"],
+            #  self.algorithm_steps_dict["Kick2Extra"],
             self.algorithm_steps_dict["ReduceGlobalQuantities"],
             self.algorithm_steps_dict["Kick1"],
-            self.algorithm_steps_dict["Kick1Extra"],
+            #  self.algorithm_steps_dict["Kick1Extra"],
         ]
 
     @property
@@ -782,7 +782,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             #  self.algorithm_steps_dict["Kick1"],
             #  self.algorithm_steps_dict["Kick1Extra"],
             self.algorithm_steps_dict["Kick2"],
-            self.algorithm_steps_dict["Kick2Extra"],
+            #  self.algorithm_steps_dict["Kick2Extra"],
         ]
 
     @property

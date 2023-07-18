@@ -3,17 +3,7 @@
 
 template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
-  // In principle, the time step sizes for drifts should all be equal.
-  // However in SWIFT cosmological factors of the expansion (rate) get
-  // directly factored into the time step size, and the fluid quantities
-  // are all assumed to be in the comoving frame (in the cosmological sense).
-  // See Section 1.4, eqns. 29 and 31 in swiftsim/theory/Cosmology/cosmology.pdf
-  // So while we don't have cosmological integration yet, we separate the
-  // two "different" time step sizes nonetheless to avoid headaches down
-  // the line.
-  const double timeStepSizeDrift = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                          .getMinTimeStepSize();
-  const double timeStepSizeKick = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
+  const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
                           .getMinTimeStepSize();
 
   for (auto* particle : localParticles) {
@@ -29,14 +19,41 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
       // to take the "V_full" here, not the fluid velocity V. V_full doesn't get
       // touched outside of kicks. V will be interpolated/integrated in time as the
       // time step progresses. V_full is the correct choice here.
-      particle->setX(particle->getX() + timeStepSizeDrift * particle->getV_full());
-      particle->setV(particle->getV() + timeStepSizeKick * particle->getA());
+
+      // particle->setX(particle->getX() + timeStepSize * particle->getV_full());
+
+      // Note that original SWIFT predicts the velocities at this point. We moved that
+      // into computePredictHydro()
+
 
       /* Flag this particle as Moved */
       particle->setMoveState(std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved);
     }
   }
 }
+
+template <typename Particle>
+void swift2::timestepping::kickResetPredictedValues(Particle& localParticle) {
+
+      /* Re-set the predicted velocities */
+      localParticle->setV(localParticle->getV_full());
+
+      /* Re-set the entropy */
+      localParticle->setU(localParticle->getU_full());
+
+      /* Re-compute the pressure */
+      const double pressure = gas_pressure_from_internal_energy(localParticle->getDensity(), localParticle->getU());
+
+      /* Compute the new sound speed */
+      const double soundspeed = gas_soundspeed_from_pressure(localParticle->getDensity(), pressure);
+
+      /* Update variables */
+      localParticle->setPressure(pressure);
+      localParticle->setSoundSpeed(soundspeed);
+      localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed));
+}
+
+
 
 template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
@@ -55,66 +72,38 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
         /* Kick the particle */
         particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
 
+        swift2::timestepping::leapfrogKickExtraWithGlobalTimeStepSize(particle);
         /* In SWIFT SPH, Kick 1 and Kick 2 are slightly different as Kick 2 does
-         * some extra operations. Not relevant for non-hydro systems
-         */
+         * some extra operations. Not relevant for non-hydro systems */
         if (kickNumber == 2) {
-          /*
-           * Reset predicted values for next Drift step
-           * Done by "hydro_reset_predicted_values" in SWIFT
-           */
+          swift2::timestepping::kickResetPredictedValues(particle);
 
-          /* Re-set the predicted velocities */
-          particle->setV(particle->getV_full());
-
-          /* Re-set the entropy */
-          particle->setU(particle->getU_full());
-
-          /* Re-compute the pressure */
-          const double pressure = gas_pressure_from_internal_energy(particle->getDensity(), particle->getU());
-
-          /* Compute the new sound speed */
-          const double soundspeed = gas_soundspeed_from_pressure(particle->getDensity(), pressure);
-
-          /* Update variables */
-          particle->setPressure(pressure);
-          particle->setSoundSpeed(soundspeed);
-          particle->setV_sig_AV(std::max(particle->getV_sig_AV(), 2.0 * soundspeed));
-        } // End if Kick 2
-
-      } else { /* vanilla kick */
-        particle->setV(particle->getV() + timeStepSizeKick * particle->getA());
+        } else { /* vanilla kick */
+          particle->setV(particle->getV() + timeStepSizeKick * particle->getA());
+        }
       }
     }
   }
 }
 
-template <typename ParticleContainer>
-void swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
+template <typename Particle>
+void swift2::timestepping::leapfrogKickExtraWithGlobalTimeStepSize(Particle& localParticle) {
   /* In principle, this time-step could be different than that used for normal kick */
-  double dt_therm = 0.5 * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
+  double dt_kick_therm = 0.5 * localParticle->getSpecies().getMinTimeStepSize();
 
 // std::cout << "dt_therm " << dt_therm << std::endl;
-  for (auto* particle : localParticles) {
-    if(
-      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-      // and
-      // not particle->getIsBoundaryParticle()
-    ) {
 
-      /* Integrate the internal energy forward in time */
-      const double delta_u = particle->getUDot() * dt_therm;
+  /* Integrate the internal energy forward in time */
+  const double delta_u = localParticle->getUDot() * dt_kick_therm;
 
-      /* Do not decrease the energy by more than a factor of 2 */
-      particle->setU_full(std::max(particle->getU_full() + delta_u, particle->getU_full() * 0.5));
+  /* Do not decrease the energy by more than a factor of 2 */
+  localParticle->setU_full(std::max(localParticle->getU_full() + delta_u, localParticle->getU_full() * 0.5));
 
-      /* Check against absolute minimum.
-       * Default value is zero. */
-      if (particle->getU_full() < 0.0) {
-        particle->setU_full(0.0);
-        particle->setUDot(0.0);
-      }
-    }
+  /* Check against absolute minimum.
+   * Default value is zero. */
+  if (localParticle->getU_full() < 0.0) {
+    localParticle->setU_full(0.0);
+    localParticle->setUDot(0.0);
   }
 }
 
@@ -122,7 +111,7 @@ template <typename ParticleContainer>
 void swift2::timestepping::computePredictHydro(const ParticleContainer& localParticles, const int hydroDimensions) {
   const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
                                 .getMinTimeStepSize();
-  const double dt_kick_hydro = 0.5 * timeStepSize;
+  const double dt_kick_hydro = timeStepSize;
   const double dt_drift      = timeStepSize;
   const double dt_therm      = dt_kick_hydro;
   // const double dt_kick_hydro = 0.;
