@@ -3,6 +3,6 @@
 """
 
 from .sph_kernels import *
-from .smltools import find_smoothing_length
+from .smltools import find_smoothing_length, eta_from_number_of_neighbours
 
 

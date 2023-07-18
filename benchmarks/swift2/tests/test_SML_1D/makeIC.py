@@ -47,10 +47,10 @@ h = np.ones(npart) * 2. * dx
 u = np.ones(npart)
 
 # get random coordinates
-rng = np.random.RandomState(seed=seed)
-coords[:,0] = rng.rand(npart) * boxSize
-#  for i in range(npart):
-#      coords[i,0] = (i + 0.5) * dx
+#  rng = np.random.RandomState(seed=seed)
+#  coords[:,0] = rng.rand(npart) * boxSize
+for i in range(npart):
+    coords[i,0] = (i + 0.5) * dx
 
 
 # File

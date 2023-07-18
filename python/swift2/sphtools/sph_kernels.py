@@ -1,7 +1,35 @@
 #!/usr/bin/env python3
 
+"""!
+SPH Kernel related constants, coefficients, and functions.
+
+All constants and kernel coefficients are taken from table 1 of
+Dehnen & Aly, MNRAS, 425, pp. 1062-1082 (2012).
+"""
+
 import numpy as np
 from typing import Union
+
+# List of available kernel names. Used to check whether user choice is valid.
+sph_kernel_list = [
+            "cubic_spline",
+            "quartic_spline",
+            "quintic_spline",
+            "wendland_C2",
+            "wendland_C4",
+            "wendland_C6",
+        ]
+
+# Translation from kernel name to kernel macro
+sph_kernel_macro_name = {
+        "cubic_spline": "CUBIC_SPLINE_KERNEL",
+        "quartic_spline": "QUARTIC_SPLINE_KERNEL",
+        "quintic_spline": "QUINTIC_SPLINE_KERNEL",
+        "wendland_C2": "WENDLAND_C2_KERNEL",
+        "wendland_C4": "WENDLAND_C4_KERNEL",
+        "wendland_C6": "WENDLAND_C6_KERNEL",
+        }
+
 
 # list for 1D, 2D, 3D values of H/h of kernel dicts
 sph_kernel_H_over_h = [{}, {}, {}]
@@ -15,7 +43,7 @@ sph_kernel_eval_function = {}
 # dict containing functions that evaluate the kernel derivatives
 sph_kernel_deval_function = {}
 
-# Kernel Gammas
+# Kernel Gammas (ratio of compact support radius H to smoothing length h)
 # 3D values
 sph_kernel_H_over_h[2]["cubic_spline"] =1.825742
 sph_kernel_H_over_h[2]["quartic_spline"] = 2.018932

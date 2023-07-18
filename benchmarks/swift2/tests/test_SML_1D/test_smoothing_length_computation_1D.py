@@ -5,6 +5,7 @@ import h5py
 
 import peano4
 import swift2
+import swift2.sphtools
 import dastgen2
 
 import shutil
@@ -71,8 +72,28 @@ parser.add_argument(
     default=5,
     help="Number of neighbours to search for",
 )
+parser.add_argument(
+    "-ht",
+    "--h-tolerance",
+    dest="h_tol",
+    type=float,
+    default=1.e-6,
+    help="Threshold for convergence of smoothing length",
+)
+parser.add_argument(
+    "-k",
+    "--kernel",
+    dest="kernel",
+    type=str,
+    default="quartic_spline",
+    help="SPH kernel function to use.",
+    choices=swift2.sphtools.sph_kernel_list,
+)
+
 args = parser.parse_args()
 nneigh = args.nneigh
+kernel = args.kernel
+h_tol = args.h_tol
 
 ########################################################################################
 # Generate SWIFT project
@@ -145,17 +166,9 @@ GAMMA = gamma_hydro_list[0]
 GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
 # SPH kernel -------------------------------------------------------
-kernel_list = ["M5"]
-kernel_list_symbols = ["QUARTIC_SPLINE_KERNEL"]
-KERNEL = kernel_list[0]
-KERNEL_SYMBOL = kernel_list_symbols[0]
-
-if KERNEL == "M5" and HYDRO_DIMENSIONS == 1:
-    KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
-if KERNEL == "M5" and HYDRO_DIMENSIONS == 2:
-    KERNEL_SUPPORT_RAD = "1.977173"
-else:
-    print(f"Unable to determine the kernel support radius. Please check.")
+KERNEL = kernel.upper()
+KERNEL_SYMBOL = swift2.sphtools.sph_kernel_macro_name[kernel]
+KERNEL_SUPPORT_RAD = str(swift2.sphtools.sph_kernel_H_over_h[hydro_dimensions-1][kernel])
 
 
 # Additional Particle Parameters -----------------------------------------------
@@ -165,11 +178,11 @@ particle.h_hydro_max = hydro_h_max
 # Modify the eta factor to look for a precise number of neighbours.
 # Then round it up a little to avoid round-down errors.
 # In 1D, N_neigh = 2 * kernel_gamma * eta; see Price 2012
-particle.eta_factor = 1.00001 * nneigh / (2. * float(KERNEL_SUPPORT_RAD))
+particle.eta_factor = swift2.sphtools.eta_from_number_of_neighbours(nneigh, kernel=kernel, ndim=hydro_dimensions)
 
 # particle.h_hydro_min = 1e-6
 particle.h_max_iterations = 50
-particle.h_tolerance = 1e-12
+particle.h_tolerance = h_tol
 # particle.beta_av = 3.0
 # particle.alpha_av = 0.8
 # Optional: Reduce the mantissa size for particle attributes -------------------
@@ -193,7 +206,7 @@ else:
 
 # Set Peano4 simulation parameters ---------------------------------------------
 offset = [0, 0, 0]
-domain_size = [2, 2, 2]
+domain_size = [1, 1, 1]
 periodic_boundary_conditions = [False, False, False]
 
 project.set_global_simulation_parameters(
@@ -287,9 +300,6 @@ peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 # Some sanity checks ----------------------------------------------------------
 if GAMMA not in gamma_hydro_list:
     print(f"Please check the value of GAMMA. You have chosen: {GAMMA}")
-
-if KERNEL not in kernel_list:
-    print(f"Please check the kernel. You have chosen: {KERNEL}")
 
 print("-----------------------------------------------------------------------")
 print("SPH parameters summary:")
