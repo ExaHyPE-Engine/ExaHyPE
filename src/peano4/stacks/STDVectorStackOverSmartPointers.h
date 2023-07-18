@@ -148,7 +148,7 @@ private:
    *         _gatheredData     = new typename T::DoFType[ size() * T::Cardinality ];
    *
    */
-  void prepareReceiveBuffer();
+  void prepareGatheredDataBuffer();
 
   /**
    * Scatter received gathered data
@@ -175,7 +175,7 @@ private:
    *         _gatheredDebugMetaData = new double[ Dimensions*2*size() ];
    *
    */
-  void prepareMetaDataReceiveBuffer();
+  void prepareMetaDataBuffers();
   void scatterDebugMetaData();
 
 public:
