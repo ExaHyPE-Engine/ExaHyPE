@@ -24,19 +24,30 @@ namespace peano4 {
 } // namespace peano4
 
 /**
- * This stack hosts data which are stored on the heap and subject to smart pointers
+ * This stack hosts data of constant size which are stored on the heap and subject to smart pointers
+ *
+ * We assume that that the object stored on the stack
+ *
+ * - all point to a memory region of the same size
+ * - offer a field T::Cardinality which tells us what this size is
+ * - defines a native pointer value which points to actual data
  *
  * Once we work with smart pointers, we can work with shallow copies as data
  * travel over the individual stacks. This implies that we "only" have to
- * make the clones actual deep copies.
+ * make the clones for the data exchange between threads and ranks actual deep
+ * copies.
  *
- * We assume that T defines a pointer data which actually points to the data.
- * Most T variants will wrap this one in a smart pointer.
+ * Special care is however required if we work with solver localisation, i.e.
+ * solvers which do not store data in each and every grid entity. If a
+ * solver decides not to store a certain piece of data, the underlying value
+ * pointer will exist but will point to nullptr. So we may not attempt to
+ * deep copy it, but instead need to ensure that the cloned vector will hold
+ * nullptr, too.
  *
  *
  * ## MPI
  *
- * The most tricky part in the context of smart pointers is actually the MPI
+ * One tricky aspect in the context of smart pointers is actually the MPI
  * data exchange which has to take into account that data are scattered over
  * the heap. See the documentation of the send/receive operations. They discuss
  * how the business with the required deep copies actually works. Anyway, to
@@ -44,6 +55,23 @@ namespace peano4 {
  *
  * - A type expression DoFType;
  * - A constexpr int Cardinality.
+ *
+ *
+ * The other tricky thing is that some mesh entities might hold nullptrs.
+ * We now have two options:
+ *
+ * 1. We actually only flatten the non-nullptr data.
+ * 2. We send out a huge array with "all" flattened data and take into account
+ *    that some data within this array hold garbage, as the actual data
+ *    actually dd point to nullptr.
+ *
+ * We go down the latter route. It would be no problem to squeeze out areas
+ * in the flattened/gathered area which correspond to nullptr. Yet, if we do
+ * so we do not know a priori how big the outgoing data will be. This implies
+ * that we have to send out the data in two chunks: First the meta data and
+ * then we can trigger the corresponding receive call with a matching size.
+ * This is too complicated for me. I just send out everything - including
+ * rubbish.
  *
  *
  * ## Comparison to normal STD stack
@@ -75,9 +103,27 @@ private:
 
   /**
    * See MPI routines below.
+   *
+   * This routine holds the actual data in a continuous way.
    */
   typename T::DoFType* _gatheredData;
-  double*              _gatheredMetaData;
+
+  /**
+   * Meta data with size of memory chunks
+   *
+   * The entries here hold either T::Cardinality or zero. In the latter case,
+   * any copy should reconstruct an entry with a nullptr. The entries
+   * effectively cluster _gatheredData into chunks.
+   */
+  int*                 _gatheredMetaData;
+
+  /**
+   * Debug data
+   *
+   * Is only used in debug mode to store the x and h values tied to each entry
+   * on the stack.
+   */
+  double*              _gatheredDebugMetaData;
 
   IOMode _ioMode;
   int    _ioRank;
@@ -86,12 +132,15 @@ private:
 #ifdef Parallel
   MPI_Request* _ioMPIRequest;
   MPI_Request* _ioMetaDataMPIRequest;
+  MPI_Request* _ioDebugMetaDataMPIRequest;
 #endif
 
   /**
    * Allocate buffer and gather
+   *
    */
   void gather();
+
   /**
    * Mere alloc. We use the tarch's allocation. Therefore, we can have
    * aligned data here. Without the tarch, the code call would be
@@ -100,21 +149,34 @@ private:
    *
    */
   void prepareReceiveBuffer();
+
+  /**
+   * Scatter received gathered data
+   *
+   * We run over the size keeping in mind that the target has been created over
+   * objects with the constructor argument T::ObjectConstruction::NoData. That
+   * is, each entry hosts a pointer, but this pointer will currently point to
+   * nullptr, as the object is not yet prepared to host any data. We run over
+   * the meta data to find out if this is ok, or if we actually want this stack
+   * entry to host data. If so, we use the "real" constructor and then copy the
+   * raw content over from the gathered data set.
+   */
   void scatter();
 
   /**
    * Allocate buffer and gather
    */
   void gatherMetaData();
+
   /**
    * Mere alloc. We use the tarch's allocation. Therefore, we can have
    * aligned data here. Without tarch, the call would be
    *
-   *         _gatheredMetaData = new double[ Dimensions*2*size() ];
+   *         _gatheredDebugMetaData = new double[ Dimensions*2*size() ];
    *
    */
   void prepareMetaDataReceiveBuffer();
-  void scatterMetaData();
+  void scatterDebugMetaData();
 
 public:
   STDVectorStackOverSmartPointers();
