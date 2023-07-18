@@ -29,6 +29,7 @@ template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculation(const ParticleContainer& localParticles) {
 
   assertionMsg(false, "Don't use this. It's not implemented properly yet.");
+  std::abort();
 
   /* Grab static parameters */
   const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
@@ -215,6 +216,7 @@ template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const ParticleContainer& localParticles) {
 
   assertionMsg(false, "Don't use this. It's not implemented properly yet.");
+  std::abort();
 
   /* Grab static parameters */
   const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
@@ -266,6 +268,7 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const Par
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSearchRadius(const ParticleContainer& localParticles) {
 
+  std::abort();
   return;
 
   /* Grab static parameters */
