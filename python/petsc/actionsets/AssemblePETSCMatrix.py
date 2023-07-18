@@ -577,6 +577,24 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
       }
     }
   }
+  //we can send to petsc now.
+
+  //get global index
+  std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}.getNumber() );
+  int globalIndex =  repositories::getGlobalCellIndex( localIndex );
+
+  //construct the list of row indices we want to use:
+  std::vector<int> rowIndices({{CELL_CARDINALITY}});
+  //fill this vector up, starting with our global index
+  std::iota(rowIndices.begin(), rowIndices.end(), globalIndex);
+
+  //repeat for the colIndices
+  std::vector<int> colIndices({{CELL_CARDINALITY}});
+  //fill this vector up, starting with our global index
+  std::iota(colIndices.begin(), colIndices.end(), globalIndex);
+
+  //send to petsc
+  repositories::instanceOfPetsc.insertLocalMatrix( rowIndices, colIndices, localMatrix );
   """
 
   def __init__(self, solver):
@@ -635,6 +653,7 @@ Consult petsc.Project for details
 """    
     return """
 #include "repositories/SolverRepository.h"
+#include <numeric> //for std::iota
 """
   def get_attributes(self):
     """!
