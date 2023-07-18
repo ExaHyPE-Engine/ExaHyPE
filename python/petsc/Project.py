@@ -7,6 +7,7 @@ import dastgen2
 
 import os
 import sys
+import itertools
 
 from petsc.PETScMain import PETScMain
 
@@ -240,9 +241,69 @@ This yet has to be written.
     put in a guard clause to skip over CollocatedLowOrderDiscretisation
     if it has one, it should have the others
     '''
+
+    #dummy function to return the product of all elements in an array 
+    def productOfArray(array):
+      output = 1
+      for el in array: output *= el
+      return output
+
     if hasattr(self, 'quadrature_points'):
-      dictionary[ "QUADRATURE_POINTS"] = self.convertArrayToCppVector(self.quadrature_points)
-      dictionary[ "WEIGHTS"]           = self.convertArrayToCppVector(self.weights)
+      '''
+      below is a little bit of dark python magic. 
+      basically, we have a 1d array of weights and points that looks like:
+      
+      [w0, w1, w2, ... , wn]
+      [p0, p1, p2, ... , pn]
+
+      we need to convert this to 2d. so we go:
+
+      pn |
+      ...|
+      ...|
+      ...|  ETC
+      p2 |
+      p1 |(p0,p1) 
+      p0 |(p0,p0) (p1,p0) (p2,p0)    (pn,p0)
+      -----------------------------------------
+          p0      p1      p2     ... pn
+
+      and:
+
+      wn |
+      ...|
+      ...|
+      ...|  ETC
+      w2 |
+      w1 | w0*w1 
+      w0 | w0*w0  w1*w0  w2*w0      wn*w0
+      -----------------------------------------
+           w0      w1      w2     ... wn
+
+      below is some awful python code to do just that. it works in any dimension.
+
+      we paste this into the code as:
+        a std::vector of length (n+1)^d for points,  each containing 1 std::vector for (pi, pj,pk)
+        a std::vector of length (n+1)^d for weights, each containing 1 double for wi*wj*wk  
+
+      we could have done this as [w1*w2   for w1 in self.weights for w2 in self.weights]
+      or                         [(p1,p2) for p1 in self.points  for p2 in self.points ]
+      but this works in any dimensions
+      '''
+
+      
+      quad_points = list( itertools.product( *( [ self.quadrature_points for _ in range(self.dimensions)] ) ) )
+      # dictionary[ "QUADRATURE_POINTS"] = self.convertArrayToCppVector(self.quadrature_points)
+      #we have an array of arrays
+      dictionary[ "QUADRATURE_POINTS"] = "{ "
+      for array in quad_points:
+        dictionary[ "QUADRATURE_POINTS"] += self.convertArrayToCppVector( array )
+        dictionary[ "QUADRATURE_POINTS"] += ", \n"
+      dictionary[ "QUADRATURE_POINTS"]   += " }"
+      
+      weights = [productOfArray(el) for el in itertools.product( *( [ self.weights for _ in range(self.dimensions)] ) )]
+      #                                       ^create cartesian product
+      dictionary[ "WEIGHTS"]           = self.convertArrayToCppVector(weights)
       
       #slightly more fiddly; we have an array of arrays
       dictionary[ "POLY_COEFFS"]       = "{ "
@@ -306,13 +367,15 @@ This yet has to be written.
 
     #add in points, weight and poly coeffs, but only if
     #this class has the attribute. We put in a guard clause
-    #for CollacatedLowOrderDiscretisation
+    #for CollacatedLowOrderDiscretisation.
+
     if hasattr(solver, 'quadrature_points'):
       #if it has one, it should have all the others
       self.quadrature_points = solver.quadrature_points
       self.weights           = solver.weights
       self.poly_coeffs       = solver.poly_coeffs
       self.polynomial_degree = solver.polynomial_degree
+      self.dimensions        = solver.dimensions
       
     solver.add_to_Peano4_datamodel( self._project.datamodel, verbose=False )
     

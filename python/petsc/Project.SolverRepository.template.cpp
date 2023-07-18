@@ -9,7 +9,6 @@ namespace {{N}} {
     {% for SOLVER in SOLVER_INSTANCES %}
     {{SOLVER[0]}}  {{SOLVER[1]}};
     {% endfor %}
-    // ::petsc::PetscData instanceOfPetsc;
     PetscData instanceOfPetsc;
 
   }
@@ -78,6 +77,9 @@ int {{NAMESPACE | join("::")}}::repositories::getGlobalFaceIndex(std::pair<int,i
   return result;
 }
 
+/*
+overload to actually perform polynomial eval
+*/
 double {{NAMESPACE | join("::")}}::repositories::evalPoly( const std::vector<double>& coeffs, const double& quadPoint ){
   double output = 0;
   double x      = 1;
@@ -89,5 +91,55 @@ double {{NAMESPACE | join("::")}}::repositories::evalPoly( const std::vector<dou
   }
   return output;
 }
+
+/*
+overload to:
+  - convert index into a tuple that describes position in the cell
+  - evaluate the 1d basis at each of the points
+  - take the product
+
+  ie we promote a 1d basis to an n-dimensional basis by evaluating 
+  our basis polynomial at (x,y,z,...) and taking the product
+  poly(x)*poly(y)*poly(z)*...
+*/
+double {{NAMESPACE | join("::")}}::repositories::evalPoly( const int& index, const std::vector<double>& quadPoint ){
+  //convert index to pair of indices
+  const std::vector<int> indices = convertDofIndexToXYCoordinate(index);
+  double output = 1;
+
+  /*
+  let our dof   indices be ordered [d0, d1, ...]
+  and our point indices be ordered [p0, p1, ...]
+
+  then we actually want to return 
+
+  eval(d0, p0) * eval(d1, p1) * ...
+  */
+
+  auto indexIter = indices.cbegin();
+  auto pointIter = quadPoint.cbegin();
+
+  for (; indexIter!=indices.end(), pointIter!=quadPoint.end(); indexIter++, pointIter++)
+    output *= evalPoly( polyCoeffs[ *indexIter ], *pointIter );
+
+  return output;
+}
+
+
+const std::vector<int> {{NAMESPACE | join("::")}}::repositories::convertDofIndexToXYCoordinate(const int& dofIndex){
+  std::vector<int> output;
+  
+  //get x coord by taking modulo with polynomialDegree + 1
+  const int x = dofIndex % (polynomialDegree + 1);
+  output.push_back(x);
+
+  //take off the x coordinate, divide by (polynomialDegree + 1) to determine
+  //how many blocks north we are
+  const int y = dofIndex / (polynomialDegree + 1);
+  output.push_back(y);
+
+  return output;
+}
+
 
 {% endif %}

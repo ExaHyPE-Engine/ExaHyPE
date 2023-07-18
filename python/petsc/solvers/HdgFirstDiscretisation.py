@@ -16,7 +16,7 @@ from petsc.actionsets.EnumerateCellsAndFaces    import EnumerateCellsAndFaces
 from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
-from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixOnCellsAndFaces
+from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixWithQuadratures
 
 from abc import abstractmethod
 
@@ -51,7 +51,8 @@ class HdgFirstDiscretisation(Solver):
                cell_dofs,
                face_dofs,
                min_h,
-               max_h):
+               max_h,
+               dimensions):
     """!
    
  Test comment (C)
@@ -64,6 +65,7 @@ class HdgFirstDiscretisation(Solver):
                                                   )
 
     self.polynomial_degree = polynomial_degree
+    self.dimensions        = dimensions
 
     self.quadrature_points, self.weights, self.poly_coeffs = \
       self.initGaussLobatto()
@@ -151,7 +153,7 @@ class HdgFirstDiscretisation(Solver):
   
   
   def add_to_assemble(self, observer):
-    # observer.add_action_set( AssemblePETSCMatrixOnCellsAndFaces(self) )
+    observer.add_action_set( AssemblePETSCMatrixWithQuadratures(self) )
     pass
   
 
@@ -261,3 +263,4 @@ class HdgFirstDiscretisation(Solver):
     points, weights = leggauss( self.polynomial_degree + 1 )
 
     return points, weights, coeffs
+    

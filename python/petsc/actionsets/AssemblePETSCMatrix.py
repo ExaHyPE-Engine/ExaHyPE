@@ -277,7 +277,8 @@ Define body of constructor
 
 '''
 
-we leave the class below in place. We can rewrite soon to fit our needs
+This class is somewhat deprecated. was put in place for demonstrating firedrake code, but we move
+away from this now.
 
 '''
 
@@ -546,17 +547,44 @@ Consult petsc.Project for details
 """
 
 
-class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
+class AssemblePETSCMatrixWithQuadratures(ActionSet):
   ## add templates
   
+  templateTouchCellFirstTime="""
+  /*
+  we need to create a matrix which we will pass to petsc.
+
+  SIDE NOTE - WE WILL HAVE (FOR NOW) THE SAME VALUES IN EACH CELL (WE DO THE EXACT SAME CALCULATION)
+  but we do it on each cell, rather than just reading off a value
+  */
+  tarch::la::Matrix<{{CELL_CARDINALITY}},{{CELL_CARDINALITY}},double> localMatrix;
+
+  /*
+  need a two-level loop - we follow the code in main.py (at time of writing, line 52) here:
+  https://bitbucket.org/em459/hybridisableaderdg/src/prototype-development/src/prototype/main.py
+  */
+  for (int i=0; i<{{CELL_CARDINALITY}}; i++){
+    //std::pair<int,int> polyCoordsI = repositories::convertDofIndexToXYCoordinate(i);
+    for (int j=0; j<{{CELL_CARDINALITY}}; j++){
+      //std::pair<int,int> polyCoordsJ = repositories::convertDofIndexToXYCoordinate(j);
+
+      //third level - loop over all the quad points and weights
+      int p = 0; int w = 0;
+      for (; p<repositories::quadWeights.size(); p++, w++){
+        const std::vector<double> localQuadPoint  = repositories::quadPoints[p];
+        const double              localQuadWeight = repositories::quadWeights[w];
+        localMatrix(i,j) += marker.h()[0] * marker.h()[1] * localQuadWeight * repositories::evalPoly( i, localQuadPoint ) * repositories::evalPoly( j, localQuadPoint );
+      }
+    }
+  }
+  """
 
   def __init__(self, solver):
-    super( AssemblePETSCMatrixOnCellsAndFaces, self ).__init__()
+    super( AssemblePETSCMatrixWithQuadratures, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
     self.d["CELL_CARDINALITY"]   = solver.number_of_cell_unknowns
-    self.d["FACE_CARDINALITY"]   = solver.number_of_face_unknowns
 
   def get_constructor_body(self):
     return f"""
@@ -566,14 +594,12 @@ class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
 
   def get_body_of_operation(self, operation_name):
     """!
-    for now, only touch face first time
+    for now, only touch cell first time
     """
     ## add touchcellfirsttime
-
-    ## add touch face first time
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.TemplateInitCell).render(**self.d)
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass 
     return result
 

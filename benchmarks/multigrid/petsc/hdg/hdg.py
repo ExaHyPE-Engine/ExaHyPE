@@ -50,6 +50,7 @@ solver = petsc.solvers.HdgFirstDiscretisation("HDG",
                                               faceDofs,
                                               args.meshsize,
                                               args.meshsize,
+                                              args.dimensions,
                                               )
 
 project.add_solver( solver )
