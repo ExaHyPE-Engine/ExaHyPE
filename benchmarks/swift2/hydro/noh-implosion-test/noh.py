@@ -108,6 +108,9 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Noh", executable="noh2D"
 )
 
+project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets
+project.initialisation_steps_task_graph_compiler = swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets
+
 
 # Initialise the SPH particle --------------------------------------------------
 # If multiple particle species are present, we can specify the parameters
@@ -142,6 +145,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=particles_per_cell,
     min_h=max_cell_size,
     max_h=max_cell_size,
+    use_optimised_coalesced_memory_access_kernels=True
 )
 
 
@@ -225,10 +229,13 @@ if args.mantissa_size > 0:
     particle.v_full.valid_mantissa_bits = args.mantissa_size
     particle.u_full.valid_mantissa_bits = args.mantissa_size
 
+particle.data.expose_all_attributes_in_header_file()
+
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
+particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
 
 if args.asserts:
     build_mode = peano4.output.CompileMode.Asserts

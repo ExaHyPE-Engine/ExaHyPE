@@ -59,8 +59,7 @@ class DataModel(object):
 // however are not subject of copyright, i.e. feel free to add your copyright in
 // here
 //
-#ifndef {INCLUDE_GUARD}
-#define {INCLUDE_GUARD}
+#pragma once 
 
 #include <string>
 
@@ -91,7 +90,6 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 
 }};
 
-#endif
   """
 
     _Header_Template_With_Data_Store = """
@@ -102,8 +100,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 // however are not subject of copyright, i.e. feel free to add your copyright in
 // here
 //
-#ifndef {INCLUDE_GUARD}
-#define {INCLUDE_GUARD}
+#pragma once
 
 #include <string>
 
@@ -136,7 +133,6 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
     DataStore _dataStore;
 }};
 
-#endif
   """
 
     def _get_constructor_arguments(self):
@@ -172,7 +168,6 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         writes the header file for your data model.
         """
         d = {}
-        d["INCLUDE_GUARD"] = dastgen2.get_include_guard(self._full_qualified_name)
         d["UNQUALIFIED_CLASS_NAME"] = dastgen2.get_unqualified_class_name(
             self._full_qualified_name
         )
@@ -201,8 +196,11 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
             for method in attribute.get_methods(
                 self._full_qualified_name, for_declaration=True
             ):
+                d["METHOD_DECLARATIONS"] += "    "
+                if attribute.expose_in_header_file:
+                    d["METHOD_DECLARATIONS"] += " inline "
                 d["METHOD_DECLARATIONS"] += (
-                    "    " + method[1] + "   " + method[0] + ";\n"
+                    method[1] + "   " + method[0] + ";\n"
                 )
             if attribute.ifdefs != []:
                 d["METHOD_DECLARATIONS"] += "#endif \n"
@@ -245,6 +243,10 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 output.write(self._Header_Template_With_Data_Store.format(**d))
             else:
                 output.write(self._Header_Template_Without_Data_Store.format(**d))
+                
+            self.__generate_accessors(output, False)
+            output.write("\n\n\n")
+
 
     def __generate_constructor_definition(self, output):
         """
@@ -342,28 +344,41 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 output.write("#endif \n")
         output.write("}\n\n\n")
 
-    def __generate_accessors(self, output):
-        """
-        generate getter/setter functions.
+    def __generate_accessors(self, 
+                             output,
+                             is_cpp_file
+                             ):
+        """!
+        
+        Generate getter/setter functions.
+        
+        Generate all the setters and getters and use get_methods() to 
+        construct them for the individual attributes.
+        
+        output: File
+        
+        is_cpp_file: Boolean
+        
         """
         for attribute in self._attributes:
-            if attribute.ifdefs != []:
-                output.write(dastgen2.construct_ifdef_string(attribute.ifdefs))
-            for method in attribute.get_methods(
-                self._full_qualified_name, for_declaration=False
-            ):
-                output.write(
-                    method[1]
-                    + "   "
-                    + self._full_qualified_name
-                    + "::"
-                    + method[0]
-                    + " {\n"
-                )
-                output.write(attribute.get_method_body(method[0]))
-                output.write("}\n\n\n")
-            if attribute.ifdefs != []:
-                output.write("#endif \n\n\n")
+            if attribute.expose_in_header_file != is_cpp_file:
+                if attribute.ifdefs != []:
+                    output.write(dastgen2.construct_ifdef_string(attribute.ifdefs))
+                for method in attribute.get_methods(
+                    self._full_qualified_name, for_declaration=False
+                ):
+                    output.write(
+                      method[1]
+                      + "   "
+                      + self._full_qualified_name
+                      + "::"
+                      + method[0]
+                      + " {\n"
+                    )
+                    output.write(attribute.get_method_body(method[0]))
+                    output.write("}\n\n\n")
+                if attribute.ifdefs != []:
+                    output.write("#endif \n\n\n")
 
     def write_implementation_file(self, full_qualified_filename):
         """!
@@ -397,8 +412,12 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
             self.__generate_toString_definition(output)
             output.write("\n\n\n")
 
-            self.__generate_accessors(output)
+            self.__generate_accessors(output, True)
             output.write("\n\n\n")
 
             for aspect in self._aspects:
                 output.write(aspect.get_implementation(self._full_qualified_name))
+
+    def expose_all_attributes_in_header_file(self):
+       for i in self._attributes:
+           i.expose_in_header_file = True

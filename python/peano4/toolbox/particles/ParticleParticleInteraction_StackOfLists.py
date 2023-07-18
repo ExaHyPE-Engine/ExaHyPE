@@ -148,34 +148,100 @@ for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
   std::advance( localParticlesIterator, localParticlesChunkSize );
 
   for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<localParticlesChunkSize; localParticleNumberInThisChunk++) {
-    if ( marker.isContained( localParticlesChunk[localParticleNumberInThisChunk].getX() ) {
+    if ( marker.isContained( localParticlesChunk[localParticleNumberInThisChunk].getX() )) {
     }
   }
 } 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-And if you want to iterate over the active particles within, you can do 
+Iterating over the active set follows the same pattern. Most codes will 
+have to couple local and active sets and hence use a kernel structure 
+similar to 
+
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-typename std::list<T*>::const_iterator activeParticlesIterator = activeParticles.begin();
-for (auto activeParticlesChunkSize: _numberOfActiveParticlesPerVertexAdded) {
-  T*  activeParticlesChunk = *activeParticlesIterator;
-  std::advance( activeParticlesIterator, activeParticlesChunkSize );
+typename std::list< typename ParticleContainer::value_type >::const_iterator localParticlesIterator  = particlesAssociatedWithLocalVertices.begin();
 
-  for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
-  
-  // access activeParticlesChunk[activeParticleNumberInThisChunk]
-  
+for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
+  typename ParticleContainer::value_type  localParticlesChunk = *localParticlesIterator;
+  std::advance( localParticlesIterator, localParticlesChunkSize );
+
+  typename std::list< typename ParticleContainer::value_type >::const_iterator activeParticlesIterator = activeParticles.begin();
+  for (auto activeParticlesChunkSize: numberOfActiveParticlesPerVertexAdded) {
+    typename ParticleContainer::value_type  activeParticlesChunk = *activeParticlesIterator;
+    std::advance( activeParticlesIterator, activeParticlesChunkSize );
+
+    computeInnerLoop(
+        marker,
+        localParticlesChunk,
+        localParticlesChunkSize,
+        activeParticlesChunk,
+        activeParticlesChunkSize
+    );
   }
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-There is one more interesting optimisation: When you do a nested loop over 
-active and local chunks, and if activeParticlesChunk and localParticlesChunk,
-then you know that the chunks that you currently run through are different. 
-So you can label them with a restrict keyword and allow for even more 
-aggressive vectorisation.
+This inner loop is where the magic happens, i.e. where we can exploit the
+fact that localParticlesChunk and activeParticlesChunk both point to coninuous
+memory regions. This means that computeInnerLoop is structurally simple:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+void computeHydroForceInnerLoop(
+    const peano4::datamanagement::CellMarker&  marker,
+    Particle*                                  particlesAssociatedWithLocalVertex, // das ist falsch
+    int                                        numberOfLocalParticles,
+    Particle*                                  activeParticles,
+    int                                        numberOfActiveParticles
+) {
+  for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<numberOfActiveParticles; activeParticleNumberInThisChunk++) {
+    for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<numberOfLocalParticles; localParticleNumberInThisChunk++) {
+      // read from activeParticles[activeParticleNumberInThisChunk]
+      // write to particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk]
+    }
+  }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+## Optimising coalesced compute kernels
+
+Compute kernels can be optimised quite aggressively, but fiddling out how they 
+can be optimised is tedious. I recommend to use MAQAO and Intel's compiler 
+optimisation feedback. Here are some lessons learned:
+
+- You cannot collapse the two for loops. That would lead to a scattered 
+  iteration space in memory and hence make any vectorisation impossible.
+- The active loop has to be the inner one. I do not understand why, but
+  Intel's icpx refuses to vectorise if the local loop is the inner one.
+- The compiler has to be able to inline. According to https://clang.llvm.org/docs/AttributeReference.html#always-inline-force-inline
+  this is something one should be able to control via the annotation
+  
+          [[clang::always_inline]]
+          
+  but this led to multiple compiler crashes (again with Intel). To some
+  degree this makes sense: The function has to be in the header! I played
+  around with ipo, but that did not resolve the fundamental issues.
+- You might have to recursively study all inlined methods and make the 
+  stuff they use inline as well. 
+- Typically, you have to embed the inner-most loop into a statement alike
+  ~~~~~~~~~~~~~~~~~~~~~~~
+    if (
+      marker.isContained(particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk].getX())
+      and
+      not particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
+    ) {
+      // read from activeParticles[activeParticleNumberInThisChunk]
+      // write to particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk]
+    }
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  
+The @ref page_peano_performance_optimisation "generic Peano optimisation" page
+provides some useful hints how to guide these optimisation through the
+compiler. It also makes sense to study swift2::kernels::computeHydroForce()
+which was one of the first routines that we optimised along these ideas.
 
 
     """
