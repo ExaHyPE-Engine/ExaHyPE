@@ -1,8 +1,5 @@
 #ifndef _applications_exahype2_swe_parser_AdjointParser_H_
 #define _applications_exahype2_swe_parser_AdjointParser_H_
-#include "../Constants.h"
-#include "NetCDFReader.hpp"
-#include "NetCDFHelper.hpp"
 
 namespace applications::exahype2::swe::parser {
   class AdjointParser;
@@ -10,42 +7,39 @@ namespace applications::exahype2::swe::parser {
 
 class applications::exahype2::swe::parser::AdjointParser {
   private:
-    double* adjoint_h_ = nullptr;
-    double* adjoint_hu_ = nullptr;
-    double* adjoint_hv_ = nullptr;
-    double* adjoint_b_ = nullptr;
-    double* adjoint_timestamps_ = nullptr;
+    double* adjoint_h_ = nullptr;           /* stores time-dependent h values of adjoint solution */
+    double* adjoint_hu_ = nullptr;          /* stores time-dependent hu values of adjoint solution */
+    double* adjoint_hv_ = nullptr;          /* stores time-dependent hv values of adjoint solution */
+    double* adjoint_b_ = nullptr;           /* stores time-independent bathymetry values of adjoint solution */
+    double* adjoint_timestamps_ = nullptr;  /* stores timestamps of adjoint solution */
 
-    size_t number_timestamps_ = 0;
+    size_t number_timestamps_ = 0;          /* number of timestamps */
 
-    size_t size_x_adjoint_ = 0;
-    size_t size_y_adjoint_ = 0;
+    size_t size_x_adjoint_ = 0;             /* number of cells in x dimension of adjoint solution */
+    size_t size_y_adjoint_ = 0;             /* number of cells in y dimension of adjoint solution */
 
-    double l_nX_ = -1;
-    double l_nY_ = -1;
+    double max_x_adjoint_ = -1;             /* highest x-coordinate in adjoint */
+    double max_y_adjoint_ = -1;             /* highest y-coordinate in adjoint */
+    double min_x_adjoint_ = 1;              /* lowest x-coordinate in adjoint */
+    double min_y_adjoint_ = 1;              /* lowest y-coordinate in adjoint */
 
-    double max_x_adjoint_ = -1;          /* highest x-coordinate in adjoint */
-    double max_y_adjoint_ = -1;          /* highest y-coordinate in adjoint */
-    double min_x_adjoint_ = 1;           /* lowest x-coordinate in adjoint */
-    double min_y_adjoint_ = 1;           /* lowest y-coordinate in adjoint */
+    double t_f_ = -1;                       /* end time for adjoint solution  */
+    double t_s_ = -1;                       /* start time for adjoint solution */
 
-    double t_f_ = -1;                /* end time for adjoint solution  */
-    double t_s_ = -1;                /* start time for adjoint solution */
-
-    size_t inner_product_start_index_ = 0;
-    double t_last_call_ = -1.0;
+    size_t inner_product_start_index_ = 0;  /* start index for inner product calculation. Same for all cells in a time step */
+    double t_last_call_ = -1.0;             /* timestamp of last call of max_inner_product() */
 
     /**
-     * @brief 
+     * @brief Interpolates spatial indices to fit adjoint solution and returns adjoint solution values at these indices 
      * 
-     * @param i_index 
-     * @param i_x 
-     * @param i_y 
-     * @param i_eta 
-     * @param i_hu 
-     * @param i_hv 
-     * @param i_b 
-     * @param interpolated_values 
+     * @param i_index index of timestamp of adjoint solution for which the inner product is to be calculated
+     * @param i_x coordinate of x-dimension of simulation which is being interpolated
+     * @param i_y coordinate of y-dimension of simulation which is being interpolated
+     * @param i_eta free surface of current cell (h + b)
+     * @param i_hu momentum in x-dimension of current cell
+     * @param i_hv momentum in y-dimension of current cell
+     * @param i_b bathymetry of current cell
+     * @param interpolated_values array to be filled with adjoint solution values in the order (h, hu, hv, b)
      */
     void interpolate_values(size_t i_index, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b, double *interpolated_values);
 
@@ -70,7 +64,12 @@ class applications::exahype2::swe::parser::AdjointParser {
      */
     void parse_adjoint_file(const char *adjoint_file_path);
 
-    void set_next_timestamp(double i_t);
+    /**
+     * @brief Call this once every time step to set start index for inner product calculation
+     * 
+     * @param i_t current time of forward simulation
+     */
+    void set_start_index(double i_t);
   
   public:
     AdjointParser(const char *adjoint_file_path);

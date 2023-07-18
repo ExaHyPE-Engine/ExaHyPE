@@ -1,12 +1,10 @@
 #include "AdjointParser.h"
 #include <iostream>
-#include <omp.h>
+#include "NetCDFReader.hpp"
+#include "NetCDFHelper.hpp"
 using namespace applications::exahype2::swe::parser::NetCDFHelper;
 
 applications::exahype2::swe::parser::AdjointParser::AdjointParser(const char *adjoint_file_path){
-
-    l_nX_ = DomainSize(0);
-    l_nY_ = DomainSize(1);
     this->parse_adjoint_file(adjoint_file_path);
 
 }
@@ -57,7 +55,7 @@ double applications::exahype2::swe::parser::AdjointParser::max_inner_product(dou
     if(i_t != t_last_call_)
     {
         t_last_call_ = i_t;
-        set_next_timestamp(i_t);
+        set_start_index(i_t);
     }
 
     double t_nm = inner_product_start_index_ > 0 ? adjoint_timestamps_[inner_product_start_index_-1] : 0.0;
@@ -84,7 +82,7 @@ double applications::exahype2::swe::parser::AdjointParser::max_inner_product(dou
     return max_inner_product;
 }
 
-void applications::exahype2::swe::parser::AdjointParser::set_next_timestamp(double i_t){
+void applications::exahype2::swe::parser::AdjointParser::set_start_index(double i_t){
     double t_nm = 0.0;
     for(size_t i = inner_product_start_index_; i < number_timestamps_; i++)
     {
