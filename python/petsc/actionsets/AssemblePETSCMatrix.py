@@ -563,38 +563,42 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
   need a two-level loop - we follow the code in main.py (at time of writing, line 52) here:
   https://bitbucket.org/em459/hybridisableaderdg/src/prototype-development/src/prototype/main.py
   */
-  for (int i=0; i<{{CELL_CARDINALITY}}; i++){
-    //std::pair<int,int> polyCoordsI = repositories::convertDofIndexToXYCoordinate(i);
-    for (int j=0; j<{{CELL_CARDINALITY}}; j++){
-      //std::pair<int,int> polyCoordsJ = repositories::convertDofIndexToXYCoordinate(j);
+  if (not marker.willBeRefined())
+  {
 
-      //third level - loop over all the quad points and weights
-      int p = 0; int w = 0;
-      for (; p<repositories::quadWeights.size(); p++, w++){
-        const std::vector<double> localQuadPoint  = repositories::quadPoints[p];
-        const double              localQuadWeight = repositories::quadWeights[w];
-        localMatrix(i,j) += marker.h()[0] * marker.h()[1] * localQuadWeight * repositories::evalPoly( i, localQuadPoint ) * repositories::evalPoly( j, localQuadPoint );
+    for (int i=0; i<{{CELL_CARDINALITY}}; i++){
+      //std::pair<int,int> polyCoordsI = repositories::convertDofIndexToXYCoordinate(i);
+      for (int j=0; j<{{CELL_CARDINALITY}}; j++){
+        //std::pair<int,int> polyCoordsJ = repositories::convertDofIndexToXYCoordinate(j);
+
+        //third level - loop over all the quad points and weights
+        int p = 0; int w = 0;
+        for (; p<repositories::quadWeights.size(); p++, w++){
+          const std::vector<double> localQuadPoint  = repositories::quadPoints[p];
+          const double              localQuadWeight = repositories::quadWeights[w];
+          localMatrix(i,j) += marker.h()[0] * marker.h()[1] * localQuadWeight * repositories::evalPoly( i, localQuadPoint ) * repositories::evalPoly( j, localQuadPoint );
+        }
       }
     }
+    //we can send to petsc now.
+
+    //get global index
+    std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}.getNumber() );
+    int globalIndex =  repositories::getGlobalCellIndex( localIndex );
+
+    //construct the list of row indices we want to use:
+    std::vector<int> rowIndices({{CELL_CARDINALITY}});
+    //fill this vector up, starting with our global index
+    std::iota(rowIndices.begin(), rowIndices.end(), globalIndex);
+
+    //repeat for the colIndices
+    std::vector<int> colIndices({{CELL_CARDINALITY}});
+    //fill this vector up, starting with our global index
+    std::iota(colIndices.begin(), colIndices.end(), globalIndex);
+
+    //send to petsc
+    repositories::instanceOfPetsc.insertLocalMatrix( rowIndices, colIndices, localMatrix );
   }
-  //we can send to petsc now.
-
-  //get global index
-  std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}.getNumber() );
-  int globalIndex =  repositories::getGlobalCellIndex( localIndex );
-
-  //construct the list of row indices we want to use:
-  std::vector<int> rowIndices({{CELL_CARDINALITY}});
-  //fill this vector up, starting with our global index
-  std::iota(rowIndices.begin(), rowIndices.end(), globalIndex);
-
-  //repeat for the colIndices
-  std::vector<int> colIndices({{CELL_CARDINALITY}});
-  //fill this vector up, starting with our global index
-  std::iota(colIndices.begin(), colIndices.end(), globalIndex);
-
-  //send to petsc
-  repositories::instanceOfPetsc.insertLocalMatrix( rowIndices, colIndices, localMatrix );
   """
 
   def __init__(self, solver):
