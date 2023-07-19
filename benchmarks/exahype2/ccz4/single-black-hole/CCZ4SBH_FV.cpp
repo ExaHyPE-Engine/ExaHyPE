@@ -55,7 +55,7 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAllFaceConnectedCellsOverlapping
   }
 }
 
-bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAdjacentCellsOverlappingWithBHImpactArea(
+bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areBothAdjacentCellsOverlappingWithBHImpactArea(
   const peano4::datamanagement::CellMarker& marker, int faceNumber
 ) {
   if (isCellOverlappingWithBHImpactArea(marker)) {
@@ -68,7 +68,7 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAdjacentCellsOverlappingWithBHIm
   }
 }
 
-bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAdjacentCellsOverlappingWithBHImpactArea(
+bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areBothAdjacentCellsOverlappingWithBHImpactArea(
   const peano4::datamanagement::FaceMarker& marker
 ) {
   const int normal = marker.getSelectedFaceNumber() % Dimensions;
@@ -76,11 +76,26 @@ bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAdjacentCellsOverlappingWithBHIm
   tarch::la::Vector<Dimensions, double> leftCellCentre  = marker.x();
   tarch::la::Vector<Dimensions, double> rightCellCentre = marker.x();
 
-  leftCellCentre(normal) -= 0.5 * marker.h()(normal);
-  rightCellCentre(normal) -= 0.5 * marker.h()(normal);
+  leftCellCentre(normal)  -= 0.5 * marker.h()(normal);
+  rightCellCentre(normal) += 0.5 * marker.h()(normal);
 
   return isCellOverlappingWithBHImpactArea(leftCellCentre, marker.h())
-         and isCellOverlappingWithBHImpactArea(rightCellCentre, marker.h());
+     and isCellOverlappingWithBHImpactArea(rightCellCentre, marker.h());
+}
+
+bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::isOneAdjacentCellOverlappingWithBHImpactArea(
+  const peano4::datamanagement::FaceMarker& marker
+) {
+  const int normal = marker.getSelectedFaceNumber() % Dimensions;
+
+  tarch::la::Vector<Dimensions, double> leftCellCentre  = marker.x();
+  tarch::la::Vector<Dimensions, double> rightCellCentre = marker.x();
+
+  leftCellCentre(normal)  -= 0.5 * marker.h()(normal);
+  rightCellCentre(normal) += 0.5 * marker.h()(normal);
+
+  return isCellOverlappingWithBHImpactArea(leftCellCentre, marker.h())
+      or isCellOverlappingWithBHImpactArea(rightCellCentre, marker.h());
 }
 
 bool benchmarks::exahype2::ccz4::CCZ4SBH_FV::isCellOverlappingWithBHImpactArea(

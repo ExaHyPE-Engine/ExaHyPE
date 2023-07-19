@@ -26,8 +26,8 @@ class ScalarJacobiWithRediscretisation(ActionSet):
     result.data.add_attribute(dastgen2.attributes.Double("OldAverage") )
     result.data.add_attribute(dastgen2.attributes.Double("NewAverage") )
 
-    result.generator.store_persistent_condition   = "true"
-    result.generator.load_persistent_condition    = "true"
+    result.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+        "true", "true", "true" )
 
     result.generator.send_condition               = "true"
     result.generator.receive_and_merge_condition  = "true"

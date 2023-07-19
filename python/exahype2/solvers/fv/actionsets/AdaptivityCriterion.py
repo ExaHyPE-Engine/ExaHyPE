@@ -67,7 +67,11 @@ class AdaptivityCriterion(AbstractFVActionSet):
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
      
-    if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH ) {
+    if (
+      refinementCriterion==::exahype2::RefinementCommand::Refine 
+      and 
+      tarch::la::smaller( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
+    ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
     else if (refinementCriterion==::exahype2::RefinementCommand::Erase ) {
@@ -91,7 +95,11 @@ class AdaptivityCriterion(AbstractFVActionSet):
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
      
-    if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH ) {
+    if (
+      refinementCriterion==::exahype2::RefinementCommand::Refine 
+      and 
+      tarch::la::smaller( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
+    ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
     else if (refinementCriterion==::exahype2::RefinementCommand::Erase and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {

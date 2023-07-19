@@ -109,7 +109,9 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   #ifdef UseSmartMPI
   , smartmpi::Task(_enclaveTaskTypeId)
   #endif
-{}
+{
+  setPriority( {{ENCLAVE_TASK_PRIORITY}} );
+}
 
 
 #ifdef UseSmartMPI

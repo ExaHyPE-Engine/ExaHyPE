@@ -48,8 +48,7 @@ class PatchToDoubleArray():
     self.merge_method_definition     = ""
     self.send_condition              = "true"
     self.receive_and_merge_condition = "true"
-    self.store_persistent_condition  = "true"
-    self.load_persistent_condition   = "true"
+    self.load_store_compute_flag     = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
     self.includes                    = ""
     self.float_type                  = FloatTypes(float_type)
 
@@ -58,8 +57,7 @@ class PatchToDoubleArray():
     result =  """Map to double array
   - send condition:          """ + self.send_condition + """
   - receive/merge condition: """ + self.receive_and_merge_condition + """
-  - load condition:          """ + self.load_persistent_condition + """
-  - store condition:         """ + self.store_persistent_condition + """
+  - load/store/compute flag: """ + self.load_store_compute_flag + """
   - merge criterion:         """
   
     if self.merge_method_definition!="":
@@ -99,8 +97,7 @@ class PatchToDoubleArray():
         "INCLUDES":                    self.includes,
         "DATA_ASSOCIATION":            int(self.data.association),
         "MERGE_METHOD_DEFINITION":     self.merge_method_definition,
-        "LOAD_PERSISTENT_CONDITION":   self.load_persistent_condition,
-        "STORE_PERSISTENT_CONDITION":  self.store_persistent_condition,
+        "LOAD_STORE_COMPUTE_FLAG":     self.load_store_compute_flag,
         "FLOAT_TYPE":                  self.float_type.cpp,
         "MPI_FLOAT_TYPE":              self.float_type.mpi,
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": self.data.additional_load_and_store_arguments

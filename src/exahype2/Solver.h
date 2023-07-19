@@ -49,6 +49,8 @@ class exahype2::Solver {
     virtual void startGridConstructionStep() = 0;
     virtual void finishGridConstructionStep() = 0;
 
+    virtual void suspendSolversForOneGridSweep() = 0;
+
     virtual void startGridInitialisationStep() = 0;
     virtual void finishGridInitialisationStep() = 0;
 
