@@ -6,8 +6,8 @@ import jinja2
 import dastgen2
 
 
-class MPI( dastgen2.aspects.MPI ):
-  """ 
+class MPIAndStorageAspect( dastgen2.aspects.MPI ):
+  """!
   
   Represents Peano's MPI and storage aspect injected into a DaStGen model. 
   
@@ -27,7 +27,8 @@ class MPI( dastgen2.aspects.MPI ):
   The aspect also determines how and
   if we store data or not in Peano. Therefore, it covers more than 
   solely MPI. Use the store and load attribute to control these 
-  predicates.
+  predicates. Please study @ref page_peano_localisation for further
+  documentation.
     
   
   ## Usage
@@ -46,14 +47,13 @@ class MPI( dastgen2.aspects.MPI ):
   
   """
   def __init__(self, dof_association_):
-    super( MPI, self ).__init__()
-    self.dof_association      = dof_association_
-    self.merge_implementation = ""
-    self.receive_predicate    = "true"
-    self.send_predicate       = "true"
-    self.load_predicate       = "true"
-    self.store_predicate      = "true"
-    self.includes             = ""
+    super( MPIAndStorageAspect, self ).__init__()
+    self.dof_association          = dof_association_
+    self.merge_implementation     = ""
+    self.receive_predicate        = "true"
+    self.send_predicate           = "true"
+    self.load_store_compute_flag  = "::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream"
+    self.includes                 = ""
     pass
 
 
@@ -74,8 +74,7 @@ class MPI( dastgen2.aspects.MPI ):
     else:
       result += ",empty-merge-impl"
       
-    result += ",load="     + self.load_predicate
-    result += ",store="    + self.store_predicate
+    result += ",load/store/compute flag="     + self.load_store_compute_flag
     result += ",compute="  + self.compute
     result += ",send="     + self.send_predicate
     result += ",receive="  + self.receive_predicate
@@ -85,10 +84,11 @@ class MPI( dastgen2.aspects.MPI ):
 
 
   def get_include(self):
-    result = super(MPI,self).get_include() + """
+    result = super(MPIAndStorageAspect,self).get_include() + """
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
 #include "peano4/utils/Globals.h"
 #include "peano4/grid/TraversalObserver.h"
 """
@@ -106,8 +106,17 @@ class MPI( dastgen2.aspects.MPI ):
   def get_method_declarations(self,full_qualified_name):
     d = {
       "full_qualified_name":              full_qualified_name,
+      "name":                             full_qualified_name.split( "::" )[-1],
     }    
-    result = super(MPI,self).get_method_declarations(full_qualified_name) +  """
+    result = super(MPIAndStorageAspect,self).get_method_declarations(full_qualified_name) +  """
+
+    enum ObjectConstruction {
+      NoData
+    };
+
+    {{name}}( ObjectConstruction ):
+        {{name}}() {}
+    
 #ifdef Parallel
     static void sendAndPollDanglingMessages(const {{full_qualified_name}}& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages({{full_qualified_name}}& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
@@ -120,8 +129,7 @@ class MPI( dastgen2.aspects.MPI ):
     
     bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) const;
     bool send(const peano4::datamanagement::VertexMarker& marker) const;
-    static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
-    bool storePersistently(const peano4::datamanagement::VertexMarker& marker) const;
+    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::VertexMarker& marker);
 """ 
     elif self.dof_association==DoFAssociation.Face:
       result += """
@@ -129,8 +137,7 @@ class MPI( dastgen2.aspects.MPI ):
 
     bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) const;
     bool send(const peano4::datamanagement::FaceMarker& marker) const;
-    static bool loadPersistently(const peano4::datamanagement::FaceMarker& marker);
-    bool storePersistently(const peano4::datamanagement::FaceMarker& marker) const;
+    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::FaceMarker& marker);
 """ 
     elif self.dof_association==DoFAssociation.Cell:
       result += """
@@ -138,8 +145,7 @@ class MPI( dastgen2.aspects.MPI ):
 
     bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker) const;
     bool send(const peano4::datamanagement::CellMarker& marker) const;
-    static bool loadPersistently(const peano4::datamanagement::CellMarker& marker);
-    bool storePersistently(const peano4::datamanagement::CellMarker& marker) const;
+    static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::CellMarker& marker);
 """ 
       pass
     elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:
@@ -156,12 +162,11 @@ class MPI( dastgen2.aspects.MPI ):
       "merge_implementation":  self.merge_implementation,
       "receive_predicate":     self.receive_predicate,
       "send_predicate":        self.send_predicate,
-      "load_predicate":        self.load_predicate,
-      "store_predicate":       self.store_predicate,
+      "load_store_compute_flag":       self.load_store_compute_flag,
     }    
         
       
-    result = super(MPI,self).get_implementation(full_qualified_name) + """
+    result = super(MPIAndStorageAspect,self).get_implementation(full_qualified_name) + """
 #ifdef Parallel
 void {{full_qualified_name}}::sendAndPollDanglingMessages(const {{full_qualified_name}}& message, int destination, int tag, MPI_Comm communicator ) {
   {{full_qualified_name}}::send(
@@ -222,19 +227,11 @@ bool {{full_qualified_name}}::send(
 }
 
 
-bool {{full_qualified_name}}::loadPersistently( 
+::peano4::grid::LoadStoreComputeFlag {{full_qualified_name}}::loadStoreComputeFlag( 
   const peano4::datamanagement::VertexMarker& marker 
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
 ) {
-  return {{load_predicate}};
-}
-
-
-bool {{full_qualified_name}}::storePersistently( 
-  const peano4::datamanagement::VertexMarker& marker 
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) const {
-  return {{store_predicate}};
+  return {{load_store_compute_flag}};
 }
 """ 
     elif self.dof_association==DoFAssociation.Face:
@@ -260,19 +257,11 @@ bool {{full_qualified_name}}::send(
 }
 
 
-bool {{full_qualified_name}}::loadPersistently( 
+::peano4::grid::LoadStoreComputeFlag {{full_qualified_name}}::loadStoreComputeFlag( 
   const peano4::datamanagement::FaceMarker& marker 
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
 ) {
-  return {{load_predicate}};
-}
-
-
-bool {{full_qualified_name}}::storePersistently( 
-  const peano4::datamanagement::FaceMarker& marker 
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) const {
-  return {{store_predicate}};
+  return {{load_store_compute_flag}};
 }
 """ 
     elif self.dof_association==DoFAssociation.Cell:
@@ -298,19 +287,11 @@ bool {{full_qualified_name}}::send(
 }
 
 
-bool {{full_qualified_name}}::storePersistently( 
-  const peano4::datamanagement::CellMarker& marker 
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) const {
-  return {{store_predicate}};
-}
-
-
-bool {{full_qualified_name}}::loadPersistently( 
+::peano4::grid::LoadStoreComputeFlag {{full_qualified_name}}::loadStoreComputeFlag( 
   const peano4::datamanagement::CellMarker& marker 
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
 ) {
-  return {{load_predicate}};
+  return {{load_store_compute_flag}};
 }
 """      
     elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:
