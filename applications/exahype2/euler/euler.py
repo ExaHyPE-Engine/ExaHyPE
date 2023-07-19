@@ -233,7 +233,7 @@ if not os.path.exists(postprocessing_dir):
 if not os.path.exists(postprocessing_dir + "/" + solution_dir):
     os.makedirs(postprocessing_dir + "/" + solution_dir)
 
-output_patch_file = solution_dir + "/solution-EulerSolver''' + str(args.scenario) + str(args.solver) + '''.peano-patch-file"
+output_patch_file = solution_dir + "/solution-''' + str(solver_name) + '''.peano-patch-file"
 if os.path.isfile(output_patch_file):
     subprocess.call([
         "python3", "../../../python/peano4/visualisation/render.py",
