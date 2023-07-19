@@ -59,7 +59,13 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   {{FLOAT_TYPE}}                                 value[{{CARDINALITY_3D}}];
   #endif
   
+  enum ObjectConstruction {
+    NoData
+  };
+
   {{CLASSNAME}}();
+  {{CLASSNAME}}( ObjectConstruction ):
+    {{CLASSNAME}}() {}
   {{CLASSNAME}}(const {{CLASSNAME}}& other);
   {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other);
 
