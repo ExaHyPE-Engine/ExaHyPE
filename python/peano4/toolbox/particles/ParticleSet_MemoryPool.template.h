@@ -7,8 +7,7 @@
 #pragma once
 
 
-#include <vector>
-
+#include <list>
 
 #include "tarch/logging/Log.h"
 #include "tarch/la/Vector.h"
@@ -19,6 +18,7 @@
 #include "peano4/grid/TraversalObserver.h"
 
 #include "toolbox/particles/ParticleSet.h"
+#include "toolbox/particles/memorypool/VertexWiseContinuousMemoryPool.h"
 
 
 {% for item in NAMESPACE -%}
@@ -47,16 +47,30 @@
                        {
     public:
       typedef toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >  Base;
-      typedef std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >                       Container;
+      typedef {{MEMORY_POOL_TYPE}}< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >          MemoryPool;
+      /**
+       * This is the container as it looks like from outside.
+       * Internally, we use instances of MemoryPool to administer
+       * the data.
+       */
+      typedef MemoryPool::Container          Container;
 
       /**
        * Expose C++ standard interface
        */
-      typedef Container::value_type      value_type;
-      typedef Container::iterator        iterator;
-      typedef Container::const_iterator  const_iterator;
+      typedef typename Container::value_type      value_type;
+      typedef typename Container::iterator        iterator;
+      typedef typename Container::const_iterator  const_iterator;
 
       {{CLASSNAME}}() = default;
+
+
+      enum ObjectConstruction {
+        NoData
+      };
+
+      {{CLASSNAME}}( ObjectConstruction ):
+        {{CLASSNAME}}() {}
 
       /**
        * Shallow copy constructor
@@ -83,8 +97,7 @@
 
       static bool send(const peano4::datamanagement::VertexMarker& marker);
       static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
-      static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
-      static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
+      static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(const peano4::datamanagement::VertexMarker& marker);
 
       /**
        * Deep clone
@@ -113,7 +126,7 @@
       /**
        * Mark whole particle set as set of particles which can't be lifted
        *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        *
        * The operation runs over all hosted particles and invokes
@@ -126,20 +139,25 @@
        *
        * Plain delegate to superclass clear(), i.e. this routine clears a set
        * of pointers, but it does not delete the actual particles. If you want
-       * that behaviour, you have to call deleteParticles(). I merely introduce
-       * this wrapper to be able to add this comment on the shallow vs deep
-       * copy/clear mechanism.
+       * that behaviour, you have to call deleteParticles().
        *
-       * There's no need to redefine this one. I just wanted to highlight
-       * that it is a shallow copy, i.e. to add a comment, and so I
-       * "overwrote" it.
+       * As it is a shallow clear, we may assume that another stack holds a
+       * copy to "our" particles. What can now happen is the following: A mesh
+       * traversal consolidates all data structures, i.e. invokes gather() on
+       * its vertices. At the end, these gathered vertices are also pushed onto
+       * to parallel data exchange stacks. Here, we employ the default copy
+       * constructor/assignment operator. That means, the boundary stack now
+       * "thinks" it holds a continuous piece of memory. Actually, it does so,
+       * but it does not own this memory. Therefore, the clear() clears indeed
+       * the list of pointers, and it clears the container, but it does not
+       * free the underlying memory.
        */
       void clear();
 
       /**
        * Inform set that particle cannot be lifted on its current tree
        *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        */
       Container::iterator particleCanNotBeLiftedLocally( const Container::iterator&   particle );
@@ -147,7 +165,7 @@
       /**
        * This is a deep delete
        *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        */
       void deleteParticles();
@@ -159,7 +177,7 @@
        * you are ever allowed to delete a particle. That has to be done through
        * the corresponding deleteParticle() operation.
        *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        */
       Container::iterator begin();
@@ -171,12 +189,16 @@
       /**
        * Add one particle
        *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
+       *
+       * This routine does not copy the particle. It adds the references
+       * (pointer) to the particle only. Notably, this routine does not
+       * give the set exclusive ownership of the particle.
        *
        * Is internally mapped onto a push_back.
        */
-      void add(DoFType* particle);
+      void addParticle(DoFType* particle);
 
       /**
        * Add set of particles
@@ -184,34 +206,47 @@
        * This is a shallow addition, i.e. I attach these new pointers. The
        * particles themselves are not copied.
        *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        */
-      void add(const ParticleList& particleSet);
+      void addParticles(const ParticleList& particleSet);
+
+      /**
+       * Some simple validation
+       *
+       * I run some simple validations such as: does every particle have a
+       * valid parallel state. This might result in the detection of memory
+       * garbage. The routine is typically used within assertions.
+       */
+      bool isValid() const;
 
       /**
        * Moves particles from one particle set to the other
        *
        * This is used by the multiscale algorithm
        */
-      void move({{CLASSNAME}}& sourceParticleSet);
+      void grabParticles({{CLASSNAME}}& sourceParticleSet);
 
       /**
        * Move particle from one container to the other one
        *
+       * I need a copy of the particle, as I might have to scatter
+       * sourceParticleSet and then redirect particle to an entry within a
+       * scattered set.
+       *
        * @return Iterator within sourceParticleSet which is returned after
        *   erasing it from this set.
        */
-      Container::iterator move(
-        const Container::iterator&         particle,
-        {{CLASSNAME}}&                     sourceParticleSet
+      Container::iterator grabParticle(
+        Container::iterator         particle,
+        {{CLASSNAME}}&              sourceParticleSet
       );
 
       /**
        * Delete a particle
        *
        * Should be used, for example, if a particle has left the local domain.
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" for
+       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        * 
        * @return an iterator to the particle. This iterator is robust, i.e. even 
@@ -219,12 +254,28 @@
        *   however not efficient, i.e. it might point to begin() and any outer
        *   loop hence might restart to run over all particles again. 
        */
-      Container::iterator deleteParticle( const Container::iterator&   particle );
+      Container::iterator deleteParticle( Container::iterator  particle );
 
+      /**
+       * Gather particles
+       *
+       * This routine consolidates all the associated particles into one
+       * chunk. This is one of the two routines that we offer compared to a
+       * realisation which scatters particles over the heap.
+       */
+      void gather();
+
+      /**
+       * Are particles gathered atm
+       *
+       * Just a query. This is one of the two routines that we offer compared to a
+       * realisation which scatters particles over the heap.
+       */
+      bool isGathered() const;
     private:
       static tarch::logging::Log _log;
 
-      Container  _container;
+      MemoryPool  _memoryPool;
 };
 
 {% for item in NAMESPACE -%}

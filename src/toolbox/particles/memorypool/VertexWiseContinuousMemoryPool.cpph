@@ -1,0 +1,103 @@
+#include "VertexWiseContinuousMemoryPool.h"
+#include "tarch/accelerator/accelerator.h"
+
+
+template <class T>
+tarch::logging::Log  toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::_log( "toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>" );
+
+
+template <class T>
+toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::VertexWiseContinuousMemoryPool():
+  _gatheredDataPointer(nullptr) {
+}
+
+
+template <class T>
+void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::scatter() {
+  assertion( not container.empty() or _gatheredDataPointer==nullptr );
+  if (_gatheredDataPointer!=nullptr) {
+    logDebug( "scatter()", "scatter " << container.size() << " element(s)" );
+    const int oldSize = container.size();
+    container.clear();
+    for (int i=0; i<oldSize; i++) {
+      container.push_back( new T( _gatheredDataPointer[i]) );
+    }
+    tarch::freeMemory( _gatheredDataPointer, tarch::MemoryLocation::Heap );
+    _gatheredDataPointer = nullptr;
+  }
+}
+
+
+template <class T>
+void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::clearAndReset() {
+  container.clear();
+  _gatheredDataPointer = nullptr;
+}
+
+
+template <class T>
+toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::Container::iterator
+toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::scatterAndUpdateIterator( const Container::iterator&  p ) {
+  assertion( not container.empty() or _gatheredDataPointer==nullptr );
+  if (_gatheredDataPointer==nullptr) {
+    return p;
+  }
+  else {
+    logDebug( "scatterAndUpdateIterator()", "scatter " << container.size() << " element(s)" );
+
+    Container newContainer;
+    typename Container::iterator result;
+
+    for (auto oldContainerIterator: container) {
+      newContainer.push_back( new T(*oldContainerIterator) );
+      if (oldContainerIterator==*p) {
+        result = newContainer.end();
+        result--;
+      }
+    }
+
+    container.clear();
+    container.splice( container.begin(), newContainer );
+    tarch::freeMemory( _gatheredDataPointer, tarch::MemoryLocation::Heap );
+    _gatheredDataPointer = nullptr;
+
+    return result;
+  }
+}
+
+
+template <class T>
+void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::gather() {
+  assertion( not container.empty() or _gatheredDataPointer==nullptr );
+  if (_gatheredDataPointer==nullptr and not container.empty()) {
+    logDebug( "gather()", "gather " << container.size() << " element(s)" );
+    _gatheredDataPointer = tarch::allocateMemory<T>( container.size(), tarch::MemoryLocation::Heap );
+    int entry = 0;
+    for (auto& p: container) {
+      _gatheredDataPointer[entry] = *p;
+      delete p;
+      p = _gatheredDataPointer + entry;
+      entry++;
+    }
+  }
+}
+
+
+template <class T>
+bool toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::isGathered() const {
+  return _gatheredDataPointer!=nullptr;
+}
+
+
+template <class T>
+void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::replace( Container::iterator p, T* newCopy ) {
+  assertion( not container.empty() or _gatheredDataPointer==nullptr );
+  if ( isGathered() ) {
+    (**p) = *newCopy;
+    delete newCopy;
+  }
+  else {
+    container.erase(p);
+    container.push_back(newCopy);
+  }
+}

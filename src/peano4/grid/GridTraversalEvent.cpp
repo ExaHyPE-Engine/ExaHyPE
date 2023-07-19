@@ -7,12 +7,13 @@
 
 
 
-peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing){
+peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoPowerD>  __isParentVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing){
 setX( __x);
 setH( __h);
 setHasBeenRefined( __hasBeenRefined);
 setWillBeRefined( __willBeRefined);
 setIsVertexLocal( __isVertexLocal);
+setIsParentVertexLocal( __isParentVertexLocal);
 setIsFaceLocal( __isFaceLocal);
 setIsCellLocal( __isCellLocal);
 setIsParentCellLocal( __isParentCellLocal);
@@ -36,6 +37,7 @@ peano4::grid::GridTraversalEvent::GridTraversalEvent( const GridTraversalEvent& 
   setHasBeenRefined( copy.getHasBeenRefined() );
   setWillBeRefined( copy.getWillBeRefined() );
   setIsVertexLocal( copy.getIsVertexLocal() );
+  setIsParentVertexLocal( copy.getIsParentVertexLocal() );
   setIsFaceLocal( copy.getIsFaceLocal() );
   setIsCellLocal( copy.getIsCellLocal() );
   setIsParentCellLocal( copy.getIsParentCellLocal() );
@@ -67,6 +69,8 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << "willBeRefined=" << getWillBeRefined();
   out << ","; 
   out << "isVertexLocal=" << getIsVertexLocal();
+  out << ","; 
+  out << "isParentVertexLocal=" << getIsParentVertexLocal();
   out << ","; 
   out << "isFaceLocal=" << getIsFaceLocal();
   out << ","; 
@@ -241,6 +245,35 @@ void   peano4::grid::GridTraversalEvent::setIsVertexLocal(int index, bool value)
 
 void   peano4::grid::GridTraversalEvent::flipIsVertexLocal(int index) {
   _isVertexLocal[index] = not   _isVertexLocal[index];
+}
+
+
+std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getIsParentVertexLocal() const {
+
+  std::bitset<TwoPowerD> result;
+  for (int i=0; i<TwoPowerD; i++) result[i] =   _isParentVertexLocal[i];
+  return result;
+}
+
+
+void   peano4::grid::GridTraversalEvent::setIsParentVertexLocal(const std::bitset<TwoPowerD>&  value) {
+
+  for (int i=0; i<TwoPowerD; i++)   _isParentVertexLocal[i]=value[i];
+}
+
+
+bool   peano4::grid::GridTraversalEvent::getIsParentVertexLocal(int index) const {
+  return   _isParentVertexLocal[index];
+}
+
+
+void   peano4::grid::GridTraversalEvent::setIsParentVertexLocal(int index, bool value) {
+  _isParentVertexLocal[index] = value;
+}
+
+
+void   peano4::grid::GridTraversalEvent::flipIsParentVertexLocal(int index) {
+  _isParentVertexLocal[index] = not   _isParentVertexLocal[index];
 }
 
 
@@ -494,41 +527,6 @@ void   peano4::grid::GridTraversalEvent::setInvokingSpacetreeIsNotInvolvedInAnyD
 
 
 #ifdef Parallel
-void peano4::grid::GridTraversalEvent::sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag, MPI_Comm communicator ) {
-  peano4::grid::GridTraversalEvent::send(
-    message, destination, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridTraversalEvent", "sendAndPollDanglingMessages()",destination, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridTraversalEvent", "sendAndPollDanglingMessages()", destination, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-
-
-void peano4::grid::GridTraversalEvent::receiveAndPollDanglingMessages(peano4::grid::GridTraversalEvent& message, int source, int tag, MPI_Comm communicator ) {
-  peano4::grid::GridTraversalEvent::receive(
-    message, source, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridTraversalEvent", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridTraversalEvent", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-#endif
-    
-#ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype peano4::grid::GridTraversalEvent::Datatype;
@@ -593,6 +591,7 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   NumberOfAttributes++;
   NumberOfAttributes++;
   NumberOfAttributes++;
+  NumberOfAttributes++;
 
   MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
   int*          blocklen = new int[NumberOfAttributes]; 
@@ -604,6 +603,9 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   counter++;
   subtypes[counter] = MPI_DOUBLE;
   blocklen[counter] = Dimensions;
+  counter++;
+  subtypes[counter] = MPI_UNSIGNED_LONG;
+  blocklen[counter] = 1;
   counter++;
   subtypes[counter] = MPI_UNSIGNED_LONG;
   blocklen[counter] = 1;
@@ -669,6 +671,8 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   MPI_Get_address( &(instances[0]._willBeRefined), &disp[counter] );
   counter++;
   MPI_Get_address( &(instances[0]._isVertexLocal), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._isParentVertexLocal), &disp[counter] );
   counter++;
   MPI_Get_address( &(instances[0]._isFaceLocal), &disp[counter] );
   counter++;
@@ -799,3 +803,39 @@ void peano4::grid::GridTraversalEvent::receive(
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
 #endif
+
+#ifdef Parallel
+void peano4::grid::GridTraversalEvent::sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag, MPI_Comm communicator ) {
+  peano4::grid::GridTraversalEvent::send(
+    message, destination, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridTraversalEvent", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridTraversalEvent", "sendAndPollDanglingMessages()", destination, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+
+
+void peano4::grid::GridTraversalEvent::receiveAndPollDanglingMessages(peano4::grid::GridTraversalEvent& message, int source, int tag, MPI_Comm communicator ) {
+  peano4::grid::GridTraversalEvent::receive(
+    message, source, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridTraversalEvent", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridTraversalEvent", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+#endif
+    

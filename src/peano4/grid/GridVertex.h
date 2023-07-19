@@ -20,6 +20,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
 #include "peano4/utils/Globals.h"
 #include "peano4/grid/TraversalObserver.h"
 
@@ -136,6 +137,14 @@ struct peano4::grid::GridVertex {
     static void receive(   peano4::grid::GridVertex& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
+
+    enum ObjectConstruction {
+      NoData
+    };
+
+    GridVertex( ObjectConstruction ):
+        GridVertex() {}
+    
 #ifdef Parallel
     static void sendAndPollDanglingMessages(const peano4::grid::GridVertex& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages(peano4::grid::GridVertex& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );

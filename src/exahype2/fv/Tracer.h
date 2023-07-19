@@ -218,8 +218,17 @@ namespace exahype2 {
 
       /**
        * Similar to mapParticleOntoVoxel() but this time, we always take the
-       * biased voxel to the left, i.e. we always use the floor and look
-       * left.
+       * biased voxel to the left. Let a 1d patch be divided into voxels of
+       * size h. Up to 1.5h, the operation returns 0. From 1.5h-2.5h, the
+       * function yields a 1. So we always are biased towards the left
+       * neighbour, which is useful whenever we use the outcome as input for a
+       * linear interpolation. In this context, the result is also bounded by
+       * 0 to the bottom (which is a natural choice), but no component of the
+       * result vector exceeds voxelsPerAxis-2. You can always increment an
+       * entry safely by a one.
+       *
+       * @see projectValueOntoParticle_piecewiseLinear() for an example where
+       *   this helper routine is used
        */
       tarch::la::Vector<Dimensions, int> mapBiasedParticleOntoVoxel(
         const peano4::datamanagement::CellMarker&    marker,
@@ -249,13 +258,18 @@ namespace exahype2 {
         int                                          unknown
       );
 
+      /**
+       * @see mapBiasedParticleOntoVoxel() which provides the index
+       *   calculations, i.e. the code to identify the voxels which
+       *   affect the particle of interest.
+       */
       double projectValueOntoParticle_piecewiseLinear(
-        const peano4::datamanagement::CellMarker& marker,
-        int                                       voxelsPerAxis,
-        int                                       unknownsPerVoxel,
-        const double* __restrict__ Q,
-        const tarch::la::Vector<Dimensions, double>& particleX,
-        int                                          unknown
+        const peano4::datamanagement::CellMarker&     marker,
+        int                                           voxelsPerAxis,
+        int                                           unknownsPerVoxel,
+        const double* __restrict__                    Q,
+        const tarch::la::Vector<Dimensions, double>&  particleX,
+        int                                           unknown
       );
 
       /**

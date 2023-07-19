@@ -65,7 +65,9 @@ public:
    * Each face has to adjacent octants. We check if isCellOverlappingWithBHImpactArea()
    * holds for both of them. Delete logic to isCellOverlappingWithBHImpactArea().
    */
-  static bool areAdjacentCellsOverlappingWithBHImpactArea(const peano4::datamanagement::FaceMarker& marker);
+  static bool areBothAdjacentCellsOverlappingWithBHImpactArea(const peano4::datamanagement::FaceMarker& marker);
+
+  static bool isOneAdjacentCellOverlappingWithBHImpactArea(const peano4::datamanagement::FaceMarker& marker);
 
   /**
    * Check if the faceNumberth adjacent face is adjacent to inside cells
@@ -75,7 +77,7 @@ public:
    * Otherwise, we can move one cell left, right, up, down, front or left and
    * check for this cell as well.
    */
-  static bool areAdjacentCellsOverlappingWithBHImpactArea(
+  static bool areBothAdjacentCellsOverlappingWithBHImpactArea(
     const peano4::datamanagement::CellMarker& marker, int faceNumber
   );
 

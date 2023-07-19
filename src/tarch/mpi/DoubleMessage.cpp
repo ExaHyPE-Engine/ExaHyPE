@@ -40,41 +40,6 @@ void   tarch::mpi::DoubleMessage::setValue(double value) {
 
 
 #ifdef Parallel
-void tarch::mpi::DoubleMessage::sendAndPollDanglingMessages(const tarch::mpi::DoubleMessage& message, int destination, int tag, MPI_Comm communicator ) {
-  tarch::mpi::DoubleMessage::send(
-    message, destination, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::DoubleMessage", "sendAndPollDanglingMessages()",destination, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::DoubleMessage", "sendAndPollDanglingMessages()", destination, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-
-
-void tarch::mpi::DoubleMessage::receiveAndPollDanglingMessages(tarch::mpi::DoubleMessage& message, int source, int tag, MPI_Comm communicator ) {
-  tarch::mpi::DoubleMessage::receive(
-    message, source, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::DoubleMessage", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::DoubleMessage", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-#endif
-    
-#ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype tarch::mpi::DoubleMessage::Datatype;
@@ -243,3 +208,39 @@ void tarch::mpi::DoubleMessage::receive(
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
 #endif
+
+#ifdef Parallel
+void tarch::mpi::DoubleMessage::sendAndPollDanglingMessages(const tarch::mpi::DoubleMessage& message, int destination, int tag, MPI_Comm communicator ) {
+  tarch::mpi::DoubleMessage::send(
+    message, destination, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::DoubleMessage", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::DoubleMessage", "sendAndPollDanglingMessages()", destination, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+
+
+void tarch::mpi::DoubleMessage::receiveAndPollDanglingMessages(tarch::mpi::DoubleMessage& message, int source, int tag, MPI_Comm communicator ) {
+  tarch::mpi::DoubleMessage::receive(
+    message, source, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::DoubleMessage", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::DoubleMessage", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+#endif
+    

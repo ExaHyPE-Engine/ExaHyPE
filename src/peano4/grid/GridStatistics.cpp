@@ -141,41 +141,6 @@ void   peano4::grid::GridStatistics::setMinH(int index, double value) {
 
 
 #ifdef Parallel
-void peano4::grid::GridStatistics::sendAndPollDanglingMessages(const peano4::grid::GridStatistics& message, int destination, int tag, MPI_Comm communicator ) {
-  peano4::grid::GridStatistics::send(
-    message, destination, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridStatistics", "sendAndPollDanglingMessages()",destination, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridStatistics", "sendAndPollDanglingMessages()", destination, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-
-
-void peano4::grid::GridStatistics::receiveAndPollDanglingMessages(peano4::grid::GridStatistics& message, int source, int tag, MPI_Comm communicator ) {
-  peano4::grid::GridStatistics::receive(
-    message, source, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridStatistics", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridStatistics", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-#endif
-    
-#ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype peano4::grid::GridStatistics::Datatype;
@@ -386,3 +351,39 @@ void peano4::grid::GridStatistics::receive(
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
 #endif
+
+#ifdef Parallel
+void peano4::grid::GridStatistics::sendAndPollDanglingMessages(const peano4::grid::GridStatistics& message, int destination, int tag, MPI_Comm communicator ) {
+  peano4::grid::GridStatistics::send(
+    message, destination, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridStatistics", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridStatistics", "sendAndPollDanglingMessages()", destination, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+
+
+void peano4::grid::GridStatistics::receiveAndPollDanglingMessages(peano4::grid::GridStatistics& message, int source, int tag, MPI_Comm communicator ) {
+  peano4::grid::GridStatistics::receive(
+    message, source, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridStatistics", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridStatistics", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+#endif
+    

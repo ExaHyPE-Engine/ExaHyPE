@@ -6,22 +6,23 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#pragma once
+#ifndef _INCLUDE_PEANO4_GRID_AUTOMATONSTATE_
+#define _INCLUDE_PEANO4_GRID_AUTOMATONSTATE_
 
 #include <string>
   
-
-#include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/services/ServiceRepository.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
-
 
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
+
+#include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/services/ServiceRepository.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
+#include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
   
@@ -66,15 +67,7 @@ struct peano4::grid::AutomatonState {
     AutomatonState(const AutomatonState& copy);
 
 
-#ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::grid::AutomatonState& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(peano4::grid::AutomatonState& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
-#endif
-    
-
     #ifdef Parallel
-    PRAGMA_PUSH
-    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -94,8 +87,8 @@ struct peano4::grid::AutomatonState {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    PRAGMA_POP
-
+    
+    
     /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
@@ -135,11 +128,22 @@ struct peano4::grid::AutomatonState {
     #endif
 
 
+    enum ObjectConstruction {
+      NoData
+    };
+
+    AutomatonState( ObjectConstruction ):
+        AutomatonState() {}
+    
+#ifdef Parallel
+    static void sendAndPollDanglingMessages(const peano4::grid::AutomatonState& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::grid::AutomatonState& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+#endif
+    
+
     std::string toString() const;
   
   private:
-    PRAGMA_PUSH
-    SILENCE_UNKNOWN_ATTRIBUTE
     [[clang::pack_range(0,63)]]  int   _level;
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
     [[clang::truncate_mantissa(23)]]  double   _x[Dimensions];
@@ -166,13 +170,14 @@ struct peano4::grid::AutomatonState {
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<DimensionsTimesTwo,int>   _accessNumber;
 #endif
-    PRAGMA_POP
+
+
 
     #ifdef Parallel
     private:
       int                  _senderDestinationRank;
 
-      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
       /**
        * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
        * initialisation of the datatype. However, Peano calls init explicitly
@@ -182,6 +187,10 @@ struct peano4::grid::AutomatonState {
       static MPI_Datatype  Datatype;
       #endif
     #endif
+
+
+
 };
 
+#endif
   

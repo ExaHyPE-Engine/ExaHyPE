@@ -302,47 +302,42 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
       repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0 or
       repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
       repositories::{}.getSolverState()=={}::SolverState::Plotting
+      repositories::{}.getSolverState()=={}::SolverState::Suspended
     )""".format(
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
         )
+          
 
         last_sweep_of_time_step_or_plotting_initialisation = """(
       repositories::{}.getSolverState()=={}::SolverState::GridInitialisation or
       repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{} or
       repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
-      repositories::{}.getSolverState()=={}::SolverState::Plotting
-    )""".format(
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
-            self.number_of_Runge_Kutta_steps() - 1,
-            self.get_name_of_global_instance(),
-            self._name,
-            self.get_name_of_global_instance(),
-            self._name,
+      repositories::{}.getSolverState()=={}::SolverState::Plotting or
+      repositories::{}.getSolverState()=={}::SolverState::Suspended
+      )""".format(
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name, self.number_of_Runge_Kutta_steps() - 1,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
+            self.get_name_of_global_instance(), self._name,
         )
 
-        self._patch_estimates.generator.store_persistent_condition = (
-            self._store_cell_data_default_guard()
-            + """
-      and not ("""
-            + last_sweep_of_time_step_or_plotting_initialisation
-            + ")"
-        )
-        self._patch_estimates.generator.load_persistent_condition = (
+        self._patch_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
             self._load_cell_data_default_guard()
             + """
       and not ("""
             + first_sweep_of_time_step_or_plotting_guard
-            + ")"
+            + ")",
+            self._store_cell_data_default_guard()
+            + """
+      and not ("""
+            + last_sweep_of_time_step_or_plotting_initialisation
+            + ")",
         )
 
     def create_action_sets(self):
