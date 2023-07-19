@@ -100,10 +100,11 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR):
       patch_overlap_restriction   = solver._patch_overlap_update,
       interpolation_scheme        = interpolation,
       restriction_scheme          = restriction,
-      interpolate_guard           = """
+      clear_guard                 = solver._provide_face_data_to_compute_kernels_default_guard(),
+      interpolate_guard           = solver._provide_face_data_to_compute_kernels_default_guard() + """ and 
   repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()!=""" + solver._name + """::SolverState::GridInitialisation
 """,
-      restrict_guard           = "true",
+      restrict_guard              = solver._provide_face_data_to_compute_kernels_default_guard(),
       additional_includes         = """
 #include "../repositories/SolverRepository.h"
 """      

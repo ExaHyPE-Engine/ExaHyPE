@@ -139,24 +139,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
+::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(
   const peano4::datamanagement::VertexMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{STORE_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
-  return {{LOAD_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
-  const peano4::datamanagement::VertexMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{STORE_PERSISTENT_CONDITION}};
+) {
+  return {{LOAD_STORE_COMPUTE_FLAG}};
 }
 {% endif -%}
 
@@ -183,19 +170,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(
+::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(
   const peano4::datamanagement::FaceMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) {
-  return {{LOAD_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
-  const peano4::datamanagement::FaceMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{STORE_PERSISTENT_CONDITION}};
+  return {{LOAD_STORE_COMPUTE_FLAG}};
 }
 {% endif -%}
 
@@ -222,19 +201,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(
+::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(
   const peano4::datamanagement::CellMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) {
-  return {{LOAD_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
-  const peano4::datamanagement::CellMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{STORE_PERSISTENT_CONDITION}};
+  return {{LOAD_STORE_COMPUTE_FLAG}};
 }
 {% endif -%}
 

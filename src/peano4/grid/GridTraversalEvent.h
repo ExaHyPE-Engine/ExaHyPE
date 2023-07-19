@@ -20,6 +20,10 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
+<<<<<<< HEAD
+=======
+#include "peano4/grid/LoadStoreComputeFlag.h"
+>>>>>>> refs/remotes/origin/optimise-storage-logic
 #include "peano4/utils/Globals.h"
 #include "peano4/grid/TraversalObserver.h"
 
@@ -178,6 +182,19 @@ struct peano4::grid::GridTraversalEvent {
     static void receive(   peano4::grid::GridTraversalEvent& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
+#ifdef Parallel
+    static void sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::grid::GridTraversalEvent& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+#endif
+    
+
+    enum ObjectConstruction {
+      NoData
+    };
+
+    GridTraversalEvent( ObjectConstruction ):
+        GridTraversalEvent() {}
+    
 #ifdef Parallel
     static void sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages(peano4::grid::GridTraversalEvent& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );

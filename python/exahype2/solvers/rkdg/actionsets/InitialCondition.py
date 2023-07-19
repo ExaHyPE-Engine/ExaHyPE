@@ -23,6 +23,11 @@ class InitialCondition(AbstractRungeKuttaDGActionSet):
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
+    
+    // relevant for tracing et al which kicks in if and only if cell has been
+    // updated
+    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 
 """
