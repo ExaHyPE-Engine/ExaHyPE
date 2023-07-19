@@ -36,8 +36,8 @@ void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::clearAnd
 
 
 template <class T>
-toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::Container::iterator
-toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::scatterAndUpdateIterator( const Container::iterator&  p ) {
+typename toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::Container::iterator
+toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::scatterAndUpdateIterator( const typename Container::iterator&  p ) {
   assertion( not container.empty() or _gatheredDataPointer==nullptr );
   if (_gatheredDataPointer==nullptr) {
     return p;
@@ -90,7 +90,7 @@ bool toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::isGather
 
 
 template <class T>
-void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::replace( Container::iterator p, T* newCopy ) {
+void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::replace( typename Container::iterator p, T* newCopy ) {
   assertion( not container.empty() or _gatheredDataPointer==nullptr );
   if ( isGathered() ) {
     (**p) = *newCopy;
