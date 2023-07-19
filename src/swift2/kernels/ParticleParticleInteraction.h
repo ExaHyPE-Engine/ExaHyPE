@@ -14,7 +14,7 @@ namespace swift2 {
      * per pair of local and active particles. The interaction functor may
      * modify the local particle. Besides the simple nested loop, the routine
      * ensures that no particle is updated twice if it belongs to two cells
-     * simulatenously.
+     * simultaneously.
      *
      * What the routine not does is to check if activeParticle!=localParticle,
      * i.e. please assume that the routine is also called for self-interaction
@@ -70,6 +70,13 @@ namespace swift2 {
      * can point to the same object, i.e. if you know that there is no aliasing.
      * It is not clear if this operation is faster than forceKernel, but it
      * delivers more flops due to the excessive vectorisation.
+     *
+     * To make the function vectorisable, we had to apply a few tweaks:
+     *
+     * 1. We mark the function explicitly as __attribute__((always_inline)).
+     *    This is likely not necessary, but cannot do any harm.
+     * 2. We rely on the fact that all the setters and getters of the
+     *    particle are visible within the header file, i.e are exposed.
      *
      * The big if in the straightforward forceKernel() is challenging for the
      * vectoriser. Hence, I compute one scalar which is either set to 1.0 if we
@@ -174,7 +181,6 @@ namespace swift2 {
      * if you use a @ref toolbox_particles_memorypool "memory pool" as it is
      * also discussed in the @ref page_swift_performance_optimisation "optimisation guidelines".
      *
-     *
      * The routine knows way more about the internal ordering of the particles
      * through the explicit arguments particlesAssociatedWithLocalVertices and
      * numberOfParticlesPerLocalVertex. It implicitly knows how the particles
@@ -183,6 +189,11 @@ namespace swift2 {
      * peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.ParticleParticleInteraction_StackOfLists
      * provides a lot of information how we construct the passed lists over
      * particles.
+     *
+     * Further to the optimised loops, the function calls forceKernelVectorised()
+     * instead of forceKernel() whenever it knows a priori that two particle
+     * ranges to not overlap. See forceKernelVectorised() for further remarks
+     * how we deliver vectorised kernels.
      *
      */
     template <typename ParticleContainer>

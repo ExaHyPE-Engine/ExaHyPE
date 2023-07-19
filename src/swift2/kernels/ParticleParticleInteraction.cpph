@@ -236,11 +236,7 @@ template <typename Particle>
 void swift2::kernels::forceKernelVectorised(
   Particle*       __restrict__   localParticle,
   const Particle* __restrict__   activeParticle
-) {
-  //  @todo This is a fake, just to ensure that the compiler doesn't eliminate the code
-  //        completely
-  tarch::la::Vector<Dimensions, double>  newA = localParticle->getA();
-  localParticle->setA( newA * 2.0 );
+) __attribute__((always_inline)) {
 
 
   /*
@@ -250,7 +246,7 @@ void swift2::kernels::forceKernelVectorised(
   const int    hydroDimensions = localParticle->getHydroDimensions();
   const double alphaAV         = localParticle->getAlphaAV();
   const double betaAV          = localParticle->getBetaAV();
-
+*/
   // Retrieve basic properties of local and active particles
   const double rho_a = localParticle->getDensity();
   const double rho_b = activeParticle->getDensity();
@@ -266,19 +262,33 @@ void swift2::kernels::forceKernelVectorised(
 
   // Distance between the two particles
   tarch::la::Vector<Dimensions, double> dx    = localParticle->getX() - activeParticle->getX();
-
   const double                          r     = tarch::la::norm2(dx);
   const double                          r_inv = r ? 1.0 / r : 0.0;
+
+  // Dimensionless distance to evaluate kernel
+  const double q_a     = r / h_a;
+  const double q_b     = r / h_b;
 
   // Get actual interaction radius
   const double iactR = kernel_gamma * h_a;
 
-  // Dimensionless distance to evaluate kernel
-  const double h_a_inv = 1. / h_a;
-  const double h_b_inv = 1. / h_b;
-  const double q_a     = r * h_a_inv;
-  const double q_b     = r * h_b_inv;
 
+  const double mask = tarch::la::smaller( r, iactR )
+                      &
+                      tarch::la::greater( r, 0.0 );
+//                      &
+//                      ! localParticle->getIsBoundaryParticle();
+
+
+  // fake operation: I only leave it here, as the compiler otherwise finds
+  // out that we don't do anything and eliminated the whole loop. Will go
+  // away in the future
+  tarch::la::Vector<Dimensions, double>  newA = localParticle->getA();
+  localParticle->setA( newA * 2.0 );
+
+  /*
+  // Get actual interaction radius
+  const double iactR = kernel_gamma * h_a;
   double wa, wb;
   double wa_dr, wb_dr;
   double dw_dqa, dw_dqb;
