@@ -112,6 +112,12 @@ compiler manages to optimise, you will see a detailed breakdown of the
 predicted speedup.
 
 
+We started to collect a list of tweaks that are necessary to get the compiler
+to vectorise in the documentation of swift2::kernels::forceKernelVectorised()
+within ParticleParticleInteraction.h. Please consult this docu for further
+information in which way we have to rewrite the kernels. 
+
+
  
  
  */
