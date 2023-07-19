@@ -20,10 +20,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-<<<<<<< HEAD
-=======
 #include "peano4/grid/LoadStoreComputeFlag.h"
->>>>>>> refs/remotes/origin/optimise-storage-logic
 #include "peano4/utils/Globals.h"
 #include "peano4/grid/TraversalObserver.h"
 
