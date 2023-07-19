@@ -77,13 +77,29 @@ namespace swift2 {
      *    This is likely not necessary, but cannot do any harm.
      * 2. We rely on the fact that all the setters and getters of the
      *    particle are visible within the header file, i.e are exposed.
+     * 3. The big if in the straightforward forceKernel() is challenging for
+     *    the vectoriser. Hence, I compute one scalar which is either set to
+     *    1.0 if we should update and otherwise 0.0. By multiplying all updates
+     *    with this scalar, we can effectively mask out the kernel or keep its
+     *    action. This works in the present case, as all updates are additive,
+     *    i.e. we take the existing value and add something onto it.
+     * 4. The tarch::la macros like smaller() or smallerEquals() might stop the
+     *    vectorisation. In this case, you have to move the implementations
+     *    into the header. We don't move all linear algebra routines into the
+     *    header, as this would blow up the executable size. For this
+     *    particular kernel, we have moved the required routines already.
+     * 5.
      *
-     * The big if in the straightforward forceKernel() is challenging for the
-     * vectoriser. Hence, I compute one scalar which is either set to 1.0 if we
-     * should update and otherwise 0.0. By multiplying all updates with this
-     * scalar, we can effectively mask out the kernel or keep its action. This
-     * works in the present case, as all updates are additive, i.e. we take the
-     * existing value and add something onto it.
+     *
+     *
+     * ## Differences to other vector kernel
+     *
+     * As we know a priori that this function is only invoked on distinct junks
+     * of particles, we know that we'll compare the same particle against each
+     * other. Consequently, we may assume that the radius is never 0. This
+     * additional check can be omitted.
+     *
+     *
      *
      * @todo This routine does not support boundary particles. But we wanted to
      *   remove this flag anyway.

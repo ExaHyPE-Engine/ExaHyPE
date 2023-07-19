@@ -272,23 +272,9 @@ void swift2::kernels::forceKernelVectorised(
   // Get actual interaction radius
   const double iactR = kernel_gamma * h_a;
 
+  const double mask = tarch::la::smaller( r, iactR );
 
-  const double mask = tarch::la::smaller( r, iactR )
-                      &
-                      tarch::la::greater( r, 0.0 );
-//                      &
-//                      ! localParticle->getIsBoundaryParticle();
-
-
-  // fake operation: I only leave it here, as the compiler otherwise finds
-  // out that we don't do anything and eliminated the whole loop. Will go
-  // away in the future
-  tarch::la::Vector<Dimensions, double>  newA = localParticle->getA();
-  localParticle->setA( newA * 2.0 );
-
-  /*
   // Get actual interaction radius
-  const double iactR = kernel_gamma * h_a;
   double wa, wb;
   double wa_dr, wb_dr;
   double dw_dqa, dw_dqb;
@@ -299,6 +285,13 @@ void swift2::kernels::forceKernelVectorised(
   // Evaluate kernel and its derivative for particle b
   kernel_deval(q_b, wb, dw_dqb);
 
+  // fake operation: I only leave it here, as the compiler otherwise finds
+  // out that we don't do anything and eliminated the whole loop. Will go
+  // away in the future
+  tarch::la::Vector<Dimensions, double>  newA = localParticle->getA();
+  localParticle->setA( newA * 2.0 * mask * wa );
+
+  /*
   wa_dr = dw_dqa * std::pow(h_a_inv, (hydroDimensions + 1));
   wb_dr = dw_dqb * std::pow(h_b_inv, (hydroDimensions + 1));
 
