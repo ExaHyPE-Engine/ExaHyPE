@@ -75,5 +75,5 @@ void toolbox::particles::insertParticleIntoCell(
       << newParticle->toString() << " to vertex " << linearisedTargetVertex << " in cell " << marker.toString()
       << " (vertex=" << fineGridVertices(targetVertex.to_ulong()).toString() << ")"
   );
-  fineGridVertices(linearisedTargetVertex).add(newParticle);
+  fineGridVertices(linearisedTargetVertex).addParticle(newParticle);
 }

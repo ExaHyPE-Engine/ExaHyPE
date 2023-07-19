@@ -122,6 +122,12 @@ public:
   /**
    * Add a particle to the list of particles which cannot be lifted
    *
+   * You hand over the pointer to the sieve list. That is, nothing is
+   * copied, but the responsibility for this object, from now on, resides
+   * with the sieve list. It will eventually delete the particle. Therefore
+   * you should not maintain any pointer to the particle anymore once you
+   * hand it over to the sieve list.
+   *
    * The routine is thread-safe. The object does not keep any kind of
    * statistics. You have to maintain stats on your own if you need them.
    */

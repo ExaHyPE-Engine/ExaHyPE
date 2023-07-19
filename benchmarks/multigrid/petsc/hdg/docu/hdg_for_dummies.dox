@@ -116,6 +116,14 @@ See the sketch below.
 
 @image html testFunctionDG.png
 
+The difference is that this time we have:
+\li A 1D domain, cut into chunks of width @f$ h @f$
+\li Our piecewise linear basis functions have been cut in half, and we relax the requirement that they're continuous
+\li We now have two values for @f$ u @f$ on the boundary of each cell: at the boundary of cell @f$ i @f$, we have @f$ u_\pm @f$
+
+*warning-used wrong symbol in the picture. should instead be* @f$ \psi @f$
+
+
 ## The Face Integral
 
 
@@ -243,6 +251,55 @@ tutorial, but we put in some implementation details here.
 Here we basically repeat what was in the last chapter. Make the change from 
 @f$ u @f$ to @f$ \sum_i u_i \psi_i @f$, and then write down what the matrix elements should be.
 
+We want the integral:
+
+\f{eqnarray*}{
+
+  \int_\text{cell} (\phi, \ \text{div}\psi) dx \ \ \forall \psi
+
+\f}
+
+to hold for all @f$ \psi @f$. Let's see what happens when we try and evaluate the @f$ \psi_1^+ @f$ term.
+Recall that @f$ u \ = \ \sum_i u_i \psi_i @f$, meaning that we can write @f$ \phi @f$ as 
+@f$ \sum_i \ u_i \text{div} \psi_i @f$. Here the sum implicitly runs over all the cell indices, 
+as well as the left and right parts of the @f$ u_i @f$.
+
+\f{eqnarray*}{
+  \int_\text{cell} ( \sum_i \ u_i \text{div} \psi_i, \ \text{div} \psi_1^+) dx \\
+\f}
+
+We note that the only cell in which @f$ \psi_1^+ @f$ has support is @f$ c_1 @f$
+
+\f{eqnarray*}{
+=  \int_{c_1} ( u_1^+ \text{div} \psi_1^+, \ \text{div} \psi_1^+) dx 
++  \int_{c_1} ( u_2^- \text{div} \psi_2^-, \ \text{div} \psi_1^+) dx 
+
+\f}
+
+and therefore we can construct the cell-cell matrix as follows:
+
+\f{eqnarray*}{
+
+  \begin{pmatrix}
+  .... & .... & .... \\
+
+  \int_{c_1} (\text{div} \psi_1^+, \  \text{div} \psi_1^+) dx & \int_{c_1} ( \text{div} \psi_2^-, \ \text{div} \psi_1^+) dx & .... & .... \\
+
+  .... & .... & .... \\
+
+  \end{pmatrix}
+
+  \begin{pmatrix}
+
+  ... \\
+  u_1^+ \\
+  u_2^- \\
+  ...   \\
+
+
+  \end{pmatrix}
+\f}
+
 
 ### In practice
 
@@ -261,7 +318,7 @@ when we evaluate over one cell in particular. So, taking our cell (pictured abov
 where we used the fact that our approximation is piecewise linear, and so the gradient
 along each face is the same. 
 
-<--!
+<!--
 
 We can do the same for the y-direction:
 
