@@ -49,12 +49,10 @@ the solver in the first place. This happens in get_includes().
 # more than the 0th index
   TemplateInitVertex = """
   auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & vertex ) -> bool {
-    //for now, hardcode 2 dimensions
-    double x = vertex[0];
-    double y = vertex[1];
-
-    if ( x < 1E-10 or x > 1 - 1E-10) return true;
-    if ( y < 1E-10 or y > 1 - 1E-10) return true;
+    for (int i=0; i<Dimensions; i++){
+      if ( vertex[i] < 1E-10 or vertex[i] > 1 - 1E-10 )
+        return true;
+    }
     return false;
   };
 
@@ -71,7 +69,6 @@ the solver in the first place. This happens in get_includes().
         fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::DoF );
         break;
     }
-
 {% if SOLVER_NAME=="HDG" %}
     //set all the entries of DofIndices to -1
     tarch::la::Vector<TwoPowerD, int> indices(-1);
