@@ -1,20 +1,20 @@
 #include "kernel_hydro.h"
 
 template <typename Particle>
-void swift2::kernels::hydro_end_density(Particle& localParticle){
+void swift2::kernels::hydro_end_density(Particle& localParticle) {
   // temporary to get things to work
 
   /* Grab static parameters */
-  const int hydroDimensions = localParticle->getHydroDimensions();
-  const double etaFactor    = localParticle->getEtaFactor();
-  const double alphaAV      = localParticle->getAlphaAV();
+  const int    hydroDimensions = localParticle->getHydroDimensions();
+  const double etaFactor       = localParticle->getEtaFactor();
+  const double alphaAV         = localParticle->getAlphaAV();
 
   /* Retrieve some properties */
   const double m_a = localParticle->getMass();
   const double h_a = localParticle->getSmoothingLength();
 
   /* Some smoothing length multiples */
-  const double h_inv              = 1.0 / h_a ;
+  const double h_inv              = 1.0 / h_a;
   const double h_inv_dim          = std::pow(h_inv, hydroDimensions);
   const double h_inv_dim_plus_one = h_inv_dim * h_inv;
 
@@ -58,7 +58,7 @@ void swift2::kernels::hydro_end_density(Particle& localParticle){
 
 
 template <typename Particle>
-void swift2::kernels::hydro_prepare_density(Particle& localParticle){
+void swift2::kernels::hydro_prepare_density(Particle& localParticle) {
   // temporary to get things to work
   localParticle->setDensity(0.0);
   localParticle->setWcount(0.0);
@@ -70,6 +70,3 @@ void swift2::kernels::hydro_prepare_density(Particle& localParticle){
   /* Not originally in SWIFT */
   localParticle->setNcount(0);
 }
-
-
-

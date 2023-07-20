@@ -6,9 +6,8 @@
 #include <list>
 #include <vector>
 
-
-#include "tarch/la/Vector.h"
 #include "SwiftKernels.h"
+#include "tarch/la/Vector.h"
 
 
 namespace swift2 {

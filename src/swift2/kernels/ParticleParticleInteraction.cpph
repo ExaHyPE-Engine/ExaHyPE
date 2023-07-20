@@ -28,27 +28,24 @@ void swift2::kernels::densityKernel(Particle* localParticle, const Particle* act
 
   /* Distance between the particles */
   const tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
-  const double r = tarch::la::norm2(dx);
+  const double                                r  = tarch::la::norm2(dx);
 
   /* Compute the actual interaction radius */
   const double iactR = kernel_gamma * h_a;
 
-  if(
-    tarch::la::smaller( r, iactR )
-    and
-    tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */
+  if (
+    tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) /* Self-contribution is calculated elsewhere */
     // and
     // not localParticle->getIsBoundaryParticle()
-    )
-    {
+  ) {
 
-if (localParticle->getPartid() == activeParticle->getPartid()){
-  std::cout << "!!!!!!!!!!!!!!!! INTERACTING SAME PARTILCE WITH ID " << localParticle->getPartid() << std::endl;
-}
+    if (localParticle->getPartid() == activeParticle->getPartid()) {
+      std::cout << "!!!!!!!!!!!!!!!! INTERACTING SAME PARTILCE WITH ID " << localParticle->getPartid() << std::endl;
+    }
 
     // const double m_a = localParticle->getMass();
-    const double m_b = activeParticle->getMass();
-    const double h_a_inv = 1./h_a;
+    const double m_b     = activeParticle->getMass();
+    const double h_a_inv = 1. / h_a;
     // Normalized distance to evaluate kernel
     const double qa = r * h_a_inv;
 
@@ -79,16 +76,16 @@ if (localParticle->getPartid() == activeParticle->getPartid()){
     tarch::la::Vector<Dimensions, double> dv;
     tarch::la::Vector<Dimensions, double> curlvr(0.0);
 
-if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
-  std::cout << "DENSITY_IACT " << localParticle->getPartid() << " and " << activeParticle->getPartid() << " x= " << activeParticle->getX()[0]
-  << " w_a " << w_a << " dwa_dx " << dwa_dx << " dwa_dh " << dwa_dh
-  << std::endl;
+    if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
+      std::cout
+        << "DENSITY_IACT " << localParticle->getPartid() << " and " << activeParticle->getPartid() << " x= "
+        << activeParticle->getX()[0] << " w_a " << w_a << " dwa_dx " << dwa_dx << " dwa_dh " << dwa_dh << std::endl;
 
     /* Now we need to compute the div terms */
     const double r_inv = r ? 1.0 / r : 0.0;
     const double fac_a = m_b * dwa_dx * r_inv;
 
-    dv = localParticle->getV() - activeParticle->getV();
+    dv                = localParticle->getV() - activeParticle->getV();
     const double dvdr = tarch::la::dot(dv, dx);
     localParticle->setDiv_v(localParticle->getDiv_v() - fac_a * dvdr);
 
@@ -115,21 +112,21 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
   const double betaAV          = localParticle->getBetaAV();
 
   // No cosmology yet: a^{(3 gamma - 5 )/ 2} = 1.
-  const double fac_mu = 1.;
+  const double fac_mu    = 1.;
   const double a2_Hubble = 0.; // a**2 * H, where H = da/dt / a. = 0 without cosmo
 
   // Distance between the two particles
-  tarch::la::Vector<Dimensions, double> dx    = localParticle->getX() - activeParticle->getX();
+  tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
 
-  const double                          r     = tarch::la::norm2(dx);
-  const double                          r_inv = r ? 1.0 / r : 0.0;
+  const double r     = tarch::la::norm2(dx);
+  const double r_inv = r ? 1.0 / r : 0.0;
 
   // Get actual interaction radius
-  const double h_a = localParticle->getSmoothingLength();
+  const double h_a   = localParticle->getSmoothingLength();
   const double iactR = kernel_gamma * h_a;
 
-  if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0)  ) {
-      // and not localParticle->getIsBoundaryParticle()) {
+  if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0)) {
+    // and not localParticle->getIsBoundaryParticle()) {
 
     // Retrieve basic properties of local and active particles
     const double m_a = localParticle->getMass();
@@ -142,21 +139,21 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
     const double P_b = activeParticle->getPressure();
 
     // Get kernel for ha
-    const double h_a_inv = 1. / h_a;
+    const double h_a_inv     = 1. / h_a;
     const double h_a_inv_dp1 = std::pow(h_a_inv, hydroDimensions + 1); // 1/h^{dim + 1}
-    const double qa = r * h_a_inv;
-    double wa, dwa_dqa;
+    const double qa          = r * h_a_inv;
+    double       wa, dwa_dqa;
     // Evaluate kernel and its derivative for particle a
     kernel_deval(qa, wa, dwa_dqa);
     const double dwa_dr = dwa_dqa * h_a_inv_dp1;
 
 
     // Dimensionless distance to evaluate kernel
-    const double h_b = activeParticle->getSmoothingLength();
-    const double h_b_inv = 1. / h_b;
+    const double h_b         = activeParticle->getSmoothingLength();
+    const double h_b_inv     = 1. / h_b;
     const double h_b_inv_dp1 = std::pow(h_b_inv, hydroDimensions + 1); // 1/h^{dim + 1}
-    const double qb = r * h_b_inv;
-    double wb, dwb_dqb;
+    const double qb          = r * h_b_inv;
+    double       wb, dwb_dqb;
     // Evaluate kernel and its derivative for particle b
     kernel_deval(qb, wb, dwb_dqb);
     const double dwb_dr = dwb_dqb * h_b_inv_dp1;
@@ -182,8 +179,7 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
     const double mu_ab    = fac_mu * r_inv * omega_ab; /* This is 0 or negative */
 
     /* Compute sound speeds and signal velocity */
-    const double v_sig
-      = localParticle->getSoundSpeed() + activeParticle->getSoundSpeed() - betaAV * mu_ab;
+    const double v_sig = localParticle->getSoundSpeed() + activeParticle->getSoundSpeed() - betaAV * mu_ab;
 
     /* Balsara term */
     const double balsara_a = localParticle->getBalsara();
@@ -259,9 +255,6 @@ void swift2::kernels::forceKernelVectorised(
   Particle*       __restrict__   localParticle,
   const Particle* __restrict__   activeParticle
 ) __attribute__((always_inline)) {
-
-
-
 
   // Grab static parameters
   const int    hydroDimensions = localParticle->getHydroDimensions();
@@ -468,14 +461,11 @@ void swift2::kernels::computeDensity(
         tarch::la::Vector<Dimensions, double> dv_ab;
         tarch::la::Vector<Dimensions, double> curlvr(0.0);
 
-        if(
-          tarch::la::smaller( r, iactR )
-          and
-          tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */
+        if (
+          tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) /* Self-contribution is calculated elsewhere */
           // and
           // not localParticle->getIsBoundaryParticle()
-          )
-          {
+        ) {
 
           // Evaluate kernel and its derivative
 
@@ -540,38 +530,51 @@ void swift2::kernels::computeHydroForce(
 
 template <typename ParticleContainer>
 void swift2::kernels::computeHydroForce(
-    const peano4::datamanagement::CellMarker&  marker,
-    const ParticleContainer&                   particlesAssociatedWithLocalVertices,
-    const std::vector<int>&                    numberOfParticlesPerLocalVertex,
-    const ParticleContainer&                   activeParticles,
-    const std::vector<int>&                    numberOfActiveParticlesPerVertexAdded
+  const peano4::datamanagement::CellMarker& marker,
+  const ParticleContainer&                  particlesAssociatedWithLocalVertices,
+  const std::vector<int>&                   numberOfParticlesPerLocalVertex,
+  const ParticleContainer&                  activeParticles,
+  const std::vector<int>&                   numberOfActiveParticlesPerVertexAdded
 ) {
-  typename std::list< typename ParticleContainer::value_type >::const_iterator localParticlesIterator  = particlesAssociatedWithLocalVertices.begin();
+  typename std::list<typename ParticleContainer::value_type>::const_iterator localParticlesIterator
+    = particlesAssociatedWithLocalVertices.begin();
 
-  for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
-    typename ParticleContainer::value_type  localParticlesChunk = *localParticlesIterator;
-    std::advance( localParticlesIterator, localParticlesChunkSize );
+  for (auto localParticlesChunkSize : numberOfParticlesPerLocalVertex) {
+    typename ParticleContainer::value_type localParticlesChunk = *localParticlesIterator;
+    std::advance(localParticlesIterator, localParticlesChunkSize);
 
-    typename std::list< typename ParticleContainer::value_type >::const_iterator activeParticlesIterator = activeParticles.begin();
-    for (auto activeParticlesChunkSize: numberOfActiveParticlesPerVertexAdded) {
-      typename ParticleContainer::value_type  activeParticlesChunk = *activeParticlesIterator;
-      std::advance( activeParticlesIterator, activeParticlesChunkSize );
+    typename std::list<typename ParticleContainer::value_type>::const_iterator activeParticlesIterator
+      = activeParticles.begin();
+    for (auto activeParticlesChunkSize : numberOfActiveParticlesPerVertexAdded) {
+      typename ParticleContainer::value_type activeParticlesChunk = *activeParticlesIterator;
+      std::advance(activeParticlesIterator, activeParticlesChunkSize);
 
-      for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<localParticlesChunkSize; localParticleNumberInThisChunk++) {
+      for (int localParticleNumberInThisChunk = 0; localParticleNumberInThisChunk < localParticlesChunkSize;
+           localParticleNumberInThisChunk++) {
         if (
           marker.isContained(localParticlesChunk[localParticleNumberInThisChunk].getX())
           and
           not localParticlesChunk[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
         ) {
-          for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
-            swift2::kernels::forceKernelVectorised(
-              localParticlesChunk  + localParticleNumberInThisChunk,
-              activeParticlesChunk + activeParticleNumberInThisChunk
-            );
+          if (localParticlesChunk != activeParticlesChunk) {
+            for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
+                 activeParticleNumberInThisChunk++) {
+              swift2::kernels::forceKernelVectorised(
+                localParticlesChunk + localParticleNumberInThisChunk,
+                activeParticlesChunk + activeParticleNumberInThisChunk
+              );
+            }
+          } else {
+            for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
+                 activeParticleNumberInThisChunk++) {
+              swift2::kernels::forceKernel(
+                localParticlesChunk + localParticleNumberInThisChunk,
+                activeParticlesChunk + activeParticleNumberInThisChunk
+              );
+            }
           }
         }
       }
     }
   }
 }
-
