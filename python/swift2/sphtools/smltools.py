@@ -6,13 +6,13 @@ Tool related to the (computation of) the smoothing length.
 from .sph_kernels import sph_kernel_W, sph_kernel_dWdr, sph_kernel_get_H, sph_kernel_get_H
 from numpy import ndarray, sqrt, cbrt, pi
 
-def _neighbour_loop(r: ndarray, h:float, kernel: str, ndim:int):
+def _neighbour_loop(r: ndarray, h:float, kernel: str, ndim:int, ids, x):
     """!
     TODO: docu
     """
     wcount = 0.
     wcount_dh = 0.
-    H = sph_kernel_get_H(h, kernel)
+    H = sph_kernel_get_H(h, kernel, ndim)
 
     # Collect neighbour values
     for n in range(r.shape[0]):
@@ -21,6 +21,7 @@ def _neighbour_loop(r: ndarray, h:float, kernel: str, ndim:int):
         dwdr =  sph_kernel_dWdr(r[n], h, kernel, ndim)
         wcount += w
         wcount_dh -= (ndim * w + q * dwdr)
+        print("iact id", ids[n], "x=", x[n], "w=", w, "dwdr=", dwdr, "dwdh=", -(ndim * w + q * dwdr))
 
     # Add self contribution
     w = sph_kernel_W(0., h, kernel, ndim)
@@ -34,7 +35,7 @@ def _neighbour_loop(r: ndarray, h:float, kernel: str, ndim:int):
 
 
 
-def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float = 1.2348, h_tolerance: float = 1e-4, ndim: int=3):
+def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float = 1.2348, h_tolerance: float = 1e-4, ndim: int=3, ids = None):
     """!
     Determine the smoothing length of a particle with coordinates xp
 
@@ -62,13 +63,14 @@ def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float = 1.
 
     iteration = 0
     n_target = eta ** ndim
+    print("h_init", h)
 
     while iteration < 100:
         iteration += 1
 
         h_dim = h**ndim
         h_dim_minus_one = h**(ndim-1.)
-        wcount, wcount_dh = _neighbour_loop(r, h, kernel, ndim)
+        wcount, wcount_dh = _neighbour_loop(r, h, kernel, ndim, ids, xn[:,0])
 
         n_sum = wcount * h_dim
         f = n_sum - n_target
@@ -78,11 +80,20 @@ def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float = 1.
 
         diff = 1. - h_new / h
 
+        #TODO temporary
+        print("h_new=", h_new)
+        print("wcount", wcount)
+        print("wcount_dh", wcount_dh)
+        print("f", f)
+        print("f_prime", f_prime)
+
         if abs(diff < h_tolerance):
+            print("done h=", h_new)
             return h_new
             break
         else:
             h = h_new
+        print("------------------------------------")
 
     print("Particle with coordinates", xp, "didn't converge smoothing length after", iteration, "iterations")
 
