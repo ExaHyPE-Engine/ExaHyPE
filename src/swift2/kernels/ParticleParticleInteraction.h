@@ -50,7 +50,8 @@ namespace swift2 {
      * This operation struggles to vectorise, as we have the statement
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *   if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle()) {
+     *   if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle())
+     * {
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * in there. This if statement encapsulates quite a lot of operations. The
@@ -82,10 +83,7 @@ namespace swift2 {
      *   remove this flag anyway.
      */
     template <typename Particle>
-    void forceKernelVectorised(
-      Particle* __restrict__         localParticle,
-      const Particle* __restrict__   activeParticle
-    );
+    void forceKernelVectorised(Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle);
 
     /**
      * @brief Non-symmetric density calculation (as per Swift terminology).
@@ -189,11 +187,11 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeHydroForce(
-      const peano4::datamanagement::CellMarker&  marker,
-      const ParticleContainer&                   particlesAssociatedWithLocalVertices,
-      const std::vector<int>&                    numberOfParticlesPerLocalVertex,
-      const ParticleContainer&                   activeParticles,
-      const std::vector<int>&                    numberOfActiveParticlesPerVertexAdded
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  particlesAssociatedWithLocalVertices,
+      const std::vector<int>&                   numberOfParticlesPerLocalVertex,
+      const ParticleContainer&                  activeParticles,
+      const std::vector<int>&                   numberOfActiveParticlesPerVertexAdded
     );
   } // namespace kernels
 } // namespace swift2

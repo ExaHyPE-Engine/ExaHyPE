@@ -77,7 +77,7 @@ parser.add_argument(
     "--h-tolerance",
     dest="h_tol",
     type=float,
-    default=1.e-6,
+    default=1.0e-6,
     help="Threshold for convergence of smoothing length",
 )
 parser.add_argument(
@@ -107,7 +107,7 @@ project = swift2.Project(
 
 
 cfl_factor = 1e-6
-init_dt = 1.e-6
+init_dt = 1.0e-6
 
 
 # Initialise the SPH particle --------------------------------------------------
@@ -151,8 +151,8 @@ hfile.close()
 HYDRO_PART_NUMBER = npart
 
 # Time integration parameters
-GLOBAL_TIME_STEP_SIZE = init_dt # make some stuff up and hope it'll be stable enough
-CFL_CONSTANT = cfl_factor # make some stuff up and hope it'll be stable enough
+GLOBAL_TIME_STEP_SIZE = init_dt  # make some stuff up and hope it'll be stable enough
+CFL_CONSTANT = cfl_factor  # make some stuff up and hope it'll be stable enough
 
 # EoS parameter ---------------------------------------------------------------
 gamma_hydro_list = [str(5 / 3), str(7 / 5), str(4 / 3), str(2 / 1)]
@@ -168,7 +168,9 @@ GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 # SPH kernel -------------------------------------------------------
 KERNEL = kernel.upper()
 KERNEL_SYMBOL = swift2.sphtools.sph_kernel_macro_name[kernel]
-KERNEL_SUPPORT_RAD = str(swift2.sphtools.sph_kernel_H_over_h[hydro_dimensions-1][kernel])
+KERNEL_SUPPORT_RAD = str(
+    swift2.sphtools.sph_kernel_H_over_h[hydro_dimensions - 1][kernel]
+)
 
 
 # Additional Particle Parameters -----------------------------------------------
@@ -178,7 +180,9 @@ particle.h_hydro_max = hydro_h_max
 # Modify the eta factor to look for a precise number of neighbours.
 # Then round it up a little to avoid round-down errors.
 # In 1D, N_neigh = 2 * kernel_gamma * eta; see Price 2012
-particle.eta_factor = swift2.sphtools.eta_from_number_of_neighbours(nneigh, kernel=kernel, ndim=hydro_dimensions)
+particle.eta_factor = swift2.sphtools.eta_from_number_of_neighbours(
+    nneigh, kernel=kernel, ndim=hydro_dimensions
+)
 
 # particle.h_hydro_min = 1e-6
 particle.h_max_iterations = 50

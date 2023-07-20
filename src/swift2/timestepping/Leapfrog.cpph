@@ -7,9 +7,9 @@
 template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
 
-          // } else {
+  // } else {
   const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                          .getMinTimeStepSize();
+                                .getMinTimeStepSize();
 
   for (auto* particle : localParticles) {
     if (
@@ -28,7 +28,7 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
       particle->setX(particle->getX() + timeStepSize * particle->getV_full());
 
       int id = particle->getPartid();
-      if (id == 796 or id == 797 or id == 798 or id == 799 or id == 800 or id == 801 or id == 802 or id == 803 or id == 804 )
+      if (id == 796 or id == 797 or id == 798 or id == 799 or id == 800 or id == 801 or id == 802 or id == 803 or id == 804)
         std::cout << "Particle ID " << id << " was drifted to " << particle->getX() << std::endl;
 
       assertion1(tarch::la::isEntryFinite(particle->getX()), particle->toString());
@@ -52,34 +52,36 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
 template <typename Particle>
 void swift2::timestepping::kickResetPredictedValues(Particle& localParticle) {
 
-      /* Re-set the predicted velocities */
-      localParticle->setV(localParticle->getV_full());
+  /* Re-set the predicted velocities */
+  localParticle->setV(localParticle->getV_full());
 
-      /* Re-set the entropy */
-      localParticle->setU(localParticle->getU_full());
+  /* Re-set the entropy */
+  localParticle->setU(localParticle->getU_full());
 
-      /* Re-compute the pressure */
-      const double pressure = gas_pressure_from_internal_energy(localParticle->getDensity(), localParticle->getU());
+  /* Re-compute the pressure */
+  const double pressure = gas_pressure_from_internal_energy(localParticle->getDensity(), localParticle->getU());
 
-      /* Compute the new sound speed */
-      const double soundspeed = gas_soundspeed_from_pressure(localParticle->getDensity(), pressure);
+  /* Compute the new sound speed */
+  const double soundspeed = gas_soundspeed_from_pressure(localParticle->getDensity(), pressure);
 
-      /* Update variables */
-      localParticle->setPressure(pressure);
-      localParticle->setSoundSpeed(soundspeed);
-      localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed));
+  /* Update variables */
+  localParticle->setPressure(pressure);
+  localParticle->setSoundSpeed(soundspeed);
+  localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed));
 }
-
 
 
 template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
   const ParticleContainer& localParticles, const int kickNumber, const bool isSPH
 ) {
-  const double timeStepSizeKick = 0.5 * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
+  const double timeStepSizeKick = 0.5
+                                  * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
+                                      .getMinTimeStepSize();
   for (auto* particle : localParticles) {
     if (
-      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
+      particle->getParallelState()
+      == std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
       // and
       // not particle->getIsBoundaryParticle()
     ) {
@@ -108,7 +110,7 @@ void swift2::timestepping::leapfrogKickExtraWithGlobalTimeStepSize(Particle& loc
   /* In principle, this time-step could be different than that used for normal kick */
   double dt_kick_therm = 0.5 * localParticle->getSpecies().getMinTimeStepSize();
 
-// std::cout << "dt_therm " << dt_therm << std::endl;
+  // std::cout << "dt_therm " << dt_therm << std::endl;
 
   /* Integrate the internal energy forward in time */
   const double delta_u = localParticle->getUDot() * dt_kick_therm;
@@ -140,7 +142,8 @@ void swift2::timestepping::computePredictHydro(const ParticleContainer& localPar
 
   for (auto* particle : localParticles) {
     if (
-      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
+      particle->getParallelState()
+      == std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
       // and
       // not particle->getIsBoundaryParticle()
     ) {

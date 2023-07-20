@@ -3,38 +3,43 @@
 Tool related to the (computation of) the smoothing length.
 """
 
-from .sph_kernels import sph_kernel_W, sph_kernel_dWdr, sph_kernel_get_H, sph_kernel_get_H
+from .sph_kernels import (
+    sph_kernel_W,
+    sph_kernel_dWdr,
+    sph_kernel_get_H,
+    sph_kernel_get_H,
+)
 from numpy import ndarray, sqrt, cbrt, pi
 
-def _neighbour_loop(r: ndarray, h:float, kernel: str, ndim:int):
+
+def _neighbour_loop(r: ndarray, h: float, kernel: str, ndim: int):
     """!
     TODO: docu
     """
-    wcount = 0.
-    wcount_dh = 0.
+    wcount = 0.0
+    wcount_dh = 0.0
     H = sph_kernel_get_H(h, kernel, ndim)
 
     # Collect neighbour values
     for n in range(r.shape[0]):
         q = r[n] / H
-        w =  sph_kernel_W(r[n], h, kernel, ndim)
-        dwdr =  sph_kernel_dWdr(r[n], h, kernel, ndim)
+        w = sph_kernel_W(r[n], h, kernel, ndim)
+        dwdr = sph_kernel_dWdr(r[n], h, kernel, ndim)
         wcount += w
-        wcount_dh -= (ndim * w + q * dwdr)
+        wcount_dh -= ndim * w + q * dwdr
 
     # Add self contribution
-    w = sph_kernel_W(0., h, kernel, ndim)
-    dwdr =  sph_kernel_dWdr(0., h, kernel, ndim)
+    w = sph_kernel_W(0.0, h, kernel, ndim)
+    dwdr = sph_kernel_dWdr(0.0, h, kernel, ndim)
     wcount += w
     wcount_dh -= dwdr
 
     return wcount, wcount_dh
 
 
-
-
-
-def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float, h_tolerance: float, ndim: int):
+def find_smoothing_length(
+    xp: ndarray, xn: ndarray, kernel: str, eta: float, h_tolerance: float, ndim: int
+):
     """!
     Determine the smoothing length of a particle with coordinates xp
 
@@ -54,10 +59,9 @@ def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float, h_t
     # TODO: for debugging
     verbose = False
 
-
     # get distances between particles
     dx = xn - xp
-    r2 = dx[:,0]**2 + dx[:,1]**2 + dx[:,2]**2
+    r2 = dx[:, 0] ** 2 + dx[:, 1] ** 2 + dx[:, 2] ** 2
     r = sqrt(r2)
 
     # Set up boundaries. We assume that the correct
@@ -83,8 +87,9 @@ def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float, h_t
     left_old = left
 
     iteration = 0
-    n_target = eta ** ndim
-    if verbose: print("h_init", h)
+    n_target = eta**ndim
+    if verbose:
+        print("h_init", h)
 
     # This is a very high number of iterations. However, this function
     # is intended for confirmation checks that use untypically low
@@ -93,7 +98,7 @@ def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float, h_t
         iteration += 1
 
         h_dim = h**ndim
-        h_dim_minus_one = h**(ndim-1.)
+        h_dim_minus_one = h ** (ndim - 1.0)
         wcount, wcount_dh = _neighbour_loop(r, h, kernel, ndim)
 
         n_sum = wcount * h_dim
@@ -124,12 +129,12 @@ def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float, h_t
         h_new = h - f / f_prime
 
         # don't overstep boundaries, and don't change too fast
-        h_new = min(2. * h, h_new)
+        h_new = min(2.0 * h, h_new)
         h_new = max(0.5 * h, h_new)
         h_new = max(h_new, left)
         h_new = min(h_new, right)
 
-        #TODO temporary
+        # TODO temporary
         if verbose:
             print("h_new=", h_new)
             print("wcount", wcount)
@@ -141,7 +146,8 @@ def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float, h_t
 
         # Are we done?
         if abs(diff < h_tolerance * h):
-            if verbose: print("done h=", h_new)
+            if verbose:
+                print("done h=", h_new)
             return h_new
             break
 
@@ -155,15 +161,21 @@ def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float, h_t
         h = min(h_max, h)
         h = max(h_min, h)
 
-        if verbose: print("------------------------------------")
+        if verbose:
+            print("------------------------------------")
 
-    print("Particle with coordinates", xp, "didn't converge smoothing length after", iteration, "iterations")
+    print(
+        "Particle with coordinates",
+        xp,
+        "didn't converge smoothing length after",
+        iteration,
+        "iterations",
+    )
 
     return h
 
 
-
-def eta_from_number_of_neighbours(N: float, kernel: str, ndim:int):
+def eta_from_number_of_neighbours(N: float, kernel: str, ndim: int):
     """
     Compute the resolution eta from a given (approximate) number of neighbours.
     Note that the neighbour number does not need be an integer.
@@ -189,19 +201,19 @@ def eta_from_number_of_neighbours(N: float, kernel: str, ndim:int):
         the corresponding resolution eta
     """
 
-    H_over_h = sph_kernel_get_H(1., kernel, ndim)
+    H_over_h = sph_kernel_get_H(1.0, kernel, ndim)
 
     if ndim == 1:
-        return N / (2. * H_over_h)
+        return N / (2.0 * H_over_h)
     elif ndim == 2:
         return sqrt(N / pi) / H_over_h
     elif ndim == 3:
-        return cbrt(N * 3. / 4. / pi) / H_over_h
+        return cbrt(N * 3.0 / 4.0 / pi) / H_over_h
     else:
         raise ValueError("Invalid number of dimensions", ndim)
 
 
-def number_of_neighbours_from_eta(eta: float, kernel: str, ndim:int):
+def number_of_neighbours_from_eta(eta: float, kernel: str, ndim: int):
     """
     Compute the (approximate) number of neighbours from a given resolution eta.
     Note that the neighbour number does not need be an integer.
@@ -227,14 +239,13 @@ def number_of_neighbours_from_eta(eta: float, kernel: str, ndim:int):
         the (approximate) number of neighbours
     """
 
-    H_over_h = sph_kernel_get_H(1., kernel, ndim)
+    H_over_h = sph_kernel_get_H(1.0, kernel, ndim)
 
     if ndim == 1:
-        return 2. * H_over_h * eta
+        return 2.0 * H_over_h * eta
     elif ndim == 2:
-        return pi * (H_over_h * eta)**2
+        return pi * (H_over_h * eta) ** 2
     elif ndim == 3:
-        return 4./3. * pi * (H_over_h * eta)**3
+        return 4.0 / 3.0 * pi * (H_over_h * eta) ** 3
     else:
         raise ValueError("Invalid number of dimensions", ndim)
-

@@ -32,9 +32,6 @@ npart = args.particle_number
 seed = args.random_seed
 
 
-
-
-
 # ---------------------------------------------------
 
 # Build the arrays
@@ -43,12 +40,12 @@ v = np.zeros((npart, 3))
 ids = np.linspace(1, npart, npart)
 m = np.ones(npart)
 dx = boxSize / npart
-h = np.ones(npart) * 2. * dx
+h = np.ones(npart) * 2.0 * dx
 u = np.ones(npart)
 
 # Get uniform coordinates.
 for i in range(npart):
-    coords[i,0] = (i + 0.5) * dx
+    coords[i, 0] = (i + 0.5) * dx
 
 # Now randomize them a bit.
 # Taking a completely randomly sampled particle distribution may lead
@@ -59,8 +56,8 @@ for i in range(npart):
 
 rng = np.random.RandomState(seed=seed)
 # rng.random returns random numbers in [0, 1). Scale that.
-displacement = (2. * rng.random(coords.shape) - 1.) * 0.499 * dx
-coords[:,0] += displacement[:,0]
+displacement = (2.0 * rng.random(coords.shape) - 1.0) * 0.499 * dx
+coords[:, 0] += displacement[:, 0]
 
 # File
 file = h5py.File(fileName, "w")

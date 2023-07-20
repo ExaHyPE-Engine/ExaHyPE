@@ -14,7 +14,9 @@ from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVT
 import swift2.sphtools
 
 
-parser = argparse.ArgumentParser(description="Compare Smoothing Length Results With Expectations")
+parser = argparse.ArgumentParser(
+    description="Compare Smoothing Length Results With Expectations"
+)
 parser.add_argument(
     "-ic",
     "--ic-file",
@@ -35,7 +37,7 @@ parser.add_argument(
     "--h-tolerance",
     dest="h_tol",
     type=float,
-    default=1.e-6,
+    default=1.0e-6,
     help="Threshold for convergence of smoothing length",
 )
 parser.add_argument(
@@ -59,8 +61,8 @@ eta = swift2.sphtools.eta_from_number_of_neighbours(nneigh, kernel=kernel, ndim=
 # Make this tolerance dependant on the used h_tolerance. Add a
 # factor of 10 to allow for float round-off errors and the likes.
 # Naturally this assumes that h_tolerance is small. Typically <= 1e-4
-comparison_tolerance = 10. * h_tolerance
-comparison_tolerance = max(comparison_tolerance, 1.e-4)
+comparison_tolerance = 10.0 * h_tolerance
+comparison_tolerance = max(comparison_tolerance, 1.0e-4)
 
 
 print(" Running comparison")
@@ -102,17 +104,16 @@ sml_python = np.zeros((npart))
 for i in range(npart):
     # the KDTree returns the particle itself as a neighbour too.
     # it is stored at the first index, with distance 0.
-    xp = neighbours[i,0,:]
-    xn = neighbours[i,1:,:]
-    h = swift2.sphtools.find_smoothing_length(xp, xn, kernel = kernel, eta=eta, h_tolerance=h_tolerance, ndim = 1)
+    xp = neighbours[i, 0, :]
+    xn = neighbours[i, 1:, :]
+    h = swift2.sphtools.find_smoothing_length(
+        xp, xn, kernel=kernel, eta=eta, h_tolerance=h_tolerance, ndim=1
+    )
     sml_python[i] = h
 
 
-
-
-
 # Read in peano output
-#-------------------------------
+# -------------------------------
 
 reader = ParticleVTUReader(vtufile="particles-0.vtu", verbose=False)
 partData = reader.load()
@@ -125,18 +126,22 @@ sml_peano = sml_peano[sort_peano]
 partIDs_peano = partIDs_peano[sort_peano]
 
 
-
 # Compare resutls
 # -----------------------------
 
 npart = sml_peano.shape[0]
 
 errors = 0
-errorstr = "Found difference: "+"particle ID = {0:4d} "+"H_peano = {1:.5e} "+"H_python = {2:.5e} "+"diff = {3:.5e}"
+errorstr = (
+    "Found difference: "
+    + "particle ID = {0:4d} "
+    + "H_peano = {1:.5e} "
+    + "H_python = {2:.5e} "
+    + "diff = {3:.5e}"
+)
 
 for i in range(npart):
-
-    diff = 1. - sml_peano[i]/sml_python[i]
+    diff = 1.0 - sml_peano[i] / sml_python[i]
 
     if abs(diff) > comparison_tolerance:
         errors += 1
@@ -154,7 +159,6 @@ if errors > 0:
     print(" - corrections for periodic wrapping ")
 
 
-
 #  outputfile = "sml_peano.txt"
 #  f = open(outputfile, "w")
 #  for i in range(sml_peano.shape[0]):
@@ -162,5 +166,3 @@ if errors > 0:
 #  f.close()
 
 sys.exit(errors)
-
-
