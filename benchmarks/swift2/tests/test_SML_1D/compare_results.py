@@ -14,8 +14,6 @@ from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVT
 import swift2.sphtools
 
 
-comparison_tolerance = 1e-4
-
 parser = argparse.ArgumentParser(description="Compare Smoothing Length Results With Expectations")
 parser.add_argument(
     "-ic",
@@ -56,6 +54,13 @@ nneigh = args.nneigh
 h_tolerance = args.h_tol
 kernel = args.kernel
 eta = swift2.sphtools.eta_from_number_of_neighbours(nneigh, kernel=kernel, ndim=1)
+
+# above this (relative) threshold, treat deviations as an error
+# Make this tolerance dependant on the used h_tolerance. Add a
+# factor of 10 to allow for float round-off errors and the likes.
+# Naturally this assumes that h_tolerance is small. Typically <= 1e-4
+comparison_tolerance = 10. * h_tolerance
+comparison_tolerance = max(comparison_tolerance, 1.e-4)
 
 
 print(" Running comparison")

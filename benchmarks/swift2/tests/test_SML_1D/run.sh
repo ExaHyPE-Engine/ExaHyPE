@@ -15,23 +15,17 @@ CELL_SIZE=0.1
 H_TOLERANCE=1e-6
 
 
-# Generate initial condition file
-# if [ ! -e $IC_FILENAME ]
-# then
-    rand=$RANDOM
-    echo 'Generating initial conditions with seed' $rand
-    python3 makeIC.py -np $N_PART -s $rand
-# fi
+rand=$RANDOM
+echo 'Generating initial conditions with seed' $rand
+python3 makeIC.py -np $N_PART -s $rand
 
-# echo python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
-
-# for neighbors in 1 2 5 10; do
-for neighbors in 6; do
-    # Run python script to generate the exper# iment
-    # echo 'generate and compile code ...'
-    # python3 ./test_smoothing_length_computation_1D.py -cs $CELL_SIZE -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE
-    # echo 'running test ...'
-    # ./testSML
+for neighbors in 3 5 10; do
+    echo running for $neighbors neighbors
+    echo 'generate and compile code ...'
+    python3 ./test_smoothing_length_computation_1D.py -cs $CELL_SIZE -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE > /dev/null
+    echo 'running test ...'
+    ./testSML > /dev/null
     echo 'comparing results ...'
     python3 ./compare_results.py -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE
+    echo '---------------------'
 done

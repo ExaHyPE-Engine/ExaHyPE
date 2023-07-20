@@ -46,12 +46,21 @@ dx = boxSize / npart
 h = np.ones(npart) * 2. * dx
 u = np.ones(npart)
 
-# get random coordinates
-#  rng = np.random.RandomState(seed=seed)
-#  coords[:,0] = rng.rand(npart) * boxSize
+# Get uniform coordinates.
 for i in range(npart):
     coords[i,0] = (i + 0.5) * dx
 
+# Now randomize them a bit.
+# Taking a completely randomly sampled particle distribution may lead
+# to trouble the codes aren't set up to handle, such as particles which
+# are either too close or too far from each other. So use a somewhat
+# regular distribution instead, by randomly displacing an initially
+# uniform particle distribution.
+
+rng = np.random.RandomState(seed=seed)
+# rng.random returns random numbers in [0, 1). Scale that.
+displacement = (2. * rng.random(coords.shape) - 1.) * 0.499 * dx
+coords[:,0] += displacement[:,0]
 
 # File
 file = h5py.File(fileName, "w")
