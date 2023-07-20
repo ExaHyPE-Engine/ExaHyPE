@@ -6,7 +6,7 @@ Tool related to the (computation of) the smoothing length.
 from .sph_kernels import sph_kernel_W, sph_kernel_dWdr, sph_kernel_get_H, sph_kernel_get_H
 from numpy import ndarray, sqrt, cbrt, pi
 
-def _neighbour_loop(r: ndarray, h:float, kernel: str, ndim:int, ids, x):
+def _neighbour_loop(r: ndarray, h:float, kernel: str, ndim:int):
     """!
     TODO: docu
     """
@@ -21,7 +21,6 @@ def _neighbour_loop(r: ndarray, h:float, kernel: str, ndim:int, ids, x):
         dwdr =  sph_kernel_dWdr(r[n], h, kernel, ndim)
         wcount += w
         wcount_dh -= (ndim * w + q * dwdr)
-        print("iact id", ids[n], "x=", x[n], "w=", w, "dwdr=", dwdr, "dwdh=", -(ndim * w + q * dwdr))
 
     # Add self contribution
     w = sph_kernel_W(0., h, kernel, ndim)
@@ -35,7 +34,7 @@ def _neighbour_loop(r: ndarray, h:float, kernel: str, ndim:int, ids, x):
 
 
 
-def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float = 1.2348, h_tolerance: float = 1e-4, ndim: int=3, ids = None):
+def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float, h_tolerance: float, ndim: int):
     """!
     Determine the smoothing length of a particle with coordinates xp
 
@@ -52,48 +51,111 @@ def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float = 1.
         the smoothing length
     """
 
+    # TODO: for debugging
+    verbose = False
+
 
     # get distances between particles
     dx = xn - xp
     r2 = dx[:,0]**2 + dx[:,1]**2 + dx[:,2]**2
     r = sqrt(r2)
 
-    # Initial guess
-    h = 0.5 * r.max()
+    # Set up boundaries. We assume that the correct
+    # number of neighbour (candidates) has been passed.
+    h_max = r.max()
+    h_min = h_max * 1e-12
+
+    # Get initial guess for smoothing length
+    dx_average = r.max() / xn.shape[0]
+    nneigh_expect = number_of_neighbours_from_eta(eta, kernel, ndim)
+    h = nneigh_expect * dx_average
+    h = max(h_min, h)
+    h = min(h_max, h)
+
+    # safety check
+    if int(nneigh_expect) > xn.shape[0]:
+        print("WARNING: trying to find more neighbours than candidates provided")
+
+    # bisection bounds
+    right = h_max
+    right_old = right
+    left = h_min
+    left_old = left
 
     iteration = 0
     n_target = eta ** ndim
-    print("h_init", h)
+    if verbose: print("h_init", h)
 
-    while iteration < 100:
+    # This is a very high number of iterations. However, this function
+    # is intended for confirmation checks that use untypically low
+    # convergence criteria, so allow it to do a lot of iterations.
+    while iteration < 500:
         iteration += 1
 
         h_dim = h**ndim
         h_dim_minus_one = h**(ndim-1.)
-        wcount, wcount_dh = _neighbour_loop(r, h, kernel, ndim, ids, xn[:,0])
+        wcount, wcount_dh = _neighbour_loop(r, h, kernel, ndim)
 
         n_sum = wcount * h_dim
         f = n_sum - n_target
         f_prime = wcount_dh * h_dim + ndim * wcount * h_dim_minus_one
 
+        # improve bisection bounds
+        if n_sum < n_target:
+            left_old = left
+            left = max(left, h)
+        elif n_sum > n_target:
+            right_old = right
+            right = min(right, h)
+
+        if left > right:
+            print("Error in bisection bounds. Resetting them.")
+            left = left_old
+            right = right_old
+
+        if h >= h_max and f < 0:
+            print("Particle with coordinates", xp, "reached h_max. Returning that.")
+            return h_max
+
+        if h <= h_min and f > 0:
+            print("Particle with coordinates", xp, "reached h_min. Returning that.")
+            return h_min
+
         h_new = h - f / f_prime
 
-        diff = 1. - h_new / h
+        # don't overstep boundaries, and don't change too fast
+        h_new = min(2. * h, h_new)
+        h_new = max(0.5 * h, h_new)
+        h_new = max(h_new, left)
+        h_new = min(h_new, right)
 
         #TODO temporary
-        print("h_new=", h_new)
-        print("wcount", wcount)
-        print("wcount_dh", wcount_dh)
-        print("f", f)
-        print("f_prime", f_prime)
+        if verbose:
+            print("h_new=", h_new)
+            print("wcount", wcount)
+            print("wcount_dh", wcount_dh)
+            print("f", f)
+            print("f_prime", f_prime)
 
-        if abs(diff < h_tolerance):
-            print("done h=", h_new)
+        diff = h - h_new
+
+        # Are we done?
+        if abs(diff < h_tolerance * h):
+            if verbose: print("done h=", h_new)
             return h_new
             break
+
+        # We're not done...
+        # Case where we have been oscillating around the solution
+        if (h_new == left and h == right) or (h == left and h_new == right):
+            h_new = (0.5 * (left**ndim + right**ndim)) ** (-ndim)
         else:
             h = h_new
-        print("------------------------------------")
+
+        h = min(h_max, h)
+        h = max(h_min, h)
+
+        if verbose: print("------------------------------------")
 
     print("Particle with coordinates", xp, "didn't converge smoothing length after", iteration, "iterations")
 
@@ -101,7 +163,7 @@ def find_smoothing_length(xp: ndarray, xn: ndarray, kernel: str, eta: float = 1.
 
 
 
-def eta_from_number_of_neighbours(N: float, kernel: str = "cubic_spline", ndim:int = 3):
+def eta_from_number_of_neighbours(N: float, kernel: str, ndim:int):
     """
     Compute the resolution eta from a given (approximate) number of neighbours.
     Note that the neighbour number does not need be an integer.
@@ -135,6 +197,44 @@ def eta_from_number_of_neighbours(N: float, kernel: str = "cubic_spline", ndim:i
         return sqrt(N / pi) / H_over_h
     elif ndim == 3:
         return cbrt(N * 3. / 4. / pi) / H_over_h
+    else:
+        raise ValueError("Invalid number of dimensions", ndim)
+
+
+def number_of_neighbours_from_eta(eta: float, kernel: str, ndim:int):
+    """
+    Compute the (approximate) number of neighbours from a given resolution eta.
+    Note that the neighbour number does not need be an integer.
+    See Price 2012, https://ui.adsabs.harvard.edu/abs/2012JCoPh.231..759P, eq. 12
+
+    Parameters
+    ----------
+
+    eta: float
+        resolution eta
+
+    kernel: str
+        which kernel we're computing for.
+
+    ndim: int
+        how many dimensions we are working with.
+
+
+    Returns
+    -------
+
+    N: float
+        the (approximate) number of neighbours
+    """
+
+    H_over_h = sph_kernel_get_H(1., kernel, ndim)
+
+    if ndim == 1:
+        return 2. * H_over_h * eta
+    elif ndim == 2:
+        return pi * (H_over_h * eta)**2
+    elif ndim == 3:
+        return 4./3. * pi * (H_over_h * eta)**3
     else:
         raise ValueError("Invalid number of dimensions", ndim)
 
