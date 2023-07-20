@@ -603,9 +603,9 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
 
   templateTVFT = """
     if (not marker.willBeRefined()){
-      static int calls = 10; calls++;
-      std::cout << fineGridVertex{{SOLVER_NAME}}.getDofIndices() << " " << calls << "\\n";
-      std::cout << fineGridVertex{{SOLVER_NAME}}.toString()      << "\\n\\n";
+      //static int calls = 10; calls++;
+      //std::cout << fineGridVertex{{SOLVER_NAME}}.getDofIndices() << " " << calls << "\\n";
+      //std::cout << fineGridVertex{{SOLVER_NAME}}.toString()      << "\\n\\n";
     }
   """
 

@@ -13,6 +13,7 @@ from scipy.interpolate import lagrange
 
 from .Solver                                    import Solver
 from petsc.actionsets.EnumerateCellsAndFaces    import EnumerateCellsAndFaces
+from petsc.actionsets.EnumerateVertices         import EnumerateVerticesGeneral
 from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
 from petsc.actionsets.InitPetsc                 import SendDofsToVertices
@@ -165,6 +166,7 @@ class HdgFirstDiscretisation(Solver):
     """
     observer.add_action_set( InitVertexDoFs(self) ) 
     observer.add_action_set( InitFaceAndCellDoFs(self) ) 
+    observer.add_action_set( EnumerateVerticesGeneral(self) )
     observer.add_action_set( EnumerateCellsAndFaces(self) ) 
     pass
   

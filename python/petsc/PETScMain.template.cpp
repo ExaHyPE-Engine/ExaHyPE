@@ -204,9 +204,11 @@ void step() {
         {% if Project_Name=="HDG" %}
         // const int totalNumberOfFaceDofs  = repositories::getTotalFaceDofs();
         const int totalNumberOfCellDofs  = repositories::getTotalCellDofs();
+        const int totalNumberVertices    = repositories::getTotalVertexDofs();
         const int totalDofs              = totalNumberOfCellDofs;
         // logInfo( "step()", "total no of face dofs=" << totalNumberOfFaceDofs );
         logInfo( "step()", "total no of cell dofs=" << totalNumberOfCellDofs );
+        logInfo( "step()", "total no of vertices= " << totalNumberVertices);
         logInfo( "step()", "initialising petsc matrix with " << totalDofs << " dofs" );
         repositories::instanceOfPetsc.initMatrixAndVectors( totalDofs );
 

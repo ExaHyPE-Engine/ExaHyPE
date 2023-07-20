@@ -47,6 +47,7 @@ namespace {{N}} {
 
     int getTotalFaceDofs();
     int getTotalCellDofs();
+    int getTotalVertexDofs();
 
     /**
     * we order the matrix so that cell-cell coupling sits
@@ -54,6 +55,7 @@ namespace {{N}} {
     */
     int getGlobalCellIndex(std::pair<int,int> localIndex);
     int getGlobalFaceIndex(std::pair<int,int> localIndex);
+    int getGlobalVertexIndex(std::pair<int,int> localIndex);
 
     /*
     * store points, weight and coefficients for gaussian

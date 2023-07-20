@@ -33,7 +33,7 @@ int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom()
   int result = 0;
   {% for SOLVER in SOLVER_INSTANCES %}
   {% if SOLVER_INSTANCES[0][0]=="HDG" %}
-  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getTotalNumberOfIndices();
+  // result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getTotalNumberOfIndices();
   result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getTotalNumberOfIndices();
   {% else %}
   result += {{SOLVER[1]}}.getLocalToGlobalMap().getTotalNumberOfIndices();
@@ -60,6 +60,14 @@ int {{NAMESPACE | join("::")}}::repositories::getTotalCellDofs() {
   return result;
 }
 
+int {{NAMESPACE | join("::")}}::repositories::getTotalVertexDofs() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getVertexLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
+
 int {{NAMESPACE | join("::")}}::repositories::getGlobalCellIndex(std::pair<int,int> localIndex) {
   int result;
   {% for SOLVER in SOLVER_INSTANCES %}
@@ -73,6 +81,14 @@ int {{NAMESPACE | join("::")}}::repositories::getGlobalFaceIndex(std::pair<int,i
   result += getTotalCellDofs();
   {% for SOLVER in SOLVER_INSTANCES %}
   result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getGlobalIndex(localIndex);
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalVertexIndex(std::pair<int,int> localIndex) {
+  int result;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getVertexLocalToGlobalMap().getGlobalIndex(localIndex);
   {% endfor %}
   return result;
 }
