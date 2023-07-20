@@ -267,7 +267,7 @@ sph_kernel_deval_function["wendland_C4"] = _sph_kernel_deval_wendland_C4
 sph_kernel_deval_function["wendland_C6"] = _sph_kernel_deval_wendland_C6
 
 
-def sph_kernel_W(r: float, h: float, kernel: str = "cubic_spline", ndim: int = 3):
+def sph_kernel_W(r: float, h: float, kernel: str, ndim: int):
     """!
     Evaluates various kernels.
     The kernels are scaled such that W(q > 1) = 0.
@@ -305,7 +305,7 @@ def sph_kernel_W(r: float, h: float, kernel: str = "cubic_spline", ndim: int = 3
     """
 
     sigma = sph_kernel_normalization[ndim-1][kernel]
-    H = sph_kernel_get_H(h, kernel)
+    H = sph_kernel_get_H(h, kernel, ndim)
     kernel_W = sph_kernel_eval_function[kernel]
     q = r / H
     W = sigma * kernel_W(q) / H**ndim
@@ -313,7 +313,7 @@ def sph_kernel_W(r: float, h: float, kernel: str = "cubic_spline", ndim: int = 3
     return W
 
 
-def sph_kernel_dWdr(r: float, h: float, kernel: str = "cubic_spline", ndim: int = 3):
+def sph_kernel_dWdr(r: float, h: float, kernel: str, ndim: int):
     """
     Evaluates kernel derivatives for various kernels:
     returns dW/dr = dW/dq dq/dr = 1/H * dW/dq
@@ -353,14 +353,14 @@ def sph_kernel_dWdr(r: float, h: float, kernel: str = "cubic_spline", ndim: int 
 
     sigma = sph_kernel_normalization[ndim-1][kernel]
     kernel_dWdr = sph_kernel_deval_function[kernel]
-    H = sph_kernel_get_H(h, kernel)
+    H = sph_kernel_get_H(h, kernel, ndim)
     q = r / H
     dWdr = sigma * kernel_dWdr(q) / H ** (ndim + 1)
 
     return dWdr
 
 
-def sph_kernel_get_H(h: Union[float, np.ndarray], kernel: str = "cubic_spline", ndim: int = 3):
+def sph_kernel_get_H(h: Union[float, np.ndarray], kernel: str, ndim: int):
     """!
     Compute the smoothing length in terms of the compact support length
     of a given kernel.
