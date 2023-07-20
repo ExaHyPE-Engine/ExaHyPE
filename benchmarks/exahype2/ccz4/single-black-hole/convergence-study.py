@@ -67,6 +67,8 @@ def construct_FV_limiter_for_FD4():
 #include "toolbox/blockstructured/Interpolation.h"        
 """
 
+            self.enclave_task_priority = "2*tarch::multicore::Task::DefaultPriority"
+
         def _store_cell_data_default_guard(self):
             """!
 
@@ -89,28 +91,33 @@ def construct_FV_limiter_for_FD4():
                 + self._name
                 + ".isCellOverlappingWithBHImpactArea(marker) )"
             )
+                
+        def _provide_cell_data_to_compute_kernels_default_guard(self):
+            return (
+                """("""
+                + super(Limiter,self)._provide_cell_data_to_compute_kernels_default_guard()
+                + " and repositories::InstanceOf"
+                + self._name
+                + ".isCellOverlappingWithBHImpactArea(marker) )"
+            )
+           
+        def _provide_face_data_to_compute_kernels_default_guard(self):
+            return "{} and repositories::InstanceOf{}.isOneAdjacentCellOverlappingWithBHImpactArea(marker)" .format(
+                    super(Limiter,self)._provide_face_data_to_compute_kernels_default_guard(),
+                    self._name
+                )
 
         def _store_face_data_default_guard(self):
-            return (
-                """("""
-                + super(Limiter, self)._store_face_data_default_guard()
-                + """
-                    and repositories::InstanceOf"""
-                + self._name
-                + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
-                  )"""
-            )
+            return "({} and repositories::InstanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
+                    super(Limiter, self)._store_face_data_default_guard(),
+                    self._name
+                )
 
         def _load_face_data_default_guard(self):
-            return (
-                """("""
-                + super(Limiter, self)._load_face_data_default_guard()
-                + """
-                    and repositories::InstanceOf"""
-                + self._name
-                + """.areAdjacentCellsOverlappingWithBHImpactArea(marker) 
-                  )"""
-            )
+            return "({} and repositories::InstanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
+                    super(Limiter, self)._load_face_data_default_guard(),
+                    self._name
+                )
 
         def create_action_sets(self):
             """!
@@ -350,32 +357,32 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
       interpolatedFVDataWithHalo,
       repositories::InstanceOf"""
                 + self._name_without_FD4_extension
-                + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,0) ? dummyFace0 : fineGridFaces"""
+                + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,0) ? dummyFace0 : fineGridFaces"""
                 + self._name_without_FD4_extension
                 + """_FVQNew(0).value,
       repositories::InstanceOf"""
                 + self._name_without_FD4_extension
-                + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,1) ? dummyFace1 : fineGridFaces"""
+                + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,1) ? dummyFace1 : fineGridFaces"""
                 + self._name_without_FD4_extension
                 + """_FVQNew(1).value,
       repositories::InstanceOf"""
                 + self._name_without_FD4_extension
-                + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,2) ? dummyFace2 : fineGridFaces"""
+                + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,2) ? dummyFace2 : fineGridFaces"""
                 + self._name_without_FD4_extension
                 + """_FVQNew(2).value,
       repositories::InstanceOf"""
                 + self._name_without_FD4_extension
-                + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,3) ? dummyFace3 : fineGridFaces"""
+                + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,3) ? dummyFace3 : fineGridFaces"""
                 + self._name_without_FD4_extension
                 + """_FVQNew(3).value,
       repositories::InstanceOf"""
                 + self._name_without_FD4_extension
-                + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,4) ? dummyFace4 : fineGridFaces"""
+                + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,4) ? dummyFace4 : fineGridFaces"""
                 + self._name_without_FD4_extension
                 + """_FVQNew(4).value,
       repositories::InstanceOf"""
                 + self._name_without_FD4_extension
-                + """_FV.areAdjacentCellsOverlappingWithBHImpactArea(marker,5) ? dummyFace5 : fineGridFaces"""
+                + """_FV.areBothAdjacentCellsOverlappingWithBHImpactArea(marker,5) ? dummyFace5 : fineGridFaces"""
                 + self._name_without_FD4_extension
                 + """_FVQNew(5).value
     );
@@ -497,6 +504,10 @@ def construct_FD4_solver(min_cell_size, max_cell_size):
 #include "toolbox/blockstructured/Interpolation.h"        
 #include "toolbox/blockstructured/Copy.h"        
 """
+            ## For compatibility. Name makes no sense. But the value
+            ## guides the AMR pattern
+            self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
+            
 
         def create_action_sets(self):
             """!
@@ -763,9 +774,10 @@ if __name__ == "__main__":
         my_primary_solver.add_tracer(
             name="PrimaryTracer", coordinates=tracer_coordinates, project=project
         )
-        my_secondary_solver.add_tracer(
-            name="SecondaryTracer", coordinates=tracer_coordinates, project=project
-        )
+        if added_limiter:
+            my_secondary_solver.add_tracer(
+                name="SecondaryTracer", coordinates=tracer_coordinates, project=project
+            )
 
     # project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
     project.set_load_balancing(

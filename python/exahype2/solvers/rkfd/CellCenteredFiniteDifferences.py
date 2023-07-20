@@ -560,18 +560,16 @@ The finest mesh width of """
 #include "repositories/SolverRepository.h" 
 """
 
-        self._patch.generator.store_persistent_condition = (
-            self._store_cell_data_default_guard()
-        )
-        self._patch.generator.load_persistent_condition = (
-            self._load_cell_data_default_guard()
+        self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
         )
 
-        self._patch_estimates.generator.store_persistent_condition = (
-            self._store_cell_data_default_guard()
-        )
-        self._patch_estimates.generator.load_persistent_condition = (
-            self._load_cell_data_default_guard()
+        self._patch_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
         )
 
         self._patch_overlap_old.generator.send_condition = "false"
@@ -583,22 +581,23 @@ The finest mesh width of """
         self._patch_overlap_update.generator.send_condition = "false"
         self._patch_overlap_update.generator.receive_and_merge_condition = "false"
 
-        self._patch_overlap_old.generator.store_persistent_condition = (
-            self._store_face_data_default_guard()
-        )
-        self._patch_overlap_old.generator.load_persistent_condition = (
-            self._load_face_data_default_guard()
-        )
-
-        self._patch_overlap_new.generator.store_persistent_condition = (
-            self._store_face_data_default_guard()
-        )
-        self._patch_overlap_new.generator.load_persistent_condition = (
-            self._load_face_data_default_guard()
+        self._patch_overlap_old.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+          self._provide_face_data_to_compute_kernels_default_guard(),
+          self._load_face_data_default_guard(),
+          self._store_face_data_default_guard(),
         )
 
-        self._patch_overlap_update.generator.store_persistent_condition = "false"
-        self._patch_overlap_update.generator.load_persistent_condition = "false"
+        self._patch_overlap_new.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+          self._provide_face_data_to_compute_kernels_default_guard(),
+          self._load_face_data_default_guard(),
+          self._store_face_data_default_guard(),
+        )
+
+        self._patch_overlap_update.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+          self._provide_face_data_to_compute_kernels_default_guard(),
+          "false",
+          "false"
+        )
 
         self._patch.generator.includes += """
 #include "../repositories/SolverRepository.h"
@@ -790,6 +789,27 @@ The finest mesh width of """
 
         self._action_set_update_cell = None
 
+
+    def _provide_cell_data_to_compute_kernels_default_guard(self):
+       return (
+                        "not marker.willBeRefined() "
+                        + "and repositories::"
+                        + self.get_name_of_global_instance()
+                        + ".getSolverState()!="
+                        + self._name
+                        + "::SolverState::GridConstruction"
+                )
+
+    def _provide_face_data_to_compute_kernels_default_guard(self):
+        return (
+                        "not marker.willBeRefined() "
+                        + "and repositories::"
+                        + self.get_name_of_global_instance()
+                        + ".getSolverState()!="
+                        + self._name
+                        + "::SolverState::GridConstruction"
+                )
+                
     def _store_cell_data_default_guard(self):
         """!
 

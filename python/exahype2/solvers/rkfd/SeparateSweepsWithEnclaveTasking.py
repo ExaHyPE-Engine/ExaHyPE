@@ -256,6 +256,17 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
     by redefining the corresponding entry in the dictionary befilled by
     add_entries_to_text_replacement_dictionary().
 
+    ## Task priorities
+    
+    Use the attributes self.enclave_task_priority to change the priority of the 
+    task. This value can either be a string that C++ can evaluate into a 
+    priority or a plain numerical value. I set it to 
+    
+           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority"
+               
+    by default.
+    
+    
     """
 
     def __init__(
@@ -407,6 +418,8 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         self._fused_volumetric_kernel_call_cpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_cpu in your Python solver class."
         self._fused_volumetric_kernel_call_gpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_gpu in your Python solver class."
 
+        self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority"
+            
         self.create_action_sets()
         self.create_data_structures()
 
@@ -515,19 +528,18 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
             self.get_name_of_global_instance(), 
         )
 
-        self._patch_estimates.generator.store_persistent_condition = (
-            self._store_cell_data_default_guard()
-            + """
-      and not ("""
-            + last_sweep_of_time_step_or_plotting_or_initialisation
-            + ")"
-        )
-        self._patch_estimates.generator.load_persistent_condition = (
+        self._patch_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
             self._load_cell_data_default_guard()
             + """
       and not ("""
             + first_sweep_of_time_step_or_plotting_guard
-            + ")"
+            + ")",
+            self._store_cell_data_default_guard()
+            + """
+      and not ("""
+            + last_sweep_of_time_step_or_plotting_or_initialisation
+            + ")",
         )
 
     def create_action_sets(self):
@@ -683,6 +695,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
             self._name
         )
         d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
+        d["ENCLAVE_TASK_PRIORITY"] = self.enclave_task_priority
 
     @property
     def user_action_set_includes(self):

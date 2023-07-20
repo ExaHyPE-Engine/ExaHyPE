@@ -120,7 +120,7 @@ class Particle(peano4.toolbox.particles.Particle):
         self.particles_per_cell = particles_per_cell
         self.min_h = min_h
         self.max_h = max_h
-
+        
         pass
 
     @abstractmethod
