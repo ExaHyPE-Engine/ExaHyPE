@@ -251,6 +251,7 @@ my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically",
 #my_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
+my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
 
 with open("postprocess.py", "w") as file:
