@@ -4,6 +4,9 @@
 #include "observers/EnumerateAndInitSolution.h"
 #include "observers/Assemble.h"
 #include "observers/Solve.h"
+{% if Project_Name=="HDG" %}
+#include "observers/InitPETSc.h"
+{% endif %}
 #include "observers/MapSolutionOntoMesh.h"
 #include "observers/Plot.h"
 
@@ -193,6 +196,7 @@ void step() {
 
         watch.start();
 
+        {{ADD_DOFS_TO_VERTICES}}
         repositories::computeLocalToGlobalMapsForAllSolvers();
         const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
         logInfo( "step()", "total no of dofs="  << totalNumberOfDegreesOfFreedom );

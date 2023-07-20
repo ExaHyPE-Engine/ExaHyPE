@@ -114,6 +114,10 @@ vertex for the first time of a mesh traversal, e.g.
     
     """
     assert False, "should not be called"
+
+  @abstractmethod
+  def add_to_init_petsc(self, observer):
+    assert False, "should not be called"
   
   
   @abstractmethod

@@ -15,6 +15,7 @@ from .Solver                                    import Solver
 from petsc.actionsets.EnumerateCellsAndFaces    import EnumerateCellsAndFaces
 from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
+from petsc.actionsets.InitPetsc                 import SendDofsToVertices
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
 from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixWithQuadratures
 
@@ -171,6 +172,9 @@ class HdgFirstDiscretisation(Solver):
   def add_to_assemble(self, observer):
     observer.add_action_set( AssemblePETSCMatrixWithQuadratures(self) )
     pass
+
+  def add_to_init_petsc(self, observer):
+    observer.add_action_set( SendDofsToVertices(self) )
   
 
   def add_to_map_solution_onto_mesh(self, observer):
