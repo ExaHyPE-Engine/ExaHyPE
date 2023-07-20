@@ -80,7 +80,7 @@ if (localParticle->getPartid() == activeParticle->getPartid()){
     tarch::la::Vector<Dimensions, double> curlvr(0.0);
 
 if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
-  std::cout << "iact " << localParticle->getPartid() << " and " << activeParticle->getPartid() << " x= " << activeParticle->getX()[0]
+  std::cout << "DENSITY_IACT " << localParticle->getPartid() << " and " << activeParticle->getPartid() << " x= " << activeParticle->getX()[0]
   << " w_a " << w_a << " dwa_dx " << dwa_dx << " dwa_dh " << dwa_dh
   << std::endl;
 
@@ -116,7 +116,7 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
 
   // No cosmology yet: a^{(3 gamma - 5 )/ 2} = 1.
   const double fac_mu = 1.;
-  const double a2_Hubble = 1.; // a**2 * H
+  const double a2_Hubble = 0.; // a**2 * H, where H = da/dt / a. = 0 without cosmo
 
   // Distance between the two particles
   tarch::la::Vector<Dimensions, double> dx    = localParticle->getX() - activeParticle->getX();
@@ -199,9 +199,9 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
       visc_acc_term,
       localParticle->toString(),
       activeParticle->toString(),
-      wa_dr,
+      dwa_dr,
       f_ab,
-      wb_dr,
+      dwb_dr,
       f_ba,
       r_inv,
       visc
@@ -231,7 +231,7 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
     // Update the signal velocity
     localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), v_sig));
 
-    assertion6(not std::isnan(localParticle->getHDot()), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba);
+    assertion6(not std::isnan(localParticle->getHDot()), localParticle->toString(), dvdr, r_inv, dwa_dr, f_ab, f_ba);
     assertion7(
       not tarch::la::isEntryNan(localParticle->getA()),
       localParticle->toString(),
