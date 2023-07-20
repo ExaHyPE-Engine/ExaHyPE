@@ -47,7 +47,7 @@ sph_kernel_deval_function = {}
 # 3D values
 sph_kernel_H_over_h[2]["cubic_spline"] =1.825742
 sph_kernel_H_over_h[2]["quartic_spline"] = 2.018932
-sph_kernel_H_over_h[2]["quintic_spline"] =2.195775
+sph_kernel_H_over_h[2]["quintic_spline"] = 2.195775
 sph_kernel_H_over_h[2]["wendland_C2"] = 1.936492
 sph_kernel_H_over_h[2]["wendland_C4"] =2.207940
 sph_kernel_H_over_h[2]["wendland_C6"] =2.449490
@@ -62,8 +62,8 @@ sph_kernel_H_over_h[1]["wendland_C6"] = 2.415230
 
 # 1D values
 sph_kernel_H_over_h[0]["cubic_spline"] = 1.732051
-sph_kernel_H_over_h[0]["quartic_spline"] =1.936492
-sph_kernel_H_over_h[0]["quintic_spline"] =2.121321
+sph_kernel_H_over_h[0]["quartic_spline"] = 1.936492
+sph_kernel_H_over_h[0]["quintic_spline"] = 2.121321
 sph_kernel_H_over_h[0]["wendland_C2"] =1.620185
 sph_kernel_H_over_h[0]["wendland_C4"] = None # not defined in 1D
 sph_kernel_H_over_h[0]["wendland_C6"] = None # not defined in 1D
@@ -125,8 +125,8 @@ def _sph_kernel_eval_quintic_spline(q: float):
     """!
     Evaluates the quintic spline kernel
     """
-    if q < 0.333333333333:
-        res = 10 * (q ** 4 * (1 - q) - 0.2222222222 * q ** 2) + 0.2682926829268
+    if q < 1./3.:
+        res = 10. * (q ** 4 * (1. - q) - 0.2222222222 * q ** 2) + 0.2716049382716049
     elif q < 0.666666666666:
         qsq = q ** 2
         q4 = qsq ** 2
@@ -268,15 +268,16 @@ sph_kernel_deval_function["wendland_C6"] = _sph_kernel_deval_wendland_C6
 
 
 def sph_kernel_W(r: float, h: float, kernel: str = "cubic_spline", ndim: int = 3):
-    """
+    """!
     Evaluates various kernels.
     The kernels are scaled such that W(q > 1) = 0.
     Currently implemented:
         cubic_spline,
+        quartic_spline,
         quintic_spline,
         wendland_C2,
-        wendland_C4,
-        wendland_C6
+        wendland_C4, [not with ndim=1]
+        wendland_C6, [not with ndim=1]
 
 
     Parameters
@@ -304,13 +305,12 @@ def sph_kernel_W(r: float, h: float, kernel: str = "cubic_spline", ndim: int = 3
     """
 
     sigma = sph_kernel_normalization[ndim-1][kernel]
-    kernel_W = sph_kernel_eval_function[kernel]
-
     H = sph_kernel_get_H(h, kernel)
+    kernel_W = sph_kernel_eval_function[kernel]
     q = r / H
-    W = kernel_W(q)
+    W = sigma * kernel_W(q) / H**ndim
 
-    return sigma * W / H**ndim
+    return W
 
 
 def sph_kernel_dWdr(r: float, h: float, kernel: str = "cubic_spline", ndim: int = 3):
@@ -321,11 +321,11 @@ def sph_kernel_dWdr(r: float, h: float, kernel: str = "cubic_spline", ndim: int 
     The kernels are scaled such that W(q > 1) = 0.
     Currently implemented:
         cubic_spline,
+        quartic_spline,
         quintic_spline,
         wendland_C2,
-        wendland_C4,
-        wendland_C6,
-        gaussian (no compact support)
+        wendland_C4, [not with ndim=1]
+        wendland_C6, [not with ndim=1]
 
 
     Parameters
@@ -355,9 +355,9 @@ def sph_kernel_dWdr(r: float, h: float, kernel: str = "cubic_spline", ndim: int 
     kernel_dWdr = sph_kernel_deval_function[kernel]
     H = sph_kernel_get_H(h, kernel)
     q = r / H
-    dWdr = kernel_dWdr(q)
+    dWdr = sigma * kernel_dWdr(q) / H ** (ndim + 1)
 
-    return sigma * dWdr / H**(ndim + 1.)
+    return dWdr
 
 
 def sph_kernel_get_H(h: Union[float, np.ndarray], kernel: str = "cubic_spline", ndim: int = 3):
