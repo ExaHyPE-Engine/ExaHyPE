@@ -149,6 +149,10 @@ namespace toolbox {
      *   Remove it completely from mesh and push it into a global list of
      *   particles which shall be sieved in the next step.
      *
+     * When we try to lift to the next coarser level, we have to check if the
+     * target vertex is local. If not, we have to sieve.
+     *
+     *
      * ## Algorithm
      *
      * If a particle is not local, we keep it, as we don't dare to make a
@@ -175,6 +179,7 @@ namespace toolbox {
      * All of these considerations apply if and only if a particle is local. If
      * a particle is virtual, it is a copy from another rank. In this case, we
      * should not change its position, and we should not change its association.
+     *
      *
      * @see LiftingTolerance
      */

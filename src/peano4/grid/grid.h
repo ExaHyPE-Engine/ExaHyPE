@@ -41,47 +41,6 @@ namespace peano4 {
     std::string        toString() const;
   };
 
-  enum class DataStorageScheme {
-    LoadFromInputStream_ProvideToCalculations_StoreToOutputStream,
-    LoadFromInputStream_ProvideToCalculations_Discard,
-    CreateDummy_ProvideToCalculations_StoreToOutputStream,
-    CreateDummy_ProvideToCalculations_Discard,
-    NoData
-  };
-
-  /**
-   * Constructs a data storage scheme
-   *
-   * Same as the other constructor, assuming that its predicateToUseData
-   * holds all the time.
-   */
-  DataStorageScheme dataStorageScheme(bool predicateForLoad, bool predicateForStore);
-
-  /**
-   * Constructs a data storage scheme
-   *
-   * Same as the other constructor, assuming that its predicateToUseData
-   * holds all the time.
-   *
-   * predicateToUseData | predicateForLoad | predicateForStore |  Result        | Description
-   * -------------------|------------------|-------------------|----------------|-------------
-   * False              | False            | False             | NoData         | Just ignore the data, as it is not
-   * used False              | True             | False             | LoadFromInputStream_ProvideToCalculations_Discard
-   * | Load it (and keep it as you've loaded it anyway) but then throw it away, as it is not used False              |
-   * False            | True              | CreateDummy_ProvideToCalculations_StoreToOutputStream | It will not be used,
-   * but create a dummy, as it has to be stored eventually False              | True             | True              |
-   * assertion      | Makes no sense True               | False            | False             |
-   * CreateDummy_ProvideToCalculations_Discard | Data is required temporarily throughout calculations but not persistent
-   * in-between two grid sweeps True               | True             | False             |
-   * LoadFromInputStream_ProvideToCalculations_Discard | Data flow-wisely the same as False, True, False True | False |
-   * True              | CreateDummy_ProvideToCalculations_StoreToOutputStream | Introduce a new piece of data into the
-   * data flow. Same as false, false, true True               | True             | True              |
-   * LoadFromInputStream_ProvideToCalculations_StoreToOutputStream | Proper piece of data that's held persistently
-   * in-between two mesh sweeps
-   *
-   */
-  DataStorageScheme dataStorageScheme(bool predicateToUseData, bool predicateForLoad, bool predicateForStore);
-
   typedef std::map<int, SplitInstruction> SplitSpecification;
 
   /**
@@ -118,6 +77,8 @@ namespace peano4 {
 
     class AutomatonState;
     class GridControlEvent;
+
+    class GridVertex;
 
     /**
      * The term clear() is not 100% correct, as the number of stationary traversals
@@ -444,6 +405,16 @@ namespace peano4 {
        *
        * Sort has to work purely spatially. Otherwise, we would never be
        * able to handle strong AMR.
+       *
+       * ## Comparison operator
+       *
+       * The comparison operator represents a < operator. First of all, we
+       * distinguish events that trigger different mesh sizes. That is, if
+       * you request a mesh size of h=0.1 and then of h=0.001, then the latter
+       * request is always bigger than the first one. If two events request
+       * the same mesh resolution, we first sort along the x-axis, then along
+       * the y-axis, and so forth. This way, we ensure that merges (which
+       * always merge two events next to each other) are deterministic.
        *
        * @see merge() for a discussion
        * @param events Input and output set of grid control events

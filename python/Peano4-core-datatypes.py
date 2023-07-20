@@ -14,7 +14,7 @@ import peano4.dastgen2
 integer_message = dastgen2.DataModel( "tarch::mpi::IntegerMessage" )
 integer_message.add_attribute( dastgen2.attributes.Integer( "value" ) )
 
-integer_message.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
+integer_message.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamodel.DoFAssociation.Generic ) )
 
 integer_message.write_header_file("../src/tarch/mpi/IntegerMessage.h")
 integer_message.write_implementation_file("../src/tarch/mpi/IntegerMessage.cpp")
@@ -26,7 +26,7 @@ integer_message.write_implementation_file("../src/tarch/mpi/IntegerMessage.cpp")
 double_message = dastgen2.DataModel( "tarch::mpi::DoubleMessage" )
 double_message.add_attribute( dastgen2.attributes.Double( "value" ) )
 
-double_message.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
+double_message.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamodel.DoFAssociation.Generic ) )
 
 double_message.write_header_file("../src/tarch/mpi/DoubleMessage.h")
 double_message.write_implementation_file("../src/tarch/mpi/DoubleMessage.cpp")
@@ -44,7 +44,7 @@ tree_management_message.add_attribute( dastgen2.attributes.Integer(
     "workerSpacetreeId", min_value=0 , max_value= "std::numeric_limits<int>::max()" ) )
 tree_management_message.add_attribute( dastgen2.attributes.Enumeration( "action", [ "RequestNewRemoteTree", "CreateNewRemoteTree", "RemoveChildTreeFromBooksAsChildBecameEmpty", "JoinWithWorker", "Acknowledgement" ]))
 
-tree_management_message.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
+tree_management_message.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamodel.DoFAssociation.Generic ) )
 
 tree_management_message.write_header_file("../src/peano4/parallel/TreeManagementMessage.h")
 tree_management_message.write_implementation_file("../src/peano4/parallel/TreeManagementMessage.cpp")
@@ -63,7 +63,7 @@ tree_management_message.add_attribute( dastgen2.attributes.Integer( "id",
 tree_management_message.add_attribute( dastgen2.attributes.Integer( "master",
     min_value=-1, max_value= "std::numeric_limits<int>::max()" ) )
 
-tree_management_message.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
+tree_management_message.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamodel.DoFAssociation.Generic ) )
 
 tree_management_message.write_header_file("../src/peano4/parallel/TreeEntry.h")
 tree_management_message.write_implementation_file("../src/peano4/parallel/TreeEntry.cpp")
@@ -79,7 +79,7 @@ start_traversal_message = dastgen2.DataModel( "peano4::parallel::StartTraversalM
 start_traversal_message.add_attribute( dastgen2.attributes.Integer(
     "stepIdentifier", min_value=0, max_value = "std::numeric_limits<int>::max()" ) )
 
-start_traversal_message.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
+start_traversal_message.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamodel.DoFAssociation.Generic ) )
 
 start_traversal_message.write_header_file("../src/peano4/parallel/StartTraversalMessage.h")
 start_traversal_message.write_implementation_file("../src/peano4/parallel/StartTraversalMessage.cpp")
@@ -99,7 +99,7 @@ grid_control_event.add_attribute( peano4.dastgen2.Peano4DoubleArray( "offset", "
 grid_control_event.add_attribute( peano4.dastgen2.Peano4DoubleArray( "width", "Dimensions" ))
 grid_control_event.add_attribute( peano4.dastgen2.Peano4DoubleArray( "h", "Dimensions" ))
 
-grid_control_event.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
+grid_control_event.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamodel.DoFAssociation.Generic ) )
 
 grid_control_event.write_header_file("../src/peano4/grid/GridControlEvent.h")
 grid_control_event.write_implementation_file("../src/peano4/grid/GridControlEvent.cpp")
@@ -131,7 +131,7 @@ grid_statistics.add_attribute( dastgen2.attributes.Boolean( "removedEmptySubtree
 
 grid_statistics.add_attribute( peano4.dastgen2.Peano4DoubleArray( "minH", "Dimensions" ))
   
-grid_statistics.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
+grid_statistics.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamodel.DoFAssociation.Generic ) )
 
 grid_statistics.write_header_file("../src/peano4/grid/GridStatistics.h")
 grid_statistics.write_implementation_file("../src/peano4/grid/GridStatistics.cpp")
@@ -158,7 +158,7 @@ automaton_state.add_attribute( peano4.dastgen2.Peano4IntegerArray(
     "accessNumber", cardinality="DimensionsTimesTwo",
     min_value="-TwoTimesD", max_value="TwoTimesD" ) )
 
-automaton_state.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic )  )
+automaton_state.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamodel.DoFAssociation.Generic )  )
 
 automaton_state.write_header_file("../src/peano4/grid/AutomatonState.h")
 automaton_state.write_implementation_file("../src/peano4/grid/AutomatonState.cpp")
@@ -184,9 +184,12 @@ grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray(
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray(
     "isVertexLocal", "TwoPowerD" , compress=True  ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray(
+    "isParentVertexLocal", "TwoPowerD" , compress=True  ) )
+grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray(
     "isFaceLocal",   "TwoTimesD" , compress=True  ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.Boolean(      "isCellLocal"                 ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.Boolean(      "isParentCellLocal"           ) )
+
 
 #
 # Also holds if a vertex is adjacent to a periodic boundary.
@@ -212,7 +215,7 @@ grid_traversal_event.add_attribute( dastgen2.attributes.Integer(
     "std::numeric_limits<int>::max()" ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.Boolean( "invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing" ) )
 
-grid_traversal_event.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
+grid_traversal_event.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamodel.DoFAssociation.Generic ) )
 
 grid_traversal_event.write_header_file("../src/peano4/grid/GridTraversalEvent.h")
 grid_traversal_event.write_implementation_file("../src/peano4/grid/GridTraversalEvent.cpp")
@@ -246,7 +249,7 @@ grid_vertex.add_attribute( peano4.dastgen2.Peano4DoubleArray( "x", "Dimensions",
     valid_mantissa_bits= 23, ifdefs = ["PeanoDebug>0"] ) )
 grid_vertex.add_attribute( dastgen2.attributes.Integer( "level" ) )
 
-grid_vertex.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
+grid_vertex.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamodel.DoFAssociation.Generic ) )
 
 grid_vertex.write_header_file("../src/peano4/grid/GridVertex.h")
 grid_vertex.write_implementation_file("../src/peano4/grid/GridVertex.cpp")

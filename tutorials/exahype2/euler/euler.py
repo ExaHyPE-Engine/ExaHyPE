@@ -206,7 +206,7 @@ my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.build(make=make, make_clean_first=True, throw_away_data_after_build=True)
 
 print("\nPDE is: ")
-print(my_scenario.__str__())
+print(my_pde.__str__())
 print("Executable is euler-" + str(dimensions) + "d")
 print("Clean object files via 'make clean'")
 print("(Re)compile the generated code via 'make -j'")

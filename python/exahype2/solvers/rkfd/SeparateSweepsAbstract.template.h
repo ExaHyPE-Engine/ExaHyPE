@@ -40,6 +40,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
+      Suspended,
       PlottingAfterGridInitialisation,
       RungeKuttaSubStep0AfterGridInitialisation,
       Plotting {% for item in range(RK_STEPS) -%}

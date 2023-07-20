@@ -132,21 +132,25 @@ class MyDGSolver(exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclave
                                                                    )
 
     self._current_time_step.additional_load_and_store_arguments = [ 
-        # Das muss aus dem Alpha-Dings rausgeneriert werden: create_data_dependency
       ("repositories::DataRepository::_CellDataAlphaPoissonMarkerStack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top()","celldata::AlphaPoissonMarker","alpha")
     ]
-    self._current_time_step.generator.load_persistent_condition = """
+    
+    self._current_time_step.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+# @todo This is to be controlled via alpha marker later on
+       self._provide_cell_data_to_compute_kernels_default_guard(),
+       """
 (""" + self._current_time_step.generator.load_persistent_condition + """
       and
       (alpha.getMarker()==celldata::AlphaPoissonMarker::Marker::AnotB or alpha.getMarker()==celldata::AlphaPoissonMarker::Marker::AdeterminesB)
     )
-"""
-    self._current_time_step.generator.store_persistent_condition = """
+       """,
+       """
 (""" + self._current_time_step.generator.store_persistent_condition + """
       and
       (alpha.getMarker()==celldata::AlphaPoissonMarker::Marker::AnotB or alpha.getMarker()==celldata::AlphaPoissonMarker::Marker::AdeterminesB)
     )
-"""
+""""
+    
     
     # Bei compute bin ich mir echt unsicher
     

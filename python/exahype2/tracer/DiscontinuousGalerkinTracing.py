@@ -64,10 +64,10 @@ class DiscontinuousGalerkinTracing(
 
         cell_compute_kernel = """
 if ( 
-  not marker.willBeRefined() 
+  fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() 
   and 
   (
-    (fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() and repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep())
+    repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
     or
     repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
   )

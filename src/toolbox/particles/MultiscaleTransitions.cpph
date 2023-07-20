@@ -74,7 +74,13 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftPar
     for (int d = 0; d < Dimensions; d++) {
       target[d] = marker.getRelativePositionWithinFatherCell()(d) >= 2;
     }
-    return target.to_ulong();
+
+    if ( marker.isParentVertexLocal(target.to_ulong()) ) {
+      return target.to_ulong();
+    }
+    else {
+      return ParticleReassociationInstruction_SieveGlobally;
+    }
   }
   return -65536;
 }
