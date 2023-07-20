@@ -1,0 +1,75 @@
+#include "kernel_hydro.h"
+
+template <typename Particle>
+void swift2::kernels::hydro_end_density(Particle& localParticle){
+  // temporary to get things to work
+
+  /* Grab static parameters */
+  const int hydroDimensions = localParticle->getHydroDimensions();
+  const double etaFactor    = localParticle->getEtaFactor();
+  const double alphaAV      = localParticle->getAlphaAV();
+
+  /* Retrieve some properties */
+  const double m_a = localParticle->getMass();
+  const double h_a = localParticle->getSmoothingLength();
+
+  /* Some smoothing length multiples */
+  const double h_inv              = 1.0 / h_a ;
+  const double h_inv_dim          = std::pow(h_inv, hydroDimensions);
+  const double h_inv_dim_plus_one = h_inv_dim * h_inv;
+
+  /* Final operation. Add the self-contributions (i.e. at q=0) */
+  // localParticle->setDensity(localParticle->getDensity() + m_a * kernel_root * h_inv_dim);
+  localParticle->setDensity(localParticle->getDensity() + m_a * kernel_root);
+  localParticle->setDensity(localParticle->getDensity() * h_inv_dim);
+
+  // localParticle->setWcount(localParticle->getWcount() + kernel_root * h_inv_dim);
+  localParticle->setWcount(localParticle->getWcount() + kernel_root);
+  localParticle->setWcount(localParticle->getWcount() * h_inv_dim);
+
+  // localParticle->setRho_dh(localParticle->getRho_dh() - m_a * hydroDimensions * kernel_root * h_inv_dim_plus_one);
+  localParticle->setRho_dh(localParticle->getRho_dh() - m_a * hydroDimensions * kernel_root);
+  localParticle->setRho_dh(localParticle->getRho_dh() * h_inv_dim_plus_one);
+
+  // localParticle->setWcount_dh(localParticle->getWcount_dh() - hydroDimensions * kernel_root * h_inv_dim_plus_one);
+  localParticle->setWcount_dh(localParticle->getWcount_dh() - hydroDimensions * kernel_root);
+  localParticle->setWcount_dh(localParticle->getWcount_dh() * h_inv_dim_plus_one);
+
+  /* Not needed in SWIFT */
+  localParticle->setNcount(localParticle->getNcount() + 1);
+
+  const double rho_inv = 1.0 / localParticle->getDensity();
+  // @TODO: implement cosmological factors
+  const double a_inv2 = 1.0;
+
+  /* Finish calculation of the velocity curl components */
+  localParticle->setRot_v(localParticle->getRot_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
+
+  /* Finish calculation of the velocity divergence */
+  localParticle->setDiv_v(localParticle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
+
+  assertion1(std::isfinite(localParticle->getDensity()), localParticle->toString());
+  assertion1(localParticle->getDensity() >= 0., localParticle->toString());
+  assertion1(std::isfinite(localParticle->getWcount()), localParticle->toString());
+  assertion1(localParticle->getWcount() >= 0., localParticle->toString());
+  assertion1(std::isfinite(localParticle->getRho_dh()), localParticle->toString());
+  assertion1(std::isfinite(localParticle->getWcount_dh()), localParticle->toString());
+}
+
+
+template <typename Particle>
+void swift2::kernels::hydro_prepare_density(Particle& localParticle){
+  // temporary to get things to work
+  localParticle->setDensity(0.0);
+  localParticle->setWcount(0.0);
+  localParticle->setRho_dh(0.0);
+  localParticle->setWcount_dh(0.0);
+  localParticle->setDiv_v(0.0);
+  localParticle->setRot_v(0.0);
+
+  /* Not originally in SWIFT */
+  localParticle->setNcount(0);
+}
+
+
+
