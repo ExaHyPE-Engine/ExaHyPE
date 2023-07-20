@@ -32,20 +32,110 @@ class testDensityCalculation(Particle):
         )
 
         # Simulation properties
-        self.cfl_factor = cfl_factor
-        self.initial_time_step_size = initial_time_step_size
+        self._cfl_factor = cfl_factor
+        self._initial_time_step_size = initial_time_step_size
 
         self.declare_sph_particle_attributes()
 
         # SPH parameters (default values)
-        self.hydroDimensions = dimensions_hydro
-        self.etaFactor = 1.235
+        self._hydro_dimensions = dimensions_hydro
+
+        self._eta_factor = 1.2348
+        self._h_hydro_min = 1e-6
+        self._h_hydro_max = 1.0 / 3.0 / 2  # Approximated value for coarsest grid level
+        self._h_tolerance = 1e-4
+        self._h_max_iterations = 10
 
         # Minimal SPH parameters
-        self.alphaAV = 0.8
-        self.betaAV = 3.0
+        self._alpha_av = 0.8
+        self._beta_av = 3.0
+
+        # now set these parameters as dastgen attributes
+        self.set_parameters()
 
         pass
+
+    def set_parameters(self):
+        """
+        This function translates "global" particle parameters which are
+        constant throughout the simulation (like CFL factor, minimal time step
+        size, viscosity parameters...) into dastgen attributes of the C++
+        particle class.
+        If you modify any of the attributes manually outside of the particle
+        initialisation, e.g. by invoking
+
+        ```
+        particle = SPHLeapfrogFixedSearchRadius(initial_time_step_size=ABC, ...)
+        particle.initial_time_step_size = XYZ
+        ```
+
+        you need to call this function manually so your changes propagate
+        into the generated C++ files.
+        """
+
+        cfl_attr = dastgen2.attributes.Double(
+            "cfl", is_const_static=True, initval=self._cfl_factor
+        )
+        self.data.add_or_replace_attribute(cfl_attr)
+
+        initial_time_step_size_attr = dastgen2.attributes.Double(
+            "initialTimeStepSize",
+            is_const_static=True,
+            initval=self._initial_time_step_size,
+        )
+        self.data.add_or_replace_attribute(initial_time_step_size_attr)
+
+        #  if self._constant_time_step_size == True:
+        #      adjustTimeStepSize = "false"
+        #  else:
+        #      adjustTimeStepSize = "true"
+        #  adjust_time_step_size_attr = dastgen2.attributes.Boolean("adjustTimeStepSize", is_const_static=True, initval=adjustTimeStepSize)
+        #  self.data.add_or_replace_attribute(adjust_time_step_size_attr)
+
+        #  is_sph_attr = dastgen2.attributes.Boolean("isSPH", is_const_static=True, initval=self._isSPH_cpp)
+        #  self.data.add_or_replace_attribute(is_sph_attr)
+
+        hydro_dimensions_attr = dastgen2.attributes.Double(
+            "hydroDimensions", is_const_static=True, initval=self._hydro_dimensions
+        )
+        self.data.add_or_replace_attribute(hydro_dimensions_attr)
+
+        eta_factor_attr = dastgen2.attributes.Double(
+            "etaFactor", is_const_static=True, initval=self._eta_factor
+        )
+        self.data.add_or_replace_attribute(eta_factor_attr)
+
+        h_hydro_min_attr = dastgen2.attributes.Double(
+            "smlMin", is_const_static=True, initval=self._h_hydro_min
+        )
+        self.data.add_or_replace_attribute(h_hydro_min_attr)
+
+        h_hydro_max_attr = dastgen2.attributes.Double(
+            "smlMax", is_const_static=True, initval=self._h_hydro_max
+        )
+        self.data.add_or_replace_attribute(h_hydro_max_attr)
+
+        h_tolerance_attr = dastgen2.attributes.Double(
+            "smlTolerance", is_const_static=True, initval=self._h_tolerance
+        )
+        self.data.add_or_replace_attribute(h_tolerance_attr)
+
+        h_max_iterations_attr = dastgen2.attributes.Integer(
+            "smlMaxIterations", is_const_static=True, initval=self._h_max_iterations
+        )
+        self.data.add_or_replace_attribute(h_max_iterations_attr)
+
+        alpha_av_attr = dastgen2.attributes.Double(
+            "alphaAV", is_const_static=True, initval=self._alpha_av
+        )
+        self.data.add_or_replace_attribute(alpha_av_attr)
+
+        beta_av_attr = dastgen2.attributes.Double(
+            "betaAV", is_const_static=True, initval=self._beta_av
+        )
+        self.data.add_or_replace_attribute(beta_av_attr)
+
+        return
 
     def algorithm_steps(self):
         """
@@ -63,22 +153,12 @@ class testDensityCalculation(Particle):
                 cell_kernel="""
                                          ::swift2::kernels::computeDensityWithConstantSearchRadius(
                                            localParticles,
-                                           activeParticles,
-                                           {}
+                                           activeParticles
                                          );
-                                         """.format(
-                    self.hydroDimensions
-                ),
+                                         """,
                 touch_vertex_last_time_kernel="""
-                                         ::swift2::kernels::endDensityCalculationWithConstantSearchRadius(
-                                             localParticles,
-                                             {},
-                                             {},
-                                             {}
-                                             );
-                                         """.format(
-                    self.hydroDimensions, self.etaFactor, self.alphaAV
-                ),
+                                         ::swift2::kernels::endDensityCalculationWithConstantSearchRadius(localParticles);
+                                         """,
                 includes="""
                                          #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"

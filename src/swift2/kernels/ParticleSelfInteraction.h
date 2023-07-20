@@ -86,9 +86,7 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void endDensityCalculation(
-      const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
-    );
+    void endDensityCalculation(const ParticleContainer& localParticles);
 
     /**
      * @brief Finishes the calculations from the density loop same as
@@ -101,9 +99,7 @@ namespace swift2 {
      * the wrong equations for that.
      */
     template <typename ParticleContainer>
-    void endDensityCalculationWithConstantSmoothingLength(
-      const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
-    );
+    void endDensityCalculationWithConstantSmoothingLength(const ParticleContainer& localParticles);
 
     /**
      * @brief Finishes the calculations from the density loop. Same as
@@ -111,9 +107,7 @@ namespace swift2 {
      * search radii.
      */
     template <typename ParticleContainer>
-    void endDensityCalculationWithConstantSearchRadius(
-      const ParticleContainer& localParticles, const int hydroDimensions, const double etaFactor, const double alphaAV
-    );
+    void endDensityCalculationWithConstantSearchRadius(const ParticleContainer& localParticles);
 
     /**
      * Resets the acceleration and other variables
@@ -127,9 +121,7 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void prepareHydroForceCalculation(
-      const ParticleContainer& localParticles, const int hydroDimensions, const double alphaAV
-    );
+    void prepareHydroForceCalculation(const ParticleContainer& localParticles);
 
     /**
      * Ends the force calculation. Only introduces missing factors for Udot
@@ -143,7 +135,7 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void endHydroForceCalculation(const ParticleContainer& localParticles, const int hydroDimensions);
+    void endHydroForceCalculation(const ParticleContainer& localParticles);
 
     /**
      * Flag boundary particles.

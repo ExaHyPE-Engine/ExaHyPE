@@ -28,9 +28,9 @@ template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
   const ParticleContainer& localParticles, const int kickNumber, const bool isSPH
 ) {
-  double timeStepSizeKick = 0.5
-                            * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                                .getMinTimeStepSize();
+  const double timeStepSizeKick = 0.5
+                                  * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
+                                      .getMinTimeStepSize();
   for (auto* particle : localParticles) {
     if (
       particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local

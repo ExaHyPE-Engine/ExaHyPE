@@ -18,6 +18,18 @@ class UpdateParallelState(ActionSet):
     states are not to be used anywhere else in the code.
 
 
+    ## Validity/correctness
+    
+    Particles may not change their position throughout the mesh traversal. They
+    can change their position in touchVertexLastTime(). This effectively means
+    they change x in-between two grid sweeps.
+    
+    It does not matter if you update particle positions in an action set prior
+    or after this one is called. At the time you do something within 
+    touchVertexLastTime(), this action has already set the state markers 
+    accordingly and hence can make a decision.
+    
+
     ## Statistics
 
     The mapping keeps some statistics on any state update. These statistics
@@ -56,7 +68,10 @@ class UpdateParallelState(ActionSet):
 
     DefaultPriority = AbstractUpdateParticleGridAssociation.DefaultPriority + 1
 
-    def __init__(self, particle_set):
+    def __init__(self, 
+                 particle_set,
+                 invoke_gather=False
+                 ):
         super(UpdateParallelState, self).__init__(
             priority=self.DefaultPriority, parallel=False
         )
@@ -64,12 +79,15 @@ class UpdateParallelState(ActionSet):
         self.d = {}
         self.d["PARTICLE"] = particle_set.particle_model.name
         self.d["PARTICLES_CONTAINER"] = particle_set.name
+        self.d["INVOKE_GATHER"]       = invoke_gather
+        
 
     __Template_BeginTraversal = jinja2.Template(
         """
   _numberOfRemainingLocalParticles = 0;
   _numberOfIncomingLocalParticles  = 0;
   _numberOfLeavingLocalParticles   = 0;
+  _numberOfExpiredHaloParticles    = 0;
 """
     )
 
@@ -78,7 +96,8 @@ class UpdateParallelState(ActionSet):
   vertexdata::{{PARTICLES_CONTAINER}}::updateNumberOfLocalParticleStatistics(
     _numberOfRemainingLocalParticles,
     _numberOfIncomingLocalParticles,
-    _numberOfLeavingLocalParticles
+    _numberOfLeavingLocalParticles,
+    _numberOfExpiredHaloParticles
   );
 """
     )
@@ -107,6 +126,9 @@ for (int i=0; i<TwoPowerD; i++) {
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
 // run over all adjacent vertices
+{% if INVOKE_GATHER %}
+  fineGridVertex{{PARTICLES_CONTAINER}}.gather();
+{% endif %}
 for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   // data consistency check
   assertion3(
@@ -162,6 +184,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
   ) {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was virtual and remains virtual. Remove local copy" );
+    _numberOfExpiredHaloParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
   }
   else {
@@ -218,6 +241,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   int  _numberOfRemainingLocalParticles;
   int  _numberOfIncomingLocalParticles;
   int  _numberOfLeavingLocalParticles;
+  int  _numberOfExpiredHaloParticles;
 """
 
     def get_body_of_prepareTraversal(self):

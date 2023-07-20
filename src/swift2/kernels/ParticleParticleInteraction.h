@@ -35,6 +35,59 @@ namespace swift2 {
     );
 
     /**
+     * @brief The actual density kernel, which interacts a local particle and an active
+     * particle, and updates the local particle.
+     */
+    template <typename Particle>
+    void densityKernel(Particle* localParticle, const Particle* activeParticle);
+
+    /**
+     * @brief The actual force kernel, which interacts a local particle and an active
+     * particle, and updates the local particle.
+     *
+     * ## Vectorisation
+     *
+     * This operation struggles to vectorise, as we have the statement
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *   if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle()) {
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * in there. This if statement encapsulates quite a lot of operations. The
+     * Intel compiler therefore cannot vectorise this routine anymore.
+     *
+     *
+     * @see forceKernelVectorised()
+     */
+    template <typename Particle>
+    void forceKernel(Particle* localParticle, const Particle* activeParticle);
+
+    /**
+     * Vectorised alternative implementation of forceKernel()
+     *
+     * This routine is a vectorised variant of forceKernel() which you can use
+     * if and only if you know that localParticle and activeParticle never ever
+     * can point to the same object, i.e. if you know that there is no aliasing.
+     * It is not clear if this operation is faster than forceKernel, but it
+     * delivers more flops due to the excessive vectorisation.
+     *
+     * The big if in the straightforward forceKernel() is challenging for the
+     * vectoriser. Hence, I compute one scalar which is either set to 1.0 if we
+     * should update and otherwise 0.0. By multiplying all updates with this
+     * scalar, we can effectively mask out the kernel or keep its action. This
+     * works in the present case, as all updates are additive, i.e. we take the
+     * existing value and add something onto it.
+     *
+     * @todo This routine does not support boundary particles. But we wanted to
+     *   remove this flag anyway.
+     */
+    template <typename Particle>
+    void forceKernelVectorised(
+      Particle* __restrict__         localParticle,
+      const Particle* __restrict__   activeParticle
+    );
+
+    /**
      * @brief Non-symmetric density calculation (as per Swift terminology).
      * In this, only the local particle is updated (in the symmetric case, both
      * are updated at the same time). This compute kernel is inserted by Peano's
@@ -62,9 +115,7 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeDensity(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
-    );
+    void computeDensity(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
 
     /**
      * @brief Same as computeDensity(...), but doesn't modify the particles' search radii.
@@ -72,7 +123,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSearchRadius(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
+      const ParticleContainer& localParticles, const ParticleContainer& activeParticles
     );
 
     /**
@@ -87,7 +138,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSmoothingLengths(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles, const int hydroDimensions
+      const ParticleContainer& localParticles, const ParticleContainer& activeParticles
     );
 
     /** Hydro Force calculation particle-particle kernel
@@ -111,13 +162,37 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeHydroForce(
-      const ParticleContainer& localParticles,
-      const ParticleContainer& activeParticles,
-      const int                hydroDimensions,
-      const double             betaAV
-    );
+    void computeHydroForce(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
 
+
+    /**
+     * Optimised alternative to computeHydroForce()
+     *
+     * Semantically, this operation does exactly the same as
+     * computeHydroForce(). However, there are a few differences how the
+     * function runs through the particles. The routine can be used if and only
+     * if you use a @ref toolbox_particles_memorypool "memory pool" as it is
+     * also discussed in the @ref page_swift_performance_optimisation "optimisation guidelines".
+     *
+     *
+     * The routine knows way more about the internal ordering of the particles
+     * through the explicit arguments particlesAssociatedWithLocalVertices and
+     * numberOfParticlesPerLocalVertex. It implicitly knows how the particles
+     * are stored through the naming convention/the fact that you have to use
+     * it with a memory pool. The Python class
+     * peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.ParticleParticleInteraction_StackOfLists
+     * provides a lot of information how we construct the passed lists over
+     * particles.
+     *
+     */
+    template <typename ParticleContainer>
+    void computeHydroForce(
+      const peano4::datamanagement::CellMarker&  marker,
+      const ParticleContainer&                   particlesAssociatedWithLocalVertices,
+      const std::vector<int>&                    numberOfParticlesPerLocalVertex,
+      const ParticleContainer&                   activeParticles,
+      const std::vector<int>&                    numberOfActiveParticlesPerVertexAdded
+    );
   } // namespace kernels
 } // namespace swift2
 
