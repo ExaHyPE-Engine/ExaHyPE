@@ -209,7 +209,7 @@ void step() {
         // logInfo( "step()", "total no of face dofs=" << totalNumberOfFaceDofs );
         logInfo( "step()", "total no of cell dofs=" << totalNumberOfCellDofs );
         logInfo( "step()", "total no of vertices= " << totalNumberVertices);
-        logInfo( "step()", "initialising petsc matrix with " << totalDofs << " dofs" );
+        logInfo( "step()", "initialising petsc matrix with " << totalDofs + (TwoPowerD - 1) * totalNumberVertices << " rows" );
         repositories::instanceOfPetsc.initMatrixAndVectors( totalDofs );
 
         {%else%}
