@@ -335,7 +335,6 @@ This yet has to be written.
     dictionary[ "SOLVER_INSTANCES"]  = self._solver_instances
 
 
-
     templatefile_prefix = os.path.dirname(__file__) + "/petscData/"
     template_name       = templatefile_prefix + "PETScData.template"
     generated_repository_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

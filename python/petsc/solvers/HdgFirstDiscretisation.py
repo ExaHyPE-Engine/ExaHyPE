@@ -85,7 +85,7 @@ class HdgFirstDiscretisation(Solver):
     self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(cell_dofs) ) )
     
     self._cellDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
-    # self._cellDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["interior", "exterior"] ) )
+    self._cellDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
 
     #add in some unknowns for the faces 
     #our aim is to have multiple dofs per face, but we just store the starting index in "number"

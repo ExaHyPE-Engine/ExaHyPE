@@ -74,6 +74,15 @@ degrees of freedom and the global mapping for indices on faces and cells
   if ( not marker.willBeRefined() ){
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
 
+    //check if this cell is on the boundary or not
+    //default to setting it to be in the interior
+    fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior);
+    for (int i=0; i<TwoPowerD; i++){
+      if (fineGridVertices{{SOLVER_NAME}}(i).getType()  == vertexdata::{{SOLVER_NAME}}::Type::Dirichlet)
+        //one of the vertices is on the boundary, therefore so is this cell
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Boundary );
+    }
+
     // place some values in the mesh for the face
     tarch::la::Vector<{{CELL_CARDINALITY}}, double>   value;
     tarch::la::Vector<{{CELL_CARDINALITY}}, double>   rhs;
