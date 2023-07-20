@@ -601,6 +601,14 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
   }
   """
 
+  templateTVFT = """
+    if (not marker.willBeRefined()){
+      static int calls = 10; calls++;
+      std::cout << fineGridVertex{{SOLVER_NAME}}.getDofIndices() << " " << calls << "\\n";
+      std::cout << fineGridVertex{{SOLVER_NAME}}.toString()      << "\\n\\n";
+    }
+  """
+
   def __init__(self, solver):
     super( AssemblePETSCMatrixWithQuadratures, self ).__init__()
     self.d = {}
@@ -623,6 +631,10 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass 
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
+      result = jinja2.Template(self.templateTVFT).render(**self.d)
+      pass
+
     return result
 
   def get_action_set_name(self):

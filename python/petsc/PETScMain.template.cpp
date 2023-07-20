@@ -202,10 +202,10 @@ void step() {
         logInfo( "step()", "total no of dofs="  << totalNumberOfDegreesOfFreedom );
 
         {% if Project_Name=="HDG" %}
-        const int totalNumberOfFaceDofs  = repositories::getTotalFaceDofs();
+        // const int totalNumberOfFaceDofs  = repositories::getTotalFaceDofs();
         const int totalNumberOfCellDofs  = repositories::getTotalCellDofs();
-        const int totalDofs              = totalNumberOfFaceDofs + totalNumberOfCellDofs;
-        logInfo( "step()", "total no of face dofs=" << totalNumberOfFaceDofs );
+        const int totalDofs              = totalNumberOfCellDofs;
+        // logInfo( "step()", "total no of face dofs=" << totalNumberOfFaceDofs );
         logInfo( "step()", "total no of cell dofs=" << totalNumberOfCellDofs );
         logInfo( "step()", "initialising petsc matrix with " << totalDofs << " dofs" );
         repositories::instanceOfPetsc.initMatrixAndVectors( totalDofs );

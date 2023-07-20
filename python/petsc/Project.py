@@ -387,6 +387,7 @@ This yet has to be written.
 
     solver.add_to_create_grid                (self.algorithm_step_create_grid)
     solver.add_to_enumerate_and_init_solution(self.algorithm_step_enumerate_and_init_solution)
+    solver.add_to_init_petsc                 (self._algorithm_step_init_petsc)
     solver.add_to_assemble                   (self.algorithm_step_assemble)
     solver.add_to_map_solution_onto_mesh     (self.algorithm_step_map_solution_onto_mesh)
     solver.add_to_plot                       (self.algorithm_step_plot)
