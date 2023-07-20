@@ -71,10 +71,26 @@ class HdgFirstDiscretisation(Solver):
       self.initGaussLobatto()
 
     #hardcode one unknown on vertices for now
-    self._vertex_unknowns = 1
+    self._vertex_unknowns = 2 ** ( self.dimensions ) ## will be same as number of cells surrounding each vertex
     self._vertexDof = peano4.datamodel.DaStGen2( name )
-    # self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_unknowns) ) )
-    # self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(number_of_unknowns) ) )
+
+    '''
+     ---   ---
+    |   | |   |
+    | 2 | | 3 |
+     ---   ---
+         v
+     ---   ---
+    |   | |   |
+    | 0 | | 1 |
+     ---   ---
+
+     the vertex v needs to store the top-right    dof for cell 0, 
+                                 the top-left     dof for cell 1, 
+                                 the bottom-right dof for cell 2, 
+                                 the bottom-left  dof for cell 3, 
+    '''
+    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4IntegerArray( "dofIndices",  str(self._vertex_unknowns) ) )
     self._vertexDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._vertexDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
 

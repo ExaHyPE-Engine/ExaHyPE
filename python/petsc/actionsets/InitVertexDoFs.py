@@ -71,6 +71,13 @@ the solver in the first place. This happens in get_includes().
         fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::DoF );
         break;
     }
+
+{% if SOLVER_NAME=="HDG" %}
+    //set all the entries of DofIndices to -1
+    tarch::la::Vector<TwoPowerD, int> indices(-1);
+    fineGridVertex{{SOLVER_NAME}}.setDofIndices( indices );
+{% endif %}
+
 {% if SOLVER_NAME=="Poisson" %}
 
     //init two doubles; pass these by reference into init()
@@ -89,7 +96,7 @@ the solver in the first place. This happens in get_includes().
       fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);
 
     }
-  {% endif %}
+{% endif %}
   logTraceOut( "touchVertexFirstTime(...)---InitialCondition" );
 }
 """
