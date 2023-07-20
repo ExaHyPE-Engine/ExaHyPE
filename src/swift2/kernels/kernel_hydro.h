@@ -145,9 +145,18 @@ static void kernel_deval(double u, double& W, double& dW_dx) InlineMethod {
   double dw_dx = coeffs[0];
 
   /* ... and the rest of them */
+  #pragma unroll
   for (int k = 2; k <= kernel_degree; k++) {
     dw_dx = dw_dx * x + w;
-    w     = x * w + coeffs[k];
+  //  w     = x * w + coeffs[k];
+  }
+
+  // I've split up the k loop into two segments to study the vectorisation
+  // behaviour. The loop above works fine, this one seems to be more
+  // complicated, but I do not know why.
+  #pragma unroll
+  for (int k = 2; k <= kernel_degree; k++) {
+    w     = w * x + coeffs[k];
   }
 
   w     = std::max(w, 0.0);
