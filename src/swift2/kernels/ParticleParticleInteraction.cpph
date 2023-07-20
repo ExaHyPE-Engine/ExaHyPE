@@ -185,6 +185,14 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
     const double v_sig
       = localParticle->getSoundSpeed() + activeParticle->getSoundSpeed() - betaAV * mu_ab;
 
+    /* Balsara term */
+    const double balsara_a = localParticle->getBalsara();
+    const double balsara_b = activeParticle->getBalsara();
+
+    /* Construct the full viscosity term */
+    const double rho_ab = 0.5 * (rho_a + rho_b);
+    const double visc   = -0.25 * v_sig * mu_ab * (balsara_a + balsara_b) / rho_ab;
+
     /* Convolve with the kernel */
     const double visc_acc_term = 0.5 * visc * (dwa_dr * f_ab + dwb_dr * f_ba) * r_inv;
 
