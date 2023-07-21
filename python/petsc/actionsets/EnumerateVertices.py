@@ -169,7 +169,7 @@ Same as above, but we refer to it as  getVertexLocalToGlobalMap etc
   ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
 
-    fineGridVertex{{SOLVER_NAME}}.setNumber( _localVertexMap.reserveIndex( 1 ) ); //we just want to count the number of vertices
+    fineGridVertex{{SOLVER_NAME}}.setNumber( _localVertexMap.reserveIndex( TwoPowerD - 1 ) ); //we just want to count the number of vertices
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 

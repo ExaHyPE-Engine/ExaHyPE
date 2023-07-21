@@ -602,10 +602,48 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
   """
 
   templateTVFT = """
-    if (not marker.willBeRefined()){
+    /*
+    matrix should look like:
+
+    A T^T
+    T 0.
+
+    we insert the following into T and T transpose
+    */
+    if (not marker.willBeRefined()
+        and
+        fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
+        ){
       //static int calls = 10; calls++;
       //std::cout << fineGridVertex{{SOLVER_NAME}}.getDofIndices() << " " << calls << "\\n";
       //std::cout << fineGridVertex{{SOLVER_NAME}}.toString()      << "\\n\\n";
+
+      //starting point should be be the total number of cell dofs; right now 
+      //we place the constraints into the matrix
+      const int startIndex   = repositories::getTotalCellDofs();
+      const int vertexNumber = fineGridVertex{{SOLVER_NAME}}.getNumber();
+      const int baseIndex  = fineGridVertex{{SOLVER_NAME}}.getDofIndices(0); //we constrain relative to this element
+
+
+      for (int i=1; i<TwoPowerD; i++){
+        int otherIndex = fineGridVertex{{SOLVER_NAME}}.getDofIndices(i);
+
+        if (otherIndex != -1){
+          int rowIndex = startIndex + vertexNumber + i - 1; //add on i-1 since i starts at 1
+
+          std::vector<int> rows = { rowIndex };
+          std::vector<int> cols = { baseIndex, otherIndex };
+          tarch::la::Matrix<1,2, double > vals          = {1,-1};
+          tarch::la::Matrix<2,1, double > valsTranspose = {1,-1};
+
+          //insert into row
+          repositories::instanceOfPetsc.insertLocalMatrix(rows, cols, vals);
+
+          //insert into transpose
+          repositories::instanceOfPetsc.insertLocalMatrix(cols, rows, valsTranspose);
+        }
+      }
+      
     }
   """
 
