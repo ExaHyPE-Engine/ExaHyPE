@@ -2,56 +2,134 @@
 
 @page page_toolbox_particles_mesh_traversal Mesh traversal
 
+@brief A summary of how Peano runs throug the mesh and builds up the active and local sets which are then used to realise particle-particle interactions.
+
 Peano realises mesh sweeps via tree walkers, i.e. automata which run
 through the tree top down and then bottom up again. Each algorithm step
 equals one complete mesh traversal of all mesh resolutions. Throughout
 this traversal, the automaton triggers events (or observations) that
-are then mapped onto action sets. 
+are then mapped onto @ref peano_action_sets "action sets". 
 
-The particle toolbox offers two actions sets, 
-peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists and
-peano4.toolbox.particles.ParticleParticleInteraction_Sets,
-which both assemble sets of particles while they run throug the mesh.
-These particle sets are not persistent, i.e. the marker exclusively 
-builds up pointers to them. The particle remain
-@ref page_toolbox_particles_mesh_storage "tied to the vertices they belong to".
+While running through the mesh, i.e. spacetree, the automaton maintains three
+different particle sets. For the construction rules, it is important to keep
+in mind that vertices of any level hold only particles
+whose search radius is stricly smaller or equal to the corresponding mesh 
+size. Particles with a large search radius are consequently stored on coarser
+levels. This allows us to define our particle sets:
+
+- Particles associated with local vertices. This set, called 
+  localParticles, holds all the particle pointers which 
+  are associated to the @f$ 2^d @f$ vertices of the cell.
+- The set of active particles is the local set plus the active set from
+  the father cell in the spacetree. This is a recursive definition. So the set
+  of active particles holds all local particles plus all the particles of
+  coarser levels which might overlap with a local particle whose centre is
+  within the current cell.
+
+
+
+## Example
+
+The illustration below shows two levels of a spacetree with bipartitioning 
+(although we use tri-partitioning in Peano). There are eight particles in 
+this example. The tree automaton is currently in the finer, dark blue cell
+and triggers touchCellFirstTime().
 
 @image html python/peano4/toolbox/particles/dependency_sets.png
 
-Per tree node there are two different particle sets. We explain it by means of
-the light blue cell in the cartoon. Cells of this level hold particles
-whose search radius is stricly smaller or equal to the mesh size.
+1. The set of local particles of this cell consists of four particles. It
+   is the red particle - which is kind of trivial. However, also contains
+   the three dark green particles, as the local set consists of all 
+   particles which are tied to the adjacent vertices and each particle is
+   stored within the closest vertex. 
+2. The yellow particles is too far away and is not part of the local set.
+3. Three particles have a large search radius and hence are stored on a 
+   coarser mesh level. They are not part of the local set at this point.
+4. Consequently, the set of local 
+   particles comprises all of the particles whose
+   centre is contained within the cell plus a halo of h/2. This is the
+   dotted area around the cell. 
+5. The set of active particles is built up recursively and hence comprises
+   all local particles. It is a strict superset.
+6. As the active particles are built up recursively, the active particles
+   also comprise the light blue particles and the light green one. 
+7. The orange particle is too far away (more than h/2 on the coarser 
+   mesh) to be a member of the coarse cell's local particle set. It 
+   hence is also not a member of the active set of the fine cell.
 
-The set of local particles of a cell are all of these particles whose
-centre is contained within the cell plus a halo of h/2. This is the
-dotted area around the cell. That is, the local set holds also particles
-that are not centred within the cell.
+We need the local and active sets to cover an area that is bigger than the 
+actual cells, as we want to capture all particles of this level that might
+theoretically interact with the particles located within the cell. 
 
-We need the local set to cover an area that is bigger than the actual
-cell as we want to capture all particles of this level that might
-theoretically interact with the particles located within the cell. If
+
+## Uniqueness
+
+If
 you want to update particles of a cell, you should thus only update
 particles whose centre is within the cell: Particles belong the the
 local sets of up to @f$ 2^d @f$ surrounding cells, so otherwise might be updated
 multiple times.
+Still, a simple
 
-The yellow particle on the fine grid in the sketch above is so far away
-from the cell that it does not belong into the set of local particles of
-the highlighted cell.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if (marker.isContained( p->getX() ) {
+   ...
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The set of active particles is the local set plus the active set from
-the father cell in the spacetree. This is a recursive cell. So the set
-of active particles holds all local particles plus all the particles of
-coarser levels which might overlap with a local particle whose centre is
-within the current cell.
+is not sufficient. The isContained() has to work with a slack, as it deals with
+floating point numbers. If a particle resides on the face between two cells, it 
+hence is contained within both cells. I therefore recommend to add a boolean per
+particle which highlights if a particle has already been updated.
 
-The dark blue particles in the sketch is an example of such a particle.
-The yellow particle on the coarser mesh level in constrast is not
-contained within the active set of the blue cell, as it is simply too
-far away - even on the coarser mesh where we again work with a "halo"
-around the coarse cell of @f$ h_{coarse}/2 @f$.
+As the local particle set is a subset of the active set, you will compare a 
+particle to itself if you simply compare the particles of the active set against
+the particles in the local set.
 
 
+## Set realisations
+
+The particle toolbox offers two actions sets, 
+peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists and
+peano4.toolbox.particles.ParticleParticleInteraction_Sets,
+which both assemble the active and local sets while they run throug the mesh.
+These particle sets are not persistent, i.e. they are built up on-the-fly.
+Also, building up the particle sets does not change the particle association
+in any way. 
+The sets exclusively consist of pointers to particles, but the particles
+themselves remain
+@ref page_toolbox_particles_mesh_storage "tied to the vertices they belong to".
+
+
+
+## Consistency and correctness
+
+The construction of the active and local sets works if and only if the 
+particles are correctly assigned to mesh vertices. That is, they have 
+to be stored within their closest vertex on the right mesh level in 
+line with @ref page_toolbox_particles_mesh_storage "our storage conventions".
+
+
+The very moment you alter a particle position, you might violate the correct
+assignment. From this point on, the local and active sets are corrupted, i.e.
+might hold too many particles or miss a few. Most codes equip the particles
+with markers (updated) and do not move particles directly. Instead, they 
+maintain two positions - the current x and a xNew - and then copy the xNew
+over into x when a vertex is touched for the last time. This way, the local
+and active sets deliver correct snapshots of the system described by x and
+are hence correct.
+
+
+Once we have assigned particles a new position (or a new search radius), we 
+have to re-sort them. This is required to preserve the 
+@ref page_toolbox_particles_mesh_consistency "particle-mesh consistency".
+It is important to keep in mind that particle sorting requires two mesh sweeps.
+That is, once you change a particle position, the new valid particle-vertex
+association might not be in place in the next mesh sweep. Therefore, the 
+active and local sets might be corrupted in the next sweep. They will be 
+fine two sweeps later.
+ 
+ 
 
 */
  

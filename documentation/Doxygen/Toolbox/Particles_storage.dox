@@ -56,7 +56,7 @@ sets peano4.toolbox.particles.ParticleParticleInteraction_Sets and
 peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists. These are
 two different implementations of the same "tree walker" algorithms which
 eventually provides pseudo-Verlet lists distilled from the tree structure.
-There's a @ref page_toolbox_particles_mesh_storage "dedicated discussion of the tree walking"
+There's a @ref page_toolbox_particles_mesh_traversal "dedicated discussion of the tree walking"
 in the documentation.
 
 

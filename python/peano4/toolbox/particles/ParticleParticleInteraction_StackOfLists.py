@@ -16,7 +16,7 @@ Tree walker to realise particle-particle interactions with particles held by dif
 
 This code snippet creates a tree walker, i.e. an action set that runs
 through the underlying spacetree top down and builds up 
-@ref page_toolbox_particles_mesh_storage "the active set and the local set".
+@ref page_toolbox_particles_mesh_traversal "the active set and the local set".
 These sets can then be used to trigger mesh events. 
 
 
@@ -347,7 +347,6 @@ which was one of the first routines that we optimised along these ideas.
     __Template_TouchCellFirstTime = jinja2.Template(
         """
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
-  std::list< globaldata::{{LOCAL_PARTICLE}}* >  particlesAssociatedWithLocalVertices;
   std::vector< int >                            numberOfParticlesPerLocalVertex( TwoPowerD );
   
   _numberOfActiveParticlesAdded.push_back(0);
@@ -364,11 +363,7 @@ which was one of the first routines that we optimised along these ideas.
     
     // Construct the two local particle sets
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
-      bool append = marker.isContained( p->getX() );
-      if (append) {
-        localParticles.push_back( p );
-      }
-      particlesAssociatedWithLocalVertices.push_back( p );
+      localParticles.push_back( p );
     }
   }
   
