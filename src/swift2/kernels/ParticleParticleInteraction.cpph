@@ -437,12 +437,17 @@ void swift2::kernels::computeDensityWithConstantSearchRadius(
     const ParticleContainer&                   localParticles,
     const ParticleContainer&                   activeParticles
 ) {
+  static tarch::logging::Log _log( "swift2::kernels" );
   for (auto* localParticle : localParticles) {
     if (
       not localParticle->getCellHasUpdatedParticle()
       and
       marker.isContained(localParticle->getX())
     ) {
+      if (localParticle->getPartid() == PROBLEMPART) {
+        logInfo( "computeDensityWithConstantSearchRadius", "STARTING DENSITY FOR PROBLEMPART " << PROBLEMPART << " with " << activeParticles.size() << " active particles associated to cell " << marker.toString() );
+      }
+
       swift2::kernels::findSmoothingLengthWithConstantSearchRadius(localParticle, activeParticles);
     }
   }
