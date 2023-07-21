@@ -75,7 +75,7 @@ present algorithms might have redundant pointers within the active set.
 I am also not 100% sure if we might run into memory issues if particles
 suddenly leave cells and hence "disappear" from the active sets.
 
-In the case of a dynamic setup, i.e. in combinatino with the action
+In the case of a dynamic setup, i.e. in combination with the action
 set UpdateParticleGridAssociation, you might be better of with using
 the set-based implementation of the particle-particle interaction.
 
@@ -148,7 +148,14 @@ for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
   std::advance( localParticlesIterator, localParticlesChunkSize );
 
   for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<localParticlesChunkSize; localParticleNumberInThisChunk++) {
-    if ( marker.isContained( localParticlesChunk[localParticleNumberInThisChunk].getX() )) {
+    if ( 
+      not localParticle->getCellHasUpdatedParticle()
+      and
+      marker.isContained(localParticle->getX())
+      and
+      not toolbox::particles::particleWillBeDroppedFurther( *localParticle, marker)
+    ) {
+      [...]
     }
   }
 } 
@@ -161,49 +168,43 @@ similar to
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-typename std::list< typename ParticleContainer::value_type >::const_iterator localParticlesIterator  = particlesAssociatedWithLocalVertices.begin();
+typename std::list<typename ParticleContainer::value_type>::const_iterator localParticlesIterator
+  = particlesAssociatedWithLocalVertices.begin();
 
-for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
-  typename ParticleContainer::value_type  localParticlesChunk = *localParticlesIterator;
-  std::advance( localParticlesIterator, localParticlesChunkSize );
+for (auto localParticlesChunkSize : numberOfParticlesPerLocalVertex) {
+  typename ParticleContainer::value_type localParticlesChunk = *localParticlesIterator;
+  std::advance(localParticlesIterator, localParticlesChunkSize);
 
-  typename std::list< typename ParticleContainer::value_type >::const_iterator activeParticlesIterator = activeParticles.begin();
-  for (auto activeParticlesChunkSize: numberOfActiveParticlesPerVertexAdded) {
-    typename ParticleContainer::value_type  activeParticlesChunk = *activeParticlesIterator;
-    std::advance( activeParticlesIterator, activeParticlesChunkSize );
+  typename std::list<typename ParticleContainer::value_type>::const_iterator activeParticlesIterator
+    = activeParticles.begin();
+  for (auto activeParticlesChunkSize : numberOfActiveParticlesPerVertexAdded) {
+    typename ParticleContainer::value_type activeParticlesChunk = *activeParticlesIterator;
+    std::advance(activeParticlesIterator, activeParticlesChunkSize);
 
-    computeInnerLoop(
-        marker,
-        localParticlesChunk,
-        localParticlesChunkSize,
-        activeParticlesChunk,
-        activeParticlesChunkSize
-    );
+    for (int localParticleNumberInThisChunk = 0; localParticleNumberInThisChunk < localParticlesChunkSize;
+         localParticleNumberInThisChunk++) {
+      if (
+        marker.isContained(localParticlesChunk[localParticleNumberInThisChunk].getX())
+        and
+        not localParticlesChunk[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
+        and
+        not toolbox::particles::particleWillBeDroppedFurther( localParticlesChunk[localParticleNumberInThisChunk], marker)
+      ) {
+        for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
+            p2pEvaluation(
+              localParticlesChunk + localParticleNumberInThisChunk,
+              activeParticlesChunk + activeParticleNumberInThisChunk
+            );
+        }
+      }
+    }
   }
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This inner loop is where the magic happens, i.e. where we can exploit the
 fact that localParticlesChunk and activeParticlesChunk both point to coninuous
-memory regions. This means that computeInnerLoop is structurally simple:
-
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-void computeHydroForceInnerLoop(
-    const peano4::datamanagement::CellMarker&  marker,
-    Particle*                                  particlesAssociatedWithLocalVertex, // das ist falsch
-    int                                        numberOfLocalParticles,
-    Particle*                                  activeParticles,
-    int                                        numberOfActiveParticles
-) {
-  for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<numberOfActiveParticles; activeParticleNumberInThisChunk++) {
-    for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<numberOfLocalParticles; localParticleNumberInThisChunk++) {
-      // read from activeParticles[activeParticleNumberInThisChunk]
-      // write to particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk]
-    }
-  }
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+memory regions. 
 
 
 ## Optimising coalesced compute kernels

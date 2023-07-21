@@ -3,6 +3,13 @@
 #include "tarch/la/VectorOperations.h"
 
 template <typename Particle>
+bool toolbox::particles::particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::CellMarker& marker) {
+  return marker.hasBeenRefined()
+     and tarch::la::smallerEquals( particle.getSearchRadius(), tarch::la::min(marker.h()) );
+}
+
+
+template <typename Particle>
 toolbox::particles::ParticleReassociationInstruction toolbox::particles::
   getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
     const Particle& particle, const ::peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
