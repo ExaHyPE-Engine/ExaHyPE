@@ -135,6 +135,7 @@ class AssemblePetscMatrixOnVertices(ActionSet):
 
     //send these to petsc
     repositories::instanceOfPetsc.insertValueAndRHS(val, rhs, globalIndex);
+
   }
   """
   
@@ -598,6 +599,9 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
 
     //send to petsc
     repositories::instanceOfPetsc.insertLocalMatrix( rowIndices, colIndices, localMatrix );
+
+    //do the same for rhs vector
+    repositories::instanceOfPetsc.insertRHS( fineGridCell{{SOLVER_NAME}}.getRhs(), globalIndex );
   }
   """
 
