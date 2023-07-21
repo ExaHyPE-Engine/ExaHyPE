@@ -456,7 +456,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                        """,
             cell_kernel="""
                                        ::swift2::kernels::computeDensityWithConstantSearchRadius(
-                                         localParticles, activeParticles
+                                         marker, localParticles, activeParticles
                                        );
                                        """,
             touch_vertex_last_time_kernel="""
@@ -482,19 +482,20 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                        """,
                 cell_kernel="""
                                        ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
+                                         marker,
                                          activeParticles,
                                          _numberOfActiveParticlesPerVertexAdded
                                        );
                                        ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-                                         particlesAssociatedWithLocalVertices,
+                                         localParticles,
                                          numberOfParticlesPerLocalVertex
                                        );
                                        ::swift2::kernels::computeHydroForce(
                                          marker,
-                                         particlesAssociatedWithLocalVertices,
+                                         localParticles,
                                          numberOfParticlesPerLocalVertex,
                                          activeParticles,
-                                         _numberOfActiveParticlesPerVertexAdded
+                                         numberOfActiveParticlesPerVertex
                                        );
                                        """,
                 touch_vertex_last_time_kernel="""
@@ -519,7 +520,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                        ::swift2::kernels::prepareHydroForceCalculation(localParticles);
                                        """,
                 cell_kernel="""
-                                       ::swift2::kernels::computeHydroForce(localParticles, activeParticles);
+                                       ::swift2::kernels::computeHydroForce(marker, localParticles, activeParticles);
                                        """,
                 touch_vertex_last_time_kernel="""
                                        ::swift2::kernels::endHydroForceCalculation(

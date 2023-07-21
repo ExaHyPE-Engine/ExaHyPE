@@ -14,7 +14,7 @@ namespace swift2 {
      * per pair of local and active particles. The interaction functor may
      * modify the local particle. Besides the simple nested loop, the routine
      * ensures that no particle is updated twice if it belongs to two cells
-     * simulatenously.
+     * simultaneously.
      *
      * What the routine not does is to check if activeParticle!=localParticle,
      * i.e. please assume that the routine is also called for self-interaction
@@ -29,8 +29,9 @@ namespace swift2 {
      */
     template <typename Particle, typename ParticleContainer>
     void genericInteraction(
-      const ParticleContainer&                                                           localParticles,
-      const ParticleContainer&                                                           activeParticles,
+        const peano4::datamanagement::CellMarker&  marker,
+        const ParticleContainer&                   localParticles,
+        const ParticleContainer&                   activeParticles,
       std::function<void(Particle* localParticle, const Particle* const activeParticle)> interaction
     );
 
@@ -115,7 +116,11 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeDensity(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
+    void computeDensity(
+        const peano4::datamanagement::CellMarker&  marker,
+        const ParticleContainer&                   localParticles,
+        const ParticleContainer&                   activeParticles
+    );
 
     /**
      * @brief Same as computeDensity(...), but doesn't modify the particles' search radii.
@@ -123,7 +128,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSearchRadius(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles
+        const peano4::datamanagement::CellMarker&  marker,
+        const ParticleContainer&                   localParticles,
+        const ParticleContainer&                   activeParticles
     );
 
     /**
@@ -138,7 +145,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSmoothingLengths(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles
+      const peano4::datamanagement::CellMarker&  marker,
+      const ParticleContainer&                   localParticles,
+      const ParticleContainer&                   activeParticles
     );
 
     /** Hydro Force calculation particle-particle kernel
@@ -162,7 +171,11 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeHydroForce(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
+    void computeHydroForce(
+      const peano4::datamanagement::CellMarker&  marker,
+      const ParticleContainer&                   localParticles,
+      const ParticleContainer&                   activeParticles
+    );
 
 
     /**
@@ -188,10 +201,10 @@ namespace swift2 {
     template <typename ParticleContainer>
     void computeHydroForce(
       const peano4::datamanagement::CellMarker& marker,
-      const ParticleContainer&                  particlesAssociatedWithLocalVertices,
-      const std::vector<int>&                   numberOfParticlesPerLocalVertex,
+      const ParticleContainer&                  localVertices,
+      const std::vector<int>&                   numberOfParticlesPerVertex,
       const ParticleContainer&                  activeParticles,
-      const std::vector<int>&                   numberOfActiveParticlesPerVertexAdded
+      const std::vector<int>&                   numberOfActiveParticlesPerVertex
     );
   } // namespace kernels
 } // namespace swift2

@@ -38,7 +38,7 @@ traversal approach, as it exposes more information:
   particles that are associated with adjacent vertices of the current cell. 
   This is a superset of localParticles and also holds particles for which 
   marker.isContained() does not hold.
-- ***_numberOfActiveParticlesPerVertexAdded*** is a sequence of integers
+- ***_numberOfActiveParticlesPerVertex*** is a sequence of integers
   which tells you how many particles within activeParticles are added by one
   particular vertex.
 - ***numberOfParticlesPerLocalVertex*** is a sequence of integers which 
@@ -107,7 +107,7 @@ To exploit this additional information, you cannot use localParticles anymore,
 i.e. you have to use particlesAssociatedWithLocalVertices. This means, you 
 might have to check if a particle is contained within a cell manually. 
 Once you rewrite your kernels that way, you can exploit the integers
-_numberOfActiveParticlesPerVertexAdded and numberOfParticlesPerLocalVertex:
+_numberOfActiveParticlesPerVertex and numberOfParticlesPerLocalVertex:
 
 @image html ParticleParticleInteraction_StackOfLists_continuous-memory.png
 
@@ -126,7 +126,7 @@ add the calls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
   activeParticles,
-  _numberOfActiveParticlesPerVertexAdded 
+  _numberOfActiveParticlesPerVertex 
 );
 ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
   particlesAssociatedWithLocalVertices,
@@ -353,7 +353,7 @@ which was one of the first routines that we optimised along these ideas.
   _numberOfActiveParticlesAdded.push_back(0);
   for (int i=0; i<TwoPowerD; i++) {
     // Keep track of number of particles
-    _numberOfActiveParticlesPerVertexAdded.push_back( fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size() );
+    _numberOfActiveParticlesPerVertex.push_back( fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size() );
     _numberOfActiveParticlesAdded.back() += fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
     numberOfParticlesPerLocalVertex[i] = fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
     
@@ -375,7 +375,8 @@ which was one of the first routines that we optimised along these ideas.
   logDebug( "touchCellFirstTime(...)", "size of local/active particles=" << localParticles.size() << "/" << _activeParticles.size() << " at " << marker.toString() );
 
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
-  std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
+  std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles                  = _activeParticles;
+  std::vector< int >&                             numberOfActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
   {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
   {% endif %}
 """
@@ -385,7 +386,7 @@ which was one of the first routines that we optimised along these ideas.
         """
   assertion( not _numberOfActiveParticlesAdded.empty() );
   assertion( _activeParticles.size()>=_numberOfActiveParticlesAdded.back() );
-  assertion( _numberOfActiveParticlesPerVertexAdded.size()>=TwoPowerD );
+  assertion( _numberOfActiveParticlesPerVertex.size()>=TwoPowerD );
   
 
   // More elegant way to write
@@ -398,9 +399,9 @@ which was one of the first routines that we optimised along these ideas.
     _activeParticles.end()
   );
     
-  _numberOfActiveParticlesPerVertexAdded.erase( 
-    std::prev(_numberOfActiveParticlesPerVertexAdded.end(),TwoPowerD ),
-    _numberOfActiveParticlesPerVertexAdded.end()
+  _numberOfActiveParticlesPerVertex.erase( 
+    std::prev(_numberOfActiveParticlesPerVertex.end(),TwoPowerD ),
+    _numberOfActiveParticlesPerVertex.end()
   );
   
   _numberOfActiveParticlesAdded.pop_back();
@@ -467,7 +468,7 @@ which was one of the first routines that we optimised along these ideas.
             """
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
   std::vector< int >                             _numberOfActiveParticlesAdded;
-  std::vector< int >                             _numberOfActiveParticlesPerVertexAdded;
+  std::vector< int >                             _numberOfActiveParticlesPerVertex;
 """
         )
         return result.render(**self.d)
