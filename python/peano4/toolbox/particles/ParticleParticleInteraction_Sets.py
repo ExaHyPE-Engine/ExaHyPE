@@ -18,7 +18,8 @@ Tree walker to realise particle-particle interactions with particles held by dif
 This code has the same semantics as peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.
 However, it provides a different implementation. Please consult the 
 documentation of ParticleParticleInteraction_StackOfLists for a description
-of the arguments, plug-in points and the semantics of the two sets. 
+of the arguments, plug-in points and the semantics of the two sets, as well as
+@ref page_toolbox_particles_mesh_traversal "the generic set discussion".
 
 
 ## Realisation
@@ -111,10 +112,7 @@ from the active set.
       _activeParticles.insert( p );
     }
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
-      bool append = marker.isContained( p->getX() );
-      if (append) {
-        localParticles.insert( p );
-      }
+      localParticles.insert( p );
     }
   }
 

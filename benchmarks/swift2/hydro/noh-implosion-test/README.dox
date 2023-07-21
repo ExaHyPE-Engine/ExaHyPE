@@ -56,5 +56,68 @@ python3 noh.py -np 320 -plot 0 -et 0.001
  accuracies per attribute.
 
 
+## Vectorisation studies
+
+The Noh benchmark is one of our classic test cases to study vectorisation of 
+the kernels. Our first subject of study is the function swift2::kernels::forceKernelVectorised()
+which is a nice function to see what has to be done to get good SIMD 
+efficiency. Before we tweak this function, I recommend to re-translate with
+the Intel compiler, to include -O3 -xHost in the code, and then to manipulate
+the Makefile:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
+	rm observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfLists4.o
+	$(CXX) -qopt-report=3 $(CXXFLAGS) -c -o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfLists4.o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfLists4.cpp
+	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o noh2D
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This tweaked makefile builds all object files. After that, it deletes the object
+file behind the action set StephydroPartForceLoop. This is the step where the 
+force kernel is actually used. We then retranslate this single object file with 
+Intel's -opt-report flag which provides ample evidence which vectorisation 
+optimisation has been performed by the compiler.
+
+You should get a file observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfLists4.optrpt
+which summarises if the compiler has vectorised your code and even how much 
+speedup you might expect. Please note that every rerun of the Python script 
+overwrites the Makefile. However, there's no need to do this while you tweak
+the kernels. Just re-invoke make.
+
+If the optimisation report contains a section like
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        LOOP BEGIN at ../../../../src/swift2/kernels/ParticleParticleInteraction.cpph (541, 7)
+
+            LOOP BEGIN at ../../../../src/swift2/kernels/ParticleParticleInteraction.cpph (548, 15)
+                remark #15553: loop was not vectorized: outer loop is not an auto-vectorization candidate.
+
+                LOOP BEGIN at ../../../../src/swift2/kernels/kernel_hydro.h (148, 3)
+                    remark #15344: Loop was not vectorized: vector dependence prevents vectorization
+                    remark #15346: vector dependence: assumed FLOW dependence between w (150:19) and w (150:15) 
+                    remark #25436: Loop completely unrolled by 3
+                LOOP END
+            LOOP END
+
+            LOOP BEGIN at ../../../../src/swift2/kernels/ParticleParticleInteraction.cpph (556, 15)
+            LOOP END
+        LOOP END
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+then this is really bad news. Line 556 is the loop that you want to be 
+vectorised. So nothing has happened in this case (and the report actually
+tells you in this example that kernel_hydro.h:148 is to blame. Once the 
+compiler manages to optimise, you will see a detailed breakdown of the 
+predicted speedup.
+
+
+We started to collect a list of tweaks that are necessary to get the compiler
+to vectorise in the documentation of swift2::kernels::forceKernelVectorised()
+within ParticleParticleInteraction.h. Please consult this docu for further
+information in which way we have to rewrite the kernels. 
+
+
+ 
  
  */

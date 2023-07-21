@@ -236,14 +236,9 @@ template <typename Particle>
 void swift2::kernels::forceKernelVectorised(
   Particle*       __restrict__   localParticle,
   const Particle* __restrict__   activeParticle
-) {
-  //  @todo This is a fake, just to ensure that the compiler doesn't eliminate the code
-  //        completely
-  tarch::la::Vector<Dimensions, double>  newA = localParticle->getA();
-  localParticle->setA( newA * 2.0 );
+) __attribute__((always_inline)) {
 
 
-  /*
 
 
   // Grab static parameters
@@ -266,12 +261,8 @@ void swift2::kernels::forceKernelVectorised(
 
   // Distance between the two particles
   tarch::la::Vector<Dimensions, double> dx    = localParticle->getX() - activeParticle->getX();
-
   const double                          r     = tarch::la::norm2(dx);
   const double                          r_inv = r ? 1.0 / r : 0.0;
-
-  // Get actual interaction radius
-  const double iactR = kernel_gamma * h_a;
 
   // Dimensionless distance to evaluate kernel
   const double h_a_inv = 1. / h_a;
@@ -279,6 +270,12 @@ void swift2::kernels::forceKernelVectorised(
   const double q_a     = r * h_a_inv;
   const double q_b     = r * h_b_inv;
 
+  // Get actual interaction radius
+  const double iactR = kernel_gamma * h_a;
+
+  const double mask = tarch::la::smaller( r, iactR );
+
+  // Get actual interaction radius
   double wa, wb;
   double wa_dr, wb_dr;
   double dw_dqa, dw_dqb;
@@ -304,6 +301,7 @@ void swift2::kernels::forceKernelVectorised(
 
   // Compute dv dot r.
   double dvdr = tarch::la::dot((localParticle->getV() - activeParticle->getV()), dx);
+
 
   // Are the particles moving towards each others ?
   const double omega_ab = std::min(dvdr, 0.0);
@@ -343,11 +341,8 @@ void swift2::kernels::forceKernelVectorised(
   );
   assertion3(std::isfinite(sph_acc_term), sph_acc_term, localParticle->toString(), activeParticle->toString());
 
-  assertion( tarch::la::greater(r, 0.0) );
-  const double updateScaling = tarch::la::smaller(r, iactR) ? 1.0 : 0.0;
-
   // Use the force
-  localParticle->setA( localParticle->getA() - updateScaling * m_b * acc * dx );
+  localParticle->setA( localParticle->getA() - mask * m_b * acc * dx );
 
   // Get the time derivative for u.
   const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * wa_dr;
@@ -361,13 +356,17 @@ void swift2::kernels::forceKernelVectorised(
   const double udot = localParticle->getUDot();
 
   // Internal energy time derivative
-  localParticle->setUDot(localParticle->getUDot() + updateScaling * m_b * du_dt_a);
+  localParticle->setUDot(localParticle->getUDot() + mask * m_b * du_dt_a);
 
   // Get the time derivative for h.
-  localParticle->setHDot(localParticle->getHDot() - updateScaling * m_b * dvdr * r_inv / rho_b * wa_dr * f_ab);
+  localParticle->setHDot(localParticle->getHDot() - mask * m_b * dvdr * r_inv / rho_b * wa_dr * f_ab);
 
   // Update the signal velocity
-  localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), updateScaling * v_sig));
+  // localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), mask * v_sig));
+  const double currentAV = localParticle->getV_sig_AV();
+  const double biggerAV  = mask * v_sig;
+  const double newAV     = biggerAV > currentAV ? biggerAV : currentAV;
+  localParticle->setV_sig_AV(newAV);
 
   assertion6(not std::isnan(localParticle->getHDot()), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba);
   assertion7(
@@ -380,7 +379,6 @@ void swift2::kernels::forceKernelVectorised(
       activeParticle->getF(),
       activeParticle->getIsBoundaryParticle()
   );
-  */
 }
 
 
@@ -541,13 +539,14 @@ void swift2::kernels::computeHydroForce(
           and
           not localParticlesChunk[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
         ) {
-            if (localParticlesChunk!=activeParticlesChunk) {
+//            if (localParticlesChunk!=activeParticlesChunk) {
               for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
                 swift2::kernels::forceKernelVectorised(
                   localParticlesChunk  + localParticleNumberInThisChunk,
                   activeParticlesChunk + activeParticleNumberInThisChunk
                 );
               }
+/*
             }
             else {
               for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
@@ -557,6 +556,7 @@ void swift2::kernels::computeHydroForce(
                 );
               }
             }
+*/
         }
       }
     }
