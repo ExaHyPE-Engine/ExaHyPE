@@ -170,7 +170,7 @@ tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::repositories::c
     output[i] =  cellCentre[i] - cellH[i] / 2;
     
     //indicesXY indicates how many jumps of h / polynomial degree we need to do
-    output[i] += indicesXY[i] / polynomialDegree;
+    output[i] += indicesXY[i] * cellH[i] / polynomialDegree;
   }
   return output;  
 }
