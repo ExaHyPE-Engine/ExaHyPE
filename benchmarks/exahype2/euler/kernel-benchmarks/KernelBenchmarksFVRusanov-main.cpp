@@ -488,28 +488,25 @@ void submitSYCLKernels(int patches, int device, int thread) {
     .submit([&](auto& h) {
       h.host_task(
         [=](
-        ) { /*
+        ) { 
 runStatelessVariantOnDevice(
 patches, device,
 ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
 1, FVRusanovSolver::NumberOfUnknowns,
-FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>, "sycl,
-task-graph, AoS", thread
+FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>, "sycl, task-graph, AoS", thread
 );
 runStatelessVariantOnDevice(
 patches, device,
 ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
 1, FVRusanovSolver::NumberOfUnknowns,
-FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>, "sycl,
-task-graph, AoSoA", thread
+FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>, "sycl, task-graph, AoSoA", thread
 );
 runStatelessVariantOnDevice(
 patches, device,
 ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
 1, FVRusanovSolver::NumberOfUnknowns,
-FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>, "sycl,
-task-graph, SoA", thread
-);*/
+FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>, "sycl, task-graph, SoA", thread
+);
             runStatelessVariantOnDevice(
               patches,
               device,
@@ -973,12 +970,9 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidArguments;
   }
 
-::std::cout << "checkpoint1" << std::endl;
   peano4::runTestsAndBenchmarks();
-  std::cout << "checkpoint 2" << std::endl;
 
   repositories::startSimulation();
-  std::cout << "checkpoint 3" << std::endl;
 
   otterTraceInitialise();
 
