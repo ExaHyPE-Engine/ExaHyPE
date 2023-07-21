@@ -70,7 +70,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
       Prediction,
       PredictionOnHangingCells,
       Correction,
-      Plotting
+      Plotting,
+      Suspended
     };
 
     static std::string toString(SolverState);
@@ -280,6 +281,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     virtual void finishGridInitialisationStep() override;
 
 
+    virtual void suspendSolversForOneGridSweep() override;
 
 
     /**

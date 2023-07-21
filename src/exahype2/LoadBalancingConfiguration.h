@@ -91,7 +91,7 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Confi
      */
     virtual int getMinTreeSize(toolbox::loadbalancing::State state) override;
 
-    std::string toString() const;
+    std::string toString() const override;
 };
 
 

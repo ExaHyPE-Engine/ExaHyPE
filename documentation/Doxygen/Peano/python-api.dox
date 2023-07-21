@@ -1,0 +1,60 @@
+/**
+\page peano_python_api python api intro
+
+Introduction {#section:python-api-examples:introduction}
+============
+
+-   What is a action set
+
+-   How to set up a project
+
+-   ...
+
+### Parallelisation and GPU support
+
+Follow the configuration recommendation of Section
+[\[section:particles:swift:hpc\]](#section:particles:swift:hpc){reference-type="ref"
+reference="section:particles:swift:hpc"} before you continue.
+
+#### Domain decomposition
+
+All domain decomposition is realised via your main routine, and you
+don't have to modify anything besides your main loop if you work shared
+memory only. Once you enable MPI, too, you will have to make some minor
+modifications.
+
+ allows you to control the domain decomposition via explicit splits (and
+mergers) of subdomains. However, we rely on the load balancing toolbox
+here. The toolbox collects some global information and then triggers
+splits and merges accordingly. You have to perform the following steps:
+
+-   Include
+
+    \#include \"toolbox/loadbalancing/RecursiveSubdivision.h\"
+
+-   Create an instance of the load balancer on each MPI rank. It is
+    convenient to insert
+
+    toolbox::loadbalancing::RecursiveSubdivision loadBalancer;
+
+    just before the initial
+    `tarch::mpi::Rank::getInstance().isGlobalMaster()` check. The object
+    accepts a lot of configuration parameters which you can look up in
+    the source code documentation.
+
+-   You have to inform your load balancer when an individual step has
+    terminated. This tells the balancer to collect some global
+    statistics and (eventually) to trigger some rebalancing.
+
+    loadBalancer.finishStep();
+
+    I typically use the load balancer only within the grid construction.
+    Totally dynamic load balancing is something this simple
+    pre-manufactured balancer doesn't properly support anyway.
+
+    int gridConstructionSteps = 0; while
+    (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()\<5)
+    examples::particles::observers::CreateGrid createObserver;
+    peano4::parallel::SpacetreeSet::getInstance().traverse(createObserver);
+    gridConstructionSteps++; loadBalancer.finishStep();
+*/

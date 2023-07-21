@@ -298,6 +298,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
+  _solverState = SolverState::Suspended;
+}
+
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStamp,
   double globalMaxTimeStamp,
@@ -309,6 +314,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::GridInitialisation;
       break;
     case SolverState::GridInitialisation:
+      _solverState = SolverState::Prediction;
+      break;
+    case SolverState::Suspended:
       _solverState = SolverState::Prediction;
       break;
     case SolverState::Plotting:

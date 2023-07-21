@@ -1,0 +1,61 @@
+/**
+
+  @page page_peano_localisation Localisation of a solver
+
+Peano allows you to attach data to faces, cells and vertices. It stores these
+data everywhere within the domain on each and every resolution level.
+
+
+
+
+## Alter the storage logic
+
+Typically, each data structure has a generator object attached to it which defines how
+to translate the logical data model into C++ data structures. These generators
+further add MPI logic and logic whethre to  load and store data or not. This
+latter logic is kind of an aspect to the corresponding classes. You find the
+default aspect in peano4.dastgen2.MPIAndStorageAspect.
+
+The key contribution of this aspect (from a storage point of view) is that it
+supplements the generated class with a static routine
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+::peano4::grid::LoadStoreComputeFlag MyClass::loadStoreComputeFlag(...)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is the content of this enum which dictates if data is stored, loaded or 
+even provided to the solvers. Provided deserves further explanation: Whenever
+Peano runs into a cell, vertex, face, it ensures that all the user data is 
+there. This is important to ensure that all pointer arithmetic behind the 
+scenes makes sense. However, you might work with data which is held on the
+heap, i.e. your face data for example might point to a chunk of data on the
+heap. In this case, you can instruct Peano via the LoadStoreComputeFlag that
+you don't want to store and load the pointers to these heap data and you 
+also don't want it to create (temporary) data at any point.
+Along these lines, you can also associate data with grid entitites which is 
+always created temporarily and made available to the solver, but is never
+ever stored or loaded. This is quite useful if you have multiple action sets
+within one observer which pass on information. In some way, such temporary data
+resemble temporary/local variables.
+
+
+
+## Parallelisation
+
+Peano automatically masks out the data outside of the local subdomain of a 
+thread or rank.
+However, that only works properly with smart pointers.
+
+
+
+## Further spatial multiresolution localisation in storage classes using smart pointers
+
+
+ 
+
+
+
+
+
+ */
+ 

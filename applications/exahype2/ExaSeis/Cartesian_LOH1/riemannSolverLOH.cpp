@@ -63,11 +63,11 @@ void loh::riemannSolver::riemannSolver(
   T FLx,FLy,FLz,FRx,FRy,FRz;
   T FL_x,FL_y,FL_z,FR_x,FR_y,FR_z;
 
-   for (int k = 0; k < 3; k++){
+  for (int k = 0; k < 3; k++){
 
-     n_m[k] = n[k];
-     n_p[k] = n[k];
-   }
+    n_m[k] = n[k];
+    n_p[k] = n[k];
+  }
 
   for (int i = 0; i < basisSize; i++) {
     for (int j = 0; j < basisSize; j++) {
@@ -112,9 +112,9 @@ void loh::riemannSolver::riemannSolver(
       // impedance must be greater than zero !
       if (zp_p <= 0.0 || zp_m <= 0.0){
         std::cout << "At position: " << isBoundaryFace << "\n";
-	std::cout<<zs_p<<" "<<zp_p<<" "<<zs_m<<" "<<zp_m<<"\n";
-	std::cout<<" Impedance must be greater than zero ! "<< std::endl;
-	std::exit(-1);
+        std::cout<<zs_p<<" "<<zp_p<<" "<<zs_m<<" "<<zp_m<<"\n";
+        std::cout<<" Impedance must be greater than zero ! "<< std::endl;
+        std::exit(-1);
       }
 
       // generate interface data preserving the amplitude of the outgoing charactertritics
@@ -123,15 +123,15 @@ void loh::riemannSolver::riemannSolver(
       T vn_hat_m,vm_hat_m,vl_hat_m,Tn_hat_m,Tm_hat_m,Tl_hat_m;    
 
       if (isBoundaryFace) {
-	// 1 absorbing 0 free surface
-	T r= faceIndex==2 ? 1 : 0;
-	//	T r=1.;
-	riemannSolver_boundary(faceIndex,r,vn_m,vm_m,vl_m,Tn_m,Tm_m,Tl_m,zp_m,zs_m,vn_hat_m,vm_hat_m,vl_hat_m,Tn_hat_m,Tm_hat_m,Tl_hat_m);
-	riemannSolver_boundary(faceIndex,r,vn_p,vm_p,vl_p,Tn_p,Tm_p,Tl_p,zp_p,zs_p,vn_hat_p,vm_hat_p,vl_hat_p,Tn_hat_p,Tm_hat_p,Tl_hat_p);      
+        // 1 absorbing 0 free surface
+        T r= faceIndex==2 ? 1 : 0;
+        //	T r=1.;
+        riemannSolver_boundary(faceIndex,r,vn_m,vm_m,vl_m,Tn_m,Tm_m,Tl_m,zp_m,zs_m,vn_hat_m,vm_hat_m,vl_hat_m,Tn_hat_m,Tm_hat_m,Tl_hat_m);
+        riemannSolver_boundary(faceIndex,r,vn_p,vm_p,vl_p,Tn_p,Tm_p,Tl_p,zp_p,zs_p,vn_hat_p,vm_hat_p,vl_hat_p,Tn_hat_p,Tm_hat_p,Tl_hat_p);      
       }else {
-	riemannSolver_Nodal(vn_p,vn_m, Tn_p, Tn_m, zp_p , zp_m, vn_hat_p , vn_hat_m, Tn_hat_p, Tn_hat_m);
-	riemannSolver_Nodal(vm_p,vm_m, Tm_p, Tm_m, zs_p , zs_m, vm_hat_p , vm_hat_m, Tm_hat_p, Tm_hat_m);
-	riemannSolver_Nodal(vl_p,vl_m, Tl_p, Tl_m, zs_p , zs_m, vl_hat_p , vl_hat_m, Tl_hat_p, Tl_hat_m);
+        riemannSolver_Nodal(vn_p,vn_m, Tn_p, Tn_m, zp_p , zp_m, vn_hat_p , vn_hat_m, Tn_hat_p, Tn_hat_m);
+        riemannSolver_Nodal(vm_p,vm_m, Tm_p, Tm_m, zs_p , zs_m, vm_hat_p , vm_hat_m, Tm_hat_p, Tm_hat_m);
+        riemannSolver_Nodal(vl_p,vl_m, Tl_p, Tl_m, zs_p , zs_m, vl_hat_p , vl_hat_m, Tl_hat_p, Tl_hat_m);
       }
 
       //generate fluctuations in the local basis coordinates: n, m, l
@@ -145,20 +145,20 @@ void loh::riemannSolver::riemannSolver(
 
       FL_n = FLn/zp_m;
       if(zs_m > 0){
-	FL_m = FLm/zs_m;
-	FL_l = FLl/zs_m;
+        FL_m = FLm/zs_m;
+        FL_l = FLl/zs_m;
       }else{
-	FL_m=0;
-	FL_l=0;
+        FL_m=0;
+        FL_l=0;
       }
     
       FR_n = FRn/zp_p;
       if(zs_p > 0){    
-	FR_m = FRm/zs_p;
-	FR_l = FRl/zs_p;
+        FR_m = FRm/zs_p;
+        FR_l = FRl/zs_p;
       }else{
-	FR_m=0;
-	FR_l=0;
+        FR_m=0;
+        FR_l=0;
       }
     
       // rotate back to the physical coordinates x, y, z
@@ -247,34 +247,34 @@ void loh::riemannSolver::Gram_Schmidt(T* const y, T* const z){
 template<typename T>
 void loh::riemannSolver::localBasis(T* const n, T* const m, T* const l, int d){
   if (d == 2){
-      l[0] = 0.;
-      l[1] = 0.;
-      l[2] = 1.0;
-      
-      m[0] = n[1]*l[2]-n[2]*l[1];
-      m[1] = -(n[0]*l[2]-n[2]*l[0]);
-      m[2] = n[0]*l[1]-n[1]*l[0];
+    l[0] = 0.;
+    l[1] = 0.;
+    l[2] = 1.0;
+    
+    m[0] = n[1]*l[2]-n[2]*l[1];
+    m[1] = -(n[0]*l[2]-n[2]*l[0]);
+    m[2] = n[0]*l[1]-n[1]*l[0];
   }else if (d == 3){
-      T tol, diff_norm1, diff_norm2;
-      tol = 1e-12;
+    T tol, diff_norm1, diff_norm2;
+    tol = 1e-12;
+    m[0] = 0.;
+    m[1] = 1.;
+    m[2] = 0.;
+    
+    diff_norm1 = kernels::pow2(n[0]-m[0]) + kernels::pow2(n[1]-m[1]) + kernels::pow2(n[2]-m[2]);
+    diff_norm2 = kernels::pow2(n[0]+m[0]) + kernels::pow2(n[1]+m[1]) + kernels::pow2(n[2]+m[2]);
+    
+    if (diff_norm1 >= kernels::pow2(tol) && diff_norm2 >= kernels::pow2(tol)){
+      Gram_Schmidt(n, m);
+    }else{
       m[0] = 0.;
-      m[1] = 1.;
-      m[2] = 0.;
-      
-      diff_norm1 = kernels::pow2(n[0]-m[0]) + kernels::pow2(n[1]-m[1]) + kernels::pow2(n[2]-m[2]);
-      diff_norm2 = kernels::pow2(n[0]+m[0]) + kernels::pow2(n[1]+m[1]) + kernels::pow2(n[2]+m[2]);
-      
-      if (diff_norm1 >= kernels::pow2(tol) && diff_norm2 >= kernels::pow2(tol)){
-      	Gram_Schmidt(n, m);
-      }else{
-      	  m[0] = 0.;
-      	  m[1] = 0.;
-      	  m[2] = 1.;
-      	  Gram_Schmidt(n, m);
-      }
-      l[0] = n[1]*m[2]-n[2]*m[1];
-      l[1] = -(n[0]*m[2]-n[2]*m[0]);
-      l[2] = n[0]*m[1]-n[1]*m[0];
+      m[1] = 0.;
+      m[2] = 1.;
+      Gram_Schmidt(n, m);
+    }
+    l[0] = n[1]*m[2]-n[2]*m[1];
+    l[1] = -(n[0]*m[2]-n[2]*m[0]);
+    l[2] = n[0]*m[1]-n[1]*m[0];
   }
 } 
 
@@ -324,26 +324,26 @@ void loh::riemannSolver::riemannSolver_Nodal(T v_p,T v_m, T sigma_p, T sigma_m, 
 
 template<typename T>
 void loh::riemannSolver::riemannSolver_BC0(T v, T sigma, T z,  T r, T& v_hat, T& sigma_hat){
-   T p = 0.5*(z*v + sigma);
-   if(z > 0){
-     v_hat = (1+r)/z*p;
-     sigma_hat = (1-r)*p;
-   }else{
-     v_hat = v;
-     sigma_hat = sigma;
-   }
+  T p = 0.5*(z*v + sigma);
+  if(z > 0){
+    v_hat = (1+r)/z*p;
+    sigma_hat = (1-r)*p;
+  }else{
+    v_hat = v;
+    sigma_hat = sigma;
+  }
 }
 
 template<typename T>
 void loh::riemannSolver::riemannSolver_BCn(T v,T sigma, T z, T r, T& v_hat, T& sigma_hat){
-   T q = 0.5*(z*v - sigma);
-   if(z > 0){
-     v_hat = (1+r)/z*q;
-     sigma_hat = -(1-r)*q;
-   }else{
-     v_hat = v;
-     sigma_hat = sigma;
-   }
+  T q = 0.5*(z*v - sigma);
+  if(z > 0){
+    v_hat = (1+r)/z*q;
+    sigma_hat = -(1-r)*q;
+  }else{
+    v_hat = v;
+    sigma_hat = sigma;
+  }
 }
 
 

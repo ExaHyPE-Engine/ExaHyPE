@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# exit on error
+set -e
+
 # Script to run experiment (Sedov-Taylor blast 1D)
 
 # set threads number
@@ -26,6 +29,6 @@ python3 sedov.py -dt $TIME_STEP_SIZE -et $END_TIME -np $N_PART -cs $CELL_SIZE
 
 # run experiment
 echo 'running experiment...'
-./sedov1D > output.txt
+./sedov1D | tee output.txt
 
 echo "Done."

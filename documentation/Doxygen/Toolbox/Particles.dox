@@ -1,0 +1,45 @@
+/**
+
+@page toolbox_particles Particles
+
+\li \subpage page_toolbox_particles_mesh_storage
+\li \subpage page_toolbox_particles_mesh_traversal
+\li \subpage page_toolbox_particles_mesh_consistency
+
+Peano's particle toolbox provides features to add tracers to your code, but
+also to add particles which swim around. We have some features to dump
+Lagrangian data into data bases and some generic input file readers. However,
+the toolbox has no domain-specific content, i.e. Physics. It is merely the
+base of tracers in ExaHyPE and SPH particles in Swift 2 for example.
+
+Particles in Peano are typically tied to the mesh through the
+Particles-in-Dual-Tree paradigm which we introduce in our paper
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       @article{Weinzierl:2016:PIDT,
+         title = {Two particle-in-grid realisations on spacetrees},
+         journal = {Parallel Computing},
+         volume = {52},
+         pages = {42-64},
+         year = {2016},
+         issn = {0167-8191},
+         doi = {https://doi.org/10.1016/j.parco.2015.12.007},
+         url = {https://www.sciencedirect.com/science/article/pii/S0167819115001635},
+         author = {T. Weinzierl and B. Verleye and P. Henri and D. Roose},
+         keywords = {Particle-in-cell, Spacetree, Particle sorting, AMR, Lagrangian-Eulerian methods, Communication-avoiding},
+         abstract = {The present paper studies two particle management strategies for dynamically adaptive Cartesian grids at hands of a particle-in-cell code. One holds the particles within the grid cells, the other within the grid vertices. The fundamental challenge for the algorithmic strategies results from the fact that particles may run through the grid without velocity constraints. To facilitate this, we rely on multiscale grid representations. They allow us to lift and drop particles between different spatial resolutions. We call this cell-based strategy particle in tree (PIT). Our second approach assigns particles to vertices describing a dual grid (PIDT) and augments the lifts and drops with multiscale linked cells. Our experiments validate the two schemes at hands of an electrostatic particle-in-cell code by retrieving the dispersion relation of Langmuir waves in a thermal plasma. They reveal that different particle and grid characteristics favour different realisations. The possibility that particles can tunnel through an arbitrary number of grid cells implies that most data is exchanged between neighbouring ranks, while very few data is transferred non-locally. This constraints the scalability as the code potentially has to realise global communication. We show that the merger of an analysed tree grammar with PIDT allows us to predict particle movements among several levels and to skip parts of this global communication a priori. It is capable to outperform several established implementations based upon trees and/or space-filling curves.}
+       }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+As the toolbox is quite generic, it really only provides a very basic particle
+model where the particle hosts only the very essential parameters. The particle
+itself is modelled as a DaStGen class in Python within peano4.toolbox.particles.Particle.
+
+Extensions and user codes typically take this baselien data model and augment
+it with further attributes which carry the actual physics.
+
+
+
+ */
+ 

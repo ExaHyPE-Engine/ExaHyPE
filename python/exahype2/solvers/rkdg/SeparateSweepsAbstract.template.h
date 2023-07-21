@@ -40,6 +40,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
+      Suspended,
       Plotting {% for item in range(RK_STEPS) -%}
       ,
       ProjectOnFacesAndComputeVolumeIntegralOfStep{{item}},
@@ -147,6 +148,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {% endif %}
 
 
+    virtual void suspendSolversForOneGridSweep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class

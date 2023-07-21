@@ -8,19 +8,11 @@ While the output is not particularly exciting (the simulation should yield a
 stationary solution after a while), it is numerically challenging as we have
 sophisticated boundary condition effects, a singularity in the centre which 
 can lead to oscillations, need a scheme with low numerical dissipation, and 
-so forth.
+so forth. Therefore, this benchmark combines two different solvers - a 
+dissipative Finite Volume scheme and a higher order scheme - to obtain a
+compromise between accuracy and stability. 
 
 
-We therefore study three different numerical schemes:
-
-1. A sole FV scheme. This one is very dissipative.
-2. A sole FD4 scheme. This might be/should be subject to long-term oscillations
-   i.e. numerically unstable.
-3. A coupled FD4-FV scheme where we use FV around the black hole and FD4 
-   otherwise. The fundamental idea is that we use a dissipative scheme around
-   the black hole which eliminates oscillations or avoids that they pop up in 
-   the first place. Everywhere else, we use a higher order scheme which gives
-   us higher accuracy.
 
 
 ## Build executable
@@ -127,7 +119,18 @@ immediately introduces a huge memory overhead. Along these lines, picking
 --threading-model fuse-or-process-immediately-1
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-might be reasonably whenever you are really short of main memory.
+might be reasonably whenever you are really short of main memory. Furthermore,
+this scheme will also immediately start to spawn the Finite Volume patches as
+tasks which are extremely expensive compared to their higher order cell
+counterparts. If they are not immediately processed, they will lead to serial
+compute phases later down the line.
+
+
+On the long term, we will want to have a scheduler which takes priorities into
+account as we already give enclave tasks of the Finite Volume scheme higher
+priority. See the discussion below. A better schedule should bring the 
+Finite Volume tasks forward and primarily ship those to GPUs.
+
  
 
 ## Code remarks (FD4-FV scheme)
@@ -234,22 +237,36 @@ Our FV solver is, through various inheritance levels, a subclass of
 peano.exahype2.solvers.fv.EnclaveTasking which in turn inherits from
 peano.exahype2.solvers.fv.FV. The solver is a text-book FV scheme,
 with one major added functionality: We add the implementation the routines 
-benchmarks::exahype2::ccz4::CCZ4SBH_FV::isCellOverlappingWithBHImpactArea()
-and 
-benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAdjacentCellsOverlappingWithBHImpactArea(), i.e. 
-we implement the actual logic where to apply the limiter within the C++ class.
+benchmarks::exahype2::ccz4::CCZ4SBH_FV::isCellOverlappingWithBHImpactArea(),
+benchmarks::exahype2::ccz4::CCZ4SBH_FV::areBothAdjacentCellsOverlappingWithBHImpactArea(), 
+and their cousins.
+That is, we implement the actual logic where to apply the limiter within the C++ class.
 
 
 Within the Python code, we follow @ref page_exahype_coupling "localisation recommendations for solver coupling" and
-overwrite the routines _store_cell_data_default_guard()
-and _load_cell_data_default_guard() such that only data within a certain 
+overwrite the routines 
+
+- _store_cell_data_default_guard()
+- _load_cell_data_default_guard() 
+- _provide_cell_data_to_compute_kernels_default_guard
+
+such that only data within a certain 
 radius around the black hole are actually held. 
 An analogous scheme holds for the faces.
 For the implementation of these guards, we rely on the previously introduced
 benchmarks::exahype2::ccz4::CCZ4SBH_FV::isCellOverlappingWithBHImpactArea()
 and 
-benchmarks::exahype2::ccz4::CCZ4SBH_FV::areAdjacentCellsOverlappingWithBHImpactArea().
+benchmarks::exahype2::ccz4::CCZ4SBH_FV::areBothAdjacentCellsOverlappingWithBHImpactArea().
 
+
+Their implementation is straightforward: We store these cells which overlap with 
+this black hole influence region. Consequently, we store only faces persistently 
+which have a cell left and right which actually holds data. Finally, we have to 
+create faces temporarily - similar to hanging faces - around this Finite Volume
+area of interest. We need those as the Finite Volume solver will, for example,
+project its solution onto a patch's boundaries, even though we can throw them 
+away afterwards, i.e. we do not store them. 
+ 
 
 It is the routine
 peano.exahype2.solvers.fv.FV.create_action_sets() which configures all the dynamic
@@ -259,6 +276,21 @@ ensure that the solution is also only computed on those cells which hold meaning
 data. Without those guards, the solver would invoke the compute kernels everywhere,
 even though the majority of the mesh holds only garbage solution which is neither
 stores nor loaded persistently in-between two mesh traversals.
+
+
+Finally, we set the priorities of the Finite Volume solver up. By default, any
+enclave tasks has the same (default) priority. We know however that the Finite
+Volume tasks are extremely expensive - notably compared to their higher order
+cell countersparts. In an ideal world, all enclave tasks should be postponed
+into a queue throughout the grid traversal besides the Finite Volume tasks which
+should go straight onto a core or the GPU. To re-prioritise, we add
+
+
+~~~~~~~~~~~~~~~~~~~~~~~
+  self.enclave_task_priority = "2*tarch::multicore::Task::DefaultPriority"
+~~~~~~~~~~~~~~~~~~~~~~~
+      
+to the constructor.
         
 
 ### The FD4 solver
@@ -345,5 +377,17 @@ I do not only inject data from Finite Volume patches back which are completely
 surrounded by further FV patches.
 It seemed to me to be a waste of compute power to do this. 
 Rather make the black hole influence area smaller.
+
+
+## Optimisation
+
+I found that using more than 8 trees per rank slows down the calculations 
+massively and introduces an enormous overhead, when we do the domain 
+partitioning. Therefore, I constrain the maximum number of initial trees 
+to 8 per rank, and then I also introduce a minimal tree size of 100. As
+the documentation of exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration()
+clarifies, this minimal tree size is not used for the initial decomposition
+(this is where the 8 steps in), but it is used afterwards.
+
 
 */
