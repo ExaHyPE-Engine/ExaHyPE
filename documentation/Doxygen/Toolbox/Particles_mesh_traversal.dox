@@ -10,7 +10,7 @@ equals one complete mesh traversal of all mesh resolutions. Throughout
 this traversal, the automaton triggers events (or observations) that
 are then mapped onto @ref peano_action_sets "action sets". 
 
-While running through the mesh, i.e. spacetree, the automaton maintains three
+While running through the mesh, i.e. spacetree, the automaton maintains two
 different particle sets. For the construction rules, it is important to keep
 in mind that vertices of any level hold only particles
 whose search radius is stricly smaller or equal to the corresponding mesh 
@@ -64,12 +64,24 @@ theoretically interact with the particles located within the cell.
 
 ## Uniqueness
 
-If
-you want to update particles of a cell, you should thus only update
-particles whose centre is within the cell: Particles belong the the
-local sets of up to @f$ 2^d @f$ surrounding cells, so otherwise might be updated
-multiple times.
-Still, a simple
+
+If you want to update particles within a cell, you should introduce a boolean per
+particle that indicates if you have already touched it or not. 
+The particle-to-cell association is not unique:
+isContained() has to work with a slack, as it deals with
+floating point numbers. If a particle resides on the face between two cells, it 
+hence is contained within both cells. You might update it twice if you work within
+touchCellFirstTime() or touchCellLastTime(). I therefore recommend to add a boolean per
+particle which highlights if a particle has already been updated.
+
+
+If you want to update particles of a cell due to particle-particle interactions, you 
+should only update particles which hold the right value of the corresponding flag 
+plus whose centre is within the cell: Particles belong to the
+local sets of up to @f$ 2^d @f$ surrounding vertices. If you want to update the 
+red particle vs.~the green one left above it in the sketch above, it becomes 
+immediately clear that the green particle will be in the local set of this cell, but
+also in the local set of the cell left of it and also the one left above it.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if (marker.isContained( p->getX() ) {
@@ -77,14 +89,18 @@ if (marker.isContained( p->getX() ) {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-is not sufficient. The isContained() has to work with a slack, as it deals with
-floating point numbers. If a particle resides on the face between two cells, it 
-hence is contained within both cells. I therefore recommend to add a boolean per
-particle which highlights if a particle has already been updated.
+is your friend.
 
+ 
 As the local particle set is a subset of the active set, you will compare a 
 particle to itself if you simply compare the particles of the active set against
-the particles in the local set.
+the particles in the local set. This requires an additional if in most kernels.
+
+
+All of these remarks do not apply if you work within touchVertexFirstTime() or 
+touchVertexLastTime(). Here, the local set, i.e. the particles associated with 
+a vertex, is unique. However, you cannot compute any proper particle-particle
+interaction here, as you don't have the active sets of the neighbouring vertices.
 
 
 ## Set realisations
