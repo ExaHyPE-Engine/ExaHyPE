@@ -74,6 +74,17 @@ hence is contained within both cells. You might update it twice if you work with
 touchCellFirstTime() or touchCellLastTime(). I therefore recommend to add a boolean per
 particle which highlights if a particle has already been updated.
 
+@image html Particle-uniqueness.png
+
+The illustration above highlights the problem: The blue particle sits exactly 
+on the face between two cells. It is associated to the bottom vertex (dotted 
+line). When we update it within the red cell, we will later on also update it 
+one more when we hit the green cell. So we need a marker. 
+Most codes unset this marker in touchVertexFirstTime() for all local particles,
+so it is properly initialised.
+The update then sets the marker to keep books which particles have been updated
+and which haven't.
+
 
 If you want to update particles of a cell due to particle-particle interactions, you 
 should only update particles which hold the right value of the corresponding flag 
@@ -84,12 +95,27 @@ immediately clear that the green particle will be in the local set of this cell,
 also in the local set of the cell left of it and also the one left above it.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-if (marker.isContained( p->getX() ) {
+if (
+  not p->whatever your marker is called
+  and
+  marker.isContained( p->getX() 
+) {
    ...
 }
+
+...
+
+ensure somewhere later that marker is set
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 is your friend.
+We illustrate this above by means of yellow particle which has an impact on the 
+orange particle.
+We can update the orange particle with the impact from the yellow particle when
+we hit the red cell.
+However, the orange particle is also in the local set of the green cell. 
+If we updated the orange particle there, we would miss the yellow one.
+
 
  
 As the local particle set is a subset of the active set, you will compare a 

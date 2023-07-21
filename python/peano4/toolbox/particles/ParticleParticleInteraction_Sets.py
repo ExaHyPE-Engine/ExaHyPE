@@ -18,8 +18,9 @@ Tree walker to realise particle-particle interactions with particles held by dif
 This code has the same semantics as peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.
 However, it provides a different implementation. Please consult the 
 documentation of ParticleParticleInteraction_StackOfLists for a description
-of the arguments, plug-in points and the semantics of the two sets, as well as
-@ref page_toolbox_particles_mesh_traversal "the generic set discussion".
+of the arguments, plug-in points and the semantics of the two sets. Before you 
+do so, read throuth @ref page_toolbox_particles_mesh_traversal "the generic set discussion"
+for the overall context.
 
 
 ## Realisation

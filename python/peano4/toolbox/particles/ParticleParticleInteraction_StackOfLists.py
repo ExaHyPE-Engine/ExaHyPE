@@ -19,32 +19,38 @@ through the underlying spacetree top down and builds up
 @ref page_toolbox_particles_mesh_traversal "the active set and the local set".
 These sets can then be used to trigger mesh events. 
 
-
-The code is slightly more sophisticated compared to the set-based tree
-traversal approach, as it exposes more information:
-
+Within touchCellFirstTime(), the routine exposes the following data 
+besides the generic information of any action set:
 
 - ***marker*** The CellMarker is avaialable to a compute kernel and allows you
-  to query spatial information.
+  to query spatial information. This one is actually one of the generic objects
+  which every action set has available, but we highlight that it is there, as
+  the @ref page_toolbox_particles_mesh_traversal "discussion on uniqueness for particle-particle interactions"
+  explicitly refers to the marker.
 - ***activeParticles*** The list of active particles is a list of pointers. It
   follows the @ref page_toolbox_particles_mesh_storage "generic definition of active sets".
-- ***localParticles*** This is a list of local particles, i.e. particles within
-  the cell which are tied to the cell's adjacent vertices. While they reside on
-  the cell's level, we cannot be sure that they are not also local to a 
-  neighbouring octant within the spacetree, as we work with floating point
-  arithmetics and hence have no unique particle-cell assocation. In any case,
-  marker.isContained() holds for all particles within this set.
-- ***particlesAssociatedWithLocalVertices*** This additional list holds all
-  particles that are associated with adjacent vertices of the current cell. 
-  This is a superset of localParticles and also holds particles for which 
-  marker.isContained() does not hold.
-- ***_numberOfActiveParticlesPerVertexAdded*** is a sequence of integers
+- ***localParticles*** This is a list of local particles, i.e. particles which 
+  are tied to the cell's adjacent vertices. While they reside on the cell's 
+  level, we have no guarantee that they reside within the current cell. They
+  might also be contained within its halo of marker.h()/2.
+
+The additional field _activeParticles is an alias for activeParticles.
+
+
+The code is slightly more sophisticated compared than its cousin, the 
+ParticleParticleInteraction_Sets, as it exposes more information:
+
+
+- ***numberOfActiveParticlesPerVertexAdded*** This alias for 
+  _numberOfActiveParticlesPerVertexAdded is a sequence of integers
   which tells you how many particles within activeParticles are added by one
   particular vertex.
 - ***numberOfParticlesPerLocalVertex*** is a sequence of integers which 
   tells you how many particles within particlesAssociatedWithLocalVertices are
   added by each adjacent vertex.
 
+Both pieces of information are important if you work with memory pools
+as discussed below.
 
 
 
@@ -126,7 +132,7 @@ add the calls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
   activeParticles,
-  _numberOfActiveParticlesPerVertexAdded 
+  _numberOfActiveParticlesPerVertex
 );
 ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
   particlesAssociatedWithLocalVertices,
@@ -148,7 +154,12 @@ for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
   std::advance( localParticlesIterator, localParticlesChunkSize );
 
   for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<localParticlesChunkSize; localParticleNumberInThisChunk++) {
-    if ( marker.isContained( localParticlesChunk[localParticleNumberInThisChunk].getX() )) {
+    if ( 
+      marker.isContained( localParticlesChunk[localParticleNumberInThisChunk].getX() )
+      and
+      // ensure that particle is not updated twice
+    ) {
+      [...]
     }
   }
 } 
@@ -266,15 +277,6 @@ which was one of the first routines that we optimised along these ideas.
         particle_set: ParticleSet
 
         particle_particle_interaction_kernel: String holding C++ code
-          This C++ code can access three different types of variables: There's
-          a list of particles called activeParticles, there's a list of particles
-          called localParticles, and there's the cell marker. See the guidebook
-          for further info. A typical kernel resembles
-
-              for (auto* localParticle: localParticles )
-              for (auto* activeParticle: activeParticles ) {
-                localParticle->doSomethingFancy( activeParticle );
-              }
 
         active_particle_set: ParticleSet or None
           You can compare different particles species with this argument. It
