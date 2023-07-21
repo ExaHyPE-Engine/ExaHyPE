@@ -73,7 +73,7 @@ solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
 	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o noh2D
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This weaked makefile builds all object files. After that, it deletes the object
+This tweaked makefile builds all object files. After that, it deletes the object
 file behind the action set StephydroPartForceLoop. This is the step where the 
 force kernel is actually used. We then retranslate this single object file with 
 Intel's -opt-report flag which provides ample evidence which vectorisation 
