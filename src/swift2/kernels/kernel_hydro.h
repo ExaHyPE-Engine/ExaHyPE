@@ -126,6 +126,56 @@ __attribute__((always_inline)) inline static void kernel_eval(double u, double& 
  *
  * Returns 0 if \f$u > \gamma = H/h\f$.
  *
+ *
+ *
+ * ## Implementation of polynomial evaluation
+ *
+ * We had originally the following calculation to compute w and dw_dx:
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * double w     = coeffs[0] * x + coeffs[1];
+ * double dw_dx = coeffs[0];
+ *
+ * for (int k = 2; k <= kernel_degree; k++) {
+ *   dw_dx = dw_dx * x + w;
+ *   w     = x * w + coeffs[k];
+ * }
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * This variant does not vectorise for multiple reasons: We accumulate in a
+ * complicated way in w, which at least confuses the Intel 2023.2 compiler,
+ * and then we have dependencies between dw_dx and w, i.e. w feeds into
+ * dw_dx. So the idea to fuse two evaluation of Horner's method and to use
+ * the same idea of Horner (re-use of lower-order polynomials) between two
+ * quantities is contraproductive here.
+ *
+ * We keep the plain Horner scheme for the polynomial w:
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *  double w     = coeffs[0];
+ *  for (int k = 1 ; k <= kernel_degree; k++) {
+ *    w = w * x + coeffs[k];
+ *  }
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * This part vectorises just fine and evaluates
+ *
+ * @f$ w = c_{p} + x \left( c_{p-1} + x \left( \left( c_{p-2} + x \left( ... \right) \right) \right) \right) @f$
+ *
+ * For the derivative, we can start from Horner's scheme, which naturally leads
+ * to the vanilla implementation above. However, it is better to start from the
+ * plain polynomial write-up
+ *
+ * @f{eqnarray*}{
+ *   w & = & c_{0}x^p + c_{1}x^{p-1} + c_{2}x^{p-2} + ... + c_{p} \\
+ *   \frac{\partial }{ \partial x } w & = & pc_{0}x^{p-1} + (p-1)c_{1}x^{p-2} + (p-2)c_{2}x^{p-3} + ... + c_{p-1} \\
+ *   & = & (((((( p \cdot c_{0} ) x + (p-1)c_{1} ) x + (p-2)c_{2} ) x ... ) x + (p-(p-1)) c_{p-1}
+ * @f}
+ *
+ * which we then have rewritten into Horner's scheme again.
+ *
+ *
+ *
  * @param u The ratio of the distance to the smoothing length \f$u = x/h\f$.
  * @param W (return) The value of the kernel function \f$W(x,h)\f$.
  * @param dW_dx (return) The norm of the gradient of \f$|\nabla W(x,h)|\f$.
@@ -140,23 +190,19 @@ static void kernel_deval(double u, double& W, double& dW_dx) InlineMethod {
   const int           ind    = temp > kernel_ivals ? kernel_ivals : temp;
   const double* const coeffs = &kernel_coeffs[ind * (kernel_degree + 1)];
 
-  /* First two terms of the polynomial ... */
-  double w     = coeffs[0] * x + coeffs[1];
-  double dw_dx = coeffs[0];
-
-  /* ... and the rest of them */
-  #pragma unroll
-  for (int k = 2; k <= kernel_degree; k++) {
-    dw_dx = dw_dx * x + w;
-  //  w     = x * w + coeffs[k];
+  /* w term in Horner's scheme */
+  double w     = coeffs[0];
+  for (int k = 1 ; k <= kernel_degree; k++) {
+    w = w * x + coeffs[k];
   }
 
-  // I've split up the k loop into two segments to study the vectorisation
-  // behaviour. The loop above works fine, this one seems to be more
-  // complicated, but I do not know why.
-  #pragma unroll
-  for (int k = 2; k <= kernel_degree; k++) {
-    w     = w * x + coeffs[k];
+  /* dw_dx term in Horner's scheme */
+
+  double dw_dx = coeffs[0] * kernel_degree;
+
+  /* ... and the rest of them */
+  for (int k = 1; k <= kernel_degree-1; k++) {
+    dw_dx = dw_dx * x + coeffs[k] * (kernel_degree-k);
   }
 
   w     = std::max(w, 0.0);
