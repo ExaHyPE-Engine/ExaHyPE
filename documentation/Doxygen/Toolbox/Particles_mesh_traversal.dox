@@ -62,8 +62,9 @@ actual cells, as we want to capture all particles of this level that might
 theoretically interact with the particles located within the cell. 
 
 
-## Uniqueness
+## Uniqueness, correctness and data consistency
 
+### Multiple particle reads per traversal
 
 If you want to update particles within a cell, you should introduce a boolean per
 particle that indicates if you have already touched it or not. 
@@ -85,6 +86,8 @@ so it is properly initialised.
 The update then sets the marker to keep books which particles have been updated
 and which haven't.
 
+
+### Particle-particle interactions
 
 If you want to update particles of a cell due to particle-particle interactions, you 
 should only update particles which hold the right value of the corresponding flag 
@@ -129,22 +132,9 @@ a vertex, is unique. However, you cannot compute any proper particle-particle
 interaction here, as you don't have the active sets of the neighbouring vertices.
 
 
-## Set realisations
-
-The particle toolbox offers two actions sets, 
-peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists and
-peano4.toolbox.particles.ParticleParticleInteraction_Sets,
-which both assemble the active and local sets while they run throug the mesh.
-These particle sets are not persistent, i.e. they are built up on-the-fly.
-Also, building up the particle sets does not change the particle association
-in any way. 
-The sets exclusively consist of pointers to particles, but the particles
-themselves remain
-@ref page_toolbox_particles_mesh_storage "tied to the vertices they belong to".
 
 
-
-## Consistency and correctness
+### Moving particles and particle sorting
 
 The construction of the active and local sets works if and only if the 
 particles are correctly assigned to mesh vertices. That is, they have 
@@ -169,9 +159,87 @@ It is important to keep in mind that particle sorting requires two mesh sweeps.
 That is, once you change a particle position, the new valid particle-vertex
 association might not be in place in the next mesh sweep. Therefore, the 
 active and local sets might be corrupted in the next sweep. They will be 
-fine two sweeps later.
+fine two sweeps later. This fact requires some further attention:
+
+
+If a particle has changed its position or search radius in mesh sweep n, it
+might not be assigned to the correct vertex anymore. Some particle sorting 
+(cmp discussion of variants in @ref page_toolbox_particles_mesh_consistency)
+might be able to handle some of these cases, i.e. put some particles straight
+into the right vertices, but all sorting approaches might run into situations
+where they have to lift particles to the next coarser level. In the iteration
+n+1, a particle hence might reside on a coarser level and will be dropped. 
+However, if we plug into touchCellFirstTime(), these drops have not yet 
+happened. That is, the particle currently resides on the wrong level and 
+consequently messes up our active and passive particle sets. It is the job
+of the user to use proper action sets which can deal with changing particles, 
+but we still may not update these particles until they end up on the right
+level. 
  
- 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if (
+  not p->whatever your marker is called
+  and
+  marker.isContained( p->getX() 
+  and
+  not particleWillBeDroppedFurther( *p, marker )
+) {
+   ...
+}
+
+
+...
+
+ensure somewhere later that marker is set
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+solve the issue, as they mask out particles which will be dropped later and 
+then eventually end up in the local set of a finer cell. The illustration
+below shows what would happen without the third if statement:
+
+@image html Particle-drop.png
+
+The blue particle has moved into the green position in mesh sweep n. In 
+mesh sweep n+1, we hit the cell in which the blue particle (now green)
+has ended up. We construct the active set and have no other interacting
+particles. So we should not update it. That is what the if statement 
+using  particleWillBeDroppedFurther() is for. Instead, we handle 
+whatever we do on the refined coarse cell, ignoring the particle, and 
+then descend. Throughout the descend, the particle will be dropped 
+onto the next finer level. Now, the dropped green particle will see the
+orange neighbours.
+
+
+For Swift 2 users:
+
+- See swift2.particle.Particle for the introduction of the marker 
+  CellHasUpdatedParticle which we use to ensure that each particle is 
+  only updated once.
+- Consult swift2.actionsets.UpdateParticleMarker for documentation of the
+  action set which actually sets the marker.
+- Read through swift2.graphcompiler.Sequential for an example how and when the 
+  different active set construction schemes are used.
+- Read through swift2.graphcompiler.Sequential for an example how and when to 
+  invoke UpdateParticleMarker to ensure that the update markers are always set
+  to the correct value.
+
+
+
+## Set realisations
+
+The particle toolbox offers two actions sets, 
+peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists and
+peano4.toolbox.particles.ParticleParticleInteraction_Sets,
+which both assemble the active and local sets while they run throug the mesh.
+These particle sets are not persistent, i.e. they are built up on-the-fly.
+Also, building up the particle sets does not change the particle association
+in any way. 
+The sets exclusively consist of pointers to particles, but the particles
+themselves remain
+@ref page_toolbox_particles_mesh_storage "tied to the vertices they belong to".
+
+
 
 */
  
