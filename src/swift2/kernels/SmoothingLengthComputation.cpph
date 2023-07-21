@@ -11,12 +11,10 @@ template <typename Particle, typename ParticleContainer>
 void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
   Particle& localParticle, const ParticleContainer& activeParticles
 ) {
+  static tarch::logging::Log _log( "swift2::kernels" );
 
   /* Grab static parameters */
   const int hydro_dimensions = localParticle->getHydroDimensions();
-
-  if (localParticle->getPartid() == PROBLEMPART)
-    std::cout << "+++++ STARTING DENSITY FOR PROBLEMPART" << PROBLEMPART << std::endl;
 
   /* Initialize some variables */
   // if (localParticle->getSearchRadius() < localParticle->getSmlMax()) std::cout << "\n\n !!!!!!!!!!!!!!! !! HAVE
@@ -48,7 +46,7 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
     if (localParticle->getPartid() == PROBLEMPART)
       std::cout
         << "##### STARTING DENSITY IACT LOOP FOR PROBLEMPART " << PROBLEMPART
-        << " h= " << localParticle->getSmoothingLength() << std::endl;
+        << ", h= " << localParticle->getSmoothingLength() << std::endl;
     for (auto* activeParticle : activeParticles) {
       swift2::kernels::densityKernel(localParticle, activeParticle);
     }
@@ -97,7 +95,7 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
       right = std::min(right, h_old);
     }
 
-    assertion5(left < right, "Invalid left=", left, " and right=", right, localParticle->toString());
+    assertion4(left < right, left, right, localParticle->toString(), activeParticles.size() );
 
     // Skip if h is already h_max and we don't have enough neighbours
     // Same if we are below h_min
