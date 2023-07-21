@@ -91,6 +91,14 @@ class {{NAMESPACE | join("::")}}::PetscData{
     MatSetValues( _A, rowIndices.size(), &rowIndices[0], colIndices.size(), &colIndices[0], stencil.data(), ADD_VALUES );
     }
 
+    /*
+    same as above, but dangerous
+    */
+    void insertLocalMatrix( const int rows, const int* rowIndices, const int cols, const int* colIndices, const double* values ){
+      MatSetValues( _A, rows, rowIndices, cols, colIndices, values, ADD_VALUES );
+    }
+
+
   /**
     inserting a vector of doubles into our rhs vector
   */

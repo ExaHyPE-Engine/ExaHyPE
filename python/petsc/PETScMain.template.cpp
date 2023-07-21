@@ -239,10 +239,8 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
 
         watch.start();
-        {% if Project_Name=="Poisson" %}
         // solve
         repositories::instanceOfPetsc.petscSolve();
-        {% endif %}
 
         watch.stop();
         solveMeasurement.setValue( watch.getCalendarTime() );
@@ -256,9 +254,7 @@ void step() {
         watch.start();
 
         //move data from petsc to c++
-        {% if Project_Name=="Poisson" %}
         repositories::instanceOfPetsc.convertToStdVector();
-        {% endif %}
         
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         

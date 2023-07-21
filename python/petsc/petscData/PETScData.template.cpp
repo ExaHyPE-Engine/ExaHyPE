@@ -34,6 +34,16 @@ void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int dofs ){
 
   VecSetUp(_x);
   VecSetUp(_b);
+
+  //explicitly set the diagonals to be 0!
+  int tempRowArray[1];
+  double zero[1] = {0};
+
+  for (int i=0; i<dofs; i++){
+    tempRowArray[0] = i;
+    insertLocalMatrix( 1, tempRowArray, 1, tempRowArray, zero );
+  }
+  
   logTraceOut( "initMatrixAndVectors()" );
 }
 

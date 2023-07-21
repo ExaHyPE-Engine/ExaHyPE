@@ -54,6 +54,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellInit(
   tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  value,
   tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  rhs  
 ) {
+  double cellSize = 1;
+  for (int i=0; i<Dimensions; i++)
+    cellSize *= h[i];
 
   //set entries of "value" to 0
   for (int i=0; i<{{CELL_CARDINALITY}}; i++)
@@ -74,7 +77,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellInit(
         p, x, h
       );
 
-      integral += localQuadWeight * repositories::evalPoly(i, localQuadPoint) * f(quadPointInCell);
+      integral += cellSize * localQuadWeight * repositories::evalPoly(i, localQuadPoint) * f(quadPointInCell);
     }
     rhs[i] = integral;
   }
