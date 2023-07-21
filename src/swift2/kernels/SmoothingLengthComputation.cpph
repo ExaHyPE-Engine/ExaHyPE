@@ -21,7 +21,7 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
   /* Initialize some variables */
   // if (localParticle->getSearchRadius() < localParticle->getSmlMax()) std::cout << "\n\n !!!!!!!!!!!!!!! !! HAVE
   // SEARCH RADIUS < SML MAX !!!!!!!!!!!!!!\n\n" ;
-  double       hydro_h_max = std::min(localParticle->getSmlMax(), localParticle->getSearchRadius());
+  double       hydro_h_max = std::min(localParticle->getSmlMax(), localParticle->getSearchRadius() / kernel_gamma);
   const double hydro_h_min = localParticle->getSmlMin();
   // const double hydro_h_max = 1e300;
   // const double hydro_h_min = 0.;
