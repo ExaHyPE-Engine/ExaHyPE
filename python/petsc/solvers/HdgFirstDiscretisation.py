@@ -225,6 +225,7 @@ class HdgFirstDiscretisation(Solver):
         "VERTEX_CARDINALITY": self._vertex_unknowns,
         "CELL_CARDINALITY":   self._cell_unknowns,
         "FACE_CARDINALITY":   self._face_unknowns,
+        "POLYNOMIAL_DEGREE":  self.polynomial_degree,
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

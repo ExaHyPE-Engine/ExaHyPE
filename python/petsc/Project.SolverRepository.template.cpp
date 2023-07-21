@@ -157,5 +157,23 @@ const std::vector<int> {{NAMESPACE | join("::")}}::repositories::convertDofIndex
   return output;
 }
 
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::repositories::convertQuadPointToRealLocation(
+  const int& quadIndex,
+  const tarch::la::Vector<Dimensions,double>& cellCentre,
+  const tarch::la::Vector<Dimensions,double>& cellH
+){
+  const std::vector<int> indicesXY = convertDofIndexToXYCoordinate(quadIndex);
+  tarch::la::Vector<Dimensions,double> output;
+
+  for (int i=0; i<Dimensions; i++){
+    //init output to be bottom left corner of cell
+    output[i] =  cellCentre[i] - cellH[i] / 2;
+    
+    //indicesXY indicates how many jumps of h / polynomial degree we need to do
+    output[i] += indicesXY[i] / polynomialDegree;
+  }
+  return output;  
+}
+
 
 {% endif %}

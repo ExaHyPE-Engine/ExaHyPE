@@ -109,6 +109,12 @@ namespace {{N}} {
     */
     double evalPoly( const int& index, const std::vector<double>& quadPoint );
 
+    tarch::la::Vector<Dimensions,double> convertQuadPointToRealLocation( 
+      const int& quadIndex,
+      const tarch::la::Vector<Dimensions,double>& cellCentre,
+      const tarch::la::Vector<Dimensions,double>& cellH
+     );
+
     {% endif %}
 
   }
