@@ -40,7 +40,7 @@ class PDE(exahype2.symhype.FirstOrderConservativePDEFormulation, ABC):
       self.eigenvalues[2] = [u[0],     u[1],     u[2]]
       self.eigenvalues[3] = [u[0],     u[1],     u[2]]
       self.eigenvalues[4] = [u[0] + c, u[1] + c, u[2] + c]
-    else: # 2D
+    else:
       self.eigenvalues[0] = [u[0] - c, u[1] - c]
       self.eigenvalues[1] = [u[0],     u[1]]
       self.eigenvalues[2] = [u[0],     u[1]]

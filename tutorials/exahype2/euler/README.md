@@ -66,8 +66,6 @@ $$
   = \vec{0}.
 $$
 
-This is the notation we use in this tutorial. Everything is implemented symbolically (i.e., we don't need to define any source files but Python).
-
 To implement this equation, the following things are needed: the initial condition,
 the boundary conditions, the maximal eigenvalue, the flux, and (optionally) the
 refinement criterion (which we don't use in the tutorial).
@@ -129,7 +127,7 @@ $$
                     \rho u_1 \\
                     \rho u_2 \\
                     \rho u_3 \\
-                    E_t 
+                    E_t
         \end{array} \right) +
     \nabla
         \begin{pmatrix}
