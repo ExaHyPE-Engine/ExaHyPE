@@ -204,8 +204,8 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new 
 project.set_Peano4_installation(args.peanodir, modes[args.mode])
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.output.makefile.add_cpp_file("Euler.cpp")
-peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
 peano4_project.output.makefile.add_h_file("Poisson.h")
+peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
 #peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
 if args.j==0:
   peano4_project.generate()
