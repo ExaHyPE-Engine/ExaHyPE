@@ -14,10 +14,11 @@ patch_size                = 4
 rk_order                  = 4
 dg_order                  = 2
 end_time                  = 3.0
-plot_interval             = end_time/100 # Set to 0 to disable I/O
-#plot_interval             = 0
+plot_interval             = end_time/100
+#plot_interval             = 0 # Set to 0 to disable I/O
 use_gpu                   = False # Requires a GPU enabled build
-make                      = True
+use_make                  = True
+use_symbolic_description  = False
 output_path               = "solution"
 
 scenarios = [
@@ -69,6 +70,7 @@ parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  ty
 
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. size of a finite volume cell.")
 parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=use_gpu,            help="Enable GPU support (stateless PDE terms). Requires a GPU build.")
+parser.add_argument("-sym",     "--symbolic",          dest="symbolic",       action="store_true",        default=use_symbolic_description, help="Use the symbolic PDE description of the Euler equations.")
 
 parser.add_argument("-pbc",     "--periodic-boundary-conditions",  dest="periodic_boundary_conditions",   action="store_true",        help="Use periodic boundary conditions" )
 
@@ -78,7 +80,7 @@ parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     ty
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   default=rk_order,           help="Order of time discretisation for Runge-Kutta scheme.")
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   default=dg_order,           help="Order of space discretisation for Discontinuous Galerkin.")
 
-parser.add_argument(            "--make",              dest="make",           action="store_true",        default=make,               help="Compile the code after generation")
+parser.add_argument(            "--make",              dest="use_make",       action="store_true",        default=use_make,           help="Compile the code after generation")
 args = parser.parse_args()
 
 if args.dim not in [2, 3]:
@@ -101,7 +103,7 @@ my_project = exahype2.Project(
   namespace=["applications", "exahype2", "euler"],
   project_name="Euler" + args.scenario,
   directory=".",
-  executable="euler-" + str(dimensions) + "d-" + str(args.scenario)
+  executable="euler-" + str(args.dim) + "d-" + str(args.scenario)
 )
 
 solver_type = args.solver
@@ -146,22 +148,22 @@ if args.gpu:
 
 if args.scenario == "PointExplosion":
   from point_explosion import PointExplosion
-  my_scenario = PointExplosion(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim)
+  my_scenario = PointExplosion(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
 elif args.scenario == "PointExplosionWithDynamicAMR":
   from point_explosion_with_dynamic_amr import PointExplosionWithDynamicAMR
-  my_scenario = PointExplosionWithDynamicAMR(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim)
+  my_scenario = PointExplosionWithDynamicAMR(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
 elif args.scenario == "GaussianExplosion":
   from gaussian_explosion import GaussianExplosion
-  my_scenario = GaussianExplosion(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim)
+  my_scenario = GaussianExplosion(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
 elif args.scenario == "GaussianExplosionWithDynamicAMR":
   from gaussian_explosion_with_dynamic_amr import GaussianExplosionWithDynamicAMR
-  my_scenario = GaussianExplosionWithDynamicAMR(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim)
+  my_scenario = GaussianExplosionWithDynamicAMR(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
 elif args.scenario == "BreakingDam":
   from breaking_dam import BreakingDam
-  my_scenario = BreakingDam(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim)
+  my_scenario = BreakingDam(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
 elif args.scenario == "BreakingDamWithDynamicAMR":
   from breaking_dam_with_dynamic_amr import BreakingDamWithDynamicAMR
-  my_scenario = BreakingDamWithDynamicAMR(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim)
+  my_scenario = BreakingDamWithDynamicAMR(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
 
 my_solver.set_implementation(
     initial_conditions    = my_scenario.implementation_of_initial_conditions(),
@@ -170,11 +172,18 @@ my_solver.set_implementation(
     eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
     refinement_criterion  = my_scenario.implementation_of_refinement_criterion(),
     source_term           = my_scenario.implementation_of_sources(),
-    use_split_loop = True,
-    #memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
 )
 
-my_solver.plot_description = my_scenario.unknown_identifier_for_plotter()
+if args.symbolic:
+  my_solver.plot_description = my_scenario.pde.unknown_identifier_for_plotter()
+else:
+  if args.dim == 2:
+    my_solver.plot_description = "rho, u, v, e"
+  else:
+    my_solver.plot_description = "rho, u, v, w, e"
+  my_solver.add_user_solver_includes("""
+#include "../../../tutorials/exahype2/euler/EulerKernels.h"
+""")
 
 my_project.add_solver(my_solver)
 
@@ -201,24 +210,15 @@ my_project.set_global_simulation_parameters(
     periodic_BC=periodic_BC,
 )
 
-output_path = str(args.output_path) + "-" + str(args.scenario)
-my_project.set_output_path(output_path)
-if not os.path.exists(output_path):
-  os.makedirs(output_path)
+solution_dir = str(args.output_path) + "-" + str(args.scenario) + "-" + str(args.dim) + "d"
+my_project.set_output_path(solution_dir)
+if not os.path.exists(solution_dir):
+  os.makedirs(solution_dir)
 
-my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+my_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
-my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
-
-print("\nPDE is: ")
-print(my_scenario.__str__())
-print("Executable is euler-" + str(dimensions) + "d-" + str(args.scenario))
-print("Clean object files via 'make clean'")
-print("Recompile the generated code via 'make -j'")
-print("Remove all generated code via 'make distclean'")
-print("Regenerate all code by running 'python3 euler.py' again")
-print("Generate (and convert) any postprocessing data by calling 'python3 postprocess.py'")
+my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
 
 with open("postprocess.py", "w") as file:
     file.write('''
@@ -226,18 +226,25 @@ import os
 import sys
 import subprocess
 
-postprocessing_dir = "postprocessing-''' + str(args.scenario) + '''"
-solution_dir = "solution-''' + str(args.scenario) + '''"
-if not os.path.exists(postprocessing_dir):
-    os.makedirs(postprocessing_dir)
-if not os.path.exists(postprocessing_dir + "/" + solution_dir):
-    os.makedirs(postprocessing_dir + "/" + solution_dir)
+solution_dir = "''' + str(solution_dir) + '''"
+if not os.path.exists(solution_dir):
+    os.makedirs(solution_dir)
 
 output_patch_file = solution_dir + "/solution-''' + str(solver_name) + '''.peano-patch-file"
 if os.path.isfile(output_patch_file):
     subprocess.call([
         "python3", "../../../python/peano4/visualisation/render.py",
         str(output_patch_file),
-        "--dir=" + postprocessing_dir
     ])
 ''')
+
+if args.symbolic:
+  print("\nPDE is: ")
+  print(my_scenario.pde.__str__())
+
+print("Executable is euler-" + str(args.dim) + "d-" + str(args.scenario))
+print("Clean object files via 'make clean'")
+print("Recompile the generated code via 'make -j'")
+print("Remove all generated code via 'make distclean'")
+print("Regenerate all code by running 'python3 euler.py' again")
+print("Generate (and convert) any postprocessing data by calling 'python3 postprocess.py'")
