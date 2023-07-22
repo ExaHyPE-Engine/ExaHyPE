@@ -118,7 +118,6 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/accelerator/cuda/DeviceInfo.cpp \
  tarch/accelerator/cuda/Device.cpp \
  tarch/accelerator/cuda/accelerator.cpp \
- tarch/accelerator/cuda/TestKernels.cu \
  tarch/multicore/BooleanSemaphore.cpp \
  tarch/multicore/multicore.cpp \
  tarch/multicore/Core.cpp \
@@ -254,6 +253,7 @@ $(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG): tarch/accelerator/cuda/libTarch_debug_a-%.
 	@echo "  NVCC     $@"
 	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_DEBUG)" -c $< -o $@ 
 
+
 #
 # Map defined source sequences onto libraries
 #
@@ -264,11 +264,11 @@ libTarch_trace_a_SOURCES   = $(Tarch_SOURCES)
 libTarch_asserts_a_SOURCES = $(Tarch_SOURCES)
 libTarch_debug_a_SOURCES   = $(Tarch_SOURCES)
 
-libTarch_a_LIBADD         = $(Tarch_SOURCES:.cpp=.o) $(CUDA_OBJS_RELEASE)
-libTarch_stats_a_LIBADD   = $(Tarch_SOURCES:.cpp=.o) $(CUDA_OBJS_STATS)
-libTarch_trace_a_LIBADD   = $(Tarch_SOURCES:.cpp=.o) $(CUDA_OBJS_TRACE)
-libTarch_asserts_a_LIBADD = $(Tarch_SOURCES:.cpp=.o) $(CUDA_OBJS_ASSERTS)
-libTarch_debug_a_LIBADD   = $(Tarch_SOURCES:.cpp=.o) $(CUDA_OBJS_DEBUG)
+libTarch_a_LIBADD         = $(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE)
+libTarch_stats_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_STATS)
+libTarch_trace_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_TRACE)
+libTarch_asserts_a_LIBADD = $(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS)
+libTarch_debug_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG)
 
 libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
