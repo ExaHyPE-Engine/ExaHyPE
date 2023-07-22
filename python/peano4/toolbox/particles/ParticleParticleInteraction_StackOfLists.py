@@ -41,8 +41,8 @@ The code is slightly more sophisticated compared than its cousin, the
 ParticleParticleInteraction_Sets, as it exposes more information:
 
 
-- ***numberOfActiveParticlesPerVertexAdded*** This alias for 
-  _numberOfActiveParticlesPerVertexAdded is a sequence of integers
+- ***numberOfActiveParticlesPerVertex*** This alias for 
+  _numberOfActiveParticlesPerVertex is a sequence of integers
   which tells you how many particles within activeParticles are added by one
   particular vertex.
 - ***numberOfParticlesPerLocalVertex*** is a sequence of integers which 
@@ -113,7 +113,7 @@ To exploit this additional information, you cannot use localParticles anymore,
 i.e. you have to use particlesAssociatedWithLocalVertices. This means, you 
 might have to check if a particle is contained within a cell manually. 
 Once you rewrite your kernels that way, you can exploit the integers
-_numberOfActiveParticlesPerVertexAdded and numberOfParticlesPerLocalVertex:
+_numberOfActiveParticlesPerVertex and numberOfParticlesPerLocalVertex:
 
 @image html ParticleParticleInteraction_StackOfLists_continuous-memory.png
 
@@ -179,7 +179,7 @@ for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
   std::advance( localParticlesIterator, localParticlesChunkSize );
 
   typename std::list< typename ParticleContainer::value_type >::const_iterator activeParticlesIterator = activeParticles.begin();
-  for (auto activeParticlesChunkSize: numberOfActiveParticlesPerVertexAdded) {
+  for (auto activeParticlesChunkSize: numberOfActiveParticlesPerVertex) {
     typename ParticleContainer::value_type  activeParticlesChunk = *activeParticlesIterator;
     std::advance( activeParticlesIterator, activeParticlesChunkSize );
 
@@ -215,6 +215,20 @@ void computeHydroForceInnerLoop(
   }
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+## Dynamic adaptive mesh refinement
+
+In the second sweep of any adaptive mesh refinement, we might drop particles 
+and hence destroy our nicely arranged memory layout. 
+Once particles move up and down the mesh hierarchy, the entries in 
+_numberOfActiveParticlesPerVertex are all invalid.
+In such a case, we have to switch off any coalesced memory access.
+
+
+The @ref page_toolbox_particles_mesh_traversal "generic mesh traversal description" provides 
+further context and details.
+
 
 
 ## Optimising coalesced compute kernels
@@ -354,7 +368,7 @@ which was one of the first routines that we optimised along these ideas.
   _numberOfActiveParticlesAdded.push_back(0);
   for (int i=0; i<TwoPowerD; i++) {
     // Keep track of number of particles
-    _numberOfActiveParticlesPerVertexAdded.push_back( fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size() );
+    _numberOfActiveParticlesPerVertex.push_back( fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size() );
     _numberOfActiveParticlesAdded.back() += fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
     numberOfParticlesPerLocalVertex[i] = fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
     
@@ -382,7 +396,7 @@ which was one of the first routines that we optimised along these ideas.
         """
   assertion( not _numberOfActiveParticlesAdded.empty() );
   assertion( _activeParticles.size()>=_numberOfActiveParticlesAdded.back() );
-  assertion( _numberOfActiveParticlesPerVertexAdded.size()>=TwoPowerD );
+  assertion( _numberOfActiveParticlesPerVertex.size()>=TwoPowerD );
   
 
   // More elegant way to write
@@ -395,9 +409,9 @@ which was one of the first routines that we optimised along these ideas.
     _activeParticles.end()
   );
     
-  _numberOfActiveParticlesPerVertexAdded.erase( 
-    std::prev(_numberOfActiveParticlesPerVertexAdded.end(),TwoPowerD ),
-    _numberOfActiveParticlesPerVertexAdded.end()
+  _numberOfActiveParticlesPerVertex.erase( 
+    std::prev(_numberOfActiveParticlesPerVertex.end(),TwoPowerD ),
+    _numberOfActiveParticlesPerVertex.end()
   );
   
   _numberOfActiveParticlesAdded.pop_back();
@@ -464,7 +478,7 @@ which was one of the first routines that we optimised along these ideas.
             """
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
   std::vector< int >                             _numberOfActiveParticlesAdded;
-  std::vector< int >                             _numberOfActiveParticlesPerVertexAdded;
+  std::vector< int >                             _numberOfActiveParticlesPerVertex;
 """
         )
         return result.render(**self.d)
