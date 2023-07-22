@@ -57,6 +57,13 @@ build_modes = {
 }
 build_mode = "Release"
 
+storage_types = {
+  "CallStack":exahype2.solvers.fv.Storage.CallStack,
+  "Heap":exahype2.solvers.fv.Storage.Heap,
+  "SmartPointers":exahype2.solvers.fv.Storage.SmartPointers,
+}
+storage_type = "CallStack"
+
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler Application Script')
 
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     default=solver,             help="|".join(solvers.keys()))
@@ -64,6 +71,7 @@ parser.add_argument("-o",       "--output",            dest="output_path",    ty
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default=build_mode,         help="|".join(build_modes.keys()))
 parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
 
+parser.add_argument("-st",      "--storage",           dest="storage",        choices=storage_types.keys(), default=storage_type,     help="|".join(storage_types.keys()))
 parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios,          default=scenario,           help="|".join(scenarios))
 parser.add_argument("-et",      "--end-time",          dest="end_time",       type=float,                 default=end_time,           help="End time of simulation")
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
@@ -184,6 +192,12 @@ else:
   my_solver.add_user_solver_includes("""
 #include "../../../tutorials/exahype2/euler/EulerKernels.h"
 """)
+
+#self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
+my_solver.switch_to_heap_storage(
+  cell_data_storage=storage_types[args.storage],
+  face_data_storage=storage_types[args.storage],
+)
 
 my_project.add_solver(my_solver)
 
