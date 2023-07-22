@@ -224,32 +224,32 @@ Tarch_SOURCES= tarch/tarch.cpp \
 # Since currently there is a cuda file only in one directory, and therefore I did not want to
 # bloat the variable names.
 
-CUDA_TARCH_ACCELERATOR_SRC= tarch/accelerator/cuda/TestKernels.cu
+CUDA_TARCH_ACCELERATOR_SRC= $(abs_top_srcdir)/src/tarch/accelerator/cuda/TestKernels.cu
 
-CUDA_TARCH_ACCELERATOR_OBJS_RELEASE=  tarch/accelerator/cuda/libTarch_a-TestKernels.o
-CUDA_TARCH_ACCELERATOR_OBJS_STATS=  tarch/accelerator/cuda/libTarch_stats_a-TestKernels.o
-CUDA_TARCH_ACCELERATOR_OBJS_TRACE=  tarch/accelerator/cuda/libTarch_trace_a-TestKernels.o
-CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS=  tarch/accelerator/cuda/libTarch_asserts_a-TestKernels.o
-CUDA_TARCH_ACCELERATOR_OBJS_DEBUG=  tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
+CUDA_TARCH_ACCELERATOR_OBJS_RELEASE=  $(abs_top_srcdir)/src/tarch/accelerator/cuda/libTarch_a-TestKernels.o
+CUDA_TARCH_ACCELERATOR_OBJS_STATS=  $(abs_top_srcdir)/src/tarch/accelerator/cuda/libTarch_stats_a-TestKernels.o
+CUDA_TARCH_ACCELERATOR_OBJS_TRACE=  $(abs_top_srcdir)/src/tarch/accelerator/cuda/libTarch_trace_a-TestKernels.o
+CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS=  $(abs_top_srcdir)/src/tarch/accelerator/cuda/libTarch_asserts_a-TestKernels.o
+CUDA_TARCH_ACCELERATOR_OBJS_DEBUG=  $(abs_top_srcdir)/src/tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
 
 # Define the rules per target and directory
-$(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE): tarch/accelerator/cuda/libTarch_a-%.o: tarch/accelerator/cuda/%.cu
+$(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE): $(abs_top_srcdir)/src/tarch/accelerator/cuda/libTarch_a-%.o: $(abs_top_srcdir)/src/tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
 	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_RELEASE)" -c $< -o $@ 
 
-$(CUDA_TARCH_ACCELERATOR_OBJS_STATS): tarch/accelerator/cuda/libTarch_stats_a-%.o: tarch/accelerator/cuda/%.cu
+$(CUDA_TARCH_ACCELERATOR_OBJS_STATS): $(abs_top_srcdir)/src/tarch/accelerator/cuda/libTarch_stats_a-%.o: $(abs_top_srcdir)/src/tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
 	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_STATS)" -c $< -o $@ 
 
-$(CUDA_TARCH_ACCELERATOR_OBJS_TRACE): tarch/accelerator/cuda/libTarch_trace_a-%.o: tarch/accelerator/cuda/%.cu
+$(CUDA_TARCH_ACCELERATOR_OBJS_TRACE): $(abs_top_srcdir)/src/tarch/accelerator/cuda/libTarch_trace_a-%.o: $(abs_top_srcdir)/src/tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
 	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_TRACE)" -c $< -o $@ 
 
-$(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS): tarch/accelerator/cuda/libTarch_asserts_a-%.o: tarch/accelerator/cuda/%.cu
+$(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS): $(abs_top_srcdir)/src/tarch/accelerator/cuda/libTarch_asserts_a-%.o: $(abs_top_srcdir)/src/tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
 	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_ASSERTS)" -c $< -o $@ 
 
-$(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG): tarch/accelerator/cuda/libTarch_debug_a-%.o: tarch/accelerator/cuda/%.cu
+$(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG): $(abs_top_srcdir)/src/tarch/accelerator/cuda/libTarch_debug_a-%.o: $(abs_top_srcdir)/src/tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
 	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_DEBUG)" -c $< -o $@ 
 
