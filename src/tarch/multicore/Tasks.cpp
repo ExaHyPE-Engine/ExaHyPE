@@ -43,6 +43,13 @@ namespace {
 
   tarch::multicore::orchestration::Strategy* orchestrationStrategy = tarch::multicore::orchestration::
     createDefaultStrategy();
+  // Something like this or returning a pointer an unconcretized autotuner etc.
+  //#ifdef _AUTOTUNING
+  //tarch::multicore::orchestration::
+  //  createDefaultStrategy();
+  //#else
+  //  TRY IT OUT
+  //#endif
 
   tarch::logging::Log _log("tarch::multicore");
 

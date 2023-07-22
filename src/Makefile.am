@@ -1,4 +1,7 @@
 AUTOMAKE_OPTIONS = subdir-objects
+
+ARFLAGS = crU
+
 #
 # By default, automake does dfs. We need the libs to be built first however.
 # So we add the . explicitly. Please note that it is not enough to add your
@@ -27,6 +30,9 @@ SUBDIRS = . \
 lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a        libTarch_trace.a        libTarch_stats.a \
                 libPeano4Core2d.a libPeano4Core2d_debug.a libPeano4Core2d_asserts.a libPeano4Core2d_trace.a libPeano4Core2d_stats.a \
                 libPeano4Core3d.a libPeano4Core3d_debug.a libPeano4Core3d_asserts.a libPeano4Core3d_trace.a libPeano4Core3d_stats.a
+
+# CUDA files require an update of the libraries so we will replace default u with U to force an update
+# AR = ar rU
 
 libTarch_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE)
 libTarch_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE)
@@ -216,35 +222,35 @@ Tarch_SOURCES= tarch/tarch.cpp \
 
 # Therefore we need to list CUDA_SRCs and OBJs per directory and define the appropriate rule
 # And then add the objects to other objects to be linked by adding them to LIBADD or LDADD
-# Since currently there is a cuda file only in one directory, and therefore I did nto want to
+# Since currently there is a cuda file only in one directory, and therefore I did not want to
 # bloat the variable names.
 
-CUDA_SRC= tarch/accelerator/cuda/TestKernels.cu
+CUDA_TARCH_ACCELERATOR_SRC= tarch/accelerator/cuda/TestKernels.cu
 
-CUDA_OBJS_RELEASE=  tarch/accelerator/cuda/libTarch_a-TestKernels.o
-CUDA_OBJS_STATS=  tarch/accelerator/cuda/libTarch_stats_a-TestKernels.o
-CUDA_OBJS_TRACE=  tarch/accelerator/cuda/libTarch_trace_a-TestKernels.o
-CUDA_OBJS_ASSERTS=  tarch/accelerator/cuda/libTarch_asserts_a-TestKernels.o
-CUDA_OBJS_DEBUG=  tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
+CUDA_TARCH_ACCELERATOR_OBJS_RELEASE=  tarch/accelerator/cuda/libTarch_a-TestKernels.o
+CUDA_TARCH_ACCELERATOR_OBJS_STATS=  tarch/accelerator/cuda/libTarch_stats_a-TestKernels.o
+CUDA_TARCH_ACCELERATOR_OBJS_TRACE=  tarch/accelerator/cuda/libTarch_trace_a-TestKernels.o
+CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS=  tarch/accelerator/cuda/libTarch_asserts_a-TestKernels.o
+CUDA_TARCH_ACCELERATOR_OBJS_DEBUG=  tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
 
 # Define the rules per target and directory
-$(CUDA_OBJS_RELEASE): tarch/accelerator/cuda/libTarch_a-%.o: tarch/accelerator/cuda/%.cu
+$(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE): tarch/accelerator/cuda/libTarch_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
 	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_RELEASE)" -c $< -o $@ 
 
-$(CUDA_OBJS_STATS): tarch/accelerator/cuda/libTarch_stats_a-%.o: tarch/accelerator/cuda/%.cu
+$(CUDA_TARCH_ACCELERATOR_OBJS_STATS): tarch/accelerator/cuda/libTarch_stats_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
 	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_STATS)" -c $< -o $@ 
 
-$(CUDA_OBJS_TRACE): tarch/accelerator/cuda/libTarch_trace_a-%.o: tarch/accelerator/cuda/%.cu
+$(CUDA_TARCH_ACCELERATOR_OBJS_TRACE): tarch/accelerator/cuda/libTarch_trace_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
 	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_TRACE)" -c $< -o $@ 
 
-$(CUDA_OBJS_ASSERTS): tarch/accelerator/cuda/libTarch_asserts_a-%.o: tarch/accelerator/cuda/%.cu
+$(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS): tarch/accelerator/cuda/libTarch_asserts_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
 	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_ASSERTS)" -c $< -o $@ 
 
-$(CUDA_OBJS_DEBUG): tarch/accelerator/cuda/libTarch_debug_a-%.o: tarch/accelerator/cuda/%.cu
+$(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG): tarch/accelerator/cuda/libTarch_debug_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
 	$(NVCC) -Xcompiler="$(CXXFLAGS_PEANO_2D_DEBUG)" -c $< -o $@ 
 
@@ -252,17 +258,17 @@ $(CUDA_OBJS_DEBUG): tarch/accelerator/cuda/libTarch_debug_a-%.o: tarch/accelerat
 # Map defined source sequences onto libraries
 #
 # CUDA sources are then needed to be added
-libTarch_a_SOURCES         = $(Tarch_SOURCES) $(CUDA_SRC)
-libTarch_stats_a_SOURCES   = $(Tarch_SOURCES) $(CUDA_SRC)
-libTarch_trace_a_SOURCES   = $(Tarch_SOURCES) $(CUDA_SRC)
-libTarch_asserts_a_SOURCES = $(Tarch_SOURCES) $(CUDA_SRC)
-libTarch_debug_a_SOURCES   = $(Tarch_SOURCES) $(CUDA_SRC)
+libTarch_a_SOURCES         = $(Tarch_SOURCES)
+libTarch_stats_a_SOURCES   = $(Tarch_SOURCES)
+libTarch_trace_a_SOURCES   = $(Tarch_SOURCES)
+libTarch_asserts_a_SOURCES = $(Tarch_SOURCES)
+libTarch_debug_a_SOURCES   = $(Tarch_SOURCES)
 
-#libTarch_a_LIBADD         = $(CUDA_OBJS_RELEASE)
-#libTarch_stats_a_LIBADD   = $(CUDA_OBJS_STATS)
-#libTarch_trace_a_LIBADD   = $(CUDA_OBJS_TRACE)
-#libTarch_asserts_a_LIBADD = $(CUDA_OBJS_ASSERTS)
-#libTarch_debug_a_LIBADD   = $(CUDA_OBJS_DEBUG)
+libTarch_a_LIBADD         = $(CUDA_OBJS_RELEASE)
+libTarch_stats_a_LIBADD   = $(CUDA_OBJS_STATS)
+libTarch_trace_a_LIBADD   = $(CUDA_OBJS_TRACE)
+libTarch_asserts_a_LIBADD = $(CUDA_OBJS_ASSERTS)
+libTarch_debug_a_LIBADD   = $(CUDA_OBJS_DEBUG)
 
 libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
