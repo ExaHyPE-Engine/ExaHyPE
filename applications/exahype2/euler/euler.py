@@ -96,11 +96,15 @@ if args.dim not in [2, 3]:
     sys.exit(1)
 
 if args.build_mode not in build_modes:
-    print("Error, mode must be {} or {}, you supplied {}".format(", ".join(list(build_modes.keys())[:-1]), list(build_modes.keys())[-1],args.build_mode))
+    print("Error, mode must be {} or {}, you supplied {}".format(", ".join(list(build_modes.keys())[:-1]), list(build_modes.keys())[-1], args.build_mode))
     sys.exit(1)
 
 if args.solver not in solvers:
-    print("Error, solver must be {} or {}, you supplied {}".format(", ".join(list(solvers.keys())[:-1]), list(solvers.keys())[-1],args.solver))
+    print("Error, solver must be {} or {}, you supplied {}".format(", ".join(list(solvers.keys())[:-1]), list(solvers.keys())[-1], args.solver))
+    sys.exit(1)
+
+if args.storage not in storage_type:
+    print("Error, storage type must be {} or {}, you supplied {}".format(", ".join(list(storage_type.keys())[:-1]), list(storage_type.keys())[-1], args.storage))
     sys.exit(1)
 
 if args.scenario not in scenarios:

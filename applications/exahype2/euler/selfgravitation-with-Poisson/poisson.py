@@ -1,30 +1,10 @@
-"""
-
- A very simple example which demonstrates how to configure a patch-based
- Finite Volume solver in Peano4. The code relies on snippets from ExaHyPE2.
- However, it relies only on ExaHyPE's C/FORTRAN compute kernels, i.e. the
- sophisticated build environment of this H2020 project is not used. The
- solver simulates the simple Euler equations.
-
-"""
-
-
-#
-# We import Peano4 as project. If this step fails, ensure that your environment
-# variable PYTHONPATH points to Peano4's python directory.
-#
-import os, sys
-import peano4
-import exahype2
+import os
+import sys
 import argparse
 
-
-print( """
-Please call this script from the directory hosting the Makefile and the
-sources. Typically, I invoke the script via
-
-python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py arguments
-""")
+sys.path.insert(0, os.path.abspath('../../../../python'))
+import peano4
+import exahype2
 
 modes = {
   "release": peano4.output.CompileMode.Release,
@@ -35,17 +15,17 @@ modes = {
 }
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("-cs", "--cell-size",              dest="h",              type=float, required=True, help="Mesh size" )
-parser.add_argument("-j",  "--parallel-builds",        dest="j",              type=int, default=-1, help="Parallel builds. Set to 0 to disable compile or to -1 to use all cores" )
-parser.add_argument("-d",  "--dim",                    dest="dim",            type=int, default=2, help="Dimensions" )
-parser.add_argument("-m",  "--mode",                   dest="mode",                     default="release", help="|".join(modes.keys()) )
-parser.add_argument("-et", "--end-time",               dest="end_time",                 type=float, default=1.0, help="Number of timesteps" )
-parser.add_argument("-pd", "--peano-dir",              dest="peanodir",                 default="../../../", help="Peano4 directory" )
-parser.add_argument("-amr", "--adaptive-levels",       dest="adaptivity_levels",        type=int, default=0, help="Number of AMR grid levels on top of hmax (0 by default)" )
-parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive"], required=True )
+parser.add_argument("-cs", "--cell-size",              dest="h",              type=float, required=True, help="Mesh size")
+parser.add_argument("-j",  "--parallel-builds",        dest="j",              type=int, default=-1, help="Parallel builds. Set to 0 to disable compile or to -1 to use all cores")
+parser.add_argument("-d",  "--dim",                    dest="dim",            type=int, default=2, help="Dimensions")
+parser.add_argument("-m",  "--mode",                   dest="mode",                     default="release", help="|".join(modes.keys()))
+parser.add_argument("-et", "--end-time",               dest="end_time",                 type=float, default=1.0, help="Number of timesteps")
+parser.add_argument("-pd", "--peano-dir",              dest="peanodir",                 default="../../../../", help="Peano4 directory")
+parser.add_argument("-amr", "--adaptive-levels",       dest="adaptivity_levels",        type=int, default=0, help="Number of AMR grid levels on top of hmax (0 by default)")
+parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive"], required=True)
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
-parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
+parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions")
 args = parser.parse_args()
 
 if args.dim not in [2,3]:
@@ -62,10 +42,9 @@ print("\nConfiguring {}D Euler problem. Buildmode is {}, nbuilds={}.\n".format(a
 
 #
 # Create a project and configure it to end up in a subnamespace (and thus
-# subdirectory). 
+# subdirectory).
 #
-project = exahype2.Project( ["examples", "exahype2", "selfgravitation"], "finitevolumes", "." )
-
+project = exahype2.Project(["applications", "exahype2", "euler", "selfgravitation"], "Poisson", ".")
 
 #
 # Add the Finite Volumes solver
@@ -75,12 +54,6 @@ min_h          = 0.9 * args.h * 3.0**(-args.adaptivity_levels) / args.patch_size
 
 time_step_size = 0.1 * min_h
 
-#
-# Still the same solver, but this time we use named arguments. This is the way
-# you can add further PDE terms btw.
-#
-#
-
 auxiliary_variables = 0
 
 euler_solver   = None
@@ -89,7 +62,7 @@ if args.type=="global-fixed":
   euler_solver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
     "Euler",
     args.patch_size,
-    5, #unknowns, 
+    5, #unknowns,
     3, #auxiliary_variables,
     min_h, max_h,
     time_step_size,
@@ -100,7 +73,7 @@ if args.type=="global-fixed":
   poisson_solver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
     "Poisson",
     args.patch_size,
-    4, #unknowns, 
+    4, #unknowns,
     1, #auxiliary_variables,
     min_h, max_h,
     time_step_size / 4 / 3.1415**2,
@@ -112,7 +85,7 @@ if args.type=="global-adaptive":
   euler_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     "Euler",
     args.patch_size,
-    5, #unknowns, 
+    5, #unknowns,
     3, #auxiliary_variables,
     min_h, max_h,
     time_step_relaxation = 1e-2,
@@ -123,7 +96,7 @@ if args.type=="global-adaptive":
   poisson_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     "Poisson",
     args.patch_size,
-    4, #unknowns, 
+    4, #unknowns,
     1, #auxiliary_variables,
     min_h, max_h,
     time_step_relaxation =  1e-3,
@@ -132,17 +105,10 @@ if args.type=="global-adaptive":
     source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
 
+euler_solver.set_implementation(refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation)
 
-euler_solver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
-
-
-project.add_solver( euler_solver )
-project.add_solver( poisson_solver )
-
-
-dimensions = args.dim
-build_mode = modes[args.mode]
-
+project.add_solver(euler_solver)
+project.add_solver(poisson_solver)
 
 #
 # Time step synchronisation. Ensure the Euler solver doesn't run ahead but waits
@@ -166,7 +132,7 @@ euler_solver.postprocess_updated_patch = """
    5+3,     // unknowns in source (incl material parameters)
    0,       // no overlap/halo here
    fineGridCellPoissonQ.value, // dest
-   4,       // index four in destination, i.e. fifth entry 
+   4,       // index four in destination, i.e. fifth entry
    4+1,     // four unknowns in source (incl material parameters)
    0        // no overlap/halo here
  );
@@ -176,7 +142,7 @@ poisson_solver.add_user_action_set_includes( """
 #include "toolbox/blockstructured/Derivative.h"
 """)
 poisson_solver.postprocess_updated_patch = """
- double delta = 
+ double delta =
  ::toolbox::blockstructured::computeGradientAndReturnMaxDifference(
    {},      // no of unknowns per dimension
    fineGridCellPoissonQ.value, // source
@@ -209,16 +175,20 @@ else {
 }
 """
 
-
-
+if args.dim == 2:
+  size                    = [1.0, 1.0]
+  offset                  = [0.0, 0.0]
+else:
+  size                    = [1.0, 1.0, 1.0]
+  offset                  = [0.0, 0.0, 0.0]
 
 #
 # Lets configure some global parameters
 #
 project.set_global_simulation_parameters(
-  dimensions = dimensions,
-  offset = [0.0,0.0,0.0],
-  size = [1.0,1.0,1.0],
+  dimensions = args.dim,
+  offset = offset,
+  size = size,
   min_end_time = args.end_time,
   max_end_time = args.end_time,
   first_plot_time_stamp = 0.0,
@@ -226,20 +196,20 @@ project.set_global_simulation_parameters(
   periodic_BC = [False, False, False]
 )
 
-
-
 #
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
-project.set_Peano4_installation( args.peanodir, build_mode )
+project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
+project.set_Peano4_installation(args.peanodir, modes[args.mode])
 peano4_project = project.generate_Peano4_project(args.verbose)
-#peano4_project.output.makefile.parse_configure_script_outcome( args.configuredir )
+peano4_project.output.makefile.add_cpp_file("Euler.cpp")
+peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
+peano4_project.output.makefile.add_h_file("Poisson.h")
+#peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
 if args.j==0:
   peano4_project.generate()
 else:
   peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 
-
-print( "Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file")
+print("Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file")
