@@ -8,7 +8,7 @@ import exahype2
 
 dimensions                = 2
 cell_size                 = 0.1
-amr_levels                = 4 # Set to 0 to disable adaptive mesh refinement (AMR)
+amr_levels                = 3 # Set to 0 to disable adaptive mesh refinement (AMR)
 patch_size                = 4
 rk_order                  = 4
 dg_order                  = 2
@@ -28,7 +28,7 @@ scenarios = [
   "BreakingDam",
   "BreakingDamWithDynamicAMR",
 ]
-scenario = "GaussianExplosion"
+scenario = "PointExplosion"
 
 fv_rusanov_solvers = {
   #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep, # admissible_time_step_size = min_h/patch_size*0.01

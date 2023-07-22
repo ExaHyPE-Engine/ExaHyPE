@@ -18,11 +18,11 @@ class PointExplosion:
 
           if dimensions == 2:
             volume_centre = sympy.sqrt((0.5 - self.pde.x[0])**2 + (0.5 - self.pde.x[1])**2)
-            self.pde.initial_values[3] = sympy.Piecewise((1.0, volume_centre < 0.05), (0, True)) # e
+            self.pde.initial_values[3] = sympy.Piecewise((1.0, volume_centre < 0.2), (0.05, True)) # e
           else:
             volume_centre = sympy.sqrt((0.5 - self.pde.x[0])**2 + (0.5 - self.pde.x[1])**2 + (0.5 - self.pde.x[2])**2)
             self.pde.initial_values[3] = 0 # w
-            self.pde.initial_values[4] = sympy.Piecewise((1.0, volume_centre < 0.05), (0, True)) # e
+            self.pde.initial_values[4] = sympy.Piecewise((1.0, volume_centre < 0.2), (0.05, True)) # e
 
           self.pde.substitute_expression(self.pde.gamma, 1.4)
 
@@ -36,10 +36,10 @@ class PointExplosion:
             Q[1] = 0;
             Q[2] = 0;
             #if Dimensions == 2
-            Q[3] = ((std::sqrt(std::pow(0.5 - volumeCentre(0), 2) + std::pow(0.5 - volumeCentre(1), 2)) < 0.05) ? (1.0) : (0));
+            Q[3] = ((std::sqrt(std::pow(0.5 - volumeCentre(0), 2) + std::pow(0.5 - volumeCentre(1), 2)) < 0.2) ? (1.0) : (0.05));
             #else
             Q[3] = 0;
-            Q[4] = ((std::sqrt(std::pow(0.5 - volumeCentre(0), 2) + std::pow(0.5 - volumeCentre(1), 2) + std::pow(0.5 - volumeCentre(2), 2)) < 0.05) ? (1.0) : (0));
+            Q[4] = ((std::sqrt(std::pow(0.5 - volumeCentre(0), 2) + std::pow(0.5 - volumeCentre(1), 2) + std::pow(0.5 - volumeCentre(2), 2)) < 0.2) ? (1.0) : (0.05));
             #endif
             """
 
@@ -89,7 +89,7 @@ class PointExplosion:
         // If you only have this thing, then you work with static AMR,
         // as you never invoke erase.
         if (tarch::la::equals(t, 0.0)) {
-          bool isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < 0.05);
+          bool isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < 0.2);
           if (isInTheCentre) {
             result = ::exahype2::RefinementCommand::Refine;
           }
