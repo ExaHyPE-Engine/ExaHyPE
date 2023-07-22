@@ -9,7 +9,7 @@ import peano4.datamodel.DaStGen2
 import dastgen2.attributes.Integer
 
 
-class ParticleParticleInteraction_StackOfLists(ActionSet):
+class ParticleParticleInteraction_StackOfListsOverStaticParticles(ActionSet):
     """!
 
 Tree walker to realise particle-particle interactions with particles held by different adjacent cells or on different mesh levels
@@ -46,7 +46,7 @@ ParticleParticleInteraction_Sets, as it exposes more information:
   which tells you how many particles within activeParticles are added by one
   particular vertex.
 - ***numberOfParticlesPerLocalVertex*** is a sequence of integers which 
-  tells you how many particles within particlesAssociatedWithLocalVertices are
+  tells you how many particles within localParticles are
   added by each adjacent vertex.
 
 Both pieces of information are important if you work with memory pools
@@ -110,14 +110,14 @@ rather than sole link lists. You can exploit that you know something
 about individual chunks indexed by the pointers.
 
 To exploit this additional information, you cannot use localParticles anymore,
-i.e. you have to use particlesAssociatedWithLocalVertices. This means, you 
+i.e. you have to use localParticles. This means, you 
 might have to check if a particle is contained within a cell manually. 
 Once you rewrite your kernels that way, you can exploit the integers
 _numberOfActiveParticlesPerVertex and numberOfParticlesPerLocalVertex:
 
-@image html ParticleParticleInteraction_StackOfLists_continuous-memory.png
+@image html ParticleParticleInteraction_StackOfListsOverStaticParticles_continuous-memory.png
 
-Assume you enter a cell and you get the particlesAssociatedWithLocalVertices
+Assume you enter a cell and you get the localParticles
 list hosting 19 pointers. Further to that, you receive the array 
 numberOfParticlesPerLocalVertex with four integer entries. You know that the
 first five entries point to one continuous chunk of particles in memory, the
@@ -135,7 +135,7 @@ add the calls
   _numberOfActiveParticlesPerVertex
 );
 ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-  particlesAssociatedWithLocalVertices,
+  localParticles,
   numberOfParticlesPerLocalVertex 
 );
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -147,7 +147,7 @@ snippet:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-typename std::list<T*>::const_iterator localParticlesIterator  = particlesAssociatedWithLocalVertices.begin();
+typename std::list<T*>::const_iterator localParticlesIterator  = localParticles.begin();
 
 for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
   T*  localParticlesChunk = *localParticlesIterator;
@@ -172,7 +172,7 @@ similar to
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-typename std::list< typename ParticleContainer::value_type >::const_iterator localParticlesIterator  = particlesAssociatedWithLocalVertices.begin();
+typename std::list< typename ParticleContainer::value_type >::const_iterator localParticlesIterator  = localParticles.begin();
 
 for (auto localParticlesChunkSize: numberOfParticlesPerLocalVertex) {
   typename ParticleContainer::value_type  localParticlesChunk = *localParticlesIterator;
@@ -228,6 +228,12 @@ In such a case, we have to switch off any coalesced memory access.
 
 The @ref page_toolbox_particles_mesh_traversal "generic mesh traversal description" provides 
 further context and details.
+The important detail here is: 
+As soon as we might suspect that the memory layout is corrupted, we have to 
+assume that our pointers are all ov the place and do not point to continuous 
+data anymore. Even worse, we know that previously built-up active sets might be
+invalid. We have built them up top-down, but when we drop data out of the 
+active set, they change on-the-fly.
 
 
 
@@ -235,38 +241,9 @@ further context and details.
 
 Compute kernels can be optimised quite aggressively, but fiddling out how they 
 can be optimised is tedious. I recommend to use MAQAO and Intel's compiler 
-optimisation feedback. Here are some lessons learned:
-
-- You cannot collapse the two for loops. That would lead to a scattered 
-  iteration space in memory and hence make any vectorisation impossible.
-- The active loop has to be the inner one. I do not understand why, but
-  Intel's icpx refuses to vectorise if the local loop is the inner one.
-- The compiler has to be able to inline. According to https://clang.llvm.org/docs/AttributeReference.html#always-inline-force-inline
-  this is something one should be able to control via the annotation
-  
-          [[clang::always_inline]]
-          
-  but this led to multiple compiler crashes (again with Intel). To some
-  degree this makes sense: The function has to be in the header! I played
-  around with ipo, but that did not resolve the fundamental issues.
-- You might have to recursively study all inlined methods and make the 
-  stuff they use inline as well. 
-- Typically, you have to embed the inner-most loop into a statement alike
-  ~~~~~~~~~~~~~~~~~~~~~~~
-    if (
-      marker.isContained(particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk].getX())
-      and
-      not particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
-    ) {
-      // read from activeParticles[activeParticleNumberInThisChunk]
-      // write to particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk]
-    }
-  ~~~~~~~~~~~~~~~~~~~~~~~
-  
-The @ref page_peano_performance_optimisation "generic Peano optimisation" page
-provides some useful hints how to guide these optimisation through the
-compiler. It also makes sense to study swift2::kernels::computeHydroForce()
-which was one of the first routines that we optimised along these ideas.
+optimisation feedback. The page @ref toolbox_particles_memorypool holds 
+additional information. It is also worth studying @ref page_swift_performance_optimisation "Swift's performance optimisation"
+remarks with respect to vecorisation as well as Swift's discussion of @ref swift_particle_lifecycle Particle Lifecycle "vectorised kernels".
 
 
     """
@@ -311,7 +288,7 @@ which was one of the first routines that we optimised along these ideas.
 
 
         """
-        super(ParticleParticleInteraction_StackOfLists, self).__init__(
+        super(ParticleParticleInteraction_StackOfListsOverStaticParticles, self).__init__(
             priority=1, parallel=False
         )
 

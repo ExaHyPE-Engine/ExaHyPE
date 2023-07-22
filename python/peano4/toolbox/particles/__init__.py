@@ -14,7 +14,7 @@ from .ParticleSet                   import ParticleSetGenerator_GlobalContinuous
 
 
 from .ParticleParticleInteraction_Sets         import ParticleParticleInteraction_Sets
-from .ParticleParticleInteraction_StackOfLists import ParticleParticleInteraction_StackOfLists
+from .ParticleParticleInteraction_StackOfListsOverStaticParticles import ParticleParticleInteraction_StackOfListsOverStaticParticles
 from .ParticlePerCellUpdate                    import ParticlePerCellUpdate
 
 

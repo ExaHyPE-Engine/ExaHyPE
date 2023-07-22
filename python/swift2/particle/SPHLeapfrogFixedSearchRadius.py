@@ -107,6 +107,16 @@ class SPHLeapfrogFixedSearchRadius(Particle):
     To be in line with other conventions, I recommend you start with an
     uppercase letter. This has to be a valid C++ identifier, i.e. don't
     use any special symbols besides an underscore.
+    
+    ## Vectorisation
+    
+    This type can be used with aggressively optimised kernels if you follow
+    @ref page_swift_performance_optimisation Performance optimisation and use
+    the serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+    graph compiler from the Sequential suite. We have not tested it with other 
+    graph compiler flavours.
+    
+    
 
     @see peano4::datamanagement::CellMarker
     @see peano4::datamanagement::VertexMarker
@@ -413,7 +423,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         drift = AlgorithmStep(
             name="Drift",
             dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
+            effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN,
             touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
             touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( localParticles );""",
             includes="""
@@ -481,18 +491,18 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             cell_kernel="""
                                        ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
                                          activeParticles,
-                                         _numberOfActiveParticlesPerVertexAdded
+                                         _numberOfActiveParticlesPerVertex
                                        );
                                        ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-                                         particlesAssociatedWithLocalVertices,
+                                         localParticles,
                                          numberOfParticlesPerLocalVertex
                                        );
                                        ::swift2::kernels::computeHydroForce(
                                          marker,
-                                         particlesAssociatedWithLocalVertices,
+                                         localParticles,
                                          numberOfParticlesPerLocalVertex,
                                          activeParticles,
-                                         _numberOfActiveParticlesPerVertexAdded
+                                         _numberOfActiveParticlesPerVertex
                                        );
                                        """,
             touch_vertex_last_time_kernel="""
@@ -518,19 +528,20 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                        """,
             cell_kernel="""
                                        ::swift2::kernels::computeHydroForce(localParticles, activeParticles);
-                                       """,
-            touch_vertex_last_time_kernel="""
-                                       ::swift2::kernels::endHydroForceCalculation(
-                                           localParticles);
-                                       """,
-            includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/kernels/ParticleParticleInteraction.h"
-                                       #include "swift2/kernels/ParticleSelfInteraction.h"
-                                       #include "swift2/kernels/kernel_hydro.h"
-                                       #include "swift2/kernels/equation_of_state.h"
-                                       """,
-          )
+                                     """,
+          touch_vertex_last_time_kernel="""
+                                     ::swift2::kernels::endHydroForceCalculation(
+                                         localParticles);
+                                     """,
+          includes="""
+                                     #include "Constants.h"
+                                     #include "swift2/kernels/ParticleParticleInteraction.h"
+                                     #include "swift2/kernels/ParticleSelfInteraction.h"
+                                     #include "swift2/kernels/kernel_hydro.h"
+                                     #include "swift2/kernels/equation_of_state.h"
+                                     #include "toolbox/particles/ParticleListValidation.h"
+                                     """,
+        )
         self.algorithm_steps_dict["Force"] = force
 
         kick2 = AlgorithmStep(

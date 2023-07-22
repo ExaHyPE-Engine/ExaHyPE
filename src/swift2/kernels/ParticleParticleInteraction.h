@@ -71,54 +71,12 @@ namespace swift2 {
      * It is not clear if this operation is faster than forceKernel, but it
      * delivers more flops due to the excessive vectorisation.
      *
-     * To make the function vectorisable, we had to apply a few tweaks:
-     *
-     * 1. We mark the function explicitly as __attribute__((always_inline)).
-     *    This is likely not necessary, but cannot do any harm.
-     * 2. We rely on the fact that all the setters and getters of the
-     *    particle are visible within the header file, i.e are exposed.
-     * 3. The big if in the straightforward forceKernel() is challenging for
-     *    the vectoriser. Hence, I compute one scalar which is either set to
-     *    1.0 if we should update and otherwise 0.0. By multiplying all updates
-     *    with this scalar, we can effectively mask out the kernel or keep its
-     *    action. This works in the present case, as all updates are additive,
-     *    i.e. we take the existing value and add something onto it.
-     * 4. The tarch::la macros like smaller() or smallerEquals() might stop the
-     *    vectorisation. In this case, you have to move the implementations
-     *    into the header. We don't move all linear algebra routines into the
-     *    header, as this would blow up the executable size. For this
-     *    particular kernel, we have moved the required routines already.
-     * 5. It seemed originally that one has to replace the std::pow function
-     *    with a specialised version that takes into account that the power is
-     *    an integer. The C++ standard https://en.cppreference.com/w/cpp/numeric/math/pow
-     *    is not clear if there is still a specialised version of pow for
-     *    integers. However, all seems to vectorise nicely even if we use
-     *    the power with the Intel 2023.2 compiler.
-     * 6. The statement
-     *
-     *    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *    // Update the signal velocity
-     *    localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), mask * v_sig));
-     *    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *
-     *    from the original kernel breaks the vectorisation. I had to replace it with
-     *
-     *    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *      const double currentAV = localParticle->getV_sig_AV();
-     *      const double biggerAV  = mask * v_sig;
-     *      const double newAV     = biggerAV > currentAV ? biggerAV : currentAV;
-     *      localParticle->setV_sig_AV(newAV);
-     *    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *
-     *    and now it seems to work.
+     * To make the function vectorisable, we had to apply a few tweaks compared
+     * to the non-vector counterpart. Most of these tweaks are now
+     * @ref swift_particle_new_solver "documented as part of Swift's generic solver documentation".
      *
      *
-     *
-     * Anyway, it is important to translate all observers that use these
-     * functions with -qopt-report=3 (if you use the Intel toolchain) to
-     * validate that it has vectorised.
-     *
-     * ## Differences to other vector kernel
+     * ## Specific differences to other vector kernel
      *
      * As we know a priori that this function is only invoked on distinct junks
      * of particles, we know that we'll compare the same particle against each
@@ -228,7 +186,7 @@ namespace swift2 {
      * numberOfParticlesPerLocalVertex. It implicitly knows how the particles
      * are stored through the naming convention/the fact that you have to use
      * it with a memory pool. The Python class
-     * peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.ParticleParticleInteraction_StackOfLists
+     * peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles.ParticleParticleInteraction_StackOfListsOverStaticParticles
      * provides a lot of information how we construct the passed lists over
      * particles.
      *
@@ -236,6 +194,9 @@ namespace swift2 {
      * instead of forceKernel() whenever it knows a priori that two particle
      * ranges to not overlap. See forceKernelVectorised() for further remarks
      * how we deliver vectorised kernels.
+     *
+     * See also @ref swift_particle_new_solver Create new solvers "Swift's discussion how to vectorise kernels"
+     * for further details.
      *
      */
     template <typename ParticleContainer>

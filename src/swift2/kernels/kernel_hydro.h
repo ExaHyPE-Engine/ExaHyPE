@@ -181,7 +181,6 @@ __attribute__((always_inline)) inline static void kernel_eval(double u, double& 
  * @param dW_dx (return) The norm of the gradient of \f$|\nabla W(x,h)|\f$.
  */
 static void kernel_deval(double u, double& W, double& dW_dx) InlineMethod {
-
   /* Go to the range [0,1[ from [0,H[ */
   const double x = u * kernel_gamma_inv;
 

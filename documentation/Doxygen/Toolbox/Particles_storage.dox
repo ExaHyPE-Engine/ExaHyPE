@@ -53,7 +53,7 @@ with all particles within one specific cell, or evaluate all particle-particle
 interactions with particles in the neighbouring cells (or half of it) plus
 all particles on coarser levels. Therefore, the toolbox provides the action
 sets peano4.toolbox.particles.ParticleParticleInteraction_Sets and
-peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists. These are
+peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles. These are
 two different implementations of the same "tree walker" algorithms which
 eventually provides pseudo-Verlet lists distilled from the tree structure.
 There's a @ref page_toolbox_particles_mesh_traversal "dedicated discussion of the tree walking"

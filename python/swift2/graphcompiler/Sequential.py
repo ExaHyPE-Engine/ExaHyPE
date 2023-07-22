@@ -7,8 +7,23 @@ import peano4
 import swift2
 
 
+from enum import Enum
+
+
 from .AMRLogic import add_dynamic_mesh_refinement_and_particle_resorting
 
+
+class Optimisation(Enum):
+    """
+
+
+    """
+
+    NONE = 0
+    INSERT_RESORT_SWEEPS_AND_VECTORISE = 1
+#VECTORISE_WHENEVER_POSSIBLE = 1
+
+    
 
 def translate_one_step_of_species_into_mesh_traversal(
     step,
@@ -69,7 +84,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     if step.dependencies == AlgorithmStep.Dependencies.NEIGHBOURS:
         if verbose:
             print(
-                "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} uses peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists action set".format(
+                "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} uses peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles action set".format(
                     len(mesh_traversals),
                     step.name,
                     current_species_set.particle_model.name,
@@ -77,7 +92,15 @@ def translate_one_step_of_species_into_mesh_traversal(
             )
             
         if use_lists_to_construct_active_sets:
-          action_set_particle_particle_interaction = peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists(
+          if verbose:
+               print(
+                   "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} can use the peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles action set and hence optimise aggressively".format(
+                       len(mesh_traversals),
+                       step.name,
+                       current_species_set.particle_model.name,
+                   )
+               )
+          action_set_particle_particle_interaction = peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles(
             particle_set=current_species_set,
             particle_particle_interaction_kernel=step.cell_kernel,
             touch_vertex_first_time_compute_particle_update_kernel=step.touch_vertex_first_time_kernel,
@@ -134,7 +157,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     #
     # As we have a 1:1 mapping, we can directly translate the effect into flags
     #
-    if step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS:
+    if step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN or step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN:
         alter_particle_position.append(True)
     else:
         alter_particle_position.append(False)
@@ -143,7 +166,7 @@ def translate_one_step_of_species_into_mesh_traversal(
 
 
 def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets, 
-                                                                      use_lists_to_construct_active_sets, 
+                                                                      optimisation: Optimisation,
                                                                       verbose,
                                                                       ):
     """!
@@ -193,7 +216,29 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
 
     for current_species_set in species_sets:
         for step in current_species_set.particle_model.algorithm_steps():
-            if use_lists_to_construct_active_sets and step.dependencies == AlgorithmStep.Dependencies.NEIGHBOURS and len(mesh_traversals)>0 and alter_particle_position[-1]:
+            if optimisation==Optimisation.NONE:
+              use_lists_to_construct_active_sets = False
+              add_additional_dummy_sweep         = False
+#elif optimisation==Optimisation.VECTORISE_WHENEVER_POSSIBLE:
+#              use_lists_to_construct_active_sets = step.effect != AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN and step.effect != AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN and len(alter_particle_position)>0 and not alter_particle_position[-1]
+#              add_additional_dummy_sweep        = False
+            elif optimisation==Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE:
+              use_lists_to_construct_active_sets = step.effect!=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
+              add_additional_dummy_sweep         = step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN or step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
+            else:
+              assert False, "option not supported"
+                                   
+            translate_one_step_of_species_into_mesh_traversal(
+                step                                = step,
+                current_species_set                 = current_species_set,
+                mesh_traversals                     = mesh_traversals,
+                alter_particle_position             = alter_particle_position,
+                use_lists_to_construct_active_sets   = use_lists_to_construct_active_sets,
+                preamble                            = "Step",
+                verbose                             = verbose,
+            )
+
+            if add_additional_dummy_sweep:
               new_step = peano4.solversteps.Step(
                 "DummyStep{}{}_sweep{}".format(
                   current_species_set.particle_model.name,
@@ -203,23 +248,15 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
                 add_user_defined_actions=False,
               )
               mesh_traversals.append(new_step)
+              alter_particle_position.append(True)
               print(
-                  "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting".format(
-                    len(mesh_traversals),
-                    step.name,
-                    current_species_set.particle_model.name,
-                )
+                "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting".format(
+                  len(mesh_traversals),
+                  step.name,
+                  current_species_set.particle_model.name,
+               )
             )
-            
-            translate_one_step_of_species_into_mesh_traversal(
-                step                                = step,
-                current_species_set                 = current_species_set,
-                mesh_traversals                     = mesh_traversals,
-                alter_particle_position             = alter_particle_position,
-                use_lists_to_construct_active_sets  = use_lists_to_construct_active_sets,
-                preamble                            = "Step",
-                verbose                             = verbose,
-            )
+
 
     add_dynamic_mesh_refinement_and_particle_resorting(
         mesh_traversals, alter_particle_position, species_sets, verbose
@@ -234,7 +271,6 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
 
 
 def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species_sets, 
-                                                                         use_lists_to_construct_active_sets, 
                                                                          verbose,
                                                                          ):
     """!
@@ -267,7 +303,7 @@ def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species
                 alter_particle_position  = alter_particle_position,
                 preamble                 = "Initialisation",
                 verbose                  = verbose,
-                use_lists_to_construct_active_sets=False
+                use_lists_to_construct_active_sets = False,
             )
 
     additional_initialisation_step = peano4.solversteps.Step(
@@ -304,38 +340,20 @@ def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species
 
 
 
-def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets(species_sets,
-                                                                                                            verbose,
-                                                                                                            ):
+def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec(species_sets,
+                                                                             verbose,
+                                                                             ):
     return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
-                                                                             use_lists_to_construct_active_sets = True,
-                                                                             verbose = verbose
+                                                                             optimisation = Optimisation.NONE,
+                                                                             verbose      = verbose
                                                                              )
 
-                                                                                                         
-def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_use_stlsets_to_construct_active_sets(species_sets,
-                                                                                                           verbose,
-                                                                                                           ):
-    return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
-                                                                             use_lists_to_construct_active_sets = False,
-                                                                             verbose = verbose
-                                                                             )
 
-def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets(species_sets, 
-                                                                                                               verbose,
-                                                                                                               ):
-    return serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
-                                                                                use_lists_to_construct_active_sets = True,
-                                                                                verbose = verbose
-                                                                                )
-
-def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_use_stlsets_to_construct_active_sets(species_sets, 
-                                                                                                              verbose,
-                                                                                                              ):
-    return serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
-                                                                                use_lists_to_construct_active_sets = False,
-                                                                                verbose = verbose
-                                                                                )
-
-
-
+def  serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise(species_sets,
+                                                                                                         verbose,
+                                                                                                         ):
+     return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
+                                                                              optimisation = Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
+                                                                              verbose      = verbose
+                                                                              )
+        

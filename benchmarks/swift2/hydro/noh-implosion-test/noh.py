@@ -88,6 +88,14 @@ parser.add_argument(
     help="Switch on assertions",
 )
 parser.add_argument(
+    "-no-vec",
+    "--on-vectorisation",
+    dest="no_vec",
+    action="store_true",
+    default=False,
+    help="Disable vectorisation",
+)
+parser.add_argument(
     "-ms",
     "--mantissa-size",
     dest="mantissa_size",
@@ -108,8 +116,7 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Noh", executable="noh2D"
 )
 
-project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets
-project.initialisation_steps_task_graph_compiler = swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets
+project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
 
 
 # Initialise the SPH particle --------------------------------------------------
@@ -145,7 +152,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=particles_per_cell,
     min_h=max_cell_size,
     max_h=max_cell_size,
-    use_optimised_coalesced_memory_access_kernels=True
+    use_optimised_coalesced_memory_access_kernels = not args.no_vec
 )
 
 

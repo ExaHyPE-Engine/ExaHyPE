@@ -223,13 +223,14 @@ For Swift 2 users:
 - Read through swift2.graphcompiler.Sequential for an example how and when to 
   invoke UpdateParticleMarker to ensure that the update markers are always set
   to the correct value.
+- Read through the recommendations on @ref page_swift_performance_optimisation. 
 
 
 
 ## Set realisations
 
 The particle toolbox offers two actions sets, 
-peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists and
+peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles and
 peano4.toolbox.particles.ParticleParticleInteraction_Sets,
 which both assemble the active and local sets while they run throug the mesh.
 These particle sets are not persistent, i.e. they are built up on-the-fly.

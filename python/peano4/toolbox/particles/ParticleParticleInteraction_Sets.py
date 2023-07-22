@@ -15,9 +15,9 @@ class ParticleParticleInteraction_Sets(ActionSet):
 
 Tree walker to realise particle-particle interactions with particles held by different adjacent cells or on different mesh levels.
 
-This code has the same semantics as peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.
+This code has the same semantics as peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles.
 However, it provides a different implementation. Please consult the 
-documentation of ParticleParticleInteraction_StackOfLists for a description
+documentation of ParticleParticleInteraction_StackOfListsOverStaticParticles for a description
 of the arguments, plug-in points and the semantics of the two sets. Before you 
 do so, read throuth @ref page_toolbox_particles_mesh_traversal "the generic set discussion"
 for the overall context.

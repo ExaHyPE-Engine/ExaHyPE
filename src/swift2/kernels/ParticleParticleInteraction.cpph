@@ -539,24 +539,12 @@ void swift2::kernels::computeHydroForce(
           and
           not localParticlesChunk[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
         ) {
-//            if (localParticlesChunk!=activeParticlesChunk) {
-              for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
-                swift2::kernels::forceKernelVectorised(
-                  localParticlesChunk  + localParticleNumberInThisChunk,
-                  activeParticlesChunk + activeParticleNumberInThisChunk
-                );
-              }
-/*
-            }
-            else {
-              for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
-                swift2::kernels::forceKernel(
-                  localParticlesChunk  + localParticleNumberInThisChunk,
-                  activeParticlesChunk + activeParticleNumberInThisChunk
-                );
-              }
-            }
-*/
+          for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
+            swift2::kernels::forceKernelVectorised(
+              localParticlesChunk  + localParticleNumberInThisChunk,
+              activeParticlesChunk + activeParticleNumberInThisChunk
+            );
+          }
         }
       }
     }
