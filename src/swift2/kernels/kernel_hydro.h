@@ -8,6 +8,7 @@
  * Dehnen & Aly, MNRAS, 425, pp. 1062-1082 (2012).
  */
 
+#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "peano4/utils/Globals.h"
 
 #if defined(QUARTIC_SPLINE_KERNEL)
@@ -33,7 +34,7 @@
 #pragma error "Hydro dimension undefined"
 #endif
 
-static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)] __attribute__((aligned(16))) = {
+static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)] __attribute__((aligned(AlignmentOnHeap))) = {
   6.0,  0.0,  -2.4, 0.0,  0.368, /* 0 < u < 0.2 */
   -4.0, 8.0,  -4.8, 0.32, 0.352, /* 0.2 < u < 0.4 */
   -4.0, 8.0,  -4.8, 0.32, 0.352, /* 0.4 < u < 0.6 */
