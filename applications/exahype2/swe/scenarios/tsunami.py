@@ -15,9 +15,9 @@ class Tsunami(scenarios.template_scenario.Template_Scenario):
         return """
         double bath = topology_parser.sample_bathymetry(volumeCentre(0), volumeCentre(1));
         double displ = topology_parser.sample_displacement(volumeCentre(0), volumeCentre(1));
-        double combined_bathymetry = bath+displ;
+        double combined_bathymetry = bath + displ;
 
-        /* Might need this for proper boundary conditions 
+        /* Might need this for proper boundary conditions at wet-dry interface
         if (combined_bathymetry > -20.0 && combined_bathymetry < 0.0)
             combined_bathymetry = -20.0;
         else if (combined_bathymetry >= 0.0 && combined_bathymetry < 20.0)

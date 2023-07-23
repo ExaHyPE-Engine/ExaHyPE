@@ -7,10 +7,10 @@ class Sea_At_Rest(scenarios.template_scenario.Template_Scenario):
     """
     def __init__(self, width, refinement_tolerance):
         super().__init__(refinement_tolerance)
-        self.hu = 0.0
-        self.hv = 0.0
-        self.h = sympy.Piecewise(
-            (10.0, self.x[0] <= width[0]/2),
-            (15.0, True)
+        self.initial_values[1] = 0.0
+        self.initial_values[2] = 0.0
+        self.initial_values[0] = sympy.Piecewise(
+            (1.1, self.x[0] <= width[0]/2),
+            (1.0, True)
         )
-        self.b = -self.h
+        self.initial_values[3] = -self.initial_values[0]

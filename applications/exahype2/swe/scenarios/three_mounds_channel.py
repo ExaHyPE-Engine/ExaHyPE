@@ -15,7 +15,7 @@ class Three_Mounds_Channel(scenarios.template_scenario.Template_Scenario):
         _m3 = 2.8 - 0.28 * sympy.sqrt((self.x[0] - 47.5)**2 + (self.x[1] - 15.0)**2)
 
         self.initial_values[0] = sympy.Piecewise(
-            (1.0, sympy.And(self.x[0] <= 20.0, self.x[1] <= 30.0)), 
+            (0.9, sympy.And(self.x[0] <= 17.0, self.x[1] <= 30.0)), 
             (0.0, True)
             )
         self.initial_values[1] = 0.0

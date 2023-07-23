@@ -14,7 +14,7 @@ class Radial_Bathymetry_Dam_Break(scenarios.template_scenario.Template_Scenario)
         )
 
         self.initial_values[3] = sympy.Piecewise(
-            (0.1, dam < width[0] / 10), (0.0, True)
+            (-0.9, dam <= width[0] / 10), (-1.0, True)
         ) 
 
         pass

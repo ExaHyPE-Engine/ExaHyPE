@@ -15,6 +15,6 @@ class Oscillating_Lake(scenarios.template_scenario.Template_Scenario):
         self.initial_values[3] = -0.2*(1.0 - sympy.sqrt((self.x[0] - 2.0)**2 + (self.x[1] - 2.0)**2))-0.1
         _h = 0.025*(1-sympy.sqrt((self.x[0] - 2)**2 + (self.x[1] - 2)**2))
         self.initial_values[0] = sympy.Piecewise(
-            (_h, self.initial_values[3] < _h),
+            (_h, _h > 0),
             (0.0, True)
         )
