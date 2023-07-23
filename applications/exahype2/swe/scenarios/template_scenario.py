@@ -24,7 +24,7 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     def definition_of_ncp(self):
         grad_b = self.grad(self.b)
 
-        # NCP [unkowns, dimensions]
+        # NCP [unknowns, dimensions]
         self.ncp[0, 0] = 0.0
         self.ncp[1, 0] = self.g * self.h * grad_b
         self.ncp[2, 0] = 0.0

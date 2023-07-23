@@ -44,7 +44,7 @@ class PDE(exahype2.symhype.FirstOrderConservativePDEFormulation, ABC):
     self.F[2, 1] = self.hv * self.v + (self.g * self.h**2)/2
 
   def definition_of_eigenvalues(self):
-    # Eigenvalues [unkowns, dimensions]
+    # Eigenvalues [unknowns, dimensions]
     self.eigenvalues[0, 0] = self.u
     self.eigenvalues[0, 1] = self.v
 
