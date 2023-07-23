@@ -20,26 +20,14 @@ class TsunamiModel(umbridge.Model):
 
     def __call__(self, parameters, config):
         # can be adapted for docker image
-        root_directory = "Peano/"
+        root_directory = "work/"
 
         # if get_output_sizes() has not been called yet
         if(not hasattr(self, "output_size")):
             # calculate output size based on number of probes
             self.output_size = self.calculate_output_size(config["probe_coordinates"])
 
-        # check whether this script is being called from the build directory (is there a build folder on the path between peano and cwd)
-        # or if build directory exists
-        operating_directory = realpath(__file__).split(basename(__file__))[0]
-        print("Calling script on path: " + operating_directory)
-        
-        print("Checking whether build directory is on path...")
-        if("build" not in operating_directory.rsplit(root_directory,maxsplit=1)[1]):  
-            print("ExaHyPE not compiled! Please first compile ExaHyPE and call this script from within the build directory!")
-            return []
-        else:
-            print("Build directory already on path.")
-
-        print("Compiling swe.py now.") 
+        print("Trying to compile swe.py now.") 
 
         flag_map = {
             "solver":                   "s",
@@ -71,12 +59,12 @@ class TsunamiModel(umbridge.Model):
         compile_instructions.append("--uq-displacement-origin")
         compile_instructions.append("[%f,%f]" % (parameters[0][0], parameters[0][1]))
         
-        run(compile_instructions, cwd=operating_directory).check_returncode()
+        run(compile_instructions).check_returncode()
         # run exe 
         application_name = "swe-application-2d-solver-name-SWESolver%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (config["solver"], config["scenario"], config["patch_size"], config["amr"], config["max_cell_size"], config["end_time"])
-        run("./%s" % application_name, cwd=operating_directory).check_returncode()
+        run("./%s" % application_name).check_returncode()
 
-        operating_directory = operating_directory + ("output-%s/" % application_name)
+        operating_directory = "./output-%s/" % application_name
         # read out values from csv file
         if(not isdir(operating_directory)):
             print("Output directory not found! Aborting!")
