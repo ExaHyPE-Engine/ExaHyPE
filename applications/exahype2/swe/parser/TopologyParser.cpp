@@ -4,9 +4,9 @@ using namespace applications::exahype2::swe::parser::NetCDFHelper;
 
 applications::exahype2::swe::parser::TopologyParser::TopologyParser(
   const char *bathymetry_file_path, const char *displacement_file_path, 
-  double i_uq_displacement_origin_x, double i_uq_displacement_origin_y,
   const char *nc_bathymetry_x_key, const char *nc_bathymetry_y_key, const char *nc_bathymetry_bathymetry_key,
-  const char *nc_displacement_x_key, const char *nc_displacement_y_key, const char *nc_displacement_displacement_key
+  const char *nc_displacement_x_key, const char *nc_displacement_y_key, const char *nc_displacement_displacement_key,
+  double i_uq_displacement_origin_x, double i_uq_displacement_origin_y
 ):
 uq_displacement_origin_x(i_uq_displacement_origin_x),
 uq_displacement_origin_y(i_uq_displacement_origin_y),
@@ -23,29 +23,6 @@ nc_displacement_displacement_key_(nc_displacement_displacement_key)
   this->parse_bathymetry_file(bathymetry_file_path);
   this->parse_displacement_file(displacement_file_path);
 
-}
-
-applications::exahype2::swe::parser::TopologyParser::TopologyParser(
-  const char* bathymetry_file_path,
-  const char* displacement_file_path,
-  const char* nc_bathymetry_x_key,
-  const char* nc_bathymetry_y_key,
-  const char* nc_bathymetry_bathymetry_key,
-  const char* nc_displacement_x_key,
-  const char* nc_displacement_y_key,
-  const char* nc_displacement_displacement_key
-):
-nc_bathymetry_x_key_(nc_bathymetry_x_key),
-nc_bathymetry_y_key_(nc_bathymetry_y_key),
-nc_bathymetry_bathymetry_key_(nc_bathymetry_bathymetry_key),
-nc_displacement_x_key_(nc_displacement_x_key),
-nc_displacement_y_key_(nc_displacement_y_key),
-nc_displacement_displacement_key_(nc_displacement_displacement_key)
-{
-  l_nX_ = applications::exahype2::swe::DomainSize(0);
-  l_nY_ = applications::exahype2::swe::DomainSize(1);
-  this->parse_bathymetry_file(bathymetry_file_path);
-  this->parse_displacement_file(displacement_file_path);
 }
 
 applications::exahype2::swe::parser::TopologyParser::TopologyParser(

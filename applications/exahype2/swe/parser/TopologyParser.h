@@ -46,15 +46,9 @@ class applications::exahype2::swe::parser::TopologyParser {
   
     TopologyParser(
       const char *bathymetry_file_path, const char *displacement_file_path, 
-      double i_uq_displacement_origin_x=INFINITY, double i_uq_displacement_origin_y=INFINITY, 
       const char *nc_bathymetry_x_key="x", const char *nc_bathymetry_y_key="y", const char *nc_bathymetry_bathymetry_key="z",
-      const char *nc_displacement_x_key="x", const char *nc_displacement_y_key="y", const char *nc_displacement_displacement_key="z"
-    );
-
-    TopologyParser(
-      const char *bathymetry_file_path, const char *displacement_file_path, 
-      const char *nc_bathymetry_x_key="x", const char *nc_bathymetry_y_key="y", const char *nc_bathymetry_bathymetry_key="z",
-      const char *nc_displacement_x_key="x", const char *nc_displacement_y_key="y", const char *nc_displacement_displacement_key="z"
+      const char *nc_displacement_x_key="x", const char *nc_displacement_y_key="y", const char *nc_displacement_displacement_key="z",
+      double i_uq_displacement_origin_x=INFINITY, double i_uq_displacement_origin_y=INFINITY
     );
     
     TopologyParser(
