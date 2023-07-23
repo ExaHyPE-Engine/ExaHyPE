@@ -97,9 +97,9 @@ class TsunamiModel(umbridge.Model):
     
 # config should only contain options for swe
 config = {
-    "scenario": "Artificial_Tsunami",
-    "bathymetry_file_path": "abc",
-    "displacement_file_path": "jkl",
+    "scenario": "Tsunami",
+    "bathymetry_file_path": "./netCDFInputs/artificialtsunami_bathymetry_1000.nc",
+    "displacement_file_path": "./netCDFInputs/artificialtsunami_displ_1000.nc",
     "end_time": 0.1,
     "amr": 0,
     "solver": "FVRusanovGlobalAdaptive",
@@ -108,5 +108,5 @@ config = {
     "probe_coordinates": ["[5,5]", "[7,3]"] # don't question it, has to be this way
 }
 model = TsunamiModel()
-model.__call__([[0, 0]],config)
+model.__call__([[2000, 2000]],config)
 #umbridge.serve_models([model], 4242)

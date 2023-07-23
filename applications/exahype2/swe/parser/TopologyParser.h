@@ -31,8 +31,8 @@ class applications::exahype2::swe::parser::TopologyParser {
     double max_y_displacement_ = -1;              /* highest y-coordinate in displacement */
     double min_x_displacement_ = 1;               /* lowest x-coordinate in displacement */
     double min_y_displacement_ = 1;               /* lowest y-coordinate in displacement */
-    double uq_displacement_origin_x = INFINITY;   /* origin for displacment in x-dimension for uq */
-    double uq_displacement_origin_y = INFINITY;   /* origin for displacment in y-dimension for uq */
+    double uq_displacement_origin_x_ = INFINITY;   /* origin for displacment in x-dimension for uq */
+    double uq_displacement_origin_y_ = INFINITY;   /* origin for displacment in y-dimension for uq */
     
     const char *nc_bathymetry_x_key_;
     const char *nc_bathymetry_y_key_;
@@ -50,7 +50,7 @@ class applications::exahype2::swe::parser::TopologyParser {
       const char *nc_displacement_x_key="x", const char *nc_displacement_y_key="y", const char *nc_displacement_displacement_key="z",
       double i_uq_displacement_origin_x=INFINITY, double i_uq_displacement_origin_y=INFINITY
     );
-    
+
     TopologyParser(
       const char *bathymetry_file_path, 
       double width_x, double width_y,

@@ -8,8 +8,8 @@ applications::exahype2::swe::parser::TopologyParser::TopologyParser(
   const char *nc_displacement_x_key, const char *nc_displacement_y_key, const char *nc_displacement_displacement_key,
   double i_uq_displacement_origin_x, double i_uq_displacement_origin_y
 ):
-uq_displacement_origin_x(i_uq_displacement_origin_x),
-uq_displacement_origin_y(i_uq_displacement_origin_y),
+uq_displacement_origin_x_(i_uq_displacement_origin_x),
+uq_displacement_origin_y_(i_uq_displacement_origin_y),
 nc_bathymetry_x_key_(nc_bathymetry_x_key),
 nc_bathymetry_y_key_(nc_bathymetry_y_key),
 nc_bathymetry_bathymetry_key_(nc_bathymetry_bathymetry_key),
@@ -141,16 +141,6 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
     }
     min_x_displacement_ = tmp[0];
     max_x_displacement_ = tmp[x_displacement_ - 1];
-    // Has the origin of the displacement in x-dimension been put elsewhere than specified in the file?
-    if(!isinf(uq_displacement_origin_x))
-    {
-      // Move boundaries
-       std::cout << "Current boundaries in x-dimension: [" << min_x_displacement_ << ", " << max_x_displacement_ << "]." << std::endl;
-      double difference = max_x_displacement_ - min_x_displacement_;
-      min_x_displacement_ = uq_displacement_origin_x - (difference / 2.f);
-      max_x_displacement_ = uq_displacement_origin_x + (difference / 2.f);
-      std::cout << "Moved boundaries in x-dimension to: [" << min_x_displacement_ << ", " << max_x_displacement_ << "]." << std::endl;
-    }
   }
 
   // Get max and min y
@@ -163,16 +153,6 @@ void applications::exahype2::swe::parser::TopologyParser::parse_displacement_fil
     }
     min_y_displacement_ = tmp[0];
     max_y_displacement_ = tmp[y_displacement_ - 1];
-    // Has the origin of the displacement in y-dimension been put elsewhere than specified in the file?
-    if(!isinf(uq_displacement_origin_y))
-    {
-      // Move boundaries
-      std::cout << "Current boundaries in y-dimension: [" << min_y_displacement_ << ", " << max_y_displacement_ << "]." << std::endl;
-      double difference = max_y_displacement_ - min_y_displacement_;
-      min_y_displacement_ = uq_displacement_origin_y - (difference / 2.f);
-      max_y_displacement_ = uq_displacement_origin_y + (difference / 2.f);
-      std::cout << "Moved boundaries in y-dimension to: [" << min_y_displacement_ << ", " << max_y_displacement_ << "]." << std::endl;
-    }
   }
 
   displacement_ = new double[x_displacement_*y_displacement_];
@@ -204,6 +184,15 @@ double applications::exahype2::swe::parser::TopologyParser::sample_bathymetry(do
 double applications::exahype2::swe::parser::TopologyParser::sample_displacement(double x, double y){
   auto x_cdf = transformIndexSimulationToCDFRange(x, l_nX_, min_x_bathymetry_, max_x_bathymetry_);
   auto y_cdf = transformIndexSimulationToCDFRange(y, l_nY_, min_y_bathymetry_, max_y_bathymetry_);
+  
+  // Has the origin of the displacement in x-dimension been put elsewhere than specified in the file?
+  if(!isinf(uq_displacement_origin_x_))
+    x_cdf -= uq_displacement_origin_x_;
+
+  // Has the origin of the displacement in y-dimension been put elsewhere than specified in the file?
+  if(!isinf(uq_displacement_origin_y_))
+    y_cdf -= uq_displacement_origin_y_;
+
   // Is displacement defined 
   if (x_cdf <= max_x_displacement_ && x_cdf >= min_x_displacement_ && y_cdf <= max_y_displacement_ && y_cdf >= min_y_displacement_)
     return displacement_[transformIndexCDFRangeToArray(x_cdf, y_cdf, min_x_displacement_, min_y_displacement_, max_x_displacement_, max_y_displacement_, x_displacement_, y_displacement_)];
