@@ -7,16 +7,16 @@ import peano4
 import exahype2
 
 dimensions                = 2
-cell_size                 = 0.1
-amr_levels                = 3 # Set to 0 to disable adaptive mesh refinement (AMR)
+cell_size                 = 0.001
+amr_levels                = 0
 patch_size                = 4
 rk_order                  = 4
 dg_order                  = 2
-end_time                  = 3.0
-plot_interval             = end_time/100
-#plot_interval             = 0 # Set to 0 to disable I/O
-use_gpu                   = False # Requires a GPU enabled build
+end_time                  = 1.0
+#plot_interval             = end_time/100
+plot_interval             = 0
 use_make                  = True
+use_enclave_tasking       = True
 use_symbolic_description  = False
 output_path               = "solution"
 
@@ -61,11 +61,12 @@ storage_types = {
   "Heap":exahype2.solvers.fv.Storage.Heap,
   "SmartPointers":exahype2.solvers.fv.Storage.SmartPointers,
 }
-storage_type = "CallStack"
+storage_type = "SmartPointers"
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler Application Script')
 
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     default=solver,             help="|".join(solvers.keys()))
+parser.add_argument("-e",       "--enclave",           dest="enclave",        action="store_true",        default=use_enclave_tasking, help="Use enclave tasking")
 parser.add_argument("-o",       "--output",            dest="output_path",    type=str,                   default=output_path,        help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default=build_mode,         help="|".join(build_modes.keys()))
 parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
@@ -76,7 +77,6 @@ parser.add_argument("-et",      "--end-time",          dest="end_time",       ty
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
 
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. size of a finite volume cell.")
-parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=use_gpu,            help="Enable GPU support (stateless PDE terms). Requires a GPU build.")
 parser.add_argument("-sym",     "--symbolic",          dest="symbolic",       action="store_true",        default=use_symbolic_description, help="Use the symbolic PDE description of the Euler equations.")
 
 parser.add_argument("-pbc",     "--periodic-boundary-conditions",  dest="periodic_boundary_conditions",   action="store_true",        help="Use periodic boundary conditions" )
@@ -118,16 +118,12 @@ my_project = exahype2.Project(
 )
 
 solver_type = args.solver
-if args.gpu:
+if args.enclave:
   if not "Enclave" in solver_type:
     solver_type += "Enclave"
     if solver_type not in solvers:
-      # This is necessary as "-s RKDGRusanovGlobalAdaptive -gpu" for example currently leads to this scenario
-      raise ValueError("The requested solver {} is not available for GPUs!".format(solver_type))
+      raise ValueError("The requested solver {} is not available for enclave tasking!".format(solver_type))
 solver_name = "EulerSolver" + str(args.scenario) + str(solver_type)
-
-if args.gpu:
-  solver_name += "GPU"
 
 my_solver = None
 if solver_type in fv_rusanov_solvers:
@@ -154,7 +150,7 @@ elif solver_type in rkdg_rusanov_solvers:
     time_step_relaxation      = 0.5
 )
 
-if args.gpu:
+if args.enclave:
   my_solver.set_pde_terms_without_state(True)
 
 if args.scenario == "PointExplosion":
@@ -202,6 +198,16 @@ my_solver.switch_to_heap_storage(
   face_data_storage=storage_types[args.storage],
 )
 
+#from exahype2.solvers.fv.rusanov.kernels import create_compute_Riemann_kernel_for_Rusanov
+#my_solver._fused_compute_kernel_call_cpu = create_compute_Riemann_kernel_for_Rusanov(
+#  my_solver._flux_implementation,
+#  my_solver._ncp_implementation,
+#  my_solver._source_term_implementation,
+#  compute_max_eigenvalue_of_next_time_step=True,
+#  solver_variant = exahype2.solvers.fv.rusanov.SolverVariant.Multicore,
+#  kernel_variant = exahype2.solvers.fv.rusanov.KernelVariant.BatchedAoSHeap
+#)
+
 my_project.add_solver(my_solver)
 
 if args.periodic_boundary_conditions:
@@ -232,7 +238,11 @@ my_project.set_output_path(solution_dir)
 if not os.path.exists(solution_dir):
   os.makedirs(solution_dir)
 
-my_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
+#my_project.set_load_balancing("toolbox::loadbalancing::SpreadOut", "new ::exahype2::LoadBalancingConfiguration(0.98)")
+#my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
+my_project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration(0.98, 0, 16)")
+#my_project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_SplitOversizedTree", "new ::exahype2::LoadBalancingConfiguration(0.98, 1000, 16)")
+#my_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
