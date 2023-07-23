@@ -224,8 +224,8 @@ verbose: {True, False}
             steps_to_evaluate_amr = {(i + 1) % len(steps)}
             if verbose:
                 print(
-                    "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: peano4.toolbox.particles.DynamicMeshRefinementAnalysis has to be triggered in steps {}".format(
-                        steps_to_evaluate_amr
+                    "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: {}th step has to evaluate the AMR criterion".format(
+                        i
                     )
                 )
             for j in steps_to_evaluate_amr:
@@ -243,8 +243,8 @@ verbose: {True, False}
             }
             if verbose:
                 print(
-                    "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: peano4.toolbox.particles.UpdateParticleGridAssociation_Reassign has to be triggered in steps {}".format(
-                        steps_to_update_particle_grid_assocation
+                    "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: {}th step has to update the particle-grid association of species {}".format(
+                        i, current_species_set.name
                     )
                 )
             for j in steps_to_update_particle_grid_assocation:
@@ -260,8 +260,8 @@ verbose: {True, False}
             }
             if verbose:
                 print(
-                    "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: peano4.toolbox.particles.UpdateParallelState has to be triggered in steps {}".format(
-                        steps_to_update_parallel_state
+                    "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: {}th step has to update the parallel state of species {}".format(
+                        i, current_species_set.name
                     )
                 )
             for j in steps_to_update_parallel_state:
@@ -274,7 +274,7 @@ verbose: {True, False}
             steps_to_realise_amr = {(i + 2) % len(steps)}
             if verbose:
                 print(
-                    "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: swift2.actionsets.DynamicMeshRefinementTrigger has to be triggered in steps {}".format(
+                    "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: {}th step has to realies the AMR instructions".format(
                         steps_to_realise_amr
                     )
                 )
@@ -295,11 +295,11 @@ verbose: {True, False}
                 action_set_AMR_analysis.priority = steps[i].lowest_priority() - 1
                 action_set_AMR_analysis.parallel = True
                 steps[i].add_action_set(action_set_AMR_analysis)
-                print(
+                if verbose:
+                  print(
                     "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.DynamicMeshRefinementAnalysis for species {} to step {}".format(
                         current_species_set.name, i
-                    )
-                )
+                    ))
 
             if global_steps_to_update_particle_grid_assocation[i]:
                 action_set_update_particle_grid_association = (
@@ -312,11 +312,11 @@ verbose: {True, False}
                 )
                 action_set_update_particle_grid_association.parallel = True
                 steps[i].add_action_set(action_set_update_particle_grid_association)
-                print(
+                if verbose:
+                  print(
                     "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop for species {} to step {}".format(
                         current_species_set.name, i
-                    )
-                )
+                    ))
 
             if global_steps_to_update_parallel_state[i]:
                 action_set_update_parallel_state = (
@@ -330,19 +330,19 @@ verbose: {True, False}
                 )
                 action_set_update_parallel_state.parallel = True
                 steps[i].add_action_set(action_set_update_parallel_state)
-                print(
+                if verbose:
+                  print(
                     "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.UpdateParallelState for species {} to step {}".format(
                         current_species_set.name, i
-                    )
-                )
+                    ))
 
             if global_steps_to_realise_amr[i]:
                 action_set_dynamic_AMR = DynamicMeshRefinementTrigger()
                 action_set_dynamic_AMR.priority = steps[i].highest_priority() + 1
                 action_set_dynamic_AMR.parallel = True
                 steps[i].add_action_set(action_set_dynamic_AMR)
-                print(
+                if verbose:
+                  print(
                     "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add swift2.actionsets.DynamicMeshRefinementTrigger for species {} to step {}".format(
                         current_species_set.name, i
-                    )
-                )
+                    ))

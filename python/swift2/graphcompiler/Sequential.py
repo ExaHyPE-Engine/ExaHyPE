@@ -249,12 +249,13 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
               )
               mesh_traversals.append(new_step)
               alter_particle_position.append(True)
-              print(
-                "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting".format(
-                  len(mesh_traversals),
-                  step.name,
-                  current_species_set.particle_model.name,
-               )
+              if verbose:
+                print(
+                  "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting".format(
+                    len(mesh_traversals),
+                    step.name,
+                    current_species_set.particle_model.name,
+                )
             )
 
 
@@ -286,8 +287,6 @@ def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species
     """
     mesh_traversals = []
     alter_particle_position = []
-
-    verbose = True
 
     if verbose:
         print(
@@ -324,7 +323,7 @@ def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species
                 len(mesh_traversals)
             )
         )
-
+ 
     add_dynamic_mesh_refinement_and_particle_resorting(
         mesh_traversals, alter_particle_position, species_sets, verbose
     )
