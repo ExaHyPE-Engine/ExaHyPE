@@ -258,15 +258,29 @@ if test "$gpu" == cpp; then
 fi
 
 if test "$gpu" == cuda; then
-  AC_LANG_DEFINE([CUDA], [cuda], [CUDA], [CUDACXX],
-  [])
-
   AC_DEFINE([GPUOffloadingCUDA], [1], [GPUOffloadingCUDA])
 
   AC_ARG_WITH([cuda],
     [AS_HELP_STRING([--with-cuda=PATH], [specify CUDA installation path])],
     [with_cuda="$withval"],
-    [with_cuda=""])
+    [with_cuda=""],
+  )
+
+  AC_ARG_WITH([arch],
+    [AS_HELP_STRING([--with-gpu-arch=ARCH], [specify GPU architecture])],
+    [ AC_MSG_CHECKING(for GPU arch)
+      case "$withval" in
+          sm_*)
+            arch="$withval" ;;
+          *)
+            AC_MSG_ERROR([Invalid architecture. Option should start with 'sm_'.]) ;;
+      esac
+    ],
+    [
+      AC_MSG_ERROR([Architecture is required. Use --with-gpu-arch=ARCH, where ARCH starts with 'sm_' given $withval.])
+    ])
+  GPU_ARCH=$arch
+  AC_SUBST(GPU_ARCH)
 
   # We need to apply further checks on CUDA
   if test -n "$with_cuda"

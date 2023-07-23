@@ -104,6 +104,9 @@ if args.libxsmm:
 if args.with_cuda:
   configure_args.append(f'--with-cuda={args.with_cuda}')
 
+if args.arch:
+  configure_args.append(f'--with-gpu-arch={args.arch}')
+
 print('Running ./configure ' + ' '.join(configure_args))
 
 subprocess.run(['libtoolize'], cwd=os.getcwd())
