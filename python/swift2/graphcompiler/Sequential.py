@@ -82,15 +82,6 @@ def translate_one_step_of_species_into_mesh_traversal(
     # octant (cell).
     #
     if step.dependencies == AlgorithmStep.Dependencies.NEIGHBOURS:
-        if verbose:
-            print(
-                "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} uses peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles action set".format(
-                    len(mesh_traversals),
-                    step.name,
-                    current_species_set.particle_model.name,
-                )
-            )
-            
         if use_lists_to_construct_active_sets:
           if verbose:
                print(
@@ -111,6 +102,14 @@ def translate_one_step_of_species_into_mesh_traversal(
             active_particle_set=step.input_particles,
           )
         else:
+          if verbose:
+             print(
+                 "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} uses the peano4.toolbox.particles.ParticleParticleInteraction_Sets".format(
+                     len(mesh_traversals),
+                     step.name,
+                     current_species_set.particle_model.name,
+                 )
+             )
           action_set_particle_particle_interaction = peano4.toolbox.particles.ParticleParticleInteraction_Sets(
             particle_set=current_species_set,
             particle_particle_interaction_kernel=step.cell_kernel,

@@ -212,74 +212,70 @@ verbose: {True, False}
             if alter_position[i]:
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: {}th step alters the particle positions of species {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} alters the particle positions of species {}".format(
                             i, current_species_set.name
                         )
                     )
 
-            #
-            #   AMR
-            # =======
-            #
-            steps_to_evaluate_amr = {(i + 1) % len(steps)}
-            if verbose:
-                print(
-                    "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: {}th step has to evaluate the AMR criterion".format(
+                #
+                #   AMR
+                # =======
+                #
+                steps_to_evaluate_amr = {(i + 1) % len(steps)}
+                if verbose:
+                    print(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} has to evaluate the AMR criterion".format(
+                            i
+                        ))
+                for j in steps_to_evaluate_amr:
+                    global_steps_to_evaluate_amr[j] = True
+
+                #
+                #   Association
+                # ==============
+                #
+                steps_to_update_particle_grid_assocation = {
+                   (i + 0) % len(steps),
+                   (i + 1) % len(steps),
+                   (i + 3) % len(steps),
+                   (i + 4) % len(steps),
+                }
+                if verbose:
+                    print(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} has to update the particle-grid association of species {}".format(
+                            i, current_species_set.name
+                        ))
+                for j in steps_to_update_particle_grid_assocation:
+                    global_steps_to_update_particle_grid_assocation[j] = True
+
+                #
+                #   State
+                # =========
+                #
+                steps_to_update_parallel_state = {
+                    (i + 1) % len(steps),
+                    (i + 4) % len(steps),
+                }
+                if verbose:
+                    print(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} has to update the parallel state of species {}".format(
+                        i, current_species_set.name
+                        ))
+                for j in steps_to_update_parallel_state:
+                    global_steps_to_update_parallel_state[j] = True
+
+                #
+                #   Realise AMR
+                # ===============
+                #
+                steps_to_realise_amr = {(i + 2) % len(steps)}
+                if verbose:
+                    print(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} has to realise the AMR instructions".format(
                         i
-                    )
-                )
-            for j in steps_to_evaluate_amr:
-                global_steps_to_evaluate_amr[j] = True
-
-            #
-            #   Association
-            # ==============
-            #
-            steps_to_update_particle_grid_assocation = {
-                (i + 0) % len(steps),
-                (i + 1) % len(steps),
-                (i + 3) % len(steps),
-                (i + 4) % len(steps),
-            }
-            if verbose:
-                print(
-                    "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: {}th step has to update the particle-grid association of species {}".format(
-                        i, current_species_set.name
-                    )
-                )
-            for j in steps_to_update_particle_grid_assocation:
-                global_steps_to_update_particle_grid_assocation[j] = True
-
-            #
-            #   State
-            # =========
-            #
-            steps_to_update_parallel_state = {
-                (i + 1) % len(steps),
-                (i + 4) % len(steps),
-            }
-            if verbose:
-                print(
-                    "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: {}th step has to update the parallel state of species {}".format(
-                        i, current_species_set.name
-                    )
-                )
-            for j in steps_to_update_parallel_state:
-                global_steps_to_update_parallel_state[j] = True
-
-            #
-            #   Realise AMR
-            # ===============
-            #
-            steps_to_realise_amr = {(i + 2) % len(steps)}
-            if verbose:
-                print(
-                    "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: {}th step has to realies the AMR instructions".format(
-                        steps_to_realise_amr
-                    )
-                )
-            for j in steps_to_realise_amr:
-                global_steps_to_realise_amr[j] = True
+                        ))
+                for j in steps_to_realise_amr:
+                    global_steps_to_realise_amr[j] = True
 
         for i in range(0, len(steps)):
             if global_steps_to_evaluate_amr[i]:
