@@ -239,8 +239,8 @@ if not os.path.exists(solution_dir):
   os.makedirs(solution_dir)
 
 #my_project.set_load_balancing("toolbox::loadbalancing::SpreadOut", "new ::exahype2::LoadBalancingConfiguration(0.98)")
-#my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
-my_project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration(0.98, 0, 16)")
+my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
+#my_project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration(0.98, 0, 16)")
 #my_project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_SplitOversizedTree", "new ::exahype2::LoadBalancingConfiguration(0.98, 1000, 16)")
 #my_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
