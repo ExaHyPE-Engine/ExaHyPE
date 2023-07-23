@@ -187,11 +187,13 @@ double applications::exahype2::swe::parser::TopologyParser::sample_displacement(
   
   // Has the origin of the displacement in x-dimension been put elsewhere than specified in the file?
   if(!isinf(uq_displacement_origin_x_))
-    x_cdf -= uq_displacement_origin_x_;
+    // project coordinates into opposite direction of new origin so that displacement gets shifted towards new origin
+    x_cdf -= uq_displacement_origin_x_ - ((max_x_displacement_ + min_x_displacement_) / 2);
 
   // Has the origin of the displacement in y-dimension been put elsewhere than specified in the file?
   if(!isinf(uq_displacement_origin_y_))
-    y_cdf -= uq_displacement_origin_y_;
+    // project coordinates into opposite direction of new origin so that displacement gets shifted towards new origin
+    y_cdf -= uq_displacement_origin_y_ - ((max_y_displacement_ + min_y_displacement_) / 2);
 
   // Is displacement defined 
   if (x_cdf <= max_x_displacement_ && x_cdf >= min_x_displacement_ && y_cdf <= max_y_displacement_ && y_cdf >= min_y_displacement_)
