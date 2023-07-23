@@ -15,42 +15,21 @@ class TsunamiModel(umbridge.Model):
     def get_output_sizes(self, config):
         # normally 2x max water height at time t for two DART buoys 21418 and 21419
         # but can in theory be any probe point one is interested in
-        self.output_size = self.calculate_output_size(config["probe_coordinates"])
+        self.output_size = len(config["-probes"])*2
         return [self.output_size] 
 
     def __call__(self, parameters, config):
-        # can be adapted for docker image
-        root_directory = "work/"
-
         # if get_output_sizes() has not been called yet
         if(not hasattr(self, "output_size")):
             # calculate output size based on number of probes
-            self.output_size = self.calculate_output_size(config["probe_coordinates"])
+            self.output_size = len(config["-probes"])*2
 
         print("Trying to compile swe.py now.") 
 
-        flag_map = {
-            "solver":                   "s",
-            "end_time":                 "et", 
-            "amr":                      "amr",
-            "scenario":                 "sc",
-            "patch_size":               "ps",
-            "max_cell_size":            "maxh",
-            "bathymetry_file_path":     "bf",
-            "displacement_file_path":   "df",
-            "plot_interval":            "pi", # this also defines the schedule for the probes being dumped into the database
-            "output_path":              "o",
-            "rk_order":                 "rk-order",
-            "dg_order":                 "dg-order",
-            "probe_coordinates":        "probes"
-        }
-
         compile_instructions = ["python3", "swe.py"]
         for k in config.keys():
-            if(k not in flag_map):
-                continue
-            compile_instructions.append("-%s" % flag_map[k])
-            if (k == "probe_coordinates"):
+            compile_instructions.append(k)
+            if (k == "-probes"):
                 for coordinates in config[k]:
                     compile_instructions.append(coordinates)
                 continue
@@ -61,7 +40,7 @@ class TsunamiModel(umbridge.Model):
         
         run(compile_instructions).check_returncode()
         # run exe 
-        application_name = "swe-application-2d-solver-name-SWESolver%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (config["solver"], config["scenario"], config["patch_size"], config["amr"], config["max_cell_size"], config["end_time"])
+        application_name = "swe-application-2d-solver-name-SWESolver%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (config["-s"], config["-sc"], config["-ps"], config["-amr"], config["-maxh"], config["-et"])
         run("./%s" % application_name).check_returncode()
 
         operating_directory = "./output-%s/" % application_name
@@ -90,23 +69,7 @@ class TsunamiModel(umbridge.Model):
         return [output] 
 
     def supports_evaluate(self):
-        return True
+        return True 
     
-    def calculate_output_size(self, probe_coordinates, number_of_variables=2):
-        return len(probe_coordinates)*number_of_variables
-    
-# config should only contain options for swe
-config = {
-    "scenario": "Tsunami",
-    "bathymetry_file_path": "./netCDFInputs/artificialtsunami_bathymetry_1000.nc",
-    "displacement_file_path": "./netCDFInputs/artificialtsunami_displ_1000.nc",
-    "end_time": 0.1,
-    "amr": 0,
-    "solver": "FVRusanovGlobalAdaptive",
-    "patch_size": 32,
-    "max_cell_size": 0.1,
-    "probe_coordinates": ["[5,5]", "[7,3]"] # don't question it, has to be this way
-}
 model = TsunamiModel()
-model.__call__([[2000, 2000]],config)
-#umbridge.serve_models([model], 4242)
+umbridge.serve_models([model], 4242)
