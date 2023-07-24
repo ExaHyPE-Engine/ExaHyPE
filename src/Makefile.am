@@ -1,5 +1,9 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
+# CUDA files require an update of the libraries (or at least trigger a warning)
+# Therefore we will replace default u with U to force an update
+ARFLAGS = crU
+
 #
 # By default, automake does dfs. We need the libs to be built first however.
 # So we add the . explicitly. Please note that it is not enough to add your
@@ -28,6 +32,7 @@ SUBDIRS = . \
 lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a        libTarch_trace.a        libTarch_stats.a \
                 libPeano4Core2d.a libPeano4Core2d_debug.a libPeano4Core2d_asserts.a libPeano4Core2d_trace.a libPeano4Core2d_stats.a \
                 libPeano4Core3d.a libPeano4Core3d_debug.a libPeano4Core3d_asserts.a libPeano4Core3d_trace.a libPeano4Core3d_stats.a
+
 
 libTarch_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE)
 libTarch_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE)
