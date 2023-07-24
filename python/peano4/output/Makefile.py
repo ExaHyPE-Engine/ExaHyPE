@@ -369,7 +369,7 @@ did search for a file """
                 "FC",
                 "CXXFLAGS",
                 "LDFLAGS",
-                "LIBS"
+                "LIBS",
             ]
 
             for line in input:

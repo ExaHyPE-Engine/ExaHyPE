@@ -5,7 +5,7 @@ UnitTestsSources = main.cpp
 UnitTests2d_SOURCES   = $(UnitTestsSources)
 UnitTests2d_CXXFLAGS  = $(CXXFLAGS_PEANO_2D_DEBUG)
 UnitTests2d_LDFLAGS   = $(LDFLAGS_PEANO_DEBUG) $(LDFLAGS)
-UnitTests2d_LDADD     = $(LDADD_PEANO_2D_DEBUG) $(CUDA_OBJS_DEBUG) $(LDADD_TARCH_DEBUG)
+UnitTests2d_LDADD     = $(LDADD_PEANO_2D_DEBUG) $(LDADD_TARCH_DEBUG)
 
 #if GPUOffloadingOMP
 #UnitTests2d_LDADD     += $(top_builddir)/src/tarch/multicore/omp/libTarch_a-multicore.o
@@ -17,7 +17,7 @@ UnitTests2d_LDADD     = $(LDADD_PEANO_2D_DEBUG) $(CUDA_OBJS_DEBUG) $(LDADD_TARCH
 UnitTests3d_SOURCES   = $(UnitTestsSources)
 UnitTests3d_CXXFLAGS  = $(CXXFLAGS_PEANO_3D_DEBUG)
 UnitTests3d_LDFLAGS   = $(LDFLAGS_PEANO_DEBUG) $(LDFLAGS)
-UnitTests3d_LDADD     = $(LDADD_PEANO_3D_DEBUG) $(CUDA_OBJS_DEBUG) $(LDADD_TARCH_DEBUG)
+UnitTests3d_LDADD     = $(LDADD_PEANO_3D_DEBUG) $(LDADD_TARCH_DEBUG)
 
 #if GPUOffloadingOMP
 #UnitTests3d_LDADD     += $(top_builddir)/src/tarch/multicore/omp/libTarch_a-multicore.o
