@@ -29,9 +29,6 @@ lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a    
                 libPeano4Core2d.a libPeano4Core2d_debug.a libPeano4Core2d_asserts.a libPeano4Core2d_trace.a libPeano4Core2d_stats.a \
                 libPeano4Core3d.a libPeano4Core3d_debug.a libPeano4Core3d_asserts.a libPeano4Core3d_trace.a libPeano4Core3d_stats.a
 
-# CUDA files require an update of the libraries so we will replace default u with U to force an update
-# AR = ar rU
-
 libTarch_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE)
 libTarch_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE)
 libTarch_asserts_a_CXXFLAGS = $(CXXFLAGS_PEANO_2D_ASSERTS)

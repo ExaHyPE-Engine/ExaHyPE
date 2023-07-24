@@ -43,13 +43,6 @@ namespace {
 
   tarch::multicore::orchestration::Strategy* orchestrationStrategy = tarch::multicore::orchestration::
     createDefaultStrategy();
-  // Something like this or returning a pointer an unconcretized autotuner etc.
-  //#ifdef _AUTOTUNING
-  //tarch::multicore::orchestration::
-  //  createDefaultStrategy();
-  //#else
-  //  TRY IT OUT
-  //#endif
 
   tarch::logging::Log _log("tarch::multicore");
 
@@ -157,7 +150,8 @@ bool tarch::multicore::internal::fusePendingTasks(
     auto pp = globalNonblockingTasks.tasks.begin();
     while (
       pp != globalNonblockingTasks.tasks.end() and (*pp)->getTaskType() == myTask->getTaskType()
-      and /*(*pp)->getTaskType() == myTask->canFuse()*/ (*pp)->canFuse() and tasksOfSameType.size() < fuseInstruction.maxTasks - 1
+      and /*(*pp)->getTaskType() == myTask->canFuse()*/ (*pp)->canFuse()
+      and tasksOfSameType.size() < fuseInstruction.maxTasks - 1
     ) {
       tasksOfSameType.push_back(*pp);
       pp = globalNonblockingTasks.tasks.erase(pp);
