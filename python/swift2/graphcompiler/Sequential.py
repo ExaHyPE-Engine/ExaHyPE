@@ -238,6 +238,13 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
             )
 
             if add_additional_dummy_sweep:
+              if verbose:
+                print(
+                  "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting".format(
+                    len(mesh_traversals),
+                    step.name,
+                    current_species_set.particle_model.name,
+                ))
               new_step = peano4.solversteps.Step(
                 "DummyStep{}{}_sweep{}".format(
                   current_species_set.particle_model.name,
@@ -248,14 +255,6 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
               )
               mesh_traversals.append(new_step)
               alter_particle_position.append(True)
-              if verbose:
-                print(
-                  "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting".format(
-                    len(mesh_traversals),
-                    step.name,
-                    current_species_set.particle_model.name,
-                )
-            )
 
 
     add_dynamic_mesh_refinement_and_particle_resorting(
