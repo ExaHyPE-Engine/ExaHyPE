@@ -274,6 +274,11 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::size() const {
 }
 
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::empty() const {
+  return _memoryPool.container.empty();
+}
+
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticle(DoFType*  particle) {
   _memoryPool.scatter();
 

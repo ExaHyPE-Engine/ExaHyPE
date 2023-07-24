@@ -185,6 +185,7 @@
       Container::const_iterator begin() const;
       Container::const_iterator end() const;
       int size() const;
+      bool empty() const;
 
       /**
        * Add one particle
