@@ -304,6 +304,7 @@ if test "$gpu" == cuda; then
     NVCC="$with_cuda/bin/nvcc"
     CUDA_PATH="$with_cuda"
 
+
     AC_SUBST(CUDA_INCLUDE_FLAGS)
     AC_SUBST(CUDA_LIBS)
     AC_SUBST(NVCC)

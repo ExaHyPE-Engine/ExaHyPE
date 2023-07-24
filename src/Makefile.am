@@ -227,6 +227,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
 # Since currently there is a cuda file only in one directory, and therefore I did not want to
 # bloat the variable names.
 
+if GPUOffloadingCUDA
 # When you want to add new files you can use both relative or absolute pathing, just be sure that the pattern in the rules matches
 CUDA_TARCH_ACCELERATOR_SRC= tarch/accelerator/cuda/TestKernels.cu
 
@@ -258,6 +259,12 @@ $(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG): tarch/accelerator/cuda/libTarch_debug_a-%.
 	@echo "  NVCC     $@"
 	$(NVCC) $(NVCC_FLAGS_DEBUG) -Xcompiler="$(CXXFLAGS_PEANO_2D_DEBUG)" -c $< -o $@ 
 
+libTarch_a_LIBADD         = $(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE)
+libTarch_stats_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_STATS)
+libTarch_trace_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_TRACE)
+libTarch_asserts_a_LIBADD = $(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS)
+libTarch_debug_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG)
+endif
 #
 # Map defined source sequences onto libraries
 #
@@ -267,12 +274,6 @@ libTarch_stats_a_SOURCES   = $(Tarch_SOURCES)
 libTarch_trace_a_SOURCES   = $(Tarch_SOURCES)
 libTarch_asserts_a_SOURCES = $(Tarch_SOURCES)
 libTarch_debug_a_SOURCES   = $(Tarch_SOURCES)
-
-libTarch_a_LIBADD         = $(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE)
-libTarch_stats_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_STATS)
-libTarch_trace_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_TRACE)
-libTarch_asserts_a_LIBADD = $(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS)
-libTarch_debug_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG)
 
 libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
