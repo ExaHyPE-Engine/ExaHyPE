@@ -140,7 +140,14 @@ add the calls
 );
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-to your cell-wise compute kernel.
+to your cell-wise compute kernel. Furthermore, you might want to check if all
+vertices are properly gathered:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+::toolbox::particles::ensureAllParticleListsAreGathered(
+  fineGridVerticesMyParticleSetName
+);
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The actual compute kernels then typically look similar to the following code 
 snippet:
