@@ -1,0 +1,80 @@
+FROM intel/oneapi-hpckit:2023.1.0-devel-ubuntu22.04
+
+ENV FORCE_UNSAFE_CONFIGURE=1 \
+DEBIAN_FRONTEND=noninteractive \
+TZ=Europe/Berlin \
+DISPLAY=host.docker.internal:0.0 \
+OMPI_ALLOW_RUN_AS_ROOT=1 \
+OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 \
+HDF5_LIB_DIR=/usr/local/lib \
+HDF5DIR=/usr/local \
+HDF5_DIR=/usr/local \
+NETCDFHOME=/usr/local \
+NETCDF_PREFIX=/usr/local \
+NETCDF_LIB=/usr/local/lib \
+NETCDF4_ROOT=/usr/local \
+NETCDF4_DIR=/usr/local \
+NETCDF_INC=/usr/local/include \
+PATH=/usr/local/bin:${PATH} \
+LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH} \
+TERM=xterm
+
+COPY install/base.sh /
+RUN set -e && chmod +x /base.sh && ./base.sh && rm ./base.sh
+
+COPY install/oneapi-for-amd-gpus-2023.1.0-rocm-5.4.3-linux.sh /
+RUN set -e && chmod +x /oneapi-for-amd-gpus-2023.1.0-rocm-5.4.3-linux.sh && ./oneapi-for-amd-gpus-2023.1.0-rocm-5.4.3-linux.sh -y && rm -f /oneapi-for-amd-gpus-2023.1.0-rocm-5.4.3-linux.sh
+
+COPY install/oneapi-for-nvidia-gpus-2023.1.0-cuda-12.0-linux.sh /
+RUN set -e && chmod +x /oneapi-for-nvidia-gpus-2023.1.0-cuda-12.0-linux.sh && ./oneapi-for-nvidia-gpus-2023.1.0-cuda-12.0-linux.sh -y && rm -f /oneapi-for-nvidia-gpus-2023.1.0-cuda-12.0-linux.sh
+
+COPY install/hdf5.sh /
+RUN set -e && chmod +x /hdf5.sh && ./hdf5.sh && rm -f /hdf5.sh
+
+COPY install/pnetcdf.sh /
+RUN set -e && chmod +x /pnetcdf.sh && ./pnetcdf.sh && rm -f /pnetcdf.sh
+
+COPY install/netcdf-c.sh /
+RUN set -e && chmod +x /netcdf-c.sh && ./netcdf-c.sh && rm -f /netcdf-c.sh
+
+COPY install/netcdf-cxx.sh /
+RUN set -e && chmod +x /netcdf-cxx.sh && ./netcdf-cxx.sh && rm -f /netcdf-cxx.sh
+
+COPY install/vtk.sh /
+RUN set -e && chmod +x /vtk.sh && ./vtk.sh && rm -f /vtk.sh
+
+ENV CC=icx \
+CXX=icpx \
+FC=ifort \
+I_MPI_CC=icx \
+I_MPI_CXX=icpx \
+I_MPI_FC=ifort \
+MPI_CC=mpicc\
+MPI_CXX=mpicxx \
+MPI_FC="mpif90 -fc=ifort"
+
+COPY install/boost.sh /
+RUN set -e && chmod +x /boost.sh && ./boost.sh && rm -f /boost.sh
+
+COPY install/libxsmm.sh /
+RUN set -e && chmod +x /libxsmm.sh && ./libxsmm.sh && rm -f /libxsmm.sh
+
+COPY install/parmetis.sh /
+RUN set -e && chmod +x /parmetis.sh && ./parmetis.sh && rm -f /parmetis.sh
+
+COPY install/eigen.sh /
+RUN set -e && chmod +x /eigen.sh && ./eigen.sh && rm -f /eigen.sh
+
+COPY install/petsc.sh /
+RUN set -e && chmod +x /petsc.sh && ./petsc.sh && rm -f /petsc.sh
+
+COPY install/apptainer.sh /
+RUN set -e && chmod +x /apptainer.sh && ./apptainer.sh && rm -f /apptainer.sh
+
+COPY install/spack.sh /
+RUN set -e && chmod +x /spack.sh && ./spack.sh && rm -f /spack.sh
+
+COPY offload/check_hip_offload.cpp /
+COPY offload/check_sycl_offload.cpp /
+
+ENTRYPOINT ["/bin/bash", "-l", "-c"]

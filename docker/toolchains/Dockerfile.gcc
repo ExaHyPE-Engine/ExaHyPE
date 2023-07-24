@@ -1,0 +1,83 @@
+FROM nvidia/cuda:11.7.1-devel-ubuntu22.04
+
+ENV FORCE_UNSAFE_CONFIGURE=1 \
+DEBIAN_FRONTEND=noninteractive \
+TZ=Europe/Berlin \
+DISPLAY=host.docker.internal:0.0 \
+OMPI_ALLOW_RUN_AS_ROOT=1 \
+OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 \
+HDF5_LIB_DIR=/usr/local/lib \
+HDF5DIR=/usr/local \
+HDF5_DIR=/usr/local \
+NETCDFHOME=/usr/local \
+NETCDF_PREFIX=/usr/local \
+NETCDF_LIB=/usr/local/lib \
+NETCDF4_ROOT=/usr/local \
+NETCDF4_DIR=/usr/local \
+NETCDF_INC=/usr/local/include \
+PATH=/usr/local/bin:/opt/gcc/bin:${PATH} \
+LD_LIBRARY_PATH=/usr/local/lib:/opt/gcc/lib64:/opt/gcc/nvptx-none/lib:${LD_LIBRARY_PATH} \
+TERM=xterm
+
+COPY install/base.sh /
+RUN set -e && chmod +x /base.sh && ./base.sh && rm ./base.sh
+
+COPY install/gcc.sh /
+RUN set -e && chmod +x /gcc.sh && ./gcc.sh && rm ./gcc.sh
+
+RUN update-alternatives --install /usr/bin/gcc gcc /opt/gcc/bin/gcc 100 && \
+update-alternatives --set gcc /opt/gcc/bin/gcc && \
+update-alternatives --display gcc && \
+update-alternatives --install /usr/bin/g++ g++ /opt/gcc/bin/g++ 100 && \
+update-alternatives --set g++ /opt/gcc/bin/g++ && \
+update-alternatives --display g++ && \
+update-alternatives --install /usr/bin/gfortran gfortran /opt/gcc/bin/gfortran 100 && \
+update-alternatives --set gfortran /opt/gcc/bin/gfortran && \
+update-alternatives --display gfortran
+
+ENV CC=/opt/gcc/bin/gcc \
+CXX=/opt/gcc/bin/g++ \
+FC=/opt/gcc/bin/gfortran
+
+COPY install/hwloc-cuda.sh /
+RUN set -e && chmod +x /hwloc-cuda.sh && bash /hwloc-cuda.sh && rm -f /hwloc-cuda.sh
+
+COPY install/openmpi-cuda.sh /
+RUN set -e && chmod +x /openmpi-cuda.sh && ./openmpi-cuda.sh && rm -f /openmpi-cuda.sh
+
+COPY install/boost.sh /
+RUN set -e && chmod +x /boost.sh && ./boost.sh && rm -f /boost.sh
+
+COPY install/libxsmm.sh /
+RUN set -e && chmod +x /libxsmm.sh && ./libxsmm.sh && rm -f /libxsmm.sh
+
+COPY install/parmetis.sh /
+RUN set -e && chmod +x /parmetis.sh && ./parmetis.sh && rm -f /parmetis.sh
+
+COPY install/hdf5.sh /
+RUN set -e && chmod +x /hdf5.sh && ./hdf5.sh && rm -f /hdf5.sh
+
+COPY install/netcdf-c.sh /
+RUN set -e && chmod +x /netcdf-c.sh && ./netcdf-c.sh && rm -f /netcdf-c.sh
+
+COPY install/netcdf-cxx.sh /
+RUN set -e && chmod +x /netcdf-cxx.sh && ./netcdf-cxx.sh && rm -f /netcdf-cxx.sh
+
+COPY install/eigen.sh /
+RUN set -e && chmod +x /eigen.sh && ./eigen.sh && rm -f /eigen.sh
+
+COPY install/petsc.sh /
+RUN set -e && chmod +x /petsc.sh && ./petsc.sh && rm -f /petsc.sh
+
+COPY install/apptainer.sh /
+RUN set -e && chmod +x /apptainer.sh && ./apptainer.sh && rm -f /apptainer.sh
+
+COPY install/spack.sh /
+RUN set -e && chmod +x /spack.sh && ./spack.sh && rm -f /spack.sh
+
+COPY offload/check_omp_offload.cpp /
+RUN g++ /check_omp_offload.cpp -o /check_omp_offload -fopenmp -foffload=nvptx-none && rm -f /check_omp_offload.cpp
+COPY offload/check_acc_offload.cpp /
+RUN g++ check_acc_offload.cpp -o check_acc_offload -fopenmp -foffload=nvptx-none && rm -f check_acc_offload.cpp
+
+ENTRYPOINT ["/bin/bash", "-l", "-c"]

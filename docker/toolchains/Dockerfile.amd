@@ -1,0 +1,62 @@
+from rocm/dev-ubuntu-22.04
+
+ENV FORCE_UNSAFE_CONFIGURE=1 \
+DEBIAN_FRONTEND=noninteractive \
+TZ=Europe/Berlin \
+DISPLAY=host.docker.internal:0.0 \
+OMPI_ALLOW_RUN_AS_ROOT=1 \
+OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 \
+HDF5_LIB_DIR=/usr/local/lib \
+HDF5DIR=/usr/local \
+HDF5_DIR=/usr/local \
+NETCDFHOME=/usr/local \
+NETCDF_PREFIX=/usr/local \
+NETCDF_LIB=/usr/local/lib \
+NETCDF4_ROOT=/usr/local \
+NETCDF4_DIR=/usr/local \
+NETCDF_INC=/usr/local/include \
+PATH=/usr/local/bin:/opt/rocm/bin:${PATH} \
+LD_LIBRARY_PATH=/usr/local/lib:/opt/rocm/lib:${LD_LIBRARY_PATH} \
+TERM=xterm
+
+COPY install/base.sh /
+RUN set -e && chmod +x /base.sh && ./base.sh && rm ./base.sh
+
+COPY install/vtk.sh /
+RUN set -e && chmod +x /vtk.sh && ./vtk.sh && rm -f /vtk.sh
+
+ENV CC=/opt/rocm/bin/amdclang \
+CXX=/opt/rocm/bin/amdclang++ \
+FC=/opt/rocm/bin/amdflang
+
+COPY install/hwloc-rocm.sh /
+RUN set -e && chmod +x /hwloc-rocm.sh && bash /hwloc-rocm.sh && rm -f /hwloc-rocm.sh
+
+COPY install/openmpi-rocm.sh /
+RUN set -e && chmod +x /openmpi-rocm.sh && ./openmpi-rocm.sh && rm -f /openmpi-rocm.sh
+
+COPY install/boost.sh /
+RUN set -e && chmod +x /boost.sh && ./boost.sh && rm -f /boost.sh
+
+COPY install/libxsmm.sh /
+RUN set -e && chmod +x /libxsmm.sh && ./libxsmm.sh && rm -f /libxsmm.sh
+
+COPY install/parmetis.sh /
+RUN set -e && chmod +x /parmetis.sh && ./parmetis.sh && rm -f /parmetis.sh
+
+COPY install/pnetcdf.sh /
+RUN set -e && chmod +x /pnetcdf.sh && ./pnetcdf.sh && rm -f /pnetcdf.sh
+
+COPY install/eigen.sh /
+RUN set -e && chmod +x /eigen.sh && ./eigen.sh && rm -f /eigen.sh
+
+COPY install/petsc.sh /
+RUN set -e && chmod +x /petsc.sh && ./petsc.sh && rm -f /petsc.sh
+
+COPY install/apptainer.sh /
+RUN set -e && chmod +x /apptainer.sh && ./apptainer.sh && rm -f /apptainer.sh
+
+COPY install/spack.sh /
+RUN set -e && chmod +x /spack.sh && ./spack.sh && rm -f /spack.sh
+
+ENTRYPOINT ["/bin/bash", "-l", "-c"]

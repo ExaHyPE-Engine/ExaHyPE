@@ -1,0 +1,76 @@
+FROM nvidia/cuda:11.7.1-devel-ubuntu22.04
+
+ENV FORCE_UNSAFE_CONFIGURE=1 \
+DEBIAN_FRONTEND=noninteractive \
+TZ=Europe/Berlin \
+DISPLAY=host.docker.internal:0.0 \
+OMPI_ALLOW_RUN_AS_ROOT=1 \
+OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 \
+HDF5_LIB_DIR=/usr/local/lib \
+HDF5DIR=/usr/local \
+HDF5_DIR=/usr/local \
+NETCDFHOME=/usr/local \
+NETCDF_PREFIX=/usr/local \
+NETCDF_LIB=/usr/local/lib \
+NETCDF4_ROOT=/usr/local \
+NETCDF4_DIR=/usr/local \
+NETCDF_INC=/usr/local/include \
+PATH=/usr/local/bin:/opt/llvm/bin:${PATH} \
+LD_LIBRARY_PATH=/usr/local/lib:/opt/llvm/lib:${LD_LIBRARY_PATH} \
+TERM=xterm
+
+COPY install/base.sh /
+RUN set -e && chmod +x /base.sh && ./base.sh && rm ./base.sh
+
+COPY install/vtk.sh /
+RUN set -e && chmod +x /vtk.sh && ./vtk.sh && rm -f /vtk.sh
+
+COPY install/llvm.sh /
+RUN set -e && chmod +x /llvm.sh && ./llvm.sh && rm ./llvm.sh
+
+ENV CC=/opt/llvm/bin/clang \
+CXX=/opt/llvm/bin/clang++ \
+FC=gfortran
+
+COPY install/hwloc-cuda.sh /
+RUN set -e && chmod +x /hwloc-cuda.sh && bash /hwloc-cuda.sh && rm -f /hwloc-cuda.sh
+
+COPY install/openmpi-cuda.sh /
+RUN set -e && chmod +x /openmpi-cuda.sh && ./openmpi-cuda.sh && rm -f /openmpi-cuda.sh
+
+COPY install/boost.sh /
+RUN set -e && chmod +x /boost.sh && ./boost.sh && rm -f /boost.sh
+
+COPY install/libxsmm.sh /
+RUN set -e && chmod +x /libxsmm.sh && ./libxsmm.sh && rm -f /libxsmm.sh
+
+COPY install/parmetis.sh /
+RUN set -e && chmod +x /parmetis.sh && ./parmetis.sh && rm -f /parmetis.sh
+
+COPY install/hdf5.sh /
+RUN set -e && chmod +x /hdf5.sh && ./hdf5.sh && rm -f /hdf5.sh
+
+COPY install/netcdf-c.sh /
+RUN set -e && chmod +x /netcdf-c.sh && ./netcdf-c.sh && rm -f /netcdf-c.sh
+
+COPY install/netcdf-cxx.sh /
+RUN set -e && chmod +x /netcdf-cxx.sh && ./netcdf-cxx.sh && rm -f /netcdf-cxx.sh
+
+COPY install/eigen.sh /
+RUN set -e && chmod +x /eigen.sh && ./eigen.sh && rm -f /eigen.sh
+
+COPY install/petsc.sh /
+RUN set -e && chmod +x /petsc.sh && ./petsc.sh && rm -f /petsc.sh
+
+COPY install/apptainer.sh /
+RUN set -e && chmod +x /apptainer.sh && ./apptainer.sh && rm -f /apptainer.sh
+
+COPY install/spack.sh /
+RUN set -e && chmod +x /spack.sh && ./spack.sh && rm -f /spack.sh
+
+COPY offload/check_cuda_offload.cu /
+RUN clang++ check_cuda_offload.cu -o check_cuda_offload -L/usr/local/cuda/lib64 -lcuda -lcudart && rm -f check_cuda_offload.cu
+COPY offload/check_omp_offload.cpp /
+RUN clang++ check_omp_offload.cpp -o check_omp_offload -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_70 && rm -f check_omp_offload.cpp
+
+ENTRYPOINT ["/bin/bash", "-l", "-c"]

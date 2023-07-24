@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Check if the script is being executed with root privileges
 if [[ $EUID -ne 0 ]]; then
   echo "This script must be run as root"
@@ -23,7 +25,7 @@ cyan=$(tput setaf 6)
 bold=$(tput bold)
 reset=$(tput sgr0)
 
-declare -a essential_packages=(
+declare -a apt_packages=(
   software-properties-common
   apt-utils
   build-essential
@@ -31,6 +33,7 @@ declare -a essential_packages=(
   wget
   git
   curl
+  ssh
   subversion
   tar
   unzip
@@ -45,9 +48,6 @@ declare -a essential_packages=(
   pkg-config
   tree
   flex
-)
-
-declare -a development_packages=(
   automake
   make
   cmake
@@ -57,9 +57,16 @@ declare -a development_packages=(
   clang-tidy
   cppcheck
   libtool
+  gcovr
   vim
   less
+  meld
+  gedit
   gdb
+  strace
+  perf
+  valgrind
+  unifdef
   ninja-build
   meson
   graphviz
@@ -67,47 +74,47 @@ declare -a development_packages=(
   xorg-dev
   mesa-utils
   mesa-common-dev
-)
-
-declare -a libraries=(
+  freeglut3-dev
   ca-certificates
   libxml2-dev
   libbz2-dev
   libxslt1-dev
   libelf-dev
   libtbb-dev
+  libtbb2
   libsimde-dev
-  libboost-all-dev
+  libcurl4-gnutls-dev
+  libcurl4-openssl-dev
   libgl-dev
   libgl1-mesa-dev
   libglu1-mesa-dev
   libglvnd-core-dev
-  vtk9
-)
-
-declare -a programming_packages=(
+  libyaml-cpp-dev
   nodejs
+  gcc
   g++
   gfortran
+  libgomp1
+  libnuma-dev
+  libnuma1
   python3
   python3-dev
+  python3-venv
   python3-pip
+  python3-paraview
   g++-multilib
   gcc-multilib
-)
-
-declare -a hpc_packages=(
-  openmpi-bin
-  openmpi-common
-  libopenmpi-dev
-  hdf5-tools
-  libhdf5-openmpi-dev
-  netcdf-bin
-  libmetis-dev
-  libparmetis-dev
-)
-
-declare -a latex_packages=(
+  zlib1g
+  zlib1g-dev
+  uidmap
+  squashfs-tools
+  squashfuse
+  fuse2fs
+  fuse-overlayfs
+  fakeroot
+  cryptsetup
+  golang
+  gocryptfs
   texlive
   texlive-base
   texlive-bibtex-extra
@@ -128,16 +135,8 @@ declare -a latex_packages=(
   texlive-pictures
   texlive-pstricks
   texlive-xetex
+  texlive-full
   latexmk
-)
-
-declare -a packages=(
-  "${essential_packages[@]}"
-  "${development_packages[@]}"
-  "${libraries[@]}"
-  "${programming_packages[@]}"
-  "${hpc_packages[@]}"
-  "${latex_packages[@]}"
 )
 
 # Upgrade and install the packages
@@ -158,14 +157,14 @@ install_packages() {
   local package
   for package in "${package_list[@]}"; do
     if dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q '^install ok installed'; then
-      echo "${cyan}Package '$package' already installed, skipping...${reset}"
+      echo "${cyan}Package '$package' is already installed, skipping...${reset}"
       continue
     fi
     if ! apt-cache show "$package" &>/dev/null; then
       echo "${yellow}Package '$package' not found in the repository, skipping...${reset}"
       continue
     fi
-    echo "${green}Installing package '$package'...${reset}"
+    echo "${green}Installing apt package '$package'...${reset}"
     apt-get install -y --no-install-recommends "$package"
     if [ $? -ne 0 ]; then
       echo "${red}Failed to install package '$package'${reset}"
@@ -174,31 +173,7 @@ install_packages() {
   done
 }
 
-install_group() {
-  local group_name=$1
-  local group_packages=("${!2}")
-
-  echo "${bold}${magenta}Installing packages for group '$group_name'...${reset}"
-  install_packages "${group_packages[@]}"
-}
-
-# Essential packages
-install_group "Essential Packages" essential_packages[@]
-
-# Development packages
-install_group "Development Packages" development_packages[@]
-
-# Libraries
-install_group "Libraries" libraries[@]
-
-# Programming packages
-install_group "Programming Packages" programming_packages[@]
-
-# HPC packages
-install_group "HPC Packages" hpc_packages[@]
-
-# LaTeX packages
-install_group "LaTeX Packages" latex_packages[@]
+install_packages "${apt_packages[@]}"
 
 # Clean up the system
 apt-get clean -y
@@ -210,22 +185,28 @@ rm -rf /var/lib/apt/lists/*
 declare -a python_packages=(
   pip
   jinja2
-  numpy
   jsonschema
   jupyterlab
+  numpy
   sympy
   scipy
   matplotlib
   tikzplotlib
+  hpccm
+  black
+  h5py
+  mpmath
+  umbridge
 )
 
 for package in "${python_packages[@]}"; do
   if python3 -c "import $package" > /dev/null 2>&1; then
-    echo "${cyan}Python package $package is already installed${reset}"
+    echo "${cyan}Python package '$package' is already installed, skipping...${reset}"
   else
-    python3 -m pip install "$package"
+    echo "${green}Installing Python package '$package'...${reset}"
+    python3 -m pip install --upgrade "$package"
     if [ $? -ne 0 ]; then
-      echo "${red}Error: Failed to install Python package $package${reset}"
+      echo "${red}Failed to install Python package '$package'${reset}"
       exit 1
     fi
   fi
