@@ -1,0 +1,57 @@
+/**
+
+@page page_toolbox_particles_mesh_traversal Mesh traversal
+
+Peano realises mesh sweeps via tree walkers, i.e. automata which run
+through the tree top down and then bottom up again. Each algorithm step
+equals one complete mesh traversal of all mesh resolutions. Throughout
+this traversal, the automaton triggers events (or observations) that
+are then mapped onto action sets. 
+
+The particle toolbox offers two actions sets, 
+peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists and
+peano4.toolbox.particles.ParticleParticleInteraction_Sets,
+which both assemble sets of particles while they run throug the mesh.
+These particle sets are not persistent, i.e. the marker exclusively 
+builds up pointers to them. The particle remain
+@ref page_toolbox_particles_mesh_storage "tied to the vertices they belong to".
+
+@image html python/peano4/toolbox/particles/dependency_sets.png
+
+Per tree node there are two different particle sets. We explain it by means of
+the light blue cell in the cartoon. Cells of this level hold particles
+whose search radius is stricly smaller or equal to the mesh size.
+
+The set of local particles of a cell are all of these particles whose
+centre is contained within the cell plus a halo of h/2. This is the
+dotted area around the cell. That is, the local set holds also particles
+that are not centred within the cell.
+
+We need the local set to cover an area that is bigger than the actual
+cell as we want to capture all particles of this level that might
+theoretically interact with the particles located within the cell. If
+you want to update particles of a cell, you should thus only update
+particles whose centre is within the cell: Particles belong the the
+local sets of up to @f$ 2^d @f$ surrounding cells, so otherwise might be updated
+multiple times.
+
+The yellow particle on the fine grid in the sketch above is so far away
+from the cell that it does not belong into the set of local particles of
+the highlighted cell.
+
+The set of active particles is the local set plus the active set from
+the father cell in the spacetree. This is a recursive cell. So the set
+of active particles holds all local particles plus all the particles of
+coarser levels which might overlap with a local particle whose centre is
+within the current cell.
+
+The dark blue particles in the sketch is an example of such a particle.
+The yellow particle on the coarser mesh level in constrast is not
+contained within the active set of the blue cell, as it is simply too
+far away - even on the coarser mesh where we again work with a "halo"
+around the coarse cell of @f$ h_{coarse}/2 @f$.
+
+
+
+*/
+ 

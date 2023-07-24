@@ -37,12 +37,46 @@ namespace peano4 {
 
 
 /**
+ * Default stack implementation using std::vector
  * 
  *
  * ## Visibility
  *
  * The fields are protected, as there are subclasses. They usually differ "only"
  * in the way they organise the data exchange between parallel entities.
+ *
+ *
+ * ## Signature of hosted objects
+ *
+ * In principle, all we assume is that the hosted objects work internally like
+ * normal C++ objects with proper move/copy semantics.
+ * However, we expect them to provide one more constructor,
+ * which looks similar to
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~
+ * class MyClass {
+ *   public:
+ *     enum ObjectConstruction {
+ *       NoData
+ *     };
+ *
+ *     MyClass( ObjectConstruction );
+ * };
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * The enum here has no semantics of its own. It is simply there to allow us
+ * to specify a special constructor which should not allocate any data. A
+ * similar pattern is used within Intel's TBB to define special-semantics
+ * constructor.
+ *
+ * If the object backs up some dynamic memory on the heap, the invocation of
+ * this special constructor means that the dynamic memory should not be
+ * allocated. We use this feature in the resize or clone() operations, where
+ * we know that any new entry will be overwritten later on by the assignment
+ * operator. All we do there is to provide space of the objects.
+ *
+ * If your stored class does not manage dynamic memory, the modified
+ * constructor can delegate to the default constructor.
  */
 template <class T>
 class peano4::stacks::STDVectorStack {
@@ -134,7 +168,7 @@ class peano4::stacks::STDVectorStack {
       assertionEquals1( _currentElement, 0, toString() );
       _data.clear();
       _currentElement = data._currentElement;
-      _data.resize(_currentElement);
+      _data.resize(_currentElement, T(T::ObjectConstruction::NoData));
       for (int n = 0; n<_currentElement; n++) {
         _data[n] = data._data[n];
       }
@@ -363,7 +397,7 @@ class peano4::stacks::STDVectorStack {
       _currentElement+=numberOfElements;
 
       if (static_cast<int>(_data.size())<=_currentElement) {
-        _data.resize(_currentElement);
+        _data.resize(_currentElement, T(T::ObjectConstruction::NoData));
         assertion(static_cast<int>(_data.size())>=_currentElement);
       }
 
@@ -425,7 +459,7 @@ class peano4::stacks::STDVectorStack {
       _ioTag  = tag;
       _ioRank = rank;
 
-      _data.resize(numberOfElements);
+      _data.resize(numberOfElements, T(T::ObjectConstruction::NoData));
       _currentElement = numberOfElements;
       assertionEquals( _data.size(), numberOfElements );
 

@@ -69,6 +69,7 @@ Peano4Core_SOURCES = \
   peano4/grid/GridStatistics.cpp \
   peano4/grid/GridTraversalEvent.cpp \
   peano4/grid/GridTraversalEventGenerator.cpp \
+  peano4/grid/LoadStoreComputeFlag.cpp \
   peano4/grid/PeanoCurve.cpp \
   peano4/grid/Spacetree.cpp \
   peano4/grid/TraversalObserver.cpp \

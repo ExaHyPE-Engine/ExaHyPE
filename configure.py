@@ -19,6 +19,7 @@ parser.add_argument('--blockstructured', action='store_true', help='Enable block
 parser.add_argument('--fem', action='store_true', help='Enable finite elements support')
 parser.add_argument('--libxsmm', action='store_true', help='Enable libxsmm support')
 parser.add_argument('--multithreading', choices=['omp', 'tbb', 'sycl', 'cpp'], help='Enable multithreading support')
+parser.add_argument('--mpi', help='Enable MPI support')
 parser.add_argument('--gpu', choices=['omp', 'cuda', 'sycl', 'cpp', 'hip'], help='Enable GPU support')
 parser.add_argument('--with-cuda', type=str, default='/opt/nvidia/hpc_sdk/Linux_x86_64/23.3/cuda', help='Path to CUDA')
 parser.add_argument('--arch', choices=[
@@ -81,6 +82,9 @@ if args.multithreading is not None:
 
 if args.gpu is not None:
   configure_args.append(f'--with-gpu={args.gpu}')
+
+if args.mpi is not None:
+  configure_args.append('--with-mpi="{} {}"'.format(args.mpi, cxxflags))
 
 if args.exahype:
   configure_args.append('--enable-exahype')

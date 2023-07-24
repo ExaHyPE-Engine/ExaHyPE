@@ -62,6 +62,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       GridConstruction,
       GridInitialisation,
       PlottingAfterGridInitialisation,
+      Suspended,
       RungeKuttaSubStep0AfterGridInitialisation,
       Plotting {% for item in range(RK_STEPS) -%}
       ,
@@ -262,9 +263,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual bool mayPlot() const override;
 
+    virtual void suspendSolversForOneGridSweep() override;
+
     /**
-     * This predicate is always true, as we work with a single-sweep
-     * implementation, i.e. each grid sweep realises one time step.
+     * This predicate is true, when we do the first substep of the Runge-Kutta
+     * scheme.
      */
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;

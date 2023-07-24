@@ -68,7 +68,14 @@
   double getMinMeshSize();
   double getMaxMeshSize();
 
+  /**
+   * This routine returns the minimum of the max admissible mesh sizes.
+   */
   double getMaxAdmissibleMeshSize();
+
+  /**
+   * Return max of min admissible mesh sizes.
+   */
   double getMinAdmissibleMeshSize();
 
   void startGridConstructionStep();
@@ -99,6 +106,8 @@
   bool mayPlot();
   bool isFirstGridSweepOfTimeStep();
   bool isLastGridSweepOfTimeStep();
+
+  void suspendSolversForOneGridSweep();
 
 {% for item in NAMESPACE -%}
   }

@@ -1,0 +1,22 @@
+template <typename T>
+void toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
+  const std::list<T*>       activeParticles,
+  const std::vector<int>&   numberOfParticlesPerVertexAdded
+) {
+  typename std::list<T*>::const_iterator iterator = activeParticles.begin();
+
+  for (auto chunkSize: numberOfParticlesPerVertexAdded) {
+    T*  firstParticleOfThisChunk = *iterator;
+    for (int particleInThisChunk=0; particleInThisChunk<chunkSize; particleInThisChunk++) {
+      assertion(iterator != activeParticles.end());
+      void* iteratorsRawPointer = *iterator;
+      void* arrayRawPointer     = firstParticleOfThisChunk + particleInThisChunk;
+      assertionEquals2(
+        iteratorsRawPointer, arrayRawPointer,
+        (*iterator)->toString(),
+        firstParticleOfThisChunk[particleInThisChunk].toString()
+      );
+      iterator++;
+    }
+  }
+}
