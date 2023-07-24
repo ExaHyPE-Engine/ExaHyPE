@@ -9,8 +9,11 @@
 
 namespace toolbox {
   namespace particles {
+    /**
+     * Check if all particles are either gathered or host the empt set
+     */
     template <typename T>
-    void ensureAllParticleListsAreGathered(
+    void ensureAllParticleListsAreGatheredOrEmpty(
       peano4::datamanagement::VertexEnumerator<T> vertices
     );
 

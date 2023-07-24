@@ -144,7 +144,7 @@ to your cell-wise compute kernel. Furthermore, you might want to check if all
 vertices are properly gathered:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-::toolbox::particles::ensureAllParticleListsAreGathered(
+::toolbox::particles::ensureAllParticleListsAreGatheredOrEmpty(
   fineGridVerticesMyParticleSetName
 );
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
