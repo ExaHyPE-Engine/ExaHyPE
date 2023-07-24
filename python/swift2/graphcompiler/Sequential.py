@@ -10,7 +10,8 @@ import swift2
 from enum import Enum
 
 
-from .AMRLogic import add_dynamic_mesh_refinement_and_particle_resorting
+from .AMRLogic import add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption
+from .AMRLogic import add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers
 
 
 class Optimisation(Enum):
@@ -165,6 +166,7 @@ def translate_one_step_of_species_into_mesh_traversal(
 
 
 def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets, 
+                                                                      amr_logic,
                                                                       optimisation: Optimisation,
                                                                       verbose,
                                                                       ):
@@ -203,6 +205,15 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
     will create it, but we assume that it is already out there, so
     we don't have to add it actually to the project.
 
+
+    species_sets: [Species]
+                   
+    amr_logic: functor
+      Use one of the options from AMRLogic.py
+
+    optimisation: Optimisation,
+
+    verbose: {True, False}
 
     """
     mesh_traversals = []
@@ -257,9 +268,11 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
               alter_particle_position.append(True)
 
 
-    add_dynamic_mesh_refinement_and_particle_resorting(
-        mesh_traversals, alter_particle_position, species_sets, verbose
-    )
+    amr_logic( mesh_traversals, 
+               alter_particle_position, 
+               species_sets, 
+               verbose
+               )
 
     if verbose:
         print(
@@ -281,6 +294,10 @@ def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species
     The initialisation always uses sets to construct the active lists. 
     Performance should not be that much of an issue here, and we rather
     minimise the number of mesh traversals and stay generic.
+   
+    species_sets: [Species]
+                         
+    verbose: {True, False}
     
     """
     mesh_traversals = []
@@ -322,9 +339,15 @@ def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species
             )
         )
  
-    add_dynamic_mesh_refinement_and_particle_resorting(
-        mesh_traversals, alter_particle_position, species_sets, verbose
-    )
+
+    if current_species_set.generator.gather_particles:
+        add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers(
+            mesh_traversals, alter_particle_position, species_sets, verbose
+        )
+    else:
+        add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
+            mesh_traversals, alter_particle_position, species_sets, verbose
+        )
 
     if verbose:
         print(
@@ -341,6 +364,7 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec(spe
                                                                              verbose,
                                                                              ):
     return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
+                                                                             amr_logic    = add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption,
                                                                              optimisation = Optimisation.NONE,
                                                                              verbose      = verbose
                                                                              )
@@ -350,7 +374,7 @@ def  serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_du
                                                                                                          verbose,
                                                                                                          ):
      return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
+                                                                              amr_logic    = add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers,
                                                                               optimisation = Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
                                                                               verbose      = verbose
                                                                               )
-        
