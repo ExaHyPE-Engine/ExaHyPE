@@ -489,6 +489,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                        ::swift2::kernels::prepareHydroForceCalculation(localParticles);
                                        """,
             cell_kernel="""
+                                       ::toolbox::particles::ensureAllParticleListsAreGathered(
+                                         fineGridVertices""" + self.name + """Set
+                                       );
                                        ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
                                          activeParticles,
                                          _numberOfActiveParticlesPerVertex
