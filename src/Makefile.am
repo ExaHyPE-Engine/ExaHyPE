@@ -235,26 +235,27 @@ CUDA_TARCH_ACCELERATOR_OBJS_TRACE=  tarch/accelerator/cuda/libTarch_trace_a-Test
 CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS=  tarch/accelerator/cuda/libTarch_asserts_a-TestKernels.o
 CUDA_TARCH_ACCELERATOR_OBJS_DEBUG=  tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
 
+
 # Define the rules per target and directory
 $(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE): tarch/accelerator/cuda/libTarch_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) -arch=$arch -Xcompiler="$(CXXFLAGS_PEANO_2D_RELEASE)" -I$(abs_top_srcdir)/src -cbin=$(CXX) -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_RELEASE) -Xcompiler="$(CXXFLAGS_PEANO_2D_RELEASE)" -c $< -o $@ 
 
 $(CUDA_TARCH_ACCELERATOR_OBJS_STATS): tarch/accelerator/cuda/libTarch_stats_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) -arch=$arch -Xcompiler="$(CXXFLAGS_PEANO_2D_STATS)" -I$(abs_top_srcdir)/src -cbin=$(CXX) -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_STATS) -Xcompiler="$(CXXFLAGS_PEANO_2D_STATS)" -c $< -o $@ 
 
 $(CUDA_TARCH_ACCELERATOR_OBJS_TRACE): tarch/accelerator/cuda/libTarch_trace_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) -arch=$arch -Xcompiler="$(CXXFLAGS_PEANO_2D_TRACE)" -I$(abs_top_srcdir)/src -cbin=$(CXX) -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_TRACE) -Xcompiler="$(CXXFLAGS_PEANO_2D_TRACE)" -c $< -o $@ 
 
 $(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS): tarch/accelerator/cuda/libTarch_asserts_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) -arch=$arch -Xcompiler="$(CXXFLAGS_PEANO_2D_ASSERTS)" -I$(abs_top_srcdir)/src -cbin=$(CXX) -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_ASSERTS) -Xcompiler="$(CXXFLAGS_PEANO_2D_ASSERTS)" -c $< -o $@ 
 
 $(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG): tarch/accelerator/cuda/libTarch_debug_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) -arch=$arch -Xcompiler="$(CXXFLAGS_PEANO_2D_DEBUG)" -I$(abs_top_srcdir)/src -cbin=$(CXX) -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_DEBUG) -Xcompiler="$(CXXFLAGS_PEANO_2D_DEBUG)" -c $< -o $@ 
 
 #
 # Map defined source sequences onto libraries

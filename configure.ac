@@ -266,21 +266,21 @@ if test "$gpu" == cuda; then
     [with_cuda=""],
   )
 
-  AC_ARG_WITH([arch],
+  AC_ARG_WITH([gpu-arch],
     [AS_HELP_STRING([--with-gpu-arch=ARCH], [specify GPU architecture])],
-    [ AC_MSG_CHECKING(for GPU arch)
+    [ AC_MSG_CHECKING([for GPU architecture])
       case "$withval" in
           sm_*)
-            arch="$withval" ;;
+            AC_MSG_RESULT(CUDA GPU architecture is $withval); with_gpu_arch="$withval" ;;
           *)
             AC_MSG_ERROR([Invalid architecture. Option should start with 'sm_'.]) ;;
       esac
     ],
     [
-      AC_MSG_ERROR([Architecture is required. Use --with-gpu-arch=ARCH, where ARCH starts with 'sm_' given $withval.])
+      AC_MSG_ERROR([Architecture is required. Use --with-gpu-arch=ARCH, where ARCH starts with 'sm_' given $withval | $arch.])
     ])
-  GPU_ARCH=$arch
-  AC_SUBST(GPU_ARCH)
+    GPU_ARCH="$with_gpu_arch"
+    AC_SUBST(GPU_ARCH)
 
   # We need to apply further checks on CUDA
   if test -n "$with_cuda"
@@ -323,6 +323,14 @@ if test "$gpu" == cuda; then
   CXXFLAGS_PEANO_3D_ASSERTS=" $CXXFLAGS_PEANO_3D_ASSERTS $CUDA_INCLUDE_FLAGS"
   CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE   $CUDA_INCLUDE_FLAGS"
   CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG   $CUDA_INCLUDE_FLAGS"
+
+  NVCC_FLAGS="-forward-unknown-to-host-compiler --gpu-architecture=$with_gpu_arch -I$srcdir_full_path/src -ccbin=$CXX"
+
+  NVCC_FLAGS_RELEASE="$NVCC_FLAGS -dlto"
+  NVCC_FLAGS_STATS="$NVCC_FLAGS -dlto"
+  NVCC_FLAGS_ASSERTS="$NVCC_FLAGS -G -O0"
+  NVCC_FLAGS_TRACE="$NVCC_FLAGS -g"
+  NVCC_FLAGS_DEBUG="$NVCC_FLAGS -G -O0"
 fi
 
 
@@ -1051,11 +1059,11 @@ AC_SUBST(CXXFLAGS_PEANO_3D_ASSERTS)
 AC_SUBST(CXXFLAGS_PEANO_3D_TRACE)
 AC_SUBST(CXXFLAGS_PEANO_3D_DEBUG)
 
-AC_SUBST(CXXFLAGS_TARCH_RELEASE)
-AC_SUBST(CXXFLAGS_TARCH_STATS)
-AC_SUBST(CXXFLAGS_TARCH_ASSERTS)
-AC_SUBST(CXXFLAGS_TARCH_TRACE)
-AC_SUBST(CXXFLAGS_TARCH_DEBUG)
+AC_SUBST(NVCC_FLAGS_RELEASE)
+AC_SUBST(NVCC_FLAGS_STATS)
+AC_SUBST(NVCC_FLAGS_ASSERTS)
+AC_SUBST(NVCC_FLAGS_TRACE)
+AC_SUBST(NVCC_FLAGS_DEBUG)
 
 AC_SUBST(LDFLAGS_PEANO_RELEASE)
 AC_SUBST(LDFLAGS_PEANO_STATS)
