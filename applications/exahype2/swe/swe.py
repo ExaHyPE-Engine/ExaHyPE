@@ -292,19 +292,24 @@ if args.scenario == "Tsunami":
   if args.guided_amr:
     # Is no file provided?
     if args.gamr_file is None:
-      # Add code for simulating adjoint problem 
+      
+      #########################################
+      # Add adjoint problem simulation        #
+      #########################################
+      
       my_solver.add_user_solver_includes("""
                                          #include \"adjoint/cpp/SWEAdjoint.hpp\"
                                          """)
       
       if args.gamr_area_of_interest is None:
-        raise Exception("No area of interest specified for guided amr!")
+        raise Exception("No file or area of interest specified for guided amr!")
 
       area_of_interest = []
       for coords in args.gamr_area_of_interest:
         area_of_interest.append(parse_coordinate_pair(coords))
 
-      swe_adjoint_parameters = "\"%s/%s-adjoint.nc\"" % (output_path, executable_name) # output file name
+      adjoint_output_path = "\"%s/%s-adjoint.nc\"" % (output_path, executable_name) # output file name
+      swe_adjoint_parameters = adjoint_output_path
       swe_adjoint_parameters += ",\"%s\"" % args.bathymetry_file # bathymetry file
 
       swe_adjoint_parameters += ", %f" % width[0] # width x
@@ -315,7 +320,7 @@ if args.scenario == "Tsunami":
       swe_adjoint_parameters += ", %f" % area_of_interest[0][0]
       swe_adjoint_parameters += ", %f" % area_of_interest[0][1]
       swe_adjoint_parameters += ", %f" % area_of_interest[1][0]
-      swe_adjoint_parameters += ", %f" % area_of_interest[1][1] if area_of_interest[1][1] != float('inf') else ", INFINITY"
+      swe_adjoint_parameters += (", %f" % area_of_interest[1][1]) if area_of_interest[1][1] != float('inf') else ", INFINITY"
 
       swe_adjoint_parameters += ", %f" % args.gamr_start_time # start time
       swe_adjoint_parameters += ", %d" % args.gamr_checkpoints # checkpoints
@@ -326,6 +331,10 @@ if args.scenario == "Tsunami":
       swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_bath
       
       my_solver.add_solver_constants("applications::exahype2::swe::adjoint::SWEAdjoint swe_adjoint = applications::exahype2::swe::adjoint::SWEAdjoint(%s);" % swe_adjoint_parameters)
+
+    #########################################
+    # Add adjoint parser                    #
+    #########################################
     
     my_solver.add_user_solver_includes("""
                                       #include \"parser/AdjointParser.h\"
@@ -334,9 +343,12 @@ if args.scenario == "Tsunami":
     if args.gamr_file is not None:
       adjoint_parser_parameters = "\"%s\"" % args.gamr_file
     else:
-      adjoint_parser_parameters = "\"./%s-adjoint.nc\"" % executable_name
+      adjoint_parser_parameters = adjoint_output_path
     my_solver.add_solver_constants("applications::exahype2::swe::parser::AdjointParser adjoint_parser = applications::exahype2::swe::parser::AdjointParser(%s);" % adjoint_parser_parameters)
 
+  #########################################
+  # Add topology parser                   #
+  #########################################
 
   my_solver.add_user_solver_includes("""
                                      #include \"parser/TopologyParser.h\"
@@ -349,9 +361,12 @@ if args.scenario == "Tsunami":
   topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_x
   topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_y
   topology_parser_parameters += ",\"%s\"" % args.nc_key_displ_displ
+
+  # is the displacement moved for uncertainty quantification?
   if args.uq_displacement_origin is not None:
     displacement_origin_x, displacement_origin_y = parse_coordinate_pair(args.uq_displacement_origin)
-    topology_parser_parameters += ", %f, %f" % (displacement_origin_x, displacement_origin_y)
+    topology_parser_parameters += (", %f" % displacement_origin_x) if displacement_origin_x != float('inf') else ", INFINITY"
+    topology_parser_parameters += (", %f" % displacement_origin_y) if displacement_origin_y != float('inf') else ", INFINITY"
   
   my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser topology_parser = applications::exahype2::swe::parser::TopologyParser(%s);" % topology_parser_parameters)
 
