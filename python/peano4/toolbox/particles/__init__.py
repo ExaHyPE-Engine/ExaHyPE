@@ -28,6 +28,7 @@ from .UpdateParticleGridAssociation_LiftDrop import UpdateParticleGridAssociatio
 
 from .UpdateParallelState           import UpdateParallelState
 
+from .GatherParticlesInMemoryPool   import GatherParticlesInMemoryPool
 
 from .InsertRandomParticlesIntoUnrefinedCells               import InsertRandomParticlesIntoUnrefinedCells
 from .InsertParticlesAlongCartesianLayoutIntoUnrefinedCells import InsertParticlesAlongCartesianLayoutIntoUnrefinedCells
