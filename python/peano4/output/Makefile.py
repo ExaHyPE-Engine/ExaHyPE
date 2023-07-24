@@ -369,13 +369,7 @@ did search for a file """
                 "FC",
                 "CXXFLAGS",
                 "LDFLAGS",
-                "LIBS",
-                "CUDA_OBJS_RELEASE",
-                "CUDA_OBJS_STATS",
-                "CUDA_OBJS_ASSERTS",
-                "CUDA_OBJS_TRACE",
-                "CUDA_OBJS_DEBUG",
-                "CUDA_LIBS",
+                "LIBS"
             ]
 
             for line in input:

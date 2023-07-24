@@ -1,7 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
-ARFLAGS = crU
-
 #
 # By default, automake does dfs. We need the libs to be built first however.
 # So we add the . explicitly. Please note that it is not enough to add your
