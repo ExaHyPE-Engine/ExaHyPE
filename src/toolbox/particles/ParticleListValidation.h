@@ -5,8 +5,17 @@
 #include <list>
 #include <vector>
 
+#include "peano4/datamanagement/VertexEnumerator.h"
+
 namespace toolbox {
   namespace particles {
+    template <typename T>
+    void ensureAllParticleListsAreGathered(
+      peano4::datamanagement::VertexEnumerator<T> vertices
+    );
+
+
+
     /**
      * Validate encoding of particle lists
      *
