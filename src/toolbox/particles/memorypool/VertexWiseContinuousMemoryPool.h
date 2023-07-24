@@ -53,6 +53,11 @@ struct toolbox::particles::memorypool::VertexWiseContinuousMemoryPool {
      */
     void gather();
 
+    /**
+     * Is the vertex data gathered
+     *
+     * This routine returns false if the underlying container is empty.
+     */
     bool isGathered() const;
 
     /**

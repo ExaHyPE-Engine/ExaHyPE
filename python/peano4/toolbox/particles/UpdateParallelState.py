@@ -70,7 +70,6 @@ class UpdateParallelState(ActionSet):
 
     def __init__(self, 
                  particle_set,
-                 invoke_gather=False
                  ):
         super(UpdateParallelState, self).__init__(
             priority=self.DefaultPriority, parallel=False
@@ -79,7 +78,6 @@ class UpdateParallelState(ActionSet):
         self.d = {}
         self.d["PARTICLE"] = particle_set.particle_model.name
         self.d["PARTICLES_CONTAINER"] = particle_set.name
-        self.d["INVOKE_GATHER"]       = invoke_gather
         
 
     __Template_BeginTraversal = jinja2.Template(
@@ -126,9 +124,6 @@ for (int i=0; i<TwoPowerD; i++) {
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
 // run over all adjacent vertices
-{% if INVOKE_GATHER %}
-  fineGridVertex{{PARTICLES_CONTAINER}}.gather();
-{% endif %}
 for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   // data consistency check
   assertion3(
