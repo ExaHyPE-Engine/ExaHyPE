@@ -30,6 +30,10 @@ namespace applications::exahype2::swe::adjoint{
              * @param i_nX number of cells in x-dimension
              * @param i_nY number of cells in y-dimension
              * @param b bathymetry array
+             * @param area_of_interest_coord_0 
+             * @param area_of_interest_coord_1 
+             * @param area_of_interest_coord_2 
+             * @param area_of_interest_coord_3 
              * @param end_time end time of simulation
              * @param start_time start time for temporal region of interest
              * @param flush flush data to disk after |flush| write operations

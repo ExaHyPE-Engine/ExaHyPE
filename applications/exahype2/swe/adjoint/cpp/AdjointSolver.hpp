@@ -3,7 +3,7 @@
 #include <cmath>
 namespace applications::exahype2::swe::adjoint
 {
-    class Adjoint_Solver
+    class AdjointSolver
     {
         public:
             inline static void compute_net_updates(double m_h_l, double m_h_r, double m_hu_l, double m_hu_r, double bat_l, double bat_r, double &h_netup_l,

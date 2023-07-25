@@ -52,7 +52,7 @@ double applications::exahype2::swe::adjoint::DimensionalSplitting::compute_numer
         {
             double max_edge_speed = 0.0;
 
-            applications::exahype2::swe::adjoint::Adjoint_Solver::compute_net_updates(
+            applications::exahype2::swe::adjoint::AdjointSolver::compute_net_updates(
                 h_[(i - 1) * (l_nY_ + 2) + j], h_[i * (l_nY_ + 2) + j],
                 hu_[(i - 1) * (l_nY_ + 2) + j], hu_[i * (l_nY_ + 2) + j],
                 b_[(i - 1) * (l_nY_ + 2) + j], b_[i * (l_nY_ + 2) + j],
@@ -81,7 +81,7 @@ double applications::exahype2::swe::adjoint::DimensionalSplitting::compute_numer
         {
             double max_edge_speed = 0.0;
 
-            applications::exahype2::swe::adjoint::Adjoint_Solver::compute_net_updates(
+            applications::exahype2::swe::adjoint::AdjointSolver::compute_net_updates(
                 h_[i * (l_nY_ + 2) + (j - 1)], h_[i * (l_nY_ + 2) + j],
                 hv_[i * (l_nY_ + 2) + (j - 1)], hv_[i * (l_nY_ + 2) + j],
                 b_[i * (l_nY_ + 2) + (j - 1)], b_[i * (l_nY_ + 2) + j],
