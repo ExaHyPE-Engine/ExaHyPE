@@ -1,5 +1,6 @@
 #pragma once
 #include "cmath"
+#include "tarch/tarch.h"
 
 /**
  * @file kernel_hydro.h
@@ -97,7 +98,7 @@ static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)] __at
  * @param u The ratio of the distance to the smoothing length \f$u = x/h\f$.
  * @param W (return) The value of the kernel function \f$W(x,h)\f$.
  */
-__attribute__((always_inline)) inline static void kernel_eval(double u, double& W) {
+static void kernel_eval(double u, double& W) InlineMethod {
 
   /* Go to the range [0,1[ from [0,H[ */
   const double x = u * kernel_gamma_inv;

@@ -63,8 +63,6 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
     const double h_old_dim           = std::pow(h_old, hydro_dimensions);
     const double h_old_dim_minus_one = std::pow(h_old, hydro_dimensions - 1);
     double       h_new;
-    /* TODO: remove this after debugging */
-    const double h_current = localParticle->getSmoothingLength();
 
     // for now, make sure this fails even without debug mode
     if (localParticle->getWcount() < 1.e-5 * kernel_root) {
@@ -95,16 +93,16 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
       right = std::min(right, h_old);
     }
 
-    assertion4(left < right, left, right, localParticle->toString(), activeParticles.size() );
-
     // Skip if h is already h_max and we don't have enough neighbours
     // Same if we are below h_min
-    if (((h_current >= hydro_h_max) && (f < 0.)) || ((h_current <= hydro_h_min) && (f > 0.))) {
+    if (((h_old >= hydro_h_max) && (f < 0.)) || ((h_old <= hydro_h_min) && (f > 0.))) {
       if (not localParticle->getIsBoundaryParticle()) {
         std::cout << "EARLY EXIT ABCDEF " << localParticle->toString() << std::endl;
       }
       break;
     }
+
+    assertion4((not localParticle->getIsBoundaryParticle()) and (left < right), left, right, localParticle->toString(), activeParticles.size() );
 
     // Normal case: Use Newton-Raphson to get a better value of h
 

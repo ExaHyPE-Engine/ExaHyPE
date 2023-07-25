@@ -262,10 +262,10 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
 
 
 template <typename Particle>
-void swift2::kernels::forceKernelVectorised(
+__attribute__((always_inline)) inline void swift2::kernels::forceKernelVectorised(
   Particle*       __restrict__   localParticle,
   const Particle* __restrict__   activeParticle
-) __attribute__((always_inline)) {
+){
 
   // Grab static parameters
   const int    hydroDimensions = localParticle->getHydroDimensions();
