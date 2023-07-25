@@ -157,6 +157,35 @@ const std::vector<int> {{NAMESPACE | join("::")}}::repositories::convertDofIndex
   return output;
 }
 
+double {{NAMESPACE | join("::")}}::repositories::evalDeriv( const int& dofIndex, const int& dimension, const std::vector<double>& quadPoint ){
+  if (dimension >= Dimensions) throw std::runtime_error("taking derivative in wrong dimension!");
+
+  //convert index to pair of indices
+  const std::vector<int> indices = convertDofIndexToXYCoordinate(dofIndex);
+  double output = 1;
+
+  for (int iter = 0; iter!=indices.size(); iter++){
+    //we want to eval deriv, but only in one dimension
+    output *= (iter == dimension)
+      ? evalDeriv( polyCoeffs[ indices[iter] ], quadPoint[iter] )
+      : evalPoly(  polyCoeffs[ indices[iter] ], quadPoint[iter] );
+  }
+
+  return output;
+}
+
+double {{NAMESPACE | join("::")}}::repositories::evalDeriv( const std::vector<double>& coeffs, const double& quadPoint ){
+  double output = 0;
+  double x      = 1;
+  double derivFactor = 1; //factor to account for falling powers of x
+
+  for (auto iter=coeffs.crbegin()+1; iter!=coeffs.crend(); iter++){
+    output += (*iter) * x * derivFactor;
+    x *= quadPoint; derivFactor++;
+  }
+  return output;
+}
+
 tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::repositories::convertQuadPointToRealLocation(
   const int& quadIndex,
   const tarch::la::Vector<Dimensions,double>& cellCentre,

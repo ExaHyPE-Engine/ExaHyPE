@@ -119,6 +119,27 @@ class {{NAMESPACE | join("::")}}::PetscData{
       VecSetValues( _b, dofs.size(), indices.data(), dofs.data(), ADD_VALUES );
     }
 
+    /*
+    inserting vector of doubles to "u"
+    */
+    template <int cellDofs>
+    void insertX( const tarch::la::Vector<cellDofs,double> dofs, const int& globalIndex ){
+      tarch::la::Vector<cellDofs, int> indices;
+      std::iota( indices.data(), indices.data() + indices.size(), globalIndex );
+
+      /*
+      the params here are, in order of appearance:
+        - _x, our solution vector
+        - the number of entries we want to add
+        - array containing each of the indices we insert into
+        - array containing the data we insert there
+        - insert policy. ADD_VALUES is equivalent to +=
+      */
+      VecSetValues( _x, dofs.size(), indices.data(), dofs.data(), ADD_VALUES );
+    
+    }
+
+
     /**
     * method to insert value and rhs into the _x and _b vectors 
     * respectively. 

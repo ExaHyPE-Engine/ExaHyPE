@@ -109,6 +109,12 @@ namespace {{N}} {
     */
     double evalPoly( const int& index, const std::vector<double>& quadPoint );
 
+    /*
+    need to specify in which dimension we are taking derivative
+    */
+    double evalDeriv( const int& dofIndex, const int& dimension, const std::vector<double>& quadPoint );
+    double evalDeriv( const std::vector<double>& coeffs, const double& quadPoint );
+
     tarch::la::Vector<Dimensions,double> convertQuadPointToRealLocation( 
       const int& quadIndex,
       const tarch::la::Vector<Dimensions,double>& cellCentre,

@@ -577,7 +577,10 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
         for (; p<repositories::quadWeights.size(); p++, w++){
           const std::vector<double> localQuadPoint  = repositories::quadPoints[p];
           const double              localQuadWeight = repositories::quadWeights[w];
-          localMatrix(i,j) += marker.h()[0] * marker.h()[1] * localQuadWeight * repositories::evalPoly( i, localQuadPoint ) * repositories::evalPoly( j, localQuadPoint );
+          double gradDotGrad = repositories::evalDeriv( i, 0, localQuadPoint ) * repositories::evalDeriv( j, 0, localQuadPoint ) 
+          + repositories::evalDeriv( i, 1, localQuadPoint ) * repositories::evalDeriv( j, 1, localQuadPoint );
+          //double gradDotGrad = repositories::evalPoly( i, localQuadPoint ) * repositories::evalPoly( j, localQuadPoint ); //this way is wrong
+          localMatrix(i,j) += marker.h()[0] * marker.h()[1] * localQuadWeight * gradDotGrad;
         }
       }
     }
@@ -602,6 +605,10 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
 
     //do the same for rhs vector
     repositories::instanceOfPetsc.insertRHS( fineGridCell{{SOLVER_NAME}}.getRhs(), globalIndex );
+
+    //insert zeroes into solution vectors
+    repositories::instanceOfPetsc.insertX( fineGridCell{{SOLVER_NAME}}.getValue(), globalIndex );
+
   }
   """
 
@@ -617,7 +624,7 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
     if (not marker.willBeRefined()
         and
         fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
-        ){
+    ){
       //static int calls = 10; calls++;
       //std::cout << fineGridVertex{{SOLVER_NAME}}.getDofIndices() << " " << calls << "\\n";
       //std::cout << fineGridVertex{{SOLVER_NAME}}.toString()      << "\\n\\n";
@@ -648,6 +655,19 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
         }
       }
       
+    }
+
+    else if (not marker.willBeRefined()
+        and
+        fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Dirichlet)
+    {
+      //this time we are on the boundary.
+      //starting point should be be the total number of cell dofs; right now 
+      //we place the constraints into the matrix
+      const int startIndex   = repositories::getTotalCellDofs();
+      const int vertexNumber = fineGridVertex{{SOLVER_NAME}}.getNumber();
+      const int baseIndex  = fineGridVertex{{SOLVER_NAME}}.getDofIndices(0); //we constrain relative to this element
+
     }
   """
 
