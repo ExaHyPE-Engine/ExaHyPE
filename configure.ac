@@ -325,6 +325,7 @@ if test "$gpu" == cuda; then
   CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE   $CUDA_INCLUDE_FLAGS"
   CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG   $CUDA_INCLUDE_FLAGS"
 
+  # TODO: gpu-arch etc. as CXX flags
   NVCC_FLAGS="-forward-unknown-to-host-compiler --gpu-architecture=$with_gpu_arch -I$srcdir_full_path/src -ccbin=$CXX"
 
   NVCC_FLAGS_RELEASE="$NVCC_FLAGS -dlto"

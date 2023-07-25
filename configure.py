@@ -21,7 +21,7 @@ parser.add_argument('--libxsmm', action='store_true', help='Enable libxsmm suppo
 parser.add_argument('--multithreading', choices=['omp', 'tbb', 'sycl', 'cpp'], help='Enable multithreading support')
 parser.add_argument('--mpi', help='Enable MPI support')
 parser.add_argument('--gpu', choices=['omp', 'cuda', 'sycl', 'cpp', 'hip'], help='Enable GPU support')
-parser.add_argument('--with-cuda', type=str, help='Path to CUDA')
+parser.add_argument('--cuda-path', type=str, help='Path to CUDA')
 parser.add_argument('--arch', choices=[
   'gfx906', 'gfx908', 'gfx90a', # gfx906=MI50, gfx908=MI100, gfx90a=MI200
   'cc70', 'cc72', 'cc75', 'cc80', 'cc86', 'cc90',
@@ -66,6 +66,14 @@ if args.gpu == 'omp' and args.toolchain == "gcc":
 if args.gpu == 'sycl' and args.toolchain == "intel":
   cxxflags += ' -fsycl -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
 
+# Take the options out
+if args.gpu == "cuda":
+  if args.cuda_path:
+    configure_args.append(f'--with-cuda={args.cuda_path}')
+
+  if args.arch:
+    configure_args.append(f'--with-gpu-arch={args.arch}')
+
 # Print out the selected compiler, compiler flags, and other options
 print(f'Using C compiler: {args.cc}')
 print(f'Using C++ compiler: {args.cxx} {cxxflags}')
@@ -104,12 +112,6 @@ if args.fem:
   configure_args.append('--enable-finiteelements')
 if args.libxsmm:
   configure_args.append('--with-libxsmm')
-
-if args.with_cuda:
-  configure_args.append(f'--with-cuda={args.with_cuda}')
-
-if args.arch:
-  configure_args.append(f'--with-gpu-arch={args.arch}')
 
 print('Running ./configure ' + ' '.join(configure_args))
 
