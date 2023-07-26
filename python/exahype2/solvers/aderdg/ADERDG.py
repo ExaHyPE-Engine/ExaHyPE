@@ -9,7 +9,9 @@ import exahype2.grid
 import exahype2.solvers.aderdg.actionsets
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 from .PDETerms import PDETerms
-from .kernels import get_face_overlap_merge_implementation
+from .kernels import (get_face_overlap_merge_implementation, create_abstract_solver_user_declarations_for_error_measurement,
+  create_abstract_solver_user_definitions_for_error_measurement, create_finish_time_step_implementation_for_error_measurement,
+  add_final_action_for_error_measurement)
 from .kernelgenerator import generate_aderdg_kernels, Configuration
 
 import os
@@ -164,6 +166,14 @@ class ADERDG(object):
         #determines whether to hold respectively the cells and faces on the stack or heap (with smart pointers)
         self._hold_cell_data_on_heap_with_smart_pointer = False
         self._hold_face_data_on_heap_with_smart_pointer = False
+
+        """
+        if this is turned to true, the solver will provide the user with a function to compute the exact solution
+        and, using this, it will after the last timestep compute the l1, l2 and linf norms of the total error
+        integrated over the entire domain.
+        """
+        self._compute_and_display_solver_error = False
+        self._error_measurement_implementation = PDETerms.None_Implementation
 
         # whether or not to plot information about the grid as well as information about the content of the patches
         self._plot_grid_properties = plot_grid_properties
@@ -1098,7 +1108,11 @@ class ADERDG(object):
         d[
             "ADAPTIVE_PRECISION_IMPLEMENTATION"
         ] = self._precision_criterion_implementation
+        d[
+            "ERROR_MEASUREMENT_IMPLEMENTATION"
+        ] = self._error_measurement_implementation
         d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
+
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
             self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined
         ).render(**d)
@@ -1111,12 +1125,14 @@ class ADERDG(object):
         d["SOLVER_USER_DEFINITIONS"] = jinja2.Template(
             self._solver_user_definitions, undefined=jinja2.DebugUndefined
         ).render(**d)
+
         d["START_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
             self._start_time_step_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
         d["FINISH_TIME_STEP_IMPLEMENTATION"] = jinja2.Template(
             self._finish_time_step_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
+
         d["CONSTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
             self._constructor_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
@@ -1129,6 +1145,15 @@ class ADERDG(object):
         d["ARCHITECTURE_ALIGNMENT"] = Configuration.alignmentPerArchitectures[
             self._architecture
         ]
+
+        if self._compute_and_display_solver_error:
+            d["ABSTRACT_SOLVER_USER_DECLARATIONS"] += create_abstract_solver_user_declarations_for_error_measurement()
+            d["ABSTRACT_SOLVER_USER_DEFINITIONS"]  += jinja2.Template(
+                create_abstract_solver_user_definitions_for_error_measurement(), undefined=jinja2.DebugUndefined
+            ).render(**d)
+            d["FINISH_TIME_STEP_IMPLEMENTATION"] += jinja2.Template(
+                create_finish_time_step_implementation_for_error_measurement(), undefined=jinja2.DebugUndefined
+            ).render(**d)
 
         d["USE_FLUX"] = self._flux_implementation
         d["USE_NCP"] = self._ncp_implementation
@@ -1197,9 +1222,23 @@ class ADERDG(object):
         self.create_data_structures()
         self.create_action_sets()
 
+
+    def add_error_measurement(
+        self,
+        error_measurement_implementation=PDETerms.User_Defined_Implementation
+    ):
+        self._compute_and_display_solver_error = True
+        self._error_measurement_implementation = error_measurement_implementation
+        self._action_set_postprocess_solution = (
+            exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
+        )
+        self._action_set_postprocess_solution._compute_kernel += add_final_action_for_error_measurement()
+        self._action_set_postprocess_solution.priority = 3
+
+
     """
-  Various options that can be specified in order to optimize the generated code for different options.
-  """
+    Various options that can be specified in order to optimize the generated code for different options.
+    """
 
     def add_kernel_optimizations(
         self,
