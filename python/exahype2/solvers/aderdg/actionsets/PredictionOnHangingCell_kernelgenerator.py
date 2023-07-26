@@ -261,7 +261,7 @@ class PredictionOnHangingCell_kernelgenerator(AbstractAderDGActionSet):
           d
         );
         {% else %}
-        generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<double>(
+        generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{CORRECTOR_COMPUTATION_PRECISION}}>(
           repositories::{{SOLVER_INSTANCE}},
           fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value, //FL
           &lFhbnd[2*d*fluxElementsPerFace],            //FR
@@ -311,7 +311,7 @@ class PredictionOnHangingCell_kernelgenerator(AbstractAderDGActionSet):
           d+Dimensions
         );
         {% else %}
-        generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<double>(
+        generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{CORRECTOR_COMPUTATION_PRECISION}}>(
           repositories::{{SOLVER_INSTANCE}},
           &lFhbnd[(2*d+1)*fluxElementsPerFace],//FL
           fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsPerFace,//FR
