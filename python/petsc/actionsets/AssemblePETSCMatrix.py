@@ -666,7 +666,31 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
       //we place the constraints into the matrix
       const int startIndex   = repositories::getTotalCellDofs();
       const int vertexNumber = fineGridVertex{{SOLVER_NAME}}.getNumber();
-      const int baseIndex  = fineGridVertex{{SOLVER_NAME}}.getDofIndices(0); //we constrain relative to this element
+
+      int numberOfNonTrivialEntries = 0;
+      for (int i=0; i<TwoPowerD; i++)
+      {
+        if (fineGridVertex{{SOLVER_NAME}}.getDofIndices(i) != -1) //this element has been set
+          numberOfNonTrivialEntries++;
+      }
+
+      for (int i=0; i<numberOfNonTrivialEntries; i++)
+      {
+        int otherIndex = fineGridVertex{{SOLVER_NAME}}.getDofIndices(i);
+        if (otherIndex != -1)
+        {
+          int rowIndex = startIndex + vertexNumber + i; //how far down we want 
+
+          std::vector<int> rows = { rowIndex };
+          std::vector<int> cols = { otherIndex }; //we want to constraint exactly this element
+          tarch::la::Matrix<1,1,double> vals = {1};
+
+          repositories::instanceOfPetsc.insertLocalMatrix(rows, cols, vals);
+          repositories::instanceOfPetsc.insertLocalMatrix(cols, rows, vals);
+
+
+        }
+      }
 
     }
   """

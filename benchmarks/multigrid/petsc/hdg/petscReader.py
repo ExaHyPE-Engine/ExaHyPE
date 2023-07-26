@@ -64,15 +64,42 @@ def populateMatrix(fName):
       l = f.readline() # read the line
   return output
 
+def populateRHS(fName):
+  dim = getMatDimensions(fName)
+  vec = np.zeros((dim))
+  with open(fName) as f:
+    for _ in range(3): #skip the first two lines
+      l = f.readline()
+  
+    row = 0
+    while l:
+      if l == '\n':
+        break
+      vec[row] = float(l)
+      row += 1
+      l=f.readline()
+  return vec
+
+
+def getRankOfMatrix(mat):
+  return np.linalg.matrix_rank(mat)
 
 if __name__ == "__main__":
 
   #hardcoding file names!
 
-  print(getMatDimensions("mat.xml"))
-  
   dim = getMatDimensions("mat.xml")
   with open("mat.xml") as f:
     for _ in range(5): l = f.readline()
 
   mat = populateMatrix("mat.xml")
+  vec = populateRHS("rhs.xml")
+
+  print(f'shape of this matrix is {mat.shape}')
+  print("getting rank of this matrix...")
+
+  print(f"rank of this matrix is {getRankOfMatrix(mat)}")
+
+  print("getting eigenvalues and vectors")
+  eigs, vecs = np.linalg.eig(mat)
+  print(f'smallest eigenvalue is {eigs[np.argmin(np.abs(eigs))]}')

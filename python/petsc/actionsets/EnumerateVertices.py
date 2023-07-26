@@ -164,13 +164,32 @@ Same as above, but we refer to it as  getVertexLocalToGlobalMap etc
   TemplateEnumerateVertex = """
   if ( 
     not marker.willBeRefined() 
-    and
-    fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
   ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
 
-    fineGridVertex{{SOLVER_NAME}}.setNumber( _localVertexMap.reserveIndex( TwoPowerD - 1 ) ); //we just want to count the number of vertices
+    auto isCorner = [&]( const tarch::la::Vector< Dimensions, double > & vertex ) -> bool{
+      bool xIsOnBoundary = ( vertex[0] < 1E-10 or  vertex[0] > 1 - 1E-10);
+      bool yIsOnBoundary = ( vertex[1] < 1E-10 or  vertex[1] > 1 - 1E-10);
+      return (xIsOnBoundary and yIsOnBoundary);
+    };
+
+    if (fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::DoF)
+      fineGridVertex{{SOLVER_NAME}}.setNumber( _localVertexMap.reserveIndex( TwoPowerD - 1 ) ); //we just want to count the number of vertices
     
+    else if(fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Dirichlet)
+    {
+      if ( isCorner(marker.x()) )
+      {
+        fineGridVertex{{SOLVER_NAME}}.setNumber( _localVertexMap.reserveIndex( 1 ) );
+
+      }
+      else
+      {
+        fineGridVertex{{SOLVER_NAME}}.setNumber( _localVertexMap.reserveIndex( TwoPowerD / 2 ) );
+      }
+
+    }
+
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 
 """

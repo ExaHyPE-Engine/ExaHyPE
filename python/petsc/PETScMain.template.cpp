@@ -204,11 +204,17 @@ void step() {
         {% if Project_Name=="HDG" %}
         // const int totalNumberOfFaceDofs  = repositories::getTotalFaceDofs();
         const int totalNumberOfCellDofs  = repositories::getTotalCellDofs();
-        const int totalNumberVertexDofs  = repositories::getTotalVertexDofs();
+
+        //we added 2**d / 2 constraints for every vertex on the boundary. 
+        //but this overcounts in the corner. we bodge here for 2d only. we should really
+        //count the number of vertex constraints at a later stage (eg when we are totting) up
+        //all the indices
+        static_assert(Dimensions==2);
+        const int totalNumberVertexDofs  = repositories::getTotalVertexDofs(); //THIS ONLY WORKS FOR 2D! MUST TAKE INTO ACCOUNT CORNERS MORE CAREFULLY IN 3D
         const int totalDofs              = totalNumberOfCellDofs;
         // logInfo( "step()", "total no of face dofs=" << totalNumberOfFaceDofs );
         logInfo( "step()", "total no of cell dofs= " << totalNumberOfCellDofs );
-        logInfo( "step()", "total no of vertices * TwoPowerD - 1= " << totalNumberVertexDofs);
+        logInfo( "step()", "total no of vertex constraints = " << totalNumberVertexDofs);
         logInfo( "step()", "initialising petsc matrix with " << totalDofs + totalNumberVertexDofs << " rows" );
         repositories::instanceOfPetsc.initMatrixAndVectors( totalDofs + totalNumberVertexDofs );
 
