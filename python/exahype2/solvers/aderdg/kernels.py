@@ -924,7 +924,7 @@ def create_finish_time_step_implementation_for_error_measurement():
 
     tarch::mpi::Rank::getInstance().allReduce(
         &l1Error,
-        &_error[0],
+        &_errors[0],
         1,
         MPI_DOUBLE,
         MPI_SUM,
@@ -933,7 +933,7 @@ def create_finish_time_step_implementation_for_error_measurement():
 
     tarch::mpi::Rank::getInstance().allReduce(
         &l2Error,
-        &_error[1],
+        &_errors[1],
         1,
         MPI_DOUBLE,
         MPI_SUM,
@@ -942,7 +942,7 @@ def create_finish_time_step_implementation_for_error_measurement():
 
     tarch::mpi::Rank::getInstance().allReduce(
         &linfError,
-        &_error[2],
+        &_errors[2],
         1,
         MPI_DOUBLE,
         MPI_MAX,
