@@ -316,20 +316,23 @@ class ADERDG(object):
 
         #if user has specified that they want the data on the heap
         if self._hold_cell_data_on_heap_with_smart_pointer:
-          self._current_time_step.generator         = peano4.datamodel.PatchToDoubleArrayOnHeap(
+         self._current_time_step.generator         = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+          # self._current_time_step.generator         = peano4.datamodel.PatchToDoubleArrayOnHeap(
               self._current_time_step,
               self._solution_persistent_storage_precision
           )
-        if self._hold_face_data_on_heap_with_smart_pointer:
           # self._current_update.generator            = peano4.datamodel.PatchToDoubleArrayOnHeap(
           #     self._current_update,
           #     self._solution_persistent_storage_precision
           # )
-          self._rhs_estimates_projection.generator  = peano4.datamodel.PatchToDoubleArrayOnHeap(
+        if self._hold_face_data_on_heap_with_smart_pointer:
+          self._rhs_estimates_projection.generator  = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+          # self._rhs_estimates_projection.generator  = peano4.datamodel.PatchToDoubleArrayOnHeap(
               self._rhs_estimates_projection,
               self._corrector_computation_precision
           )
-          self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
+          self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
+          # self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
               self._flux_estimates_projection,
               self._corrector_computation_precision
           )
