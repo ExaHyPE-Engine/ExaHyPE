@@ -15,8 +15,8 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     In all other cases, please extend scenario.py and pde.py, and implement the required given methods.
     """
     @abstractmethod
-    def __init__(self, refinement_tolerance:float):
-        super().__init__()
+    def __init__(self, refinement_tolerance:float, unkowns=3, auxilliary_variables=1):
+        super().__init__(unkowns=unkowns, auxiliary_variables=auxilliary_variables)
         self.definition_of_ncp()
         super().outflow_boundary_conditions()
         self.amr_tol = refinement_tolerance
@@ -26,12 +26,18 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
 
         # NCP [unknowns, dimensions]
         self.ncp[0, 0] = 0.0
-        self.ncp[1, 0] = self.g * self.h * grad_b
+        self.ncp[1, 0] = sympy.Piecewise(
+                                            (self.g * self.h * grad_b, self.h > 0.0),
+                                            (0.0, True)
+                                        )
         self.ncp[2, 0] = 0.0
 
         self.ncp[0, 1] = 0.0
         self.ncp[1, 1] = 0.0
-        self.ncp[2, 1] = self.g * self.h * grad_b
+        self.ncp[2, 1] = sympy.Piecewise(
+                                            (self.g * self.h * grad_b, self.h > 0.0),
+                                            (0.0, True)
+                                        )
         
     def implementation_of_refinement_criterion(self):
         return """
