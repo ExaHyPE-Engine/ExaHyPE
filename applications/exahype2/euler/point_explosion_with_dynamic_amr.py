@@ -28,21 +28,21 @@ class PointExplosionWithDynamicAMR(PointExplosion):
           }
         }
 
-        #if Dimensions == 2
-        const double energy = Q[3];
-        #else
-        const double energy = Q[4];
-        #endif
-
         // This is an example how to implement dynamic AMR, as the
         // AMR instruction depends on the actual solution (which is
         // not directly available throughout the grid construction).
         // If you remove this part, you get static AMR.
         if (tarch::la::greater(t, 0.0)) {
-          if (energy > 0.4) {
+          #if Dimensions == 2
+          const double energy = Q[3];
+          #else
+          const double energy = Q[4];
+          #endif
+
+          if (energy >= 0.1) {
             result = ::exahype2::RefinementCommand::Refine;
           }
-          if (energy < 0.2) {
+          if (energy < 0.1) {
             result = ::exahype2::RefinementCommand::Erase;
           }
         }
