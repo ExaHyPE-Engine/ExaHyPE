@@ -14,7 +14,8 @@ config = {
     "-s": "FVRusanovGlobalAdaptive",
     "-ps": 32,
     "-maxh": 0.1,
-    "-probes": ["[5,5]", "[7,3]"]
+    "-probes": ["[5,5]", "[7,3]"],
+    "--no-dynamic-h": ""
 }
 
 print(model.get_input_sizes())
