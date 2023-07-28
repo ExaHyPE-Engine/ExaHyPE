@@ -87,7 +87,9 @@ parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     ty
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   default=rk_order,           help="Order of time discretisation for Runge-Kutta scheme.")
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   default=dg_order,           help="Order of space discretisation for Discontinuous Galerkin.")
 
-parser.add_argument(            "--make",              dest="use_make",       action="store_true",        default=use_make,           help="Compile the code after generation")
+parser.add_argument(            "--make",                                     action="store_true",                                    help="Compile the code after generation")
+parser.add_argument(            "--no-make",           dest="use_make",       action="store_false",                                   help="Do not compile the code after generation")
+parser.set_defaults(make=True)
 parser.add_argument(            "--executable",        dest="executable",     type=str,                                               help="Specify the executable name. If none is chosen, the name is automatically deduced by some parameters.")
 args = parser.parse_args()
 
@@ -274,7 +276,7 @@ if args.symbolic:
   print("\nPDE is: ")
   print(my_scenario.pde.__str__())
 
-print("Executable is euler-" + str(args.dim) + "d-" + str(args.scenario))
+print("Executable is ", executable_name)
 print("Clean object files via 'make clean'")
 print("Recompile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")

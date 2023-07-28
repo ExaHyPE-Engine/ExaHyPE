@@ -51,7 +51,10 @@ parser.add_argument("-pi",      "--plot-interval",      dest="plot_interval",   
 parser.add_argument("-a",       "--accuracy",           dest="accuracy",          type=float,                   default=accuracy,           help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon (default).")
 parser.add_argument(            "--with-scaling",       dest="with_scaling",      action="store_true",          default=with_scaling,       help="Benchmark kernels according to scaling laws. When switched off, each thread replicates the problem size (off by default).")
 parser.add_argument("-sym",     "--symbolic",           dest="symbolic",          action="store_true",          default=use_symbolic_description, help="Use the symbolic PDE description of the Euler equations.")
-parser.add_argument(            "--make",               dest="use_make",          action="store_true",          default=use_make,           help="Compile the code after generation")
+parser.add_argument(            "--make",                                         action="store_true",                                      help="Compile the code after generation")
+parser.add_argument(            "--no-make",           dest="use_make",           action="store_false",                                     help="Do not compile the code after generation")
+parser.set_defaults(make=True)
+parser.add_argument(            "--executable",        dest="executable",         type=str,                                                 help="Specify the executable name. If none is chosen, the name is automatically deduced by some parameters.")
 args = parser.parse_args()
 
 if args.dim not in [2, 3]:
@@ -71,11 +74,15 @@ if(args.accuracy < 0):
   import numpy
   accuracy = default=numpy.finfo(float).eps
 
+if args.executable:
+  executable_name = args.executable
+else:
+  executable_name = "kernel-benchmarks-fv-rusanov-" + str(args.dim) + "d-patch-size-"+ str(args.patch_size) + "-" + str(args.scenario)
 my_project = exahype2.Project(
   namespace     = ["benchmarks", "exahype2", "kernelbenchmarks"],
   project_name  = "KernelBenchmarksFVRusanov",
   directory     = ".",
-  executable    = "kernel-benchmarks-fv-rusanov-" + str(args.dim) + "d-patch-size-"+ str(args.patch_size) + "-" + str(args.scenario)
+  executable    = executable_name
 )
 
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
@@ -169,7 +176,7 @@ if args.symbolic:
   print("\nPDE is: ")
   print(my_scenario.pde.__str__())
 
-print("Executable is kernel-benchmarks-fv-rusanov-" + str(args.dim) + "d-patch-size-"+ str(args.patch_size) + "-" + str(args.scenario))
+print("Executable is ", executable_name)
 print("Clean object files via 'make clean'")
 print("Recompile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
