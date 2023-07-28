@@ -1,8 +1,7 @@
 
 import peano4
 import exahype2
-import argparse
-import math
+from math import sqrt
 
 import exahype2.solvers.aderdg
 from exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
@@ -11,30 +10,20 @@ from exahype2.solvers.aderdg.SingleSweep import SingleSweep
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 
-parser = argparse.ArgumentParser(description='ExaHyPE 2 - ADER testing script')
-parser.add_argument("-cs", "--cell-size",              dest="h",              type=float, default=0.6, help="Mesh size" )
-parser.add_argument("-d",  "--dim",                    dest="dim",            type=int, default=3, help="Dimensions" )
-args = parser.parse_args()
+dimensions          = 3
+min_level           = 2
+max_depth           = 0
+order               = 3
+e_t                 = 2*sqrt(dimensions) #end_time
 
-dimensions = args.dim
-
-project = exahype2.Project( ["examples", "exahype2", "elastic"], "elastic", ".", executable="ELASTIC"+str(dimensions) + "D" )
-
-#stability condition: CFL for Ader-DG
-# dt <= c*dx / (lambda_max*(2N+1)
-# cflAder = [ 1.0, 0.33, 0.17, 0.1, 0.069, 0.045, 0.038, 0.03, 0.02, 0.015]
-
-unknowns       = {"v": 3, "sigma": 6}
+offset              = [-1.0, -1.0, -1.0][0:dimensions]
+size                = [2.0, 2.0, 2.0][0:dimensions]
+unknowns            = {"v": 3, "sigma": 6}
 auxiliary_variables = {"rho":1, "cp": 1, "cs": 1}
-# e_t = 100*math.sqrt(3) #end_time
-e_t = 2*math.sqrt(3)
-max_h          = args.h
-min_h          = 0.9 * max_h / 3.0
+max_h               = 1.1 * min(size) / (3.0**min_level)
+min_h               = max_h / (3.0**max_depth)
 
-offset  = [-1.0, -1.0, -1.0]
-size    = [2.0, 2.0, 2.0]
-# offset  = [-50.0, -50.0, -50.0]
-# size    = [100.0, 100.0, 100.0]
+project = exahype2.Project( ["examples", "exahype2", "elastic"], "elastic", ".", executable="PlanarElastic_level_"+str(min_level)+"_order_"+str(order) )
 
 theSolver=GlobalAdaptiveTimeStep(
   name="elastic",  order=3,

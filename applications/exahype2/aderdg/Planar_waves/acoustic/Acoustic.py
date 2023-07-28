@@ -11,25 +11,20 @@ from exahype2.solvers.aderdg.ADERDG import ADERDG
 from exahype2.solvers.aderdg.SingleSweep import SingleSweep
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
-dimensions = 3
+dimensions          = 3
+min_level           = 2
+max_depth           = 0
+order               = 3
+e_t                 = 2*sqrt(dimensions) #end_time
 
-project = exahype2.Project( ["exahype2", "acoustic"], ".", executable="Acoustic"+str(dimensions)+"D" )
-
-#stability condition: CFL for Ader-DG
-# dt <= c*dx / (lambda_max*(2N+1)
-# cflAder = [ 1.0, 0.33, 0.17, 0.1, 0.069, 0.045, 0.038, 0.03, 0.02, 0.015]
-# here lambda_max = 100
-# dt <= 0.1 * 0.03 / 700 \approx  0.000004
-# dt <= 0.1 * 0.03 / 1100 \approx  0.0000025
-
-unknowns       = 4
+offset              = [-1.0, -1.0, -1.0][0:dimensions]
+size                = [2.0, 2.0, 2.0][0:dimensions]
+unknowns            = 4
 auxiliary_variables = 0
+max_h               = 1.1 * min(size) / (3.0**min_level)
+min_h               = max_h / (3.0**max_depth)
 
-max_h = 0.6
-min_h = 0.9 * max_h / 3.0
-e_t = 0.1 #2*sqrt(dimensions) #end_time
-
-# timestep = 0.00001
+project = exahype2.Project( ["exahype2", "acoustic"], ".", executable="PlanarAcoustic_level_"+str(min_level)+"_order_"+str(order) )
 
 theSolver=GlobalAdaptiveTimeStep(
   name="acousticSolver",  order=3,
@@ -109,9 +104,6 @@ project.add_solver(theSolver)
 
 
 build_mode = peano4.output.CompileMode.Release
-
-offset = [-1.0, -1.0, -1.0]
-size   = [2.0, 2.0, 2.0]
 
 project.set_global_simulation_parameters(
   dimensions = dimensions,
