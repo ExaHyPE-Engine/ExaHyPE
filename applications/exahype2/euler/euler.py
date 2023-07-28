@@ -7,16 +7,16 @@ import peano4
 import exahype2
 
 dimensions                = 2
-cell_size                 = 0.001
-amr_levels                = 0
+cell_size                 = 0.01
+amr_levels                = 2
 patch_size                = 4
 rk_order                  = 4
 dg_order                  = 2
-end_time                  = 1.0
-#plot_interval             = end_time/100
-plot_interval             = 0
+end_time                  = 3.0
+plot_interval             = end_time/100
+#plot_interval             = 0
 use_make                  = True
-use_enclave_tasking       = True
+use_enclave_tasking       = False
 use_symbolic_description  = False
 output_path               = "solution"
 
@@ -28,7 +28,7 @@ scenarios = [
   "BreakingDam",
   "BreakingDamWithDynamicAMR",
 ]
-scenario = "PointExplosion"
+scenario = "PointExplosionWithDynamicAMR"
 
 fv_rusanov_solvers = {
   #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep, # admissible_time_step_size = min_h/patch_size*0.01
@@ -61,7 +61,7 @@ storage_types = {
   "Heap":exahype2.solvers.fv.Storage.Heap,
   "SmartPointers":exahype2.solvers.fv.Storage.SmartPointers,
 }
-storage_type = "SmartPointers"
+storage_type = "CallStack"
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler Application Script')
 
@@ -88,6 +88,7 @@ parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       ty
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   default=dg_order,           help="Order of space discretisation for Discontinuous Galerkin.")
 
 parser.add_argument(            "--make",              dest="use_make",       action="store_true",        default=use_make,           help="Compile the code after generation")
+parser.add_argument(            "--executable",        dest="executable",     type=str,                                               help="Specify the executable name. If none is chosen, the name is automatically deduced by some parameters.")
 args = parser.parse_args()
 
 if args.dim not in [2, 3]:
@@ -110,11 +111,15 @@ if args.scenario not in scenarios:
     print("Error, scenario must be {} or {}, you supplied {}".format(", ".join(scenarios[:-1]), scenarios[-1], args.scenario))
     sys.exit(1)
 
+if args.executable:
+  executable_name = args.executable
+else:
+  executable_name = "euler-" + str(args.dim) + "d-" + str(args.scenario)
 my_project = exahype2.Project(
   namespace=["applications", "exahype2", "euler"],
   project_name="Euler" + args.scenario,
   directory=".",
-  executable="euler-" + str(args.dim) + "d-" + str(args.scenario)
+  executable=executable_name
 )
 
 solver_type = args.solver
