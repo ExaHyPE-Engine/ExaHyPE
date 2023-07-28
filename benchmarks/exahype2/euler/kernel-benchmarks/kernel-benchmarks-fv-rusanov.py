@@ -7,16 +7,17 @@ sys.path.insert(0, os.path.abspath('../../../../python'))
 import peano4
 import exahype2
 
-dimensions            = 2
-cell_size             = 0.01
-patch_size            = 17
-max_patches           = 1024*2*2*2*2
-end_time              = 3
-output_path           = "solution"
-make                  = True
-with_scaling          = False
-plot_interval         = end_time/100 # Set to 0 to disable I/O
-accuracy              = -1.0 # Set to value <0 to set to machine precision. Set to 0 to disable accuracy checks.
+dimensions                = 2
+cell_size                 = 0.01
+patch_size                = 17
+max_patches               = 1024*2*2*2*2
+end_time                  = 3
+output_path               = "solution"
+use_make                  = True
+with_scaling              = False
+use_symbolic_description  = False
+plot_interval             = end_time/100 # Set to 0 to disable I/O
+accuracy                  = -1.0 # Set to value <0 to set to machine precision. Set to 0 to disable accuracy checks.
 
 scenarios = [
   "PointExplosion",
@@ -48,8 +49,9 @@ parser.add_argument("-mp",      "--max-patches",        dest="max_patches",     
 parser.add_argument("-et",      "--end-time",           dest="end_time",          type=int,                     default=end_time,           help="End time of simulation")
 parser.add_argument("-pi",      "--plot-interval",      dest="plot_interval",     type=float,                   default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
 parser.add_argument("-a",       "--accuracy",           dest="accuracy",          type=float,                   default=accuracy,           help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon (default).")
-parser.add_argument(            "--with-scaling",       dest="with_scaling",      action="store_true",          default=with_scaling,       help="Benchmark kernels according to scaling laws. When switched off, each thread replicates the problem size (off by default)." )
-parser.add_argument(            "--make",               dest="make",              action="store_true",          default=make,               help="Compile the code after generation")
+parser.add_argument(            "--with-scaling",       dest="with_scaling",      action="store_true",          default=with_scaling,       help="Benchmark kernels according to scaling laws. When switched off, each thread replicates the problem size (off by default).")
+parser.add_argument("-sym",     "--symbolic",           dest="symbolic",          action="store_true",          default=use_symbolic_description, help="Use the symbolic PDE description of the Euler equations.")
+parser.add_argument(            "--make",               dest="use_make",          action="store_true",          default=use_make,           help="Compile the code after generation")
 args = parser.parse_args()
 
 if args.dim not in [2, 3]:
@@ -92,22 +94,22 @@ sys.path.append('../../../../tutorials/exahype2/euler')
 sys.path.append('../../../../applications/exahype2/euler')
 if args.scenario == "PointExplosion":
   from point_explosion import PointExplosion
-  my_scenario = PointExplosion(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim)
+  my_scenario = PointExplosion(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
 elif args.scenario == "PointExplosionWithDynamicAMR":
   from point_explosion_with_dynamic_amr import PointExplosionWithDynamicAMR
-  my_scenario = PointExplosionWithDynamicAMR(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim)
+  my_scenario = PointExplosionWithDynamicAMR(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
 elif args.scenario == "GaussianExplosion":
   from gaussian_explosion import GaussianExplosion
-  my_scenario = GaussianExplosion(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim)
+  my_scenario = GaussianExplosion(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
 elif args.scenario == "GaussianExplosionWithDynamicAMR":
   from gaussian_explosion_with_dynamic_amr import GaussianExplosionWithDynamicAMR
-  my_scenario = GaussianExplosionWithDynamicAMR(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim)
+  my_scenario = GaussianExplosionWithDynamicAMR(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
 elif args.scenario == "BreakingDam":
   from breaking_dam import BreakingDam
-  my_scenario = BreakingDam(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim)
+  my_scenario = BreakingDam(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
 elif args.scenario == "BreakingDamWithDynamicAMR":
   from breaking_dam_with_dynamic_amr import BreakingDamWithDynamicAMR
-  my_scenario = BreakingDamWithDynamicAMR(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim)
+  my_scenario = BreakingDamWithDynamicAMR(unknowns=args.dim + 2, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
 
 my_solver.set_implementation(
     initial_conditions    = my_scenario.implementation_of_initial_conditions(),
@@ -118,7 +120,16 @@ my_solver.set_implementation(
     source_term           = my_scenario.implementation_of_sources(),
 )
 
-my_solver.plot_description = my_scenario.unknown_identifier_for_plotter()
+if args.symbolic:
+  my_solver.plot_description = my_scenario.pde.unknown_identifier_for_plotter()
+else:
+  if args.dim == 2:
+    my_solver.plot_description = "rho, u, v, e"
+  else:
+    my_solver.plot_description = "rho, u, v, w, e"
+  my_solver.add_user_solver_includes("""
+#include "../../../../tutorials/exahype2/euler/EulerKernels.h"
+""")
 
 my_project.add_solver(my_solver)
 
@@ -145,7 +156,6 @@ my_project.set_output_path(output_path)
 if not os.path.exists(output_path):
   os.makedirs(output_path)
 
-my_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 my_project.set_Peano4_installation("../../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.output.makefile.add_cpp_file("KernelBenchmarksFVRusanov-main.cpp")
@@ -153,10 +163,12 @@ my_project.constants.export_boolean("WithScaling", args.with_scaling)
 my_project.constants.export_constexpr_with_type("Accuracy", str(accuracy), "double")
 my_project.constants.export_constexpr_with_type("MaxPatches", str(args.max_patches), "int")
 my_project.constants.export_constexpr_with_type("EndTime", str(args.end_time), "int")
-my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
+my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
 
-print("\nPDE is: ")
-print(my_scenario.__str__())
+if args.symbolic:
+  print("\nPDE is: ")
+  print(my_scenario.pde.__str__())
+
 print("Executable is kernel-benchmarks-fv-rusanov-" + str(args.dim) + "d-patch-size-"+ str(args.patch_size) + "-" + str(args.scenario))
 print("Clean object files via 'make clean'")
 print("Recompile the generated code via 'make -j'")
