@@ -19,6 +19,7 @@ parser.add_argument('--exahype', action='store_true', help='Enable ExaHyPE')
 parser.add_argument('--loadbalancing', action='store_true', help='Enable load balancing support')
 parser.add_argument('--blockstructured', action='store_true', help='Enable block structured grid support')
 parser.add_argument('--fem', action='store_true', help='Enable finite elements support')
+parser.add_argument('--petsc', action='store_true', help='Enable PETSc support')
 parser.add_argument('--libxsmm', action='store_true', help='Enable libxsmm support')
 parser.add_argument('--multithreading', choices=['omp', 'tbb', 'sycl', 'cpp'], help='Enable multithreading support')
 parser.add_argument('--mpi', help='Enable MPI support')
@@ -135,6 +136,10 @@ if args.particles:
     configure_args.append('--enable-particles')
 
 if args.fem:
+  configure_args.append('--enable-finiteelements')
+
+if args.petsc:
+  configure_args.append('--with-petsc')
   configure_args.append('--enable-finiteelements')
 
 if args.libxsmm:
