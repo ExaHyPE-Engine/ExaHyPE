@@ -1,12 +1,14 @@
-import subprocess
-import argparse
 import os
+import shlex
+import argparse
+import subprocess
 
 # python3 .continuous_integration/configure.py --exahype --multithreading=tbb --gpu=sycl -t=intel --arch=cc86
 # python3 .continuous_integration/configure.py --exahype --multithreading=omp --gpu=omp -t=nvidia --arch=cc86
 # python3 .continuous_integration/configure.py --exahype --multithreading=omp --gpu=cpp -t=nvidia --arch=cc86
 # python3 .continuous_integration/configure.py --exahype --multithreading=omp --gpu=omp -t=amd --arch=gfx90a
-parser = argparse.ArgumentParser(description='Call GNU Autools ./configure script.')
+parser = argparse.ArgumentParser(description='Configure helper script for GNU autotools and CMake')
+parser.add_argument('--cmake', help='Use CMake')
 parser.add_argument('-t', '--toolchain', choices=['gcc', 'llvm', 'nvidia', 'amd', 'intel'], help='Select toolchain')
 parser.add_argument('--cc', type=str, default=os.environ.get('CC'), help='C compiler to use')
 parser.add_argument('--cxx', type=str, default=os.environ.get('CXX'), help='C++ compiler to use')
@@ -77,43 +79,87 @@ configure_args.append('CXX="{} {}"'.format(args.cxx, cxxflags))
 configure_args.append(f'FC={args.fc}')
 
 if args.multithreading is not None:
-  configure_args.append(f'--with-multithreading={args.multithreading}')
+  if args.cmake:
+    configure_args.append(f'-DWITH_MULTITHREADING={args.multithreading}')
+  else:
+    configure_args.append(f'--with-multithreading={args.multithreading}')
 
 if args.gpu is not None:
-  configure_args.append(f'--with-gpu={args.gpu}')
+  if args.cmake:
+    configure_args.append(f'-DWITH_GPU={args.gpu}')
+  else:
+    configure_args.append(f'--with-gpu={args.gpu}')
 
 if args.mpi is not None:
-  configure_args.append('--with-mpi="{} {}"'.format(args.mpi, cxxflags))
+  if args.cmake:
+    configure_args.append('-DWITH_MPI')
+  else:
+    configure_args.append('--with-mpi="{} {}"'.format(args.mpi, cxxflags))
 
 if args.exahype:
-  configure_args.append('--enable-exahype')
-  configure_args.append('--enable-loadbalancing')
-  configure_args.append('--enable-blockstructured')
-  configure_args.append('--with-libxsmm')
+  if args.cmake:
+    configure_args.append('-DENABLE_EXAHYPE=ON')
+    configure_args.append('-DENABLE_LOADBALANCING=ON')
+    configure_args.append('-DENABLE_BLOCKSTRUCTURED=ON')
+  else:
+    configure_args.append('--enable-exahype')
+    configure_args.append('--enable-loadbalancing')
+    configure_args.append('--enable-blockstructured')
+    configure_args.append('--with-libxsmm')
+
 if args.loadbalancing:
-  configure_args.append('--enable-loadbalancing')
+  if args.cmake:
+    configure_args.append('-DENABLE_LOADBALANCING=ON')
+  else:
+    configure_args.append('--enable-loadbalancing')
+
 if args.blockstructured:
-  configure_args.append('--enable-blockstructured')
+  if args.cmake:
+    configure_args.append('-DENABLE_BLOCKSTRUCTURED=ON')
+  else:
+    configure_args.append('--enable-blockstructured')
+
 if args.swift:
-  configure_args.append('--enable-swift')
-  configure_args.append('--enable-particles')
+  if args.cmake:
+    configure_args.append('-DENABLE_SWIFT=ON')
+    configure_args.append('-DENABLE_PARTICLES=ON')
+  else:
+    configure_args.append('--enable-swift')
+    configure_args.append('--enable-particles')
+
 if args.particles:
-  configure_args.append('--enable-particles')
+  if args.cmake:
+    configure_args.append('-DENABLE_PARTICLES=ON')
+  else:
+    configure_args.append('--enable-particles')
+
 if args.fem:
   configure_args.append('--enable-finiteelements')
+
 if args.libxsmm:
   configure_args.append('--with-libxsmm')
 
-print('Running ./configure ' + ' '.join(configure_args))
+if args.cmake:
+  print('Running cmake .. ' + ' '.join(configure_args))
 
-subprocess.run(['libtoolize'], cwd=os.getcwd())
-subprocess.run(['aclocal'], cwd=os.getcwd())
-subprocess.run(['autoconf'], cwd=os.getcwd())
-subprocess.run(['autoheader'], cwd=os.getcwd())
-subprocess.run(['cp', f'{os.getcwd()}/src/config.h.in', os.getcwd()])
-subprocess.run(['automake', '--add-missing'], cwd=os.getcwd())
+  if not os.path.exists(args.cmake) and not os.path.isdir(args.cmake):
+    subprocess.run('mkdir {}'.format(args.cmake), cwd=os.getcwd(), shell=True)
 
-import shlex
-args_str = ' '.join(configure_args)
-args_list = shlex.split(args_str)
-subprocess.check_call(['./configure'] + args_list, cwd=os.getcwd())
+  os.chdir(args.cmake)
+  args_str = ' '.join(configure_args)
+  args_list = shlex.split(args_str)
+  subprocess.check_call(['cmake', '..'] + args_list, cwd=os.getcwd())
+
+else:
+  print('Running ./configure ' + ' '.join(configure_args))
+
+  subprocess.run(['libtoolize'], cwd=os.getcwd())
+  subprocess.run(['aclocal'], cwd=os.getcwd())
+  subprocess.run(['autoconf'], cwd=os.getcwd())
+  subprocess.run(['autoheader'], cwd=os.getcwd())
+  subprocess.run(['cp', f'{os.getcwd()}/src/config.h.in', os.getcwd()])
+  subprocess.run(['automake', '--add-missing'], cwd=os.getcwd())
+
+  args_str = ' '.join(configure_args)
+  args_list = shlex.split(args_str)
+  subprocess.check_call(['./configure'] + args_list, cwd=os.getcwd())
