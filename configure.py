@@ -31,7 +31,8 @@ parser.add_argument('--arch', choices=[
   help='Select GPU compute capability')
 args = parser.parse_args()
 
-cxxflags = '-std=c++20 -W -Wall -Wextra'
+#cxxflags = '-std=c++20 -W -Wall -Wextra'
+cxxflags = '-std=c++20 -w'
 
 # Merge in any additional flags needed for the selected multithreading backend
 if args.multithreading == 'omp':
