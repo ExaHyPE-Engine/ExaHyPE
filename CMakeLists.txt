@@ -96,6 +96,7 @@ ProcessorCount(AVAILABLE_PROCESSOR_COUNT)
 find_package(Slurm)
 find_package(Threads REQUIRED)
 include(CTest)
+enable_testing()
 # https://stackoverflow.com/questions/31355692/how-do-i-enable-link-time-optimization-lto-with-cmake
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
@@ -392,16 +393,15 @@ if (NOT EXISTS "${CMAKE_BINARY_DIR}/documentation")
 endif()
 
 find_package(Doxygen)
-if (DOXYGEN_FOUND)
+if(DOXYGEN_FOUND)
     set(DOXYGEN ${CMAKE_CURRENT_BINARY_DIR}/documentation/Doxyfile)
 
-    add_custom_target( documentation
+    add_custom_target(documentation
         COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Generating API documentation with Doxygen"
-        VERBATIM )
-endif (DOXYGEN_FOUND)
-
+        VERBATIM)
+endif(DOXYGEN_FOUND)
 
 add_subdirectory(src)
 

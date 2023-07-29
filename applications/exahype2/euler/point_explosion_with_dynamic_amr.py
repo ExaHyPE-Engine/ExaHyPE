@@ -25,10 +25,10 @@ class PointExplosionWithDynamicAMR(PointExplosion):
           const double energy = Q[4];
           #endif
 
-          if (energy >= 0.1) {
+          if (energy >= 0.05) {
             result = ::exahype2::RefinementCommand::Refine;
           }
-          if (energy < 0.1) {
+          if (energy < 0.05) {
             result = ::exahype2::RefinementCommand::Erase;
           }
         }
