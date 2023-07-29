@@ -49,6 +49,7 @@ def generate_aderdg_kernels(
     useGaussLobatto=False,
     useVectPDE=False,
     useLibxsmm=False,
+    useBLIS=False,
     architecture="noarch",
     useCERKGuess=False,
     useSplitCK=False,
@@ -66,6 +67,7 @@ def generate_aderdg_kernels(
         "solverName": solverName,
         "namespace": "generated::kernels::AderDG::" + numerics,
         "useLibxsmm": useLibxsmm,
+        "useBLIS": useBLIS,
         "architecture": architecture,
     }
 

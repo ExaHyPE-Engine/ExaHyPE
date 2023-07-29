@@ -80,6 +80,8 @@ class Configuration:
 #    useLibxsmm = True;
     useLibxsmm = False;
 
+    useBLIS = False;
+
     # set to true to print models runtime
     runtimeDebug = False;
 

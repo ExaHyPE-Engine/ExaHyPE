@@ -150,6 +150,7 @@ class ADERDG(object):
         self._basis = GaussLegendreBasis(order + 1)
         self._use_kernel_generator = True
         self._use_libxsmm = False
+        self._use_BLIS = False
         self._use_vectorized_PDE = False
         self._architecture = "noarch"
         self._use_CERK_Guess = False
@@ -809,6 +810,7 @@ class ADERDG(object):
                 True if self._polynomials is Polynomials.Gauss_Lobatto else False
             ),
             useLibxsmm=self._use_libxsmm,
+            useBLIS=self._use_BLIS,
             useVectPDE=self._use_vectorized_PDE,
             architecture=self._architecture,
             useCERKGuess=self._use_CERK_Guess,
@@ -1207,6 +1209,7 @@ class ADERDG(object):
         polynomials=Polynomials.Gauss_Legendre,
         use_kernel_generator=True,
         use_libxsmm=False,
+        use_BLIS=False,
         predictor_computation_precisions=["double"],
         corrector_computation_precision="double",
         solution_persistent_storage_precision="double",
@@ -1237,6 +1240,7 @@ class ADERDG(object):
 
         self._use_kernel_generator = use_kernel_generator
         self._use_libxsmm = use_libxsmm
+        self._use_BLIS = use_BLIS
 
         precisions = [
             solution_persistent_storage_precision,
