@@ -96,7 +96,7 @@ if args.exahype:
     configure_args.append('-DENABLE_EXAHYPE=ON')
     configure_args.append('-DENABLE_LOADBALANCING=ON')
     configure_args.append('-DENABLE_BLOCKSTRUCTURED=ON')
-    configure_args.append('-WITH_LIBXSMM=ON')
+    configure_args.append('-DWITH_LIBXSMM=ON')
   else:
     configure_args.append('--enable-exahype')
     configure_args.append('--enable-loadbalancing')
