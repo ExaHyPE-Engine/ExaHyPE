@@ -14,20 +14,6 @@ class PointExplosionWithDynamicAMR(PointExplosion):
         return """
         auto result = ::exahype2::RefinementCommand::Keep;
 
-        #if Dimensions==3
-        const tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.5, 0.5};
-        #else
-        const tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.5};
-        #endif
-
-        // Same as for static AMR. This is the initial pattern.
-        if (tarch::la::equals(t, 0.0)) {
-          bool isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < 0.05);
-          if (isInTheCentre) {
-            result = ::exahype2::RefinementCommand::Refine;
-          }
-        }
-
         // This is an example how to implement dynamic AMR, as the
         // AMR instruction depends on the actual solution (which is
         // not directly available throughout the grid construction).
