@@ -32,8 +32,10 @@ parser.add_argument('--arch', choices=[
   help='Select GPU compute capability')
 args = parser.parse_args()
 
+cflags = ''
 #cxxflags = '-std=c++20 -W -Wall -Wextra'
 cxxflags = '-std=c++20 -w'
+fortranflags = ''
 
 # Merge in any additional flags needed for the selected multithreading backend
 if args.multithreading == 'omp':
@@ -69,17 +71,8 @@ if args.gpu == 'omp' and args.toolchain == "gcc":
 if args.gpu == 'sycl' and args.toolchain == "intel":
   cxxflags += ' -fsycl -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
 
-# Print out the selected compiler, compiler flags, and other options
-print(f'Using C compiler: {args.cc}')
-print(f'Using C++ compiler: {args.cxx} {cxxflags}')
-print(f'Using Fortran compiler: {args.fc}')
-
 # Call the ./configure script with the specified arguments
 configure_args = []
-configure_args.append(f'CC={args.cc}')
-configure_args.append('CXX="{} {}"'.format(args.cxx, cxxflags))
-configure_args.append(f'FC={args.fc}')
-
 if args.multithreading is not None:
   if args.cmake:
     configure_args.append(f'-DWITH_MULTITHREADING={args.multithreading}')
@@ -103,6 +96,7 @@ if args.exahype:
     configure_args.append('-DENABLE_EXAHYPE=ON')
     configure_args.append('-DENABLE_LOADBALANCING=ON')
     configure_args.append('-DENABLE_BLOCKSTRUCTURED=ON')
+    configure_args.append('-WITH_LIBXSMM=ON')
   else:
     configure_args.append('--enable-exahype')
     configure_args.append('--enable-loadbalancing')
@@ -136,17 +130,40 @@ if args.particles:
     configure_args.append('--enable-particles')
 
 if args.fem:
-  configure_args.append('--enable-finiteelements')
+  if args.cmake:
+    configure_args.append('-DENABLE_FINITEELEMENTS=ON')
+  else:
+    configure_args.append('--enable-finiteelements')
 
 if args.petsc:
-  configure_args.append('--with-petsc')
-  configure_args.append('--enable-finiteelements')
+  if args.cmake:
+    configure_args.append('-DWITH_PETSC=ON')
+    configure_args.append('-DENABLE_FINITEELEMENTS=ON')
+  else:
+    configure_args.append('--with-petsc')
+    configure_args.append('--enable-finiteelements')
 
 if args.libxsmm:
-  configure_args.append('--with-libxsmm')
+  if args.cmake:
+    configure_args.append('-WITH_LIBXSMM=ON')
+  else:
+    configure_args.append('--with-libxsmm')
 
 if args.cmake:
-  print('Running cmake .. ' + ' '.join(configure_args))
+  # Prepare the environment variables. We don't need any compiler flags here as CMake handles those.
+  env_vars = {
+      "C": "{}".format(args.cc),
+      "CXX": "{}".format(args.cxx),
+      "FC": "{}".format(args.fc),
+  }
+
+  # Create a string to display environment variables like in a terminal
+  env_vars_str = ' '.join(f'{key}="{value}"' for key, value in env_vars.items())
+  print(f"Running: {env_vars_str} cmake .. {' '.join(configure_args)}")
+
+  # Update the current environment with the specified variables
+  new_env = os.environ.copy()
+  new_env.update(env_vars)
 
   if not os.path.exists(args.cmake) and not os.path.isdir(args.cmake):
     subprocess.run('mkdir {}'.format(args.cmake), cwd=os.getcwd(), shell=True)
@@ -154,10 +171,23 @@ if args.cmake:
   os.chdir(args.cmake)
   args_str = ' '.join(configure_args)
   args_list = shlex.split(args_str)
-  subprocess.check_call(['cmake', '..'] + args_list, cwd=os.getcwd())
+  subprocess.check_call(['cmake', '..'] + args_list, cwd=os.getcwd(), env=new_env)
 
 else:
-  print('Running ./configure ' + ' '.join(configure_args))
+  # Prepare the environment variables
+  env_vars = {
+      "C": "{} {}".format(args.cc, cflags),
+      "CXX": "{} {}".format(args.cxx, cxxflags),
+      "FC": "{} {}".format(args.fc, fortranflags),
+  }
+
+  # Create a string to display environment variables like in a terminal
+  env_vars_str = ' '.join(f'{key}="{value}"' for key, value in env_vars.items())
+  print(f"Running: {env_vars_str} ./configure {' '.join(configure_args)}")
+
+  # Update the current environment with the specified variables
+  new_env = os.environ.copy()
+  new_env.update(env_vars)
 
   subprocess.run(['libtoolize'], cwd=os.getcwd())
   subprocess.run(['aclocal'], cwd=os.getcwd())
@@ -168,4 +198,5 @@ else:
 
   args_str = ' '.join(configure_args)
   args_list = shlex.split(args_str)
-  subprocess.check_call(['./configure'] + args_list, cwd=os.getcwd())
+
+  subprocess.check_call(['./configure'] + args_list, cwd=os.getcwd(), env=new_env)
