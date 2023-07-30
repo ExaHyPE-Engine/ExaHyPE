@@ -1,0 +1,43 @@
+variables:
+  RUNNER_TAG: "peano_dine_runner" # "peano-dine-runner"
+  AMD_IMAGE_TAG: "amd_latest.sif"
+  GCC_IMAGE_TAG: "gcc_latest.sif"
+  INTEL_IMAGE_TAG: "intel_latest.sif"
+  LLVM_IMAGE_TAG: "llvm_latest.sif"
+  NVIDIA_IMAGE_TAG: "nvidia_latest.sif"
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "p4"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "DG"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "exahype"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "gpus"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "multigrid"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "applications"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "particles"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "ccz4-cpp"'
+
+stages:
+  - build
+  - test
+  - tutorials
+  - applications
+  - benchmarks
+  - formatting
+  - publish
+
+include:
+  - .continuous_integration/pipeline-amd.yml
+  - .continuous_integration/pipeline-gcc.yml
+  - .continuous_integration/pipeline-intel.yml
+  - .continuous_integration/pipeline-llvm.yml
+  - .continuous_integration/pipeline-nvidia.yml
+
+  - .continuous_integration/pipeline-amd-cmake.yml
+  - .continuous_integration/pipeline-gcc-cmake.yml
+  - .continuous_integration/pipeline-intel-cmake.yml
+  - .continuous_integration/pipeline-llvm-cmake.yml
+  - .continuous_integration/pipeline-nvidia-cmake.yml
+
+  - .continuous_integration/pipeline-formatting.yml
+  - .continuous_integration/pipeline-documentation.yml
