@@ -469,20 +469,6 @@ if __name__ == "__main__":
         )
         quit(1)
 
-    # make sure that the branch exists
-    try:
-        git_check_branch_exists_cmd = f"git rev-parse --verify {target_branch}"
-        subprocess.run(
-            git_check_branch_exists_cmd,
-            shell=True,
-            check=True,
-            stdout=subprocess.DEVNULL,
-        )
-    except subprocess.CalledProcessError:
-        print("Something went wrong when trying to check whether branch exists.")
-        print("Command that failed was:", git_check_branch_exists_cmd)
-        sys.exit(1)
-
     # which files are we formatting?
     filelist = []
 
@@ -496,8 +482,8 @@ if __name__ == "__main__":
                 if python_venv_dir in dirs:
                     # If it's present, remove it from the list of subdirectories to skip it in the iteration
                     dirs.remove(python_venv_dir)
-                if 'submodules' in dirs:
-                    dirs.remove('submodules')
+                if "submodules" in dirs:
+                    dirs.remove("submodules")
                 for filename in files:
                     f = os.path.join(root, filename)
                     if not (is_pythonfile(f) or is_cppfile(f)):
@@ -525,6 +511,20 @@ if __name__ == "__main__":
                 filelist.append(f)
 
     else:
+        # make sure that the branch exists
+        try:
+            git_check_branch_exists_cmd = f"git rev-parse --verify {target_branch}"
+            subprocess.run(
+                git_check_branch_exists_cmd,
+                shell=True,
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
+        except subprocess.CalledProcessError:
+            print("Something went wrong when trying to check whether branch exists.")
+            print("Command that failed was:", git_check_branch_exists_cmd)
+            sys.exit(1)
+
         if verbose:
             print("Comparing against", target_branch, "branch")
         # No file list means we're checking for git diffs
