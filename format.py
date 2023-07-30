@@ -488,21 +488,39 @@ if __name__ == "__main__":
 
     # Check first if file list was given by user
     if args.files is not None:
-        if verbose:
-            print("File list provided. Formatting only provided list.")
+        if args.files[0] == peano_root:
+            if verbose:
+                print("Formatting all files in this directory.")
+            for root, dirs, files in os.walk(peano_root):
+                # Check if 'python_venv_dir' is in the list of subdirectories
+                if python_venv_dir in dirs:
+                    # If it's present, remove it from the list of subdirectories to skip it in the iteration
+                    dirs.remove(python_venv_dir)
+                for filename in files:
+                    f = os.path.join(root, filename)
+                    if not (is_pythonfile(f) or is_cppfile(f)):
+                        if verbose:
+                            print(
+                                f"File {f} doesn't look like a python nor cpp file to me, skipping it"
+                            )
+                        continue
+                    filelist.append(f)
+        else:
+            if verbose:
+                print("File list provided. Formatting only provided list.")
 
-        for f in args.files:
-            if not os.path.exists(f):
-                if verbose:
-                    print(f"Didn't find file {f}, ignoring it")
-                continue
-            if not (is_pythonfile(f) or is_cppfile(f)):
-                if verbose:
-                    print(
-                        f"File {f} doesn't look like a python nor cpp file to me, skipping it"
-                    )
-                continue
-            filelist.append(f)
+            for f in args.files:
+                if not os.path.exists(f):
+                    if verbose:
+                        print(f"Didn't find file {f}, ignoring it")
+                    continue
+                if not (is_pythonfile(f) or is_cppfile(f)):
+                    if verbose:
+                        print(
+                            f"File {f} doesn't look like a python nor cpp file to me, skipping it"
+                        )
+                    continue
+                filelist.append(f)
 
     else:
         if verbose:
