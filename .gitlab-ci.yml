@@ -1,5 +1,5 @@
 variables:
-  RUNNER_TAG: "peano_dine_runner" # "peano-dine-runner"
+  RUNNER_TAG: "peano-dine-runner"
   AMD_IMAGE_TAG: "amd_latest.sif"
   GCC_IMAGE_TAG: "gcc_latest.sif"
   INTEL_IMAGE_TAG: "intel_latest.sif"
