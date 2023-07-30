@@ -6,7 +6,7 @@ import argparse
 import subprocess
 
 # Some repository setup.
-peano_repo_rootdir_name = "Peano"
+peano_repo_rootdir = "."
 python_venv_dir = ".formatting_python_env"
 
 # These can be overwritten by optional cmdline arg
@@ -21,32 +21,6 @@ clang_version = "16.0.5"
 verbose = True  # will be overwritten by arg parser
 black_checked = False
 clang_checked = False
-
-
-def find_peano_root_dir():
-    """
-    Starting from current working directory, go up the directory
-    tree until you find the Peano root directory and return that
-    path
-    """
-
-    current_dir = os.getcwd()
-    peano_root = None
-
-    while current_dir != os.sep:  # until we reach root
-        if os.path.basename(current_dir) == peano_repo_rootdir_name:
-            peano_root = current_dir
-            break
-
-        current_dir = os.path.dirname(current_dir)
-
-    if peano_root is None:
-        raise FileNotFoundError("Couldn't find Peano root directory?")
-
-    if verbose:
-        print("Found Peano root", peano_root)
-
-    return peano_root
 
 
 def get_default_clang_format(peano_root):
@@ -460,7 +434,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
 
 
 if __name__ == "__main__":
-    peano_root = find_peano_root_dir()
+    peano_root = peano_repo_rootdir
     clang_format_file = get_default_clang_format(peano_root)
 
     parser = setup_parser(peano_root, clang_format_file)
