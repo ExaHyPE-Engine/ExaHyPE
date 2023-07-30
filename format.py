@@ -365,7 +365,7 @@ def run_python_formatter(filename, dry_run, peano_root):
     # First run in dry-run mode to accurately count whether we
     # need to/do format through the return code.
     if verbose:
-        print(f"checking {filename}", filename)
+        print(f"checking {filename}")
     run = subprocess.run(
         black_cmd + " --check " + filename, stdout=subprocess.DEVNULL, shell=True
     )
