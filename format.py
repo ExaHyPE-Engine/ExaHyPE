@@ -496,6 +496,8 @@ if __name__ == "__main__":
                 if python_venv_dir in dirs:
                     # If it's present, remove it from the list of subdirectories to skip it in the iteration
                     dirs.remove(python_venv_dir)
+                if 'submodules' in dirs:
+                    dirs.remove('submodules')
                 for filename in files:
                     f = os.path.join(root, filename)
                     if not (is_pythonfile(f) or is_cppfile(f)):
