@@ -890,3 +890,118 @@ def create_array_and_convert_from_type(from_name, to_name, type_to, array_size):
   """
     )
     return template
+
+def create_abstract_solver_user_declarations_for_error_measurement():
+    return """
+public:
+  double _errors[3] = {0.0,0.0,0.0};
+  void setError(double* err);
+    """
+
+
+def create_abstract_solver_user_definitions_for_error_measurement():
+    return """
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setError(double* err){
+  tarch::multicore::Lock lock(_semaphore);
+  _errors[0] += err[0];
+  _errors[1] += err[1];
+  _errors[2] = std::max(_errors[2],err[2]);
+}
+"""
+
+def create_finish_time_step_implementation_for_error_measurement():
+    return """
+
+  if ( 
+    _solverState==SolverState::Correction 
+    and _minTimeStampThisTimeStep+getAdmissibleTimeStepSize()>=MinTerminalTime
+  ) {
+
+    #ifdef Parallel
+    double l1Error    = _errors[0];
+    double l2Error    = _errors[1];
+    double linfError  = _errors[2];
+
+    tarch::mpi::Rank::getInstance().allReduce(
+        &l1Error,
+        &_errors[0],
+        1,
+        MPI_DOUBLE,
+        MPI_SUM,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+
+    tarch::mpi::Rank::getInstance().allReduce(
+        &l2Error,
+        &_errors[1],
+        1,
+        MPI_DOUBLE,
+        MPI_SUM,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+
+    tarch::mpi::Rank::getInstance().allReduce(
+        &linfError,
+        &_errors[2],
+        1,
+        MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    #endif
+
+
+    if (
+      tarch::mpi::Rank::getInstance().isGlobalMaster() 
+      and
+      _maxCellH>0.0
+    ) {
+      logInfo( "FinalTimeStep()", "Solver {{SOLVER_NAME}}:" );
+      logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
+      logInfo( "FinalTimeStep()", "l1_error     = " << _errors[0] );
+      logInfo( "FinalTimeStep()", "l2_error     = " << _errors[1] );
+      logInfo( "FinalTimeStep()", "linf_error   = " << _errors[2] );
+      logInfo( "FinalTimeStep(...)", "phase " + toString(_solverState) );
+    }
+
+  }
+"""
+
+def add_final_action_for_error_measurement():
+
+    return """
+  if (
+    fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()+repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize()>=MinTerminalTime
+    and repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
+  ) {
+
+    double errors[3];
+
+    ::exahype2::aderdg::computeCellErrorIntegral(
+      [&](
+        const tarch::la::Vector<Dimensions,double>&   x,
+        const double                                  t,
+        const double                                  dt,
+        double*                                       sol
+      )->void {
+
+        repositories::{{SOLVER_INSTANCE}}.analyticalSolution(x,t,dt,sol);
+
+      },
+      marker.x(),
+      marker.h(),
+      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
+      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize(),
+      repositories::{{SOLVER_INSTANCE}}.Order,
+      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+      repositories::{{SOLVER_INSTANCE}}.NumberOfVariables,
+      repositories::{{SOLVER_INSTANCE}}.NumberOfParameters,
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
+      errors
+    );
+
+    repositories::{{SOLVER_INSTANCE}}.setError(errors);
+
+  }
+"""

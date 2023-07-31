@@ -259,6 +259,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 }
 {% endif %}
 
+{% if ERROR_MEASUREMENT_IMPLEMENTATION!="<empty>" and ERROR_MEASUREMENT_IMPLEMENTATION!="<user-defined>" and ERROR_MEASUREMENT_IMPLEMENTATION!="<none>"%}
+    void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::analyticalSolution(
+      const tarch::la::Vector<Dimensions,double>&   x,
+      const double                                  t,
+      const double                                  dt,
+      double*                                       sol
+    ) {
+  {{ERROR_MEASUREMENT_IMPLEMENTATION}}
+}
+{% endif %}
+
 {% if RIEMANN_SOLVER_IMPLEMENTATION!="<empty>" and RIEMANN_SOLVER_IMPLEMENTATION!="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>"%}
     void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::riemannSolver(
       {{CORRECTOR_COMPUTATION_PRECISION}}* const FL, // FL[{{NUMBER_OF_UNKNOWNS}}

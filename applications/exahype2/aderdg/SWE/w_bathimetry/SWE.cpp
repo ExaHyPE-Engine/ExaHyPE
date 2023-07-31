@@ -70,7 +70,7 @@ double ::examples::exahype2::heat::SWE::maxEigenvalue(
 ) {
 
   double u = Q[s.v + normal] / Q[s.h];
-  double c = std::sqrt(grav * (Q[s.h] + Q[s.b]));
+  double c = std::sqrt(grav * Q[s.h]);
 
   return std::max(std::abs(u + c), std::abs(u - c));
 }
