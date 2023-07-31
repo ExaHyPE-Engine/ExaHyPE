@@ -29,6 +29,13 @@ float one_f = 1.0;
 double zero_d = 0.0;
 double one_d = 1.0;
 {% endif %}
+{% if useEigen %}
+#include <Eigen/Dense>
+{% endif %}
+{% if useLibxsmmJIT %}
+#include <libxsmm.h>
+{{ m.initializeLibxsmmJIT() }}
+{% endif %}
 
 #include "{{solverHeader}}"
 

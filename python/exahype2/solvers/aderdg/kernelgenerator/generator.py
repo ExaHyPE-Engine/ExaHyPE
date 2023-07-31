@@ -50,6 +50,8 @@ def generate_aderdg_kernels(
     useVectPDE=False,
     useLibxsmm=False,
     useBLIS=False,
+    useEigen=False,
+    useLibxsmmJIT=False,
     architecture="noarch",
     useCERKGuess=False,
     useSplitCK=False,
@@ -68,6 +70,8 @@ def generate_aderdg_kernels(
         "namespace": "generated::kernels::AderDG::" + numerics,
         "useLibxsmm": useLibxsmm,
         "useBLIS": useBLIS,
+        "useEigen": useEigen,
+        "useLibxsmmJIT": useLibxsmmJIT,
         "architecture": architecture,
     }
 

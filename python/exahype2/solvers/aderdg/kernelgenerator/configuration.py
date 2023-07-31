@@ -82,6 +82,10 @@ class Configuration:
 
     useBLIS = False;
 
+    useEigen = False;
+
+    useLibxsmmJIT = False;
+
     # set to true to print models runtime
     runtimeDebug = False;
 

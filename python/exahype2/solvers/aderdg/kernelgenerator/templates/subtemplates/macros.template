@@ -82,3 +82,33 @@ std::copy_n({{gradQY}}, {{incr}}, {{gradQ}}+{{1*incr}}); //y
 std::copy_n({{gradQZ}}, {{incr}}, {{gradQ}}+{{2*incr}}); //z
 {% endif %}
 {% endmacro %}
+
+/**
+  initialize libxsmm JIT matrix multiplication kernels
+*/
+#}
+{% macro initializeLibxsmmJIT() %}
+
+/*
+ * Initialize libxsmm JIT matrix multiplication kernels
+ */
+{% for config in matmulConfigs %}
+
+{% set matmulConfig = matmulConfigs[config] %}
+{% set precision = matmulConfig.precision[0] %}
+{% if precision == "DP" %}
+{% set precisionPrefix = "d" %}
+{% elif precision== "SP" %}
+{% set precisionPrefix = "s" %}
+{% endif %}
+libxsmm_blasint lda_{{matmulConfig.baseroutinename}}({{matmulConfig.LDA}});
+libxsmm_blasint ldb_{{matmulConfig.baseroutinename}}({{matmulConfig.LDB}});
+libxsmm_blasint ldc_{{matmulConfig.baseroutinename}}({{matmulConfig.LDC}});
+const int flags_{{matmulConfig.baseroutinename}}({% if matmulConfig.beta == 1%}0{% else %}4{% endif%}); // 0 for beta = 1, 4 for beta = 0
+
+libxsmm_{{precisionPrefix}}mmfunction {{matmulConfig.baseroutinename}} = libxsmm_{{precisionPrefix}}mmdispatch_v2({{matmulConfig.M}}, {{matmulConfig.N}}, {{matmulConfig.K}}, &lda_{{matmulConfig.baseroutinename}}, &ldb_{{matmulConfig.baseroutinename}}, &ldc_{{matmulConfig.baseroutinename}}, &flags_{{matmulConfig.baseroutinename}});
+/* if(!{{matmulConfig.baseroutinename}}){
+    std::cout << "kernel generation failed for {{matmulConfig.baseroutinename}}\n";
+} */
+{% endfor %}
+{% endmacro %}
