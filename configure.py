@@ -87,7 +87,7 @@ if args.gpu is not None:
 
 if args.mpi is not None:
   if args.cmake:
-    configure_args.append('-DWITH_MPI')
+    configure_args.append('-DWITH_MPI=ON')
   else:
     configure_args.append('--with-mpi="{} {}"'.format(args.mpi, cxxflags))
 
