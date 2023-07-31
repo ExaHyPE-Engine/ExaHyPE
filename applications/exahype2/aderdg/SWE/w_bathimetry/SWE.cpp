@@ -90,6 +90,7 @@ void ::examples::exahype2::heat::SWE::flux(
   F[s.h]     = Q[s.v + normal];
   F[s.v + 0] = Q[s.v + normal] * Q[s.v + 0] * ih;
   F[s.v + 1] = Q[s.v + normal] * Q[s.v + 1] * ih;
+  F[s.b]     = 0.0;
 }
 
 void ::examples::exahype2::heat::SWE::nonconservativeProduct(
@@ -114,4 +115,5 @@ void ::examples::exahype2::heat::SWE::nonconservativeProduct(
     BgradQ[s.v + 1] = grav * Q[s.h] * (deltaQ[s.h] + deltaQ[s.b]);
     break;
   }
+  BgradQ[s.b] = 0.0;
 }
