@@ -66,7 +66,7 @@ if args.gpu == 'omp' and args.toolchain == "gcc":
 if args.gpu == 'sycl' and args.toolchain == "intel":
   cxxflags += ' -fsycl -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
 
-# Take the options out
+# TODO: Take the options out, and provide them with the cxxflags
 if args.gpu == "cuda":
   if args.cuda_path:
     configure_args.append(f'--with-cuda={args.cuda_path}')

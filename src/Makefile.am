@@ -237,7 +237,7 @@ CUDA_TARCH_ACCELERATOR_OBJS_TRACE=  tarch/accelerator/cuda/libTarch_trace_a-Test
 CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS=  tarch/accelerator/cuda/libTarch_asserts_a-TestKernels.o
 CUDA_TARCH_ACCELERATOR_OBJS_DEBUG=  tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
 
-
+# TODO: Assure that the rules will compile when every rule will be given with the C++ compiler $(CXX)
 # Define the rules per target and directory
 $(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE): tarch/accelerator/cuda/libTarch_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
