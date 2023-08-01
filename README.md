@@ -73,10 +73,10 @@ docker run -it -v ${PWD}:/work -p 53155:53155 --rm --gpus=all --privileged peano
 When you run the Docker container interactively with `--gpus` using the command above,
 you can quickly check whether GPU offloading is supported on your system by executing `./check_XXX_offload`.
 
-A [Python helper script](./.continuous_integration/configure.py) is available which can help to configure the project. It can be called from the root directory as follows:
+A [Python helper script](./configure.py) is available which can help to configure the project. It can be called as follows:
 
 ```shell
-python3 .continuous_integration/configure.py --help
+python3 configure.py --help
 ```
 
 For CMake, it is recommended to use `ccmake`.

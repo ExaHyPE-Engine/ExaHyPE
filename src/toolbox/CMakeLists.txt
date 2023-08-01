@@ -1,7 +1,7 @@
 if(ENABLE_BLOCKSTRUCTURED)
   add_subdirectory(blockstructured)
 endif()
-if(ENABLE_FEM)
+if(ENABLE_FINITEELEMENTS)
   add_subdirectory(finiteelements)
 endif()
 if(ENABLE_LOADBALANCING)

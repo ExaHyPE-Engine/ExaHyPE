@@ -14,13 +14,13 @@ class BreakingDamWithDynamicAMR(BreakingDam):
         return """
         auto result = ::exahype2::RefinementCommand::Keep;
 
-        #if Dimensions == 2
-        const double energy = Q[3];
-        #else
-        const double energy = Q[4];
-        #endif
-
         if (tarch::la::equals(t, 0.0) and tarch::la::equals(volumeCentre(0), 1.0/3.0)) {
+          #if Dimensions == 2
+          const double energy = Q[3];
+          #else
+          const double energy = Q[4];
+          #endif
+
           result = ::exahype2::RefinementCommand::Refine;
         } else if (t > 0.0 and energy > 0.4) {
           result = ::exahype2::RefinementCommand::Refine;

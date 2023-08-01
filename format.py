@@ -6,7 +6,7 @@ import argparse
 import subprocess
 
 # Some repository setup.
-peano_repo_rootdir_name = "Peano"
+peano_repo_rootdir = "."
 python_venv_dir = ".formatting_python_env"
 
 # These can be overwritten by optional cmdline arg
@@ -21,32 +21,6 @@ clang_version = "16.0.5"
 verbose = True  # will be overwritten by arg parser
 black_checked = False
 clang_checked = False
-
-
-def find_peano_root_dir():
-    """
-    Starting from current working directory, go up the directory
-    tree until you find the Peano root directory and return that
-    path
-    """
-
-    current_dir = os.getcwd()
-    peano_root = None
-
-    while current_dir != os.sep:  # until we reach root
-        if os.path.basename(current_dir) == peano_repo_rootdir_name:
-            peano_root = current_dir
-            break
-
-        current_dir = os.path.dirname(current_dir)
-
-    if peano_root is None:
-        raise FileNotFoundError("Couldn't find Peano root directory?")
-
-    if verbose:
-        print("Found Peano root", peano_root)
-
-    return peano_root
 
 
 def get_default_clang_format(peano_root):
@@ -391,7 +365,7 @@ def run_python_formatter(filename, dry_run, peano_root):
     # First run in dry-run mode to accurately count whether we
     # need to/do format through the return code.
     if verbose:
-        print(f"checking {filename}", filename)
+        print(f"checking {filename}")
     run = subprocess.run(
         black_cmd + " --check " + filename, stdout=subprocess.DEVNULL, shell=True
     )
@@ -460,7 +434,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
 
 
 if __name__ == "__main__":
-    peano_root = find_peano_root_dir()
+    peano_root = peano_repo_rootdir
     clang_format_file = get_default_clang_format(peano_root)
 
     parser = setup_parser(peano_root, clang_format_file)
@@ -495,42 +469,62 @@ if __name__ == "__main__":
         )
         quit(1)
 
-    # make sure that the branch exists
-    try:
-        git_check_branch_exists_cmd = f"git rev-parse --verify {target_branch}"
-        subprocess.run(
-            git_check_branch_exists_cmd,
-            shell=True,
-            check=True,
-            stdout=subprocess.DEVNULL,
-        )
-    except subprocess.CalledProcessError:
-        print("Something went wrong when trying to check whether branch exists.")
-        print("Command that failed was:", git_check_branch_exists_cmd)
-        sys.exit(1)
-
     # which files are we formatting?
     filelist = []
 
     # Check first if file list was given by user
     if args.files is not None:
-        if verbose:
-            print("File list provided. Formatting only provided list.")
+        if args.files[0] == peano_root:
+            if verbose:
+                print("Formatting all files in this directory.")
+            for root, dirs, files in os.walk(peano_root):
+                # Check if 'python_venv_dir' is in the list of subdirectories
+                if python_venv_dir in dirs:
+                    # If it's present, remove it from the list of subdirectories to skip it in the iteration
+                    dirs.remove(python_venv_dir)
+                if "submodules" in dirs:
+                    dirs.remove("submodules")
+                for filename in files:
+                    f = os.path.join(root, filename)
+                    if not (is_pythonfile(f) or is_cppfile(f)):
+                        if verbose:
+                            print(
+                                f"File {f} doesn't look like a python nor cpp file to me, skipping it"
+                            )
+                        continue
+                    filelist.append(f)
+        else:
+            if verbose:
+                print("File list provided. Formatting only provided list.")
 
-        for f in args.files:
-            if not os.path.exists(f):
-                if verbose:
-                    print(f"Didn't find file {f}, ignoring it")
-                continue
-            if not (is_pythonfile(f) or is_cppfile(f)):
-                if verbose:
-                    print(
-                        f"File {f} doesn't look like a python nor cpp file to me, skipping it"
-                    )
-                continue
-            filelist.append(f)
+            for f in args.files:
+                if not os.path.exists(f):
+                    if verbose:
+                        print(f"Didn't find file {f}, ignoring it")
+                    continue
+                if not (is_pythonfile(f) or is_cppfile(f)):
+                    if verbose:
+                        print(
+                            f"File {f} doesn't look like a python nor cpp file to me, skipping it"
+                        )
+                    continue
+                filelist.append(f)
 
     else:
+        # make sure that the branch exists
+        try:
+            git_check_branch_exists_cmd = f"git rev-parse --verify {target_branch}"
+            subprocess.run(
+                git_check_branch_exists_cmd,
+                shell=True,
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
+        except subprocess.CalledProcessError:
+            print("Something went wrong when trying to check whether branch exists.")
+            print("Command that failed was:", git_check_branch_exists_cmd)
+            sys.exit(1)
+
         if verbose:
             print("Comparing against", target_branch, "branch")
         # No file list means we're checking for git diffs

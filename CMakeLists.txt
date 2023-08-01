@@ -96,6 +96,7 @@ ProcessorCount(AVAILABLE_PROCESSOR_COUNT)
 find_package(Slurm)
 find_package(Threads REQUIRED)
 include(CTest)
+enable_testing()
 # https://stackoverflow.com/questions/31355692/how-do-i-enable-link-time-optimization-lto-with-cmake
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
@@ -310,7 +311,7 @@ option(WITH_VTK "Build with VTK support" OFF)
 option(WITH_HDF5 "Build with HDF5 support" OFF)
 option(ENABLE_EXAHYPE "Enable ExaHyPE2" OFF)
 option(ENABLE_SWIFT "Enable Swift2" OFF)
-option(ENABLE_FEM "Enable the finite elements toolbox" OFF)
+option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
 option(ENABLE_MULTIPRECISION "Enable the multi-precision toolbox" OFF)
 option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" OFF)
 option(ENABLE_PARTICLES "Enable the particles toolbox" OFF)
@@ -392,16 +393,15 @@ if (NOT EXISTS "${CMAKE_BINARY_DIR}/documentation")
 endif()
 
 find_package(Doxygen)
-if (DOXYGEN_FOUND)
+if(DOXYGEN_FOUND)
     set(DOXYGEN ${CMAKE_CURRENT_BINARY_DIR}/documentation/Doxyfile)
 
-    add_custom_target( documentation
+    add_custom_target(documentation
         COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Generating API documentation with Doxygen"
-        VERBATIM )
-endif (DOXYGEN_FOUND)
-
+        VERBATIM)
+endif(DOXYGEN_FOUND)
 
 add_subdirectory(src)
 
@@ -419,7 +419,7 @@ display_variable(WITH_LIBXSMM)
 display_variable(WITH_VTK)
 display_variable(WITH_HDF5)
 display_variable(ENABLE_EXAHYPE)
-display_variable(ENABLE_FEM)
+display_variable(ENABLE_FINITEELEMENTS)
 display_variable(ENABLE_MULTIPRECISION)
 display_variable(ENABLE_LOADBALANCING)
 display_variable(ENABLE_PARTICLES)

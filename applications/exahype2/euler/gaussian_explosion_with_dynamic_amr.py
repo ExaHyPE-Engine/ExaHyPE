@@ -27,13 +27,13 @@ class GaussianExplosionWithDynamicAMR(GaussianExplosion):
           }
         }
 
-        #if Dimensions == 2
-        const double energy = Q[3];
-        #else
-        const double energy = Q[4];
-        #endif
-
         if (tarch::la::greater(t, 0.0)) {
+          #if Dimensions == 2
+          const double energy = Q[3];
+          #else
+          const double energy = Q[4];
+          #endif
+
           if (energy > 0.4) {
             result = ::exahype2::RefinementCommand::Refine;
           }
