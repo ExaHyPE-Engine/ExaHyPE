@@ -3,10 +3,6 @@ import shlex
 import argparse
 import subprocess
 
-# python3 .continuous_integration/configure.py --exahype --multithreading=tbb --gpu=sycl -t=intel --arch=cc86
-# python3 .continuous_integration/configure.py --exahype --multithreading=omp --gpu=omp -t=nvidia --arch=cc86
-# python3 .continuous_integration/configure.py --exahype --multithreading=omp --gpu=cpp -t=nvidia --arch=cc86
-# python3 .continuous_integration/configure.py --exahype --multithreading=omp --gpu=omp -t=amd --arch=gfx90a
 parser = argparse.ArgumentParser(description='Configure helper script for GNU autotools and CMake')
 parser.add_argument('--cmake', help='Use CMake')
 parser.add_argument('-t', '--toolchain', choices=['gcc', 'llvm', 'nvidia', 'amd', 'intel'], help='Select toolchain')
@@ -26,7 +22,6 @@ parser.add_argument('--mpi', help='Enable MPI support')
 parser.add_argument('--gpu', choices=['omp', 'cuda', 'sycl', 'cpp', 'hip'], help='Enable GPU support')
 parser.add_argument('--arch', choices=[
   'gfx906', 'gfx908', 'gfx90a', # gfx906=MI50, gfx908=MI100, gfx90a=MI200
-  'cc70', 'cc72', 'cc75', 'cc80', 'cc86', 'cc90',
   'sm_70', 'sm_72', 'sm_75', 'sm_80', 'sm_86', 'sm_90',
   'spir64'],
   help='Select GPU compute capability')
@@ -63,7 +58,7 @@ if args.gpu == 'omp' and args.toolchain == "amd":
   cxxflags += ' -lstdc++fs --offload-arch=' + args.arch
 
 if args.gpu == 'omp' or args.gpu == 'cpp' and args.toolchain == "nvidia":
-  cxxflags += ' -cuda -mp=gpu -gpu=' + args.arch
+  cxxflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc")
 
 if args.gpu == 'omp' and args.toolchain == "gcc":
   cxxflags += ' -fopenmp -foffload=nvptx-none -march=native'
@@ -82,6 +77,7 @@ if args.multithreading is not None:
 if args.gpu is not None:
   if args.cmake:
     configure_args.append(f'-DWITH_GPU={args.gpu}')
+    configure_args.append(f'-DWITH_GPU_ARCH={args.arch}')
   else:
     configure_args.append(f'--with-gpu={args.gpu}')
 
