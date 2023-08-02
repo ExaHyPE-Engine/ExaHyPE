@@ -427,6 +427,23 @@ if test "$use_libxsmm" == true; then
   AC_DEFINE([UseLibXSMM], [UseLibXSMM], [UseLibXSMM])
 fi
 
+#
+# BLIS
+#
+AC_ARG_WITH(BLIS,
+  AS_HELP_STRING([--with-BLIS],[enable BLIS [default=false]]),
+  [ AC_MSG_CHECKING(for BLIS)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_BLIS=false ;;
+      *)     AC_MSG_RESULT(yes);   use_BLIS=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for BLIS); AC_MSG_RESULT(no); use_BLIS=false ])
+AM_CONDITIONAL([UseBLIS],[test "x$use_BLIS" = xtrue])
+
+if test "$use_BLIS" == true; then
+  AC_DEFINE([UseBLIS], [UseBLIS], [UseBLIS])
+fi
+
 
 
 #
@@ -912,6 +929,37 @@ if test "$use_libxsmm" != false; then
 
 fi
 
+
+if test "$use_BLIS" != false; then
+  #BLIS
+  echo "Checking whether BLIS needs to be installed or built"
+  if @<:@ ! -d submodules @:>@; then
+    mkdir submodules
+    echo "Created BLIS directory in submodules"
+  fi
+  if @<:@ ! -e submodules/BLIS/.git @:>@; then
+    echo "Initializing BLIS in submodules/BLIS, this may take a while"
+    cd submodules
+    git clone https://github.com/flame/blis.git
+    cd blis
+    cd ../..
+  fi
+  
+  # build BLIS
+  if @<:@ ! -d submodules/blis/lib @:>@ || @<:@ ! -e submodules/blis/include @:>@; then
+    REBUILD_BLIS=true
+  fi
+  if @<:@ "$REBUILD_BLIS" = true @:>@; then
+    echo "Building BLIS"
+    cd submodules/BLIS
+    ./configure auto
+    make
+    cd ../..
+  fi
+  echo "Finished building BLIS"
+
+
+fi
 
 #
 # SWIFT2

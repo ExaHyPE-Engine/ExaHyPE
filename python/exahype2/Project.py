@@ -11,6 +11,9 @@ import sys
 import exahype2.grid
 import exahype2.solvers
 
+from exahype2.solvers.aderdg.ADERDG import ADERDG
+from exahype2.solvers.aderdg.kernelgenerator import Configuration
+
 
 class Project(object):
     """!
@@ -604,6 +607,22 @@ thus appreciate any citation of the original release paper
         #  self._project.output.makefile.add_library( "ToolboxParticles$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/particles" )
 
         self._project.output.makefile.set_mode(self._build_mode)
+
+        for solver in self._solvers:
+            updated_makefile = False
+            if isinstance(solver, ADERDG) and not updated_makefile:
+                updated_makefile = True
+                pathToExaHyPERoot = Configuration.pathToExaHyPERoot
+                if solver._use_BLIS:
+                    self._project.output.makefile.add_header_search_path(" ~/Dokumente/ba/include/zen2")
+                    self._project.output.makefile.add_linker_flag("~/Dokumente/ba/libs/libblis.a")
+                elif solver._use_Eigen:
+                    self._project.output.makefile.add_header_search_path(" ~/Dokumente/ba/include/eigen")
+                elif solver._use_libxsmm_JIT:
+                    self._project.output.makefile.add_header_search_path(" ~/Dokumente/ba/include/include")
+                    self._project.output.makefile.add_linker_flag("~/Dokumente/ba/libs/libxsmm.a")
+                    self._project.output.makefile.add_linker_flag("~/Dokumente/ba/lapack/librefblas.a")
+                    self._project.output.makefile.add_linker_flag("-lgfortran")
 
         return self._project
 
