@@ -28,7 +28,7 @@ class applications::exahype2::swe::parser::AdjointParser {
     double t_f_ = -1;                       /* end time for adjoint solution  */
     double t_s_ = -1;                       /* start time for adjoint solution */
 
-    size_t inner_product_start_index_ = 0;  /* start index for inner product calculation. Same for all cells in a time step */
+    size_t inner_product_start_index_ = 1;  /* start index for inner product calculation. Same for all cells in a time step */
     double t_last_call_ = -1.0;             /* timestamp of last call of max_inner_product() */
 
     /**
@@ -63,8 +63,9 @@ class applications::exahype2::swe::parser::AdjointParser {
      * @brief Parses given netCDF file of adjoint simulation and reads out all necessary values
      * 
      * @param adjoint_file_path path to pre-computed adjoint solution netCDF file
+     * @param start_time start time for temporal area of interest. Default (=INFINITY) is to read from file.
      */
-    void parse_adjoint_file(const char *adjoint_file_path);
+    void parse_adjoint_file(const char *adjoint_file_path, double start_time=INFINITY);
 
     /**
      * @brief Call this once every time step to set start index for inner product calculation
@@ -74,7 +75,7 @@ class applications::exahype2::swe::parser::AdjointParser {
     void set_start_index(double i_t);
   
   public:
-    AdjointParser(const char *adjoint_file_path);
+    AdjointParser(const char *adjoint_file_path, double start_time=INFINITY);
     ~AdjointParser();
 
     /**

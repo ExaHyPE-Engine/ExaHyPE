@@ -2,8 +2,8 @@
 #include <iostream>
 using namespace applications::exahype2::swe::parser::NetCDFHelper;
 
-applications::exahype2::swe::parser::AdjointParser::AdjointParser(const char *adjoint_file_path){
-    this->parse_adjoint_file(adjoint_file_path);
+applications::exahype2::swe::parser::AdjointParser::AdjointParser(const char *adjoint_file_path, double start_time){
+    this->parse_adjoint_file(adjoint_file_path, start_time);
 
 }
 
@@ -56,12 +56,12 @@ double applications::exahype2::swe::parser::AdjointParser::max_inner_product(dou
         set_start_index(i_t);
     }
 
-    double t_nm = inner_product_start_index_ > 0 ? adjoint_timestamps_[inner_product_start_index_-1] : 0.0;
+    double t_nm = adjoint_timestamps_[inner_product_start_index_-1];
 
     double t_current;
     double inner_product_current;
     double t_comp = i_t + (t_f_ - t_s_);
-    double max_inner_product = inner_product_start_index_  > 0 ? calculate_inner_product(inner_product_start_index_-1, i_x, i_y, i_eta, i_hu, i_hv, i_b) : 0.0;
+    double max_inner_product = calculate_inner_product(inner_product_start_index_-1, i_x, i_y, i_eta, i_hu, i_hv, i_b);
 
     for(size_t i = inner_product_start_index_; i < number_timestamps_; i++)
     {
@@ -81,7 +81,7 @@ double applications::exahype2::swe::parser::AdjointParser::max_inner_product(dou
 }
 
 void applications::exahype2::swe::parser::AdjointParser::set_start_index(double i_t){
-    double t_nm = 0.0;
+    double t_nm = adjoint_timestamps_[inner_product_start_index_ - 1];
     for(size_t i = inner_product_start_index_; i < number_timestamps_; i++)
     {
         if(t_nm <= i_t + (t_f_ - t_s_) && adjoint_timestamps_[i] > i_t)
@@ -93,7 +93,7 @@ void applications::exahype2::swe::parser::AdjointParser::set_start_index(double 
     }
 }
 
-void applications::exahype2::swe::parser::AdjointParser::parse_adjoint_file(const char *adjoint_file_path){
+void applications::exahype2::swe::parser::AdjointParser::parse_adjoint_file(const char *adjoint_file_path, double start_time){
     int ncid;
     // Open adjoint netCDF file
     if ((ncid = NetCDFReader::openCdf(adjoint_file_path)) == -1)
@@ -203,6 +203,7 @@ void applications::exahype2::swe::parser::AdjointParser::parse_adjoint_file(cons
     }
 
     // Read start time
+    if(isinf(start_time))
     {
         double *tmp = nullptr;
         if((tmp = NetCDFReader::getGlobalAttDouble(ncid, "start_time")) == nullptr)
@@ -211,6 +212,10 @@ void applications::exahype2::swe::parser::AdjointParser::parse_adjoint_file(cons
             return;
         }
         t_s_ = tmp[0];
+    }
+    else
+    {
+        t_s_ = start_time;
     }
 
     // Close adjoint netCDF file

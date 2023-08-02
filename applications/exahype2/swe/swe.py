@@ -103,7 +103,7 @@ parser.add_argument(            "--no-dynamic-h",      dest="dynamic_h",      ac
 
 parser.add_argument(            "--guided-amr",        dest="guided_amr",      action="store_true",       default=False,              help="Use guided AMR, only available with the \"Tsunami\" scenario. Optionally pass in an already computed adjoint simulation file in netCDF format using the flag --gamr-file.")
 parser.add_argument(            "--gamr-file",          dest="gamr_file",      type=str,                  required=False,             help="Pass in an already computed adjoint simulation output file in netCDF format. Expects to have keys \"x\",\"y\" and \"h\", \"hu\", \"hv\", \"b\"")
-parser.add_argument(            "--gamr-start-time",    dest="gamr_start_time",type=float,                default=0,                  help="Begin of temporal region of interest. Defaults to 0.")
+parser.add_argument(            "--gamr-start-time",    dest="gamr_start_time",type=float,                required=False,             help="Begin of temporal region of interest. Defaults to 0.")
 parser.add_argument(            "--gamr-checkpoints",   dest="gamr_checkpoints",type=int,                 default=0,                  help="Number of times output should be written in adjoint simulation. Defaults to 0 (=Infinity)")
 parser.add_argument("--gamr-area-of-interest", nargs="+",dest="gamr_area_of_interest",type=str,           required=False,             help="Define area of interest for guided AMR. Pass in either a square [x1,x2] [y1,y2] or a circle [x1,y1] [r, inf]. Coordinates are in the same system as the bathymetry.")
 parser.add_argument(            "--gamr-writer-flush",  dest="gamr_writer_flush", type=int,               default=0,                  help="Define after how many writer operations the writer flushes the buffer to the disk.")
@@ -303,6 +303,10 @@ if args.scenario == "Tsunami":
       
       if args.gamr_area_of_interest is None:
         raise Exception("No file or area of interest specified for guided amr!")
+      
+      if args.gamr_start_time is None:
+        print("No start time for temporal area of interest specified! Default to 0!")
+        args.gamr_start_time = 0
 
       area_of_interest = []
       for coords in args.gamr_area_of_interest:
@@ -342,6 +346,10 @@ if args.scenario == "Tsunami":
     adjoint_parser_parameters = ""
     if args.gamr_file is not None:
       adjoint_parser_parameters = "\"%s\"" % args.gamr_file
+      if args.gamr_start_time is not None:
+        adjoint_parser_parameters += ", %f" % args.gamr_start_time
+      else:
+        print("No start time for temporal area of interest specified! Default to reading from provided file!")
     else:
       adjoint_parser_parameters = adjoint_output_path
     my_solver.add_solver_constants("applications::exahype2::swe::parser::AdjointParser adjoint_parser = applications::exahype2::swe::parser::AdjointParser(%s);" % adjoint_parser_parameters)
