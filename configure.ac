@@ -1039,26 +1039,25 @@ if test "$use_libxsmmJIT" != false; then
   fi
   echo "Finished building libxsmm JIT"
 
-  #lapack
-  echo "Checking whether lapack needs to be installed or built"
+  #OpenBLAS
+  echo "Checking whether OpenBLAS needs to be installed or built"
   if @<:@ ! -d submodules @:>@; then
     mkdir submodules
-    echo "Created lapack directory in submodules"
+    echo "Created OpenBLAS directory in submodules"
   fi
-  if @<:@ ! -e submodules/lapack/.git @:>@; then
-    echo "Initializing lapack in submodules/lapack, this may take a while"
+  if @<:@ ! -e submodules/OpenBLAS/.git @:>@; then
+    echo "Initializing OpenBLAS in submodules/OpenBLAS, this may take a long while"
     cd submodules
-    git clone https://github.com/Reference-LAPACK/lapack.git
-    cd lapack
+    https://github.com/xianyi/OpenBLAS.git
+    cd OpenBLAS
     cd ../..
   fi
   
-  # build lapack
-    REBUILD_lapack=true
-  if @<:@ "$REBUILD_lapack" = true @:>@; then
-    echo "Building lapack"
-    cd submodules/lapack
-    mv make.inc.example make.inc
+  # build OpenBLAS
+    REBUILD_OpenBLAS=true
+  if @<:@ "$REBUILD_OpenBLAS" = true @:>@; then
+    echo "Building OpenBLAS"
+    cd submodules/OpenBLAS
     make --silent
     cd ../..
   fi
