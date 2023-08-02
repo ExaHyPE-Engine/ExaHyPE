@@ -444,6 +444,23 @@ if test "$use_BLIS" == true; then
   AC_DEFINE([UseBLIS], [UseBLIS], [UseBLIS])
 fi
 
+#
+# Eigen
+#
+AC_ARG_WITH(Eigen,
+  AS_HELP_STRING([--with-Eigen],[enable Eigen [default=false]]),
+  [ AC_MSG_CHECKING(for Eigen)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_Eigen=false ;;
+      *)     AC_MSG_RESULT(yes);   use_Eigen=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for Eigen); AC_MSG_RESULT(no); use_Eigen=false ])
+AM_CONDITIONAL([UseEigen],[test "x$use_Eigen" = xtrue])
+
+if test "$use_Eigen" == true; then
+  AC_DEFINE([UseEigen], [UseEigen], [UseEigen])
+fi
+
 
 
 #
@@ -960,6 +977,22 @@ if test "$use_BLIS" != false; then
   echo "Finished building BLIS"
 
 
+fi
+
+if test "$use_Eigen" != false; then
+  #Eigen
+  echo "Checking whether Eigen needs to be installed or built"
+  if @<:@ ! -d submodules @:>@; then
+    mkdir submodules
+    echo "Created Eigen directory in submodules"
+  fi
+  if @<:@ ! -e submodules/Eigen/.git @:>@; then
+    echo "Initializing Eigen in submodules/Eigen, this may take a while"
+    cd submodules
+    git clone https://gitlab.com/libeigen/eigen.git
+    cd eigen
+    cd ../..
+  fi
 fi
 
 #
