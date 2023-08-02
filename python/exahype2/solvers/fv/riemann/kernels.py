@@ -29,8 +29,8 @@ def create_compute_Riemann_kernel_for_UserDefinedRiemann(flux_implementation, ri
     const double * __restrict__                  QL,
     const double * __restrict__                  FR,
     const double * __restrict__                  FL,
-    const double * __restrict__                  maxLR,
-    const double * __restrict__                  maxLL,
+    const double * __restrict__                  LR,
+    const double * __restrict__                  LL,
     const tarch::la::Vector<Dimensions,double>&  xR,
     const tarch::la::Vector<Dimensions,double>&  xL,
     const tarch::la::Vector<Dimensions,double>&  h,
@@ -41,7 +41,7 @@ def create_compute_Riemann_kernel_for_UserDefinedRiemann(flux_implementation, ri
     double * __restrict__                        QSL
   )->void {
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem( QR, QL, FR, FL, maxLR, maxLL, xR, xL, h, t, dt, normal, QSR, QSL );
+    repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem( QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, QSR, QSL );
     {% endif %}
   },
   [&](
@@ -105,8 +105,8 @@ def create_abstract_solver_declarations(flux_implementation, riemann_solver_impl
         const double * __restrict__                  QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
         const double * __restrict__                  FR, // FR[{{NUMBER_OF_UNKNOWNS}}]
         const double * __restrict__                  FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-        const double * __restrict__                  maxLR, // maxLR[1]
-        const double * __restrict__                  maxLL, // maxLL[1]
+        const double * __restrict__                  LR, // LR[1]
+        const double * __restrict__                  LL, // LL[1]
         const tarch::la::Vector<Dimensions,double>&  xR,
         const tarch::la::Vector<Dimensions,double>&  xL,
         const tarch::la::Vector<Dimensions,double>&  h,
@@ -160,8 +160,8 @@ void solveRiemannProblem(
   const double * __restrict__                  QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const double * __restrict__                  FR, // FR[{{NUMBER_OF_UNKNOWNS}}]
   const double * __restrict__                  FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-  const double * __restrict__                  maxLR, // maxLR[1]
-  const double * __restrict__                  maxLL, // maxLL[1]
+  const double * __restrict__                  LR, // LR[1]
+  const double * __restrict__                  LL, // LL[1]
   const tarch::la::Vector<Dimensions,double>&  xR,
   const tarch::la::Vector<Dimensions,double>&  xL,
   const tarch::la::Vector<Dimensions,double>&  h,
@@ -223,8 +223,8 @@ def create_solver_declarations(flux_implementation, riemann_solver_implementatio
         const double * __restrict__                  QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
         const double * __restrict__                  FR, // FR[{{NUMBER_OF_UNKNOWNS}}]
         const double * __restrict__                  FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-        const double * __restrict__                  maxLR, // maxLR[1]
-        const double * __restrict__                  maxLL, // maxLL[1]
+        const double * __restrict__                  LR, // LR[1]
+        const double * __restrict__                  LL, // LL[1]
         const tarch::la::Vector<Dimensions,double>&  xR,
         const tarch::la::Vector<Dimensions,double>&  xL,
         const tarch::la::Vector<Dimensions,double>&  h,
@@ -278,27 +278,27 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
                                
 
 {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %}
-    virtual void solveRiemannProblem(
-        const double * __restrict__                  QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-        const double * __restrict__                  QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-        const double * __restrict__                  FR, // FR[{{NUMBER_OF_UNKNOWNS}}]
-        const double * __restrict__                  FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-        const double * __restrict__                  maxLR, // maxLR[1]
-        const double * __restrict__                  maxLL, // maxLL[1]
-        const tarch::la::Vector<Dimensions,double>&  xR,
-        const tarch::la::Vector<Dimensions,double>&  xL,
-        const tarch::la::Vector<Dimensions,double>&  h,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * __restrict__                        QSR, // QSR[{{NUMBER_OF_UNKNOWNS}}]
-        double * __restrict__                        QSL  // QSR[{{NUMBER_OF_UNKNOWNS}}]
-    ) {
-        logTraceInWith4Arguments( "solveRiemannProblem(...)", xR, xL, t, normal );
-        // @todo implement
-        logTraceOut( "solveRiemannProblem(...)" );                 
-    }
-    {% endif %}
+void solveRiemannProblem(
+  const double * __restrict__                  QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double * __restrict__                  QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double * __restrict__                  FR, // FR[{{NUMBER_OF_UNKNOWNS}}]
+  const double * __restrict__                  FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
+  const double * __restrict__                  LR, // LR[1]
+  const double * __restrict__                  LL, // LL[1]
+  const tarch::la::Vector<Dimensions,double>&  xR,
+  const tarch::la::Vector<Dimensions,double>&  xL,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  double * __restrict__                        QSR, // QSR[{{NUMBER_OF_UNKNOWNS}}]
+  double * __restrict__                        QSL  // QSR[{{NUMBER_OF_UNKNOWNS}}]
+) {
+  logTraceInWith4Arguments( "solveRiemannProblem(...)", xR, xL, t, normal );
+  // @todo implement
+  logTraceOut( "solveRiemannProblem(...)" );                 
+}
+{% endif %}
 """, undefined=jinja2.DebugUndefined)
     d= {}
     d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
