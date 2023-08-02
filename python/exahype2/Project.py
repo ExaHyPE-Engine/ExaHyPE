@@ -616,10 +616,8 @@ thus appreciate any citation of the original release paper
                     for root, dirs, files in os.walk(pathToExaHyPERoot+ "/submodules/blis/include"):
                         archname = dirs[0]
                         break
-                    print("\n\n\n\n archname:")
-                    print(archname)
                     self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/blis/include/" + archname)
-                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/blis/libs/" + archname + "/libblis.a")
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/blis/lib/" + archname + "/libblis.a")
                 elif solver._use_Eigen:
                     self._project.output.makefile.add_header_search_path(" ~/Dokumente/ba/include/eigen")
                 elif solver._use_libxsmm_JIT:
