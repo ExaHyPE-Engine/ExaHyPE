@@ -58,8 +58,7 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
          * data will be AoS in almost all the cases. So it makes sense
          * to exploit this knowledge performance-wisely.
          */
-        template <>
-        KeywordToAvoidDuplicateSymbolsForInlinedFunctions double reduceMaxEigenvalue_LoopBody(
+        static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__ QOut,
           exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator,
           exahype2::fv::riemann::MaxEigenvalue             maxEigenvalue,

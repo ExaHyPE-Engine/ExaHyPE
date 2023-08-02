@@ -46,7 +46,6 @@ void exahype2::fv::riemann::internal::computeMaxEigenvalue_LoopBody(
   );
 }
 
-template <>
 double exahype2::fv::riemann::internal::reduceMaxEigenvalue_LoopBody(
   const double* __restrict__ QOut,
   exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator,
