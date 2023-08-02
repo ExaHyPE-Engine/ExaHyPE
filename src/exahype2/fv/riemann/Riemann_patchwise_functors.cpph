@@ -1,0 +1,502 @@
+#include "../../../tarch/multicore/otter.h"
+#include "Riemann.h"
+
+void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
+  ::exahype2::CellData&   patchData,
+  int                     numberOfVolumesPerAxisInPatch,
+  int                     haloSize,
+  int                     unknowns,
+  int                     auxiliaryVariables,
+  bool                    evaluateFlux,
+  bool                    evaluateRiemann,
+  bool                    evaluateMaximumEigenvalueAfterTimeStep,
+  Flux                    flux,
+  MaxEigenvalue           maxEigenvalue,
+  SolveRiemannProblem     solveRiemannProblem
+) {
+  static tarch::logging::Log _log( "exahype2::fv::riemann" );
+
+  /**
+   * The halo size passed in by the user might differ from the one that we have to evaluate/
+   * take into account from the solver's perspective.
+   */
+  constexpr int solversHaloSize        = 1;
+
+  assertionEquals(haloSize,1);
+
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
+  exahype2::enumerator::AoSLexicographicEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,1,0);
+  exahype2::enumerator::AoSLexicographicEnumerator riemannEnumerator   (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
+
+  double* tempEigenvalueX            =                                    tarch::allocateMemory<double>( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvalueY            =                                    tarch::allocateMemory<double>( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory<double>( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+
+  double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+
+  double* tempRiemannX               = evaluateRiemann                     ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempRiemannY               = evaluateRiemann                     ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempRiemannZ               = (evaluateRiemann and Dimensions==3) ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+
+  for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+    logDebug( "timeStepWithRiemann_sequential(...)", "evaluate source terms and/or copy solution over" );
+    if (Dimensions==2) {
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        internal::copySolution_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchIndex,
+          volumeIndex2d(x,y),
+          unknown,
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+    }
+    else {
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        internal::copySolution_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          unknown,
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+    }
+
+    if (Dimensions==2) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
+        internal::computeMaxEigenvalue_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            maxEigenvalue,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex2d(x,y),
+            patchData.t[patchIndex], patchData.dt[patchIndex],
+            0,
+            tempEigenvalueX,
+            eigenvalueEnumerator
+        );
+      }
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::computeMaxEigenvalue_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            maxEigenvalue,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex2d(x,y),
+            patchData.t[patchIndex], patchData.dt[patchIndex],
+            1,
+            tempEigenvalueY,
+            eigenvalueEnumerator
+        );
+      }
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        internal::updateSolutionWithEigenvalueDamping_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          tempEigenvalueX,
+          tempEigenvalueY,
+          tempEigenvalueZ,
+          eigenvalueEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex2d(x,y),
+          unknown,
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+    }
+    else {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+        internal::computeMaxEigenvalue_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              maxEigenvalue,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex3d(x,y,z),
+              patchData.t[patchIndex], patchData.dt[patchIndex],
+              0,
+              tempEigenvalueX,
+              eigenvalueEnumerator
+        );
+      }
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+        internal::computeMaxEigenvalue_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              maxEigenvalue,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex3d(x,y,z),
+              patchData.t[patchIndex], patchData.dt[patchIndex],
+              1,
+              tempEigenvalueY,
+              eigenvalueEnumerator
+        );
+      }
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++) {
+        internal::computeMaxEigenvalue_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              maxEigenvalue,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex3d(x,y,z),
+              patchData.t[patchIndex], patchData.dt[patchIndex],
+              2,
+              tempEigenvalueZ,
+              eigenvalueEnumerator
+        );
+      }
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        internal::updateSolutionWithEigenvalueDamping_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          tempEigenvalueX,
+          tempEigenvalueY,
+          tempEigenvalueZ,
+          eigenvalueEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          unknown,
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+    }
+
+    if (evaluateFlux and Dimensions==2) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
+      for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++) {
+        internal::computeFlux_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          flux,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex2d(x,y),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          0, // normal
+          tempFluxX,
+          fluxEnumerator
+        );
+      }
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++) {
+        internal::computeFlux_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          flux,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex2d(x,y),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          1, // normal
+          tempFluxY,
+          fluxEnumerator
+        );
+      }
+    }
+    else if (evaluateFlux and Dimensions==3) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
+      for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
+      for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++) {
+        internal::computeFlux_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          flux,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          0, // normal
+          tempFluxX,
+          fluxEnumerator
+        );
+      }
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++)
+      for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++) {
+        internal::computeFlux_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          flux,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          1, // normal
+          tempFluxY,
+          fluxEnumerator
+        );
+      }
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
+      for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
+      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize;  z++) {
+        internal::computeFlux_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          flux,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          2, // normal
+          tempFluxZ,
+          fluxEnumerator
+        );
+      }
+    }
+
+    if (evaluateRiemann and Dimensions==2) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
+      for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++){
+        internal::computeRiemannSolution_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          solveRiemannProblem,
+          tempFluxX,
+          fluxEnumerator,
+          tempEigenvalueX,
+          eigenvalueEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex2d(x,y),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          0, // normal
+          tempRiemannX,
+          riemannEnumerator
+        );
+      }
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++){
+        internal::computeRiemannSolution_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          solveRiemannProblem,
+          tempFluxY,
+          fluxEnumerator,
+          tempEigenvalueY,
+          eigenvalueEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex2d(x,y),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          1, // normal
+          tempRiemannY,
+          riemannEnumerator
+        );
+      }
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        internal::updateSolutionWithRiemannSolution_LoopBody(
+          tempRiemannX, tempRiemannY, tempRiemannZ,
+          riemannEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex2d(x,y),
+          unknown,
+          patchData.dt[patchIndex],
+          *(patchData.QOut + patchIndex),
+          QOutEnumerator
+        );
+      }
+    }
+    else if (evaluateRiemann and Dimensions==3) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
+      for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
+      for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++) {
+        internal::computeRiemannSolution_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          solveRiemannProblem,
+          tempFluxX,
+          fluxEnumerator,
+          tempEigenvalueX,
+          eigenvalueEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          0, // normal
+          tempRiemannX,
+          riemannEnumerator
+        );
+      }
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++)
+      for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++) {
+        internal::computeRiemannSolution_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          solveRiemannProblem,
+          tempFluxY,
+          fluxEnumerator,
+          tempEigenvalueY,
+          eigenvalueEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          1, // normal
+          tempRiemannY,
+          riemannEnumerator
+        );
+      }
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
+      for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
+      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize;  z++) {
+        internal::computeRiemannSolution_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          solveRiemannProblem,
+          tempFluxZ,
+          fluxEnumerator,
+          tempEigenvalueZ,
+          eigenvalueEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          2, // normal
+          tempRiemannZ,
+          riemannEnumerator
+        );
+      }
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        internal::updateSolutionWithRiemannSolution_LoopBody(
+          tempRiemannX, tempRiemannY, tempRiemannZ,
+          riemannEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          unknown,
+          patchData.dt[patchIndex],
+          *(patchData.QOut + patchIndex),
+          QOutEnumerator
+        );
+      }
+    }
+
+    if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
+      logDebug( "timeStepWithRiemann_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
+      double newMaxEigenvalue = 0.0;
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
+        newMaxEigenvalue = std::max(
+          newMaxEigenvalue,
+          internal::reduceMaxEigenvalue_LoopBody(
+            *(patchData.QOut + patchIndex),
+            QOutEnumerator,
+            maxEigenvalue,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex2d(x,y),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex]
+          )
+        );
+      }
+      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+    }
+    else if (evaluateMaximumEigenvalueAfterTimeStep) {
+      double newMaxEigenvalue = 0.0;
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+        newMaxEigenvalue = std::max(
+          newMaxEigenvalue,
+          internal::reduceMaxEigenvalue_LoopBody(
+            *(patchData.QOut + patchIndex),
+            QOutEnumerator,
+            maxEigenvalue,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex]
+          )
+        );
+      }
+      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+    }
+  }
+
+  if (tempFluxX!=nullptr)               tarch::freeMemory(tempFluxX, tarch::MemoryLocation::Heap);
+  if (tempFluxY!=nullptr)               tarch::freeMemory(tempFluxY, tarch::MemoryLocation::Heap);
+  if (tempFluxZ!=nullptr)               tarch::freeMemory(tempFluxZ, tarch::MemoryLocation::Heap);
+  if (tempRiemannX!=nullptr)            tarch::freeMemory(tempRiemannX, tarch::MemoryLocation::Heap);
+  if (tempRiemannY!=nullptr)            tarch::freeMemory(tempRiemannY, tarch::MemoryLocation::Heap);
+  if (tempRiemannZ!=nullptr)            tarch::freeMemory(tempRiemannZ, tarch::MemoryLocation::Heap);
+  if (tempEigenvalueX!=nullptr)         tarch::freeMemory(tempEigenvalueX, tarch::MemoryLocation::Heap);
+  if (tempEigenvalueY!=nullptr)         tarch::freeMemory(tempEigenvalueY, tarch::MemoryLocation::Heap);
+  if (tempEigenvalueZ!=nullptr)         tarch::freeMemory(tempEigenvalueZ, tarch::MemoryLocation::Heap);
+}
