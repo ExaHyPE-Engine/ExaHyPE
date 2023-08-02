@@ -161,8 +161,8 @@ void exahype2::fv::riemann::internal::updateSolutionWithRiemannSolution_LoopBody
     tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
     rightVolume(normal)++;
 
-    const double fluxLeft = tempRiemann[riemannEnumerator(patchIndex, leftVolume, unkown)];
-    const double fluxRight = empRiemann[riemannEnumerator(patchIndex, volumeIndex, unknown)];
+    const double fluxLeft = tempRiemann[riemannEnumerator(patchIndex, leftVolume, unknown)];
+    const double fluxRight = tempRiemann[riemannEnumerator(patchIndex, volumeIndex, unknown)];
 
     QOut[QOutEnumerator(
       patchIndex, volumeIndex, unknown
