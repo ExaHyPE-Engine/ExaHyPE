@@ -46,7 +46,7 @@ namespace exahype2 {
         int                                          normal,
         double * __restrict__                        QSR,
         double * __restrict__                        QSL
-      ) > SolveRiemannProblem
+      ) > SolveRiemannProblem;
     }
   }
 }

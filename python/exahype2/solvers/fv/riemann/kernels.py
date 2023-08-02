@@ -25,6 +25,16 @@ def create_compute_Riemann_kernel_for_UserDefinedRiemann(flux_implementation, ri
     {% endif %}
   },
   [&](
+    const double * __restrict__ Q,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal
+  )->double {
+    return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal);
+  },
+  [&](
     const double * __restrict__                  QR,
     const double * __restrict__                  QL,
     const double * __restrict__                  FR,
@@ -43,16 +53,6 @@ def create_compute_Riemann_kernel_for_UserDefinedRiemann(flux_implementation, ri
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem( QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, QSR, QSL );
     {% endif %}
-  },
-  [&](
-    const double * __restrict__ Q,
-    const tarch::la::Vector<Dimensions,double>&  faceCentre,
-    const tarch::la::Vector<Dimensions,double>&  volumeH,
-    double                                       t,
-    double                                       dt,
-    int                                          normal
-  )->double {
-    return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal);
   }
 );
   """
@@ -61,7 +61,6 @@ def create_compute_Riemann_kernel_for_UserDefinedRiemann(flux_implementation, ri
     d[ "FLUX_IMPLEMENTATION" ]         = flux_implementation
     d[ "NCP_IMPLEMENTATION" ]          = riemann_solver_implementation
     d[ "COMPUTE_MAX_EIGENVALUE" ]      = compute_max_eigenvalue_of_next_time_step
-    d[ "TEMP_DATA_ENUMERATOR" ]        = "::exahype2::enumerator::AoSLexicographicEnumerator"
     return result.render(**d)
 
 def create_abstract_solver_declarations(flux_implementation, riemann_solver_implementation, eigenvalues_implementation):

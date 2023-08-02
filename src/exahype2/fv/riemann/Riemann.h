@@ -2,6 +2,7 @@
 
 #include "Functors.h"
 #include "LoopBody.h"
+#include "Riemann_Helper.cpph"
 
 #include "exahype2/CellData.h"
 namespace exahype2 {
