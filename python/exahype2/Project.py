@@ -613,7 +613,7 @@ thus appreciate any citation of the original release paper
                 pathToExaHyPERoot = Configuration.pathToExaHyPERoot
                 if solver._use_BLIS:
                     archname = ""
-                    for root, dirs, files in os.walk(pathToExaHyPERoot):
+                    for root, dirs, files in os.walk(pathToExaHyPERoot+ "/blis/include/"):
                         archname = dirs[0]
                         break
                     print("\n\n\n\n archname:")
