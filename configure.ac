@@ -1048,7 +1048,7 @@ if test "$use_libxsmmJIT" != false; then
   if @<:@ ! -e submodules/OpenBLAS/.git @:>@; then
     echo "Initializing OpenBLAS in submodules/OpenBLAS, this may take a long while"
     cd submodules
-    https://github.com/xianyi/OpenBLAS.git
+    git clone https://github.com/xianyi/OpenBLAS.git
     cd OpenBLAS
     cd ../..
   fi
