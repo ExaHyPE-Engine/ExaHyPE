@@ -131,7 +131,7 @@ volatile double doNotOptimizeAway_{{B}} = {{B}}[0]; //used to prevent the compil
     Eigen::Map<Eigen::Matrix<{{precisionType}}, {{M}}, {{K}}>, Eigen::Unaligned, Eigen::Stride<{{LDA}}, 1>> A({{A}}{% if A_shift != '0' %}+{{A_shift}}{% endif %});
     Eigen::Map<Eigen::Matrix<{{precisionType}}, {{K}}, {{N}}>, Eigen::Unaligned, Eigen::Stride<{{LDB}}, 1>> B({{B}}{% if B_shift != '0' %}+{{B_shift}}{% endif %});
     Eigen::Map<Eigen::Matrix<{{precisionType}}, {{M}}, {{N}}>, Eigen::Unaligned, Eigen::Stride<{{LDC}}, 1>> C({{C}}{% if C_shift != '0' %}+{{C_shift}}{% endif %});
-    C {{eigenOp}} A * B;
+    C {{eigenOp}} {% if alpha != 1%}{{alpha}} * (A * B){% else %}A * B{% endif %};
 }
 {#
 
