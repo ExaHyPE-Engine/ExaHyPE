@@ -619,7 +619,7 @@ thus appreciate any citation of the original release paper
                     print("\n\n\n\n archname:")
                     print(archname)
                     self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/blis/include/" + archname)
-                    self._project.output.makefile.add_linker_flag("~/Dokumente/ba/libs/libblis.a")
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/blis/libs/" + archname + "/libblis.a")
                 elif solver._use_Eigen:
                     self._project.output.makefile.add_header_search_path(" ~/Dokumente/ba/include/eigen")
                 elif solver._use_libxsmm_JIT:
