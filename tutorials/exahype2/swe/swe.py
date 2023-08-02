@@ -30,7 +30,7 @@ volume_size = 0.05
 #
 # The simulation end time.
 #
-end_time = 1.0
+end_time = 3.0
 
 #
 # Choose domain size and offset.
@@ -52,7 +52,7 @@ time_in_between_two_snapshots = end_time/100
 #
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-compile_mode=peano4.output.CompileMode.Debug
+compile_mode=peano4.output.CompileMode.Release
 
 #
 # We first create a new ExaHyPE 2 project.
@@ -113,14 +113,6 @@ my_solver.set_implementation(
 my_solver.plot_description = "h, hu, hv, b"
 
 #
-# We can add additional variables to our solver instance, such as constexpr values
-# we want to use in our solver implementations multiple times.
-#
-my_solver.add_solver_constants(
-    "static constexpr double g = {}; // [m/s^2]".format(9.81)
-)
-
-#
 # Add the solver to our project
 #
 my_project.add_solver(my_solver)
@@ -179,7 +171,8 @@ my_project = my_project.generate_Peano4_project(verbose=True)
 # and toolboxes which have been built before.
 # You can also always invoke 'make' yourself to compile, or cleanup with 'make clean'.
 #
-my_project.build(make=use_make, make_clean_first=True, throw_away_data_after_build=True)
+#my_project.build(make=use_make, make_clean_first=True, throw_away_data_after_build=True)
+my_project.build(make_clean_first=True, throw_away_data_after_build=True)
 
 #
 # Create a postprocessing script which converts the output patch files of the simulation
