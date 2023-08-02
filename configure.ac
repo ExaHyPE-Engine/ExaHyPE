@@ -954,6 +954,7 @@ if test "$use_BLIS" != false; then
     cd submodules/blis
     ./configure auto
     make --silent
+    make check
     cd ../..
   fi
   echo "Finished building BLIS"

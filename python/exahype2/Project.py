@@ -609,12 +609,15 @@ thus appreciate any citation of the original release paper
         self._project.output.makefile.set_mode(self._build_mode)
 
         for solver in self._solvers:
-            updated_makefile = False
-            if isinstance(solver, ADERDG) and not updated_makefile:
-                updated_makefile = True
+            if isinstance(solver, ADERDG):
                 pathToExaHyPERoot = Configuration.pathToExaHyPERoot
                 if solver._use_BLIS:
-                    self._project.output.makefile.add_header_search_path(" ~/Dokumente/ba/include/zen2")
+                    archname = ""
+                    for root, dirs, files in os.walk(pathToExaHyPERoot):
+                        archname = dirs[0]
+                        break
+                    print(archname)
+                    self._project.output.makefile.add_header_search_path(" pathToExaHyPERoot/submodules/blis/include/archname/")
                     self._project.output.makefile.add_linker_flag("~/Dokumente/ba/libs/libblis.a")
                 elif solver._use_Eigen:
                     self._project.output.makefile.add_header_search_path(" ~/Dokumente/ba/include/eigen")
@@ -623,7 +626,7 @@ thus appreciate any citation of the original release paper
                     self._project.output.makefile.add_linker_flag("~/Dokumente/ba/libs/libxsmm.a")
                     self._project.output.makefile.add_linker_flag("~/Dokumente/ba/lapack/librefblas.a")
                     self._project.output.makefile.add_linker_flag("-lgfortran")
-
+                break
         return self._project
 
 
