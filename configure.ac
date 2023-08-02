@@ -937,8 +937,8 @@ if test "$use_BLIS" != false; then
     mkdir submodules
     echo "Created BLIS directory in submodules"
   fi
-  if @<:@ ! -e submodules/BLIS/.git @:>@; then
-    echo "Initializing BLIS in submodules/BLIS, this may take a while"
+  if @<:@ ! -e submodules/blis/.git @:>@; then
+    echo "Initializing BLIS in submodules/blis, this may take a while"
     cd submodules
     git clone https://github.com/flame/blis.git
     cd blis
@@ -951,9 +951,9 @@ if test "$use_BLIS" != false; then
   fi
   if @<:@ "$REBUILD_BLIS" = true @:>@; then
     echo "Building BLIS"
-    cd submodules/BLIS
+    cd submodules/blis
     ./configure auto
-    make
+    make --silent
     cd ../..
   fi
   echo "Finished building BLIS"
