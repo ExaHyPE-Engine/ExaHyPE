@@ -7,6 +7,7 @@
 #include <chrono>
 #include <ctime>
 
+
 #include "tarch/logging/Log.h"
 
 
@@ -23,15 +24,15 @@ namespace tarch::timing {
  *
  * <pre>
  *   void anyOperation() {
- *     utils::Watch watch("MyClass","anyOperation()");
+ *     tarch::timing::Watch watch("MyClass", "anyOperation()");
  *     ...
  *   }
  * </pre>
  *
  * The result the of the measurement is written to log.info level. Note that
- * this operation works within operation blocks (e.g. a for-loop), too.
+ * this operation works within operation blocks (e.g., a for-loop), too.
  *
- * For an extended measurement of calender (i.e. user) time and a saving of the
+ * For an extended measurement of calender (i.e., user) time and a saving of the
  * data and access via getters, we implemented parts of what Markus Langlotz
  * gave us for the ancient stokes project. Additionally, the counter overflow
  * and the non-access to the measured time were reasons for introducing this
@@ -116,7 +117,7 @@ public:
    * This method starts the timer. Actually, it restarts the time as the
    * constructor also invokes this operation. You don't have to call start()
    * after stop(). If you omit another call to start(), you just won't reset
-   * the baseline, i.e. all getXXXTime() calls will still refer to the same
+   * the baseline, i.e., all getXXXTime() calls will still refer to the same
    * time zero when the Watch has been constructed.
    *
    * @see stopTimer()
@@ -137,16 +138,16 @@ public:
   /**
    * Return CPU Time in Seconds
    *
-   * This method returns the elapsed cpu time between the start and stop
-   * command of the timer, i.e. the clock ticks actually spent by the process.
+   * This method returns the elapsed CPU time between the start and stop
+   * command of the timer, i.e., the clock ticks actually spent by the process.
    * Take care: This counter might overflow, especially on a 32 bit
    * architecture.
    *
    * !!! Multithreading
    *
-   * If you use multithreading, cpu time sums up the clock ticks invested by
-   * the individual cores, i.e. if you switch from a one core to a dual core
-   * machine, the cpu time should roughly double.
+   * If you use multithreading, CPU time sums up the clock ticks invested by
+   * the individual cores, i.e., if you switch from a one core to a dual core
+   * machine, the CPU time should roughly double.
    *
    * @return CPU time in seconds
    */
@@ -160,7 +161,7 @@ public:
 
   /**
    * This method returns the elapsed calendar time between the start and stop
-   * command of the timer, i.e. the real world time. The result is given in
+   * command of the timer, i.e., the real world time. The result is given in
    * seconds.
    */
   double getCalendarTime();

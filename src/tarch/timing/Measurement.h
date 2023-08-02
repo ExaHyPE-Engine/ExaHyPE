@@ -43,7 +43,7 @@ private:
   /**
    * To compute the standard deviation, we rely on the formula
    *
-   * sigma =sqrt( E(x^2) - E(x)^2 )
+   * sigma = sqrt(E(x^2) - E(x)^2)
    *
    * with E being the mean value.
    */

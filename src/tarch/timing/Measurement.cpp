@@ -25,6 +25,7 @@ tarch::timing::Measurement::Measurement(const double& accuracy):
   _max(-std::numeric_limits<double>::max()),
   _minMeasurement(-1),
   _maxMeasurement(-1) {
+
   assertion1(accuracy >= 0.0, accuracy);
 }
 
