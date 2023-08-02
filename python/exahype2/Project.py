@@ -622,9 +622,9 @@ thus appreciate any citation of the original release paper
                 elif solver._use_Eigen:
                     self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/eigen")
                 elif solver._use_libxsmm_JIT:
-                    self._project.output.makefile.add_header_search_path(" ~/Dokumente/ba/include/include")
-                    self._project.output.makefile.add_linker_flag("~/Dokumente/ba/libs/libxsmm.a")
-                    self._project.output.makefile.add_linker_flag("~/Dokumente/ba/lapack/librefblas.a")
+                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/libxsmm/include")
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/libxsmm/lib/libxsmm.a")
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/lapack/librefblas.a")
                     self._project.output.makefile.add_linker_flag("-lgfortran")
                 break
         return self._project

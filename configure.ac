@@ -461,6 +461,23 @@ if test "$use_Eigen" == true; then
   AC_DEFINE([UseEigen], [UseEigen], [UseEigen])
 fi
 
+#
+# libxsmm JIT
+#
+AC_ARG_WITH(libxsmmJIT,
+  AS_HELP_STRING([--with-libxsmmJIT],[enable libxsmmJIT [default=false]]),
+  [ AC_MSG_CHECKING(for libxsmmJIT)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_libxsmmJIT=false ;;
+      *)     AC_MSG_RESULT(yes);   use_libxsmmJIT=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for libxsmmJIT); AC_MSG_RESULT(no); use_libxsmmJIT=false ])
+AM_CONDITIONAL([UselibxsmmJIT],[test "x$use_libxsmmJIT" = xtrue])
+
+if test "$use_libxsmmJIT" == true; then
+  AC_DEFINE([UselibxsmmJIT], [UselibxsmmJIT], [UselibxsmmJIT])
+fi
+
 
 
 #
@@ -993,6 +1010,60 @@ if test "$use_Eigen" != false; then
     cd eigen
     cd ../..
   fi
+fi
+
+if test "$use_libxsmmJIT" != false; then
+  #libxsmm JIT
+  echo "Checking whether libxsmm JIT needs to be installed or built"
+  if @<:@ ! -d submodules @:>@; then
+    mkdir submodules
+    echo "Created libxsmmJIT directory in submodules"
+  fi
+  if @<:@ ! -e submodules/libxsmm/.git @:>@; then
+    echo "Initializing libxsmm JIT in submodules/libxsmm, this may take a while"
+    cd submodules
+    git clone https://github.com/libxsmm/libxsmm.git
+    cd libxsmm
+    cd ../..
+  fi
+  
+  # build libxsmm JIT
+  if @<:@ ! -d submodules/libxsmm/lib @:>@ || @<:@ ! -e submodules/libxsmm/include @:>@; then
+    REBUILD_libxsmmJIT=true
+  fi
+  if @<:@ "$REBUILD_libxsmmJIT" = true @:>@; then
+    echo "Building libxsmm JIT"
+    cd submodules/libxsmm
+    make --silent
+    cd ../..
+  fi
+  echo "Finished building libxsmm JIT"
+
+  #lapack
+  echo "Checking whether lapack needs to be installed or built"
+  if @<:@ ! -d submodules @:>@; then
+    mkdir submodules
+    echo "Created lapack directory in submodules"
+  fi
+  if @<:@ ! -e submodules/lapack/.git @:>@; then
+    echo "Initializing lapack in submodules/lapack, this may take a while"
+    cd submodules
+    git clone https://github.com/Reference-LAPACK/lapack.git
+    cd lapack
+    cd ../..
+  fi
+  
+  # build lapack
+    REBUILD_lapack=true
+  if @<:@ "$REBUILD_lapack" = true @:>@; then
+    echo "Building lapack"
+    cd submodules/lapack
+    mv make.inc.example make.inc
+    make --silent
+    cd ../..
+  fi
+  echo "Finished building libxsmm JIT"
+
 fi
 
 #
