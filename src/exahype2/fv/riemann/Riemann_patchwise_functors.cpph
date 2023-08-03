@@ -48,7 +48,7 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
   double* tempRiemannZ               = (evaluateRiemann and Dimensions==3) ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
-    logDebug( "timeStepWithRiemann_sequential(...)", "evaluate source terms and/or copy solution over" );
+    logDebug( "timeStepWithRiemann_sequential(...)", "copy solution over" );
     if (Dimensions==2) {
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -263,7 +263,7 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
     }
 
     if (evaluateRiemann and Dimensions==2) {
-      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++){
         internal::computeRiemannSolution_LoopBody(
           patchData.QIn[patchIndex],
@@ -287,7 +287,7 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
         );
       }
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
-      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++){
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch;  y++){
         internal::computeRiemannSolution_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -327,7 +327,7 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
       }
     }
     else if (evaluateRiemann and Dimensions==3) {
-      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
       for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++) {
         internal::computeRiemannSolution_LoopBody(
@@ -352,7 +352,7 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
         );
       }
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
-      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch;  y++)
       for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++) {
         internal::computeRiemannSolution_LoopBody(
           patchData.QIn[patchIndex],
@@ -377,7 +377,7 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
       }
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
-      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize;  z++) {
+      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch;  z++) {
         internal::computeRiemannSolution_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
