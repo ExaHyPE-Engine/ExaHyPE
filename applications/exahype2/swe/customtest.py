@@ -10,7 +10,7 @@ from scenarios.radial_bathymetry_dam_break import Radial_Bathymetry_Dam_Break
 dimensions            = 2 # this is fixed to 2 in pde.py
 width                 = [10, 10]
 offset                = [0, 0] # this is fixed to [0, 0]
-end_time              = 0.02
+end_time              = 1
 time_step_relaxation  = 0.5 # taken from tutorial
 plot_interval         = 0.005 # taken from tutorial
 patch_size            = 4 # 32
@@ -24,7 +24,11 @@ my_pde.substitute_expression(my_pde.g, 9.81)
 
 custom_riemann_solver = """
     double grav = 9.81;
-    double smax = std::max(LR[0], LL[0]);
+    double smax = 0.0;
+    for(int i = 0; i < 3; i++)
+    {
+        smax = std::max(smax, std::max(std::abs(LL[i]), std::abs(LR[i])));
+    }
     double bm = std::max(QL[3], QR[3]);
     double hRoe = 0.5 * (QL[0] + QR[0]);
     double DEta = std::max(QR[0]+QR[3] - bm, 0.0) - std::max(QL[0]+QL[3] - bm, 0.0);
@@ -37,28 +41,18 @@ custom_riemann_solver = """
     switch(normal)
     {
         case 0:
-            QSL[0] = flux[0];
-            QSL[1] = flux[1] + 0.5*grav*hRoe*DEta;
-            QSL[2] = flux[2];
-
-            QSR[0] = flux[0];
-            QSR[1] = flux[1] - 0.5*grav*hRoe*DEta;
-            QSR[2] = flux[2];
-
+            QSFlux[0] = flux[0];
+            QSFlux[1] = flux[1] - 0.5*grav*hRoe*DEta;
+            QSFlux[2] = flux[2];
             break;
         
         case 2:
-            QSL[0] = flux[0];
-            QSL[1] = flux[1];
-            QSL[2] = flux[2] + 0.5*grav*hRoe*DEta;
-
-            QSR[0] = flux[0];
-            QSR[1] = flux[1];
-            QSR[2] = flux[2] - 0.5*grav*hRoe*DEta;
-
+            QSFlux[0] = flux[0];
+            QSFlux[1] = flux[1];
+            QSFlux[2] = flux[2] - 0.5*grav*hRoe*DEta;
             break;
     }
-    return;
+    return smax;
 """
 
 custom_flux = """
@@ -95,7 +89,7 @@ if solver == 0:
     initial_conditions    = my_pde.implementation_of_initial_conditions(),
     boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
     flux                  = custom_flux,
-    eigenvalues           = my_pde.implementation_of_max_eigenvalue(),
+    eigenvalues           = my_pde.implementation_of_eigenvalues(),
     refinement_criterion  = my_pde.implementation_of_refinement_criterion(),
     riemann_solver        = custom_riemann_solver
     )
