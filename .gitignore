@@ -305,3 +305,5 @@ UnitTests3d
 *.err
 *.out
 /documentation/
+
+*.o

@@ -64,15 +64,15 @@ def populateMatrix(fName):
       l = f.readline() # read the line
   return output
 
-def populateRHS(fName):
-  dim = getMatDimensions(fName)
+def populateRHS(fName, solDim=None):
+  dim = solDim if solDim else getMatDimensions(fName)
   vec = np.zeros((dim))
   with open(fName) as f:
     for _ in range(3): #skip the first two lines
       l = f.readline()
   
     row = 0
-    while l:
+    while l and row < dim:
       if l == '\n':
         break
       vec[row] = float(l)
@@ -89,17 +89,32 @@ if __name__ == "__main__":
   #hardcoding file names!
 
   dim = getMatDimensions("mat.xml")
-  with open("mat.xml") as f:
-    for _ in range(5): l = f.readline()
 
-  mat = populateMatrix("mat.xml")
-  vec = populateRHS("rhs.xml")
+  try:
+    mat = populateMatrix("mat.xml")
+  except:
+    print("no mat.xml file available")
+    pass
+  try:
+    rhs = populateRHS("rhs.xml")
+  except:
+    print("no rhs.xml available")
+    pass
+
+  try:
+    numCells = 27 * 27
+    solDim = 4 * numCells
+    # sol = populateRHS("solution.xml", solDim)
+    sol = populateRHS("solution.xml")
+  except:
+    print("didn't read in solution")
+    pass
 
   print(f'shape of this matrix is {mat.shape}')
   print("getting rank of this matrix...")
 
-  print(f"rank of this matrix is {getRankOfMatrix(mat)}")
+  # print(f"rank of this matrix is {getRankOfMatrix(mat)}")
 
-  print("getting eigenvalues and vectors")
-  eigs, vecs = np.linalg.eig(mat)
-  print(f'smallest eigenvalue is {eigs[np.argmin(np.abs(eigs))]}')
+  # print("getting eigenvalues and vectors")
+  # eigs, vecs = np.linalg.eig(mat)
+  # print(f'smallest eigenvalue is {eigs[np.argmin(np.abs(eigs))]}')

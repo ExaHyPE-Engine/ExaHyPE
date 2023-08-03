@@ -151,22 +151,14 @@ void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
      also serves as the preconditioning matrix.
   */
   KSPSetOperators(ksp, _A, _A);
-  
-  // KSPGetPC(ksp, &pc);
-  // PCSetType(pc, PCBJACOBI);
+  KSPGetPC(ksp, &pc);
 
   //set runtime options
   KSPSetFromOptions(ksp);
 
-  //the rest comes from the block with isbjacobi. we just do this once
-  KSPSetUp(ksp);
-  KSPGetPC(ksp, &pc);
-
-  //inside second else block
-  PCSetType(pc, PCLU); //or ILU
-  // PCSetType(pc, PCBJACOBI);
+  PCSetType(pc, PCNONE); //no preconditioner
   KSPSetType(ksp, KSPGMRES);
-  // KSPSetType(ksp, KSPCG);
+  KSPSetUp(ksp);
   KSPSetTolerances(ksp, 1.e-7, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
 
   //solve against the "exact" solution u
@@ -182,8 +174,12 @@ void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
 
   //tidy up temp objects
   KSPDestroy(&ksp);
-  // PCDestroy(&pc);
-  // VecDestroy(&u);
+
+  // PetscViewer viewer;
+  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"solution.xml",&viewer);
+  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  // VecView(_x, viewer);
+
   return;
 }
 

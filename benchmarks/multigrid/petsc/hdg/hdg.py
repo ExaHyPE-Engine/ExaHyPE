@@ -30,7 +30,6 @@ parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       defau
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
-
 '''
 set the number of cell and face dofs
 '''

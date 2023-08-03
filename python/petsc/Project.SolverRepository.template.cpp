@@ -191,15 +191,18 @@ tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::repositories::c
   const tarch::la::Vector<Dimensions,double>& cellCentre,
   const tarch::la::Vector<Dimensions,double>& cellH
 ){
-  const std::vector<int> indicesXY = convertDofIndexToXYCoordinate(quadIndex);
+  //get the quadrature point associated with this index
+  const std::vector<double> quadPoint = quadPoints[quadIndex];
   tarch::la::Vector<Dimensions,double> output;
 
   for (int i=0; i<Dimensions; i++){
-    //init output to be bottom left corner of cell
-    output[i] =  cellCentre[i] - cellH[i] / 2;
+    //init output to be centre of the cell
+    output[i] =  cellCentre[i];
     
-    //indicesXY indicates how many jumps of h / polynomial degree we need to do
-    output[i] += indicesXY[i] * cellH[i] / polynomialDegree;
+    //move from centre -> quadpoint, weighted by the size of the cell
+    //need to divide by 2 - want to make sure that furthest from the 
+    //centre we move is h/2
+    output[i] += quadPoint[i] * cellH[i]/2;
   }
   return output;  
 }
