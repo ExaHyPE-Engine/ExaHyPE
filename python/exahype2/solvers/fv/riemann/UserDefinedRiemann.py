@@ -20,8 +20,17 @@ class UserDefinedRiemann( SingleSweep ):
     overlap=1
   ):
     super().__init__(name, patch_size,overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, "riemann") 
+
     self._time_step_relaxation = time_step_relaxation
+
     self._user_defined_riemann_solver_implementation       = PDETerms.None_Implementation
+    self._flux_implementation                              = PDETerms.None_Implementation
+    self._ncp_implementation                               = PDETerms.None_Implementation
+    self._eigenvalues_implementation                       = PDETerms.None_Implementation
+    self._source_term_implementation                       = PDETerms.None_Implementation
+
+    self._compute_eigenvalue                               = True
+
     self.set_implementation(flux=flux,
                             riemann_solver=riemann_solver, 
                             boundary_conditions=boundary_conditions,
