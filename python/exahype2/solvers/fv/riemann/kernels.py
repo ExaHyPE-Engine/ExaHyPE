@@ -51,7 +51,7 @@ def create_compute_Riemann_kernel_for_UserDefinedRiemann(flux_implementation, ri
     double * __restrict__                        QSFlux
   )->double {
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem( QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, QSFlux );
+    return repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem( QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, QSFlux );
     {% endif %}
   }
 );
