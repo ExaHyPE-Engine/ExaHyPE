@@ -123,8 +123,8 @@ void exahype2::fv::riemann::internal::computeRiemannSolution_LoopBody(
   tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
   tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
   rightVolume(normal)++;
-
-  QMaxEigenvalue[QMaxEigenvalueEnumerator(patchIndex, rightVolume, 0)] = solveRiemannProblem(
+  std::cout << "Entered computeRiemannSolution_LoopBody" << std::endl;
+  double smax = solveRiemannProblem(
     QIn + QInEnumerator(patchIndex, rightVolume, 0),
     QIn + QInEnumerator(patchIndex, leftVolume,  0),
     QFlux + QFluxEnumerator(patchIndex, rightVolume, 0),
@@ -139,6 +139,9 @@ void exahype2::fv::riemann::internal::computeRiemannSolution_LoopBody(
     normal,
     QS + QSEnumerator(patchIndex, rightVolume, 0)
   );
+  std::cout << "Computed smax" << std::endl;
+  QMaxEigenvalue[QMaxEigenvalueEnumerator(patchIndex, rightVolume, 0)] = smax;
+  std::cout << "Saved smax" << std::endl;
 }
 
 template <typename QRiemannEnumeratorType, typename QOutEnumeratorType>

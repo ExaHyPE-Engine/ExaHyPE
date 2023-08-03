@@ -15,7 +15,7 @@ time_step_relaxation  = 0.5 # taken from tutorial
 plot_interval         = 0.005 # taken from tutorial
 patch_size            = 4 # 32
 maximum_cell_size     = 0.1
-amr_levels            = 3 
+amr_levels            = 0
 auxiliary_variables   = 1 # bathymetry, this is fixed to 1 in pde.py
 amr_tolerance         = 1e-3
 
@@ -23,6 +23,18 @@ my_pde = Radial_Bathymetry_Dam_Break(width=width, refinement_tolerance=amr_toler
 my_pde.substitute_expression(my_pde.g, 9.81)
 
 custom_riemann_solver = """
+    std::cout << "Entered solveRiemannProblem for x = " << xR(0) << ", y = " << xR(1) << std::endl;
+    std::cout << "Checking arrays for garbage values" << std::endl;
+    for(int i = 0; i < 3; i++)
+    {
+        std::cout << "QR[" << i << "] = " << QR[i] << std::endl
+        << "QL[" << i << "] = " << QL[i] << std::endl
+        << "FR[" << i << "] = " << FR[i] << std::endl
+        << "FL[" << i << "] = " << FL[i] << std::endl
+        << "LR[" << i << "] = " << LR[i] << std::endl
+        << "LL[" << i << "] = " << LL[i] << std::endl
+        << "QSFlux[" << i << "] = " << QSFlux[i] << std::endl;
+    }
     double grav = 9.81;
     double smax = 0.0;
     for(int i = 0; i < 3; i++)
@@ -52,10 +64,13 @@ custom_riemann_solver = """
             QSFlux[2] = flux[2] - 0.5*grav*hRoe*DEta;
             break;
     }
+    std::cout << "Leaving solveRiemannProblem" << std::endl;
+    std::cout << "smax = " << smax << std::endl;
     return smax;
 """
 
 custom_flux = """
+std::cout << "Entered flux for x = " << faceCentre(0) << ", y = " << faceCentre(1) << std::endl;
 switch(normal)
 {
     case 0:
@@ -69,6 +84,26 @@ switch(normal)
         F[2] = Q[2] * Q[2] / Q[0];
         break;
 }
+std::cout << "Leaving flux" << std::endl;
+return;
+"""
+
+custom_eigenvalues = """
+std::cout << "Entered eigenvalues for x = " << faceCentre(0) << ", y = " << faceCentre(1) << std::endl;
+switch(normal)
+{
+    case 0:
+        lambda[0] = Q[1]/Q[0];
+        lambda[1] = lambda[0] - std::sqrt(9.81*Q[0]);
+        lambda[2] = lambda[0] + std::sqrt(9.81*Q[0]);
+        break;
+    case 1:
+        lambda[0] = Q[2]/Q[0];
+        lambda[1] = lambda[0] - std::sqrt(9.81*Q[0]);
+        lambda[2] = lambda[0] + std::sqrt(9.81*Q[0]);
+        break;
+}
+std::cout << "Leaving eigenvalues" << std::endl;
 return;
 """
 
@@ -89,7 +124,7 @@ if solver == 0:
     initial_conditions    = my_pde.implementation_of_initial_conditions(),
     boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
     flux                  = custom_flux,
-    eigenvalues           = my_pde.implementation_of_eigenvalues(),
+    eigenvalues           = custom_eigenvalues,
     refinement_criterion  = my_pde.implementation_of_refinement_criterion(),
     riemann_solver        = custom_riemann_solver
     )
