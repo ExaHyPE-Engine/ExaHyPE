@@ -78,10 +78,6 @@ function @f$ \psi @f$, and then integrate over the cell:
 Obviously, we will want to integrate over the whole domain. But for now we just consider this 
 integral in each cell, as we can sum over them eventually.
 
-The test functions we use are piecewise linear, scaled such that @f$ \psi_i @f$ is 1 right above @f$ u_i @f$ and 0 elsewhere
-
-*THIS DOESN'T SQUARE WITH THERE BEING TWICE AS MANY TEST FUNCTIONS AS BEFORE. FIX THIS*
-
 Next, we want to just consider the left-hand integral. Let's integrate by parts:
 
 \f{eqnarray*}{
@@ -333,6 +329,15 @@ WE WILL WORK IT OUT ON THE BOTTOM FACE AND TOP FACE,
 THEN INTERPOLATE ACROSS
 
 -->
+
+Constructing the gradient of @f$ u @f$ on the face is simple enough. We can linearly interpolate
+to figure out the gradient throughout the rest of the cell. Using our 2d diagram above, we can 
+interpolate between the gradient on the bottom face, and the gradient on the top face, meaning:
+
+\f{eqnarray*}{
+  \nabla u_0
+\f}
+
 
 #### What about the gradient of the test functions?
 
