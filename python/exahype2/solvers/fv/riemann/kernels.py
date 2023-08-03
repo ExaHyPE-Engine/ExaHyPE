@@ -30,9 +30,10 @@ def create_compute_Riemann_kernel_for_UserDefinedRiemann(flux_implementation, ri
     const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
     double                                       dt,
-    int                                          normal
-  )->double {
-    return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal);
+    int                                          normal,
+    double * __restrict__ lambda
+  )->void {
+    return repositories::{{SOLVER_INSTANCE}}.eigenvalues( Q, faceCentre, volumeH, t, dt, normal, lambda );
   },
   [&](
     const double * __restrict__                  QR,
@@ -47,11 +48,10 @@ def create_compute_Riemann_kernel_for_UserDefinedRiemann(flux_implementation, ri
     double                                       t,
     double                                       dt,
     int                                          normal,
-    double * __restrict__                        QSR,
-    double * __restrict__                        QSL
-  )->void {
+    double * __restrict__                        QSFlux
+  )->double {
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem( QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, QSR, QSL );
+    repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem( QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, QSFlux );
     {% endif %}
   }
 );
@@ -78,13 +78,14 @@ def create_abstract_solver_declarations(flux_implementation, riemann_solver_impl
      * @return Max eigenvalue. Result has to be positive, so we are actually speaking
      *   about the maximum absolute eigenvalue.
      */
-    virtual double maxEigenvalue(
+    virtual void eigenvalues(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
-      int                                          normal
+      int                                          normal,
+      double * __restrict__ lambda // lambda[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
     
     {% if FLUX_IMPLEMENTATION!="<none>" %}
@@ -100,21 +101,29 @@ def create_abstract_solver_declarations(flux_implementation, riemann_solver_impl
     {% endif %}
                                
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    virtual void solveRiemannProblem(
+    /**
+     * Allows to implement a custom Riemann solver. 
+     * @param QR the right state vector
+     * @param QL the left state vector
+     * @param FR the right flux vector
+     * @param FL the left flux vector
+     * @param LR the eigenvalues of the right state vector
+     * @param LL the eigenvalues of the left state vector                          
+     */
+    virtual double solveRiemannProblem(
         const double * __restrict__                  QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
         const double * __restrict__                  QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
         const double * __restrict__                  FR, // FR[{{NUMBER_OF_UNKNOWNS}}]
         const double * __restrict__                  FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-        const double * __restrict__                  LR, // LR[1]
-        const double * __restrict__                  LL, // LL[1]
+        const double * __restrict__                  LR, // LR[{{NUMBER_OF_UNKNOWNS}}]
+        const double * __restrict__                  LL, // LL[{{NUMBER_OF_UNKNOWNS}}]
         const tarch::la::Vector<Dimensions,double>&  xR,
         const tarch::la::Vector<Dimensions,double>&  xL,
         const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        QSR, // QSR[{{NUMBER_OF_UNKNOWNS}}]
-        double * __restrict__                        QSL  // QSR[{{NUMBER_OF_UNKNOWNS}}]
+        double * __restrict__                        QSFlux // QSFlux[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %}=0{% else %} final {% endif %};
     {% endif %}
 """, undefined=jinja2.DebugUndefined)
@@ -128,13 +137,14 @@ def create_abstract_solver_declarations(flux_implementation, riemann_solver_impl
 def create_abstract_solver_definitions(flux_implementation, riemann_solver_implementation, eigenvalues_implementation):
     Template = jinja2.Template( """
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
-  int                                          normal
+  int                                          normal,
+  double * __restrict__ lambda // lambda[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {{EIGENVALUES_IMPLEMENTATION}}
 }
@@ -155,21 +165,20 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 {% endif %}
                                
 {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-void solveRiemannProblem(
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::solveRiemannProblem(
   const double * __restrict__                  QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const double * __restrict__                  QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const double * __restrict__                  FR, // FR[{{NUMBER_OF_UNKNOWNS}}]
   const double * __restrict__                  FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-  const double * __restrict__                  LR, // LR[1]
-  const double * __restrict__                  LL, // LL[1]
+  const double * __restrict__                  LR, // LR[{{NUMBER_OF_UNKNOWNS}}]
+  const double * __restrict__                  LL, // LL[{{NUMBER_OF_UNKNOWNS}}]
   const tarch::la::Vector<Dimensions,double>&  xR,
   const tarch::la::Vector<Dimensions,double>&  xL,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * __restrict__                        QSR, // QSR[{{NUMBER_OF_UNKNOWNS}}]
-  double * __restrict__                        QSL  // QSR[{{NUMBER_OF_UNKNOWNS}}]
+  double * __restrict__                        QSFlux // QSFlux[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {{RIEMANN_SOLVER_IMPLEMENTATION}}          
 }
@@ -194,13 +203,14 @@ def create_solver_declarations(flux_implementation, riemann_solver_implementatio
      * @return Max eigenvalue. Result has to be positive, so we are actually speaking
      *   about the maximum absolute eigenvalue.
      */
-    virtual double maxEigenvalue(
+    virtual void eigenvalues(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
-      int                                          normal
+      int                                          normal,
+      double * __restrict__ lambda // lambda[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
 
@@ -218,21 +228,29 @@ def create_solver_declarations(flux_implementation, riemann_solver_implementatio
     {% endif %}
                                
     {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %}
-    virtual void solveRiemannProblem(
+    /**
+     * Allows to implement a custom Riemann solver. 
+     * @param QR the right state vector
+     * @param QL the left state vector
+     * @param FR the right flux vector
+     * @param FL the left flux vector
+     * @param LR the eigenvalues of the right state vector
+     * @param LL the eigenvalues of the left state vector                          
+     */
+    virtual double solveRiemannProblem(
         const double * __restrict__                  QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
         const double * __restrict__                  QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
         const double * __restrict__                  FR, // FR[{{NUMBER_OF_UNKNOWNS}}]
         const double * __restrict__                  FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-        const double * __restrict__                  LR, // LR[1]
-        const double * __restrict__                  LL, // LL[1]
+        const double * __restrict__                  LR, // LR[{{NUMBER_OF_UNKNOWNS}}]
+        const double * __restrict__                  LL, // LL[{{NUMBER_OF_UNKNOWNS}}]
         const tarch::la::Vector<Dimensions,double>&  xR,
         const tarch::la::Vector<Dimensions,double>&  xL,
         const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        QSR, // QSR[{{NUMBER_OF_UNKNOWNS}}]
-        double * __restrict__                        QSL  // QSR[{{NUMBER_OF_UNKNOWNS}}]
+        double * __restrict__                        QSFlux // QSFlux[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
 """, undefined=jinja2.DebugUndefined)
@@ -245,17 +263,18 @@ def create_solver_declarations(flux_implementation, riemann_solver_implementatio
 def create_solver_definitions(flux_implementation, riemann_solver_implementation, eigenvalues_implementation):
     Template = jinja2.Template( """
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
-  int                                          normal
+  int                                          normal,
+  double * __restrict__ lambda // lambda[{{NUMBER_OF_UNKNOWNS}}]
 )  {
-  logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
+  logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );
   // @todo implement
-  logTraceOut( "maxEigenvalue(...)" );
+  logTraceOut( "eigenvalues(...)" );
 }
 {% endif %}
 
@@ -278,21 +297,20 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
                                
 
 {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %}
-void solveRiemannProblem(
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::solveRiemannProblem(
   const double * __restrict__                  QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const double * __restrict__                  QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const double * __restrict__                  FR, // FR[{{NUMBER_OF_UNKNOWNS}}]
   const double * __restrict__                  FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-  const double * __restrict__                  LR, // LR[1]
-  const double * __restrict__                  LL, // LL[1]
+  const double * __restrict__                  LR, // LR[{{NUMBER_OF_UNKNOWNS}}]
+  const double * __restrict__                  LL, // LL[{{NUMBER_OF_UNKNOWNS}}]
   const tarch::la::Vector<Dimensions,double>&  xR,
   const tarch::la::Vector<Dimensions,double>&  xL,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * __restrict__                        QSR, // QSR[{{NUMBER_OF_UNKNOWNS}}]
-  double * __restrict__                        QSL  // QSR[{{NUMBER_OF_UNKNOWNS}}]
+  double * __restrict__                        QSFlux // QSFlux[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith4Arguments( "solveRiemannProblem(...)", xR, xL, t, normal );
   // @todo implement
