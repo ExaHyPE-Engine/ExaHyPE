@@ -20,59 +20,59 @@ void exahype2::fv::riemann::internal::copySolution_LoopBody(
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
-
-template <class QMaxEigenvalueEnumeratorType>
-void exahype2::fv::riemann::internal::computeMaxEigenvalue_LoopBody(
-  const double* __restrict__ QIn,
-    exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
-    exahype2::fv::riemann::MaxEigenvalue             maxEigenvalue,
-    const tarch::la::Vector<Dimensions, double>&     patchCentre,
-    const tarch::la::Vector<Dimensions, double>&     patchSize,
-    int                                              patchIndex,
-    const tarch::la::Vector<Dimensions, int>&        volumeIndex,
-    double                                           t,
-    double                                           dt,
-    int                                              normal,
-    double* __restrict__ QMaxEigenvalue,
-    QMaxEigenvalueEnumeratorType QMaxEigenvalueEnumerator
-  ) {
-  QMaxEigenvalue[QMaxEigenvalueEnumerator(patchIndex, volumeIndex, 0)] = maxEigenvalue(
-    QIn + QInEnumerator(patchIndex, volumeIndex, 0),
-    ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex),
-    ::exahype2::fv::getVolumeSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell),
-    t,
-    dt,
-    normal
-  );
+void exahype2::fv::riemann::internal::computeEigenvalues_LoopBody(
+          const double* __restrict__ QIn,
+          exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
+          exahype2::fv::riemann::Eigenvalues               eigenvalues,
+          const tarch::la::Vector<Dimensions, double>&     patchCentre,
+          const tarch::la::Vector<Dimensions, double>&     patchSize,
+          int                                              patchIndex,
+          const tarch::la::Vector<Dimensions, int>&        volumeIndex,
+          double                                           t,
+          double                                           dt,
+          int                                              normal,
+          double* __restrict__ QEigenvalues,
+          exahype2::enumerator::AoSLexicographicEnumerator QEigenvaluesEnumerator
+        )  {
+          eigenvalues(
+            QIn + QInEnumerator(patchIndex, volumeIndex, 0),
+            ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex),
+            ::exahype2::fv::getVolumeSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell),
+            t,
+            dt,
+            normal,
+            QEigenvalues + QEigenvaluesEnumerator(patchIndex, volumeIndex, 0)
+          );
+  
 }
 
 double exahype2::fv::riemann::internal::reduceMaxEigenvalue_LoopBody(
   const double* __restrict__ QOut,
   exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator,
-  exahype2::fv::riemann::MaxEigenvalue             maxEigenvalue,
+  const double* __restrict__ tempMaxEigenvalueX,
+  const double* __restrict__ tempMaxEigenvalueY,
+  const double* __restrict__ tempMaxEigenvalueZ,
+  exahype2::enumerator::AoSLexicographicEnumerator maxEigenvalueEnumerator,
   const tarch::la::Vector<Dimensions, double>&     patchCentre,
   const tarch::la::Vector<Dimensions, double>&     patchSize,
   int                                              patchIndex,
   const tarch::la::Vector<Dimensions, int>&        volumeIndex,
   double                                           t,
-  double                                           dt
+  double                                           dt,
+  int                                              unknowns
 ) {
+  auto reduceAlongOneDirection = [=](const double* __restrict__ tempMaxEigenvalue) {
+    double result = 0.0;
+    for(int i = 0; i < unknowns; i++)
+      result = std::max(result, std::abs(tempMaxEigenvalue[maxEigenvalueEnumerator(patchIndex, volumeIndex, i)]));
+    return result;
+  };
+
   double result = 0.0;
-  for (int normal = 0; normal < Dimensions; normal++) {
-    // actual computation via user's functor
-    result = std::max(
-      result,
-      maxEigenvalue(
-        QOut + QOutEnumerator(patchIndex, volumeIndex, 0),
-        ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell, volumeIndex),
-        ::exahype2::fv::getVolumeSize(patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell),
-        t,
-        dt,
-        normal
-      )
-    );
-  }
-  return result;
+  result = std::max(result, reduceAlongOneDirection(tempMaxEigenvalueX));
+  result = std::max(result, reduceAlongOneDirection(tempMaxEigenvalueY));
+  if (Dimensions == 3)
+    result = std::max(result, reduceAlongOneDirection(tempMaxEigenvalueZ));
 }
 
 void exahype2::fv::riemann::internal::computeFlux_LoopBody(
@@ -106,8 +106,8 @@ void exahype2::fv::riemann::internal::computeRiemannSolution_LoopBody(
   exahype2::fv::riemann::SolveRiemannProblem       solveRiemannProblem,
   const double* __restrict__ QFlux,
   exahype2::enumerator::AoSLexicographicEnumerator QFluxEnumerator,
-  double* __restrict__ QMaxEigenvalue,
-  exahype2::enumerator::AoSLexicographicEnumerator QMaxEigenvalueEnumerator,
+  const double* __restrict__ QEigenvalues,
+  exahype2::enumerator::AoSLexicographicEnumerator QEigenvaluesEnumerator,
   const tarch::la::Vector<Dimensions, double>&     patchCentre,
   const tarch::la::Vector<Dimensions, double>&     patchSize,
   int                                              patchIndex,
@@ -116,27 +116,28 @@ void exahype2::fv::riemann::internal::computeRiemannSolution_LoopBody(
   double                                           dt,
   int                                              normal,
   double* __restrict__ QS,
-  exahype2::enumerator::AoSLexicographicEnumerator QSEnumerator
+  exahype2::enumerator::AoSLexicographicEnumerator QSEnumerator,
+  double* __restrict__ QMaxEigenvalue,
+  exahype2::enumerator::AoSLexicographicEnumerator QMaxEigenvalueEnumerator
 )  {
   tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
   tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
   rightVolume(normal)++;
 
-  solveRiemannProblem(
+  QMaxEigenvalue[QMaxEigenvalueEnumerator(patchIndex, rightVolume, 0)] = solveRiemannProblem(
     QIn + QInEnumerator(patchIndex, rightVolume, 0),
     QIn + QInEnumerator(patchIndex, leftVolume,  0),
     QFlux + QFluxEnumerator(patchIndex, rightVolume, 0),
     QFlux + QFluxEnumerator(patchIndex, leftVolume, 0),
-    QMaxEigenvalue + QMaxEigenvalueEnumerator(patchIndex, rightVolume, 0),
-    QMaxEigenvalue + QMaxEigenvalueEnumerator(patchIndex, leftVolume, 0),
+    QEigenvalues + QEigenvaluesEnumerator(patchIndex, rightVolume, 0),
+    QEigenvalues + QEigenvaluesEnumerator(patchIndex, leftVolume, 0),
     ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, rightVolume),
     ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, leftVolume),
     ::exahype2::fv::getVolumeSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell),
     t,
     dt,
     normal,
-    QS + QSEnumerator(patchIndex, rightVolume, 0),
-    QS + QSEnumerator(patchIndex, leftVolume, 0)
+    QS + QSEnumerator(patchIndex, rightVolume, 0)
   );
 }
 
@@ -161,7 +162,7 @@ void exahype2::fv::riemann::internal::updateSolutionWithRiemannSolution_LoopBody
     rightVolume(normal)++;
 
     const double fluxLeft = tempRiemann[riemannEnumerator(patchIndex, leftVolume, unknown)];
-    const double fluxRight = tempRiemann[riemannEnumerator(patchIndex, volumeIndex, unknown)];
+    const double fluxRight = tempRiemann[riemannEnumerator(patchIndex, rightVolume, unknown)];
 
     QOut[QOutEnumerator(
       patchIndex, volumeIndex, unknown

@@ -11,7 +11,7 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
   bool                    evaluateRiemann,
   bool                    evaluateMaximumEigenvalueAfterTimeStep,
   Flux                    flux,
-  MaxEigenvalue           maxEigenvalue,
+  Eigenvalues             eigenvalues,
   SolveRiemannProblem     solveRiemannProblem
 ) {
   static tarch::logging::Log _log( "exahype2::fv::riemann" );
@@ -27,12 +27,17 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
   exahype2::enumerator::AoSLexicographicEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
-  exahype2::enumerator::AoSLexicographicEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,1,0);
+  exahype2::enumerator::AoSLexicographicEnumerator maxEigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,1,0);
   exahype2::enumerator::AoSLexicographicEnumerator riemannEnumerator   (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
+  exahype2::enumerator::AoSLexicographicEnumerator eigenvaluesEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
 
-  double* tempEigenvalueX            =                                    tarch::allocateMemory<double>( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
-  double* tempEigenvalueY            =                                    tarch::allocateMemory<double>( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
-  double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory<double>( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempEigenvaluesX            =                                    tarch::allocateMemory<double>( eigenvaluesEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvaluesY            =                                    tarch::allocateMemory<double>( eigenvaluesEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvaluesZ            = (Dimensions==3)                  ? tarch::allocateMemory<double>( eigenvaluesEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+
+  double* tempMaxEigenvalueX         =                                    tarch::allocateMemory<double>( maxEigenvalueEnumerator.size(),     tarch::MemoryLocation::Heap);
+  double* tempMaxEigenvalueY         =                                    tarch::allocateMemory<double>( maxEigenvalueEnumerator.size(),     tarch::MemoryLocation::Heap);
+  double* tempMaxEigenvalueZ         =  (Dimensions==3)                 ? tarch::allocateMemory<double>( maxEigenvalueEnumerator.size(),     tarch::MemoryLocation::Heap) : nullptr;
 
   double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
@@ -79,54 +84,34 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
     if (Dimensions==2) {
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
-        internal::computeMaxEigenvalue_LoopBody(
+        internal::computeEigenvalues_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            maxEigenvalue,
+            eigenvalues,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex2d(x,y),
             patchData.t[patchIndex], patchData.dt[patchIndex],
             0,
-            tempEigenvalueX,
-            eigenvalueEnumerator
+            tempEigenvaluesX,
+            eigenvaluesEnumerator
         );
       }
       for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        internal::computeMaxEigenvalue_LoopBody(
+        internal::computeEigenvalues_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            maxEigenvalue,
+            eigenvalues,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex2d(x,y),
             patchData.t[patchIndex], patchData.dt[patchIndex],
             1,
-            tempEigenvalueY,
-            eigenvalueEnumerator
-        );
-      }
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int unknown = 0; unknown < unknowns; unknown++) {
-        internal::updateSolutionWithEigenvalueDamping_LoopBody(
-          patchData.QIn[patchIndex],
-          QInEnumerator,
-          tempEigenvalueX,
-          tempEigenvalueY,
-          tempEigenvalueZ,
-          eigenvalueEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x,y),
-          unknown,
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
-          QOutEnumerator
+            tempEigenvaluesY,
+            eigenvaluesEnumerator
         );
       }
     }
@@ -134,73 +119,52 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-        internal::computeMaxEigenvalue_LoopBody(
+        internal::computeEigenvalues_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
-              maxEigenvalue,
+              eigenvalues,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
               patchData.t[patchIndex], patchData.dt[patchIndex],
               0,
-              tempEigenvalueX,
-              eigenvalueEnumerator
+              tempEigenvaluesX,
+              eigenvaluesEnumerator
         );
       }
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-        internal::computeMaxEigenvalue_LoopBody(
+        internal::computeEigenvalues_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
-              maxEigenvalue,
+              eigenvalues,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
               patchData.t[patchIndex], patchData.dt[patchIndex],
               1,
-              tempEigenvalueY,
-              eigenvalueEnumerator
+              tempEigenvaluesY,
+              eigenvaluesEnumerator
         );
       }
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++) {
-        internal::computeMaxEigenvalue_LoopBody(
+        internal::computeEigenvalues_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
-              maxEigenvalue,
+              eigenvalues,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
               patchData.t[patchIndex], patchData.dt[patchIndex],
               2,
-              tempEigenvalueZ,
-              eigenvalueEnumerator
-        );
-      }
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int unknown = 0; unknown < unknowns; unknown++) {
-        internal::updateSolutionWithEigenvalueDamping_LoopBody(
-          patchData.QIn[patchIndex],
-          QInEnumerator,
-          tempEigenvalueX,
-          tempEigenvalueY,
-          tempEigenvalueZ,
-          eigenvalueEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x,y,z),
-          unknown,
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
-          QOutEnumerator
+              tempEigenvaluesZ,
+              eigenvaluesEnumerator
         );
       }
     }
@@ -307,8 +271,8 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           solveRiemannProblem,
           tempFluxX,
           fluxEnumerator,
-          tempEigenvalueX,
-          eigenvalueEnumerator,
+          tempEigenvaluesX,
+          eigenvaluesEnumerator,
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
@@ -317,7 +281,9 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           patchData.dt[patchIndex],
           0, // normal
           tempRiemannX,
-          riemannEnumerator
+          riemannEnumerator,
+          tempMaxEigenvalueX,
+          maxEigenvalueEnumerator
         );
       }
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
@@ -328,8 +294,8 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           solveRiemannProblem,
           tempFluxY,
           fluxEnumerator,
-          tempEigenvalueY,
-          eigenvalueEnumerator,
+          tempEigenvaluesY,
+          eigenvaluesEnumerator,
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
@@ -338,7 +304,9 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           patchData.dt[patchIndex],
           1, // normal
           tempRiemannY,
-          riemannEnumerator
+          riemannEnumerator,
+          tempMaxEigenvalueY,
+          maxEigenvalueEnumerator
         );
       }
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -368,8 +336,8 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           solveRiemannProblem,
           tempFluxX,
           fluxEnumerator,
-          tempEigenvalueX,
-          eigenvalueEnumerator,
+          tempEigenvaluesX,
+          eigenvaluesEnumerator,
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
@@ -378,7 +346,9 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           patchData.dt[patchIndex],
           0, // normal
           tempRiemannX,
-          riemannEnumerator
+          riemannEnumerator,
+          tempMaxEigenvalueX,
+          maxEigenvalueEnumerator
         );
       }
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
@@ -390,8 +360,8 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           solveRiemannProblem,
           tempFluxY,
           fluxEnumerator,
-          tempEigenvalueY,
-          eigenvalueEnumerator,
+          tempEigenvaluesY,
+          eigenvaluesEnumerator,
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
@@ -400,7 +370,9 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           patchData.dt[patchIndex],
           1, // normal
           tempRiemannY,
-          riemannEnumerator
+          riemannEnumerator,
+          tempMaxEigenvalueY,
+          maxEigenvalueEnumerator
         );
       }
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
@@ -412,8 +384,8 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           solveRiemannProblem,
           tempFluxZ,
           fluxEnumerator,
-          tempEigenvalueZ,
-          eigenvalueEnumerator,
+          tempEigenvaluesZ,
+          eigenvaluesEnumerator,
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
@@ -422,7 +394,9 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           patchData.dt[patchIndex],
           2, // normal
           tempRiemannZ,
-          riemannEnumerator
+          riemannEnumerator,
+          tempMaxEigenvalueZ,
+          maxEigenvalueEnumerator
         );
       }
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -454,13 +428,17 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           internal::reduceMaxEigenvalue_LoopBody(
             *(patchData.QOut + patchIndex),
             QOutEnumerator,
-            maxEigenvalue,
+            tempMaxEigenvalueX,
+            tempMaxEigenvalueY,
+            tempMaxEigenvalueZ,
+            maxEigenvalueEnumerator,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex2d(x,y),
             patchData.t[patchIndex],
-            patchData.dt[patchIndex]
+            patchData.dt[patchIndex],
+            unknowns
           )
         );
       }
@@ -476,13 +454,17 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           internal::reduceMaxEigenvalue_LoopBody(
             *(patchData.QOut + patchIndex),
             QOutEnumerator,
-            maxEigenvalue,
+            tempMaxEigenvalueX,
+            tempMaxEigenvalueY,
+            tempMaxEigenvalueZ,
+            maxEigenvalueEnumerator,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
             patchData.t[patchIndex],
-            patchData.dt[patchIndex]
+            patchData.dt[patchIndex],
+            unknowns
           )
         );
       }
@@ -496,7 +478,10 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
   if (tempRiemannX!=nullptr)            tarch::freeMemory(tempRiemannX, tarch::MemoryLocation::Heap);
   if (tempRiemannY!=nullptr)            tarch::freeMemory(tempRiemannY, tarch::MemoryLocation::Heap);
   if (tempRiemannZ!=nullptr)            tarch::freeMemory(tempRiemannZ, tarch::MemoryLocation::Heap);
-  if (tempEigenvalueX!=nullptr)         tarch::freeMemory(tempEigenvalueX, tarch::MemoryLocation::Heap);
-  if (tempEigenvalueY!=nullptr)         tarch::freeMemory(tempEigenvalueY, tarch::MemoryLocation::Heap);
-  if (tempEigenvalueZ!=nullptr)         tarch::freeMemory(tempEigenvalueZ, tarch::MemoryLocation::Heap);
+  if (tempEigenvaluesX!=nullptr)        tarch::freeMemory(tempEigenvaluesX, tarch::MemoryLocation::Heap);
+  if (tempEigenvaluesY!=nullptr)        tarch::freeMemory(tempEigenvaluesY, tarch::MemoryLocation::Heap);
+  if (tempEigenvaluesZ!=nullptr)        tarch::freeMemory(tempEigenvaluesZ, tarch::MemoryLocation::Heap);
+  if (tempMaxEigenvalueX!=nullptr)      tarch::freeMemory(tempMaxEigenvalueX, tarch::MemoryLocation::Heap);
+  if (tempMaxEigenvalueY!=nullptr)      tarch::freeMemory(tempMaxEigenvalueY, tarch::MemoryLocation::Heap);
+  if (tempMaxEigenvalueZ!=nullptr)      tarch::freeMemory(tempMaxEigenvalueZ, tarch::MemoryLocation::Heap);
 }

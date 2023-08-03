@@ -12,14 +12,15 @@
 namespace exahype2 {
   namespace fv {
     namespace riemann {
-      typedef std::function< double(
+      typedef std::function< void(
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
-        int                                          normal
-      ) >   MaxEigenvalue;
+        int                                          normal,
+        double * __restrict__                        lambda
+      ) >   Eigenvalues;
 
       typedef std::function< void(
         const double * __restrict__                  Q,
@@ -31,7 +32,7 @@ namespace exahype2 {
         double * __restrict__                        F
       ) >  Flux;
 
-      typedef std::function< void(
+      typedef std::function< double(
         const double * __restrict__                  QR,
         const double * __restrict__                  QL,
         const double * __restrict__                  FR,
@@ -44,8 +45,7 @@ namespace exahype2 {
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        QSR,
-        double * __restrict__                        QSL
+        double * __restrict__                        QSFlux
       ) > SolveRiemannProblem;
     }
   }

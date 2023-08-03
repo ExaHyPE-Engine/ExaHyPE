@@ -38,10 +38,10 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
          * Specialisation if input data is already in AoS format. This holds for
          * all of our kernels unless you explicitly reorder the input.
          */
-        static void computeMaxEigenvalue_LoopBody(
+        static void computeEigenvalues_LoopBody(
           const double* __restrict__ QIn,
           exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
-          exahype2::fv::riemann::MaxEigenvalue             maxEigenvalue,
+          exahype2::fv::riemann::Eigenvalues               eigenvalues,
           const tarch::la::Vector<Dimensions, double>&     patchCentre,
           const tarch::la::Vector<Dimensions, double>&     patchSize,
           int                                              patchIndex,
@@ -49,8 +49,8 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
           double                                           t,
           double                                           dt,
           int                                              normal,
-          double* __restrict__ QMaxEigenvalue,
-          exahype2::enumerator::AoSLexicographicEnumerator QMaxEigenvalueEnumerator
+          double* __restrict__ QEigenvalues,
+          exahype2::enumerator::AoSLexicographicEnumerator QEigenvaluesEnumerator
         ) InlineMethod;
 
         /**
@@ -61,13 +61,17 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__ QOut,
           exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator,
-          exahype2::fv::riemann::MaxEigenvalue             maxEigenvalue,
+          const double* __restrict__ tempMaxEigenvalueX,
+          const double* __restrict__ tempMaxEigenvalueY,
+          const double* __restrict__ tempMaxEigenvalueZ,
+          exahype2::enumerator::AoSLexicographicEnumerator maxEigenvalueEnumerator,
           const tarch::la::Vector<Dimensions, double>&     patchCentre,
           const tarch::la::Vector<Dimensions, double>&     patchSize,
           int                                              patchIndex,
           const tarch::la::Vector<Dimensions, int>&        volumeIndex,
           double                                           t,
-          double                                           dt
+          double                                           dt,
+          int                                              unknowns
         ) InlineMethod;
 
         /**
@@ -121,8 +125,8 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
           exahype2::fv::riemann::SolveRiemannProblem       solveRiemannProblem,
           const double* __restrict__ QFlux,
           exahype2::enumerator::AoSLexicographicEnumerator QFluxEnumerator,
-          double* __restrict__ QMaxEigenvalue,
-          exahype2::enumerator::AoSLexicographicEnumerator QMaxEigenvalueEnumerator,
+          const double* __restrict__ QEigenvalues,
+          exahype2::enumerator::AoSLexicographicEnumerator QEigenvaluesEnumerator,
           const tarch::la::Vector<Dimensions, double>&     patchCentre,
           const tarch::la::Vector<Dimensions, double>&     patchSize,
           int                                              patchIndex,
@@ -131,36 +135,10 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
           double                                           dt,
           int                                              normal,
           double* __restrict__ QS,
-          exahype2::enumerator::AoSLexicographicEnumerator QSEnumerator
+          exahype2::enumerator::AoSLexicographicEnumerator QSEnumerator,
+          double* __restrict__ QMaxEigenvalue,
+          exahype2::enumerator::AoSLexicographicEnumerator QMaxEigenvalueEnumerator
         )  InlineMethod;
-
-#if defined(SharedOMP) \
-  and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNUC__)) or !defined(GPUOffloadingOMP))
-#pragma omp declare simd
-#endif
-#if defined(GPUOffloadingOMP)
-#pragma omp declare target
-#endif
-        template <typename QInEnumeratorType, typename QMaxEigenvalueEnumeratorType, typename QOutEnumeratorType>
-        static void updateSolutionWithEigenvalueDamping_LoopBody(
-          const double* __restrict__ QIn,
-          const QInEnumeratorType& QInEnumerator,
-          const double* __restrict__ tempMaxEigenvalueX,
-          const double* __restrict__ tempMaxEigenvalueY,
-          const double* __restrict__ tempMaxEigenvalueZ,
-          const QMaxEigenvalueEnumeratorType&          eigenvalueEnumerator,
-          const tarch::la::Vector<Dimensions, double>& patchCentre,
-          const tarch::la::Vector<Dimensions, double>& patchSize,
-          int                                          patchIndex,
-          const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-          int                                          unknown,
-          double                                       dt,
-          double* __restrict__ QOut,
-          const QOutEnumeratorType& QOutEnumerator
-        ) InlineMethod;
-#if defined(GPUOffloadingOMP)
-#pragma omp end declare target
-#endif
       }
     }
   }

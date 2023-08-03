@@ -18,7 +18,7 @@ namespace exahype2 {
         bool                    evaluateRiemann,
         bool                    evaluateMaximumEigenvalueAfterTimeStep,
         Flux                    flux,
-        MaxEigenvalue           maxEigenvalue,
+        Eigenvalues             eigenvalues,
         SolveRiemannProblem     solveRiemannProblem
       )
       #if defined(UseManualInlining)
