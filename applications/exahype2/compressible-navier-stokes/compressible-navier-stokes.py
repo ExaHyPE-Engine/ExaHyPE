@@ -6,9 +6,9 @@ sys.path.insert(0, os.path.abspath('../../../python'))
 import peano4
 import exahype2
 
-dimensions                = 2
+dimensions                = 3
 unknowns                  = dimensions + 2 # [rho, u, v, (w), e]
-cell_size                 = 0.1
+cell_size                 = 0.4
 amr_levels                = 0 # Set to 0 to disable adaptive mesh refinement (AMR)
 patch_size                = 3
 auxiliary_variables       = 0
@@ -126,7 +126,7 @@ my_solver._preprocess_reconstructed_patch = """
     }
 #else
     // Edges
-    for (int i = 1, i < patchSize + 1, i++) {
+    for (int i = 1; i < patchSize + 1; i++) {
       tarch::la::Vector<Dimensions, int> backLeftCell   = {0, i, 0};
       tarch::la::Vector<Dimensions, int> backLeftCellN1 = {1, i, 0};
       tarch::la::Vector<Dimensions, int> backLeftCellN2 = {0, i, 1};
@@ -223,55 +223,54 @@ my_solver._preprocess_reconstructed_patch = """
       const int topRightCellN1Serialised = peano4::utils::dLinearised(topRightCellN1, patchSize + 2 * 1);
       const int topRightCellN2Serialised = peano4::utils::dLinearised(topRightCellN2, patchSize + 2 * 1);
 
-      for (int j = 0, j < aux_var + real_var, j++) {
-        oldQWithHalo[(backLeftCellSerialised) * (real_var + aux_var) + i]
+      for (int j = 0; j < aux_var + real_var; j++) {
+        oldQWithHalo[(backLeftCellSerialised) * (real_var + aux_var) + j]
           = 0.5
-            * (oldQWithHalo[(backLeftCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(backLeftCellN2Serialised) * (real_var + aux_var) + i]);
+            * (oldQWithHalo[(backLeftCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(backLeftCellN2Serialised) * (real_var + aux_var) + j]);
 
-        oldQWithHalo[(backRightCellSerialised) * (real_var + aux_var) + i]
+        oldQWithHalo[(backRightCellSerialised) * (real_var + aux_var) + j]
           = 0.5
-            * (oldQWithHalo[(backRightCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(backRightCellN2Serialised) * (real_var + aux_var) + i]);
+            * (oldQWithHalo[(backRightCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(backRightCellN2Serialised) * (real_var + aux_var) + j]);
 
-        oldQWithHalo[(backTopCellSerialised) * (real_var + aux_var) + i]
+        oldQWithHalo[(backTopCellSerialised) * (real_var + aux_var) + j]
           = 0.5
-            * (oldQWithHalo[(backTopCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(backTopCellN2Serialised) * (real_var + aux_var) + i]);
+            * (oldQWithHalo[(backTopCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(backTopCellN2Serialised) * (real_var + aux_var) + j]);
 
-        oldQWithHalo[(backBottomCellSerialised) * (real_var + aux_var) + i]
+        oldQWithHalo[(backBottomCellSerialised) * (real_var + aux_var) + j]
           = 0.5
-            * (oldQWithHalo[(backBottomCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(backBottomCellN2Serialised) * (real_var + aux_var) + i]);
+            * (oldQWithHalo[(backBottomCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(backBottomCellN2Serialised) * (real_var + aux_var) + j]);
 
-        oldQWithHalo[(frontLeftCellSerialised) * (real_var + aux_var) + i]
+        oldQWithHalo[(frontLeftCellSerialised) * (real_var + aux_var) + j]
           = 0.5
-            * (oldQWithHalo[(frontLeftCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(frontLeftCellN2Serialised) * (real_var + aux_var) + i]);
+            * (oldQWithHalo[(frontLeftCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(frontLeftCellN2Serialised) * (real_var + aux_var) + j]);
 
-        oldQWithHalo[(frontRightCellSerialised) * (real_var + aux_var) + i]
+        oldQWithHalo[(frontRightCellSerialised) * (real_var + aux_var) + j]
           = 0.5
-            * (oldQWithHalo[(frontRightCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(frontRightCellN2Serialised) * (real_var + aux_var) + i]);
-      
-      oldQWithHalo[(frontTopCellSerialised) * (real_var + aux_var) + i]
+            * (oldQWithHalo[(frontRightCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(frontRightCellN2Serialised) * (real_var + aux_var) + j]);
+
+        oldQWithHalo[(frontTopCellSerialised) * (real_var + aux_var) + j]
           = 0.5
-            * (oldQWithHalo[(frontTopCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(frontTopCellN2Serialised) * (real_var + aux_var) + i]);
-      
-      oldQWithHalo[(frontBottomCellSerialised) * (real_var + aux_var) + i]
+            * (oldQWithHalo[(frontTopCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(frontTopCellN2Serialised) * (real_var + aux_var) + j]);
+
+        oldQWithHalo[(frontBottomCellSerialised) * (real_var + aux_var) + j]
           = 0.5
-            * (oldQWithHalo[(frontBottomCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(frontBottomCellN2Serialised) * (real_var + aux_var) + i]);
-      
-      oldQWithHalo[(bottomLeftCellSerialised) * (real_var + aux_var) + i]
+            * (oldQWithHalo[(frontBottomCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(frontBottomCellN2Serialised) * (real_var + aux_var) + j]);
+
+        oldQWithHalo[(bottomLeftCellSerialised) * (real_var + aux_var) + j]
           = 0.5
-            * (oldQWithHalo[(bottomLeftCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomLeftCellN2Serialised) * (real_var + aux_var) + i]);
-      
-      oldQWithHalo[(bottomRightCellSerialised) * (real_var + aux_var) + i]
+            * (oldQWithHalo[(bottomLeftCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(bottomLeftCellN2Serialised) * (real_var + aux_var) + j]);
+
+        oldQWithHalo[(bottomRightCellSerialised) * (real_var + aux_var) + j]
           = 0.5
-            * (oldQWithHalo[(bottomRightCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomRightCellN2Serialised) * (real_var + aux_var) + i]);
-      
-      oldQWithHalo[(topLeftCellSerialised) * (real_var + aux_var) + i]
+            * (oldQWithHalo[(bottomRightCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(bottomRightCellN2Serialised) * (real_var + aux_var) + j]);
+
+        oldQWithHalo[(topLeftCellSerialised) * (real_var + aux_var) + j]
           = 0.5
-            * (oldQWithHalo[(topLeftCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topLeftCellN2Serialised) * (real_var + aux_var) + i]);
-      
-      oldQWithHalo[(topRightCellSerialised) * (real_var + aux_var) + i]
+            * (oldQWithHalo[(topLeftCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(topLeftCellN2Serialised) * (real_var + aux_var) + j]);
+
+        oldQWithHalo[(topRightCellSerialised) * (real_var + aux_var) + j]
           = 0.5
-            * (oldQWithHalo[(topRightCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topRightCellN2Serialised) * (real_var + aux_var) + i]);
-      
+            * (oldQWithHalo[(topRightCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(topRightCellN2Serialised) * (real_var + aux_var) + j]);
       }
     }
 
@@ -328,12 +327,9 @@ my_solver._preprocess_reconstructed_patch = """
     tarch::la::Vector<Dimensions, int> topRightFrontCellN3 = topRightFrontCell;
     topRightFrontCellN3(2)--;
 
-    tarch::la::Vector<Dimensions, int> bottomLeftFrontCellN1 = bottomLeftFrontCell;
-    bottomLeftFrontCellN1(0)++;
-    tarch::la::Vector<Dimensions, int> bottomLeftFrontCellN2 = bottomLeftFrontCell;
-    bottomLeftFrontCellN2(1)++;
-    tarch::la::Vector<Dimensions, int> bottomLeftFrontCellN3 = bottomLeftFrontCell;
-    bottomLeftFrontCellN3(2)--;
+    tarch::la::Vector<Dimensions, int> bottomLeftFrontCellN1 = {1, 0, patchSize + 1};
+    tarch::la::Vector<Dimensions, int> bottomLeftFrontCellN2 = {0, 1, patchSize + 1};
+    tarch::la::Vector<Dimensions, int> bottomLeftFrontCellN3 = {0, 0, patchSize};
 
     tarch::la::Vector<Dimensions, int> bottomRightFrontCellN1 = bottomRightFrontCell;
     bottomRightFrontCellN1(0)--;
@@ -391,15 +387,15 @@ my_solver._preprocess_reconstructed_patch = """
           * (oldQWithHalo[(topLeftBackCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topLeftBackCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topLeftBackCellN3Serialised) * (real_var + aux_var) + i]);
 
       oldQWithHalo[(topRightBackCellSerialised) * (real_var + aux_var) + i]
-        = 0.5
+        = 1.0 / 3.0
           * (oldQWithHalo[(topRightBackCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topRightBackCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topRightBackCellN3Serialised) * (real_var + aux_var) + i]);
 
       oldQWithHalo[(bottomLeftBackCellSerialised) * (real_var + aux_var) + i]
-        = 0.5
+        = 1.0 / 3.0
           * (oldQWithHalo[(bottomLeftBackCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomLeftBackCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomLeftBackCellN3Serialised) * (real_var + aux_var) + i]);
 
       oldQWithHalo[(bottomRightBackCellSerialised) * (real_var + aux_var) + i]
-        = 0.5
+        = 1.0 / 3.0
           * (oldQWithHalo[(bottomRightBackCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomRightBackCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomRightBackCellN3Serialised) * (real_var + aux_var) + i]);
 
       oldQWithHalo[(topLeftFrontCellSerialised) * (real_var + aux_var) + i]
@@ -407,11 +403,11 @@ my_solver._preprocess_reconstructed_patch = """
           * (oldQWithHalo[(topLeftFrontCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topLeftFrontCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topLeftFrontCellN3Serialised) * (real_var + aux_var) + i]);
 
       oldQWithHalo[(topRightFrontCellSerialised) * (real_var + aux_var) + i]
-        = 0.5
+        = 1.0 / 3.0
           * (oldQWithHalo[(topRightFrontCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topRightFrontCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topRightFrontCellN3Serialised) * (real_var + aux_var) + i]);
 
       oldQWithHalo[(bottomLeftFrontCellSerialised) * (real_var + aux_var) + i]
-        = 0.5
+        = 1.0 / 3.0
           * (oldQWithHalo[(bottomLeftFrontCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomLeftFrontCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomLeftFrontCellN3Serialised) * (real_var + aux_var) + i]);
 
       oldQWithHalo[(bottomRightFrontCellSerialised) * (real_var + aux_var) + i]
