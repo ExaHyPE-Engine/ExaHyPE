@@ -1,4 +1,4 @@
-FROM intel/oneapi-hpckit:2023.1.0-devel-ubuntu22.04
+FROM intel/oneapi-hpckit:2023.2-devel-ubuntu22.04
 
 ENV FORCE_UNSAFE_CONFIGURE=1 \
 DEBIAN_FRONTEND=noninteractive \
@@ -21,12 +21,6 @@ TERM=xterm
 
 COPY install/base.sh /
 RUN set -e && chmod +x /base.sh && ./base.sh && rm ./base.sh
-
-COPY install/oneapi-for-amd-gpus-2023.1.0-rocm-5.4.3-linux.sh /
-RUN set -e && chmod +x /oneapi-for-amd-gpus-2023.1.0-rocm-5.4.3-linux.sh && ./oneapi-for-amd-gpus-2023.1.0-rocm-5.4.3-linux.sh -y && rm -f /oneapi-for-amd-gpus-2023.1.0-rocm-5.4.3-linux.sh
-
-COPY install/oneapi-for-nvidia-gpus-2023.1.0-cuda-12.0-linux.sh /
-RUN set -e && chmod +x /oneapi-for-nvidia-gpus-2023.1.0-cuda-12.0-linux.sh && ./oneapi-for-nvidia-gpus-2023.1.0-cuda-12.0-linux.sh -y && rm -f /oneapi-for-nvidia-gpus-2023.1.0-cuda-12.0-linux.sh
 
 COPY install/hdf5.sh /
 RUN set -e && chmod +x /hdf5.sh && ./hdf5.sh && rm -f /hdf5.sh
@@ -73,6 +67,12 @@ RUN set -e && chmod +x /apptainer.sh && ./apptainer.sh && rm -f /apptainer.sh
 
 COPY install/spack.sh /
 RUN set -e && chmod +x /spack.sh && ./spack.sh && rm -f /spack.sh
+
+#RUN curl -LJO 'https://developer.codeplay.com/api/v1/products/download?product=oneapi&variant=nvidia&filters[]=linux&aat=NWQzYmRkZTQ5MjQyMDBlMzUzYjYzMTE4ZN7wAACGmYVBMwVPxiiPcjMP6uA1VpFQrnvtfo7h_r26Ees0eUf1CsNIguxCGBU00-vqqUNG71Obv375TsVziW9sRJEB'
+#RUN set -e && chmod +x /oneapi-for-nvidia-gpus-2023.2.0-cuda-12.0-linux.sh && ./oneapi-for-nvidia-gpus-2023.2.0-cuda-12.0-linux.sh -y && rm -f /oneapi-for-nvidia-gpus-2023.2.0-cuda-12.0-linux.sh
+
+RUN curl -LJO 'https://developer.codeplay.com/api/v1/products/download?product=oneapi&variant=amd&filters[]=linux&aat=NWQzYmRkZTQ5MjQyMDBlMzUzYjYzMTE4ZN7wAACGmYVBMwVPxiiPcjMP6uA1VpFQrnvtfo7h_r26Ees0eUf1CsNIguxCGBU00-vqqUNG71Obv375TsVziW9sRJEB'
+RUN set -e && chmod +x /oneapi-for-amd-gpus-2023.2.0-rocm-4.5.2-linux.sh && ./oneapi-for-amd-gpus-2023.2.0-rocm-4.5.2-linux.sh -y && rm -f /oneapi-for-amd-gpus-2023.2.0-rocm-4.5.2-linux.sh
 
 COPY offload/check_hip_offload.cpp /
 COPY offload/check_sycl_offload.cpp /
