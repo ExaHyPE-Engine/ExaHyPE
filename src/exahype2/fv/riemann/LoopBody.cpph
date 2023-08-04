@@ -61,18 +61,11 @@ double exahype2::fv::riemann::internal::reduceMaxEigenvalue_LoopBody(
   double                                           dt,
   int                                              unknowns
 ) {
-  auto reduceAlongOneDirection = [=](const double* __restrict__ tempMaxEigenvalue) {
-    double result = 0.0;
-    for(int i = 0; i < unknowns; i++)
-      result = std::max(result, std::abs(tempMaxEigenvalue[maxEigenvalueEnumerator(patchIndex, volumeIndex, i)]));
-    return result;
-  };
-
   double result = 0.0;
-  result = std::max(result, reduceAlongOneDirection(tempMaxEigenvalueX));
-  result = std::max(result, reduceAlongOneDirection(tempMaxEigenvalueY));
+  result = std::max(result, tempMaxEigenvalueX[maxEigenvalueEnumerator(patchIndex, volumeIndex, 0)]);
+  result = std::max(result, tempMaxEigenvalueY[maxEigenvalueEnumerator(patchIndex, volumeIndex, 0)]);
   if (Dimensions == 3)
-    result = std::max(result, reduceAlongOneDirection(tempMaxEigenvalueZ));
+    result = std::max(result, tempMaxEigenvalueZ[maxEigenvalueEnumerator(patchIndex, volumeIndex, 0)]);
     
   return result;
 }
@@ -125,7 +118,7 @@ void exahype2::fv::riemann::internal::computeRiemannSolution_LoopBody(
 )  {
   tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
   tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
-  leftVolume(normal)--;
+  rightVolume(normal)++;
   double smax = solveRiemannProblem(
     QIn + QInEnumerator(patchIndex, rightVolume, 0),
     QIn + QInEnumerator(patchIndex, leftVolume,  0),
@@ -168,12 +161,12 @@ void exahype2::fv::riemann::internal::updateSolutionWithRiemannSolution_LoopBody
     tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
     leftVolume(normal)--;
 
-    const double fluxLeft = tempRight[riemannEnumerator(patchIndex, leftVolume, unknown)];
-    const double fluxRight = tempLeft[riemannEnumerator(patchIndex, rightVolume, unknown)];
+    const double fluxPos = tempRight[riemannEnumerator(patchIndex, leftVolume, unknown)];
+    const double fluxNeg = tempLeft[riemannEnumerator(patchIndex, rightVolume, unknown)];
 
     QOut[QOutEnumerator(
       patchIndex, volumeIndex, unknown
-    )] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxRight + fluxLeft);
+    )] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxNeg - fluxPos);
   };
 
   updateAlongOneDirection(tempLeftUpdatesX, tempRightUpdatesX, 0);
