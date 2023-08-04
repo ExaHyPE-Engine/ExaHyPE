@@ -45,7 +45,8 @@ namespace exahype2 {
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        QSFlux
+        double * __restrict__                        APDQ,
+        double * __restrict__                        AMDQ 
       ) > SolveRiemannProblem;
     }
   }

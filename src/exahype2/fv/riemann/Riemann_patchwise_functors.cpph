@@ -43,9 +43,12 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
   double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory<double>( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
-  double* tempRiemannX               = evaluateRiemann                     ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempRiemannY               = evaluateRiemann                     ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempRiemannZ               = (evaluateRiemann and Dimensions==3) ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempLeftUpdatesX           = evaluateRiemann                     ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempRightUpdatesX          = evaluateRiemann                     ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempBelowUpdatesY          = evaluateRiemann                     ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempAboveUpdatesY          = evaluateRiemann                     ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempBackwardUpdatesZ       = (evaluateRiemann and Dimensions==3) ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempForwardUpdatesZ        = (evaluateRiemann and Dimensions==3) ? tarch::allocateMemory<double>( riemannEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     logDebug( "timeStepWithRiemann_sequential(...)", "copy solution over" );
@@ -280,7 +283,8 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           patchData.t[patchIndex],
           patchData.dt[patchIndex],
           0, // normal
-          tempRiemannX,
+          tempRightUpdatesX,
+          tempLeftUpdatesX,
           riemannEnumerator,
           tempMaxEigenvalueX,
           maxEigenvalueEnumerator
@@ -303,7 +307,8 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           patchData.t[patchIndex],
           patchData.dt[patchIndex],
           1, // normal
-          tempRiemannY,
+          tempAboveUpdatesY,
+          tempBelowUpdatesY,
           riemannEnumerator,
           tempMaxEigenvalueY,
           maxEigenvalueEnumerator
@@ -313,7 +318,9 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int unknown=0; unknown<unknowns; unknown++) {
         internal::updateSolutionWithRiemannSolution_LoopBody(
-          tempRiemannX, tempRiemannY, tempRiemannZ,
+          tempLeftUpdatesX, tempRightUpdatesX,
+          tempBelowUpdatesY, tempAboveUpdatesY,
+          tempBackwardUpdatesZ, tempForwardUpdatesZ,
           riemannEnumerator,
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
@@ -345,7 +352,8 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           patchData.t[patchIndex],
           patchData.dt[patchIndex],
           0, // normal
-          tempRiemannX,
+          tempRightUpdatesX,
+          tempLeftUpdatesX,
           riemannEnumerator,
           tempMaxEigenvalueX,
           maxEigenvalueEnumerator
@@ -369,7 +377,8 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           patchData.t[patchIndex],
           patchData.dt[patchIndex],
           1, // normal
-          tempRiemannY,
+          tempAboveUpdatesY,
+          tempBelowUpdatesY,
           riemannEnumerator,
           tempMaxEigenvalueY,
           maxEigenvalueEnumerator
@@ -393,7 +402,8 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
           patchData.t[patchIndex],
           patchData.dt[patchIndex],
           2, // normal
-          tempRiemannZ,
+          tempForwardUpdatesZ,
+          tempBackwardUpdatesZ,
           riemannEnumerator,
           tempMaxEigenvalueZ,
           maxEigenvalueEnumerator
@@ -404,7 +414,9 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int unknown=0; unknown<unknowns; unknown++) {
         internal::updateSolutionWithRiemannSolution_LoopBody(
-          tempRiemannX, tempRiemannY, tempRiemannZ,
+          tempLeftUpdatesX, tempRightUpdatesX, 
+          tempBelowUpdatesY, tempAboveUpdatesY,
+          tempBackwardUpdatesZ, tempForwardUpdatesZ,
           riemannEnumerator,
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
@@ -475,12 +487,18 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
   if (tempFluxX!=nullptr)               tarch::freeMemory(tempFluxX, tarch::MemoryLocation::Heap);
   if (tempFluxY!=nullptr)               tarch::freeMemory(tempFluxY, tarch::MemoryLocation::Heap);
   if (tempFluxZ!=nullptr)               tarch::freeMemory(tempFluxZ, tarch::MemoryLocation::Heap);
-  if (tempRiemannX!=nullptr)            tarch::freeMemory(tempRiemannX, tarch::MemoryLocation::Heap);
-  if (tempRiemannY!=nullptr)            tarch::freeMemory(tempRiemannY, tarch::MemoryLocation::Heap);
-  if (tempRiemannZ!=nullptr)            tarch::freeMemory(tempRiemannZ, tarch::MemoryLocation::Heap);
+
+  if (tempLeftUpdatesX!=nullptr)        tarch::freeMemory(tempLeftUpdatesX, tarch::MemoryLocation::Heap);
+  if (tempRightUpdatesX!=nullptr)       tarch::freeMemory(tempRightUpdatesX, tarch::MemoryLocation::Heap);
+  if (tempBelowUpdatesY!=nullptr)       tarch::freeMemory(tempBelowUpdatesY, tarch::MemoryLocation::Heap);
+  if (tempAboveUpdatesY!=nullptr)       tarch::freeMemory(tempAboveUpdatesY, tarch::MemoryLocation::Heap);
+  if (tempBackwardUpdatesZ!=nullptr)    tarch::freeMemory(tempBackwardUpdatesZ, tarch::MemoryLocation::Heap);
+  if (tempForwardUpdatesZ!=nullptr)     tarch::freeMemory(tempForwardUpdatesZ, tarch::MemoryLocation::Heap);
+
   if (tempEigenvaluesX!=nullptr)        tarch::freeMemory(tempEigenvaluesX, tarch::MemoryLocation::Heap);
   if (tempEigenvaluesY!=nullptr)        tarch::freeMemory(tempEigenvaluesY, tarch::MemoryLocation::Heap);
   if (tempEigenvaluesZ!=nullptr)        tarch::freeMemory(tempEigenvaluesZ, tarch::MemoryLocation::Heap);
+  
   if (tempMaxEigenvalueX!=nullptr)      tarch::freeMemory(tempMaxEigenvalueX, tarch::MemoryLocation::Heap);
   if (tempMaxEigenvalueY!=nullptr)      tarch::freeMemory(tempMaxEigenvalueY, tarch::MemoryLocation::Heap);
   if (tempMaxEigenvalueZ!=nullptr)      tarch::freeMemory(tempMaxEigenvalueZ, tarch::MemoryLocation::Heap);

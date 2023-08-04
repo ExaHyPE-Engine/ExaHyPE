@@ -102,9 +102,12 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
 #endif
         template <typename QRiemannEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithRiemannSolution_LoopBody(
-          const double* __restrict__ tempRiemannX,
-          const double* __restrict__ tempRiemannY,
-          const double* __restrict__ tempRiemannZ,
+          const double* __restrict__ tempLeftUpdatesX,
+          const double* __restrict__ tempRightUpdatesX,
+          const double* __restrict__ tempBelowUpdatesY,
+          const double* __restrict__ tempAboveUpdatesY,
+          const double* __restrict__ tempBackwardsUpdatesZ,
+          const double* __restrict__ tempForwardsUpdatesZ,
           const QRiemannEnumeratorType&                riemannEnumerator,
           const tarch::la::Vector<Dimensions, double>& patchCentre,
           const tarch::la::Vector<Dimensions, double>& patchSize,
@@ -134,8 +137,9 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
           double                                           t,
           double                                           dt,
           int                                              normal,
-          double* __restrict__ QS,
-          exahype2::enumerator::AoSLexicographicEnumerator QSEnumerator,
+          double* __restrict__ APDQ,
+          double* __restrict__ AMDQ,
+          exahype2::enumerator::AoSLexicographicEnumerator DQEnumerator,
           double* __restrict__ QMaxEigenvalue,
           exahype2::enumerator::AoSLexicographicEnumerator QMaxEigenvalueEnumerator
         )  InlineMethod;

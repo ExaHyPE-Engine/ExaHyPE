@@ -48,10 +48,11 @@ def create_compute_Riemann_kernel_for_UserDefinedRiemann(flux_implementation, ri
     double                                       t,
     double                                       dt,
     int                                          normal,
-    double * __restrict__                        QSFlux
+    double * __restrict__                        APDQ,
+    double * __restrict__                        AMDQ
   )->double {
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    return repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem( QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, QSFlux );
+    return repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem( QR, QL, FR, FL, LR, LL, xR, xL, h, t, dt, normal, APDQ, AMDQ );
     {% endif %}
   }
 );
@@ -123,7 +124,8 @@ def create_abstract_solver_declarations(flux_implementation, riemann_solver_impl
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        QSFlux // QSFlux[{{NUMBER_OF_UNKNOWNS}}]
+        double * __restrict__                        APDQ, // APDQ[{{NUMBER_OF_UNKNOWNS}}]
+        double * __restrict__                        AMDQ // AMDQ[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %}=0{% else %} final {% endif %};
     {% endif %}
 """, undefined=jinja2.DebugUndefined)
@@ -178,7 +180,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::solveRiemannProblem(
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * __restrict__                        QSFlux // QSFlux[{{NUMBER_OF_UNKNOWNS}}]
+  double * __restrict__                        APDQ, // APDQ[{{NUMBER_OF_UNKNOWNS}}]
+  double * __restrict__                        AMDQ // AMDQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {{RIEMANN_SOLVER_IMPLEMENTATION}}          
 }
@@ -250,7 +253,8 @@ def create_solver_declarations(flux_implementation, riemann_solver_implementatio
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__                        QSFlux // QSFlux[{{NUMBER_OF_UNKNOWNS}}]
+        double * __restrict__                        APDQ, // APDQ[{{NUMBER_OF_UNKNOWNS}}]
+        double * __restrict__                        AMDQ // AMDQ[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
 """, undefined=jinja2.DebugUndefined)
@@ -310,7 +314,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::solveRiemannProblem(
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * __restrict__                        QSFlux // QSFlux[{{NUMBER_OF_UNKNOWNS}}]
+  double * __restrict__                        APDQ, // APDQ[{{NUMBER_OF_UNKNOWNS}}]
+  double * __restrict__                        AMDQ // AMDQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith4Arguments( "solveRiemannProblem(...)", xR, xL, t, normal );
   // @todo implement

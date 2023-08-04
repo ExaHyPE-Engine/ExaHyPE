@@ -117,14 +117,15 @@ void exahype2::fv::riemann::internal::computeRiemannSolution_LoopBody(
   double                                           t,
   double                                           dt,
   int                                              normal,
-  double* __restrict__ QS,
-  exahype2::enumerator::AoSLexicographicEnumerator QSEnumerator,
+  double* __restrict__ APDQ,
+  double* __restrict__ AMDQ,
+  exahype2::enumerator::AoSLexicographicEnumerator DQEnumerator,
   double* __restrict__ QMaxEigenvalue,
   exahype2::enumerator::AoSLexicographicEnumerator QMaxEigenvalueEnumerator
 )  {
   tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
   tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
-  rightVolume(normal)++;
+  leftVolume(normal)--;
   double smax = solveRiemannProblem(
     QIn + QInEnumerator(patchIndex, rightVolume, 0),
     QIn + QInEnumerator(patchIndex, leftVolume,  0),
@@ -138,16 +139,20 @@ void exahype2::fv::riemann::internal::computeRiemannSolution_LoopBody(
     t,
     dt,
     normal,
-    QS + QSEnumerator(patchIndex, rightVolume, 0)
+    APDQ + DQEnumerator(patchIndex, leftVolume, 0),
+    AMDQ + DQEnumerator(patchIndex, leftVolume, 0)
   );
-  QMaxEigenvalue[QMaxEigenvalueEnumerator(patchIndex, rightVolume, 0)] = smax;
+  QMaxEigenvalue[QMaxEigenvalueEnumerator(patchIndex, leftVolume, 0)] = smax;
 }
 
 template <typename QRiemannEnumeratorType, typename QOutEnumeratorType>
 void exahype2::fv::riemann::internal::updateSolutionWithRiemannSolution_LoopBody(
-  const double* __restrict__ tempRiemannX,
-  const double* __restrict__ tempRiemannY,
-  const double* __restrict__ tempRiemannZ,
+  const double* __restrict__ tempLeftUpdatesX,
+  const double* __restrict__ tempRightUpdatesX,
+  const double* __restrict__ tempBelowUpdatesY,
+  const double* __restrict__ tempAboveUpdatesY,
+  const double* __restrict__ tempBackwardsUpdatesZ,
+  const double* __restrict__ tempForwardsUpdatesZ,
   const QRiemannEnumeratorType&                riemannEnumerator,
   const tarch::la::Vector<Dimensions, double>& patchCentre,
   const tarch::la::Vector<Dimensions, double>& patchSize,
@@ -158,21 +163,21 @@ void exahype2::fv::riemann::internal::updateSolutionWithRiemannSolution_LoopBody
   double* __restrict__ QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
-  auto updateAlongOneDirection = [=](const double* __restrict__ tempRiemann, const int normal) {
+  auto updateAlongOneDirection = [=](const double* __restrict__ tempLeft, const double* __restrict__ tempRight, const int normal) {
     tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
     tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
-    rightVolume(normal)++;
+    leftVolume(normal)--;
 
-    const double fluxLeft = tempRiemann[riemannEnumerator(patchIndex, leftVolume, unknown)];
-    const double fluxRight = tempRiemann[riemannEnumerator(patchIndex, rightVolume, unknown)];
+    const double fluxLeft = tempRight[riemannEnumerator(patchIndex, leftVolume, unknown)];
+    const double fluxRight = tempLeft[riemannEnumerator(patchIndex, rightVolume, unknown)];
 
     QOut[QOutEnumerator(
       patchIndex, volumeIndex, unknown
-    )] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight);
+    )] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxRight + fluxLeft);
   };
 
-  updateAlongOneDirection(tempRiemannX, 0);
-  updateAlongOneDirection(tempRiemannY, 1);
+  updateAlongOneDirection(tempLeftUpdatesX, tempRightUpdatesX, 0);
+  updateAlongOneDirection(tempBelowUpdatesY, tempAboveUpdatesY, 1);
   if (Dimensions == 3)
-    updateAlongOneDirection(tempRiemannZ, 2);
+    updateAlongOneDirection(tempBackwardsUpdatesZ, tempForwardsUpdatesZ, 2);
 }
