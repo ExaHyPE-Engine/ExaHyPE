@@ -23,7 +23,7 @@ my_pde = Radial_Bathymetry_Dam_Break(width=width, refinement_tolerance=amr_toler
 my_pde.substitute_expression(my_pde.g, 9.81)
 
 custom_riemann_solver = """
-    double grav = 9.81;
+    const double g = 9.81;
     double smax = 0.0;
     for(int i = 0; i < 3; i++)
     {
@@ -38,18 +38,22 @@ custom_riemann_solver = """
     flux[1] = 0.5 * (FL[1] + FR[1]) - 0.5 * smax * (QR[1] - QL[1]);
     flux[2] = 0.5 * (FL[2] + FR[2]) - 0.5 * smax * (QR[2] - QL[2]);
 
+    APDQ[0] = flux[0];
+    AMDQ[0] = flux[0];
+    
     switch(normal)
     {
         case 0:
-            QSFlux[0] = flux[0];
-            QSFlux[1] = flux[1] - 0.5*grav*hRoe*DEta;
-            QSFlux[2] = flux[2];
+            APDQ[1] = flux[1] - 0.5 * g * hRoe * DEta;
+            AMDQ[1] = flux[1] + 0.5 * g * hRoe * DEta;
+            APDQ[2] = flux[2];
+            AMDQ[2] = flux[2];
             break;
-        
-        case 2:
-            QSFlux[0] = flux[0];
-            QSFlux[1] = flux[1];
-            QSFlux[2] = flux[2] - 0.5*grav*hRoe*DEta;
+        case 1:
+            APDQ[1] = flux[1];
+            AMDQ[1] = flux[1];
+            APDQ[2] = flux[2] - 0.5 * g * hRoe * DEta;
+            AMDQ[2] = flux[2] + 0.5 * g * hRoe * DEta;
             break;
     }
     return smax;
@@ -107,7 +111,7 @@ else:
 my_project = exahype2.Project( ["applications", "exahype2", "swe"], "SWEApplication", ".", executable="CUSTOMTEST")
 my_project.add_solver( my_solver )
 my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
-my_project.set_Peano4_installation("../../../", peano4.output.CompileMode.Release)
+my_project.set_Peano4_installation("../../../", peano4.output.CompileMode.Debug)
 
 my_project.set_global_simulation_parameters(
   dimensions            = 2,
