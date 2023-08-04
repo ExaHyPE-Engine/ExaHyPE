@@ -53,8 +53,6 @@ declare -a apt_packages=(
   cmake
   cmake-curses-gui
   ccache
-  clang-format
-  clang-tidy
   cppcheck
   libtool
   gcovr
@@ -197,6 +195,8 @@ declare -a python_packages=(
   h5py
   mpmath
   umbridge
+  clang-format
+  clang-tidy
 )
 
 for package in "${python_packages[@]}"; do
