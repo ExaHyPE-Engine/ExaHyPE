@@ -568,10 +568,7 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
   {
 
     for (int i=0; i<{{CELL_CARDINALITY}}; i++){
-      //std::pair<int,int> polyCoordsI = repositories::convertDofIndexToXYCoordinate(i);
       for (int j=0; j<{{CELL_CARDINALITY}}; j++){
-        //std::pair<int,int> polyCoordsJ = repositories::convertDofIndexToXYCoordinate(j);
-
         //third level - loop over all the quad points and weights
         int p = 0; int w = 0;
         for (; p<repositories::quadWeights.size(); p++, w++){

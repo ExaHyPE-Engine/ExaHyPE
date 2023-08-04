@@ -77,7 +77,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellInit(
         p, x, h
       );
 
-      integral += cellSize * localQuadWeight * repositories::evalPoly(i, localQuadPoint) * f(quadPointInCell);
+      integral += 0.25 * cellSize * localQuadWeight * repositories::evalPoly(i, localQuadPoint) * f(quadPointInCell);
     }
     rhs[i] = integral;
   }
