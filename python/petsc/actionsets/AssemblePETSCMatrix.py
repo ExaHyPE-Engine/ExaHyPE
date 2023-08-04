@@ -577,10 +577,9 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
         for (; p<repositories::quadWeights.size(); p++, w++){
           const std::vector<double> localQuadPoint  = repositories::quadPoints[p];
           const double              localQuadWeight = repositories::quadWeights[w];
-          double gradDotGrad = repositories::evalDeriv( i, 0, localQuadPoint ) * repositories::evalDeriv( j, 0, localQuadPoint ) 
-          + repositories::evalDeriv( i, 1, localQuadPoint ) * repositories::evalDeriv( j, 1, localQuadPoint );
-          //double gradDotGrad = repositories::evalPoly( i, localQuadPoint ) * repositories::evalPoly( j, localQuadPoint ); //this way is wrong
-          localMatrix(i,j) += marker.h()[0] * marker.h()[1] * localQuadWeight * gradDotGrad;
+          double gradDotGrad = repositories::evalDeriv( i, 0, localQuadPoint ) * repositories::evalDeriv( j, 0, localQuadPoint ) * marker.h()[0] / marker.h()[1]
+                             + repositories::evalDeriv( i, 1, localQuadPoint ) * repositories::evalDeriv( j, 1, localQuadPoint ) * marker.h()[1] / marker.h()[0];
+          localMatrix(i,j) += - localQuadWeight * gradDotGrad;
         }
       }
     }
