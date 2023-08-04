@@ -625,7 +625,7 @@ thus appreciate any citation of the original release paper
                     self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/libxsmm/include")
                     self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/libxsmm/lib/libxsmm.a")
                     self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/OpenBLAS/libopenblas.a")
-                    # self._project.output.makefile.add_linker_flag("-lgfortran")
+                    self._project.output.makefile.add_library("-lpthread")
                 break
         return self._project
 
