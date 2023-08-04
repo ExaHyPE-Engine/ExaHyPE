@@ -312,7 +312,9 @@ This yet has to be written.
         dictionary[ "POLY_COEFFS"] += ", \n"
       dictionary[ "POLY_COEFFS"]   += " }"
 
-      dictionary["POLY_DEGREE"] = self.polynomial_degree
+      dictionary["POLY_DEGREE"]  = self.polynomial_degree
+    dictionary["HEADER_EXTRA"] = self.solver_repository_snippet_header
+    dictionary["CPP_EXTRA"]    = self.solver_repository_snippet_cpp
 
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     template_name       = templatefile_prefix + ".SolverRepository.template"
@@ -363,6 +365,11 @@ This yet has to be written.
     print( "Create data for solver " +solver._name  )
     print( "---------------------------------------")
     print( str(solver) )
+
+    #let's add in some extra project-specific snippets
+    self.solver_repository_snippet_header, \
+    self.solver_repository_snippet_cpp     \
+      = solver.get_solver_repository_snippets()
 
     #add in points, weight and poly coeffs, but only if
     #this class has the attribute. We put in a guard clause

@@ -286,4 +286,248 @@ class HdgFirstDiscretisation(Solver):
     points, weights = leggauss( self.polynomial_degree + 1 )
 
     return points, weights, coeffs
+
+  def get_solver_repository_snippets(self):
+    header = """
+    int getTotalFaceDofs();
+    int getTotalCellDofs();
+    int getTotalVertexDofs();
+
+    /**
+    * we order the matrix so that cell-cell coupling sits
+    * in the top left, with face-face coupling in the bottom right
+    */
+    int getGlobalCellIndex(std::pair<int,int> localIndex);
+    int getGlobalFaceIndex(std::pair<int,int> localIndex);
+    int getGlobalVertexIndex(std::pair<int,int> localIndex);
+
+    /*
+    * store points, weight and coefficients for gaussian
+    * quadratures. aligned left to right / bottom to top
+    */
+    const std::vector<std::vector<double>> quadPoints = {{QUADRATURE_POINTS}};
+    const std::vector<double> quadWeights             = {{WEIGHTS}};
+    const std::vector<std::vector<double>> polyCoeffs = {{POLY_COEFFS}};
+
+    const int polynomialDegree = {{POLY_DEGREE}};
+
+    /*
+    we will enumerate our DoFs 0 -> (n+1)^d.
+    for now we only have 1D basis functions, and we promote them to 2d by taking their product.
+    we do this by taking the x position of the quadrature point, and pulling out an appropriate basis function
+    and then      taking the y position of the quadrature point, and pulling out an appropriate basis function
+    and multiplying them together.
+
+    dof ordering, with polynomial degree n:
+
+
+    .......................
+    .......................
+    .......................
+    n+1 - n+2 - .... - 2n+1
+    0   - 1   - .... -    n
+
+    so this method will pick out (x,y) coords for each dof. 
+
+    This is temporary - I haven't ironed out where the dofs should sit physically. we 
+    should be able to get some correct local matrices.
+
+    TODO upgrade to 3d
+    */
+    const std::vector<int> convertDofIndexToXYCoordinate(const int& dofIndex);
+
+    /*
+    method to evaluate polynomial at given point, given a set of coefficients
+    */
+    double evalPoly( const std::vector<double>& coeffs, const double& quadPoint );
+
+    /*
+    overload to:
+      - convert index into a tuple that describes position in the cell
+      - evaluate the 1d basis at each of the points
+      - take the product
+
+      ie we promote a 1d basis to an n-dimensional basis by evaluating 
+      our basis polynomial at (x,y,z,...) and taking the product
+      poly(x)*poly(y)*poly(z)*...
+    */
+    double evalPoly( const int& index, const std::vector<double>& quadPoint );
+
+    /*
+    need to specify in which dimension we are taking derivative
+    */
+    double evalDeriv( const int& dofIndex, const int& dimension, const std::vector<double>& quadPoint );
+    double evalDeriv( const std::vector<double>& coeffs, const double& quadPoint );
+
+    tarch::la::Vector<Dimensions,double> convertQuadPointToRealLocation( 
+      const int& quadIndex,
+      const tarch::la::Vector<Dimensions,double>& cellCentre,
+      const tarch::la::Vector<Dimensions,double>& cellH
+     );
+"""
+    cpp = """
+int {{NAMESPACE | join("::")}}::repositories::getTotalFaceDofs() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getTotalCellDofs() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getTotalVertexDofs() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getVertexLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalCellIndex(std::pair<int,int> localIndex) {
+  int result;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getGlobalIndex(localIndex);
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalFaceIndex(std::pair<int,int> localIndex) {
+  int result;
+  result += getTotalCellDofs();
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getGlobalIndex(localIndex);
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalVertexIndex(std::pair<int,int> localIndex) {
+  int result;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getVertexLocalToGlobalMap().getGlobalIndex(localIndex);
+  {% endfor %}
+  return result;
+}
+
+/*
+overload to actually perform polynomial eval
+*/
+double {{NAMESPACE | join("::")}}::repositories::evalPoly( const std::vector<double>& coeffs, const double& quadPoint ){
+  double output = 0;
+  double x      = 1;
+  //coeffs are ordered from highest degree to lowest degree,
+  //so iterate from back to front
+  for (auto iter=coeffs.crbegin(); iter!=coeffs.crend(); iter++){
+    output += (*iter) * x;
+    x *= quadPoint;
+  }
+  return output;
+}
+
+/*
+overload to:
+  - convert index into a tuple that describes position in the cell
+  - evaluate the 1d basis at each of the points
+  - take the product
+
+  ie we promote a 1d basis to an n-dimensional basis by evaluating 
+  our basis polynomial at (x,y,z,...) and taking the product
+  poly(x)*poly(y)*poly(z)*...
+*/
+double {{NAMESPACE | join("::")}}::repositories::evalPoly( const int& index, const std::vector<double>& quadPoint ){
+  //convert index to pair of indices
+  const std::vector<int> indices = convertDofIndexToXYCoordinate(index);
+  double output = 1;
+
+  /*
+  let our dof   indices be ordered [d0, d1, ...]
+  and our point indices be ordered [p0, p1, ...]
+
+  then we actually want to return 
+
+  eval(d0, p0) * eval(d1, p1) * ...
+  */
+
+  auto indexIter = indices.cbegin();
+  auto pointIter = quadPoint.cbegin();
+
+  for (; indexIter!=indices.end(), pointIter!=quadPoint.end(); indexIter++, pointIter++)
+    output *= evalPoly( polyCoeffs[ *indexIter ], *pointIter );
+
+  return output;
+}
+
+
+const std::vector<int> {{NAMESPACE | join("::")}}::repositories::convertDofIndexToXYCoordinate(const int& dofIndex){
+  std::vector<int> output;
+  
+  //get x coord by taking modulo with polynomialDegree + 1
+  const int x = dofIndex % (polynomialDegree + 1);
+  output.push_back(x);
+
+  //take off the x coordinate, divide by (polynomialDegree + 1) to determine
+  //how many blocks north we are
+  const int y = dofIndex / (polynomialDegree + 1);
+  output.push_back(y);
+
+  return output;
+}
+
+double {{NAMESPACE | join("::")}}::repositories::evalDeriv( const int& dofIndex, const int& dimension, const std::vector<double>& quadPoint ){
+  if (dimension >= Dimensions) throw std::runtime_error("taking derivative in wrong dimension!");
+
+  //convert index to pair of indices
+  const std::vector<int> indices = convertDofIndexToXYCoordinate(dofIndex);
+  double output = 1;
+
+  for (int iter = 0; iter!=indices.size(); iter++){
+    //we want to eval deriv, but only in one dimension
+    output *= (iter == dimension)
+      ? evalDeriv( polyCoeffs[ indices[iter] ], quadPoint[iter] )
+      : evalPoly(  polyCoeffs[ indices[iter] ], quadPoint[iter] );
+  }
+
+  return output;
+}
+
+double {{NAMESPACE | join("::")}}::repositories::evalDeriv( const std::vector<double>& coeffs, const double& quadPoint ){
+  double output = 0;
+  double x      = 1;
+  double derivFactor = 1; //factor to account for falling powers of x
+
+  for (auto iter=coeffs.crbegin()+1; iter!=coeffs.crend(); iter++){
+    output += (*iter) * x * derivFactor;
+    x *= quadPoint; derivFactor++;
+  }
+  return output;
+}
+
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::repositories::convertQuadPointToRealLocation(
+  const int& quadIndex,
+  const tarch::la::Vector<Dimensions,double>& cellCentre,
+  const tarch::la::Vector<Dimensions,double>& cellH
+){
+  //get the quadrature point associated with this index
+  const std::vector<double> quadPoint = quadPoints[quadIndex];
+  tarch::la::Vector<Dimensions,double> output;
+
+  for (int i=0; i<Dimensions; i++){
+    //init output to be centre of the cell
+    output[i] =  cellCentre[i];
     
+    //move from centre -> quadpoint, weighted by the size of the cell
+    //need to divide by 2 - want to make sure that furthest from the 
+    //centre we move is h/2
+    output[i] += quadPoint[i] * cellH[i]/2;
+  }
+  return output;  
+}
+
+"""
+    return header, cpp

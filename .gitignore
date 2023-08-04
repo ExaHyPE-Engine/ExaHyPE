@@ -311,3 +311,4 @@ UnitTests3d
 *.xml
 *.def
 
+builds/

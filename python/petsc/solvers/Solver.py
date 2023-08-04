@@ -195,4 +195,12 @@ Return the name of the object that will be created for this solver.
     """
     return "instanceOf" + self.typename()  
 
-
+  @abstractmethod
+  def get_solver_repository_snippets(self):
+    """!
+    returns a snippet to go into the header
+    and another to go into the cpp
+    """
+    header = """ """
+    cpp    = """ """
+    return header, cpp

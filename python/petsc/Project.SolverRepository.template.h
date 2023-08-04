@@ -43,88 +43,14 @@ namespace {{N}} {
     /**
     * for now, use this to count the total number of faces
     */
-    {% if SOLVER_INSTANCES[0][0]=="HDG" %}
-
-    int getTotalFaceDofs();
-    int getTotalCellDofs();
-    int getTotalVertexDofs();
-
+    
     /**
-    * we order the matrix so that cell-cell coupling sits
-    * in the top left, with face-face coupling in the bottom right
+    * use this snippet to insert something project-specific. 
+    * the Solver.py has an abstract method get_solver_repository_snippets
+    * overload this with a jinja template.
     */
-    int getGlobalCellIndex(std::pair<int,int> localIndex);
-    int getGlobalFaceIndex(std::pair<int,int> localIndex);
-    int getGlobalVertexIndex(std::pair<int,int> localIndex);
-
-    /*
-    * store points, weight and coefficients for gaussian
-    * quadratures. aligned left to right / bottom to top
-    */
-    const std::vector<std::vector<double>> quadPoints = {{QUADRATURE_POINTS}};
-    const std::vector<double> quadWeights             = {{WEIGHTS}};
-    const std::vector<std::vector<double>> polyCoeffs = {{POLY_COEFFS}};
-
-    const int polynomialDegree = {{POLY_DEGREE}};
-
-    /*
-    we will enumerate our DoFs 0 -> (n+1)^d.
-    for now we only have 1D basis functions, and we promote them to 2d by taking their product.
-    we do this by taking the x position of the quadrature point, and pulling out an appropriate basis function
-    and then      taking the y position of the quadrature point, and pulling out an appropriate basis function
-    and multiplying them together.
-
-    dof ordering, with polynomial degree n:
-
-
-    .......................
-    .......................
-    .......................
-    n+1 - n+2 - .... - 2n+1
-    0   - 1   - .... -    n
-
-    so this method will pick out (x,y) coords for each dof. 
-
-    This is temporary - I haven't ironed out where the dofs should sit physically. we 
-    should be able to get some correct local matrices.
-
-    TODO upgrade to 3d
-    */
-    const std::vector<int> convertDofIndexToXYCoordinate(const int& dofIndex);
-
-    /*
-    method to evaluate polynomial at given point, given a set of coefficients
-    */
-    double evalPoly( const std::vector<double>& coeffs, const double& quadPoint );
-
-    /*
-    overload to:
-      - convert index into a tuple that describes position in the cell
-      - evaluate the 1d basis at each of the points
-      - take the product
-
-      ie we promote a 1d basis to an n-dimensional basis by evaluating 
-      our basis polynomial at (x,y,z,...) and taking the product
-      poly(x)*poly(y)*poly(z)*...
-    */
-    double evalPoly( const int& index, const std::vector<double>& quadPoint );
-
-    /*
-    need to specify in which dimension we are taking derivative
-    */
-    double evalDeriv( const int& dofIndex, const int& dimension, const std::vector<double>& quadPoint );
-    double evalDeriv( const std::vector<double>& coeffs, const double& quadPoint );
-
-    tarch::la::Vector<Dimensions,double> convertQuadPointToRealLocation( 
-      const int& quadIndex,
-      const tarch::la::Vector<Dimensions,double>& cellCentre,
-      const tarch::la::Vector<Dimensions,double>& cellH
-     );
-
-    {% endif %}
-
+    {{HEADER_EXTRA}}
   }
 {% for N in NAMESPACE %}
 }
 {% endfor %}
-
