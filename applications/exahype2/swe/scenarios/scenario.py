@@ -1,4 +1,3 @@
-import pde
 from abc import ABC, abstractmethod
 
 class Scenario(ABC):

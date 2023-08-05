@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.abspath('../../../python'))
 
 import peano4
 import exahype2
+from exahype2.solvers.fv.PDETerms import PDETerms
 
 dimensions            = 2 # this is fixed to 2 in pde.py
 width                 = [10, 10]
@@ -36,6 +37,10 @@ rkdg_rusanov_solvers = {
 user_defined_solvers = {
   "FVUserDefined" : exahype2.solvers.fv.riemann.UserDefinedRiemann
 }
+
+custom_solver_implementations = [
+  "HLLEM"
+]
 
 solvers = {}
 solvers.update(rkdg_rusanov_solvers)
@@ -84,6 +89,7 @@ parser.add_argument("-df",      "--displacement-file", dest="displacement_file",
 parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios,          default="Radial_Dam_Break", help="Default is Radial_Dam_Break.")
 parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch. Default is %f." % patch_size)
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used. Default is %f." % plot_interval)
+parser.add_argument("-cs",      "--custom-solver",     dest="custom_solver",  choices=custom_solver_implementations,required=False,   help="Custom solver to be used as user defined solver. Has to be set if --solver has been set to some user defined option.")
 
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. finite volume cell Default is %f." % amr_levels)
 parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=False,              help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
@@ -122,6 +128,9 @@ maximum_cell_size = args.max_cell_size
 patch_size = args.patch_size if args.patch_size != None else patch_size
 if not args.output_path.endswith("/"):
   args.output_path += "/"
+
+if args.solver in user_defined_solvers and args.custom_solver is None:
+  raise Exception("No custom solver implementation supplied for user defined solver! Please set -cs flag to one of the following values: " + "|".join(custom_solver_implementations) + ".")
 
 #########################################
 # Set up scenario to use                #
@@ -215,8 +224,8 @@ if args.gpu:
     if solver_type not in solvers:
       # This is necessary as "-s RKDGRusanovGlobalAdaptive -gpu" for example currently leads to this scenario
       raise ValueError("The requested solver {} is not available for GPUs!".format(solver_type))
-solver_name = "SWESolver" + str(solver_type)
-
+    
+solver_name = "SWESolver" + str(solver_type) + (args.custom_solver if solver_type in user_defined_solvers else "")
 if args.gpu:
   solver_name += "GPU"
 
@@ -288,13 +297,26 @@ if solver_type not in user_defined_solvers:
   )
 
 else:
+    
+#########################################
+# Set up custom solver                  #
+#########################################
+
+  custom_solver = None
+  if args.custom_solver == "HLLEM":
+    from custom_solvers.custom_fv_solvers.hllem import HLLEM
+    custom_solver = HLLEM(args.epsilon)
+
+  implementation_of_flux = my_pde.implementation_of_flux() if custom_solver.implementation_of_flux() == PDETerms.None_Implementation else custom_solver.implementation_of_flux()
+  implementation_of_eigenvalues = my_pde.implmentation_of_eigenvalues() if custom_solver.implementation_of_eigenvalues() == PDETerms.None_Implementation else custom_solver.implementation_of_eigenvalues()
+
   my_solver.set_implementation(
     initial_conditions    = my_pde.implementation_of_initial_conditions(),
     boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
-    flux                  = my_pde.implementation_of_flux(),
-    eigenvalues           = my_pde.implementation_of_eigenvalues(),
+    flux                  = implementation_of_flux,
+    eigenvalues           = implementation_of_eigenvalues,
     refinement_criterion  = my_pde.implementation_of_refinement_criterion(),
-    riemann_solver        = my_pde.implementation_of_riemann_solver()
+    riemann_solver        = custom_solver.implementation_of_riemann_solver()
   )
 
 executable_name = "swe-application-2d-solver-name-%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (solver_name, args.scenario, patch_size, args.amr_levels, maximum_cell_size, args.end_time)
@@ -407,7 +429,8 @@ if args.scenario == "Tsunami":
 
 my_project = exahype2.Project( ["applications", "exahype2", "swe"], "SWEApplication", ".", executable=executable_name)
 my_project.add_solver( my_solver )
-my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+#my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
 my_project.set_Peano4_installation("../../../", build_modes[args.build_mode])
 my_project.set_output_path(output_path)
 if not os.path.exists(output_path):

@@ -1,13 +1,13 @@
-import scenarios.inundation_scenario, sympy
+import scenarios.template_scenario, sympy
 
 
-class Tsunami(scenarios.inundation_scenario.Inundation_Scenario):
+class Tsunami(scenarios.template_scenario.Template_Scenario):
     """
     This class provides a tsunami scenario. 
     Bathymetry and displacement are read from files provided by the user.
     """
-    def __init__(self, refinement_tolerance, use_guided_amr:bool=False, epsilon:float=1e-4):
-        super().__init__(refinement_tolerance, epsilon=epsilon)
+    def __init__(self, refinement_tolerance, use_guided_amr:bool=False):
+        super().__init__(refinement_tolerance)
         self.guided_amr = use_guided_amr
         pass
 
@@ -17,11 +17,12 @@ class Tsunami(scenarios.inundation_scenario.Inundation_Scenario):
         double displ = topology_parser.sample_displacement(volumeCentre(0), volumeCentre(1));
         double combined_bathymetry = bath + displ;
 
-        /* Might need this for proper boundary conditions at wet-dry interface */
+        /* Might need this for proper boundary conditions at wet-dry interface 
         if (combined_bathymetry > -20.0 && combined_bathymetry < 0.0)
             combined_bathymetry = -20.0;
         else if (combined_bathymetry >= 0.0 && combined_bathymetry < 20.0)
             combined_bathymetry = 20.0;
+        */
         
         Q[0] = bath > 0  || combined_bathymetry > 0 ? 0.0 : -bath;
         Q[1] = 0.0;

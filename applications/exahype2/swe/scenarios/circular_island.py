@@ -1,12 +1,12 @@
-import scenarios.inundation_scenario, sympy
+import scenarios.template_scenario, sympy
 
 
-class Circular_Island(scenarios.inundation_scenario.Inundation_Scenario):
+class Circular_Island(scenarios.template_scenario.Template_Scenario):
     """
     Taken from https://doi.org/10.48550/arXiv.1607.04547
     """
-    def __init__(self, refinement_tolerance, epsilon=1e-4):
-        super().__init__(refinement_tolerance, epsilon=epsilon)
+    def __init__(self, refinement_tolerance):
+        super().__init__(refinement_tolerance)
         super().reflective_boundary_conditions()
         
         _h_0 = 0.32

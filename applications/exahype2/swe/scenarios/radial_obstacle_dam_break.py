@@ -1,9 +1,9 @@
-import scenarios.inundation_scenario, sympy
+import scenarios.template_scenario, sympy
 
 
-class Radial_Obstacle_Dam_Break(scenarios.inundation_scenario.Inundation_Scenario):
-    def __init__(self, width, refinement_tolerance, epsilon=1e-4):
-        super().__init__(refinement_tolerance, epsilon=epsilon)
+class Radial_Obstacle_Dam_Break(scenarios.template_scenario.Template_Scenario):
+    def __init__(self, width, refinement_tolerance):
+        super().__init__(refinement_tolerance)
 
         dam = sympy.sqrt(
             ((width[0] / 2) - self.x[0]) ** 2 + ((width[1] / 2) - self.x[1]) ** 2
@@ -19,7 +19,7 @@ class Radial_Obstacle_Dam_Break(scenarios.inundation_scenario.Inundation_Scenari
         self.initial_values[2] = 0.0
         self.initial_values[3] = sympy.Piecewise(
             (2.0, sympy.And(dam >= 2 * width[0] / 10, dam <= 3 * width[0] / 10)),
-            (0.0, True)
+            (-1.0, True)
         )
         
         pass
