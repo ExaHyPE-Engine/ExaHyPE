@@ -1,13 +1,13 @@
-import scenarios.template_scenario
+import scenarios.inundation_scenario
 import sympy
 
 
-class Oscillating_Lake(scenarios.template_scenario.Template_Scenario): 
+class Oscillating_Lake(scenarios.inundation_scenario.Inundation_Scenario): 
     """
     Taken from https://doi.org/10.48550/arXiv.1607.04547
     """
-    def __init__(self, refinement_tolerance):
-        super().__init__(refinement_tolerance)
+    def __init__(self, refinement_tolerance, epsilon=1e-4):
+        super().__init__(refinement_tolerance, epsilon=epsilon)
         super().reflective_boundary_conditions()
 
         self.initial_values[1] = 0.0

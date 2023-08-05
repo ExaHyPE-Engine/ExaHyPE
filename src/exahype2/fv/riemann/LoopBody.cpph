@@ -156,13 +156,13 @@ void exahype2::fv::riemann::internal::updateSolutionWithRiemannSolution_LoopBody
   double* __restrict__ QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
-  auto updateAlongOneDirection = [=](const double* __restrict__ tempLeft, const double* __restrict__ tempRight, const int normal) {
+  auto updateAlongOneDirection = [=](const double* __restrict__ tempLeftUpdates, const double* __restrict__ tempRightUpdates, const int normal) {
     tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
     tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
     leftVolume(normal)--;
 
-    const double fluxPos = tempRight[riemannEnumerator(patchIndex, leftVolume, unknown)];
-    const double fluxNeg = tempLeft[riemannEnumerator(patchIndex, rightVolume, unknown)];
+    const double fluxPos = tempRightUpdates[riemannEnumerator(patchIndex, leftVolume, unknown)];
+    const double fluxNeg = tempLeftUpdates[riemannEnumerator(patchIndex, rightVolume, unknown)];
 
     QOut[QOutEnumerator(
       patchIndex, volumeIndex, unknown

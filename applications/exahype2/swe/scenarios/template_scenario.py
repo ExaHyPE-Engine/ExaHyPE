@@ -15,8 +15,8 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     In all other cases, please extend scenario.py and pde.py, and implement the required given methods.
     """
     @abstractmethod
-    def __init__(self, refinement_tolerance:float, unknowns=3, auxilliary_variables=1):
-        super().__init__(unknowns=unknowns, auxiliary_variables=auxilliary_variables)
+    def __init__(self, refinement_tolerance:float, unknowns=3, auxiliary_variables=1):
+        super().__init__(unknowns=unknowns, auxiliary_variables=auxiliary_variables)
         self.definition_of_ncp()
         super().outflow_boundary_conditions()
         self.amr_tol = refinement_tolerance

@@ -19,6 +19,7 @@ maximum_cell_size     = 0.1
 amr_levels            = 3 
 auxiliary_variables   = 1 # bathymetry, this is fixed to 1 in pde.py
 amr_tolerance         = 1e-3
+epsilon               = 1e-4
 
 fv_rusanov_solvers = {
   #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
@@ -32,9 +33,14 @@ rkdg_rusanov_solvers = {
   "RKDGRusanovGlobalAdaptive": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep
 }
 
+user_defined_solvers = {
+  "FVUserDefined" : exahype2.solvers.fv.riemann.UserDefinedRiemann
+}
+
 solvers = {}
 solvers.update(rkdg_rusanov_solvers)
 solvers.update(fv_rusanov_solvers)
+solvers.update(user_defined_solvers)
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -49,6 +55,7 @@ supported_file_types = [".nc"]
 scenarios = [
   "Radial_Dam_Break", 
   "Radial_Bathymetry_Dam_Break", 
+  "Radial_Obstacle_Dam_Break",
   "Tsunami", 
   "Artificial_Tsunami",
   "Sea_At_Rest",
@@ -67,44 +74,45 @@ def parse_coordinate_pair(coords):
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - SWE Application Script')
 
-parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     required=True,              help="|".join(solvers.keys()) )
+parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     required=True               )
 parser.add_argument("-o",       "--output",            dest="output_path",    type=str,                   default="./",               help="Output path for project output. The project will create a new folder at the given path. Default is the current directory.")
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default="Release",          help="|".join(build_modes.keys()) )
 
-parser.add_argument("-et",      "--end-time",          dest="end_time",       type=float,                 default=end_time,           help="End time of simulation")
+parser.add_argument("-et",      "--end-time",          dest="end_time",       type=float,                 default=end_time,           help="End time of simulation. Default is %f." % end_time)
 parser.add_argument("-bf",      "--bathymetry-file",   dest="bathymetry_file", type=str,                  required=False,             help="Path to file containing bathymetry relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types)))
 parser.add_argument("-df",      "--displacement-file", dest="displacement_file",type=str,                 required=False,             help="Path to file containing displacement relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types)))
-parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios,          default="Radial_Dam_Break", help="|".join(scenarios))
-parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch.")
-parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
+parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios,          default="Radial_Dam_Break", help="Default is Radial_Dam_Break.")
+parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch. Default is %f." % patch_size)
+parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used. Default is %f." % plot_interval)
 
-parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. finite volume cell (3 by default)." )
+parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. finite volume cell Default is %f." % amr_levels)
 parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=False,              help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
 
 parser.add_argument("-maxd",    "--max_dimension_netcdf",dest="max_dimension_netcdf",type=int,            required=False,             help="Use when netCDF4 python package not installed to pass maximum dimension to the program.")
 parser.add_argument("-maxh",    "--max-cell-size",     dest="max_cell_size",  type=float,                 default=maximum_cell_size,  help="Maximum size of a single finite volume cell on each axis")
 
-parser.add_argument("-probes",  nargs='+',             dest="probe_coordinates",type=str,                 required=False,             help="Provide one or more tuples of coordinates [x,y] for tracers (e.g. [15,20.23] [5,14.123]). Coordinates have to be in reference to the simulation domain and must not contain any white spaces!")
+parser.add_argument("-probes",  nargs='+',             dest="probe_coordinates",type=str,                 required=False,             help="Provide one or more tuples of coordinates [x,y] for probes (e.g. [15,20.23] [5,14.123]). Coordinates have to be in reference to the simulation domain and must not contain any white spaces!")
 
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   required=False,             help="Set order of time discretisation for Runge-Kutta scheme." )
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   required=False,             help="Set order of space discretisation for Discontinuous Galerkin." )
-parser.add_argument("-amr-tol", "--amr-tolerance",     dest="amr_tol",        type=float,                 default=amr_tolerance,      help="When using AMR, please set a surface tolerance above which shall be refined and otherwise coarsened. Default is 0.05. Also used for guided AMR.")
+parser.add_argument("-amr-tol", "--amr-tolerance",     dest="amr_tol",        type=float,                 default=amr_tolerance,      help="When using AMR, please set a surface tolerance above which shall be refined and otherwise coarsened. Default is %f. Also used for guided AMR." % amr_tolerance)
+parser.add_argument("-epsilon", "--epsilon",           dest="epsilon",        type=float,                 default=epsilon,            help="Minimum water height to be calculated with so that h = 0 does not become a problem. Default is %f." % epsilon)
 
-parser.add_argument("-nc-key-bath-x",                  dest="nc_key_bath_x",  type=str,                   default="x",                help="Key for x dimension values in bathymetry netCDF file.")
-parser.add_argument("-nc-key-bath-y",                  dest="nc_key_bath_y",  type=str,                   default="y",                help="Key for y dimension values in bathymetry netCDF file.")
-parser.add_argument("-nc-key-bath-bath",               dest="nc_key_bath_bath",type=str,                  default="z",                help="Key for bathymetry values in bathymetry netCDF file.")
-parser.add_argument("-nc-key-displ-x",                 dest="nc_key_displ_x",  type=str,                  default="x",                help="Key for x dimension values in displacement netCDF file.")
-parser.add_argument("-nc-key-displ-y",                 dest="nc_key_displ_y",  type=str,                  default="y",                help="Key for y dimension values in displacement netCDF file.")
-parser.add_argument("-nc-key-displ-displ",             dest="nc_key_displ_displ",type=str,                default="z",                help="Key for displacement values in displacement netCDF file.")
+parser.add_argument("-nc-key-bath-x",                  dest="nc_key_bath_x",  type=str,                   default="x",                help="Key for x dimension values in bathymetry netCDF file. Default is x.")
+parser.add_argument("-nc-key-bath-y",                  dest="nc_key_bath_y",  type=str,                   default="y",                help="Key for y dimension values in bathymetry netCDF file. Default is y.")
+parser.add_argument("-nc-key-bath-bath",               dest="nc_key_bath_bath",type=str,                  default="z",                help="Key for bathymetry values in bathymetry netCDF file. Default is z.")
+parser.add_argument("-nc-key-displ-x",                 dest="nc_key_displ_x",  type=str,                  default="x",                help="Key for x dimension values in displacement netCDF file. Default is x.")
+parser.add_argument("-nc-key-displ-y",                 dest="nc_key_displ_y",  type=str,                  default="y",                help="Key for y dimension values in displacement netCDF file. Default is y.")
+parser.add_argument("-nc-key-displ-displ",             dest="nc_key_displ_displ",type=str,                default="z",                help="Key for displacement values in displacement netCDF file. Default is z.")
 
-parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile (on by default)." )
+parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile. Default is True.")
 parser.add_argument(            "--uq-displacement-origin",dest="uq_displacement_origin",type=str,        required=False,             help="Move displacement for uncertainty quantification. Expected argument [x,y] denoting the center of the displacement file within the coordinate system of the bathymetry file. To move only one dimension, set the other one to inf.")
-parser.add_argument(            "--no-dynamic-h",      dest="dynamic_h",      action="store_false",       default=True,               help="Dynamically adapt max cell size for highest netCDF resolution. On by default.")
+parser.add_argument(            "--no-dynamic-h",      dest="dynamic_h",      action="store_false",       default=True,               help="Dynamically adapt max cell size for highest netCDF resolution. Default is True.")
 
 parser.add_argument(            "--guided-amr",        dest="guided_amr",      action="store_true",       default=False,              help="Use guided AMR, only available with the \"Tsunami\" scenario. Optionally pass in an already computed adjoint simulation file in netCDF format using the flag --gamr-file.")
-parser.add_argument(            "--gamr-file",          dest="gamr_file",      type=str,                  required=False,             help="Pass in an already computed adjoint simulation output file in netCDF format. Expects to have keys \"x\",\"y\" and \"h\", \"hu\", \"hv\", \"b\"")
-parser.add_argument(            "--gamr-start-time",    dest="gamr_start_time",type=float,                required=False,             help="Begin of temporal region of interest. Defaults to 0.")
-parser.add_argument(            "--gamr-checkpoints",   dest="gamr_checkpoints",type=int,                 default=0,                  help="Number of times output should be written in adjoint simulation. Defaults to 0 (=Infinity)")
+parser.add_argument(            "--gamr-file",          dest="gamr_file",      type=str,                  required=False,             help="Pass in an already computed adjoint simulation output file in netCDF format. Expects to have keys \"x\",\"y\" and \"h\", \"hu\", \"hv\", \"b\".")
+parser.add_argument(            "--gamr-start-time",    dest="gamr_start_time",type=float,                required=False,             help="Begin of temporal region of interest. Default is 0.")
+parser.add_argument(            "--gamr-checkpoints",   dest="gamr_checkpoints",type=int,                 default=0,                  help="Number of times output should be written in adjoint simulation. Default is 0 (=Infinity)")
 parser.add_argument("--gamr-area-of-interest", nargs="+",dest="gamr_area_of_interest",type=str,           required=False,             help="Define area of interest for guided AMR. Pass in either a square [x1,x2] [y1,y2] or a circle [x1,y1] [r, inf]. Coordinates are in the same system as the bathymetry.")
 parser.add_argument(            "--gamr-writer-flush",  dest="gamr_writer_flush", type=int,               default=0,                  help="Define after how many writer operations the writer flushes the buffer to the disk.")
 parser.add_argument(            "--adjoint-only",       dest="adjoint_only",    action="store_true",      default=False,              help="Set to only run adjoint simulation and no forward simulation. Used to simply generate file for guided amr.")
@@ -124,6 +132,10 @@ if args.scenario == "Radial_Bathymetry_Dam_Break":
   from scenarios.radial_bathymetry_dam_break import Radial_Bathymetry_Dam_Break
   my_pde = Radial_Bathymetry_Dam_Break(width=width, refinement_tolerance=args.amr_tol)
 
+if args.scenario == "Radial_Obstacle_Dam_Break":
+  from scenarios.radial_obstacle_dam_break import Radial_Obstacle_Dam_Break
+  my_pde = Radial_Obstacle_Dam_Break(width=width, refinement_tolerance=args.amr_tol, epsilon=args.epsilon)
+
 elif args.scenario == "Artificial_Tsunami":
   from scenarios.artificial_tsunami import Artificial_Tsunami
   my_pde = Artificial_Tsunami(width=width, refinement_tolerance=args.amr_tol)
@@ -135,17 +147,17 @@ elif args.scenario == "Sea_At_Rest":
 elif args.scenario == "Oscillating_Lake":
   width = [4, 4]
   from scenarios.oscillating_lake import Oscillating_Lake
-  my_pde = Oscillating_Lake(refinement_tolerance=args.amr_tol)
+  my_pde = Oscillating_Lake(refinement_tolerance=args.amr_tol, epsilon=args.epsilon)
 
 elif args.scenario == "Three_Mounds_Channel":
   width = [75, 30]
   from scenarios.three_mounds_channel import Three_Mounds_Channel
-  my_pde = Three_Mounds_Channel(refinement_tolerance=args.amr_tol)
+  my_pde = Three_Mounds_Channel(refinement_tolerance=args.amr_tol, epsilon=args.epsilon)
 
 elif args.scenario == "Circular_Island":
   width = [25, 30]
   from scenarios.circular_island import Circular_Island
-  my_pde = Circular_Island(refinement_tolerance=args.amr_tol)
+  my_pde = Circular_Island(refinement_tolerance=args.amr_tol, epsilon=args.epsilon)
 
 elif args.scenario == "Tsunami":
 
@@ -183,7 +195,7 @@ elif args.scenario == "Tsunami":
         maximum_cell_size = min(width)/args.max_dimension_netcdf
 
   from scenarios.tsunami import Tsunami
-  my_pde = Tsunami(refinement_tolerance=args.amr_tol, use_guided_amr=args.guided_amr)
+  my_pde = Tsunami(refinement_tolerance=args.amr_tol, use_guided_amr=args.guided_amr, epsilon=args.epsilon)
 
 else:
   # This is the default scenario
@@ -214,7 +226,7 @@ if args.gpu:
 
 my_solver = None
 # finite volume rusanov solver?
-if solver_type in fv_rusanov_solvers:
+if solver_type in fv_rusanov_solvers or solver_type == "FVUserDefined":
 
 #########################################
 # Set up solver parameters for FV       #
@@ -225,7 +237,7 @@ if solver_type in fv_rusanov_solvers:
     patch_size                = patch_size,
     unknowns                  = 3,
     auxiliary_variables       = 1,
-    max_volume_h              = maximum_cell_size, # must be at least as fine as bathymetry file if netCDF is used
+    max_volume_h              = maximum_cell_size,
     min_volume_h              = maximum_cell_size * 3.0**(-args.amr_levels),
     time_step_relaxation      = time_step_relaxation
   )
@@ -252,7 +264,7 @@ elif solver_type in rkdg_rusanov_solvers:
     face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2? 
     unknowns                  = 3,
     auxiliary_variables       = 1,
-    max_cell_h                = maximum_cell_size, # must be at least as fine as bathymetry file if netCDF is used
+    max_cell_h                = maximum_cell_size, 
     min_cell_h                = maximum_cell_size * 3.0**(-args.amr_levels),
     time_step_relaxation      = time_step_relaxation
   )
@@ -264,15 +276,26 @@ if args.gpu:
 # Set up solver implementation          #
 #########################################
 
-my_solver.set_implementation(
-  initial_conditions    = my_pde.implementation_of_initial_conditions(),
-  boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
-  flux                  = my_pde.implementation_of_flux(),
-  eigenvalues           = my_pde.implementation_of_max_eigenvalue(),
-  ncp                   = my_pde.implementation_of_ncp(),
-  refinement_criterion  = my_pde.implementation_of_refinement_criterion(),
-  source_term           = my_pde.implementation_of_sources()
-)
+if solver_type not in user_defined_solvers:
+  my_solver.set_implementation(
+    initial_conditions    = my_pde.implementation_of_initial_conditions(),
+    boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
+    flux                  = my_pde.implementation_of_flux(),
+    eigenvalues           = my_pde.implementation_of_max_eigenvalue(),
+    ncp                   = my_pde.implementation_of_ncp(),
+    refinement_criterion  = my_pde.implementation_of_refinement_criterion(),
+    source_term           = my_pde.implementation_of_sources()
+  )
+
+else:
+  my_solver.set_implementation(
+    initial_conditions    = my_pde.implementation_of_initial_conditions(),
+    boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
+    flux                  = my_pde.implementation_of_flux(),
+    eigenvalues           = my_pde.implementation_of_eigenvalues(),
+    refinement_criterion  = my_pde.implementation_of_refinement_criterion(),
+    riemann_solver        = my_pde.implementation_of_riemann_solver()
+  )
 
 executable_name = "swe-application-2d-solver-name-%s-scenario-%s-patch-size-%d-amr-%d-cell-size-%f-end-time-%f" % (solver_name, args.scenario, patch_size, args.amr_levels, maximum_cell_size, args.end_time)
 output_path = args.output_path+"output-%s/" % executable_name
