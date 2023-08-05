@@ -8,25 +8,93 @@ class HLLEM(solver.Solver):
 
     def implementation_of_riemann_solver(self):
         return """ 
+    double fluxLeft[3]{0.0};
+    double fluxRight[3]{0.0};
+    double lambdaLeft[3]{0.0};
+    double lambdaRight[3]{0.0};
+
+    double h_l = QL[0];
+    double hu_l = QL[1];
+    double hv_l = QL[2];
+    double b_l = QL[3];
+
+    double h_r = QR[0];
+    double hu_r = QR[1];
+    double hv_r = QR[2];
+    double b_r = QR[3];
+
+    if(b_r >= 0 && b_l >= 0)
+    {
+        for(int i = 0; i < 3; i++)
+        {
+            AMDQ[i] = 0.0;
+            APDQ[i] = 0.0;
+        }
+        return 0.0;
+    } 
+    else if (b_r >= 0 && b_l < 0)
+    {
+        b_r = b_l;
+        h_r = h_l;
+        hu_r = -hu_l;
+        hv_r = -hv_l;
+        for(int i = 0; i < 3; i++)
+        {
+            lambdaLeft[i] = LL[i];
+            lambdaRight[i] = -lambdaLeft[i];
+            fluxLeft[i] = FL[i];
+            fluxRight[i] = fluxLeft[i];
+            if(normal == 0 && i == 2 || normal == 1 && i == 1)
+                fluxRight[i] *= -1.0;
+        }
+
+    }
+    else if (b_l >= 0 && b_r < 0)
+    {
+        b_l = b_r;
+        h_l = h_r;
+        hu_l = -hu_r;
+        hv_l = -hv_r;
+        for(int i = 0; i < 3; i++)
+        {
+            lambdaRight[i] = LR[i];
+            lambdaLeft[i] = -lambdaRight[i];
+            fluxRight[i] = FR[i];
+            fluxLeft[i] = fluxRight[i];
+            if(normal == 0 && i == 2 || normal == 1 && i == 1)
+                fluxLeft[i] *= -1.0;
+        }
+    }
+    else
+    {
+        for(int i = 0; i < 3; i++)
+        {
+            lambdaRight[i] = LR[i];
+            lambdaLeft[i] = LL[i];
+            fluxRight[i] = FR[i];
+            fluxLeft[i] = FL[i];
+        }
+    }
+
     const double g = 9.81;
     double smax = 0.0;
     {
         double maxAbsLambda = 0.0;
         for(int i = 0; i < 3; i++)
         {
-            maxAbsLambda = std::max(std::abs(LL[i]), std::abs(LR[i]));
+            maxAbsLambda = std::max(std::abs(lambdaLeft[i]), std::abs(lambdaRight[i]));
             smax = std::max(smax, maxAbsLambda);
         }
     }
 
-    double bm = std::max(QL[3], QR[3]);
-    double hRoe = 0.5 * (QL[0] + QR[0]);
-    double DEta = std::max(QR[0]+QR[3] - bm, 0.0) - std::max(QL[0]+QL[3] - bm, 0.0);
+    double bm = std::max(b_l, b_r);
+    double hRoe = 0.5 * (h_l + h_r);
+    double DEta = std::max(h_r + b_r - bm, 0.0) - std::max(h_l + b_l - bm, 0.0);
 
     double flux[3] = {0.0};
-    flux[0] = 0.5 * (FL[0] + FR[0]) - 0.5 * smax * DEta;
-    flux[1] = 0.5 * (FL[1] + FR[1]) - 0.5 * smax * (QR[1] - QL[1]);
-    flux[2] = 0.5 * (FL[2] + FR[2]) - 0.5 * smax * (QR[2] - QL[2]);
+    flux[0] = 0.5 * (fluxLeft[0] + fluxRight[0]) - 0.5 * smax * DEta;
+    flux[1] = 0.5 * (fluxLeft[1] + fluxRight[1]) - 0.5 * smax * (hu_r - hu_l);
+    flux[2] = 0.5 * (fluxLeft[2] + fluxRight[2]) - 0.5 * smax * (hv_r - hv_l);
 
     for(int i = 0; i < 3; i++)
     {
