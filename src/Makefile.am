@@ -7,8 +7,8 @@ ARFLAGS = crU
 #
 # By default, automake does dfs. We need the libs to be built first however.
 # So we add the . explicitly. Please note that it is not enough to add your
-# directory here. You also have to add any new directory to the root's 
-# configure.ac script and rerun the whole autotool pipeline (see comment 
+# directory here. You also have to add any new directory to the root's
+# configure.ac script and rerun the whole autotool pipeline (see comment
 # within configure.ac as well as its very last line).
 #
 SUBDIRS = . \
@@ -200,6 +200,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/timing/Watch.cpp \
  tarch/timing/Measurement.cpp \
  tarch/timing/GlidingAverageMeasurement.cpp \
+ tarch/timing/TPSCalculator.cpp \
  tarch/services/Service.cpp \
  tarch/services/ServiceRepository.cpp
 
