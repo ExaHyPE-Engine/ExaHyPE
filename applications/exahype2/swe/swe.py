@@ -308,7 +308,7 @@ else:
     custom_solver = HLLEM(args.epsilon)
 
   implementation_of_flux = my_pde.implementation_of_flux() if custom_solver.implementation_of_flux() == PDETerms.None_Implementation else custom_solver.implementation_of_flux()
-  implementation_of_eigenvalues = my_pde.implmentation_of_eigenvalues() if custom_solver.implementation_of_eigenvalues() == PDETerms.None_Implementation else custom_solver.implementation_of_eigenvalues()
+  implementation_of_eigenvalues = my_pde.implementation_of_eigenvalues() if custom_solver.implementation_of_eigenvalues() == PDETerms.None_Implementation else custom_solver.implementation_of_eigenvalues()
 
   my_solver.set_implementation(
     initial_conditions    = my_pde.implementation_of_initial_conditions(),
