@@ -15,11 +15,9 @@ class Solver(ABC):
     def implementation_of_riemann_solver(self):
         pass
     
-    @abstractmethod
     def implementation_of_flux(self):
         return PDETerms.None_Implementation
 
-    @abstractmethod
     def implementation_of_eigenvalues(self):
         return PDETerms.None_Implementation
 
