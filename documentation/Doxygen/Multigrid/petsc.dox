@@ -71,5 +71,39 @@ and so forth are lost. This is a realisation representation, not a logical
 representation of our project.
  
 
+## A brief run through of the work in progress
+
+1. Mesh creation - this is done automatically
+
+2. EnumerateAndInitSolution step - Here we have two action sets, petsc.actionsets.InitVertexDoFs and petsc.actionsets.EnumerateVertices.
+   InitVertexDoFs and EnumerateVertices both operate only on TouchVertexFirstTime.
+   In petsc.actionsets.InitVertexDoFs, every fineGridVertex is marked as "Dirichlet"
+   if it lies on the boundary, and as "DoF" otherwise. For now, we just use marker.x() to 
+   determine whether a vertex is on the boundary.
+   We also insert 
+   a value and rhs into the vertex (on the Peano mesh) at this stage, which we pass to PETSc during assembly, but this comes later.
+   During the Enumeration Action set, every fineGridVertex is given a globalIndex, which will be used later
+   to construct the PETSc matrix. We operate exclusively on the fine grid data.
+
+3. InitPETSc step. Here we count total number of DoFs and send to our instanceOfPetsc. This is the same as the 
+   number of vertices that were marked as DoF - we simply query LocalToGlobalMap for the total number of global vertices.
+
+4. Assembly - This is the stage we construct the PETSc matrix and Rhs vector. For this, we add a new action set,
+   petsc.actionsets.InitVertexDoFsAssemblePetscMatrix.
+   During TouchCellFirstTime:
+      - Run through the vertices within this cell
+      - Retrieve a global Index for each from the LocalToGlobalMap per vertex
+      - Increment values in PETSc matrix based on the Poisson stencil @f$ 2^(2d) @f$ calls
+   During TouchVertexFirstTime:
+      - Get global index of the vertex (only for the fine grid vertex)
+      - Set entry in RHS vector to corresponding value from the Peano mesh.
+      - Set entry in solution vector to corresponding value from the Peano mesh.
+
+
+5. Solve - Hand over to PETSc to find solution 
+6. MapSolutionOntoMesh - query instanceOfPetsc for the data from the solution vector. 
+
+
+
  */
  

@@ -5,14 +5,20 @@
 
 #include "tarch/logging/Log.h"
 
-namespace tarch::accelerator
-{
+namespace tarch::accelerator {
   struct BenchmarkResultInNanoSeconds;
-}
+} // namespace tarch::accelerator
 
-namespace tarch::accelerator::cpp
-{
-  static tarch::logging::Log _log("tarch::accelerator::cpp");
+namespace tarch::accelerator::cpp {
+  /**
+   * Queries device information for ISO C++ GPU accelerator  backend.
+   *
+   * It implements the device infromation queries described in `tarch::accelerator::queryDeviceInformation`
+   * Since ISO C++ hides any information about the GPUs to the users, an empty matrix will be returned
+   *
+   * @see tarch::accelerator::queryDeviceInformation
+   */
+  void queryDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix);
 
 
   /**

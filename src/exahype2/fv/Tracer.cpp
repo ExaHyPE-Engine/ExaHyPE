@@ -30,14 +30,14 @@ tarch::la::Vector<Dimensions, int> exahype2::fv::internal::mapBiasedParticleOnto
 ) {
   tarch::la::Vector<Dimensions, int> result;
 
-  assertion(voxelsPerAxis > 0);
+  assertion3(voxelsPerAxis>=2, marker, voxelsPerAxis, particleX);
   double cartesianMeshH = marker.h()(0) / voxelsPerAxis;
 
   for (int d = 0; d < Dimensions; d++) {
     double biasedPositionWithinPatch = particleX(d) - marker.getOffset()(d) - cartesianMeshH / 2.0;
     result(d)                        = static_cast<int>(std::floor(biasedPositionWithinPatch / cartesianMeshH));
     result(d)                        = std::max(0, result(d));
-    result(d)                        = std::min(voxelsPerAxis - 1, result(d));
+    result(d)                        = std::min(voxelsPerAxis - 2, result(d));
   }
 
   return result;
@@ -61,38 +61,41 @@ double exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
 }
 
 double exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const double* __restrict__ Q,
-  const tarch::la::Vector<Dimensions, double>& particleX,
-  int                                          unknown
+  const peano4::datamanagement::CellMarker&     marker,
+  int                                           voxelsPerAxis,
+  int                                           unknownsPerVoxel,
+  const double* __restrict__                    Q,
+  const tarch::la::Vector<Dimensions, double>&  particleX,
+  int                                           unknown
 ) {
   tarch::la::Vector<Dimensions, int> biasedVoxel = mapBiasedParticleOntoVoxel(marker, voxelsPerAxis, particleX);
 
   double h = getVolumeLength(marker.h(), voxelsPerAxis);
 
   double                                      result        = 0.0;
-  dfor2(k) tarch::la::Vector<Dimensions, int> currentVoxel  = biasedVoxel + k;
-  tarch::la::Vector<Dimensions, double>       currentVoxelX = getVolumeCentre(
-    marker.x(), marker.h(), voxelsPerAxis, currentVoxel
-  );
-  int    currentVoxelIndex = peano4::utils::dLinearised(currentVoxel, voxelsPerAxis);
-  double weight            = 1.0;
-  for (int d = 0; d < Dimensions; d++) {
-    double relativeDistance = std::abs(currentVoxelX(d) - particleX(d)) / h;
-    if (particleX(d) < currentVoxelX(d) and currentVoxel(d) == 0) {
-      weight = 1.0;
-    } else if (particleX(d) > currentVoxelX(d) and currentVoxel(d) == voxelsPerAxis - 1) {
-      weight = 1.0;
-    } else if (relativeDistance < 1.0) {
-      weight *= (1.0 - relativeDistance);
-    } else {
-      weight = 0.0;
+  dfor2(k)
+    tarch::la::Vector<Dimensions, int> currentVoxel  = biasedVoxel + k;
+    tarch::la::Vector<Dimensions, double>       currentVoxelX = getVolumeCentre(
+      marker.x(), marker.h(), voxelsPerAxis, currentVoxel
+    );
+    int    currentVoxelIndex = peano4::utils::dLinearised(currentVoxel, voxelsPerAxis);
+    double weight            = 1.0;
+    for (int d = 0; d < Dimensions; d++) {
+      double relativeDistance = std::abs(currentVoxelX(d) - particleX(d)) / h;
+      if (particleX(d) < currentVoxelX(d) and currentVoxel(d) == 0) {
+        weight = 1.0;
+      }
+      else if (particleX(d) > currentVoxelX(d) and currentVoxel(d) == voxelsPerAxis - 1) {
+        weight = 1.0;
+      } else if (relativeDistance < 1.0) {
+        weight *= (1.0 - relativeDistance);
+      } else {
+        weight = 0.0;
+      }
     }
-  }
-  if (weight > 0.0) {
-    result += weight * Q[currentVoxelIndex * unknownsPerVoxel + unknown];
-  }
-  enddforx return result;
+    if (weight > 0.0) {
+      result += weight * Q[currentVoxelIndex * unknownsPerVoxel + unknown];
+    }
+  enddforx
+  return result;
 }

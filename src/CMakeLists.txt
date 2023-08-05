@@ -7,9 +7,17 @@ add_subdirectory(tarch)
 add_subdirectory(peano4)
 add_subdirectory(convert)
 add_subdirectory(toolbox)
+
 if(ENABLE_EXAHYPE)
   add_subdirectory(exahype2)
 endif()
+
 if(ENABLE_SWIFT)
   add_subdirectory(swift2)
 endif()
+
+if(WITH_PETSC)
+  add_subdirectory(petsc)
+endif()
+
+add_subdirectory(unittests)

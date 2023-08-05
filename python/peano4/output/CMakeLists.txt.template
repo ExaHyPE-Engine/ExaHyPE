@@ -44,6 +44,9 @@ if(NOT ${MODE_LOWER} IN_LIST BUILD_MODES)
     the build of the configured CMake project. Please reconfigure the CMake project with -DCMAKE_BUILD_TYPE=${value_capitalized}")
 endif()
 
+capitalize(${MODE})
+set(CMAKE_BUILD_TYPE "${value_capitalized}" CACHE STRING "${BUILD_MODES}" FORCE)
+
 list(APPEND DEPENDS_CORE {% for item in CMAKE_CORE_LIBS -%} {{item+' '}} {%- endfor %})
 list(APPEND DEPENDS_OTHER {% for item in CMAKE_LIBS -%} {{item+' '}} {%- endfor %})
 

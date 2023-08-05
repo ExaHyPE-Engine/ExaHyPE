@@ -2,9 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
-
+#include "tarch/la/Vector.h"
 
 
 /**
@@ -97,10 +96,17 @@ namespace peano4 {
    *
    * - tarch::mpi::Rank, as the rank is not a service and is handled
    *   separately by the initParallelEnvironment().
+   *
+   * Note that there is a bug when passing in initializer lists
+   * to this function. If the number of elements in "offset" is
+   * greater than Dimensions, then "width" will borrow some elements that
+   * were intended for "offset". Best practice is to initialize
+   * vectors that are to be passed in before the call to initSingletons.
+   * That way the compiler will throw an error if the sizes are not correct.
    */
   void initSingletons(
-    const tarch::la::Vector<Dimensions,double>&  offset,
-    const tarch::la::Vector<Dimensions,double>&  width,
+    const tarch::la::Vector<Dimensions, double>& offset,
+    const tarch::la::Vector<Dimensions, double>& width,
     const std::bitset<Dimensions>&               periodicBC = 0
   );
 
@@ -109,8 +115,10 @@ namespace peano4 {
    * shutdown will tell all the other ranks to go down as well.
    */
   void shutdownSingletons();
-}
 
-
-
-
+  /**
+   * Runs GPU Offloading tests, GPU Bandwidth benchmarks and
+   * prints the benchmark results
+   */
+  void runTestsAndBenchmarks();
+} // namespace peano4

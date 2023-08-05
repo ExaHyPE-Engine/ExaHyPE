@@ -5,56 +5,46 @@
 
 #include "tarch/logging/Log.h"
 
-namespace tarch::accelerator
-{
+namespace tarch::accelerator {
   struct BenchmarkResultInNanoSeconds;
-}
-namespace tarch::accelerator::omp
-{
-  static tarch::logging::Log _log("tarch::accelerator::omp");
-
+} // namespace tarch::accelerator
+namespace tarch::accelerator::omp {
   /**
-   * @brief Query device information and update the property matrix.
+   * Queries device information for OpenMP GPU accelerator  backend.
    *
-   * Only information OpenMP GPU Offloading can return as information is the number of GPUs
+   * It implements the device infromation queries described in `tarch::accelerator::queryDeviceInformation`
+   * Since OpenMP hides any information about the GPUs other than the count to the users, a matrix that is
+   * filled will placeholder "X" values instead of the information is returned.
    *
-   * @param[in,out] propertyMatrix A matrix of property values to be updated with the device information.
+   * @see tarch::accelerator::queryDeviceInformation
    */
-  void queryDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix);
+  void queryDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix);
 
   /**
-   * @brief Prints the whatever little information the OpenMP backend provides
+   * Prints device information for OpenMP GPU accelerator  backend.
    *
-   * @param[in,out] propertyMatrix A matrix of property values
+   * It implements the device infromation printing described in `tarch::accelerator::printDeviceInformation`
+   *
+   * @see tarch::accelerator::printDeviceInformation
    */
-  void printDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix);
+  void printDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix);
 
   /**
-   * @brief Run offloading tests with OpenMP.
+   * Prints device information for OpenMP GPU accelerator  backend.
    *
-   * This function runs benchmarks to check whether offloading can be performed
+   * It implements the kernel launch test described in `tarch::accelerator::testKernelLaunch`
    *
-   * @return A vector of boolean to indicate successful offloading for the device.
+   *
+   * @see tarch::accelerator::testKernelLaunch
    */
   std::vector<bool> testKernelLaunch();
 
   /**
-   * @brief Run benchmarks with OpenMP backend.
+   * Runs benchmarks for the OpenMP GPU accelerator backend.
    *
-   * This function runs benchmarks using the OpenMP backend and measures the performance of various operations.
+   * It implements the memory bandwidth benchmarks described in `tarch::accelerator::runBenchmarks`
    *
-   * An attempt to dynamically allocate more data until there is no space in GPU fails as the attempt to allocate
-   * results with a runtime error that also has a termination SIGNAL, which although being catchable, trying to
-   * avoid the termination is undefined behavior, and often the compilers just terminate. Therefore dynamic allocation
-   * tests is not possible. We allocate roughly 1GB of data on the CPU then transfer it to the GPU, and add half of this
-   * data to the other half and transfer it back. Every step is then measured and saved in the BenchmarkResultsInNanoSeconds
-   * struct to be printed as a table.
-   *
-   * @return A vector of BenchmarkResultInNanoSeconds objects containing the benchmark results for each device.
-   * 
-   * @see tarch::accelerator::cpp::runBenchmarks
-   * @see tarch::accelerator::cuda::runBenchmarks
-   * @see tarch::accelerator::sycl::runBenchmarks
-   */ 
+   * @see tarch::accelerator::runBenchmarks
+   */
   std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> runBenchmarks();
 } // namespace tarch::accelerator::omp

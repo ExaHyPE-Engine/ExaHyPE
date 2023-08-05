@@ -5,14 +5,19 @@
 
 #include "tarch/logging/Log.h"
 
-namespace tarch::accelerator
-{
+namespace tarch::accelerator {
   struct BenchmarkResultInNanoSeconds;
-}
+} // namespace tarch::accelerator
 
-namespace tarch::accelerator::sycl
-{
-  static tarch::logging::Log _log("tarch::accelerator::sycl");
+namespace tarch::accelerator::sycl {
+  /**
+   * Queries device information for Sycl GPU accelerator  backend.
+   *
+   * It implements the device infromation queries described in `tarch::accelerator::queryDeviceInformation`
+   *
+   * @see tarch::accelerator::queryDeviceInformation
+   */
+  void queryDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix);
 
   /**
    * @brief Query device information and update the property matrix.

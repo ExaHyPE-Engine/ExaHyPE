@@ -4,26 +4,28 @@
 #include <vector>
 
 #include "tarch/logging/Log.h"
-namespace tarch::accelerator
-{
-  // Using a struct per Device Could be easier, but this way it is easier to create a Matrix with more Freedom
-  // For a cleaner code it can be a future todo since there is only 1 table being printed
+namespace tarch::accelerator {
   /**
-   * @brief Vector containing properties of a device.
+   * Vector of strings representing various properties.
    *
-   * This vector holds the names of various properties related to a device.
-   * It is used to unify the communication between functions used in device information and should not 
-   * be needed by the users
+   * This variable is a constant vector of strings that stores the names of various properties used to
+   * identify the properties of GPUs.
    *
+   * Using a struct per Device Could be better, but this way it is easier to create a Matrix with more Freedom
+   * For cleaner code it can be a future todo since there is only 1 table being printed (initial design was to
+   * have multiple remnants and it is a remnant of that design)
+   *
+   * @note This vector is intended to be used in conjunction with other functions or classes
+   *       that require a list of properties.
    */
   const std::vector<std::string> properties = {
-      "Device Name",
-      "Global Memory",
-      "Free Memory",
-      "Clock Frequency",
-      "Compute Units",
-      "Streaming Bandwidth",
-      "GPU-GPU Copy"};
+    "Device Name",
+    "Global Memory",
+    "Free Memory",
+    "Clock Frequency",
+    "Compute Units",
+    "Streaming Bandwidth",
+    "GPU-GPU Copy"};
 
   /**
    * @brief Struct representing benchmark results in nanoseconds.
@@ -53,135 +55,136 @@ namespace tarch::accelerator
     uint64_t readWriteSize;
   };
 
-  static tarch::logging::Log _log("tarch::accelerator");
-  
   /**
-   * @brief Queries device information for available accelerators (gpus).
+   * Num of repeats of streaming benchmarks and the number of elements N per vector
+   */
+  constexpr uint64_t repeats    = 10;
+  constexpr size_t   alloc_size = 1e9;
+  constexpr size_t   N          = alloc_size / sizeof(float);
+
+  static tarch::logging::Log _log("tarch::accelerator");
+
+  /**
+   * Queries device information and runs benchmarks on the available accelerators.
    *
-   * This function queries device information for available accelerators using
-   * the specified backend at configuration time. 
-   * The device information is stored in a nested vector
-   * structure, where each inner vector represents the information for a single
-   * device and contains strings describing various properties.
-   * 
-   * The matrix / vector structure uses a static const vector for indexing between 
-   * various functions
+   * This function retrieves information about the available accelerators and performs
+   * benchmarking using the appropriate backend based on the preprocessor directives.
+   * The device information is stored in a vector of vectors of strings, where each
+   * inner vector represents the information of a single property (A column in the Matrix then
+   * belongs to one device, and one row belongs to one Property).
    *
-   * @return A vector of vectors containing device information.
+   * Is the CUDA API is available it will be always prefered as it provides the most information
+   * alongside sycl. As of July 23, ISO C++ and OpenMP GPU Offloading hides almost any information
+   * available from the user
    *
-   * @note The backend to be used is determined based on preprocessor directives.
-   *       If `_NVHPC_CUDA` is defined even though there might be other backends we do cuda calls
-   *       as CUDA gives the most useful information to us, SYCL also gives enough information
-   *       in ISO CPP and OpenMP we get almost no infromation about the accelerators.
-   *
-   * @note This function also runs benchmarks on the available devices.
+   * @return The device information as a Matrix (vector<vector>) of strings.
+   * @see tarch::accelerator::cpp::queryDeviceInformation
+   * @see tarch::accelerator::cuda::queryDeviceInformation
+   * @see tarch::accelerator::sycl::queryDeviceInformation
+   * @see tarch::accelerator::omp::queryDeviceInformation
    */
   std::vector<std::vector<std::string>> queryDeviceInformation();
 
-/**
- * @brief Prints device information for available accelerators.
- *
- * This function retrieves device information using the `queryDeviceInformation`
- * function and then prints the information using the specified backend. The
- * device information is passed as a matrix of strings.
- *
- * @note the bachend choice happens the same as in `queryDeviceInformation`
- */
+  /**
+   * Prints device information based on the available accelerator backend.
+   *
+   * This function retrieves device information using the `queryDeviceInformation`
+   * and `runBenchmarks`functions, it prints the information using the appropriate
+   * backend based on the preprocessor directives (same backend as the  `queryDeviceInformation`).
+   * Individual implementations are necessary because some backends hide the number of accelerators
+   * from the user, this renders a table output useless and therefore individual decisions are necessary.
+   *
+   * @see queryDeviceInformation
+   * @see tarch::accelerator::cpp::printDeviceInformation
+   * @see tarch::accelerator::cuda::printDeviceInformation
+   * @see tarch::accelerator::sycl::printDeviceInformation
+   * @see tarch::accelerator::omp::printDeviceInformation
+   */
   void printDeviceInformation();
 
   /**
-   * @brief Get the offset of a property within a list of identifiers, intended to be used with `properties`.
+   * Retrieves the offset of a property in a vector of identifiers.
+   * By default the static vector of strings within this namespace is used
    *
-   * This function searches for the specified property name within a vector of identifiers and returns its offset.
+   * This function searches for the given property name in the vector of identifiers.
+   * If the property name is found, the function returns its offset (index) in the vector.
+   * If the property name is not found, a runtime_error is thrown.
    *
-   * @param name The name of the property to find.
-   * @param identifiers The vector of property identifiers default is `properties`.
-   * @return The offset of the property within the identifiers vector.
-   *
-   * @throws std::runtime_error if the property name is not found in the identifiers list.
-   *
-   * @note The identifiers vector should contain unique property names.
+   * @param name The name of the property to retrieve the offset for.
+   * @param identifiers The vector of identifiers containing the property names.
+   * @return The offset (index) of the property in the vector of identifiers.
+   * @throws std::runtime_error If the property name is not found in the vector of identifiers.
    */
-  size_t getPropertyOffset(const char name[], const std::vector<std::string> &identifiers = properties);
-
-/**
- * @brief Parse a property matrix into a formatted string Where every column should be properties of the device.
- *
- * This function takes a property matrix, number of devices, and a vector of identifiers and converts them into a formatted string representation.
- * Every column of the matrix should contain the properties of the device. The order should be the same as the `properties` vector used.
- * In the output the row 0 has then the identifiers of the `properties` and the column 0 has the enumeration of the devices. The table output is also padded
- * so that every entry has the same length in a table cell. (The input of the matrix has device properties per column with each row for a different identifier 
- * this means the input will be transposed during parsing on the fly)
- * 
- * @param propertyMatrix The property matrix to parse.
- * @param numberOfDevices The number of devices.
- * @param identifiers The vector of property identifiers, default is the `properties` from the namespace.
- * @return A formatted string representing the property matrix.
- *
- * @note The propertyMatrix should be a 2D vector containing the property values for each device and obtained by `queryDeviceInformation`.
- * @note The identifiers vector should contain the names of the properties.
- *
- * @see getPropertyOffset
- * @see queryDeviceInformation
- */
-  std::string parseMatrix(const std::vector<std::vector<std::string>> &propertyMatrix, int numberOfDevices, const std::vector<std::string> &identifiers = properties);
+  size_t getPropertyOffset(const char name[], const std::vector<std::string>& identifiers = properties);
 
   /**
-   * @brief Perform offload capability test for GPU acceleration.
+   * Parses a matrix of properties into a formatted string representation.
    *
-   * This function tests the capability of the GPU acceleration backend to successfully launch GPU kernels.
+   * This function takes a matrix of properties, the number of devices, and a vector of identifiers.
+   * It formats the properties into a string representation, including headers and proper padding.
+   * In the matrix, each column should have the properties from a device, the order should be same as the
+   * tarch::accelerator::properties.
    *
-   * @note The function will log information depending on the capabiliteis of the backend
-   * @note The function throw runtime errors if it can't launch kernels.
+   * @note The function is intended to use with `queryDeviceInformation()`and `parseBenchmarkResults(...)`
    *
-   * @see tarch::accelerator::cuda::testKernelLaunch
-   * @see tarch::accelerator::sycl::testKernelLaunch
-   * @see tarch::accelerator::omp::testKernelLaunch
-   * @see tarch::accelerator::cpp::testKernelLaunch
+   * @param propertyMatrix The matrix of properties to parse.
+   * @param numberOfDevices The number of devices.
+   * @param identifiers The vector of identifiers containing property names.
+   * @return The formatted string representation of the property matrix.
+   */
+  std::string parseMatrix(
+    const std::vector<std::vector<std::string>>& propertyMatrix,
+    int                                          numberOfDevices,
+    const std::vector<std::string>&              identifiers = properties
+  );
+
+  /**
+   * Performs offload capability tests for the available GPU accelerator backend.
+   *
+   * The specific tests are executed using the respective
+   * backend's `testKernelLaunch` function. The test results are evaluated to determine if the GPU
+   * kernels can be successfully launched. The launched kernels are dummy (hello world) kernels just
+   * to check whether launch fails or not.
+   *
+   * @throws std::runtime_error If the offload capability tests fail.
+   *
+   * @see tarch::accelerator::cpp::offloadCapabilityTest
+   * @see tarch::accelerator::cuda::offloadCapabilityTest
+   * @see tarch::accelerator::sycl::offloadCapabilityTest
+   * @see tarch::accelerator::omp::offloadCapabilityTest
+   *
    */
   void offloadCapabilityTest();
 
   /**
-   * @brief Run benchmarks for GPU acceleration and update the property matrix.
+   * Runs benchmarks for the available GPU accelerator backend and populates the property matrix.
+   * The propertyMatrix assumed to be used the matrix initialized properly (this is done by `queryBenchmarks`)
    *
-   * This function runs benchmarks for GPU acceleration based on the defined GPU acceleration backend.
-   * It stores the benchmark results in the `results` vector and updates the `propertyMatrix` accordingly
-   * using the `parseBenchmarkResults` function. This function works on a matrix that is partially written
-   * from the `queryDeviceInformation`. Results for device with id i is written to the column i of the matrix
-   * As we print a single table but might use two different backends to obtain the device information and
-   * benchmarks this approach is necessary.
-   * 
-   * For example compiling for the OpenMP GPU Offloading backend with NVHPC compilers means that we will have 
-   * CUDA API available and thus get good information on the devices but we will still run the benchmarks with
-   * OpenMP backend as it will be the one using in the simulation.
+   * Every backend implements (for their respective backends) a vector copy benchmark, which is memory bound.
+   * The vector B is assigned to vector A where both of them are roughly 1 GB in size. The benchmarks perform
+   * 10 repeats, where the result of the first repeat is discarded and the remaining 9 benchmarks' results are
+   * averaged.
    *
-   * @param[in,out] propertyMatrix A matrix of property values to be updated with benchmark results.
+   * @param propertyMatrix The matrix to store the benchmark results.
    *
-   * @note The function executes the appropriate benchmark function based on the defined GPU acceleration backend.
-   *       The benchmark results are then parsed and stored in the `propertyMatrix`.
-   *
+   * @see tarch::accelerator::cpp::runBenchmarks
    * @see tarch::accelerator::cuda::runBenchmarks
    * @see tarch::accelerator::sycl::runBenchmarks
    * @see tarch::accelerator::omp::runBenchmarks
-   * @see tarch::accelerator::cpp::runBenchmarks
-   * @see parseBenchmarkResults
-   * @see queryDeviceInformation
    */
-  void runBenchmarks(std::vector<std::vector<std::string>> &propertyMatrix);
+  void runBenchmarks(std::vector<std::vector<std::string>>& propertyMatrix);
 
-/**
- * @brief Parse the benchmark results and update the property matrix.
- *
- * This function parses the benchmark results stored in the `benchmarkResults` vector and updates
- * the `propertyMatrix` accordingly. The benchmark results are expected to be of type `BenchmarkResultInNanoSeconds`
- *
- * @param[in] benchmarkResults A vector of benchmark results to be parsed.
- * @param[in,out] propertyMatrix A matrix of property values to be updated with the parsed results.
- *
- * @note The function iterates over the benchmark results and extracts the relevant information to update
- *       the corresponding entries in the `propertyMatrix`.
- *
- * @see BenchmarkResultInNanoSeconds
- */
-  void parseBenchmarkResults(std::vector<BenchmarkResultInNanoSeconds> &benchmarkResults, std::vector<std::vector<std::string>> &propertyMatrix);
+  /**
+   * Parses benchmark results and updates the string representations in the property matrix.
+   *
+   * This function takes a vector of benchmark results (one result struct per GPU)
+   * and updates the corresponding string representations in the already initialized propertyMatrixs
+   *
+   *
+   * @param benchmarkResults The vector of benchmark results to parse.
+   * @param benchmarkResultsStringRepresentations The property matrix to update with the string representations.
+   */
+  void parseBenchmarkResults(
+    std::vector<BenchmarkResultInNanoSeconds>& benchmarkResults, std::vector<std::vector<std::string>>& propertyMatrix
+  );
 } // namespace tarch::accelerator

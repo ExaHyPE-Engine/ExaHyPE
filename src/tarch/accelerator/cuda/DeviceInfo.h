@@ -5,14 +5,11 @@
 
 #include "tarch/logging/Log.h"
 
-namespace tarch::accelerator
-{
+namespace tarch::accelerator {
   struct BenchmarkResultInNanoSeconds;
-}
+} // namespace tarch::accelerator
 
-namespace tarch::accelerator::cuda
-{
-  static tarch::logging::Log _log("tarch::accelerator::cuda");
+namespace tarch::accelerator::cuda {
 
   /**
    * @brief Query device information using CUDA API.

@@ -69,14 +69,14 @@ class DynamicMeshRefinementAnalysis(ActionSet):
 
         particle_set: peano4.toolbox.particles.ParticleSet
            Instance of the particle set that is to be used as trigger. Each particle in the
-           set has a cut-off radius and this one is used to guide the AMR.
+           set has a search radius and this one is used to guide the AMR.
 
         min_particles_per_cell: Integer (>=0)
            The tree is not refined if there are less than min_particles_per_cell particles
            within the cell. By default, this parameter is set to 1 and thus the code refines
            always if there are more than two particles held in a cell. You can set the value
-           to 0. In this case, we refine whenever there's a particle in a cell and its cut-off
-           would allow us to refine further. Set
+           to 0. In this case, we refine whenever there's a particle in a cell and its search
+           radius would allow us to refine further. Set
            it to a higher number to ensure that there's (approximately) a certain particle
            counter per cell.
 
@@ -85,10 +85,10 @@ class DynamicMeshRefinementAnalysis(ActionSet):
            particles held. Has to be bigger or equal to min_particles_per_cell.
 
            Whenever the AMR criterion refines, it can happen that particles do not
-           drop down further, as their cut-off radius is too small.
+           drop down further, as their search radius is too small.
 
            You can also set this argument to zero as well. In this case, the action
-           sets refines all the way down until the mesh size just fits the cut-off
+           sets refines all the way down until the mesh size just fits the search
            radius. It even refines a cell if there's only one particle in it.
 
         scale_marker: Float
@@ -151,30 +151,30 @@ class DynamicMeshRefinementAnalysis(ActionSet):
     __Template_TouchCellLastTime = jinja2.Template(
         """
   /*
-  
+
    Local particles
    ===============
-   
+
    Determine local number of particles associated with the adjacent
    vertices.
-  
+
    */
   int count = 0;
   for (int i=0; i<TwoPowerD; i++) {
     count += fineGridVertices{{PARTICLE_SET}}(i).size();
   }
-  
-  
+
+
   /*
-  
+
    Determine local counter
    =======================
-   
-   We might already have received data from finer cells (if we are 
-   in a refined cell), so we add the data. We might also be in a 
+
+   We might already have received data from finer cells (if we are
+   in a refined cell), so we add the data. We might also be in a
    newly generated cell, where adding new particles might cause an
    overflow. So I protect the accumulation.
-  
+
    */
   if ( fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() < std::numeric_limits<int>::max() ) {
     fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(
@@ -183,15 +183,15 @@ class DynamicMeshRefinementAnalysis(ActionSet):
       count
     );
   }
-  
+
   /*
-  
+
    Restrict the particle count to the next coarser level
    =====================================================
-  
+
    */
   coarseGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(
-    coarseGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() 
+    coarseGridCell{{CELL_DATA_NAME}}.getNumberOfParticles()
     +
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles()
   );
@@ -199,31 +199,31 @@ class DynamicMeshRefinementAnalysis(ActionSet):
   if ( marker.willBeRefined() ) {
     coarseGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell( true );
   }
-  
+
   /*
-    
+
    Erase
    =====
-   
-   If we want to erase a cell, we actually make the region that is to be 
+
+   If we want to erase a cell, we actually make the region that is to be
    erased slightly bigger. While we can pick this blow-up factor arbitrarily
-   (up to a factor of three might make sense in some cases), but if we make 
-   is 2.0, then an erased cell covers half of its neighbour. If we have a 
-   cell which hosts a particle, this cell will then maybe not coarsen, but 
-   all of its neighbours do, so the cell is eliminated. This triggers a 
+   (up to a factor of three might make sense in some cases), but if we make
+   is 2.0, then an erased cell covers half of its neighbour. If we have a
+   cell which hosts a particle, this cell will then maybe not coarsen, but
+   all of its neighbours do, so the cell is eliminated. This triggers a
    mesh oscillation. So the factor should either be smaller than 2.0, or we
-   have to veto that an area with particles is overwritten. Indeed we go 
+   have to veto that an area with particles is overwritten. Indeed we go
    down the latter route and mark cells that we may not erase with a refine
    event which describes the mesh status quo.
-         
-   
+
+
    This is a tricky part. Our idea is that we mark only examine refined cells
    one level above the finest mesh. These are cells which will be refined and
    have been refined, and also carry only few particles such that we could
    safely erase their children. While we only examine refined cells, we do not
    examine refined cells which have refined children. To find this out, we
    look at the flag getParentOfRefinedCell().
-   
+
   */
   if (
     not marker.willBeRefined()
@@ -243,8 +243,8 @@ class DynamicMeshRefinementAnalysis(ActionSet):
   }
 
   if (
-    marker.willBeRefined() 
-    and 
+    marker.willBeRefined()
+    and
     marker.hasBeenRefined()
     and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
