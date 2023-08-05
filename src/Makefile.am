@@ -241,35 +241,29 @@ CUDA_TARCH_ACCELERATOR_OBJS_DEBUG=  tarch/accelerator/cuda/libTarch_debug_a-Test
 # Define the rules per target and directory
 $(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE): tarch/accelerator/cuda/libTarch_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) $(NVCC_FLAGS_RELEASE) -Xcompiler="$(CXXFLAGS_PEANO_2D_RELEASE)" $(CXXFLAGS_PEANO_2D_RELEASE) -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_RELEASE) -Xcompiler="$(CXXFLAGS_PEANO_2D_RELEASE)" -c $< -o $@ 
 
 $(CUDA_TARCH_ACCELERATOR_OBJS_STATS): tarch/accelerator/cuda/libTarch_stats_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) $(NVCC_FLAGS_STATS) -Xcompiler="$(CXXFLAGS_PEANO_2D_STATS)" $(CXXFLAGS_PEANO_2D_STATS) -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_STATS) -Xcompiler="$(CXXFLAGS_PEANO_2D_STATS)" -c $< -o $@ 
 
 $(CUDA_TARCH_ACCELERATOR_OBJS_TRACE): tarch/accelerator/cuda/libTarch_trace_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) $(NVCC_FLAGS_TRACE) -Xcompiler="$(CXXFLAGS_PEANO_2D_TRACE)" $(CXXFLAGS_PEANO_2D_TRACE) -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_TRACE) -Xcompiler="$(CXXFLAGS_PEANO_2D_TRACE)" -c $< -o $@ 
 
 $(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS): tarch/accelerator/cuda/libTarch_asserts_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) $(NVCC_FLAGS_ASSERTS) -Xcompiler="$(CXXFLAGS_PEANO_2D_ASSERTS)" $(CXXFLAGS_PEANO_2D_ASSERTS) -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_ASSERTS) -Xcompiler="$(CXXFLAGS_PEANO_2D_ASSERTS)" -c $< -o $@ 
 
 $(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG): tarch/accelerator/cuda/libTarch_debug_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) $(NVCC_FLAGS_DEBUG) -Xcompiler="$(CXXFLAGS_PEANO_2D_DEBUG)" $(CXXFLAGS_PEANO_2D_DEBUG) -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_DEBUG) -Xcompiler="$(CXXFLAGS_PEANO_2D_DEBUG)" -c $< -o $@ 
 
-libTarch_a_LIBADD         = $(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE)
-libTarch_stats_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_STATS)
-libTarch_trace_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_TRACE)
-libTarch_asserts_a_LIBADD = $(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS)
-libTarch_debug_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG)
-
-libTarch_a_LDFLAGS = $(CUDA_LIBS)
-libTarch_stats_a_LDFLAGS = $(CUDA_LIBS)
-libTarch_trace_a_LDFLAGS = $(CUDA_LIBS)
-libTarch_asserts_a_LDFLAGS = $(CUDA_LIBS)
-libTarch_debug_a_LDFLAGS = $(CUDA_LIBS)
+libTarch_a_LIBADD         = $(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE) $(CUDA_LIBS)
+libTarch_stats_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_STATS) $(CUDA_LIBS)
+libTarch_trace_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_TRACE) $(CUDA_LIBS)
+libTarch_asserts_a_LIBADD = $(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS) $(CUDA_LIBS)
+libTarch_debug_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG) $(CUDA_LIBS)
 endif
 #
 # Map defined source sequences onto libraries
