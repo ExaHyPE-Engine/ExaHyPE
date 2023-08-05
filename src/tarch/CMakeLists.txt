@@ -22,7 +22,6 @@ foreach(mode IN LISTS BUILD_MODES)
     add_sycl_to_target(TARGET Tarch_${mode_lower})
   endif()
 
-
   install(TARGETS Tarch_${mode_lower}
     RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
             COMPONENT           ${PROJECT_NAME}_Runtime

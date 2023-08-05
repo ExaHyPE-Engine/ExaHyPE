@@ -355,12 +355,10 @@ AC_ARG_WITH(petsc,
   [ AC_MSG_CHECKING(for petsc)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);                              petsc=false ;;
-      *)     AC_MSG_RESULT(yes);                             petsc=${withval}  ;;
+      *)     AC_MSG_RESULT(yes);                             petsc=true  ;;
     esac ],
   [ AC_MSG_CHECKING(for petsc); AC_MSG_RESULT(no); petsc=false ])
-
-AM_CONDITIONAL([UsePETSc],    [test "$petsc" != petsc])
-
+AM_CONDITIONAL([UsePETSc], [test "x$petsc" = xtrue])
 
 #
 # ===============================================================
@@ -638,14 +636,14 @@ fi
 #
 # A toolbox is an optional extension of Peano (package). As there
 # are dependencies between the toolboxes, this part only analyses
-# whether a toolbox should be used or not. It does not react to 
+# whether a toolbox should be used or not. It does not react to
 # this choice.
 # ===============================================================
 #
 
 
 #
-# FEM 
+# FEM
 #
 AC_ARG_ENABLE(finiteelements,
   AS_HELP_STRING([--enable-finiteelements],[enable finite elements toolbox  [default=false]]),
@@ -659,7 +657,7 @@ AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$toolbox_finiteelements" = xtr
 
 
 #
-# Multiprecision 
+# Multiprecision
 #
 AC_ARG_ENABLE(multiprecision,
   AS_HELP_STRING([--enable-multiprecision],[enable multiprecision  [default=false]]),

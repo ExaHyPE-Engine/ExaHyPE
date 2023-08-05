@@ -59,7 +59,7 @@ class DataModel(object):
 // however are not subject of copyright, i.e. feel free to add your copyright in
 // here
 //
-#pragma once 
+#pragma once
 
 #include <string>
 

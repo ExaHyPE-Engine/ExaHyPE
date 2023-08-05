@@ -14,6 +14,7 @@ class PDE(object):
         self.initial_values = sympy.symarray("Q0", (unknowns + auxiliary_variables))
         self.boundary_values = sympy.symarray("Qb", (unknowns + auxiliary_variables))
         self.x = sympy.symarray("x", (dimensions))
+        self.h = sympy.symarray("h", (dimensions))
         pass
 
     def unknown_identifier_for_plotter(self):
@@ -66,7 +67,12 @@ class PDE(object):
             else:
                 result += "faceCentre"
             result += "(" + str(i) + ");\n"
-            result += ";\n"
+        for i in range(0, self.dimensions):
+            result += "const double h_"
+            result += str(i)
+            result += " = "
+            result += "volumeH"
+            result += "(" + str(i) + ");\n"
 
         return result
 
