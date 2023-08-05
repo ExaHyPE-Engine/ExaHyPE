@@ -1,6 +1,6 @@
 from custom_solvers import solver
 
-class HLLEM(solver.Solver):
+class RusanovTsunami(solver.Solver):
 
     def __init__(self, epsilon=1e-4):
         self.epsilon = epsilon
@@ -87,12 +87,8 @@ class HLLEM(solver.Solver):
         }
     }
 
-    double bm = std::max(b_l, b_r);
-    double hRoe = 0.5 * (h_l + h_r);
-    double DEta = std::max(h_r + b_r - bm, 0.0) - std::max(h_l + b_l - bm, 0.0);
-
     double flux[3] = {0.0};
-    flux[0] = 0.5 * (fluxLeft[0] + fluxRight[0]) - 0.5 * smax * DEta;
+    flux[0] = 0.5 * (fluxLeft[0] + fluxRight[0]) - 0.5 * smax * (h_r - h_l);
     flux[1] = 0.5 * (fluxLeft[1] + fluxRight[1]) - 0.5 * smax * (hu_r - hu_l);
     flux[2] = 0.5 * (fluxLeft[2] + fluxRight[2]) - 0.5 * smax * (hv_r - hv_l);
 
@@ -102,39 +98,7 @@ class HLLEM(solver.Solver):
         AMDQ[i] = flux[i];
     }
 
-    APDQ[normal + 1] -= 0.5 * g * hRoe * DEta;
-    AMDQ[normal + 1] += 0.5 * g * hRoe * DEta;
+    APDQ[normal + 1] -= 0.5 * g * (h_l + h_r) * (b_r - b_l);
+    AMDQ[normal + 1] += 0.5 * g * (h_l + h_r) * (b_r - b_l);
     return smax;
     """
-
-    def implementation_of_eigenvalues(self):
-        return """
-    double g = 9.81;
-    const double c = std::sqrt(g * Q[0]);
-    double u_n = Q[normal+1] * Q[0] *std::sqrt(2)/std::sqrt(std::pow(Q[0], 4) + std::pow(std::max(Q[0], %f), 4));
-
-    lambda[0] = u_n + c;
-    lambda[1] = u_n - c;
-    lambda[2] = u_n;
-    return;
-    """ % self.epsilon
-
-    def implementation_of_flux(self):
-        return """
-    double u_n = Q[1] * Q[0] *std::sqrt(2)/std::sqrt(std::pow(Q[0], 4) + std::pow(std::max(Q[0], %f), 4));
-    double v_n = Q[2] * Q[0] *std::sqrt(2)/std::sqrt(std::pow(Q[0], 4) + std::pow(std::max(Q[0], %f), 4));
-    switch(normal)
-    {
-        case 0: 
-            F[0] = Q[0] * u_n;
-            F[1] = Q[0] * u_n * u_n;
-            F[2] = Q[0] * u_n * v_n;
-            break;
-        case 1:
-            F[0] = Q[0] * v_n;
-            F[1] = Q[0] * u_n * v_n;
-            F[2] = Q[0] * v_n * v_n;
-            break;
-    }
-    return;
-    """ % (self.epsilon, self.epsilon)

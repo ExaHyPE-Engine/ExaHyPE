@@ -303,9 +303,9 @@ else:
 #########################################
 
   custom_solver = None
-  if args.custom_solver == "HLLEM":
-    from custom_solvers.custom_fv_solvers.hllem import HLLEM
-    custom_solver = HLLEM(args.epsilon)
+  if args.custom_solver == "RusanovTsunami":
+    from custom_solvers.custom_fv_solvers.rusanov_tsunami import RusanovTsunami
+    custom_solver = RusanovTsunami(args.epsilon)
 
   implementation_of_flux = my_pde.implementation_of_flux() if custom_solver.implementation_of_flux() == PDETerms.None_Implementation else custom_solver.implementation_of_flux()
   implementation_of_eigenvalues = my_pde.implementation_of_eigenvalues() if custom_solver.implementation_of_eigenvalues() == PDETerms.None_Implementation else custom_solver.implementation_of_eigenvalues()
