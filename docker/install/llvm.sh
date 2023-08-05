@@ -8,7 +8,7 @@ TMP_DIR=$(mktemp -d)
 # https://llvm.org/docs/NVPTXUsage.html
 # https://llvm.org/docs/AMDGPUUsage.html
 
-git clone https://github.com/llvm/llvm-project.git /llvm-project -b llvmorg-16.0.5
+git clone https://github.com/llvm/llvm-project.git /llvm-project -b llvmorg-17.0.0-rc1
 
 mkdir /llvm-project/build && cd /llvm-project/build
 cmake -GNinja \
