@@ -30,7 +30,7 @@ parser.add_argument('--arch', choices=[
   help='Select GPU compute capability')
 args = parser.parse_args()
 
-cxxflags = '-std=c++20 -W -Wall -Wextra'
+cxxflags = '-std=c++17 -W -Wall -Wextra -lstdc++fs'
 
 # Merge in any additional flags needed for the selected multithreading backend
 if args.multithreading == 'omp':
@@ -66,14 +66,6 @@ if args.gpu == 'omp' and args.toolchain == "gcc":
 if args.gpu == 'sycl' and args.toolchain == "intel":
   cxxflags += ' -fsycl -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
 
-# TODO: Take the options out, and provide them with the cxxflags
-if args.gpu == "cuda":
-  if args.cuda_path:
-    configure_args.append(f'--with-cuda={args.cuda_path}')
-
-  if args.arch:
-    configure_args.append(f'--with-gpu-arch={args.arch}')
-
 # Print out the selected compiler, compiler flags, and other options
 print(f'Using C compiler: {args.cc}')
 print(f'Using C++ compiler: {args.cxx} {cxxflags}')
@@ -90,6 +82,17 @@ if args.multithreading is not None:
 
 if args.gpu is not None:
   configure_args.append(f'--with-gpu={args.gpu}')
+
+if args.gpu == "cuda":
+  if args.cuda_path:
+    configure_args.append(f'--with-cuda={args.cuda_path}')
+
+  # Would be better if architecture flag was given as a C++ flag, but it will be used by
+  # the nvcc compiler (e.g. -arch={args.arch}) but this approach is problematic as the 
+  # flag will be then used by the C++ compiler (nvc++, g++ etc.) and will result with compiler
+  # errors.
+  if args.arch:
+    configure_args.append(f'--with-cuda-gpu-arch={args.arch}')
 
 if args.mpi is not None:
   configure_args.append('--with-mpi="{} {}"'.format(args.mpi, cxxflags))

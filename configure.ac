@@ -266,20 +266,20 @@ if test "$gpu" == cuda; then
     [with_cuda=""],
   )
 
-  AC_ARG_WITH([gpu-arch],
-    [AS_HELP_STRING([--with-gpu-arch=ARCH], [specify GPU architecture])],
+  AC_ARG_WITH([cuda-gpu-arch],
+    [AS_HELP_STRING([--with-cuda-gpu-arch=ARCH], [specify GPU architecture])],
     [ AC_MSG_CHECKING([for GPU architecture])
       case "$withval" in
           sm_*)
-            AC_MSG_RESULT(CUDA GPU architecture is $withval); with_gpu_arch="$withval" ;;
+            AC_MSG_RESULT(CUDA GPU architecture is $withval); with_cuda_gpu_arch="$withval" ;;
           *)
             AC_MSG_ERROR([Invalid architecture. Option should start with 'sm_'.]) ;;
       esac
     ],
     [
-      AC_MSG_ERROR([Architecture is required. Use --with-gpu-arch=ARCH, where ARCH starts with 'sm_' given $withval | $arch.])
+      with_cida_gpu_arch="native"
     ])
-    GPU_ARCH="$with_gpu_arch"
+    GPU_ARCH="$with_cuda_gpu_arch"
     AC_SUBST(GPU_ARCH)
 
   # We need to apply further checks on CUDA
@@ -325,11 +325,10 @@ if test "$gpu" == cuda; then
   CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE   $CUDA_INCLUDE_FLAGS"
   CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG   $CUDA_INCLUDE_FLAGS"
 
-  # TODO: gpu-arch etc. as CXX flags
-  NVCC_FLAGS="-forward-unknown-to-host-compiler --gpu-architecture=$with_gpu_arch -I$srcdir_full_path/src -ccbin=$CXX"
+  NVCC_FLAGS="-forward-unknown-to-host-compiler -arch=$with_cuda_gpu_arch -I$srcdir_full_path/src -ccbin=$CXX"
 
-  NVCC_FLAGS_RELEASE="$NVCC_FLAGS -dlto"
-  NVCC_FLAGS_STATS="$NVCC_FLAGS -dlto"
+  NVCC_FLAGS_RELEASE="$NVCC_FLAGS"
+  NVCC_FLAGS_STATS="$NVCC_FLAGS"
   NVCC_FLAGS_ASSERTS="$NVCC_FLAGS -G -O0"
   NVCC_FLAGS_TRACE="$NVCC_FLAGS -g"
   NVCC_FLAGS_DEBUG="$NVCC_FLAGS -G -O0"
