@@ -9,7 +9,7 @@ TMP_DIR=$(mktemp -d)
 git clone https://github.com/MentorEmbedded/nvptx-tools/ /nvptx-tools
 cd /nvptx-tools && ./configure --prefix=${INSTALL_DIR} && make -j$(nproc) && make -j$(nproc) install
 
-git clone git://gcc.gnu.org/git/gcc.git -b releases/gcc-13.1.0 /gcc && git clone https://github.com/MentorEmbedded/nvptx-newlib/ /nvptx-newlib
+git clone git://gcc.gnu.org/git/gcc.git -b releases/gcc-13.2.0 /gcc && git clone https://github.com/MentorEmbedded/nvptx-newlib/ /nvptx-newlib
 cd /gcc && ln -s ../nvptx-newlib/newlib newlib && cd /gcc && contrib/download_prerequisites
 
 mkdir /gcc/build-nvptx-gcc && cd /gcc/build-nvptx-gcc
