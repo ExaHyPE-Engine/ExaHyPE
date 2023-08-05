@@ -102,7 +102,7 @@ parser.add_argument("-probes",  nargs='+',             dest="probe_coordinates",
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   required=False,             help="Set order of time discretisation for Runge-Kutta scheme." )
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   required=False,             help="Set order of space discretisation for Discontinuous Galerkin." )
 parser.add_argument("-amr-tol", "--amr-tolerance",     dest="amr_tol",        type=float,                 default=amr_tolerance,      help="When using AMR, please set a surface tolerance above which shall be refined and otherwise coarsened. Default is %f. Also used for guided AMR." % amr_tolerance)
-parser.add_argument("-epsilon", "--epsilon",           dest="epsilon",        type=float,                 default=epsilon,            help="Minimum water height to be calculated with so that h = 0 does not become a problem. Default is %f." % epsilon)
+parser.add_argument("-epsilon", "--epsilon",           dest="epsilon",        type=float,                 default=epsilon,            help="Can be used in the custom solver for something. Default is %f." % epsilon)
 
 parser.add_argument("-nc-key-bath-x",                  dest="nc_key_bath_x",  type=str,                   default="x",                help="Key for x dimension values in bathymetry netCDF file. Default is x.")
 parser.add_argument("-nc-key-bath-y",                  dest="nc_key_bath_y",  type=str,                   default="y",                help="Key for y dimension values in bathymetry netCDF file. Default is y.")
@@ -143,7 +143,7 @@ if args.scenario == "Radial_Bathymetry_Dam_Break":
 
 if args.scenario == "Radial_Obstacle_Dam_Break":
   from scenarios.radial_obstacle_dam_break import Radial_Obstacle_Dam_Break
-  my_pde = Radial_Obstacle_Dam_Break(width=width, refinement_tolerance=args.amr_tol, epsilon=args.epsilon)
+  my_pde = Radial_Obstacle_Dam_Break(width=width, refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Artificial_Tsunami":
   from scenarios.artificial_tsunami import Artificial_Tsunami
@@ -156,17 +156,17 @@ elif args.scenario == "Sea_At_Rest":
 elif args.scenario == "Oscillating_Lake":
   width = [4, 4]
   from scenarios.oscillating_lake import Oscillating_Lake
-  my_pde = Oscillating_Lake(refinement_tolerance=args.amr_tol, epsilon=args.epsilon)
+  my_pde = Oscillating_Lake(refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Three_Mounds_Channel":
   width = [75, 30]
   from scenarios.three_mounds_channel import Three_Mounds_Channel
-  my_pde = Three_Mounds_Channel(refinement_tolerance=args.amr_tol, epsilon=args.epsilon)
+  my_pde = Three_Mounds_Channel(refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Circular_Island":
   width = [25, 30]
   from scenarios.circular_island import Circular_Island
-  my_pde = Circular_Island(refinement_tolerance=args.amr_tol, epsilon=args.epsilon)
+  my_pde = Circular_Island(refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Tsunami":
 
@@ -204,7 +204,7 @@ elif args.scenario == "Tsunami":
         maximum_cell_size = min(width)/args.max_dimension_netcdf
 
   from scenarios.tsunami import Tsunami
-  my_pde = Tsunami(refinement_tolerance=args.amr_tol, use_guided_amr=args.guided_amr, epsilon=args.epsilon)
+  my_pde = Tsunami(refinement_tolerance=args.amr_tol, use_guided_amr=args.guided_amr)
 
 else:
   # This is the default scenario
