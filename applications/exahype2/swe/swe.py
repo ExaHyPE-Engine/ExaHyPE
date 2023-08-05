@@ -39,7 +39,7 @@ user_defined_solvers = {
 }
 
 custom_solver_implementations = [
-  "HLLEM"
+  "RusanovTsunami"
 ]
 
 solvers = {}
