@@ -288,8 +288,8 @@ doxygen-html/
 submodules/
 
 # Unit tests
-UnitTests2d
-UnitTests3d
+UnitTests2d*
+UnitTests3d*
 
 # Output files
 *patch-file*
