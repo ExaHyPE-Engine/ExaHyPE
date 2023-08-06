@@ -98,7 +98,7 @@ class RusanovTsunami(solver.Solver):
         AMDQ[i] = flux[i];
     }
 
-    APDQ[normal + 1] -= 0.5 * g * (h_l + h_r) * (b_r - b_l);
-    AMDQ[normal + 1] += 0.5 * g * (h_l + h_r) * (b_r - b_l);
+    APDQ[normal + 1] -= 0.25 * g * (h_l + h_r) * (b_r - b_l);
+    AMDQ[normal + 1] += 0.25 * g * (h_l + h_r) * (b_r - b_l);
     return smax;
     """

@@ -44,7 +44,7 @@ class HLLEM(solver.Solver):
         return """
     const double g = 9.81;
     const double c = std::sqrt(g * Q[0]);
-    const double u_n = Q[normal+1] * Q[0] *std::sqrt(2)/std::sqrt(std::pow(Q[0], 4) + std::pow(std::max(Q[0], %f), 4));
+    const double u_n = Q[normal+1] * Q[0] * std::sqrt(2) / std::sqrt(std::pow(Q[0], 4) + std::pow(std::max(Q[0], %f), 4));
 
     lambda[0] = u_n + c;
     lambda[1] = u_n - c;
