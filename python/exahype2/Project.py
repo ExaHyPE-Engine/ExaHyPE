@@ -622,8 +622,8 @@ thus appreciate any citation of the original release paper
                 elif solver._use_Eigen:
                     self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/eigen")
                 elif solver._use_libxsmm_JIT:
-                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/libxsmm/include")
-                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/libxsmm/lib/libxsmm.a")
+                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/libxsmmJIT/include")
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/libxsmmJIT/lib/libxsmm.a")
                     self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/OpenBLAS/libopenblas.a")
                     self._project.output.makefile.add_library("-lpthread")
                 break
