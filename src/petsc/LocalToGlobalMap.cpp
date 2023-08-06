@@ -3,8 +3,6 @@
 petsc::LocalToGlobalMap::LocalToGlobalMap(int treeNumber) : _treeNumber{treeNumber}, _totalNumberOfIndices{0} {
 }
 
-void petsc::LocalToGlobalMap::merge( const LocalToGlobalMap& ) {}
-
 void petsc::LocalToGlobalMap::setTreeNumber( int treeNumber ) {
   _treeNumber = treeNumber;
 }
