@@ -223,6 +223,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
 # Since currently there is a cuda file only in one directory, and therefore I did not want to
 # bloat the variable names.
 
+# Note, any identfying after the if of the lines will result with an error
 if GPUOffloadingCUDA
 # When you want to add new files you can use both relative or absolute pathing, just be sure that the pattern in the rules matches
 CUDA_TARCH_ACCELERATOR_SRC= tarch/accelerator/cuda/TestKernels.cu
