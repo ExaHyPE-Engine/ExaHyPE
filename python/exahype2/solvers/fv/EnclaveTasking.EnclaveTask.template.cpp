@@ -131,6 +131,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   }
 #endif
 {% endif %}
+  setPriority( {{ENCLAVE_TASK_PRIORITY}} );
 }
 
 

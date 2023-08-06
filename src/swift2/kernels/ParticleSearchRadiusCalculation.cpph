@@ -1,0 +1,74 @@
+#include "ParticleSearchRadiusCalculation.h"
+#include "tarch/logging/Log.h"
+
+template <typename Particle>
+void swift2::kernels::adoptInteractionRadiusAndTriggerRerun(
+  const std::list<Particle*>& localParticles,
+  const std::list<Particle*>& activeParticles,
+  int                         targetNumberOfNeighbourParticles,
+  double                      maxGrowthPerSweep,
+  double                      shrinkingFactor
+) {
+  assertion(shrinkingFactor < 1.0);
+  assertion(maxGrowthPerSweep > 1.0);
+
+  static tarch::logging::Log _log("swift2::kernels");
+
+  auto countParticlesWithinSearchRadius = [&](Particle* localParticle) -> int {
+    const double R2                   = localParticle->getSearchRadius() * localParticle->getSearchRadius();
+    int          interactingParticles = -1; // self-interaction will reset to 0
+    for (auto* activeParticle : activeParticles) {
+      double distanceSquared = tarch::la::norm2Squared(activeParticle->getX() - localParticle->getX());
+      if (distanceSquared <= R2) {
+        interactingParticles++;
+      }
+      assertion(interactingParticles >= 0);
+      return interactingParticles;
+    }
+  };
+
+  for (auto* localParticle : localParticles) {
+    int interactingParticles = countParticlesWithinSearchRadius(localParticle);
+    logDebug(
+      "adoptInteractionRadiusAndTriggerRerun(...)",
+      "particle " << localParticle->toString() << " has " << interactingParticles << " interacting neighbours"
+    );
+    if (interactingParticles < targetNumberOfNeighbourParticles) {
+      const double oldR = localParticle->getSearchRadius();
+      localParticle->setSearchRadius(oldR * maxGrowthPerSweep);
+      int newNumberOfInteractingParticles = countParticlesWithinSearchRadius(localParticle);
+      if (newNumberOfInteractingParticles > interactingParticles and newNumberOfInteractingParticles < targetNumberOfNeighbourParticles) {
+        logDebug(
+          "adoptInteractionRadiusAndTriggerRerun(...)",
+          "increasing the search radius of particle " << localParticle->toString(
+          ) << " did pay off, but there are still to few neighbours. Trigger re-analysis"
+        );
+        localParticle->getSpecies().setRerunPreviousGridSweep();
+      } else if (newNumberOfInteractingParticles > interactingParticles) {
+        logDebug(
+          "adoptInteractionRadiusAndTriggerRerun(...)",
+          "increasing the search radius of particle " << localParticle->toString() << " did pay off"
+        );
+      } else {
+        logDebug(
+          "adoptInteractionRadiusAndTriggerRerun(...)",
+          "increasing the search radius of particle " << localParticle->toString(
+          ) << " was useless, so keep old search radius"
+        );
+        localParticle->setSearchRadius(oldSearch);
+      }
+    } else if (interactingParticles > targetNumberOfNeighbourParticles) {
+      const double oldR = localParticle->getSearchRadius();
+      localParticle->setSearchRadius(oldR * shrinkingFactor);
+      int newNumberOfInteractingParticles = countParticlesWithinSearchRadius(localParticle);
+      if (newNumberOfInteractingParticles < targetNumberOfNeighbourParticles) {
+        logDebug(
+          "adoptInteractionRadiusAndTriggerRerun(...)",
+          "increasing the search radius of particle " << localParticle->toString(
+          ) << " was too aggressive, so roll back"
+        );
+        localParticle->setSearchRadius(oldR);
+      }
+    }
+  }
+}

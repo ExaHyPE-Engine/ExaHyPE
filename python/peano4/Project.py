@@ -158,8 +158,8 @@ class Project (object):
     if not self.is_built:
       print( "start to compile with concurrency level of " + str(number_of_parallel_builds) + " ..." )
       try:
-        from peano4.output.Helper import find_cmake_build_dir
-        cmake_build_dir = find_cmake_build_dir()
+        from peano4.output.Helper import find_CMake_build_dir
+        cmake_build_dir = find_CMake_build_dir()
         if cmake_build_dir != "":
           command = f"cd {cmake_build_dir} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
           process = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

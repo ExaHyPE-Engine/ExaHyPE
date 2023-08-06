@@ -247,7 +247,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.black_formatting_env/
+.formatting_python_env/
 
 # Spyder project settings
 .spyderproject
@@ -297,4 +297,13 @@ UnitTests2d.trs
 UnitTests3d.trs
 
 .gitignore
+
+*.tmp 
+*.trs 
+*.sh
+
+*patch-file*
+*.pvd
+*.err
+*.out
 /documentation/

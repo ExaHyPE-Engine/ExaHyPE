@@ -89,10 +89,10 @@ class Particle(peano4.toolbox.particles.Particle):
         hosts:
 
         - A position which is a double vector with Dimension entries.
-        - A cut-off radius which describes the range with which other particles a
+        - A search radius which describes the range with which other particles a
           particle might theoretically interact. The effective interaction might
           be smaller if a code decides to ignore potential interaction partners,
-          i.e. this is an absolute maximum. The cut-off radius will decide on which
+          i.e. this is an absolute maximum. The search radius will decide on which
           resolution level within the tree a particle is held.
         - A MoveState flag. This flag is essential. We use it later to label those
           particles that have been moved to avoid that we move particles multiple
@@ -120,7 +120,7 @@ class Particle(peano4.toolbox.particles.Particle):
         self.particles_per_cell = particles_per_cell
         self.min_h = min_h
         self.max_h = max_h
-
+        
         pass
 
     @abstractmethod
@@ -158,9 +158,9 @@ class Particle(peano4.toolbox.particles.Particle):
             """### Particle """
             + self.name
             + """
-    
+
   Mesh properties:
-  
+
   - particles per cell:         """
             + str(self.particles_per_cell)
             + """
@@ -170,7 +170,7 @@ class Particle(peano4.toolbox.particles.Particle):
   - h_max:                      """
             + str(self.max_h)
             + """
-  
+
   Attributes: """
             + str(len(self.data._attributes))
             + """

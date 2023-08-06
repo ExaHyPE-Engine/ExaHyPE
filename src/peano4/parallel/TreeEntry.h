@@ -4,17 +4,20 @@
 
 #include <string>
 
-#include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/services/ServiceRepository.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
-
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
 
+#include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/services/ServiceRepository.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
+#include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
+
+
+  
 namespace peano4{
 namespace parallel{
   struct TreeEntry;
@@ -32,10 +35,6 @@ struct peano4::parallel::TreeEntry {
     void   setMaster(int value);
     TreeEntry(const TreeEntry& copy) = default;
 
-#ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(peano4::parallel::TreeEntry& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
-#endif
 
     #ifdef Parallel
     PragmaPush
@@ -99,6 +98,20 @@ struct peano4::parallel::TreeEntry {
     static void receive(   peano4::parallel::TreeEntry& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
+
+    enum ObjectConstruction {
+      NoData
+    };
+
+    TreeEntry( ObjectConstruction ):
+        TreeEntry() {}
+    
+#ifdef Parallel
+    static void sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::parallel::TreeEntry& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+#endif
+    
+
     std::string toString() const;
 
   private:
@@ -122,4 +135,7 @@ struct peano4::parallel::TreeEntry {
       static MPI_Datatype  Datatype;
       #endif
     #endif
+
+
+
 };

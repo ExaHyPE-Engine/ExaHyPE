@@ -11,7 +11,7 @@ double applications::exahype2::ccz4::maxEigenvalue(
 ) {
   const double np = 1.0;
   const double qmin = std::min({Q[0],Q[3],Q[5]});
-  const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, std::pow(Q[54],1.0/np)}) / std::sqrt(qmin);
+  const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, pow(Q[54],1.0/np)})/ std::sqrt(qmin);
 
   constexpr double sqrtwo = 1.4142135623730951;
   const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
@@ -274,16 +274,17 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int j = 0; j < 3; j++) nablanablaalphaSrc += g_contr[i][j]*nablaijalphaSrc[i][j];
     nablanablaalphaSrc *= phi2;
 
+    // Baojiu-27-06-23
     // ================================
     // Baojiu-21-09-22 START OF CHANGES
     // --------------------------------
     // these lines won't make a difference
-//  nablanablaalphaSrc = 0.0;
-//  for (int i = 0; i < 3; i++)
-//  {
-//     nablanablaalphaSrc -= phi2*Gtilde[i]*AA[i];
-//     for (int j = 0; j < 3; j++) nablanablaalphaSrc -= phi2*g_contr[i][j]*PP[i]*AA[j]/(np*chi); // Baojiu-13-06-23: changed to chi=phi^n
-//  }
+    nablanablaalphaSrc = 0.0;
+    for (int i = 0; i < 3; i++)
+    {
+       nablanablaalphaSrc -= phi2*Gtilde[i]*AA[i];
+       for (int j = 0; j < 3; j++) nablanablaalphaSrc -= phi2*g_contr[i][j]*PP[i]*AA[j]/(np*chi); // Baojiu-13-06-23: changed to chi=phi^n
+    }
     // --------------------------------
     // Baojiu-21-09-22 END OF CHANGES
     // ================================
@@ -441,7 +442,8 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
       for (int j = 0; j < 3; j++) temp += dgup[k][i][j]*Aex[i][j];
       dtP[k] += np/3.*AA[k]*traceK*chi; 				// Baojiu-13-06-23: changed to chi=phi^n 
       dtP[k] += np/3.*(alpha*traceK-traceB)*PP[k]; 			// Baojiu-13-06-23: changed to chi=phi^n
-      dtP[k] += np/3.*alpha*CCZ4sk*temp*chi; 				// Baojiu-13-06-23: changed to chi=phi^n 
+//    dtP[k] += np/3.*alpha*CCZ4sk*temp*chi; 				// Baojiu-13-06-23: changed to chi=phi^n 
+      dtP[k] += np/3.*alpha*CCZ4sk*temp;    				// Baojiu-13-06-23: changed to chi=phi^n  // Baojiu-27-06-23
     }
 
     S[0]  = dtgamma[0][0];
@@ -877,8 +879,8 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     for (int k = 0; k < 3; k++)
     for (int j = 0; j < 3; j++)
     {
-        dtB[k][i] += CCZ4mu*alpha2 * g_contr[i][j]*( dPP[k][j] - dPP[j][k]); 		// Baojiu-13-06-23: Option 1 - similar form as in the Dumbser paper
-//      dtB[k][i] += CCZ4mu*alpha2 * g_contr[i][j]*( dPP[k][j] - dPP[j][k])/(np*chi); 	// Baojiu-13-06-23: Option 2 - same values as in the Dumbser paper
+//      dtB[k][i] += CCZ4mu*alpha2 * g_contr[i][j]*( dPP[k][j] - dPP[j][k]); 		// Baojiu-13-06-23: Option 1 - similar form as in the Dumbser paper
+        dtB[k][i] += CCZ4mu*alpha2 * g_contr[i][j]*( dPP[k][j] - dPP[j][k])/(np*chi); 	// Baojiu-13-06-23: Option 2 - same values as in the Dumbser paper // Baojiu-27-06-23
         for (int n = 0; n < 3; n++)
         for (int l = 0; l < 3; l++) dtB[k][i] -= CCZ4mu*alpha2 * g_contr[i][j]*g_contr[n][l]*(dDD[k][l][j][n] - dDD[l][k][j][n]);
     } 
@@ -914,7 +916,8 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         for (int m = 0; m < 3; m++)
         for (int n = 0; n < 3; n++) temp += g_contr[m][n]*dAex[k][m][n];
         dtP[k] += np/3.*chi*alpha*dtraceK[k]; 						// Baojiu-13-06-23: changed to chi=phi^n
-        dtP[k] += np/3.*chi*alpha*CCZ4sk*temp; 						// Baojiu-13-06-23: changed to chi=phi^n
+//      dtP[k] += np/3.*chi*alpha*CCZ4sk*temp; 						// Baojiu-13-06-23: changed to chi=phi^n
+        dtP[k] += np/3.*    alpha*CCZ4sk*temp; 						// Baojiu-13-06-23: changed to chi=phi^n // Baojiu-27-06-23
         for (int i = 0; i < 3; i++) dtP[k] -= np/6.*chi*(dBB[k][i][i] + dBB[i][k][i]); 	// Baojiu-13-06-23: changed to chi=phi^n
     }
 

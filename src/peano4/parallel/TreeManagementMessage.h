@@ -4,18 +4,20 @@
 
 #include <string>
 
-#include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/services/ServiceRepository.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
-
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
 
+#include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/services/ServiceRepository.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
+#include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
+
+
+  
 namespace peano4{
 namespace parallel{
   struct TreeManagementMessage;
@@ -39,10 +41,6 @@ struct peano4::parallel::TreeManagementMessage {
     void   setAction(Action value);
     TreeManagementMessage(const TreeManagementMessage& copy) = default;
 
-#ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::parallel::TreeManagementMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(peano4::parallel::TreeManagementMessage& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
-#endif
 
     #ifdef Parallel
     PragmaPush
@@ -106,6 +104,20 @@ struct peano4::parallel::TreeManagementMessage {
     static void receive(   peano4::parallel::TreeManagementMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
+
+    enum ObjectConstruction {
+      NoData
+    };
+
+    TreeManagementMessage( ObjectConstruction ):
+        TreeManagementMessage() {}
+    
+#ifdef Parallel
+    static void sendAndPollDanglingMessages(const peano4::parallel::TreeManagementMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::parallel::TreeManagementMessage& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+#endif
+    
+
     std::string toString() const;
 
   private:
@@ -130,4 +142,7 @@ struct peano4::parallel::TreeManagementMessage {
       static MPI_Datatype  Datatype;
       #endif
     #endif
+
+
+
 };

@@ -95,6 +95,13 @@ namespace peano4 {
    *
    * - tarch::mpi::Rank, as the rank is not a service and is handled
    *   separately by the initParallelEnvironment().
+   * 
+   * Note that there is a bug when passing in initializer lists
+   * to this function. If the number of elements in "offset" is 
+   * greater than Dimensions, then "width" will borrow some elements that
+   * were intended for "offset". Best practice is to initialize 
+   * vectors that are to be passed in before the call to initSingletons. 
+   * That way the compiler will throw an error if the sizes are not correct.
    */
   void initSingletons(
     const tarch::la::Vector<Dimensions,double>&  offset,

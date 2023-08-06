@@ -122,18 +122,17 @@ project = swift2.Project(
 # independently for each case.
 
 name = "hydroPart"
-dimensions = args.dimensions  # Peano dimensions
 
+dimensions = args.dimensions  # Peano dimensions
 hydro_dimensions = 2  # dimensions for the hydro
 
-particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(
+particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     name,
     dimensions_hydro=hydro_dimensions,
     cfl_factor=args.cfl_factor,
     initial_time_step_size=args.timestep_size,
     constant_time_step_size=True,
     swift_project_namespace=project_namespace,
-    is_sph=True,
     particles_per_cell=20,
     min_h=args.cell_size / 100,
     max_h=args.cell_size,
@@ -169,23 +168,11 @@ gamma_hydro_list_symbols = [
 GAMMA = gamma_hydro_list[0]
 GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
-# Artificial viscosity parameters ---------------------------------------------
-ALPHA_AV = particle.alpha_av
-BETA_AV = particle.beta_av
-
-# Newton-Raphson parameters --------------------------------------------------
-# Maximum allowed number of iterations and convergence tolerance
-HYDRO_DEFAULT_MAX_ITERATIONS = particle.h_max_iterations
-H_TOLERANCE = particle.h_tolerance
-
 # SPH kernel -------------------------------------------------------
 kernel_list = ["M5"]
 kernel_list_symbols = ["QUARTIC_SPLINE_KERNEL"]
 KERNEL = kernel_list[0]
 KERNEL_SYMBOL = kernel_list_symbols[0]
-
-# Smoothing-length free parameter (resolution "eta_neighbours").
-SMOOTH_ETA_FAC = particle.eta_factor
 
 if KERNEL == "M5" and HYDRO_DIMENSIONS == 1:
     KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
@@ -194,15 +181,25 @@ if KERNEL == "M5" and HYDRO_DIMENSIONS == 2:
 else:
     print(f"Unable to determine the kernel support radius. Please check.")
 
-# Max/min allowed values for smoothing length h
-HYDRO_h_MAX = args.cell_size / 2
-HYDRO_h_MIN = particle.h_hydro_min
 
-particle.h_hydro_max = HYDRO_h_MAX
+# Additional Particle Parameters -----------------------------------------------
+hydro_h_max = args.cell_size / 2
+particle.h_hydro_max = hydro_h_max
 
+# particle.h_hydro_min = 1e-6
+# particle.h_max_iterations = 10
+# particle.h_tolerance = 1e-4
+# particle.eta_factor = 1.2348
+# particle.beta_av = 3.0
+# particle.alpha_av = 0.8
 # Optional: Reduce the mantissa size for particle attributes -------------------
 # Native size is 53 (double precision)
 # particle.mantissa_size = 23
+
+
+# deploy particle properties
+particle.set_parameters()
+
 
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
@@ -234,8 +231,8 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::RecursiveSubdivision",
-    "new toolbox::loadbalancing::RecursiveSubdivision::DefaultConfiguration()",
+    "toolbox::loadbalancing::RecursiveBipartition",
+    "new toolbox::loadbalancing::DefaultConfiguration()",
 )
 
 
@@ -243,7 +240,7 @@ project.set_load_balancing(
 # Initialisation snippet for the particle
 ###############################################################################
 
-# project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesFromHDF5File(
+# project.algorithm_step_initial_conditions.add_action_set( swift2.input.InsertParticlesFromHDF5File(
 #  particle_set= particle_set,
 #  filename='sedov.hdf5'
 #  ))
@@ -278,7 +275,7 @@ ICs = swift2.scenario.SedovBlastIC()
 initialisation_snippet = ICs.initialisation_snippet
 
 # Finally, pass this configuration to the initialisation script
-project.algorithm_step_init.add_action_set(
+project.algorithm_step_initial_conditions.add_action_set(
     swift2.input.InsertParticlesByCoordinates(
         particle_set=particle_set,
         initialisation_call=initialisation_snippet,
@@ -288,17 +285,6 @@ project.algorithm_step_init.add_action_set(
 """,
     )
 )
-
-
-###############################################################################
-# Set up initialization steps
-###############################################################################
-
-# Todo Mladen later: add first kick once we deal with individual time steps
-
-project.algorithm_step_init_density_AlgorithmStep = particle.algorithm_steps_dict[
-    "Density"
-]
 
 
 ###############################################################################
@@ -371,7 +357,7 @@ print(f"Effective dimensions of the Simulation: {HYDRO_DIMENSIONS}")
 print(f"Global time-step size: {GLOBAL_TIME_STEP_SIZE}")
 print(f"Number of particles (1D): {HYDRO_PART_NUMBER}")
 print(f"Adiabatic index: {GAMMA}")
-print(f"Smoothing length free factor: {SMOOTH_ETA_FAC}")
+print(f"Smoothing length free factor: {particle.eta_factor}")
 print("-----------------------------------------------------------------------")
 
 
@@ -385,30 +371,7 @@ peano4_project.constants.export_const_with_type(
 peano4_project.constants.export_const_with_type(
     "GLOBAL_TIME_STEP_SIZE", str(GLOBAL_TIME_STEP_SIZE), "double"
 )
-peano4_project.constants.export_const_with_type(
-    "CFL_CONSTANT", str(CFL_CONSTANT), "double"
-)
 peano4_project.constants.export_const_with_type("GAMMA", GAMMA, "double")
-peano4_project.constants.export_const_with_type("ALPHA_AV", str(ALPHA_AV), "double")
-peano4_project.constants.export_const_with_type("BETA_AV", str(BETA_AV), "double")
-peano4_project.constants.export_const_with_type(
-    "HYDRO_DEFAULT_MAX_ITERATIONS", str(HYDRO_DEFAULT_MAX_ITERATIONS), "int"
-)
-peano4_project.constants.export_const_with_type(
-    "H_TOLERANCE", str(H_TOLERANCE), "double"
-)
-peano4_project.constants.export_const_with_type(
-    "KERNEL_SUPPORT_RAD", KERNEL_SUPPORT_RAD, "double"
-)
-peano4_project.constants.export_const_with_type(
-    "HYDRO_h_MAX", str(HYDRO_h_MAX), "double"
-)
-peano4_project.constants.export_const_with_type(
-    "HYDRO_h_MIN", str(HYDRO_h_MIN), "double"
-)
-peano4_project.constants.export_const_with_type(
-    "SMOOTH_ETA_FAC", str(SMOOTH_ETA_FAC), "double"
-)
 
 # Export symbols for compilation (e.g. for SPH kernel) -----------------------
 peano4_project.output.makefile.add_CXX_flag(

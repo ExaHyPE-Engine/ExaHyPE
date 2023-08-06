@@ -16,7 +16,7 @@ class ParticlePerCellUpdate(ActionSet):
                unprepare_traversal_kernel="", 
                additional_includes="", 
                active_particle_set=None ):
-    """
+    """!
     
     Update particles without non-local interaction
 

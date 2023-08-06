@@ -236,6 +236,8 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   event.setIsFaceLocal( areFacesLocal( fineGridVertices, splitTriggered, splitting, joinTriggered, joining) );
   event.setIsVertexLocal( areVerticesLocal( fineGridVertices, splitTriggered, splitting, joinTriggered, joining) );
 
+  event.setIsParentVertexLocal( areVerticesLocal( coarseGridVertices, splitTriggered, splitting, joinTriggered, joining) );
+
   event.setInvokingSpacetree( _id );
   event.setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(
         spacetreeStateIsRunning and
