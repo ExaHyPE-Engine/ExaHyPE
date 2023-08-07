@@ -109,7 +109,15 @@ def create_abstract_solver_declarations(flux_implementation, riemann_solver_impl
      * @param FR the right flux vector
      * @param FL the left flux vector
      * @param LR the eigenvalues of the right state vector
-     * @param LL the eigenvalues of the left state vector                          
+     * @param LL the eigenvalues of the left state vector  
+     * @param xR coordinates of the right state vector
+     * @param xL coordinates of the left state vector
+     * @param h volume dimensions
+     * @param t current time step
+     * @param dt previous time step width
+     * @param normal dimension currently being solved for
+     * @param APDQ right going update, has a positive contribution on right state
+     * @param AMDQ left going update, has a negative contribution on left state                       
      */
     virtual double solveRiemannProblem(
         const double * __restrict__                  QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -238,7 +246,15 @@ def create_solver_declarations(flux_implementation, riemann_solver_implementatio
      * @param FR the right flux vector
      * @param FL the left flux vector
      * @param LR the eigenvalues of the right state vector
-     * @param LL the eigenvalues of the left state vector                          
+     * @param LL the eigenvalues of the left state vector  
+     * @param xR coordinates of the right state vector
+     * @param xL coordinates of the left state vector
+     * @param h volume dimensions
+     * @param t current time step
+     * @param dt previous time step width
+     * @param normal dimension currently being solved for
+     * @param APDQ right going update, has a positive contribution in the interface flux
+     * @param AMDQ left going update, has a negative contribution in the interface flux                        
      */
     virtual double solveRiemannProblem(
         const double * __restrict__                  QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
