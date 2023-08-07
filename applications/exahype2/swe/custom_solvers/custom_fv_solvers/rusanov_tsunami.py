@@ -44,10 +44,8 @@ class RusanovTsunami(solver.Solver):
             lambdaRight[i] = -lambdaLeft[i];
             fluxLeft[i] = FL[i];
             fluxRight[i] = fluxLeft[i];
-            if(normal == 0 && i == 2 || normal == 1 && i == 1)
-                fluxRight[i] *= -1.0;
         }
-
+        fluxRight[0] *= -1.0;
     }
     else if (b_l >= 0 && b_r < 0)
     {
@@ -61,9 +59,8 @@ class RusanovTsunami(solver.Solver):
             lambdaLeft[i] = -lambdaRight[i];
             fluxRight[i] = FR[i];
             fluxLeft[i] = fluxRight[i];
-            if(normal == 0 && i == 2 || normal == 1 && i == 1)
-                fluxLeft[i] *= -1.0;
         }
+        fluxLeft[0] *= -1.0;
     }
     else
     {
