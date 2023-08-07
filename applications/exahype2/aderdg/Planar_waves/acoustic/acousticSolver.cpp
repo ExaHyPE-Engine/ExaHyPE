@@ -8,34 +8,8 @@ constexpr double K_0 = 4.0;
 constexpr double inv_rho = 1.0/rho;
 constexpr double c = std::sqrt(K_0*inv_rho);
 
-// void exahype2::acoustic::acousticSolver::analyticalSolution(
-//   const tarch::la::Vector<Dimensions,double>&   x,
-//   const double                                  t,
-//   const double                                  dt,
-//   double*                                       sol
-// ){
-
-//   double k0 = 1.0;
-//   double k1 = 1.0;
-//   double k2 = 1.0;
-
-//   double w = 6*M_PI/std::sqrt(3.0);
-
-//   double val = cos( w*t - std::numbers::pi*( 
-//     k0*x[0]
-//     + k1*x[1]
-// #if Dimensions==3
-//     + k2*x[2]
-// #endif
-//   ));
-
-//   sol[0] = (k0+k1+k2)*c*val;
-//   sol[1] = k0*val;
-//   sol[2] = k1*val;
-//   sol[3] = k2*val;
-
-// }
-
+using namespace std;
+using half_float::half;
 
 template<typename T>
 void exahype2::acoustic::acousticSolver::initialCondition(
@@ -46,17 +20,17 @@ void exahype2::acoustic::acousticSolver::initialCondition(
 	bool                                         gridIsConstructed
 ) {
 
-  T k0 = 1.0;
-  T k1 = 1.0;
-  T k2 = 1.0;
+  T k0(1.0);
+  T k1(1.0);
+  T k2(1.0);
 
-  T val = cos( -std::numbers::pi*( 
+  T val(cos( -std::numbers::pi*( 
     k0*x[0]
     + k1*x[1]
 #if Dimensions==3
     + k2*x[2]
 #endif
-  ));
+  )));
 
   Q[0] = (k0+k1+k2)*c*val;
   Q[1] = k0*val;
@@ -64,21 +38,6 @@ void exahype2::acoustic::acousticSolver::initialCondition(
   Q[3] = k2*val;
 
 }
-
-template void exahype2::acoustic::acousticSolver::initialCondition(
-  float * __restrict__ Q, //Q[4+0]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  const tarch::la::Vector<Dimensions,int>&     point,
-	bool                                         gridIsConstructed
-);
-template void exahype2::acoustic::acousticSolver::initialCondition(
-  double * __restrict__ Q, //Q[4+0]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  const tarch::la::Vector<Dimensions,int>&     point,
-	bool                                         gridIsConstructed
-);
 
 
 template<typename T>
@@ -99,27 +58,6 @@ void exahype2::acoustic::acousticSolver::boundaryConditions(
 
 }
 
-template void exahype2::acoustic::acousticSolver::boundaryConditions(
-  const float * __restrict__                   Qinside, // Qinside[4+0]
-  float * __restrict__                         Qoutside, // Qoutside[4+0]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal
-);
-
-template void exahype2::acoustic::acousticSolver::boundaryConditions(
-  const double * __restrict__                  Qinside, // Qinside[4+0]
-  double * __restrict__                        Qoutside, // Qoutside[4+0]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal
-);
-
-
-
-
   
 template<typename T>
 double ::exahype2::acoustic::acousticSolver::maxEigenvalue(
@@ -134,25 +72,6 @@ double ::exahype2::acoustic::acousticSolver::maxEigenvalue(
   return c;
 
 }
-
-
-template double ::exahype2::acoustic::acousticSolver::maxEigenvalue(
-  const float* __restrict__ Q, // Q[4+0]
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeSize,
-  double                                       t,
-  double                                       dt,
-  int                                          normal
-);
-
-template double ::exahype2::acoustic::acousticSolver::maxEigenvalue(
-  const double* __restrict__ Q, // Q[4+0]
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeSize,
-  double                                       t,
-  double                                       dt,
-  int                                          normal
-);
 
 
 template<typename T>
@@ -176,6 +95,21 @@ void ::exahype2::acoustic::acousticSolver::flux(
 }
 
 
+template void exahype2::acoustic::acousticSolver::initialCondition(
+  float * __restrict__ Q, //Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     point,
+	bool                                         gridIsConstructed
+);
+template double ::exahype2::acoustic::acousticSolver::maxEigenvalue(
+  const float* __restrict__ Q, // Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+);
 template void ::exahype2::acoustic::acousticSolver::flux(
   const float* __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -185,7 +119,31 @@ template void ::exahype2::acoustic::acousticSolver::flux(
   int                                          normal,
   float* __restrict__ F
 );
+template void exahype2::acoustic::acousticSolver::boundaryConditions(
+  const float * __restrict__                   Qinside, // Qinside[4+0]
+  float * __restrict__                         Qoutside, // Qoutside[4+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
+);
 
+
+template void exahype2::acoustic::acousticSolver::initialCondition(
+  double * __restrict__ Q, //Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     point,
+	bool                                         gridIsConstructed
+);
+template double ::exahype2::acoustic::acousticSolver::maxEigenvalue(
+  const double* __restrict__ Q, // Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+);
 template void ::exahype2::acoustic::acousticSolver::flux(
   const double* __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -195,11 +153,114 @@ template void ::exahype2::acoustic::acousticSolver::flux(
   int                                          normal,
   double* __restrict__ F
 );
+template void exahype2::acoustic::acousticSolver::boundaryConditions(
+  const double * __restrict__                  Qinside, // Qinside[4+0]
+  double * __restrict__                        Qoutside, // Qoutside[4+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
+);
 
 
+template void exahype2::acoustic::acousticSolver::initialCondition(
+  float16_t * __restrict__ Q, //Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     point,
+	bool                                         gridIsConstructed
+);
+template double ::exahype2::acoustic::acousticSolver::maxEigenvalue(
+  const float16_t* __restrict__ Q, // Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+);
+template void ::exahype2::acoustic::acousticSolver::flux(
+  const float16_t* __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  float16_t* __restrict__ F
+);
+template void exahype2::acoustic::acousticSolver::boundaryConditions(
+  const float16_t * __restrict__                  Qinside, // Qinside[4+0]
+  float16_t * __restrict__                        Qoutside, // Qoutside[4+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
+);
 
 
+//bfloat16
+template void exahype2::acoustic::acousticSolver::initialCondition(
+  bfloat16_t * __restrict__ Q, //Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     point,
+	bool                                         gridIsConstructed
+);
+template double ::exahype2::acoustic::acousticSolver::maxEigenvalue(
+  const bfloat16_t* __restrict__ Q, // Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+);
+template void ::exahype2::acoustic::acousticSolver::flux(
+  const bfloat16_t* __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  bfloat16_t* __restrict__ F
+);
+template void exahype2::acoustic::acousticSolver::boundaryConditions(
+  const bfloat16_t * __restrict__                  Qinside, // Qinside[4+0]
+  bfloat16_t * __restrict__                        Qoutside, // Qoutside[4+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
+);
 
 
-
-
+template void exahype2::acoustic::acousticSolver::initialCondition(
+  half * __restrict__ Q, //Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     point,
+	bool                                         gridIsConstructed
+);
+template double ::exahype2::acoustic::acousticSolver::maxEigenvalue(
+  const half* __restrict__ Q, // Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+);
+template void ::exahype2::acoustic::acousticSolver::flux(
+  const half* __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  half* __restrict__ F
+);
+template void exahype2::acoustic::acousticSolver::boundaryConditions(
+  const half * __restrict__                  Qinside, // Qinside[4+0]
+  half * __restrict__                        Qoutside, // Qoutside[4+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
+);

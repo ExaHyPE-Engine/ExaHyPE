@@ -3,13 +3,13 @@
 
 tarch::logging::Log   examples::exahype2::elastic::elastic::elastic::_log( "examples::exahype2::elastic::elastic::elastic" );
 
-
 /*
  * Enables the usage of shortcuts to access variables, e.g. use Q[s.sigma] instead of Q[0]
  */
 examples::exahype2::elastic::VariableShortcuts s;
 
-
+using namespace std;
+using half_float::half;
 
 template<typename T>
 void examples::exahype2::elastic::elastic::initialCondition(
@@ -21,23 +21,28 @@ void examples::exahype2::elastic::elastic::initialCondition(
 ) {
 
   //Lamé parameters
-  T mu = 1.0;
-  T lambda = 2.0;
-  T rho = 1.0;
-  T cp = 2.0;
-  T cs = 1.0;
+  T mu(1.0);
+  T lambda(2.0);
+  T rho(1.0);
+  T cp(2.0);
+  T cs(1.0);
 
-  T k0 = 1.0;
-  T k1 = 1.0;
-  T k2 = 1.0;
+  T k0(1.0);
+  T k1(1.0);
+  T k2(1.0);
 
-  T val = cos( -std::numbers::pi*(
+  T val(cos( -std::numbers::pi*(
     k0*x[0]
     + k1*x[1]
 #if Dimensions==3
     + k2*x[2]
 #endif
-  ));
+  )));
+
+  // roots of the plane-wave operator are: sqrt(lambda+4*mu), -sqrt(lambda+4*mu), 0.0, 
+  // characteristic equation is A^2 - B^2 = 0 with
+  // A = alpha^4 - 2*alpha^2*(lambda+4mu) + (lambda+4*mu)^2 - (lambda+mu)^2
+  // B = -alpha^2 * (lambda+mu) + (lambda+mu)*(lambda+4*mu) - (lambda+mu)^2
 
   //stresses
   // Q[s.sigma+0] = val*(k0*(lambda+2*mu)+k1*lambda+k2*lambda); //xx
@@ -48,12 +53,10 @@ void examples::exahype2::elastic::elastic::initialCondition(
   // Q[s.sigma+5] = 0.0; //yz
 
   // //velocities
-  // Q[s.v+0] = cp*k0*val; //vx
-  // Q[s.v+1] = cp*k1*val; //vy
-  // Q[s.v+2] = cp*k2*val; //vz
+  Q[s.v+0] = cs*k0*val; //vx
+  Q[s.v+1] = cs*k1*val; //vy
+  Q[s.v+2] = cs*k2*val; //vz
 
-
-  //stresses
   Q[s.sigma+0] = 0.0; //xx
   Q[s.sigma+1] = 0.0; //yy
   Q[s.sigma+2] = 0.0; //zz
@@ -61,14 +64,8 @@ void examples::exahype2::elastic::elastic::initialCondition(
   Q[s.sigma+4] = k2*val*mu; //xz
   Q[s.sigma+5] = k1*val*mu; //yz
 
-  //velocities
-  Q[s.v+0] = k2*cs*val; //vx
-  Q[s.v+1] = k0*cs*val; //vy
-  Q[s.v+2] = k1*cs*val; //vz
-
-
 //Dumbser 2006, doi: 10.1111/j.1365-246X.2006.03120.x 3d isotropic case
-//   double val = sin( 
+//   T val = sin( 
 //     2*std::numbers::pi*k0*x[0]/100.0
 //     + 2*std::numbers::pi*k1*x[1]/100.0
 // #if Dimensions==3
@@ -89,9 +86,6 @@ void examples::exahype2::elastic::elastic::initialCondition(
 //   Q[s.v+1] = -val*cs; //vy
 //   Q[s.v+2] = 0.0; //vz
 
-
-
-
   //auxiliary variables
   Q[s.rho]  = 1.0; //rho
   Q[s.cp]   = 2.0; //cp
@@ -108,24 +102,24 @@ void examples::exahype2::elastic::elastic::analyticalSolution(
 ) {
 
   //Lamé parameters
-  double mu = 1.0;
-  double lambda = 2.0;
-  double cp = 2.0;
-  double cs = 1.0;
+  double mu(1.0);
+  double lambda(2.0);
+  double cp(2.0);
+  double cs(1.0);
 
-  double k0 = 1.0;
-  double k1 = 1.0;
-  double k2 = 1.0;
+  double k0(1.0);
+  double k1(1.0);
+  double k2(1.0);
 
-  double w = 6*M_PI/std::sqrt(3.0);
+  double w(6*M_PI/std::sqrt(3.0));
 
-  double val = cos( w*t - std::numbers::pi*(
+  double val(cos( w*t - std::numbers::pi*(
     k0*x[0]
     + k1*x[1]
 #if Dimensions==3
     + k2*x[2]
 #endif
-  ));
+  )));
 
   //stresses
   sol[s.sigma+0] = 0.0; //xx
@@ -201,9 +195,9 @@ void ::examples::exahype2::elastic::elastic::flux(
 ){
 
   //Lamé parameters
-  T mu = Q[s.rho] * Q[s.cs] * Q[s.cs]; //rho*cs^2
-  T lambda = Q[s.rho] * Q[s.cp] * Q[s.cp] - 2.0 * mu; //rho*cp^2 - 2 mu
-  T neg_irho = -1.0/Q[s.rho];
+  T mu(Q[s.rho] * Q[s.cs] * Q[s.cs]); //rho*cs^2
+  T lambda(Q[s.rho] * Q[s.cp] * Q[s.cp] - 2.0 * mu); //rho*cp^2 - 2 mu
+  T neg_irho(-1.0/Q[s.rho]);
 
   switch(normal) {
     case 0:
@@ -252,14 +246,6 @@ template void examples::exahype2::elastic::elastic::initialCondition(
   const tarch::la::Vector<Dimensions,int>&     point,
 	bool                                         gridIsConstructed
 );
-template void examples::exahype2::elastic::elastic::initialCondition(
-  double * __restrict__ Q, //Q[4+0]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  const tarch::la::Vector<Dimensions,int>&     point,
-	bool                                         gridIsConstructed
-);
-
 template void examples::exahype2::elastic::elastic::boundaryConditions(
   const float * __restrict__                   Qinside, // Qinside[4+0]
   float * __restrict__                         Qoutside, // Qoutside[4+0]
@@ -267,36 +253,14 @@ template void examples::exahype2::elastic::elastic::boundaryConditions(
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal
-);
-
-template void examples::exahype2::elastic::elastic::boundaryConditions(
-  const double * __restrict__                  Qinside, // Qinside[4+0]
-  double * __restrict__                        Qoutside, // Qoutside[4+0]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal
-);
-
-template double ::examples::exahype2::elastic::elastic::maxEigenvalue(
+);template double ::examples::exahype2::elastic::elastic::maxEigenvalue(
   const float* __restrict__ Q, // Q[4+0]
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeSize,
   double                                       t,
   double                                       dt,
   int                                          normal
-);
-
-template double ::examples::exahype2::elastic::elastic::maxEigenvalue(
-  const double* __restrict__ Q, // Q[4+0]
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeSize,
-  double                                       t,
-  double                                       dt,
-  int                                          normal
-);
-
-template void ::examples::exahype2::elastic::elastic::flux(
+);template void ::examples::exahype2::elastic::elastic::flux(
   const float* __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -306,6 +270,30 @@ template void ::examples::exahype2::elastic::elastic::flux(
   float* __restrict__ F
 );
 
+
+template void examples::exahype2::elastic::elastic::initialCondition(
+  double * __restrict__ Q, //Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     point,
+	bool                                         gridIsConstructed
+);
+template void examples::exahype2::elastic::elastic::boundaryConditions(
+  const double * __restrict__                  Qinside, // Qinside[4+0]
+  double * __restrict__                        Qoutside, // Qoutside[4+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
+);
+template double ::examples::exahype2::elastic::elastic::maxEigenvalue(
+  const double* __restrict__ Q, // Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+);
 template void ::examples::exahype2::elastic::elastic::flux(
   const double* __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -314,4 +302,72 @@ template void ::examples::exahype2::elastic::elastic::flux(
   double                                       dt,
   int                                          normal,
   double* __restrict__ F
+);
+
+
+template void examples::exahype2::elastic::elastic::initialCondition(
+  float16_t * __restrict__ Q, //Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     point,
+	bool                                         gridIsConstructed
+);
+template double ::examples::exahype2::elastic::elastic::maxEigenvalue(
+  const float16_t* __restrict__ Q, // Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+);
+template void ::examples::exahype2::elastic::elastic::flux(
+  const float16_t* __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  float16_t* __restrict__ F
+);
+template void examples::exahype2::elastic::elastic::boundaryConditions(
+  const float16_t * __restrict__                  Qinside, // Qinside[4+0]
+  float16_t * __restrict__                        Qoutside, // Qoutside[4+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
+);
+
+
+template void examples::exahype2::elastic::elastic::initialCondition(
+  half * __restrict__ Q, //Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     point,
+	bool                                         gridIsConstructed
+);
+template double ::examples::exahype2::elastic::elastic::maxEigenvalue(
+  const half* __restrict__ Q, // Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+);
+template void ::examples::exahype2::elastic::elastic::flux(
+  const half* __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  half* __restrict__ F
+);
+template void examples::exahype2::elastic::elastic::boundaryConditions(
+  const half * __restrict__                  Qinside, // Qinside[4+0]
+  half * __restrict__                        Qoutside, // Qoutside[4+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
 );
