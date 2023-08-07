@@ -12,7 +12,6 @@
 #include "tarch/logging/Log.h"
 
 #include <stdfloat>
-#include "half.hpp"
 
 namespace exahype2 {namespace acoustic {
 
@@ -167,52 +166,7 @@ class exahype2::acoustic::acousticSolver: public AbstractacousticSolver {
       flux<double>(Q, volumeX, volumeH, t, dt, normal, F);
     }
 
-    //lib_half
-    virtual void initialCondition(
-      half_float::half * __restrict__ Q, //Q[4+0]
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
-      const tarch::la::Vector<Dimensions,int>&     index,
-			bool                                         gridIsConstructed
-    ) final{
-      initialCondition<half_float::half>(Q, x, h, index, gridIsConstructed);
-    }
-
-    virtual void boundaryConditions(
-      const half_float::half * __restrict__                  Qinside, // Qinside[4+0]
-      half_float::half * __restrict__                        Qoutside, // Qoutside[4+0]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal
-    ) final{
-      boundaryConditions<half_float::half>(Qinside, Qoutside, faceCentre, volumeH, t, normal);
-    }
-
-    double maxEigenvalue(
-      const half_float::half* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeX,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal
-    ){
-      return maxEigenvalue<half_float::half>(Q, volumeX, volumeH, t, dt, normal);
-    }
-
-    void flux(
-      const half_float::half* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeX,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      half_float::half* __restrict__ F
-    ){
-      flux<half_float::half>(Q, volumeX, volumeH, t, dt, normal, F);
-    }
-
-
+#ifdef __STDCPP_FLOAT16_T__
     //native_half_c++23
     virtual void initialCondition(
       std::float16_t * __restrict__ Q, //Q[4+0]
@@ -257,8 +211,10 @@ class exahype2::acoustic::acousticSolver: public AbstractacousticSolver {
     ){
       flux<std::float16_t>(Q, volumeX, volumeH, t, dt, normal, F);
     }
+#endif
 
 
+#ifdef __STDCPP_BFLOAT16_T__
     //native_b_half_c++23
     virtual void initialCondition(
       std::bfloat16_t * __restrict__ Q, //Q[4+0]
@@ -303,6 +259,7 @@ class exahype2::acoustic::acousticSolver: public AbstractacousticSolver {
     ){
       flux<std::bfloat16_t>(Q, volumeX, volumeH, t, dt, normal, F);
     }
+#endif
 
 };
 

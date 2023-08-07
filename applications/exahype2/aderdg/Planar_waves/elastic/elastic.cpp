@@ -9,7 +9,6 @@ tarch::logging::Log   examples::exahype2::elastic::elastic::elastic::_log( "exam
 examples::exahype2::elastic::VariableShortcuts s;
 
 using namespace std;
-using half_float::half;
 
 template<typename T>
 void examples::exahype2::elastic::elastic::initialCondition(
@@ -305,6 +304,7 @@ template void ::examples::exahype2::elastic::elastic::flux(
 );
 
 
+#ifdef __STDCPP_FLOAT16_T__
 template void examples::exahype2::elastic::elastic::initialCondition(
   float16_t * __restrict__ Q, //Q[4+0]
   const tarch::la::Vector<Dimensions,double>&  x,
@@ -337,17 +337,18 @@ template void examples::exahype2::elastic::elastic::boundaryConditions(
   double                                       t,
   int                                          normal
 );
+#endif
 
-
+#ifdef __STDCPP_BFLOAT16_T__
 template void examples::exahype2::elastic::elastic::initialCondition(
-  half * __restrict__ Q, //Q[4+0]
+  bfloat16_t * __restrict__ Q, //Q[4+0]
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   const tarch::la::Vector<Dimensions,int>&     point,
 	bool                                         gridIsConstructed
 );
 template double ::examples::exahype2::elastic::elastic::maxEigenvalue(
-  const half* __restrict__ Q, // Q[4+0]
+  const bfloat16_t* __restrict__ Q, // Q[4+0]
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeSize,
   double                                       t,
@@ -355,19 +356,20 @@ template double ::examples::exahype2::elastic::elastic::maxEigenvalue(
   int                                          normal
 );
 template void ::examples::exahype2::elastic::elastic::flux(
-  const half* __restrict__ Q,
+  const bfloat16_t* __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  half* __restrict__ F
+  bfloat16_t* __restrict__ F
 );
 template void examples::exahype2::elastic::elastic::boundaryConditions(
-  const half * __restrict__                  Qinside, // Qinside[4+0]
-  half * __restrict__                        Qoutside, // Qoutside[4+0]
+  const bfloat16_t * __restrict__                  Qinside, // Qinside[4+0]
+  bfloat16_t * __restrict__                        Qoutside, // Qoutside[4+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal
 );
+#endif
