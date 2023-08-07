@@ -139,11 +139,16 @@ if args.solver in user_defined_solvers and args.custom_solver is None:
 #########################################  
 
 my_pde = None
-if args.scenario == "Radial_Bathymetry_Dam_Break":
+if args.scenario == "Radial_Dam_Break":
+  # This is the default scenario
+  from scenarios.radial_dam_break import Radial_Dam_Break
+  my_pde = Radial_Dam_Break(width=width, refinement_tolerance=args.amr_tol)
+
+elif args.scenario == "Radial_Bathymetry_Dam_Break":
   from scenarios.radial_bathymetry_dam_break import Radial_Bathymetry_Dam_Break
   my_pde = Radial_Bathymetry_Dam_Break(width=width, refinement_tolerance=args.amr_tol)
 
-if args.scenario == "Radial_Obstacle_Dam_Break":
+elif args.scenario == "Radial_Obstacle_Dam_Break":
   from scenarios.radial_obstacle_dam_break import Radial_Obstacle_Dam_Break
   my_pde = Radial_Obstacle_Dam_Break(width=width, refinement_tolerance=args.amr_tol)
 
@@ -207,11 +212,6 @@ elif args.scenario == "Tsunami":
 
   from scenarios.tsunami import Tsunami
   my_pde = Tsunami(refinement_tolerance=args.amr_tol, use_guided_amr=args.guided_amr)
-
-else:
-  # This is the default scenario
-  from scenarios.radial_dam_break import Radial_Dam_Break
-  my_pde = Radial_Dam_Break(width=width, refinement_tolerance=args.amr_tol)
 
 my_pde.substitute_expression(my_pde.g, 9.81)
 
