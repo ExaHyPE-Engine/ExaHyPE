@@ -23,6 +23,10 @@
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/grid/TraversalObserver.h"
 
+{% if FLOAT_TYPE=="std::float16_t" or FLOAT_TYPE=="std::bfloat16_t" %}
+#include <stdfloat>
+{% endif %}
+
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
