@@ -10,8 +10,8 @@
  * Dehnen & Aly, MNRAS, 425, pp. 1062-1082 (2012).
  */
 
-#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "peano4/utils/Globals.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 #if defined(QUARTIC_SPLINE_KERNEL)
 /* ------------------------------------------------------------------------- */
@@ -193,8 +193,8 @@ static void kernel_deval(double u, double& W, double& dW_dx) InlineMethod {
   const double* const coeffs = &kernel_coeffs[ind * (kernel_degree + 1)];
 
   /* w term in Horner's scheme */
-  double w     = coeffs[0];
-  for (int k = 1 ; k <= kernel_degree; k++) {
+  double w = coeffs[0];
+  for (int k = 1; k <= kernel_degree; k++) {
     w = w * x + coeffs[k];
   }
 
@@ -203,8 +203,8 @@ static void kernel_deval(double u, double& W, double& dW_dx) InlineMethod {
   double dw_dx = coeffs[0] * kernel_degree;
 
   /* ... and the rest of them */
-  for (int k = 1; k <= kernel_degree-1; k++) {
-    dw_dx = dw_dx * x + coeffs[k] * (kernel_degree-k);
+  for (int k = 1; k <= kernel_degree - 1; k++) {
+    dw_dx = dw_dx * x + coeffs[k] * (kernel_degree - k);
   }
 
   w     = std::max(w, 0.0);

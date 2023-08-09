@@ -29,9 +29,9 @@ namespace swift2 {
      */
     template <typename Particle, typename ParticleContainer>
     void genericInteraction(
-        const peano4::datamanagement::CellMarker&  marker,
-        const ParticleContainer&                   localParticles,
-        const ParticleContainer&                   activeParticles,
+      const peano4::datamanagement::CellMarker&                                          marker,
+      const ParticleContainer&                                                           localParticles,
+      const ParticleContainer&                                                           activeParticles,
       std::function<void(Particle* localParticle, const Particle* const activeParticle)> interaction
     );
 
@@ -124,9 +124,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensity(
-        const peano4::datamanagement::CellMarker&  marker,
-        const ParticleContainer&                   localParticles,
-        const ParticleContainer&                   activeParticles
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles
     );
 
     /**
@@ -135,9 +135,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSearchRadius(
-        const peano4::datamanagement::CellMarker&  marker,
-        const ParticleContainer&                   localParticles,
-        const ParticleContainer&                   activeParticles
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles
     );
 
     /**
@@ -152,9 +152,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSmoothingLengths(
-      const peano4::datamanagement::CellMarker&  marker,
-      const ParticleContainer&                   localParticles,
-      const ParticleContainer&                   activeParticles
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles
     );
 
     /** Hydro Force calculation particle-particle kernel
@@ -179,9 +179,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeHydroForce(
-      const peano4::datamanagement::CellMarker&  marker,
-      const ParticleContainer&                   localParticles,
-      const ParticleContainer&                   activeParticles
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles
     );
 
 

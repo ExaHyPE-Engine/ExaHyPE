@@ -490,10 +490,11 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 touch_vertex_first_time_kernel="""
                                        ::swift2::kernels::prepareHydroForceCalculation(localParticles);
                                        """,
-
                 cell_kernel="""
                                        ::toolbox::particles::ensureAllParticleListsAreGatheredOrEmpty(
-                                         fineGridVertices""" + self.name + """Set
+                                         fineGridVertices"""
+                + self.name
+                + """Set
                                        );
                                        ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
                                          activeParticles,

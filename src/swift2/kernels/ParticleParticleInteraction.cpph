@@ -1,25 +1,19 @@
 #include "swift2/kernels/equation_of_state.h"
 #include "swift2/kernels/kernel_hydro.h"
 #include "swift2/kernels/SmoothingLengthComputation.h"
-
-#include "toolbox/particles/MultiscaleTransitions.h"
-
 #include "tarch/compiler/CompilerSpecificSettings.h"
+#include "toolbox/particles/MultiscaleTransitions.h"
 
 
 template <typename Particle, typename ParticleContainer>
 void swift2::kernels::genericInteraction(
-    const peano4::datamanagement::CellMarker&  marker,
-    const ParticleContainer&                   localParticles,
-    const ParticleContainer&                   activeParticles,
+  const peano4::datamanagement::CellMarker&                                          marker,
+  const ParticleContainer&                                                           localParticles,
+  const ParticleContainer&                                                           activeParticles,
   std::function<void(Particle* localParticle, const Particle* const activeParticle)> interaction
 ) {
   for (auto* localParticle : localParticles) {
-    if (
-      not localParticle->getCellHasUpdatedParticle()
-      and
-      marker.isContained(localParticle->getX())
-    ) {
+    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())) {
       for (auto* activeParticle : activeParticles) {
         interaction(localParticle, activeParticle);
       }
@@ -52,9 +46,11 @@ void swift2::kernels::densityKernel(Particle* localParticle, const Particle* act
     if (localParticle->getPartid() == activeParticle->getPartid()) {
       std::cout << "!!!!!!!!!!!!!!!! INTERACTING SAME PARTILCE WITH ID " << localParticle->getPartid() << std::endl;
     }
-  if (localParticle->getPartid() == PROBLEMPART) {
-    std::cout << "DENSITY KERNEL: INTERACTING localParticle " << localParticle->getPartid() << " and activeParticle " << activeParticle->getPartid() << std::endl;
-  }
+    if (localParticle->getPartid() == PROBLEMPART) {
+      std::cout
+        << "DENSITY KERNEL: INTERACTING localParticle " << localParticle->getPartid() << " and activeParticle "
+        << activeParticle->getPartid() << std::endl;
+    }
 
     // const double m_a = localParticle->getMass();
     const double m_b     = activeParticle->getMass();
@@ -265,8 +261,7 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
 
 template <typename Particle>
 void swift2::kernels::forceKernelVectorised(
-  Particle*       __restrict__   localParticle,
-  const Particle* __restrict__   activeParticle
+  Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle
 ) InlineMethod {
 
   // Grab static parameters
@@ -301,7 +296,7 @@ void swift2::kernels::forceKernelVectorised(
   // Get actual interaction radius
   const double iactR = kernel_gamma * h_a;
 
-  const double mask = tarch::la::smaller( r, iactR );
+  const double mask = tarch::la::smaller(r, iactR);
 
   // Get actual interaction radius
   double wa, wb;
@@ -356,21 +351,21 @@ void swift2::kernels::forceKernelVectorised(
   const double acc = sph_acc_term + visc_acc_term;
 
   assertion9(
-      std::isfinite(visc_acc_term),
-      visc_acc_term,
-      localParticle->toString(),
-      activeParticle->toString(),
-      wa_dr,
-      f_ab,
-      wb_dr,
-      f_ba,
-      r_inv,
-      visc
+    std::isfinite(visc_acc_term),
+    visc_acc_term,
+    localParticle->toString(),
+    activeParticle->toString(),
+    wa_dr,
+    f_ab,
+    wb_dr,
+    f_ba,
+    r_inv,
+    visc
   );
   assertion3(std::isfinite(sph_acc_term), sph_acc_term, localParticle->toString(), activeParticle->toString());
 
   // Use the force
-  localParticle->setA( localParticle->getA() - mask * m_b * acc * dx );
+  localParticle->setA(localParticle->getA() - mask * m_b * acc * dx);
 
   // Get the time derivative for u.
   const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * wa_dr;
@@ -398,36 +393,34 @@ void swift2::kernels::forceKernelVectorised(
 
   assertion6(not std::isnan(localParticle->getHDot()), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba);
   assertion7(
-      not tarch::la::isEntryNan(localParticle->getA()),
-      localParticle->toString(),
-      sph_acc_term,
-      visc_acc_term,
-      f_ab,
-      f_ba,
-      activeParticle->getF(),
-      activeParticle->getIsBoundaryParticle()
+    not tarch::la::isEntryNan(localParticle->getA()),
+    localParticle->toString(),
+    sph_acc_term,
+    visc_acc_term,
+    f_ab,
+    f_ba,
+    activeParticle->getF(),
+    activeParticle->getIsBoundaryParticle()
   );
 }
 
 
 template <typename ParticleContainer>
 void swift2::kernels::computeDensityWithConstantSmoothingLengths(
-    const peano4::datamanagement::CellMarker&  marker,
-    const ParticleContainer&                   localParticles,
-    const ParticleContainer&                   activeParticles
+  const peano4::datamanagement::CellMarker& marker,
+  const ParticleContainer&                  localParticles,
+  const ParticleContainer&                  activeParticles
 ) {
   /* Don't use this yet. */
   std::cout << "swift2::kernels::computeDensity: Don't use this. It's not implemented properly yet." << std::endl;
   std::abort();
   for (auto* localParticle : localParticles) {
-    if (
-      not localParticle->getCellHasUpdatedParticle()
-      and
-      marker.isContained(localParticle->getX())
-    ) {
+    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())) {
       for (auto* activeParticle : activeParticles) {
         if (localParticle->getPartid() == PROBLEMPART) {
-          std::cout << "DENSITY KERNEL: CHECKING localParticle " << localParticle->getPartid() << " and activeParticle " << activeParticle->getPartid() << std::endl;
+          std::cout
+            << "DENSITY KERNEL: CHECKING localParticle " << localParticle->getPartid() << " and activeParticle "
+            << activeParticle->getPartid() << std::endl;
         }
         swift2::kernels::densityKernel(localParticle, activeParticle);
       }
@@ -438,21 +431,20 @@ void swift2::kernels::computeDensityWithConstantSmoothingLengths(
 
 template <typename ParticleContainer>
 void swift2::kernels::computeDensityWithConstantSearchRadius(
-    const peano4::datamanagement::CellMarker&  marker,
-    const ParticleContainer&                   localParticles,
-    const ParticleContainer&                   activeParticles
+  const peano4::datamanagement::CellMarker& marker,
+  const ParticleContainer&                  localParticles,
+  const ParticleContainer&                  activeParticles
 ) {
-  static tarch::logging::Log _log( "swift2::kernels" );
+  static tarch::logging::Log _log("swift2::kernels");
   for (auto* localParticle : localParticles) {
-    if (
-      not localParticle->getCellHasUpdatedParticle()
-      and
-      marker.isContained(localParticle->getX())
-      and
-      not toolbox::particles::particleWillBeDroppedFurther( *localParticle, marker)
-    ) {
+    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX()) and not toolbox::particles::particleWillBeDroppedFurther(*localParticle, marker)) {
       if (localParticle->getPartid() == PROBLEMPART) {
-        logInfo( "computeDensityWithConstantSearchRadius", "STARTING DENSITY FOR PROBLEMPART " << PROBLEMPART << " with " << activeParticles.size() << " active particles associated to cell " << marker.toString() );
+        logInfo(
+          "computeDensityWithConstantSearchRadius",
+          "STARTING DENSITY FOR PROBLEMPART "
+            << PROBLEMPART << " with " << activeParticles.size() << " active particles associated to cell "
+            << marker.toString()
+        );
       }
 
       swift2::kernels::findSmoothingLengthWithConstantSearchRadius(localParticle, activeParticles);
@@ -463,9 +455,9 @@ void swift2::kernels::computeDensityWithConstantSearchRadius(
 
 template <typename ParticleContainer>
 void swift2::kernels::computeDensity(
-    const peano4::datamanagement::CellMarker&  marker,
-    const ParticleContainer&                   localParticles,
-    const ParticleContainer&                   activeParticles
+  const peano4::datamanagement::CellMarker& marker,
+  const ParticleContainer&                  localParticles,
+  const ParticleContainer&                  activeParticles
 ) {
 
   /* Don't use this yet. */
@@ -476,11 +468,7 @@ void swift2::kernels::computeDensity(
   const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
 
   for (auto* localParticle : localParticles) {
-    if (
-      not localParticle->getCellHasUpdatedParticle()
-      and
-      marker.isContained(localParticle->getX())
-    ) {
+    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())) {
       for (auto* activeParticle : activeParticles) {
 
         /* Retrieve basic properties of local and active particles */
@@ -557,16 +545,12 @@ void swift2::kernels::computeDensity(
 
 template <typename ParticleContainer>
 void swift2::kernels::computeHydroForce(
-    const peano4::datamanagement::CellMarker&  marker,
-    const ParticleContainer&                   localParticles,
-    const ParticleContainer&                   activeParticles
+  const peano4::datamanagement::CellMarker& marker,
+  const ParticleContainer&                  localParticles,
+  const ParticleContainer&                  activeParticles
 ) {
   for (auto* localParticle : localParticles) {
-    if (
-      not localParticle->getCellHasUpdatedParticle()
-      and
-      marker.isContained(localParticle->getX())
-    ) {
+    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())) {
       for (auto* activeParticle : activeParticles) {
         swift2::kernels::forceKernel(localParticle, activeParticle);
       }
@@ -605,11 +589,12 @@ void swift2::kernels::computeHydroForce(
           and
           not toolbox::particles::particleWillBeDroppedFurther( localParticlesChunk[localParticleNumberInThisChunk], marker)
         ) {
-          for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
-              swift2::kernels::forceKernelVectorised(
-                localParticlesChunk + localParticleNumberInThisChunk,
-                activeParticlesChunk + activeParticleNumberInThisChunk
-              );
+          for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
+               activeParticleNumberInThisChunk++) {
+            swift2::kernels::forceKernelVectorised(
+              localParticlesChunk + localParticleNumberInThisChunk,
+              activeParticlesChunk + activeParticleNumberInThisChunk
+            );
           }
         }
       }
