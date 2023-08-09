@@ -3,7 +3,6 @@
 #pragma once
 
 #include "AbstractNavierStokesSolver.h"
-#include "exahype2/fv/PatchAccess.h"
 #include "peano4/utils/Loop.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/logging/Log.h"
