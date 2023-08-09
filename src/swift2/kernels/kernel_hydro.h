@@ -1,9 +1,6 @@
 #pragma once
 #include "cmath"
-<<<<<<< HEAD
-=======
 #include "tarch/tarch.h"
->>>>>>> branch 'particles-sml-fix' of https://gitlab.lrz.de/hpcsoftware/Peano.git
 
 /**
  * @file kernel_hydro.h
