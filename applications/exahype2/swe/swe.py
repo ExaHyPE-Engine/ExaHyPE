@@ -20,7 +20,7 @@ maximum_cell_size     = 0.1
 amr_levels            = 3 
 auxiliary_variables   = 1 # bathymetry, this is fixed to 1 in pde.py
 amr_tolerance         = 1e-3
-epsilon               = 1e-4
+epsilon               = 1e-2
 
 fv_rusanov_solvers = {
   #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
@@ -71,9 +71,10 @@ scenarios = [
   "Circular_Island"
   ]
 
+coordinate_filter = "((-?[0-9]+\.?[0-9]*(e-?[0-9]+)?)|(inf))"
 def parse_coordinate_pair(coords):
-  if re.search("^\[(-?[0-9]+\.?[0-9]*)|(inf)\,(-?[0-9]+\.?[0-9]*)|(inf)\]$", coords):
-      splits = re.split("[\[ | \] | \( | \) | \,]", coords)
+  if re.search("^\[%s\,%s\]$" % (coordinate_filter, coordinate_filter), coords):
+      splits = re.split("[\[ | \] | \,]", coords)
       return [float(splits[1]), float(splits[2])]
   else:
     raise ValueError("Could not parse the illegal coordinates: {}! Is there maybe a white space within the brackets?".format(coords)) 
@@ -92,6 +93,7 @@ parser.add_argument("-sc",      "--scenario",          dest="scenario",       ch
 parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch. Default is %f." % patch_size)
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used. Default is %f." % plot_interval)
 parser.add_argument("-cs",      "--custom-solver",     dest="custom_solver",  choices=custom_solver_implementations,required=False,   help="Custom solver to be used as user defined solver. Has to be set if --solver has been set to some user defined option.")
+parser.add_argument("-wd",      "--width",             dest="width",          type=str,                   required=False,             help="Specify size of domain in [x,y] as string (e.g. [10,10], [7e6,4e6]).")
 
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. finite volume cell Default is %f." % amr_levels)
 parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=False,              help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
@@ -130,6 +132,9 @@ maximum_cell_size = args.max_cell_size
 patch_size = args.patch_size if args.patch_size != None else patch_size
 if not args.output_path.endswith("/"):
   args.output_path += "/"
+
+if args.width is not None:
+  width = parse_coordinate_pair(args.width)
 
 if args.solver in user_defined_solvers and args.custom_solver is None:
   raise Exception("No custom solver implementation supplied for user defined solver! Please set -cs flag to one of the following values: " + "|".join(custom_solver_implementations) + ".")
@@ -311,7 +316,7 @@ else:
   
   elif args.custom_solver == "HLLEM":
     from custom_solvers.custom_fv_solvers.hllem import HLLEM
-    custom_solver = HLLEM()
+    custom_solver = HLLEM(args.epsilon)
 
   elif args.custom_solver == "FWave":
     from custom_solvers.custom_fv_solvers.fwave import FWave
