@@ -2,15 +2,17 @@ from custom_solvers import solver
 
 class FWave(solver.Solver):
 
-    def __init__(self, epsilon=1e-4):
+    def __init__(self, epsilon=1e-2):
         self.epsilon = epsilon
         pass
 
     def implementation_of_riemann_solver(self):
         return """    
     const double g = 9.81;
-    const bool leftWet = QL[3] < 0; 
-    const bool rightWet = QR[3] < 0; 
+    const bool leftWet = QL[3] < 0.0; 
+    // const bool leftWet = tarch::la::greater(QL[0], 0.0, %f); // does not work that well for some reason
+    const bool rightWet = QR[3] < 0.0; 
+    // const bool rightWet = tarch::la::greater(QR[0], 0.0, %f);
     const bool leftDry = !leftWet;
     const bool rightDry = !rightWet;
 
@@ -63,4 +65,4 @@ class FWave(solver.Solver):
     AMDQ[normal+1] = (lambda_roe[0] < 0 ? z_1[1] : 0) + (lambda_roe[1] < 0 ? z_2[1] : 0);
 
     return std::max(std::abs(lambda_roe[0]), std::abs(lambda_roe[1]));
-    """
+    """  % (self.epsilon, self.epsilon)
