@@ -262,6 +262,10 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self.data.add_attribute(self.Ncount)
         self.data.add_attribute(self.part_id)
 
+        # TEMPORARY DEBUGGING
+        self.density_iact_counter = dastgen2.attributes.Integer("DensityIactCounter");
+        self.data.add_attribute(self.density_iact_counter)
+
         # Algorithm Steps ---------------------------------------------------------------
         self.algorithm_steps_dict = {}
         self._setup_algorithm_steps_dict()

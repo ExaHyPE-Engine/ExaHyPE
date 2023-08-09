@@ -328,6 +328,8 @@ void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& loca
   for (auto* particle : localParticles) {
     // if (not particle->getIsBoundaryParticle()) {
 
+assertion3(particle->getDensityIactCounter() == 1, "Local Particle in prepare Force didn't do density loop", particle->getPartid(), particle->toString());
+
     /* Retrieve basic properties of local and active particles */
     const double rho_a = particle->getDensity();
     const double m_a   = particle->getMass();
@@ -427,6 +429,7 @@ void swift2::kernels::endHydroForceCalculation(const ParticleContainer& localPar
 
   for (auto* particle : localParticles) {
     // if (not particle->getIsBoundaryParticle()) {
+assertion3(particle->getDensityIactCounter() == 1, "Local Particle in end Force didn't do density loop", particle->getPartid(), particle->toString());
     particle->setHDot(particle->getHDot() * particle->getSmoothingLength() / hydroDimensions);
 
     assertion2(std::isfinite(particle->getHDot()), particle->toString(), particle->getSmoothingLength());

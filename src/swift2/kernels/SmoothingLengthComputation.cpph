@@ -13,6 +13,8 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
 ) {
   static tarch::logging::Log _log("swift2::kernels");
 
+  localParticle->setDensityIactCounter(1);
+
   /* Grab static parameters */
   const int hydro_dimensions = localParticle->getHydroDimensions();
 

@@ -120,6 +120,8 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
   const double alphaAV         = localParticle->getAlphaAV();
   const double betaAV          = localParticle->getBetaAV();
 
+assertion3(localParticle->getDensityIactCounter() == 1, "Local Particle in Force loop didn't do density loop", localParticle->getPartid(), localParticle->toString());
+assertion3(activeParticle->getDensityIactCounter() == 1, "Active Particle in force loop didn't do density loop", activeParticle->getPartid(), activeParticle->toString());
   // No cosmology yet: a^{(3 gamma - 5 )/ 2} = 1.
   const double fac_mu    = 1.;
   const double a2_Hubble = 0.; // a**2 * H, where H = da/dt / a. = 0 without cosmo
@@ -263,6 +265,9 @@ template <typename Particle>
 void swift2::kernels::forceKernelVectorised(
   Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle
 ) InlineMethod {
+
+assertion3(localParticle->getDensityIactCounter() == 1, "Local Particle in Force loop didn't do density loop", localParticle->getPartid(), localParticle->toString());
+assertion3(activeParticle->getDensityIactCounter() == 1, "Active Particle in force loop didn't do density loop", activeParticle->getPartid(), activeParticle->toString());
 
   // Grab static parameters
   const int    hydroDimensions = localParticle->getHydroDimensions();
