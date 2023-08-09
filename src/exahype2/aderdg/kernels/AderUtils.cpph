@@ -1,0 +1,68 @@
+template <typename T>
+void exahype2::aderdg::computeCellErrorIntegral(
+  std::function< void(
+    const tarch::la::Vector<Dimensions,double>&   position,
+    const double                                  t,
+    const double                                  dt,
+    double*                                       sol
+  ) >   exactSolution,
+  const tarch::la::Vector<Dimensions,double>&  cellCentre,
+  const tarch::la::Vector<Dimensions,double>&  cellSize,
+  double                                       t,
+  double                                       dt,
+  int                                          Order,
+  const double* __restrict__                   quadratureWeights,
+  const double* __restrict__                   quadraturePoints,
+  const int                                    unknowns,
+  const int                                    auxiliary_variables,
+  T* __restrict__                              Q,
+  double                                       errors[3]
+){
+
+  errors[0] = 0.0;
+  errors[1] = 0.0;
+  errors[2] = 0.0;
+
+#if Dimensions==2
+  const double cellVolume = cellSize[0]*cellSize[1];
+  const int spaceBasisSize = (Order+1)*(Order+1);
+#else
+  const double cellVolume = cellSize[0]*cellSize[1]*cellSize[2];
+  const int spaceBasisSize = (Order+1)*(Order+1)*(Order+1);
+#endif
+
+  double sol[unknowns];
+  const int strideQ = unknowns+auxiliary_variables;
+  int linearisedIndex = 0;
+
+  //iterate over all quadrature points in the cell
+    dfor( index, Order+1 ) {
+
+#if Dimensions==2
+      double weight = cellVolume*quadratureWeights[index[0]]*quadratureWeights[index[1]];
+#else
+      double weight = cellVolume*quadratureWeights[index[0]]*quadratureWeights[index[1]]*quadratureWeights[index[2]];
+#endif
+
+      //compute the exact solution
+      exactSolution(
+        ::exahype2::aderdg::getQuadraturePoint(
+          cellCentre, cellSize, index, Order+1, quadraturePoints
+        ),
+        t,
+        dt,
+        sol
+      );
+
+      //increment the respective errors
+      for(int v=0; v<unknowns; v++){
+        double error = std::abs(Q[linearisedIndex+v]-sol[v]);
+        errors[0] += weight*error; //L1 norm
+        errors[1] += weight*error*error; //L2 norm
+        errors[2] = std::max(errors[2], error); //L_inf norm
+      }
+
+      linearisedIndex += strideQ;
+    }
+
+}

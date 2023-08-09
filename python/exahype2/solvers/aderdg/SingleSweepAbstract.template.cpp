@@ -259,6 +259,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 }
 {% endif %}
 
+{% if ERROR_MEASUREMENT_IMPLEMENTATION!="<empty>" and ERROR_MEASUREMENT_IMPLEMENTATION!="<user-defined>" and ERROR_MEASUREMENT_IMPLEMENTATION!="<none>"%}
+    void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::analyticalSolution(
+      const tarch::la::Vector<Dimensions,double>&   x,
+      const double                                  t,
+      const double                                  dt,
+      double*                                       sol
+    ) {
+  {{ERROR_MEASUREMENT_IMPLEMENTATION}}
+}
+{% endif %}
+
 {% if RIEMANN_SOLVER_IMPLEMENTATION!="<empty>" and RIEMANN_SOLVER_IMPLEMENTATION!="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>"%}
     void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::riemannSolver(
       {{CORRECTOR_COMPUTATION_PRECISION}}* const FL, // FL[{{NUMBER_OF_UNKNOWNS}}
@@ -292,8 +303,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
 
-
-
+	if ( _solverState==SolverState::GridInitialisation ) {
+    {{FINISH_TIME_STEP_IMPLEMENTATION}}
+  }
 }
 
 
@@ -322,6 +334,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::Prediction;
       break;
     case SolverState::Prediction:
+      if(_minCellHThisTimeStep<_maxCellHThisTimeStep){
+        _solverState = SolverState::PredictionOnHangingCells;
+        break;
+      }
+      else{
+        _solverState = SolverState::Correction;
+        break;
+      }
+    case SolverState::PredictionOnHangingCells:
       _solverState = SolverState::Correction;
       break;
     case SolverState::Correction:
@@ -484,6 +505,9 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "plotting";
     case SolverState::Prediction:
       return "prediction";
+      break;
+    case SolverState::PredictionOnHangingCells:
+      return "prediction on hanging cells";
       break;
     case SolverState::Correction:
 			return "correction";

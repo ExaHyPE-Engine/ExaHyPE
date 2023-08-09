@@ -24,7 +24,7 @@ class Handle_boundary(AbstractAderDGActionSet):
     const double timeStamp = fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0);
   
     // needs to declare and define timeStepSize
-    {{COMPUTE_TIME_STEP_SIZE}}    
+    {{COMPUTE_TIME_STEP_SIZE}}
     
     const int Order = {{ORDER}};
     const int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};

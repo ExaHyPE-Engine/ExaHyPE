@@ -21,6 +21,12 @@
 
 #include "tarch/la/Vector.h"
 
+{% if predictorStoragePrecision=="std::float16_t" or correctorComputePrecision=="std::float16_t" or correctorStoragePrecision=="std::float16_t" or "std::float16_t" in predictorComputePrecisions %}
+#include <stdfloat>
+{% elif predictorStoragePrecision=="std::bfloat16_t" or correctorComputePrecision=="std::bfloat16_t" or correctorStoragePrecision=="std::bfloat16_t" or "std::bfloat16_t" in predictorComputePrecisions %}
+#include <stdfloat>
+{% endif %}
+
 //forward declaration of the user solver
 {% for namespaceName in solverNamespaceList %}
 namespace {{namespaceName}} {
