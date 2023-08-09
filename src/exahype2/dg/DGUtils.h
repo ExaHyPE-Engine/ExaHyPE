@@ -5,13 +5,19 @@
 
 #include <vector>
 
+#include "tarch/la/la.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/Assertions.h"
 
 #include "peano4/grid/GridControlEvent.h"
+#include "peano4/datamanagement/CellMarker.h"
 #include "peano4/utils/Globals.h"
+#include "peano4/utils/Loop.h"
 
 #include "Functors.h"
+
+#include "exahype2/fv/PatchUtils.h"
 
 
 
@@ -285,3 +291,5 @@ namespace exahype2 {
   }
 }
 
+
+#include "DGUtils.cpph"

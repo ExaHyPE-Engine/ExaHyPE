@@ -10,14 +10,23 @@ class FloatTypes():
       if float_type=="float":
         self.cpp = "float"
         self.mpi = "MPI_FLOAT"
+        self.number_of_mpi_types_per_element = 1
       elif float_type=="double":
         self.cpp = "double"
         self.mpi = "MPI_DOUBLE"
+        self.number_of_mpi_types_per_element = 1
       elif float_type=="long double":
         self.cpp = "long double"
         self.mpi = "MPI_LONG_DOUBLE"
-      elif float_type=="half":
-        raise Exception("Float type half not currently available")
+        self.number_of_mpi_types_per_element = 1
+      elif float_type=="std::float16_t":
+        self.cpp = "std::float16_t"
+        self.mpi = "MPI_BYTE"
+        self.number_of_mpi_types_per_element = 2
+      elif float_type=="std::bfloat16_t":
+        self.cpp = "std::bfloat16_t"
+        self.mpi = "MPI_BYTE"
+        self.number_of_mpi_types_per_element = 2
       else:
         raise Exception("Float type " + float_type + " not recognized")
 
@@ -100,6 +109,7 @@ class PatchToDoubleArray():
         "LOAD_STORE_COMPUTE_FLAG":     self.load_store_compute_flag,
         "FLOAT_TYPE":                  self.float_type.cpp,
         "MPI_FLOAT_TYPE":              self.float_type.mpi,
+        "MPI_ELEMENTS_PER_FLOAT":      self.float_type.number_of_mpi_types_per_element,
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": self.data.additional_load_and_store_arguments
       }
     return d

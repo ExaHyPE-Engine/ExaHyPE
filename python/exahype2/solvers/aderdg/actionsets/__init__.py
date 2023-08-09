@@ -9,5 +9,6 @@ from .HandleBoundary                 import Handle_boundary
 from .Prediction_generic             import Prediction_generic
 from .Correction_generic             import Correction_generic
 from .Prediction_kernelgenerator     import Prediction_kernelgenerator
+from .PredictionOnHangingCell_kernelgenerator import PredictionOnHangingCell_kernelgenerator
 from .Correction_kernelgenerator     import Correction_kernelgenerator
 

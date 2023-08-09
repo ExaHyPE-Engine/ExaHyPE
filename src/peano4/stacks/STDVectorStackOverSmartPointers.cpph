@@ -175,7 +175,7 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::prepareGatheredDataBuff
     "allocate (temporary) receive of size "
       << (size() * T::Cardinality) << ". " << size() << " local entries with " << T::Cardinality << " values per entry"
   );
-  _gatheredData = tarch::allocateMemory(size() * T::Cardinality, tarch::MemoryLocation::Heap);
+  _gatheredData = tarch::allocateMemory<typename T::DoFType>(size() * T::Cardinality, tarch::MemoryLocation::Heap);
 }
 
 template <class T>
