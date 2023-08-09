@@ -97,7 +97,7 @@ void {{codeNamespace}}::riemannSolver(
     }
   }
   
-//  #pragma omp simd aligned(FL,FR,tmp_bnd:{{alignmentSize}})
+  #pragma omp simd aligned(FL,FR,tmp_bnd:{{alignmentSize}})
   for (int xyn = 0; xyn < {{nVarPad*nDof*nDof3D}}; xyn++) {
     FL[xyn] = 0.5 * (FL[xyn] + FR[xyn] + tmp_bnd[xyn]);
   }
@@ -155,14 +155,19 @@ void {{codeNamespace}}::riemannSolver(
 {% endif %}{# rest#}
 {% else %}
   cCompType Qavg[{{nData}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
-  cCompType gradQ[{{nData}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
+  cCompType gradQ[{{nVar}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
   cCompType ncp[{{nVarPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
   for (int xy = 0; xy < {{nDof*nDof3D}}; xy++) {
     #pragma omp simd aligned(Qavg,QL,QR,gradQ:{{alignmentSize}})
-    for (int n = 0; n < {{nData}}; n++) {
+    for (int n = 0; n < {{nVar}}; n++) {
        Qavg[n] = 0.5 * (QL[xy*{{nDataPad}}+n] + QR[xy*{{nDataPad}}+n]);
        gradQ[n] = QR[xy*{{nDataPad}}+n] - QL[xy*{{nDataPad}}+n];
     }
+{% if nPar != 0%}
+    for (int n = {{nVar}}; n < {{nData}}; n++) { // copy parameters
+      Qavg[n] = 0.5 * (QL[xy*{{nDataPad}}+n] + QR[xy*{{nDataPad}}+n]);
+    }
+{% endif %}
 #ifdef USE_IPO
     #pragma forceinline recursive
 #endif

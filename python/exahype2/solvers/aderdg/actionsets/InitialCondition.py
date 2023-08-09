@@ -46,7 +46,7 @@ class InitialCondition(AbstractAderDGActionSet):
 
     // relevant for tracing et al which kicks in if and only if cell has been
     // updated
-    fineGridCell{{UNKNOWN_IDENTIFIER}}CellLabel.setHasUpdated(true);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
 
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 

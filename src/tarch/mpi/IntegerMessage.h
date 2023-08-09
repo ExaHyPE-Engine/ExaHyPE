@@ -19,10 +19,6 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-#include "peano4/grid/LoadStoreComputeFlag.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
-
 
 
 namespace tarch{

@@ -1,10 +1,14 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import argparse
 import os
-import exahype2.postprocessing
+import sys
+import argparse
 
 import matplotlib.pyplot as plt
+
+sys.path.insert(0, os.path.abspath('../../../python'))
+
+import exahype2.postprocessing
 
 
 if __name__ == "__main__":
@@ -15,9 +19,9 @@ Default plotter for various standard ExaHyPE dumps. The plotter examines
 and illustrates the runtime per time step behaviour.
 
 """)
-  parser.add_argument("file", nargs="+",    help="filename of the file to parse. You can specify multiple files")
-  parser.add_argument("-v",     "--verbose",     dest="verbose",    help="increase output verbosity",   action="store_true", default=False )
-  parser.add_argument("-log-y", "--log-ysaxis",  dest="log_yscale", help="increase output verbosity",   action="store_true", default=False )
+  parser.add_argument("file", nargs="+",    help="Filename of the file to parse. You can specify multiple files.")
+  parser.add_argument("-v",     "--verbose",     dest="verbose",    help="Increase output verbosity",   action="store_true", default=False )
+  parser.add_argument("-log-y", "--log-ysaxis",  dest="log_yscale", help="Use log scale",   action="store_true", default=False )
   parser.add_argument("-t",     "--type",    dest="type",    help="Pick plot variant", choices=[
    "time-step-size-vs-time-step", "time-step-size-vs-real-time", "time-step-size-vs-simulated-time",
    "updates-vs-time-step", "updates-vs-real-time", "updates-vs-simulated-time",
@@ -26,12 +30,11 @@ and illustrates the runtime per time step behaviour.
   parser.add_argument("-l",     "--label",   dest="label",   nargs="*", help="Label of dataset (optional; if used, you have to add --label/-l after the actual files and you have to embed the labels into hyphens)",  default="output"  )
   parser.add_argument("-o",     "--output",  dest="output",  help="Name of output file",         default="output"  )
   args = parser.parse_args()
-  
-  
+
   plt.clf()
   if args.log_yscale:
     plt.yscale( 'log' )
-    
+
   for dataset in zip( args.file, args.label) :
     performance_data = exahype2.postprocessing.PerformanceData( file_name=dataset[0], verbose=args.verbose )
     if args.verbose:
@@ -62,6 +65,6 @@ and illustrates the runtime per time step behaviour.
 
   if args.output=="output":
     print( "default file names output.pdf and output.png written. Change file name with -o or --output")
-    
+
   plt.savefig( args.output + ".pdf" )
   plt.savefig( args.output + ".png" )

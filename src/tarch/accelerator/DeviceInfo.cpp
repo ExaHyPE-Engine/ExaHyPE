@@ -1,9 +1,9 @@
 #include "DeviceInfo.h"
 
 #include <algorithm>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
-#include <iostream>
 
 #if defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
 #include "cuda/DeviceInfo.h"
@@ -24,28 +24,30 @@
 #include <cassert>
 // #else if defined(WITH_SYCL_API) // Possible TODO to differentiate SYCL_API and Sycl
 
-namespace tarch::accelerator
-{
-  std::vector<std::vector<std::string>> queryDeviceInformation()
-  {
+namespace tarch::accelerator {
+  std::vector<std::vector<std::string>> queryDeviceInformation() {
+    // If we have CPP we cant have any information and in the benchmarks we already have distribution
+    // Therefore we do not call the CUDA API, otherwise we always try to prefer the CUDA API as it gives us
+    // the maximum amount of information
     std::vector<std::vector<std::string>> devInfo;
 #if defined(GPUOffloadingCPP)
     tarch::accelerator::cpp::queryDeviceInformation(devInfo);
+    tarch::accelerator::runBenchmarks(devInfo);
 #elif defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
     tarch::accelerator::cuda::queryDeviceInformation(devInfo);
+    tarch::accelerator::runBenchmarks(devInfo);
 #elif defined(GPUOffloadingSYCL)
     tarch::accelerator::sycl::queryDeviceInformation(devInfo);
+    tarch::accelerator::runBenchmarks(devInfo);
 #elif defined(GPUOffloadingOMP)
     tarch::accelerator::omp::queryDeviceInformation(devInfo);
-#else
-    return devInfo;
-#endif
     tarch::accelerator::runBenchmarks(devInfo);
+#endif
     return devInfo;
   }
 
-  void printDeviceInformation()
-  {
+  void printDeviceInformation() {
+    // see queryDeviceInformation
     auto propertymatrix = queryDeviceInformation();
 #if defined(GPUOffloadingCPP)
     // Can't get any information with cpp GPU offloading rn
@@ -64,58 +66,64 @@ namespace tarch::accelerator
 #endif
   }
 
-  size_t getPropertyOffset(const char name[], const std::vector<std::string> &identifiers)
-  {
+  size_t getPropertyOffset(const char name[], const std::vector<std::string>& identifiers) {
     auto it = std::find(identifiers.begin(), identifiers.end(), std::string(name));
-    if (it == identifiers.end())
-    {
+    if (it == identifiers.end()) {
       throw std::runtime_error("Property input name not a part of the identifiers list!");
     }
     return std::distance(identifiers.begin(), it);
   }
 
-  std::string parseMatrix(const std::vector<std::vector<std::string>> &propertyMatrix, int numberOfDevices, const std::vector<std::string> &identifiers)
-  {
+  std::string parseMatrix(
+    const std::vector<std::vector<std::string>>& propertyMatrix,
+    int                                          numberOfDevices,
+    const std::vector<std::string>&              identifiers
+  ) {
+    // Although the code looks scary:
+    // Transpose the matrix on the fly,
+    // Pad columns so that every entry of the column has the same length
+    // Pad = empty string before
+    // First row is for identifiers
+    // First column for accelerator ids
+    // Separators between the first columns and the rest
+
     unsigned int propertyCount = identifiers.size();
 
     std::stringstream ss;
 
     // This size is the padding we need to add the porpety-name column
-    unsigned int maxPropertyLengthWithPadding = std::max_element(
-                                                    identifiers.begin(),
-                                                    identifiers.end(),
-                                                    [](const std::string &lhs, const std::string &rhs)
-                                                    { return lhs.size() < rhs.size(); })
-                                                    ->size() +
-                                                1;
+    unsigned int maxPropertyLengthWithPadding
+      = std::max_element(
+          identifiers.begin(),
+          identifiers.end(),
+          [](const std::string& lhs, const std::string& rhs) { return lhs.size() < rhs.size(); }
+        )->size()
+        + 1;
 
     // Get the string entry of a columng with the highest length
     std::vector<unsigned int> columnMaxStringSizes(identifiers.size(), 0);
-    for (unsigned int row = 0; row < identifiers.size(); row++)
-    {
+    for (unsigned int row = 0; row < identifiers.size(); row++) {
       std::vector<unsigned int> col_sizes;
-      for (unsigned int col = 0; col < numberOfDevices; col++)
-      {
+      for (unsigned int col = 0; col < numberOfDevices; col++) {
         col_sizes.push_back(propertyMatrix[row][col].size());
       }
 
       // Device property is also a part of the column
       col_sizes.push_back(identifiers[row].size());
 
-      unsigned int maxLength = *std::max_element(col_sizes.begin(), col_sizes.end());
+      unsigned int maxLength    = *std::max_element(col_sizes.begin(), col_sizes.end());
       columnMaxStringSizes[row] = maxLength;
     }
 
     unsigned int maxIdLength = std::max(std::to_string(numberOfDevices).size(), std::string("DeviceId").size());
 
     // Iterate the matrix and write per row, also while accessing the padding we need to add
-    std::string propIdPad(maxIdLength + 1 - std::string("DeviceId").size(), ' ');
+    std::string  propIdPad(maxIdLength + 1 - std::string("DeviceId").size(), ' ');
     unsigned int lineLength = 0;
 
     ss << propIdPad << "DeviceId |";
     lineLength += propIdPad.size() + 10;
-    for (unsigned int x = 0; x < identifiers.size(); x++)
-    {
+    for (unsigned int x = 0; x < identifiers.size(); x++) {
       std::string propPadding(columnMaxStringSizes[x] + 1 - identifiers[x].size(), ' ');
       ss << propPadding << identifiers[x] << " |";
       lineLength += propPadding.size() + identifiers[x].size() + 2;
@@ -127,11 +135,11 @@ namespace tarch::accelerator
     std::string dash(lineLength, '-');
     ss << dash << "\n";
 
-    for (unsigned int x = 0; x < numberOfDevices; x++)
-    {
+    for (unsigned int x = 0; x < numberOfDevices; x++) {
 #if defined(GPUOffloadingCPP)
       std::string idPad(maxIdLength, ' ');
-      ss << idPad << "X" << " |";
+      ss << idPad << "X"
+         << " |";
 #else
       std::string idPad(maxIdLength + 1 - std::to_string(x).size(), ' ');
       ss << idPad << x << " |";
@@ -139,7 +147,7 @@ namespace tarch::accelerator
       for (unsigned int y = 0; y < identifiers.size(); y++) //(const auto& row : propertyMatrix)
       {
         unsigned int paddingLength = columnMaxStringSizes[y] + 1 - propertyMatrix[y][x].size();
-        std::string s(paddingLength, ' ');
+        std::string  s(paddingLength, ' ');
         // ss << s << el << "  ";
         ss << s << propertyMatrix[y][x] << " |";
       }
@@ -149,8 +157,8 @@ namespace tarch::accelerator
     return ss.str();
   }
 
-  void offloadCapabilityTest()
-  {
+  void offloadCapabilityTest() {
+    // Try to run the kernels in the configured backend
     std::vector<bool> testResults;
 #if defined(GPUOffloadingCUDA)
     testResults = tarch::accelerator::cuda::testKernelLaunch();
@@ -160,62 +168,57 @@ namespace tarch::accelerator
     testResults = tarch::accelerator::omp::testKernelLaunch();
 #elif defined(GPUOffloadingCPP)
     testResults = tarch::accelerator::cpp::testKernelLaunch();
-    if (testResults.size() == 0)
-    {
-      logInfo("offloadCapabiltiyTest()", "Iso C++ GPU-Parallelism with NVHPC compilers can't check kernel launch tests currently");
+    if (testResults.size() == 0) {
+      logInfo(
+        "offloadCapabiltiyTest()",
+        "Iso C++ GPU-Parallelism with NVHPC compilers can't check kernel launch tests currently"
+      );
       return;
+    } else if (testResults.size() == 1 && !testResults[0]) {
+      throw std::runtime_error(
+        "None of the found GPUs could successfully launch GPU Kernels (Check for wrong compile configuration)"
+      );
     }
-    else if (testResults.size() == 1 && !testResults[0])
-    {
-      throw std::runtime_error("None of the found GPUs could successfully launch GPU Kernels (Check for wrong compile configuration)");
-    }
-#else
-    // Print noinformation since we do not have an accelerator
-    logInfo("offloadCapabiltiyTest()", "No GPU Accelerator Backend is enabled. The code will run on CPUs.");
-    return;
 #endif
 
+#if defined(GPUOffloadingCUDA) or defined(GPUOffloadingSYCL) or defined(GPUOffloadingOMP) or defined(GPUOffloadingCPP)
     unsigned int offloadCapableGPUCount = 0;
-    std::string failMessage;
-    for (unsigned int i = 0; i < testResults.size(); i++)
-    {
-      if (!testResults[i])
-      {
+    std::string  failMessage;
+
+    // If one of the GPUs fail to launch but we have multiple, then we inform which ones
+    // failed by adding them to the message in the first loop.
+    // If all of the available GPUs fail, we throw a runtime error that everything failed
+    for (unsigned int i = 0; i < testResults.size(); i++) {
+      if (!testResults[i]) {
         // Using std::format would be nice but 10.06.2023 CUDA does support gcc upto 12, no std::format supprot
         failMessage += "GPU Device " + std::to_string(i) + " could not successfully launch a GPU kernel\n";
-      }
-      else
-      {
+      } else {
         offloadCapableGPUCount += 1;
       }
     }
 
-    if (testResults.size() != 0)
-    {
-      if (offloadCapableGPUCount < testResults.size())
-      {
-        if (offloadCapableGPUCount == 0)
-        {
+    if (testResults.size() != 0) {
+      if (offloadCapableGPUCount < testResults.size()) {
+        if (offloadCapableGPUCount == 0) {
           throw std::runtime_error("None of the found GPUs could successfully launch GPU Kernels");
-        }
-        else
-        {
+        } else {
           throw std::runtime_error(failMessage);
         }
-      }
-      else
-      {
+      } else {
         logInfo("offloadCapabiltiyTest()", "Kernel launch test successful");
       }
+    } else {
+      throw std::runtime_error(
+        "Peano 4 was configured to run on accelerators, but no offloading capable GPU were found."
+      );
     }
-    else
-    {
-      throw std::runtime_error("Peano 4 was configured to run on accelerators, but no offloading capable GPU were found.");
-    }
+#else
+    // Print noinformation since we do not have an accelerator
+    logInfo("offloadCapabiltiyTest()", "No GPU Accelerator Backend is enabled. The code will run on CPUs.");
+#endif
   }
 
-  void runBenchmarks(std::vector<std::vector<std::string>> &propertyMatrix)
-  {
+  void runBenchmarks(std::vector<std::vector<std::string>>& propertyMatrix) {
     std::vector<BenchmarkResultInNanoSeconds> results;
 #if defined(GPUOffloadingCUDA)
     results = tarch::accelerator::cuda::runBenchmarks();
@@ -224,7 +227,7 @@ namespace tarch::accelerator
     results = tarch::accelerator::sycl::runBenchmarks();
     parseBenchmarkResults(results, propertyMatrix);
 #elif defined(GPUOffloadingOMP)
-    results = tarch::accelerator::omp::runBenchmarks();
+    results     = tarch::accelerator::omp::runBenchmarks();
     parseBenchmarkResults(results, propertyMatrix);
 #elif defined(GPUOffloadingCPP)
     results = tarch::accelerator::cpp::runBenchmarks();
@@ -233,23 +236,27 @@ namespace tarch::accelerator
   }
 
   void parseBenchmarkResults(
-      std::vector<BenchmarkResultInNanoSeconds> &benchmarkResults,
-      std::vector<std::vector<std::string>> &benchmarkResultsStringRepresentations)
-  {
+    std::vector<BenchmarkResultInNanoSeconds>& benchmarkResults,
+    std::vector<std::vector<std::string>>&     benchmarkResultsStringRepresentations
+  ) {
 
     // A * 1e-9 / (B * 1e-9) = A / B
     // Therefore Byte / NanoSecond = GB / Second
-    for (uint i = 0; i < benchmarkResults.size(); i++)
-    {
+    for (uint i = 0; i < benchmarkResults.size(); i++) {
+      // Parse the results, bring nanoseconds to something humans would like more and add the units
       std::stringstream ss;
-      auto &benchmarkResult = benchmarkResults[i];
-      double cpuToGpu = benchmarkResult.allocatedDataSize * benchmarkResult.repeats * (1.0 / static_cast<double>(benchmarkResult.CPUtoGPUCopy));
-      double gpuToCpu = benchmarkResult.allocatedDataSize * benchmarkResult.repeats * (1.0 / static_cast<double>(benchmarkResult.GPUtoCPUCopy));
+      auto&             benchmarkResult = benchmarkResults[i];
+      double            cpuToGpu        = benchmarkResult.allocatedDataSize * benchmarkResult.repeats
+                        * (1.0 / static_cast<double>(benchmarkResult.CPUtoGPUCopy));
+      double gpuToCpu = benchmarkResult.allocatedDataSize * benchmarkResult.repeats
+                        * (1.0 / static_cast<double>(benchmarkResult.GPUtoCPUCopy));
       double averageStream = (cpuToGpu + gpuToCpu) / 2.0;
       ss << averageStream << " Gb/s";
       benchmarkResultsStringRepresentations[tarch::accelerator::getPropertyOffset("Streaming Bandwidth")][i] = ss.str();
       ss.str(std::string());
-      ss << benchmarkResult.allocatedDataSize * benchmarkResult.repeats * (1.0 / static_cast<double>(benchmarkResult.GPUtoGPUCopy)) << " Gb/s";
+      ss << benchmarkResult.allocatedDataSize * benchmarkResult.repeats
+              * (1.0 / static_cast<double>(benchmarkResult.GPUtoGPUCopy))
+         << " Gb/s";
       benchmarkResultsStringRepresentations[tarch::accelerator::getPropertyOffset("GPU-GPU Copy")][i] = ss.str();
       ss.str(std::string());
     }

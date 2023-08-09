@@ -126,9 +126,6 @@ int peano4::initParallelEnvironment([[maybe_unused]] int* argc, [[maybe_unused]]
 
   writeCopyrightMessage();
 
-  tarch::accelerator::offloadCapabilityTest();
-  tarch::accelerator::printDeviceInformation();
-
   return result;
 }
 
@@ -160,4 +157,10 @@ void peano4::shutdownSingletons() {
   peano4::parallel::SpacetreeSet::getInstance().shutdown();
   tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::getInstance().shutdown();
   tarch::services::ServiceRepository::getInstance().shutdown();
+}
+
+
+void peano4::runTestsAndBenchmarks() {
+  tarch::accelerator::offloadCapabilityTest();
+  tarch::accelerator::printDeviceInformation();
 }

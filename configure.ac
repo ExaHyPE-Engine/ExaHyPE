@@ -266,12 +266,10 @@ AC_ARG_WITH(petsc,
   [ AC_MSG_CHECKING(for petsc)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);                              petsc=false ;;
-      *)     AC_MSG_RESULT(yes);                             petsc=${withval}  ;;
+      *)     AC_MSG_RESULT(yes);                             petsc=true  ;;
     esac ],
   [ AC_MSG_CHECKING(for petsc); AC_MSG_RESULT(no); petsc=false ])
-
-AM_CONDITIONAL([UsePETSc],    [test "$petsc" != petsc])
-
+AM_CONDITIONAL([UsePETSc], [test "x$petsc" = xtrue])
 
 #
 # ===============================================================
@@ -527,7 +525,7 @@ fi
 #
 # A toolbox is an optional extension of Peano (package). As there
 # are dependencies between the toolboxes, this part only analyses
-# whether a toolbox should be used or not. It does not react to 
+# whether a toolbox should be used or not. It does not react to
 # this choice.
 # ===============================================================
 #
