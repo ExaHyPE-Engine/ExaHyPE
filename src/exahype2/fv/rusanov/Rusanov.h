@@ -6,7 +6,7 @@
 #include "LoopBody.h"
 
 #include "exahype2/CellData.h"
-#include "exahype2/VolumeIndex.h""
+#include "exahype2/VolumeIndex.h"
 
 #if defined(GPUOffloadingOMP) or defined(SharedOMP)
 #include "exahype2/fv/rusanov/omp/Rusanov.h"

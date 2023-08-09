@@ -14,7 +14,7 @@ patch_size                = 3
 auxiliary_variables       = 0
 end_time                  = 3.0
 plot_interval             = 0.05 # Set to 0 to disable I/O
-mode                      = peano4.output.CompileMode.Release # Switch here between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'
+mode                      = peano4.output.CompileMode.Debug # Switch here between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'
 use_gpu                   = False # Requires a GPU enabled build
 
 if dimensions == 2:
@@ -39,7 +39,7 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   name                    = "NavierStokesSolver",
   patch_size              = patch_size,
   unknowns                = unknowns,
-  auxiliary_variables     = 0,
+  auxiliary_variables     = dimensions**2,
   max_volume_h            = cell_size,
   min_volume_h            = cell_size * 3.0**(-amr_levels),
   time_step_relaxation    = 0.5,
@@ -60,7 +60,8 @@ my_solver.set_implementation(
 )
 
 my_solver._preprocess_reconstructed_patch = """
-  extrapolateHalo(oldQWithHalo);
+    NavierStokesSolver::extrapolateHalo(oldQWithHalo);
+    NavierStokesSolver::calculateDerivatives(oldQWithHalo);
 """
 
 my_solver.add_solver_constants("static constexpr double Gamma = {};".format(gamma))

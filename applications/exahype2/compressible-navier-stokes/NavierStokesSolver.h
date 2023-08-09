@@ -4,9 +4,9 @@
 
 #include "AbstractNavierStokesSolver.h"
 #include "exahype2/fv/PatchAccess.h"
+#include "peano4/utils/Loop.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/logging/Log.h"
-#include "peano4/utils/Loop.h"
 
 namespace applications::exahype2::CompressibleNavierStokes {
   enum Coordinates {
@@ -25,6 +25,22 @@ namespace applications::exahype2::CompressibleNavierStokes {
     w,
 #endif
     e
+  };
+
+  enum Derivatives {
+    dudx = 0,
+    dudy,
+#if Dimensions == 3
+    dudz,
+#endif
+    dvdx,
+    dvdy,
+#if Dimensions == 3
+    dvdz,
+    dwdx,
+    dwdy,
+    dwdz,
+#endif
   };
 
   class NavierStokesSolver;
@@ -211,163 +227,105 @@ public:
     assertion(!std::isnan(Q[u]));
     assertion(!std::isnan(Q[v]));
     assertion(!std::isnan(Q[e]));
+    assertion(!std::isnan(Q[dudx]));
+    assertion(!std::isnan(Q[dudy]));
+    assertion(!std::isnan(Q[dvdx]));
+    assertion(!std::isnan(Q[dvdy]));
 #if Dimensions == 3
     assertion(!std::isnan(Q[w]));
+    assertion(!std::isnan(Q[dudz]));
+    assertion(!std::isnan(Q[dvdz]));
+    assertion(!std::isnan(Q[dwdx]));
+    assertion(!std::isnan(Q[dwdy]));
+    assertion(!std::isnan(Q[dwdz]));
 #endif
 #endif
 
-    ::exahype2::fv::PatchAccess access(
-      Q,                                    // make it initially point to input
-      NumberOfFiniteVolumesPerAxisPerPatch, // defined in superclass
-      1,                                    // halo size, which you know as user
-      NumberOfUnknowns,                     // defined in superclass
-      NumberOfAuxiliaryVariables            // defined in superclass
-    );
+    double derivative[NumberOfAuxiliaryVariables];
 
     if (normal == x) {
-      // Centre (Self) values
-      const double u_c = Q[u];
-      const double v_c = Q[v];
+      derivative[dudx] = deltaQ[u];
+      derivative[dvdx] = deltaQ[v];
+      derivative[dudy] = Q[NumberOfUnknowns + dudy] - 0.5 * deltaQ[NumberOfUnknowns + dudy];
+      derivative[dvdy] = Q[NumberOfUnknowns + dvdy] - 0.5 * deltaQ[NumberOfUnknowns + dvdy];
 
-      // Top neighbour values
-      const double u_t = access.right(y, u);
-      const double v_t = access.right(y, v);
-
-      // Deriavtives
-      const double u_y = u_t - u_c;
-      const double v_y = v_t - v_c;
-
-      const double u_x = deltaQ[u];
-      const double v_x = deltaQ[v];
-
-#if Dimensions == 3
-      const double w_c = Q[w];
-      const double w_t = access.right(y, w);
-
-      // Front neighbour values
-      const double u_f = access.right(z, u);
-      const double w_f = access.right(z, w);
-
-      // Deriavtives
-      const double u_z = u_f - u_c;
-      const double w_z = w_f - w_c;
-
-      const double w_x = deltaQ[w];
+#if Dimension == 3
+      derivative[dwdx] = deltaQ[w];
+      derivative[dudz] = Q[NumberOfUnknowns + dudz] - 0.5 * deltaQ[NumberOfUnknowns + dudz];
+      derivative[dwdz] = Q[NumberOfUnknowns + dwdz] - 0.5 * deltaQ[NumberOfUnknowns + dwdz];
 #endif
+
       // -mu{2(du/dx) - 2/3 (du/dx + dv/dy)}
-      BTimesDeltaQ[u] = -Viscosity * (2.0 * u_x - 2.0 / 3.0 * (u_x + v_y
+      BTimesDeltaQ[u] = -Viscosity * (2.0 * derivative[dudx] - 2.0 / 3.0 * (derivative[dudx] + derivative[dvdy]
 #if Dimension == 3
-      +w_z
+      +derivative[dwdz]
 #endif
       )) / Q[rho];
 
       // -mu{dv/dx + du/dy}
-      BTimesDeltaQ[v] = -Viscosity * (v_x + u_y) / Q[rho];
+      BTimesDeltaQ[v] = -Viscosity * (derivative[dvdx] + derivative[dudy]) / Q[rho];
 
 #if Dimension == 3
-      BTimesDeltaQ[w] = -Viscosity * (u_z + w_x) / Q[rho];
+      BTimesDeltaQ[w] = -Viscosity * (derivative[dudz] + derivative[dwdx]) / Q[rho];
 #endif
-
-    } else
-
-#if Dimensions == 2
-    {
-#else
+    } else {
+#if Dimension == 3
       if (normal == y) {
-#endif
-      // Self values
-      const double u_c = Q[u];
-      const double v_c = Q[v];
-
-      // Right neighbour values
-      const double u_r = access.right(x, u);
-      const double v_r = access.right(x, v);
-
-      // Deriavtives
-      const double u_x = u_r - u_c;
-      const double v_x = v_r - v_c;
-
-      const double u_y = deltaQ[u];
-      const double v_y = deltaQ[v];
-
-#if Dimensions == 3
-      const double w_c = Q[w];
-      const double w_r = access.right(x, w);
-
-      // Front neighbour values
-      const double v_f = access.right(z, v);
-      const double w_f = access.right(z, w);
-
-      // Deriavtives
-      const double v_z = v_f - v_c;
-      const double w_z = w_f - w_c;
-
-      const double w_y = deltaQ[w];
+        derivative[dwdy] = deltaQ[w];
+        derivative[dvdz] = Q[NumberOfUnknowns + dvdz] - 0.5 * deltaQ[NumberOfUnknowns + dvdz];
+        derivative[dwdz] = Q[NumberOfUnknowns + dwdz] - 0.5 * deltaQ[NumberOfUnknowns + dwdz];
 #endif
 
-      // -mu{dv/dx + du/dy}
-      BTimesDeltaQ[u] = -Viscosity * (v_x + u_y) / Q[rho];
+        derivative[dudy] = deltaQ[u];
+        derivative[dvdy] = deltaQ[v];
+        derivative[dudx] = Q[NumberOfUnknowns + dudx] - 0.5 * deltaQ[NumberOfUnknowns + dudx];
+        derivative[dvdx] = Q[NumberOfUnknowns + dvdx] - 0.5 * deltaQ[NumberOfUnknowns + dvdx];
 
-      // -mu{2(dv/dy) - 2/3 (du/dx + dv/dy)}
-      BTimesDeltaQ[v] = -Viscosity * (2.0 * v_y- 2.0 / 3.0 * (u_x + v_y
+        // -mu{dv/dx + du/dy}
+        BTimesDeltaQ[u] = -Viscosity * (derivative[dvdx] + derivative[dudy]) / Q[rho];
+
+        // -mu{2(dv/dy) - 2/3 (du/dx + dv/dy)}
+        BTimesDeltaQ[v] = -Viscosity * (2.0 * derivative[dvdy] - 2.0 / 3.0 * (derivative[dudx] + derivative[dvdy]
 #if Dimension == 3
-      + w_z
+      +derivative[dwdz]
 #endif
       )) / Q[rho];
 #if Dimension == 3
-      BTimesDeltaQ[w] = -Viscosity * (v_z + w_y) / Q[rho];
-    }
-    else {
-      // Self values
-      const double u_c = Q[u];
-      const double v_c = Q[v];
-      const double w_c = Q[w];
+        BTimesDeltaQ[w] = -Viscosity * (derivative[dvdz] + derivative[dwdy]) / Q[rho];
+      } else {
 
-      // Right neighbour values
-      const double u_r = access.right(x, u);
-      const double v_r = access.right(x, v);
-      const double w_r = access.right(x, w);
+        derivative[dudz] = deltaQ[u];
+        derivative[dvdz] = deltaQ[v];
+        derivative[dwdz] = deltaQ[w];
+        derivative[dudx] = Q[NumberOfUnknowns + dudx] - 0.5 * deltaQ[NumberOfUnknowns + dudx];
+        derivative[dvdy] = Q[NumberOfUnknowns + dvdy] - 0.5 * deltaQ[NumberOfUnknowns + dvdy];
+        derivative[dudz] = Q[NumberOfUnknowns + dudz] - 0.5 * deltaQ[NumberOfUnknowns + dudz];
+        derivative[dwdy] = Q[NumberOfUnknowns + dwdy] - 0.5 * deltaQ[NumberOfUnknowns + dwdy];
+        derivative[dwdx] = Q[NumberOfUnknowns + dwdx] - 0.5 * deltaQ[NumberOfUnknowns + dwdx];
 
-      // Top neighbour values
-      const double u_t = access.right(y, u);
-      const double v_t = access.right(y, v);
-      const double w_t = access.right(y, w);
-
-      // Deriavtives
-      const double u_x = u_r - u_c;
-      const double w_x = w_r - w_c;
-
-      const double v_y = v_t - v_c;
-      const double w_y = w_t - w_c;
-
-      const double u_z = deltaQ[u];
-      const double v_z = deltaQ[v];
-      const double w_z = deltaQ[w];
-
-      BTimesDeltaQ[u] = -Viscosity * (u_z + w_x) / Q[rho];
-      BTimesDeltaQ[v] = -Viscosity * (v_z + w_y) / Q[rho];
-      BTimesDeltaQ[w] = -Viscosity * (2.0 * w_z - 2.0 / 3.0 * (u_x + v_y + w_z)) / Q[rho];
+        BTimesDeltaQ[u] = -Viscosity * (derivative[dudz] + derivative[dwdx]) / Q[rho];
+        BTimesDeltaQ[v] = -Viscosity * (derivative[dvdz] + derivative[dwdy]) / Q[rho];
+        BTimesDeltaQ[w] = -Viscosity
+                          * (2.0 * derivative[dwdz] - 2.0 / 3.0 * (derivative[dudx] + derivative[dvdy] + derivative[dwdz]))
+                          / Q[rho];
+      }
 #endif
     }
-
     BTimesDeltaQ[rho] = 0;
 #if Dimensions == 2
     BTimesDeltaQ[e] = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v]) / Q[rho];
 #else
-    BTimesDeltaQ[e] = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v] + Q[w] * BTimesDeltaQ[w]) / Q[rho];
+    BTimesDeltaQ[e]       = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v] + Q[w] * BTimesDeltaQ[w]) / Q[rho];
 #endif
   }
 
-  static void extrapolateHalo(double* __restrict__ oldQWithHalo ){
-    int patchSize = NumberOfFiniteVolumesPerAxisPerPatch;
-    int aux_var = NumberOfAuxiliaryVariables;
-    int real_var = NumberOfUnknowns;
-
-    #if Dimensions == 2
-    tarch::la::Vector<Dimensions, int> topLeftCell     = {0, patchSize + 1};
-    tarch::la::Vector<Dimensions, int> topRightCell    = {patchSize + 1, patchSize + 1};
+  static inline void extrapolateHalo(double* __restrict__ Q) {
+#if Dimensions == 2
+    tarch::la::Vector<Dimensions, int> topLeftCell  = {0, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+    tarch::la::Vector<Dimensions, int> topRightCell = {
+      NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1};
     tarch::la::Vector<Dimensions, int> bottomLeftCell  = {0, 0};
-    tarch::la::Vector<Dimensions, int> bottomRightCell = {patchSize + 1, 0};
+    tarch::la::Vector<Dimensions, int> bottomRightCell = {NumberOfFiniteVolumesPerAxisPerPatch + 1, 0};
 
     tarch::la::Vector<Dimensions, int> topLeftCellN1 = topLeftCell;
     topLeftCellN1(0)++;
@@ -389,200 +347,310 @@ public:
     tarch::la::Vector<Dimensions, int> bottomRightCellN2 = bottomRightCell;
     bottomRightCellN2(1)++;
 
-    const int topLeftCellSerialised     = peano4::utils::dLinearised(topLeftCell, patchSize + 2 * 1);
-    const int topRightCellSerialised    = peano4::utils::dLinearised(topRightCell, patchSize + 2 * 1);
-    const int bottomLeftCellSerialised  = peano4::utils::dLinearised(bottomLeftCell, patchSize + 2 * 1);
-    const int bottomRightCellSerialised = peano4::utils::dLinearised(bottomRightCell, patchSize + 2 * 1);
+    const int topLeftCellSerialised = peano4::utils::dLinearised(topLeftCell, NumberOfFiniteVolumesPerAxisPerPatch + 2);
+    const int topRightCellSerialised = peano4::utils::dLinearised(
+      topRightCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int topLeftCellN1Serialised = peano4::utils::dLinearised(topLeftCellN1, patchSize + 2 * 1);
-    const int topLeftCellN2Serialised = peano4::utils::dLinearised(topLeftCellN2, patchSize + 2 * 1);
+    const int bottomLeftCellSerialised = peano4::utils::dLinearised(
+      bottomLeftCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomRightCellSerialised = peano4::utils::dLinearised(
+      bottomRightCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int topRightCellN1Serialised = peano4::utils::dLinearised(topRightCellN1, patchSize + 2 * 1);
-    const int topRightCellN2Serialised = peano4::utils::dLinearised(topRightCellN2, patchSize + 2 * 1);
+    const int topLeftCellN1Serialised = peano4::utils::dLinearised(
+      topLeftCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int topLeftCellN2Serialised = peano4::utils::dLinearised(
+      topLeftCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int bottomLeftCellN1Serialised = peano4::utils::dLinearised(bottomLeftCellN1, patchSize + 2 * 1);
-    const int bottomLeftCellN2Serialised = peano4::utils::dLinearised(bottomLeftCellN2, patchSize + 2 * 1);
+    const int topRightCellN1Serialised = peano4::utils::dLinearised(
+      topRightCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int topRightCellN2Serialised = peano4::utils::dLinearised(
+      topRightCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int bottomRightCellN1Serialised = peano4::utils::dLinearised(bottomRightCellN1, patchSize + 2 * 1);
-    const int bottomRightCellN2Serialised = peano4::utils::dLinearised(bottomRightCellN2, patchSize + 2 * 1);
+    const int bottomLeftCellN1Serialised = peano4::utils::dLinearised(
+      bottomLeftCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomLeftCellN2Serialised = peano4::utils::dLinearised(
+      bottomLeftCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    for (int i = 0; i < real_var + aux_var; i++) {
+    const int bottomRightCellN1Serialised = peano4::utils::dLinearised(
+      bottomRightCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomRightCellN2Serialised = peano4::utils::dLinearised(
+      bottomRightCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-      oldQWithHalo[(topLeftCellSerialised) * (real_var + aux_var) + i]
+    for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
+
+      Q[(topLeftCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
         = 0.5
-          * (oldQWithHalo[(topLeftCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topLeftCellN2Serialised) * (real_var + aux_var) + i]);
-      oldQWithHalo[(topRightCellSerialised) * (real_var + aux_var) + i]
+          * (Q[(topLeftCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(topLeftCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]);
+      Q[(topRightCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
         = 0.5
-          * (oldQWithHalo[(topRightCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topRightCellN2Serialised) * (real_var + aux_var) + i]);
+          * (Q[(topRightCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(topRightCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]);
 
-      oldQWithHalo[(bottomLeftCellSerialised) * (real_var + aux_var) + i]
+      Q[(bottomLeftCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
         = 0.5
-          * (oldQWithHalo[(bottomLeftCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomLeftCellN2Serialised) * (real_var + aux_var) + i]);
+          * (Q[(bottomLeftCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(bottomLeftCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]);
 
-      oldQWithHalo[(bottomRightCellSerialised) * (real_var + aux_var) + i]
+      Q[(bottomRightCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
         = 0.5
-          * (oldQWithHalo[(bottomRightCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomRightCellN2Serialised) * (real_var + aux_var) + i]);
+          * (Q[(bottomRightCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(bottomRightCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]);
     }
 #else
     // Edges
-    for (int i = 1; i < patchSize + 1; i++) {
+    for (int i = 1; i < NumberOfFiniteVolumesPerAxisPerPatch + 1; i++) {
       tarch::la::Vector<Dimensions, int> backLeftCell   = {0, i, 0};
       tarch::la::Vector<Dimensions, int> backLeftCellN1 = {1, i, 0};
       tarch::la::Vector<Dimensions, int> backLeftCellN2 = {0, i, 1};
 
-      const int backLeftCellSerialised   = peano4::utils::dLinearised(backLeftCell, patchSize + 2 * 1);
-      const int backLeftCellN1Serialised = peano4::utils::dLinearised(backLeftCellN1, patchSize + 2 * 1);
-      const int backLeftCellN2Serialised = peano4::utils::dLinearised(backLeftCellN2, patchSize + 2 * 1);
+      const int backLeftCellSerialised = peano4::utils::dLinearised(
+        backLeftCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int backLeftCellN1Serialised = peano4::utils::dLinearised(
+        backLeftCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int backLeftCellN2Serialised = peano4::utils::dLinearised(
+        backLeftCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
 
-      tarch::la::Vector<Dimensions, int> backRightCell   = {patchSize + 1, i, 0};
-      tarch::la::Vector<Dimensions, int> backRightCellN1 = {patchSize, i, 0};
-      tarch::la::Vector<Dimensions, int> backRightCellN2 = {patchSize + 1, i, 1};
+      tarch::la::Vector<Dimensions, int> backRightCell   = {NumberOfFiniteVolumesPerAxisPerPatch + 1, i, 0};
+      tarch::la::Vector<Dimensions, int> backRightCellN1 = {NumberOfFiniteVolumesPerAxisPerPatch, i, 0};
+      tarch::la::Vector<Dimensions, int> backRightCellN2 = {NumberOfFiniteVolumesPerAxisPerPatch + 1, i, 1};
 
-      const int backRightCellSerialised   = peano4::utils::dLinearised(backRightCell, patchSize + 2 * 1);
-      const int backRightCellN1Serialised = peano4::utils::dLinearised(backRightCellN1, patchSize + 2 * 1);
-      const int backRightCellN2Serialised = peano4::utils::dLinearised(backRightCellN2, patchSize + 2 * 1);
+      const int backRightCellSerialised = peano4::utils::dLinearised(
+        backRightCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int backRightCellN1Serialised = peano4::utils::dLinearised(
+        backRightCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int backRightCellN2Serialised = peano4::utils::dLinearised(
+        backRightCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
 
-      tarch::la::Vector<Dimensions, int> backTopCell   = {i, patchSize + 1, 0};
-      tarch::la::Vector<Dimensions, int> backTopCellN1 = {i, patchSize + 1, 1};
-      tarch::la::Vector<Dimensions, int> backTopCellN2 = {i, patchSize, 0};
+      tarch::la::Vector<Dimensions, int> backTopCell   = {i, NumberOfFiniteVolumesPerAxisPerPatch + 1, 0};
+      tarch::la::Vector<Dimensions, int> backTopCellN1 = {i, NumberOfFiniteVolumesPerAxisPerPatch + 1, 1};
+      tarch::la::Vector<Dimensions, int> backTopCellN2 = {i, NumberOfFiniteVolumesPerAxisPerPatch, 0};
 
-      const int backTopCellSerialised   = peano4::utils::dLinearised(backTopCell, patchSize + 2 * 1);
-      const int backTopCellN1Serialised = peano4::utils::dLinearised(backTopCellN1, patchSize + 2 * 1);
-      const int backTopCellN2Serialised = peano4::utils::dLinearised(backTopCellN2, patchSize + 2 * 1);
+      const int backTopCellSerialised = peano4::utils::dLinearised(
+        backTopCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int backTopCellN1Serialised = peano4::utils::dLinearised(
+        backTopCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int backTopCellN2Serialised = peano4::utils::dLinearised(
+        backTopCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
 
       tarch::la::Vector<Dimensions, int> backBottomCell   = {i, 0, 0};
       tarch::la::Vector<Dimensions, int> backBottomCellN1 = {i, 0, 1};
       tarch::la::Vector<Dimensions, int> backBottomCellN2 = {i, 1, 0};
 
-      const int backBottomCellSerialised   = peano4::utils::dLinearised(backBottomCell, patchSize + 2 * 1);
-      const int backBottomCellN1Serialised = peano4::utils::dLinearised(backBottomCellN1, patchSize + 2 * 1);
-      const int backBottomCellN2Serialised = peano4::utils::dLinearised(backBottomCellN2, patchSize + 2 * 1);
+      const int backBottomCellSerialised = peano4::utils::dLinearised(
+        backBottomCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int backBottomCellN1Serialised = peano4::utils::dLinearised(
+        backBottomCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int backBottomCellN2Serialised = peano4::utils::dLinearised(
+        backBottomCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
 
-      tarch::la::Vector<Dimensions, int> frontLeftCell   = {0, i, patchSize + 1};
-      tarch::la::Vector<Dimensions, int> frontLeftCellN1 = {1, i, patchSize + 1};
-      tarch::la::Vector<Dimensions, int> frontLeftCellN2 = {0, i, patchSize};
+      tarch::la::Vector<Dimensions, int> frontLeftCell   = {0, i, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+      tarch::la::Vector<Dimensions, int> frontLeftCellN1 = {1, i, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+      tarch::la::Vector<Dimensions, int> frontLeftCellN2 = {0, i, NumberOfFiniteVolumesPerAxisPerPatch};
 
-      const int frontLeftCellSerialised   = peano4::utils::dLinearised(frontLeftCell, patchSize + 2 * 1);
-      const int frontLeftCellN1Serialised = peano4::utils::dLinearised(frontLeftCellN1, patchSize + 2 * 1);
-      const int frontLeftCellN2Serialised = peano4::utils::dLinearised(frontLeftCellN2, patchSize + 2 * 1);
+      const int frontLeftCellSerialised = peano4::utils::dLinearised(
+        frontLeftCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int frontLeftCellN1Serialised = peano4::utils::dLinearised(
+        frontLeftCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int frontLeftCellN2Serialised = peano4::utils::dLinearised(
+        frontLeftCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
 
-      tarch::la::Vector<Dimensions, int> frontRightCell   = {patchSize + 1, i, patchSize + 1};
-      tarch::la::Vector<Dimensions, int> frontRightCellN1 = {patchSize, i, patchSize + 1};
-      tarch::la::Vector<Dimensions, int> frontRightCellN2 = {patchSize + 1, i, patchSize};
+      tarch::la::Vector<Dimensions, int> frontRightCell = {
+        NumberOfFiniteVolumesPerAxisPerPatch + 1, i, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+      tarch::la::Vector<Dimensions, int> frontRightCellN1 = {
+        NumberOfFiniteVolumesPerAxisPerPatch, i, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+      tarch::la::Vector<Dimensions, int> frontRightCellN2 = {
+        NumberOfFiniteVolumesPerAxisPerPatch + 1, i, NumberOfFiniteVolumesPerAxisPerPatch};
 
-      const int frontRightCellSerialised   = peano4::utils::dLinearised(frontRightCell, patchSize + 2 * 1);
-      const int frontRightCellN1Serialised = peano4::utils::dLinearised(frontRightCellN1, patchSize + 2 * 1);
-      const int frontRightCellN2Serialised = peano4::utils::dLinearised(frontRightCellN2, patchSize + 2 * 1);
+      const int frontRightCellSerialised = peano4::utils::dLinearised(
+        frontRightCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int frontRightCellN1Serialised = peano4::utils::dLinearised(
+        frontRightCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int frontRightCellN2Serialised = peano4::utils::dLinearised(
+        frontRightCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
 
-      tarch::la::Vector<Dimensions, int> frontTopCell   = {i, patchSize + 1, patchSize + 1};
-      tarch::la::Vector<Dimensions, int> frontTopCellN1 = {i, patchSize + 1, patchSize};
-      tarch::la::Vector<Dimensions, int> frontTopCellN2 = {i, patchSize, patchSize + 1};
+      tarch::la::Vector<Dimensions, int> frontTopCell = {
+        i, NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+      tarch::la::Vector<Dimensions, int> frontTopCellN1 = {
+        i, NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch};
+      tarch::la::Vector<Dimensions, int> frontTopCellN2 = {
+        i, NumberOfFiniteVolumesPerAxisPerPatch, NumberOfFiniteVolumesPerAxisPerPatch + 1};
 
-      const int frontTopCellSerialised   = peano4::utils::dLinearised(frontTopCell, patchSize + 2 * 1);
-      const int frontTopCellN1Serialised = peano4::utils::dLinearised(frontTopCellN1, patchSize + 2 * 1);
-      const int frontTopCellN2Serialised = peano4::utils::dLinearised(frontTopCellN2, patchSize + 2 * 1);
+      const int frontTopCellSerialised = peano4::utils::dLinearised(
+        frontTopCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int frontTopCellN1Serialised = peano4::utils::dLinearised(
+        frontTopCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int frontTopCellN2Serialised = peano4::utils::dLinearised(
+        frontTopCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
 
-      tarch::la::Vector<Dimensions, int> frontBottomCell   = {i, 0, patchSize + 1};
-      tarch::la::Vector<Dimensions, int> frontBottomCellN1 = {i, 0, patchSize};
-      tarch::la::Vector<Dimensions, int> frontBottomCellN2 = {i, 1, patchSize + 1};
+      tarch::la::Vector<Dimensions, int> frontBottomCell   = {i, 0, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+      tarch::la::Vector<Dimensions, int> frontBottomCellN1 = {i, 0, NumberOfFiniteVolumesPerAxisPerPatch};
+      tarch::la::Vector<Dimensions, int> frontBottomCellN2 = {i, 1, NumberOfFiniteVolumesPerAxisPerPatch + 1};
 
-      const int frontBottomCellSerialised   = peano4::utils::dLinearised(frontBottomCell, patchSize + 2 * 1);
-      const int frontBottomCellN1Serialised = peano4::utils::dLinearised(frontBottomCellN1, patchSize + 2 * 1);
-      const int frontBottomCellN2Serialised = peano4::utils::dLinearised(frontBottomCellN2, patchSize + 2 * 1);
+      const int frontBottomCellSerialised = peano4::utils::dLinearised(
+        frontBottomCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int frontBottomCellN1Serialised = peano4::utils::dLinearised(
+        frontBottomCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int frontBottomCellN2Serialised = peano4::utils::dLinearised(
+        frontBottomCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
 
       tarch::la::Vector<Dimensions, int> bottomLeftCell   = {0, 0, i};
       tarch::la::Vector<Dimensions, int> bottomLeftCellN1 = {1, 0, i};
       tarch::la::Vector<Dimensions, int> bottomLeftCellN2 = {0, 1, i};
 
-      const int bottomLeftCellSerialised   = peano4::utils::dLinearised(bottomLeftCell, patchSize + 2 * 1);
-      const int bottomLeftCellN1Serialised = peano4::utils::dLinearised(bottomLeftCellN1, patchSize + 2 * 1);
-      const int bottomLeftCellN2Serialised = peano4::utils::dLinearised(bottomLeftCellN2, patchSize + 2 * 1);
+      const int bottomLeftCellSerialised = peano4::utils::dLinearised(
+        bottomLeftCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int bottomLeftCellN1Serialised = peano4::utils::dLinearised(
+        bottomLeftCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int bottomLeftCellN2Serialised = peano4::utils::dLinearised(
+        bottomLeftCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
 
-      tarch::la::Vector<Dimensions, int> bottomRightCell   = {patchSize + 1, 0, i};
-      tarch::la::Vector<Dimensions, int> bottomRightCellN1 = {patchSize, 0, i};
-      tarch::la::Vector<Dimensions, int> bottomRightCellN2 = {patchSize + 1, 1, i};
+      tarch::la::Vector<Dimensions, int> bottomRightCell   = {NumberOfFiniteVolumesPerAxisPerPatch + 1, 0, i};
+      tarch::la::Vector<Dimensions, int> bottomRightCellN1 = {NumberOfFiniteVolumesPerAxisPerPatch, 0, i};
+      tarch::la::Vector<Dimensions, int> bottomRightCellN2 = {NumberOfFiniteVolumesPerAxisPerPatch + 1, 1, i};
 
-      const int bottomRightCellSerialised   = peano4::utils::dLinearised(bottomRightCell, patchSize + 2 * 1);
-      const int bottomRightCellN1Serialised = peano4::utils::dLinearised(bottomRightCellN1, patchSize + 2 * 1);
-      const int bottomRightCellN2Serialised = peano4::utils::dLinearised(bottomRightCellN2, patchSize + 2 * 1);
+      const int bottomRightCellSerialised = peano4::utils::dLinearised(
+        bottomRightCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int bottomRightCellN1Serialised = peano4::utils::dLinearised(
+        bottomRightCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int bottomRightCellN2Serialised = peano4::utils::dLinearised(
+        bottomRightCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
 
-      tarch::la::Vector<Dimensions, int> topLeftCell   = {0, patchSize + 1, i};
-      tarch::la::Vector<Dimensions, int> topLeftCellN1 = {1, patchSize + 1, i};
-      tarch::la::Vector<Dimensions, int> topLeftCellN2 = {0, patchSize, i};
+      tarch::la::Vector<Dimensions, int> topLeftCell   = {0, NumberOfFiniteVolumesPerAxisPerPatch + 1, i};
+      tarch::la::Vector<Dimensions, int> topLeftCellN1 = {1, NumberOfFiniteVolumesPerAxisPerPatch + 1, i};
+      tarch::la::Vector<Dimensions, int> topLeftCellN2 = {0, NumberOfFiniteVolumesPerAxisPerPatch, i};
 
-      const int topLeftCellSerialised   = peano4::utils::dLinearised(topLeftCell, patchSize + 2 * 1);
-      const int topLeftCellN1Serialised = peano4::utils::dLinearised(topLeftCellN1, patchSize + 2 * 1);
-      const int topLeftCellN2Serialised = peano4::utils::dLinearised(topLeftCellN2, patchSize + 2 * 1);
+      const int topLeftCellSerialised = peano4::utils::dLinearised(
+        topLeftCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int topLeftCellN1Serialised = peano4::utils::dLinearised(
+        topLeftCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int topLeftCellN2Serialised = peano4::utils::dLinearised(
+        topLeftCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
 
-      tarch::la::Vector<Dimensions, int> topRightCell   = {patchSize + 1, patchSize + 1, i};
-      tarch::la::Vector<Dimensions, int> topRightCellN1 = {patchSize, patchSize + 1, i};
-      tarch::la::Vector<Dimensions, int> topRightCellN2 = {patchSize + 1, patchSize, i};
+      tarch::la::Vector<Dimensions, int> topRightCell = {
+        NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1, i};
+      tarch::la::Vector<Dimensions, int> topRightCellN1 = {
+        NumberOfFiniteVolumesPerAxisPerPatch, NumberOfFiniteVolumesPerAxisPerPatch + 1, i};
+      tarch::la::Vector<Dimensions, int> topRightCellN2 = {
+        NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch, i};
 
-      const int topRightCellSerialised   = peano4::utils::dLinearised(topRightCell, patchSize + 2 * 1);
-      const int topRightCellN1Serialised = peano4::utils::dLinearised(topRightCellN1, patchSize + 2 * 1);
-      const int topRightCellN2Serialised = peano4::utils::dLinearised(topRightCellN2, patchSize + 2 * 1);
+      const int topRightCellSerialised = peano4::utils::dLinearised(
+        topRightCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int topRightCellN1Serialised = peano4::utils::dLinearised(
+        topRightCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
+      const int topRightCellN2Serialised = peano4::utils::dLinearised(
+        topRightCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+      );
 
-      for (int j = 0; j < aux_var + real_var; j++) {
-        oldQWithHalo[(backLeftCellSerialised) * (real_var + aux_var) + j]
+      for (int j = 0; j < NumberOfAuxiliaryVariables + NumberOfUnknowns; j++) {
+        Q[(backLeftCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]
           = 0.5
-            * (oldQWithHalo[(backLeftCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(backLeftCellN2Serialised) * (real_var + aux_var) + j]);
+            * (Q[(backLeftCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j] + Q[(backLeftCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]);
 
-        oldQWithHalo[(backRightCellSerialised) * (real_var + aux_var) + j]
+        Q[(backRightCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]
           = 0.5
-            * (oldQWithHalo[(backRightCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(backRightCellN2Serialised) * (real_var + aux_var) + j]);
+            * (Q[(backRightCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j] + Q[(backRightCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]);
 
-        oldQWithHalo[(backTopCellSerialised) * (real_var + aux_var) + j]
+        Q[(backTopCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]
           = 0.5
-            * (oldQWithHalo[(backTopCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(backTopCellN2Serialised) * (real_var + aux_var) + j]);
+            * (Q[(backTopCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j] + Q[(backTopCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]);
 
-        oldQWithHalo[(backBottomCellSerialised) * (real_var + aux_var) + j]
+        Q[(backBottomCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]
           = 0.5
-            * (oldQWithHalo[(backBottomCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(backBottomCellN2Serialised) * (real_var + aux_var) + j]);
+            * (Q[(backBottomCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j] + Q[(backBottomCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]);
 
-        oldQWithHalo[(frontLeftCellSerialised) * (real_var + aux_var) + j]
+        Q[(frontLeftCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]
           = 0.5
-            * (oldQWithHalo[(frontLeftCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(frontLeftCellN2Serialised) * (real_var + aux_var) + j]);
+            * (Q[(frontLeftCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j] + Q[(frontLeftCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]);
 
-        oldQWithHalo[(frontRightCellSerialised) * (real_var + aux_var) + j]
+        Q[(frontRightCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]
           = 0.5
-            * (oldQWithHalo[(frontRightCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(frontRightCellN2Serialised) * (real_var + aux_var) + j]);
+            * (Q[(frontRightCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j] + Q[(frontRightCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]);
 
-        oldQWithHalo[(frontTopCellSerialised) * (real_var + aux_var) + j]
+        Q[(frontTopCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]
           = 0.5
-            * (oldQWithHalo[(frontTopCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(frontTopCellN2Serialised) * (real_var + aux_var) + j]);
+            * (Q[(frontTopCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j] + Q[(frontTopCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]);
 
-        oldQWithHalo[(frontBottomCellSerialised) * (real_var + aux_var) + j]
+        Q[(frontBottomCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]
           = 0.5
-            * (oldQWithHalo[(frontBottomCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(frontBottomCellN2Serialised) * (real_var + aux_var) + j]);
+            * (Q[(frontBottomCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j] + Q[(frontBottomCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]);
 
-        oldQWithHalo[(bottomLeftCellSerialised) * (real_var + aux_var) + j]
+        Q[(bottomLeftCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]
           = 0.5
-            * (oldQWithHalo[(bottomLeftCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(bottomLeftCellN2Serialised) * (real_var + aux_var) + j]);
+            * (Q[(bottomLeftCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j] + Q[(bottomLeftCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]);
 
-        oldQWithHalo[(bottomRightCellSerialised) * (real_var + aux_var) + j]
+        Q[(bottomRightCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]
           = 0.5
-            * (oldQWithHalo[(bottomRightCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(bottomRightCellN2Serialised) * (real_var + aux_var) + j]);
+            * (Q[(bottomRightCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j] + Q[(bottomRightCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]);
 
-        oldQWithHalo[(topLeftCellSerialised) * (real_var + aux_var) + j]
+        Q[(topLeftCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]
           = 0.5
-            * (oldQWithHalo[(topLeftCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(topLeftCellN2Serialised) * (real_var + aux_var) + j]);
+            * (Q[(topLeftCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j] + Q[(topLeftCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]);
 
-        oldQWithHalo[(topRightCellSerialised) * (real_var + aux_var) + j]
+        Q[(topRightCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]
           = 0.5
-            * (oldQWithHalo[(topRightCellN1Serialised) * (real_var + aux_var) + j] + oldQWithHalo[(topRightCellN2Serialised) * (real_var + aux_var) + j]);
+            * (Q[(topRightCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j] + Q[(topRightCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + j]);
       }
     }
 
     // Corners
-    tarch::la::Vector<Dimensions, int> topLeftBackCell     = {0, patchSize + 1, 0};
-    tarch::la::Vector<Dimensions, int> topRightBackCell    = {patchSize + 1, patchSize + 1, 0};
+    tarch::la::Vector<Dimensions, int> topLeftBackCell  = {0, NumberOfFiniteVolumesPerAxisPerPatch + 1, 0};
+    tarch::la::Vector<Dimensions, int> topRightBackCell = {
+      NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1, 0};
     tarch::la::Vector<Dimensions, int> bottomLeftBackCell  = {0, 0, 0};
-    tarch::la::Vector<Dimensions, int> bottomRightBackCell = {patchSize + 1, 0, 0};
+    tarch::la::Vector<Dimensions, int> bottomRightBackCell = {NumberOfFiniteVolumesPerAxisPerPatch + 1, 0, 0};
 
-    tarch::la::Vector<Dimensions, int> topLeftFrontCell     = {0, patchSize + 1, patchSize + 1};
-    tarch::la::Vector<Dimensions, int> topRightFrontCell    = {patchSize + 1, patchSize + 1, patchSize + 1};
-    tarch::la::Vector<Dimensions, int> bottomLeftFrontCell  = {0, 0, patchSize + 1};
-    tarch::la::Vector<Dimensions, int> bottomRightFrontCell = {patchSize + 1, 0, patchSize + 1};
+    tarch::la::Vector<Dimensions, int> topLeftFrontCell = {
+      0, NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+    tarch::la::Vector<Dimensions, int> topRightFrontCell = {
+      NumberOfFiniteVolumesPerAxisPerPatch + 1,
+      NumberOfFiniteVolumesPerAxisPerPatch + 1,
+      NumberOfFiniteVolumesPerAxisPerPatch + 1};
+    tarch::la::Vector<Dimensions, int> bottomLeftFrontCell  = {0, 0, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+    tarch::la::Vector<Dimensions, int> bottomRightFrontCell = {
+      NumberOfFiniteVolumesPerAxisPerPatch + 1, 0, NumberOfFiniteVolumesPerAxisPerPatch + 1};
 
     tarch::la::Vector<Dimensions, int> topLeftBackCellN1 = topLeftBackCell;
     topLeftBackCellN1(0)++;
@@ -626,9 +694,9 @@ public:
     tarch::la::Vector<Dimensions, int> topRightFrontCellN3 = topRightFrontCell;
     topRightFrontCellN3(2)--;
 
-    tarch::la::Vector<Dimensions, int> bottomLeftFrontCellN1 = {1, 0, patchSize + 1};
-    tarch::la::Vector<Dimensions, int> bottomLeftFrontCellN2 = {0, 1, patchSize + 1};
-    tarch::la::Vector<Dimensions, int> bottomLeftFrontCellN3 = {0, 0, patchSize};
+    tarch::la::Vector<Dimensions, int> bottomLeftFrontCellN1 = {1, 0, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+    tarch::la::Vector<Dimensions, int> bottomLeftFrontCellN2 = {0, 1, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+    tarch::la::Vector<Dimensions, int> bottomLeftFrontCellN3 = {0, 0, NumberOfFiniteVolumesPerAxisPerPatch};
 
     tarch::la::Vector<Dimensions, int> bottomRightFrontCellN1 = bottomRightFrontCell;
     bottomRightFrontCellN1(0)--;
@@ -637,82 +705,244 @@ public:
     tarch::la::Vector<Dimensions, int> bottomRightFrontCellN3 = bottomRightFrontCell;
     bottomRightFrontCellN3(2)--;
 
-    const int topLeftBackCellSerialised     = peano4::utils::dLinearised(topLeftBackCell, patchSize + 2 * 1);
-    const int topRightBackCellSerialised    = peano4::utils::dLinearised(topRightBackCell, patchSize + 2 * 1);
-    const int bottomLeftBackCellSerialised  = peano4::utils::dLinearised(bottomLeftBackCell, patchSize + 2 * 1);
-    const int bottomRightBackCellSerialised = peano4::utils::dLinearised(bottomRightBackCell, patchSize + 2 * 1);
+    const int topLeftBackCellSerialised = peano4::utils::dLinearised(
+      topLeftBackCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int topRightBackCellSerialised = peano4::utils::dLinearised(
+      topRightBackCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomLeftBackCellSerialised = peano4::utils::dLinearised(
+      bottomLeftBackCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomRightBackCellSerialised = peano4::utils::dLinearised(
+      bottomRightBackCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int topLeftFrontCellSerialised     = peano4::utils::dLinearised(topLeftFrontCell, patchSize + 2 * 1);
-    const int topRightFrontCellSerialised    = peano4::utils::dLinearised(topRightFrontCell, patchSize + 2 * 1);
-    const int bottomLeftFrontCellSerialised  = peano4::utils::dLinearised(bottomLeftFrontCell, patchSize + 2 * 1);
-    const int bottomRightFrontCellSerialised = peano4::utils::dLinearised(bottomRightFrontCell, patchSize + 2 * 1);
+    const int topLeftFrontCellSerialised = peano4::utils::dLinearised(
+      topLeftFrontCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int topRightFrontCellSerialised = peano4::utils::dLinearised(
+      topRightFrontCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomLeftFrontCellSerialised = peano4::utils::dLinearised(
+      bottomLeftFrontCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomRightFrontCellSerialised = peano4::utils::dLinearised(
+      bottomRightFrontCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int topLeftBackCellN1Serialised = peano4::utils::dLinearised(topLeftBackCellN1, patchSize + 2 * 1);
-    const int topLeftBackCellN2Serialised = peano4::utils::dLinearised(topLeftBackCellN2, patchSize + 2 * 1);
-    const int topLeftBackCellN3Serialised = peano4::utils::dLinearised(topLeftBackCellN3, patchSize + 2 * 1);
+    const int topLeftBackCellN1Serialised = peano4::utils::dLinearised(
+      topLeftBackCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int topLeftBackCellN2Serialised = peano4::utils::dLinearised(
+      topLeftBackCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int topLeftBackCellN3Serialised = peano4::utils::dLinearised(
+      topLeftBackCellN3, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int topRightBackCellN1Serialised = peano4::utils::dLinearised(topRightBackCellN1, patchSize + 2 * 1);
-    const int topRightBackCellN2Serialised = peano4::utils::dLinearised(topRightBackCellN2, patchSize + 2 * 1);
-    const int topRightBackCellN3Serialised = peano4::utils::dLinearised(topRightBackCellN3, patchSize + 2 * 1);
+    const int topRightBackCellN1Serialised = peano4::utils::dLinearised(
+      topRightBackCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int topRightBackCellN2Serialised = peano4::utils::dLinearised(
+      topRightBackCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int topRightBackCellN3Serialised = peano4::utils::dLinearised(
+      topRightBackCellN3, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int bottomLeftBackCellN1Serialised = peano4::utils::dLinearised(bottomLeftBackCellN1, patchSize + 2 * 1);
-    const int bottomLeftBackCellN2Serialised = peano4::utils::dLinearised(bottomLeftBackCellN2, patchSize + 2 * 1);
-    const int bottomLeftBackCellN3Serialised = peano4::utils::dLinearised(bottomLeftBackCellN3, patchSize + 2 * 1);
+    const int bottomLeftBackCellN1Serialised = peano4::utils::dLinearised(
+      bottomLeftBackCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomLeftBackCellN2Serialised = peano4::utils::dLinearised(
+      bottomLeftBackCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomLeftBackCellN3Serialised = peano4::utils::dLinearised(
+      bottomLeftBackCellN3, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int bottomRightBackCellN1Serialised = peano4::utils::dLinearised(bottomRightBackCellN1, patchSize + 2 * 1);
-    const int bottomRightBackCellN2Serialised = peano4::utils::dLinearised(bottomRightBackCellN2, patchSize + 2 * 1);
-    const int bottomRightBackCellN3Serialised = peano4::utils::dLinearised(bottomRightBackCellN3, patchSize + 2 * 1);
+    const int bottomRightBackCellN1Serialised = peano4::utils::dLinearised(
+      bottomRightBackCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomRightBackCellN2Serialised = peano4::utils::dLinearised(
+      bottomRightBackCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomRightBackCellN3Serialised = peano4::utils::dLinearised(
+      bottomRightBackCellN3, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int topLeftFrontCellN1Serialised = peano4::utils::dLinearised(topLeftFrontCellN1, patchSize + 2 * 1);
-    const int topLeftFrontCellN2Serialised = peano4::utils::dLinearised(topLeftFrontCellN2, patchSize + 2 * 1);
-    const int topLeftFrontCellN3Serialised = peano4::utils::dLinearised(topLeftFrontCellN3, patchSize + 2 * 1);
+    const int topLeftFrontCellN1Serialised = peano4::utils::dLinearised(
+      topLeftFrontCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int topLeftFrontCellN2Serialised = peano4::utils::dLinearised(
+      topLeftFrontCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int topLeftFrontCellN3Serialised = peano4::utils::dLinearised(
+      topLeftFrontCellN3, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int topRightFrontCellN1Serialised = peano4::utils::dLinearised(topRightFrontCellN1, patchSize + 2 * 1);
-    const int topRightFrontCellN2Serialised = peano4::utils::dLinearised(topRightFrontCellN2, patchSize + 2 * 1);
-    const int topRightFrontCellN3Serialised = peano4::utils::dLinearised(topRightFrontCellN3, patchSize + 2 * 1);
+    const int topRightFrontCellN1Serialised = peano4::utils::dLinearised(
+      topRightFrontCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int topRightFrontCellN2Serialised = peano4::utils::dLinearised(
+      topRightFrontCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int topRightFrontCellN3Serialised = peano4::utils::dLinearised(
+      topRightFrontCellN3, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int bottomLeftFrontCellN1Serialised = peano4::utils::dLinearised(bottomLeftFrontCellN1, patchSize + 2 * 1);
-    const int bottomLeftFrontCellN2Serialised = peano4::utils::dLinearised(bottomLeftFrontCellN2, patchSize + 2 * 1);
-    const int bottomLeftFrontCellN3Serialised = peano4::utils::dLinearised(bottomLeftFrontCellN3, patchSize + 2 * 1);
+    const int bottomLeftFrontCellN1Serialised = peano4::utils::dLinearised(
+      bottomLeftFrontCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomLeftFrontCellN2Serialised = peano4::utils::dLinearised(
+      bottomLeftFrontCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomLeftFrontCellN3Serialised = peano4::utils::dLinearised(
+      bottomLeftFrontCellN3, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    const int bottomRightFrontCellN1Serialised = peano4::utils::dLinearised(bottomRightFrontCellN1, patchSize + 2 * 1);
-    const int bottomRightFrontCellN2Serialised = peano4::utils::dLinearised(bottomRightFrontCellN2, patchSize + 2 * 1);
-    const int bottomRightFrontCellN3Serialised = peano4::utils::dLinearised(bottomRightFrontCellN3, patchSize + 2 * 1);
+    const int bottomRightFrontCellN1Serialised = peano4::utils::dLinearised(
+      bottomRightFrontCellN1, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomRightFrontCellN2Serialised = peano4::utils::dLinearised(
+      bottomRightFrontCellN2, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
+    const int bottomRightFrontCellN3Serialised = peano4::utils::dLinearised(
+      bottomRightFrontCellN3, NumberOfFiniteVolumesPerAxisPerPatch + 2
+    );
 
-    for (int i = 0; i < real_var + aux_var; i++) {
+    for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
 
-      oldQWithHalo[(topLeftBackCellSerialised) * (real_var + aux_var) + i]
+      Q[(topLeftBackCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
         = 1.0 / 3.0
-          * (oldQWithHalo[(topLeftBackCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topLeftBackCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topLeftBackCellN3Serialised) * (real_var + aux_var) + i]);
+          * (Q[(topLeftBackCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(topLeftBackCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(topLeftBackCellN3Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]);
 
-      oldQWithHalo[(topRightBackCellSerialised) * (real_var + aux_var) + i]
+      Q[(topRightBackCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
         = 1.0 / 3.0
-          * (oldQWithHalo[(topRightBackCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topRightBackCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topRightBackCellN3Serialised) * (real_var + aux_var) + i]);
+          * (Q[(topRightBackCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(topRightBackCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(topRightBackCellN3Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]);
 
-      oldQWithHalo[(bottomLeftBackCellSerialised) * (real_var + aux_var) + i]
+      Q[(bottomLeftBackCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
         = 1.0 / 3.0
-          * (oldQWithHalo[(bottomLeftBackCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomLeftBackCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomLeftBackCellN3Serialised) * (real_var + aux_var) + i]);
+          * (Q[(bottomLeftBackCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(bottomLeftBackCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(bottomLeftBackCellN3Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]);
 
-      oldQWithHalo[(bottomRightBackCellSerialised) * (real_var + aux_var) + i]
+      Q[(bottomRightBackCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
         = 1.0 / 3.0
-          * (oldQWithHalo[(bottomRightBackCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomRightBackCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomRightBackCellN3Serialised) * (real_var + aux_var) + i]);
+          * (Q[(bottomRightBackCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(bottomRightBackCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(bottomRightBackCellN3Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]);
 
-      oldQWithHalo[(topLeftFrontCellSerialised) * (real_var + aux_var) + i]
+      Q[(topLeftFrontCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
         = 1.0 / 3.0
-          * (oldQWithHalo[(topLeftFrontCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topLeftFrontCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topLeftFrontCellN3Serialised) * (real_var + aux_var) + i]);
+          * (Q[(topLeftFrontCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(topLeftFrontCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(topLeftFrontCellN3Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]);
 
-      oldQWithHalo[(topRightFrontCellSerialised) * (real_var + aux_var) + i]
+      Q[(topRightFrontCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
         = 1.0 / 3.0
-          * (oldQWithHalo[(topRightFrontCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topRightFrontCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(topRightFrontCellN3Serialised) * (real_var + aux_var) + i]);
+          * (Q[(topRightFrontCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(topRightFrontCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(topRightFrontCellN3Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]);
 
-      oldQWithHalo[(bottomLeftFrontCellSerialised) * (real_var + aux_var) + i]
+      Q[(bottomLeftFrontCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
         = 1.0 / 3.0
-          * (oldQWithHalo[(bottomLeftFrontCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomLeftFrontCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomLeftFrontCellN3Serialised) * (real_var + aux_var) + i]);
+          * (Q[(bottomLeftFrontCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(bottomLeftFrontCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(bottomLeftFrontCellN3Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]);
 
-      oldQWithHalo[(bottomRightFrontCellSerialised) * (real_var + aux_var) + i]
+      Q[(bottomRightFrontCellSerialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]
         = 0.5
-          * (oldQWithHalo[(bottomRightFrontCellN1Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomRightFrontCellN2Serialised) * (real_var + aux_var) + i] + oldQWithHalo[(bottomRightFrontCellN3Serialised) * (real_var + aux_var) + i]);
+          * (Q[(bottomRightFrontCellN1Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(bottomRightFrontCellN2Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i] + Q[(bottomRightFrontCellN3Serialised) * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + i]);
     }
+#endif
+  }
+
+  static inline void calculateDerivatives(double* __restrict__ Q) {
+
+#if Dimensions == 2
+    for (int x = 0; x < NumberOfFiniteVolumesPerAxisPerPatch + 1; x++)
+      for (int y = 0; y < NumberOfFiniteVolumesPerAxisPerPatch + 1; y++) {
+        const tarch::la::Vector<Dimensions, int> currentCell    = {x, y};
+        const tarch::la::Vector<Dimensions, int> xNeighbourCell = {x + 1, y};
+        const tarch::la::Vector<Dimensions, int> yNeighbourCell = {x, y + 1};
+
+        const int currentCellSerialized = peano4::utils::dLinearised(
+          currentCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+        );
+        const int xNeighbourCellSerialized = peano4::utils::dLinearised(
+          xNeighbourCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+        );
+        const int yNeighbourCellSerialized = peano4::utils::dLinearised(
+          yNeighbourCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+        );
+
+        // u_x
+        Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns]
+          = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1]
+            + Q[xNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1];
+        // u_y
+        Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 1]
+          = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1]
+            + Q[yNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1];
+        // v_x
+        Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 2]
+          = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 2]
+            + Q[xNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 2];
+        // v_y
+        Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 3]
+          = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 2]
+            + Q[yNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 2];
+      }
+#else
+    for (int x = 0; x < NumberOfFiniteVolumesPerAxisPerPatch + 1; x++)
+      for (int y = 0; y < NumberOfFiniteVolumesPerAxisPerPatch + 1; y++)
+        for (int z = 0; z < NumberOfFiniteVolumesPerAxisPerPatch + 1; z++) {
+          const tarch::la::Vector<Dimensions, int> currentCell    = {x, y, z};
+          const tarch::la::Vector<Dimensions, int> xNeighbourCell = {x + 1, y, z};
+          const tarch::la::Vector<Dimensions, int> yNeighbourCell = {x, y + 1, z};
+          const tarch::la::Vector<Dimensions, int> zNeighbourCell = {x, y, z + 1};
+
+          const int currentCellSerialized = peano4::utils::dLinearised(
+            currentCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+          );
+          const int xNeighbourCellSerialized = peano4::utils::dLinearised(
+            xNeighbourCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+          );
+          const int yNeighbourCellSerialized = peano4::utils::dLinearised(
+            yNeighbourCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+          );
+          const int zNeighbourCellSerialized = peano4::utils::dLinearised(
+            zNeighbourCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
+          );
+
+          // u_x
+          Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns]
+            = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1]
+              + Q[xNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1];
+          // u_y
+          Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 1]
+            = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1]
+              + Q[yNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1];
+          // u_z
+          Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 2]
+            = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1]
+              + Q[zNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1];
+          // v_x
+          Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 3]
+            = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 2]
+              + Q[xNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 2];
+          // v_y
+          Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 4]
+            = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 2]
+              + Q[yNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 2];
+          // v_z
+          Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 5]
+            = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 2]
+              + Q[zNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 2];
+          // w_x
+          Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 6]
+            = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 3]
+              + Q[xNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 3];
+          // w_y
+          Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 7]
+            = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 3]
+              + Q[yNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 3];
+          // w_x
+          Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 8]
+            = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 3]
+              + Q[zNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 3];
+        }
 #endif
   }
 };
