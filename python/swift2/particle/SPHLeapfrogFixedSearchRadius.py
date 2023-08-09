@@ -490,27 +490,16 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 touch_vertex_first_time_kernel="""
                                        ::swift2::kernels::prepareHydroForceCalculation(localParticles);
                                        """,
-<<<<<<< HEAD
-                cell_kernel="""
-                                       ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-                                         marker,
-                                         activeParticles,
-                                         _numberOfActiveParticlesPerVertexAdded
-=======
 
                 cell_kernel="""
                                        ::toolbox::particles::ensureAllParticleListsAreGatheredOrEmpty(
                                          fineGridVertices""" + self.name + """Set
->>>>>>> branch 'particles-sml-fix' of https://gitlab.lrz.de/hpcsoftware/Peano.git
                                        );
                                        ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-<<<<<<< HEAD
-=======
                                          activeParticles,
                                          _numberOfActiveParticlesPerVertex
                                        );
                                        ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
->>>>>>> branch 'particles-sml-fix' of https://gitlab.lrz.de/hpcsoftware/Peano.git
                                          localParticles,
                                          numberOfParticlesPerLocalVertex
                                        );
@@ -519,11 +508,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                          localParticles,
                                          numberOfParticlesPerLocalVertex,
                                          activeParticles,
-<<<<<<< HEAD
-                                         numberOfActiveParticlesPerVertex
-=======
                                          _numberOfActiveParticlesPerVertex
->>>>>>> branch 'particles-sml-fix' of https://gitlab.lrz.de/hpcsoftware/Peano.git
                                        );
                                        """,
                 touch_vertex_last_time_kernel="""
