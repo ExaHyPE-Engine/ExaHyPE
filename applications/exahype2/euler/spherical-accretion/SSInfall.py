@@ -1,6 +1,8 @@
 import os
+import sys
 import argparse
 
+sys.path.insert(0, os.path.abspath('../../../../python'))
 import peano4
 import exahype2
 
@@ -15,7 +17,7 @@ import numpy as np
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
-  "assert":  peano4.output.CompileMode.Asserts, 
+  "assert":  peano4.output.CompileMode.Asserts,
   "stats":  peano4.output.CompileMode.Stats,
   "debug":   peano4.output.CompileMode.Debug,
 }
@@ -269,7 +271,7 @@ if __name__ == "__main__":
       exe += args.exe_name
     if not args.tra_name=="de":
       exe += "_" + args.tra_name
-    project = exahype2.Project( ["examples", "exahype2", "SSInfall"], "SSInfall", executable=exe)
+    project = exahype2.Project( ["applications", "exahype2", "euler", "sphericalaccretion"], "SSInfall", executable=exe)
 
 ########################################################################################
 #Pick solver
@@ -447,14 +449,14 @@ if __name__ == "__main__":
       userinfo.append(("Use DGP modified Model+Einstein-de Sitter univese background", None))
 
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
-    for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("{}".format(k), v)  
-            
+    for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("{}".format(k), v)
+
     my_solver.set_solver_constants(solverconstants)
 
     project.add_solver(my_solver)
 
     build_mode = modes[args.mode]
-    
+
     dimensions = 3
 
     project.set_global_simulation_parameters(
@@ -466,7 +468,7 @@ if __name__ == "__main__":
       12  # plotter precision
     )
 
-    project.set_Peano4_installation("../../..", build_mode)
+    project.set_Peano4_installation("../../../../", build_mode)
 
 ########################################################################################
 #output dir and proble
@@ -480,7 +482,7 @@ if __name__ == "__main__":
     probe_point = [-0,-0,-1e-6]
     project.add_plot_filter( probe_point,[40.0,40.0,2e-6],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.9,0))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,0))" )
 
 ########################################################################################
 #Tracer setting 
@@ -519,7 +521,7 @@ if __name__ == "__main__":
         initial_record_time=55#args.end_time*2.0/3.0
         #last_record_time=1e3
       ))
-      #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
+      #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,
       #,,-1,"zz",1000))
 
 ########################################################################################
@@ -535,6 +537,15 @@ if __name__ == "__main__":
       peano4_project.output.makefile.add_CXX_flag( "-DDGP" )
 
     #peano4_project.output.makefile.add_CXX_flag( "-DPeanoDebug=2" )
+
+    peano4_project.output.makefile.add_h_file("SSInfall.h")
+    peano4_project.output.makefile.add_cpp_file("SSInfall.cpp")
+
+    peano4_project.output.makefile.add_h_file("GravityModel.h")
+    peano4_project.output.makefile.add_cpp_file("GravityModel.cpp")
+
+    peano4_project.output.makefile.add_h_file("MassAccumulator.h")
+    peano4_project.output.makefile.add_cpp_file("MassAccumulator.cpp")
 
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True )

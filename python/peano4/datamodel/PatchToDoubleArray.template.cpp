@@ -8,7 +8,15 @@
 #include "{{CLASSNAME}}.h"
 
 
+#include <cstring>
+
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
+#if Dimensions == 2
+  memset(value, 0, {{CARDINALITY_2D}} * sizeof({{FLOAT_TYPE}}));
+#elif Dimensions == 3
+  memset(value, 0, {{CARDINALITY_3D}} * sizeof({{FLOAT_TYPE}}));
+#endif
 }
 
 
@@ -99,26 +107,14 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
+::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(
   const peano4::datamanagement::VertexMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{STORE_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
-  return {{LOAD_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
-  const peano4::datamanagement::VertexMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{STORE_PERSISTENT_CONDITION}};
+) {
+  return {{LOAD_STORE_COMPUTE_FLAG}};
 }
 {% endif -%}
+
 
 {% if DATA_ASSOCIATION == 2 -%}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker) {
@@ -142,19 +138,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(
+::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(
   const peano4::datamanagement::FaceMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) {
-  return {{LOAD_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
-  const peano4::datamanagement::FaceMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{STORE_PERSISTENT_CONDITION}};
+  return {{LOAD_STORE_COMPUTE_FLAG}};
 }
 {% endif -%}
 
@@ -180,19 +168,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(
+::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(
   const peano4::datamanagement::CellMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) {
-  return {{LOAD_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
-  const peano4::datamanagement::CellMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{STORE_PERSISTENT_CONDITION}};
+  return {{LOAD_STORE_COMPUTE_FLAG}};
 }
 {% endif -%}
 
@@ -204,9 +184,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
     MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}}, {{MPI_FLOAT_TYPE}}, {{MPI_FLOAT_TYPE}} };
 
     #if Dimensions==2
-    int blocklen[] = { Dimensions, Dimensions, {{CARDINALITY_2D}} };
+    int blocklen[] = { Dimensions, Dimensions, {{MPI_ELEMENTS_PER_FLOAT*CARDINALITY_2D}} };
     #else
-    int blocklen[] = { Dimensions, Dimensions, {{CARDINALITY_3D}} };
+    int blocklen[] = { Dimensions, Dimensions, {{MPI_ELEMENTS_PER_FLOAT*CARDINALITY_3D}} };
     #endif
 
     const int NumberOfAttributes = 3;
@@ -214,9 +194,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
     MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}} };
     
     #if Dimensions==2
-    int blocklen[] = { {{CARDINALITY_2D}} };
+    int blocklen[] = { {{MPI_ELEMENTS_PER_FLOAT*CARDINALITY_2D}} };
     #else
-    int blocklen[] = { {{CARDINALITY_3D}} };
+    int blocklen[] = { {{MPI_ELEMENTS_PER_FLOAT*CARDINALITY_3D}} };
     #endif
   
     const int NumberOfAttributes = 1;  

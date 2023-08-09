@@ -89,6 +89,11 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
+  _solverState = SolverState::Suspended;
+}
+
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double patchSize) {
   tarch::multicore::Lock lock(_semaphore);
 
@@ -210,6 +215,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::RungeKuttaPrimarySubStep{{item+1}};
       break;
   {% endfor %}
+    case SolverState::Suspended:
     case SolverState::Plotting:
     case SolverState::PlottingAfterGridInitialisation:
       _solverState = SolverState::RungeKuttaPrimarySubStep0;
@@ -380,6 +386,8 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-initialisation";
     case SolverState::Plotting:
       return "plotting";
+    case SolverState::Suspended:
+      return "suspended";
     case SolverState::PlottingAfterGridInitialisation:
       return "plotting-after-grid-initialisation";
     case SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation:

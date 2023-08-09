@@ -46,7 +46,7 @@ class DynamicAMR(AbstractAderDGActionSet):
       const int basisElementsPerFace = spaceFaceSize*strideQ;
       const int fluxElementsPerFace = spaceFaceSize*NumberOfVariables;
 
-      std::fill_n(fineGridFace{{SOLVER_NAME}}QEstimates.value, 2*basisElementsPerFace, 0.0);
+      //std::fill_n(fineGridFace{{SOLVER_NAME}}QEstimates.value, 2*basisElementsPerFace, 0.0);
       std::fill_n(fineGridFace{{SOLVER_NAME}}QFluxEstimates.value, 2*fluxElementsPerFace, 0.0);
 
     }
@@ -57,8 +57,15 @@ class DynamicAMR(AbstractAderDGActionSet):
 
   if ( {{INTERPOLATE_GUARD}} ) {
   
+    const double timeStamp = fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0);
+  
+    // needs to declare and define timeStepSize
+    {{COMPUTE_TIME_STEP_SIZE}}
+
     const int Order = {{ORDER}};
     const int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
+    const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    const int NumberOfData = NumberOfVariables+NumberOfParameters;
     
     #if Dimensions==2
     constexpr int spaceFaceSize      = (Order+1);
@@ -66,21 +73,46 @@ class DynamicAMR(AbstractAderDGActionSet):
     constexpr int spaceFaceSize      = (Order+1)*(Order+1);
     #endif
 
-    int facePosition = marker.getSelectedFaceNumber()<Dimensions ? spaceFaceSize*NumberOfVariables : 0;
+    const int normal = marker.getSelectedFaceNumber()%Dimensions;
+    int facePosition = marker.getSelectedFaceNumber()<Dimensions ? 0 : spaceFaceSize;
 
     if(!marker.isInteriorFaceWithinPatch()){
 
+      //Prolongate estimations, then compute flux on the fine face using these estimations
       kernels::aderdg::generic::c::singleLevelFaceUnknownsProlongation<
         {{SOLVER_NAME}},
-        {{CORRECTOR_COMPUTATION_PRECISION}},        
-        NumberOfVariables,+
+        {{CORRECTOR_COMPUTATION_PRECISION}},
+        NumberOfData,
         Order+1>(
-          fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition,
-          coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value+facePosition,
+          fineGridFace{{SOLVER_NAME}}QEstimates.value+facePosition*NumberOfData,
+          coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).value+facePosition*NumberOfData,
           marker.getRelativePositionWithinFatherFace()
       );
 
-   }
+      {{CORRECTOR_COMPUTATION_PRECISION}}* nodeValuesFine = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value+facePosition*NumberOfData;
+      {{CORRECTOR_COMPUTATION_PRECISION}}* nodeFluxesFine = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value+facePosition*NumberOfVariables;
+
+      for(int i=0; i<spaceFaceSize; i++){
+        repositories::{{SOLVER_INSTANCE}}.flux(
+          nodeValuesFine,
+          marker.x(),
+          marker.h(),
+          timeStamp,
+          timeStepSize,
+          normal,
+          nodeFluxesFine
+        );
+
+        nodeValuesFine  += NumberOfData;
+        nodeFluxesFine  += NumberOfVariables;
+      }
+
+    }
+
+  fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(0, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getNewTimeStamp(0), fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0)) );
+  fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(1, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getNewTimeStamp(1), fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1)) );
+  fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(0, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getOldTimeStamp(0), fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(0)) );
+  fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(1, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getOldTimeStamp(1), fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(1)) );
 
   }
 
@@ -104,18 +136,7 @@ class DynamicAMR(AbstractAderDGActionSet):
     const int basisElementsPerFace  = spaceFaceSize*strideQ;
     const int fluxElementsPerFace   = spaceFaceSize*NumberOfVariables;
 
-    int facePosition = marker.getSelectedFaceNumber()<Dimensions ? 1 : 0;
-
-    //estimates
-    kernels::aderdg::generic::c::singleLevelFaceUnknownsRestriction<
-      {{SOLVER_NAME}},
-      {{CORRECTOR_COMPUTATION_PRECISION}},      
-      strideQ,
-      Order+1>(
-        coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).value+facePosition*basisElementsPerFace, //const double* lQhbndCoarse
-        fineGridFace{{SOLVER_NAME}}QEstimates.value+facePosition*basisElementsPerFace, //double* lQhbndFine          
-        marker.getRelativePositionWithinFatherFace() //const tarch::la::Vector<Dimensions-1, int>& subfaceIndex
-    );
+    int facePosition = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
 
     //fluxes
     kernels::aderdg::generic::c::singleLevelFaceUnknownsRestriction<

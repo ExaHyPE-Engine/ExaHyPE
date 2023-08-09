@@ -29,6 +29,7 @@
 #include "tarch/multicore/otter.h"
 #include "tarch/timing/Watch.h"
 #include "tarch/timing/Measurement.h"
+#include "tarch/timing/TPSCalculator.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 
 #include "peano4/peano.h"
@@ -44,6 +45,8 @@
 #include "exahype2/UserInterface.h"
 #include "exahype2/UnitTests.h"
 
+#include <iomanip>
+
 #include <fenv.h>
 
 //#ifdef UseFenv
@@ -56,9 +59,11 @@ using namespace {{NAMESPACE | join("::")}};
 tarch::logging::Log _log("::");
 
 
-tarch::timing::Measurement   gridConstructionMeasurement;
-tarch::timing::Measurement   timeStepMeasurement;
-tarch::timing::Measurement   plotMeasurement;
+tarch::timing::TPSCalculator tpsCalculator;
+tarch::timing::Measurement tpsMeasurement;
+tarch::timing::Measurement gridConstructionMeasurement;
+tarch::timing::Measurement timeStepMeasurement;
+tarch::timing::Measurement plotMeasurement;
 
 
 /**
@@ -385,15 +390,19 @@ void step() {
         const double minMeshSize     = repositories::getMinMeshSize();
         const double maxMeshSize     = repositories::getMaxMeshSize();
 
-        otterPhaseSwitch( "time-step" );
-        repositories::startTimeStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
-        
-        observers::TimeStep  observer;
+        otterPhaseSwitch("time-step");
+        repositories::startTimeStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
+
+        observers::TimeStep observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
-        timeStepMeasurement.setValue( watch.getCalendarTime() );
-        
+        timeStepMeasurement.setValue(watch.getCalendarTime());
+
+        tpsCalculator.update(watch.getCalendarTime());
+        tpsMeasurement.setValue(tpsCalculator.getTPS());
+        logInfo("step()", "TPS: " << std::fixed << std::setprecision(2) << tpsCalculator.getTPS());
+
         repositories::finishTimeStep();
       }
       break;
@@ -429,6 +438,8 @@ int main(int argc, char** argv) {
     logError("main()", "Invalid command line arguments.");
     return ExitCodeInvalidArguments;
   }
+
+  peano4::runTestsAndBenchmarks();
 
   repositories::DataRepository::initDatatypes();
 
@@ -478,9 +489,10 @@ int main(int argc, char** argv) {
     }
 
     logInfo("main()", "terminated successfully");
-    logInfo("main()", "initial grid construction:  " << gridConstructionMeasurement.getAccumulatedValue() << "s\t" << gridConstructionMeasurement.toString() );
-    logInfo("main()", "plotting:                   " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString() );
-    logInfo("main()", "time stepping:              " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString() );
+    logInfo("main()", "initial grid construction:  " << gridConstructionMeasurement.getAccumulatedValue() << "s\t" << gridConstructionMeasurement.toString());
+    logInfo("main()", "plotting:                   " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString());
+    logInfo("main()", "time stepping:              " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString());
+    logInfo("main()", "average TPS:                " << tpsMeasurement.getValue() << "\t" << tpsMeasurement.toString());
   }
   else if (isPeanoComputeNode) {
     while (peano4::parallel::Node::getInstance().continueToRun()) {

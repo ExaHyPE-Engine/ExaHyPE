@@ -88,8 +88,13 @@ private:
   std::bitset<TwoPowerD> _willBeRefined;
   std::bitset<TwoPowerD> _isLocal;
   std::bitset<TwoPowerD> _isHanging;
+  std::bitset<TwoPowerD> _isParentVertexLocal;
 
   bool _isParentCellLocal;
+
+  bool isParentLocal() const;
+
+
   // std::bitset<TwoPowerD>  _isAdjacentToParallelDomainBoundary;
 
   /**
@@ -190,13 +195,40 @@ public:
    * So there's a cell state associated with any vertex event, and,
    * therefore, we know if the corresponding cell is local and whether
    * its parent cell is local.
+   *
+   * @see isParentVertexLocal()
    */
   bool isParentCellLocal() const;
 
-  // bool isAdjacentToParallelDomainBoundary() const;
-  // bool isAdjacentToParallelDomainBoundary(int i) const;
+  /**
+   * Is the parent vertex local
+   *
+   * Is a parent vertex local, i.e. not adjacent to any boundary or
+   * remote. Peano traverses the tree in a strict octant-wise
+   * (multiscale-wise) order. That is, whenever you receive a
+   * touchVertexFirstTime() or touchVertexLastTime() event, the Peano
+   * core has actually entered a cell and recognised "whoops, I haven't
+   * used that vertex yet" or "this will be the last time this vertex
+   * is available". See the @ref peano_action_sets "generic event description" on
+   * an overview of all of these events.
+   *
+   * @image html VertexMarker_isParentVertexLocal.png
+   *
+   * As a logical consequence, there are always @f$ 2^d @f$ parent
+   * vertices when you encounter a vertex for the first or last time.
+   * But you never know which parent cell it will be. The code could
+   * have stepped down from A into a or from B into b. So the parent
+   * vertices could be the green or the blue ones.
+   *
+   * This routine allows you to find out if these vertices are local.
+   * It will always return if isParentCellLocal() does not hold.
+   */
+  bool isParentVertexLocal(int i) const;
+
 
   /**
+   * Relative position within parent cell
+   *
    * Return relative position within father cell. The result is from
    * (0,1,2,3)^d and denotes the vertex position within a 3x3 or 3x3x3
    * respectively mesh.
@@ -217,15 +249,17 @@ public:
    * which coincide spatially with vertices on the next coarser level. A classic
    * are codes like
    *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~
    *       if ( marker.coincidesWithCoarseGridVertex() ) {
    *         tarch::la::Vector<Dimensions,int> parent = marker.getRelativePositionWithinFatherCell() / 3;
    *         coarseGridVerticesX( peano4::utils::dLinearised(parent,2) ).set...
    *       }
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~
    *
    * within touchVertexLastTime. This snippet looks if two vertices coincide
    * spatially. If so, it computes the parent's relative position within the
    * parent cell which is simply a division by 3. We then linearise this vector
-   * index and thus have access to teh parent.
+   * index and thus have access to the parent.
    */
   bool coincidesWithCoarseGridVertex() const;
 

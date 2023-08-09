@@ -6,22 +6,23 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#pragma once
+#ifndef _INCLUDE_PEANO4_PARALLEL_TREEENTRY_
+#define _INCLUDE_PEANO4_PARALLEL_TREEENTRY_
 
 #include <string>
   
-
-#include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/services/ServiceRepository.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
-
 
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
+
+#include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/services/ServiceRepository.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
+#include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
   
@@ -49,15 +50,7 @@ struct peano4::parallel::TreeEntry {
     TreeEntry(const TreeEntry& copy) = default;
 
 
-#ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(peano4::parallel::TreeEntry& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
-#endif
-    
-
     #ifdef Parallel
-    PRAGMA_PUSH
-    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -77,7 +70,7 @@ struct peano4::parallel::TreeEntry {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    PRAGMA_POP
+    
     
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -117,14 +110,27 @@ struct peano4::parallel::TreeEntry {
     static void receive(   peano4::parallel::TreeEntry& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
+
+    enum ObjectConstruction {
+      NoData
+    };
+
+    TreeEntry( ObjectConstruction ):
+        TreeEntry() {}
+    
+#ifdef Parallel
+    static void sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::parallel::TreeEntry& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+#endif
+    
+
     std::string toString() const;
   
   private:
-    PRAGMA_PUSH
-    SILENCE_UNKNOWN_ATTRIBUTE
     [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _id;
     [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _master;
-    PRAGMA_POP
+
+
 
     #ifdef Parallel
     private:
@@ -140,6 +146,10 @@ struct peano4::parallel::TreeEntry {
       static MPI_Datatype  Datatype;
       #endif
     #endif
+
+
+
 };
 
+#endif
   

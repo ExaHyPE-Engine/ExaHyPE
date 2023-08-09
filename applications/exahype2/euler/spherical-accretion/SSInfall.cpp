@@ -1,31 +1,30 @@
-#include "../spherical-accretion/SSInfall.h"
+#include "SSInfall.h"
 
-#include "../spherical-accretion/Constants.h"
-#include "../../../applications/exahype2/euler/SSInfall/Constants.h"
+#include "Constants.h"
 #include "exahype2/RefinementControl.h"
 
 #include "exahype2/NonCriticalAssertions.h"
 #include "tarch/multicore/Lock.h"
 
 
-tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
+tarch::logging::Log   applications::exahype2::euler::sphericalaccretion::SSInfall::_log( "applications::exahype2::euler::sphericalaccretion::SSInfall" );
 
 
-const tarch::la::Vector<Dimensions,double>  examples::exahype2::SSInfall::SSInfall::OverDensityCentre = {0.0, 0.0, 0.0};
+const tarch::la::Vector<Dimensions,double>  applications::exahype2::euler::sphericalaccretion::SSInfall::OverDensityCentre = {0.0, 0.0, 0.0};
 
 
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-double examples::exahype2::SSInfall::SSInfall::_rMax;
-double examples::exahype2::SSInfall::SSInfall::_rhoMax;
-double examples::exahype2::SSInfall::SSInfall::_mTotMax;
+double applications::exahype2::euler::sphericalaccretion::SSInfall::_rMax;
+double applications::exahype2::euler::sphericalaccretion::SSInfall::_rhoMax;
+double applications::exahype2::euler::sphericalaccretion::SSInfall::_mTotMax;
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
 
-void examples::exahype2::SSInfall::SSInfall::startTimeStep(
+void applications::exahype2::euler::sphericalaccretion::SSInfall::startTimeStep(
   double globalMinTimeStamp,
   double globalMaxTimeStamp,
   double globalMinTimeStepSize,
@@ -77,7 +76,7 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
 }
 
 
-void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
+void applications::exahype2::euler::sphericalaccretion::SSInfall::finishTimeStep(){
   AbstractSSInfall::finishTimeStep();
 
   if (AbstractSSInfall::isLastGridSweepOfTimeStep()){
@@ -112,7 +111,7 @@ void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
 }
 
 
-std::string examples::exahype2::SSInfall::SSInfall::plotRs() const {
+std::string applications::exahype2::euler::sphericalaccretion::SSInfall::plotRs() const {
   std::ostringstream msg;
   msg << "r_s=(";
   for (int i=0;i<sample_number;i++) {
@@ -124,7 +123,7 @@ std::string examples::exahype2::SSInfall::SSInfall::plotRs() const {
 }
 
 
-std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy) const {
+std::string applications::exahype2::euler::sphericalaccretion::SSInfall::plotGlobalMTot(bool plotCopy) const {
   std::ostringstream msg;
   if (plotCopy) {
     msg << "m_tot_copy=(";
@@ -146,7 +145,7 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
 }
 
 
-::exahype2::RefinementCommand examples::exahype2::SSInfall::SSInfall::refinementCriterion(
+::exahype2::RefinementCommand applications::exahype2::euler::sphericalaccretion::SSInfall::refinementCriterion(
   const double * __restrict__ Q, // Q[5+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -235,7 +234,7 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
 
 
 
-void examples::exahype2::SSInfall::SSInfall::initialCondition(
+void applications::exahype2::euler::sphericalaccretion::SSInfall::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -318,7 +317,7 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
 }
 
 
-double examples::exahype2::SSInfall::SSInfall::getInitialMIn( double r_coor ) const {
+double applications::exahype2::euler::sphericalaccretion::SSInfall::getInitialMIn( double r_coor ) const {
   const double rho_ini=tilde_rho_ini;
   if (iseed==0) {//not using
     if (r_coor<r_ini) {
@@ -340,7 +339,7 @@ double examples::exahype2::SSInfall::SSInfall::getInitialMIn( double r_coor ) co
 }
 
 
-double examples::exahype2::SSInfall::SSInfall::getForceDensityNorm(double r_coor,double m_in, double t, double density, double a_input) {
+double applications::exahype2::euler::sphericalaccretion::SSInfall::getForceDensityNorm(double r_coor,double m_in, double t, double density, double a_input) {
   double a=0.0287*pow((-t/11.8+0.1694*pow(a_i,-0.5)),-2);//when code time ~ 2*(a_i^(-0.5)-1), a~1
   #ifdef useTable
   a=a_input; //if we use a table to interpolate a (for LCDM), we replace it here.
@@ -359,7 +358,7 @@ double examples::exahype2::SSInfall::SSInfall::getForceDensityNorm(double r_coor
 }
 
 
-void examples::exahype2::SSInfall::SSInfall::sourceTerm(
+void applications::exahype2::euler::sphericalaccretion::SSInfall::sourceTerm(
   const double * __restrict__                  Q, // Q[5+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -442,7 +441,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void examples::exahype2::SSInfall::SSInfall::sourceTerm(
+void applications::exahype2::euler::sphericalaccretion::SSInfall::sourceTerm(
   const double * __restrict__                  Q, // Q[5+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -480,7 +479,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 #endif
 
 
-bool examples::exahype2::SSInfall::SSInfall::isOutsideOfLargestRadius(
+bool applications::exahype2::euler::sphericalaccretion::SSInfall::isOutsideOfLargestRadius(
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchH
 ) const {
@@ -490,7 +489,7 @@ bool examples::exahype2::SSInfall::SSInfall::isOutsideOfLargestRadius(
 }
 
 
-bool examples::exahype2::SSInfall::SSInfall::patchCanUseStatelessPDETerms(
+bool applications::exahype2::euler::sphericalaccretion::SSInfall::patchCanUseStatelessPDETerms(
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchH,
   double                                       t,
@@ -500,7 +499,7 @@ bool examples::exahype2::SSInfall::SSInfall::patchCanUseStatelessPDETerms(
 }
 
 
-void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
+void applications::exahype2::euler::sphericalaccretion::SSInfall::boundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[5+0]
   double * __restrict__                        Qoutside, // Qoutside[5+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -589,7 +588,7 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
 }
 
 
-double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
+double applications::exahype2::euler::sphericalaccretion::SSInfall::maxEigenvalue(
   const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -629,7 +628,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
+double applications::exahype2::euler::sphericalaccretion::SSInfall::maxEigenvalue(
   const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -666,7 +665,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
 #endif
 
 
-void examples::exahype2::SSInfall::SSInfall::flux(
+void applications::exahype2::euler::sphericalaccretion::SSInfall::flux(
   const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -709,7 +708,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void examples::exahype2::SSInfall::SSInfall::flux(
+void applications::exahype2::euler::sphericalaccretion::SSInfall::flux(
   const double * __restrict__                  Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -741,7 +740,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
 #endif
 
 
-void examples::exahype2::SSInfall::SSInfall::add_mass(
+void applications::exahype2::euler::sphericalaccretion::SSInfall::add_mass(
   const double r_coor,
   const double rho,
   const double size
@@ -771,7 +770,7 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
 }
 
 
-double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
+double applications::exahype2::euler::sphericalaccretion::SSInfall::mass_interpolate(
   const double r_coor,
   const int MassCal
 ) {

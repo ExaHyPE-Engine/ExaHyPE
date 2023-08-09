@@ -95,6 +95,7 @@ ProcessorCount(AVAILABLE_PROCESSOR_COUNT)
 find_package(Slurm)
 find_package(Threads REQUIRED)
 include(CTest)
+enable_testing()
 # https://stackoverflow.com/questions/31355692/how-do-i-enable-link-time-optimization-lto-with-cmake
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
@@ -301,12 +302,16 @@ else()
   list(APPEND BUILD_MODES ${CMAKE_BUILD_TYPE})
 endif()
 
-set(WITH_DIMENSIONS "2" CACHE STRING "Build with number of dimensions")
-option(WITH_MPI "Build with distributed memory parallelisation" OFF)
-option(WITH_OTTER "Build with Otter" OFF)
+set(WITH_DIMENSIONS "2;3" CACHE STRING "Build with number of (space) dimensions")
+option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
+option(WITH_OTTER "Build with Otter support" OFF)
+option(WITH_PETSC "Build with PETSc support" OFF)
+option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
+option(WITH_VTK "Build with VTK support" OFF)
+option(WITH_HDF5 "Build with HDF5 support" OFF)
 option(ENABLE_EXAHYPE "Enable ExaHyPE2" ON)
 option(ENABLE_SWIFT "Enable Swift2" ON)
-option(ENABLE_FEM "Enable the finite elements toolbox" ON)
+option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
 option(ENABLE_MULTIPRECISION "Enable the multi-precision toolbox" ON)
 option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" ON)
 option(ENABLE_PARTICLES "Enable the particles toolbox" ON)
@@ -397,16 +402,15 @@ if (NOT EXISTS "${CMAKE_BINARY_DIR}/documentation")
 endif()
 
 find_package(Doxygen)
-if (DOXYGEN_FOUND)
+if(DOXYGEN_FOUND)
     set(DOXYGEN ${CMAKE_CURRENT_BINARY_DIR}/documentation/Doxyfile)
 
-    add_custom_target( documentation
+    add_custom_target(documentation
         COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Generating API documentation with Doxygen"
-        VERBATIM )
-endif (DOXYGEN_FOUND)
-
+        VERBATIM)
+endif(DOXYGEN_FOUND)
 
 add_subdirectory(src)
 
@@ -425,7 +429,7 @@ display_variable(WITH_VTK)
 display_variable(WITH_HDF5)
 display_variable(WITH_NETCDF)
 display_variable(ENABLE_EXAHYPE)
-display_variable(ENABLE_FEM)
+display_variable(ENABLE_FINITEELEMENTS)
 display_variable(ENABLE_MULTIPRECISION)
 display_variable(ENABLE_LOADBALANCING)
 display_variable(ENABLE_PARTICLES)

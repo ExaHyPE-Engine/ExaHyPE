@@ -39,7 +39,8 @@ class SodShockIC:
       particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
 
       /* Initial estimate for smoothing length */
-      particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
+      const double eta_fac = particle->getEtaFactor();
+      particle->setSmoothingLength( eta_fac * std::pow(particle->getMass()/particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
       particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
 
       particle->setU( 1e-1 );
@@ -71,8 +72,8 @@ class SodShockIC:
       particle->setRho_dh(0.0);
       particle->setWcount_dh(0.0);
 
-      particle->setHLeft (HYDRO_h_MIN);
-      particle->setHRight(HYDRO_h_MAX);
+      particle->setHLeft (particle->getSmlMin());
+      particle->setHRight(particle->getSmlMax());
 
 //      particle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
       particle->setTime(0);

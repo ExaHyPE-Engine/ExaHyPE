@@ -86,7 +86,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
 {% endif %}
 {% if useNCPVect or useFusedSourceVect %}
   // transposed gradQ slice for vect ncp/source
-  {{m.vectPDEsArrays('gradQt', nData, True) | indent(2)}}{##}
+  {{m.vectPDEsArrays('gradQt', nVar, True) | indent(2)}}{##}
 {% endif %}
 {% if useFluxVect or useNCPVect or useSourceVect or useFusedSourceVect %}
   // transposed Q slice for vect PDEs
@@ -184,14 +184,14 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   for (; iter < MaxIterations; iter++) {
 {% if useViscousFlux %}
       //set gradQAvg to 0
-      std::memset(gradQAvg, 0, {{(nDof**nDim)*nDataPad*nDim}} * sizeof(pCompType));
+      std::memset(gradQAvg, 0, {{(nDof**nDim)*nVarPad*nDim}} * sizeof(pCompType));
 {% endif %}
     for (int t = 0; t < {{nDof}}; t++) {  // time DOF
 
 
 {% if useNCP or useViscousFlux %}
       //set gradQ to 0
-      std::memset(gradQ, 0, {{(nDof**nDim)*nDataPad*nDim}} * sizeof(pCompType));
+      std::memset(gradQ, 0, {{(nDof**nDim)*nVarPad*nDim}} * sizeof(pCompType));
 {% endif %}
       
       // Compute the "derivatives" (contributions of the stiffness matrix)      
@@ -199,21 +199,21 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
 {% if useNCP or useViscousFlux %}
       for (int z = 0; z < {{nDof3D}}; z++) {
         for (int y = 0; y < {{nDof}}; y++) {
-          {{ m.matmul('gradQ_x', 'lQi', 'dudxT_by_dx', 'gradQ', '((t*'~nDof3D~'+z)*'~nDof~'+y)*'~nDof*nDataPad, '0', '(z*'~nDof~'+y)*'~nDataPad*nDof) | indent(10) }}{##}
+          {{ m.matmul('gradQ_x', 'lQi', 'dudxT_by_dx', 'gradQ', '((t*'~nDof3D~'+z)*'~nDof~'+y)*'~nDof*nDataPad, '0', '(z*'~nDof~'+y)*'~nVarPad*nDof) | indent(10) }}{##}
         }
       }
       
       // y direction (independent from the x and z derivatives)
       for (int z = 0; z < {{nDof3D}}; z++) {
         for (int x = 0; x < {{nDof}}; x++) {
-          {{ m.matmul('gradQ_y', 'lQi', 'dudxT_by_dx', 'gradQ', '((t*'~nDof3D~'+z)*'~nDof*nDof~'+x)*'~nDataPad, '0', '(z*'~nDof*nDof~'+x)*'~nDataPad~'+'~nDataPad*(nDof**nDim)) | indent(10) }}{##}
+          {{ m.matmul('gradQ_y', 'lQi', 'dudxT_by_dx', 'gradQ', '((t*'~nDof3D~'+z)*'~nDof*nDof~'+x)*'~nDataPad, '0', '(z*'~nDof*nDof~'+x)*'~nVarPad~'+'~nVarPad*(nDof**nDim)) | indent(10) }}{##}
         }
       }
   {% if nDim==3 %}
       // z direction (independent from the x and y derivatives)
       for (int y = 0; y < {{nDof}}; y++) {
         for (int x = 0; x < {{nDof}}; x++) {
-          {{ m.matmul('gradQ_z', 'lQi', 'dudxT_by_dx', 'gradQ', '((t*'~nDof3D*nDof~'+y)*'~nDof~'+x)*'~nDataPad, '0', '(y*'~nDof~'+x)*'~nDataPad~'+'~2*nDataPad*(nDof**nDim)) | indent(10) }}{##}
+          {{ m.matmul('gradQ_z', 'lQi', 'dudxT_by_dx', 'gradQ', '((t*'~nDof3D*nDof~'+y)*'~nDof~'+x)*'~nDataPad, '0', '(y*'~nDof~'+x)*'~nVarPad~'+'~2*nVarPad*(nDof**nDim)) | indent(10) }}{##}
         }
       }
   {% endif %}
@@ -224,7 +224,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
 // Compute time-avg gradQ
 // TODO(JMG): Maybe compute after Picard its?
 #pragma omp simd aligned(gradQAvg,gradQ:{{alignmentSize}})
-    for (int it = 0; it < {{nDim * (nDof**nDim) * nDataPad}}; it++) {
+    for (int it = 0; it < {{nDim * (nDof**nDim) * nVarPad}}; it++) {
       gradQAvg[it] += weights1[t] * gradQ[it];
     }
 {% endif %}
@@ -405,7 +405,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   std::memset(lFhbnd, 0, {{2*nDim*nVarPad*nDof*nDof3D}} * sizeof(pStoreType));
 
   {% if useViscousFlux %}
-  std::memset(lGradQhbnd, 0, {{2*nDim*nDataPad*nDof*nDof3D*nDim}} * sizeof(pStoreType));
+  std::memset(lGradQhbnd, 0, {{2*nDim*nVarPad*nDof*nDof3D*nDim}} * sizeof(pStoreType));
   {% endif %}
 
   // x-direction: face 1 (left) and face 2 (right)
@@ -517,9 +517,9 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
     // Matrix-Vector Products
     for (int x = 0; x < {{nDof}}; x++) {
       #pragma omp simd aligned(lGradQhbnd,gradQAvg:{{alignmentSize}})
-      for (int n = 0; n < {{nDataPad}}; n++) {
-        lGradQhbnd[dzy*{{nDataPad}}+n+{{0*nDim*nDof*nDof3D*nDataPad}}] += gradQAvg[(dzy*{{nDof}}+x)*{{nDataPad}}+n] * FLCoeff[x];
-        lGradQhbnd[dzy*{{nDataPad}}+n+{{1*nDim*nDof*nDof3D*nDataPad}}] += gradQAvg[(dzy*{{nDof}}+x)*{{nDataPad}}+n] * FRCoeff[x];
+      for (int n = 0; n < {{nVarPad}}; n++) {
+        lGradQhbnd[dzy*{{nVarPad}}+n+{{0*nDim*nDof*nDof3D*nVarPad}}] += gradQAvg[(dzy*{{nDof}}+x)*{{nVarPad}}+n] * FLCoeff[x];
+        lGradQhbnd[dzy*{{nVarPad}}+n+{{1*nDim*nDof*nDof3D*nVarPad}}] += gradQAvg[(dzy*{{nDof}}+x)*{{nVarPad}}+n] * FRCoeff[x];
       }
     }
   }
@@ -529,9 +529,9 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
     for (int x = 0; x < {{nDof}}; x++) {
       for (int y = 0; y < {{nDof}}; y++) {
         #pragma omp simd aligned(lGradQhbnd,gradQAvg:{{alignmentSize}})
-        for (int n = 0; n < {{nDataPad}}; n++) {
-          lGradQhbnd[(dz*{{nDof}}+x)*{{nDataPad}}+n+{{2*nDim*nDof*nDof3D*nDataPad}}] += gradQAvg[((dz*{{nDof}}+y)*{{nDof}}+x)*{{nDataPad}}+n] * FLCoeff[y];
-          lGradQhbnd[(dz*{{nDof}}+x)*{{nDataPad}}+n+{{3*nDim*nDof*nDof3D*nDataPad}}] += gradQAvg[((dz*{{nDof}}+y)*{{nDof}}+x)*{{nDataPad}}+n] * FRCoeff[y];
+        for (int n = 0; n < {{nVarPad}}; n++) {
+          lGradQhbnd[(dz*{{nDof}}+x)*{{nVarPad}}+n+{{2*nDim*nDof*nDof3D*nVarPad}}] += gradQAvg[((dz*{{nDof}}+y)*{{nDof}}+x)*{{nVarPad}}+n] * FLCoeff[y];
+          lGradQhbnd[(dz*{{nDof}}+x)*{{nVarPad}}+n+{{3*nDim*nDof*nDof3D*nVarPad}}] += gradQAvg[((dz*{{nDof}}+y)*{{nDof}}+x)*{{nVarPad}}+n] * FRCoeff[y];
         }
       }
     }
@@ -543,9 +543,9 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
     for (int yx = 0; yx < {{nDof*nDof}}; yx++) {
       for (int z = 0; z < {{nDof}}; z++) {
         #pragma omp simd aligned(lGradQhbnd,gradQAvg:{{alignmentSize}})
-        for (int n = 0; n < {{nDataPad}}; n++) {
-          lGradQhbnd[(d*{{nDof*nDof}}+yx)*{{nDataPad}}+n+{{4*nDim*nDof*nDof3D*nDataPad}}] += gradQAvg[((d*{{nDof}}+z)*{{nDof*nDof}}+yx)*{{nDataPad}}+n] * FLCoeff[z];
-          lGradQhbnd[(d*{{nDof*nDof}}+yx)*{{nDataPad}}+n+{{5*nDim*nDof*nDof3D*nDataPad}}] += gradQAvg[((d*{{nDof}}+z)*{{nDof*nDof}}+yx)*{{nDataPad}}+n] * FRCoeff[z];
+        for (int n = 0; n < {{nVarPad}}; n++) {
+          lGradQhbnd[(d*{{nDof*nDof}}+yx)*{{nVarPad}}+n+{{4*nDim*nDof*nDof3D*nVarPad}}] += gradQAvg[((d*{{nDof}}+z)*{{nDof*nDof}}+yx)*{{nVarPad}}+n] * FLCoeff[z];
+          lGradQhbnd[(d*{{nDof*nDof}}+yx)*{{nVarPad}}+n+{{5*nDim*nDof*nDof3D*nVarPad}}] += gradQAvg[((d*{{nDof}}+z)*{{nDof*nDof}}+yx)*{{nVarPad}}+n] * FRCoeff[z];
         }
       }
     }
