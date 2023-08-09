@@ -110,21 +110,6 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   , smartmpi::Task(_enclaveTaskTypeId)
   #endif
 {
-{% if STATELESS_PDE_TERMS %}
-#if defined(GPUOffloadingOMP)
-  bool canOffload = false;
-  #pragma omp target map(tofrom : canOffload)
-  {
-    if (!omp_is_initial_device()) {
-      canOffload = true;
-    }
-  }
-
-  if (not canOffload) {
-    throw std::runtime_error("ExaHyPE 2 was built with OpenMP GPU offloading support, but the chosen solver cannot offload to the GPU.");
-  }
-#endif
-{% endif %}
   setPriority( {{ENCLAVE_TASK_PRIORITY}} );
 }
 

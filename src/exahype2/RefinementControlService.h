@@ -84,7 +84,7 @@ public:
    *   and _remoteNewEvents.
    *
    * We note that most of these complex multithreading operations are rarely
-   * necessary, as receveDanglingMessages() within the tarch::services::ServiceRepository::receiveDanglingMessages()
+   * necessary, as receiveDanglingMessages() within the tarch::services::ServiceRepository::receiveDanglingMessages()
    * is a prior thread-safe. Nevertheless, I decided to try to be on the safe
    * side in case someone wants to call this receiveDanglingMessages()
    * version explicitly.
@@ -227,7 +227,7 @@ private:
    *
    * It is important to work with non-blocking calls here, as the code otherwise tends
    * to deadlock if we have a lot of events. This is due to MPI falling back to
-   * rendeszvouz message passing if the data that is on-the-fly becomes too large.
+   * rendezvous message passing if the data that is on-the-fly becomes too large.
    */
   void triggerSendOfCopyOfCommittedEvents();
 #endif

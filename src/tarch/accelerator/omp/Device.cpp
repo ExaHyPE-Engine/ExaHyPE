@@ -20,7 +20,21 @@ tarch::accelerator::Device& tarch::accelerator::Device::getInstance() {
   return instance;
 }
 
-void tarch::accelerator::Device::configure([[maybe_unused]] const std::set<int>& devicesToUse) {}
+void tarch::accelerator::Device::configure(const std::set<int>& devicesToUse) {
+  (void) devicesToUse;
+  // TODO: Iterate over devicesToUse and check offloading capability for each device.
+  bool canOffload = false;
+  #pragma omp target map(tofrom : canOffload)
+  {
+    if (!omp_is_initial_device()) {
+      canOffload = true;
+    }
+  }
+
+  if (not canOffload) {
+    throw std::runtime_error("Peano was built with OpenMP GPU offloading support, but the hardware configuration cannot offload to the GPU.");
+  }
+}
 
 void tarch::accelerator::Device::shutdown() {}
 
