@@ -1,10 +1,11 @@
 #pragma once
 
 
-#include "tarch/multicore/BooleanSemaphore.h"
-#include "tarch/logging/Log.h"
-#include "tarch/la/Vector.h"
 #include <vector>
+
+#include "tarch/la/Vector.h"
+#include "tarch/logging/Log.h"
+#include "tarch/multicore/BooleanSemaphore.h"
 
 
 namespace applications {
@@ -31,8 +32,8 @@ namespace applications {
          * @see initialiseOverdensity_Gaussian()
          */
         void initialiseOverdensity_topHat(
-          double * __restrict__                        Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
+          double* __restrict__ Q,
+          const tarch::la::Vector<Dimensions, double>& x,
           double                                       topHatRadius,
           double                                       additionalMass,
           double                                       baselineDensity,
@@ -45,10 +46,7 @@ namespace applications {
          * Baseline configuration where no overdensity is applied
          */
         void initialiseHomogeneousDensity(
-          double * __restrict__                        Q,
-          double                                       baselineDensity,
-          double                                       baselinePressure,
-          double                                       gamma
+          double* __restrict__ Q, double baselineDensity, double baselinePressure, double gamma
         );
 
 
@@ -81,8 +79,8 @@ namespace applications {
          * and error involved.
          */
         void initialiseOverdensity_Gaussian(
-          double * __restrict__                        Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
+          double* __restrict__ Q,
+          const tarch::la::Vector<Dimensions, double>& x,
           double                                       topHatRadius,
           double                                       additionalMass,
           double                                       baselineDensity,
@@ -98,8 +96,8 @@ namespace applications {
          * @see initialiseOverdensity_Gaussian()
          */
         void initialiseOverdensity_bumpFunction(
-          double * __restrict__                        Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
+          double* __restrict__ Q,
+          const tarch::la::Vector<Dimensions, double>& x,
           double                                       topHatRadius,
           double                                       additionalMass,
           double                                       baselineDensity,
@@ -115,8 +113,8 @@ namespace applications {
          * @see initialiseOverdensity_Gaussian()
          */
         void initialiseOverdensity_hyperbolicSecant(
-          double * __restrict__                        Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
+          double* __restrict__ Q,
+          const tarch::la::Vector<Dimensions, double>& x,
           double                                       topHatRadius,
           double                                       additionalMass,
           double                                       baselineDensity,
@@ -126,16 +124,14 @@ namespace applications {
 
 
         void addGravitationalSource_AlphaCDM(
-          double * __restrict__                        S,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          const double * __restrict__                  Q,
-          double                                       mass,
-          double                                       aInitial,
-          double                                       t
+          double* __restrict__ S,
+          const tarch::la::Vector<Dimensions, double>& x,
+          const double* __restrict__ Q,
+          double mass,
+          double aInitial,
+          double t
         );
-      }
-    }
-  }
-}
-
-
+      } // namespace sphericalaccretion
+    }   // namespace euler
+  }     // namespace exahype2
+} // namespace applications

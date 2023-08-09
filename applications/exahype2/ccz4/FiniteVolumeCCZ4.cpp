@@ -1,7 +1,7 @@
 #include "FiniteVolumeCCZ4.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/NonCriticalAssertions.h"
-#include "exahype2/fv/PatchAccess.h"
+#include "exahype2/fv/CellAccess.h"
 
 #include <algorithm>
 
@@ -200,12 +200,12 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
     constexpr int NumberOfRefinementLayers = 3;
     double Radius[NumberOfRefinementLayers] = {5.0*1.8, 3.0*1.8, 1.5*1.8};
     double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
-    ::exahype2::fv::PatchAccess access(
+    ::exahype2::CellAccess access(
       Q,                         // make it initially point to input
-      NumberOfDoFsPerAxisInCell, // defined in superclass
       1,                         // halo size, which you know as user
       NumberOfUnknowns,          // defined in superclass
       NumberOfAuxiliaryVariables // defined in superclass
+      NumberOfDoFsPerAxisInCell, // defined in superclass
     );
     double laplacian=0.0;
     for (int unknown=0; unknown<NumberOfUnknowns; unknown++) {

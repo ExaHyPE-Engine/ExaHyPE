@@ -34,3 +34,4 @@ tarch::la::Vector<3,double>  exahype2::aderdg::getQuadraturePoint(
 
   return tarch::la::multiplyComponents(result,cellSize) + cellCentre - 0.5*cellSize;
 }
+

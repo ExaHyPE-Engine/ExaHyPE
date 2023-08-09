@@ -150,7 +150,7 @@ bool tarch::multicore::internal::fusePendingTasks(
     auto pp = globalNonblockingTasks.tasks.begin();
     while (
       pp != globalNonblockingTasks.tasks.end() and (*pp)->getTaskType() == myTask->getTaskType()
-      and (*pp)->getTaskType() == myTask->canFuse() and tasksOfSameType.size() < fuseInstruction.maxTasks - 1
+      and /*(*pp)->getTaskType() == myTask->canFuse()*/ (*pp)->canFuse() and tasksOfSameType.size() < fuseInstruction.maxTasks - 1
     ) {
       tasksOfSameType.push_back(*pp);
       pp = globalNonblockingTasks.tasks.erase(pp);
