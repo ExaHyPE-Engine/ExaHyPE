@@ -12,6 +12,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
 #include "peano4/utils/Globals.h"
 #include "peano4/grid/TraversalObserver.h"
 
@@ -24,7 +25,7 @@ namespace grid{
 struct peano4::grid::GridVertex {
   public:
     enum class State: int {
-      HangingVertex=0, New=1, Unrefined=2, Refined=3, RefinementTriggered=4, Refining=5, EraseTriggered=6, Erasing=7, Delete=8    
+      HangingVertex=0, New=1, Unrefined=2, Refined=3, RefinementTriggered=4, Refining=5, EraseTriggered=6, Erasing=7, Delete=8
     };
 
     GridVertex() {}
@@ -104,25 +105,33 @@ struct peano4::grid::GridVertex {
 
     /**
      * In DaStGen (the first version), I had a non-static version of the send
-     * as well as the receive. However, this did not work with newer C++11 
-     * versions, as a member function using this as pointer usually doesn't 
-     * see the vtable while the init sees the object from outside, i.e. 
+     * as well as the receive. However, this did not work with newer C++11
+     * versions, as a member function using this as pointer usually doesn't
+     * see the vtable while the init sees the object from outside, i.e.
      * including a vtable. So this routine now is basically an alias for a
-     * blocking MPI_Send. 
+     * blocking MPI_Send.
      */
     static void send(const peano4::grid::GridVertex& buffer, int destination, int tag, MPI_Comm communicator );
     static void receive(peano4::grid::GridVertex& buffer, int source, int tag, MPI_Comm communicator );
 
     /**
-     * Alternative to the other send() where I trigger a non-blocking send an 
-     * then invoke the functor until the corresponding MPI_Test tells me that 
-     * the message went through. In systems with heavy MPI usage, this can 
+     * Alternative to the other send() where I trigger a non-blocking send an
+     * then invoke the functor until the corresponding MPI_Test tells me that
+     * the message went through. In systems with heavy MPI usage, this can
      * help to avoid deadlocks.
      */
     static void send(const peano4::grid::GridVertex& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     static void receive(   peano4::grid::GridVertex& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
+
+    enum ObjectConstruction {
+      NoData
+    };
+
+    GridVertex( ObjectConstruction ):
+        GridVertex() {}
+    
 #ifdef Parallel
     static void sendAndPollDanglingMessages(const peano4::grid::GridVertex& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
     static void receiveAndPollDanglingMessages(peano4::grid::GridVertex& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
@@ -166,7 +175,7 @@ struct peano4::grid::GridVertex {
       /**
        * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
        * initialisation of the datatype. However, Peano calls init explicitly
-       * in most cases. Without the LLVM extension which caches the MPI 
+       * in most cases. Without the LLVM extension which caches the MPI
        * datatype once constructed, this field stores the type.
        */
       static MPI_Datatype  Datatype;

@@ -4,17 +4,20 @@
 
 #include <string>
 
-#include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/services/ServiceRepository.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
-
 #ifdef Parallel
   #include <mpi.h>
   #include <functional>
 #endif
 
+#include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/services/ServiceRepository.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
+#include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
+
+
+  
 namespace peano4{
 namespace parallel{
   struct StartTraversalMessage;
@@ -30,10 +33,6 @@ struct peano4::parallel::StartTraversalMessage {
     void   setStepIdentifier(int value);
     StartTraversalMessage(const StartTraversalMessage& copy) = default;
 
-#ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::parallel::StartTraversalMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(peano4::parallel::StartTraversalMessage& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
-#endif
 
     #ifdef Parallel
     PragmaPush
@@ -97,6 +96,20 @@ struct peano4::parallel::StartTraversalMessage {
     static void receive(   peano4::parallel::StartTraversalMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
+
+    enum ObjectConstruction {
+      NoData
+    };
+
+    StartTraversalMessage( ObjectConstruction ):
+        StartTraversalMessage() {}
+    
+#ifdef Parallel
+    static void sendAndPollDanglingMessages(const peano4::parallel::StartTraversalMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::parallel::StartTraversalMessage& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+#endif
+    
+
     std::string toString() const;
 
   private:
@@ -119,4 +132,7 @@ struct peano4::parallel::StartTraversalMessage {
       static MPI_Datatype  Datatype;
       #endif
     #endif
+
+
+
 };

@@ -35,6 +35,12 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
+  _solverState = SolverState::Suspended;
+}
+
+
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
   return getMaxPatchSize();
 }

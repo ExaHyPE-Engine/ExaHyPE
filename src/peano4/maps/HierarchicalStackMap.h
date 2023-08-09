@@ -182,6 +182,7 @@ T* peano4::maps::HierarchicalStackMap<T>::getForPop(const StackKey& key) {
   assertion3(localTreeId>=0,localTreeId,key.first,key.second);
   assertion4(localTreeId<static_cast<int>(_data.size()),localTreeId,_data.size(),key.first,key.second);
   assertion4(_data[localTreeId]._stackNumberToData.count(key.second)==1,localTreeId,_data.size(),key.first,key.second);
+  assertion3(key.second>=0,localTreeId,key.first,key.second);
   return _data[localTreeId]._stackNumberToData.at(key.second);
 }
 

@@ -213,14 +213,24 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * on-rank and the between-rank case. As a consequence, we may only stream if the
      * destination stack is still empty.
      *
-     * <h2> On-rank realisation </h2>
+     * All data that are streamed are clones of the original data. These clones
+     * are created by peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees()
+     * before we trigger this routine.
+     *
+     * ## On-rank realisation
      *
      * If source and destination rank are the same, a tree splits up into two trees
      * both residing on the same MPI rank. We therefore simply copy the stream. As
      * this routine is invoked on the master, it is the master that creates the
      * stream on the worker and befills it.
      *
-     * <h2> Data exchange between different ranks </h2>
+     * Please note that in this particular case, the routine is called twice: We call
+     * it per rank for the splitting trees and then for the empty ones. The second
+     * call however degenerates to nop.
+     *
+     * Where to the clones happen?
+     *
+     * ## Data exchange between different ranks
      *
      * If the master rank is the local guy, then we have to trigger a send. Otherwise,
      * we trigger a receive. The message exchange consists of two phases. An integer
@@ -387,7 +397,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * the streamed user data. After that, we have to run through the grid one more time
      * on the worker (without any action) to get all the data into the right order.
      *
-     * <h2> Vertex grid data </h2>
+     * ## Vertex grid data
      *
      * The copying of the whole tree data is literally a copying of the output stack of
      * the master. It happens after the master has finished its splitting traversal.
@@ -402,14 +412,14 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * second invocation degenerates to nop automatically. See streamDataFromSplittingTreeToNewTree()
      * which implements a simple emptyness check.
      *
-     * <h2> User data </h2>
+     * ## User data
      *
      * It is only the vertex grid data that is copied over in one rush prior to the splitting
      * state. User data is streamed within the splitting state. See Spacetree::sendUserData().
      * The latter routine dumps data in the vertical data exchange stacks, and these stacks
      * subsequently are then transferred over by the present routine, too.
      *
-     * <h2> Stack types </h2>
+     * ## Stack types
      *
      * All the routines copy over the stream stack data, i.e. the stacks for the vertical
      * data exchange. It is hence important to recognise that the normal stacks are not

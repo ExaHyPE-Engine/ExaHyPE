@@ -4,10 +4,18 @@
 
 #include <tuple>
 
+#include "particles.h"
+#include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
+
 
 namespace toolbox {
   namespace particles {
+    typedef int ParticleReassociationInstruction;
+
+    constexpr int ParticleReassociationInstruction_Keep          = -1;
+    constexpr int ParticleReassociationInstruction_SieveGlobally = -2;
+
     /**
      * Multilevel sorting tolerance
      *
@@ -78,7 +86,7 @@ namespace toolbox {
     /**
      * @see SpatialReassignmentTolerance
      */
-    constexpr double MultilevelSortingTolerance = 1.01;
+    constexpr double MultilevelSortingTolerance = SpatialSortingTolerance;
 
     /**
      * We try to pick the damping such that the two halo layers from the
@@ -94,18 +102,6 @@ namespace toolbox {
      * @see SpatialSortingTolerance
      */
     constexpr double AsymmetricSortingDamping = 0.5 / SpatialSortingTolerance + 0.5;
-
-    /**
-     * Default tolerance to decide when two particles are the same.
-     *
-     * @see eliminateSpatialDuplicates()
-     */
-    constexpr double SpatialDuplicateTolerance = 1e-6;
-
-    typedef int ParticleReassociationInstruction;
-
-    constexpr int ParticleReassociationInstruction_Keep          = -1;
-    constexpr int ParticleReassociationInstruction_SieveGlobally = -2;
 
     /**
      * If you use this operation, you can be sure that every particle is
@@ -153,6 +149,10 @@ namespace toolbox {
      *   Remove it completely from mesh and push it into a global list of
      *   particles which shall be sieved in the next step.
      *
+     * When we try to lift to the next coarser level, we have to check if the
+     * target vertex is local. If not, we have to sieve.
+     *
+     *
      * ## Algorithm
      *
      * If a particle is not local, we keep it, as we don't dare to make a
@@ -179,6 +179,7 @@ namespace toolbox {
      * All of these considerations apply if and only if a particle is local. If
      * a particle is virtual, it is a copy from another rank. In this case, we
      * should not change its position, and we should not change its association.
+     *
      *
      * @see LiftingTolerance
      */
@@ -211,10 +212,10 @@ namespace toolbox {
      * - this vertex is closer to the particle than half the mesh size of
      *   an adjacent mesh element, as we always store particles next to
      *   their closest vertex; AND
-     * - this vertex's cut-off radius would not fit into the next finer
+     * - this vertex's search radius would not fit into the next finer
      *   mesh level OR
      *   there is no next finer mesh level; AND
-     * - the particle's cut-off is not too big for the current mesh level.
+     * - the particle's search radius is not too big for the current mesh level.
      *
      *
      * ## Rationale and usage
@@ -260,7 +261,7 @@ namespace toolbox {
      *
      * Lifting will always be subject to a comparison similar to
      *
-     *       marker.h() < 2.0 * particle.getCutOffRadius()
+     *       marker.h() < 2.0 * particle.getSearchRadius()
      *
      * This threshold is hard. However, we can sieve into a coarser
      * level obviously to ensure that we don't violate it.
@@ -271,8 +272,8 @@ namespace toolbox {
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *  const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.h() )     * MultilevelSortingTolerance *
-     * AsymmetricSortingDamping >= 2.0 * particle.getCutOffRadius(); const bool   fitsIntoNextFinerGridResolution =
-     * tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getCutOffRadius();
+     * AsymmetricSortingDamping >= 2.0 * particle.getSearchRadius(); const bool   fitsIntoNextFinerGridResolution =
+     * tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getSearchRadius();
      *
      *  return marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) *
      * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE) and fitsIntoThisGridResolution and ( not
@@ -280,7 +281,7 @@ namespace toolbox {
      *     );
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
-     * However, it turns out a lot of runtime is spent in getCutOffRadius(). It
+     * However, it turns out a lot of runtime is spent in getSearchRadius(). It
      * is not clear if the compiler manages to exploit the non-strict evaluation
      * if we first define the two const bools. So I moved them now into the
      * boolean expression, i.e. work without the explicit temporary variables.
@@ -293,31 +294,10 @@ namespace toolbox {
     template <typename Particle>
     bool dropParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
 
-    /**
-     * Eliminate spatial duplicates
-     *
-     * Whenever we work with distributed data structures and multilevel transitions
-     * in a distributed memory mindset, we can run into redundant particles which
-     * we then have to eliminate.
-     *
-     * This elimination means that I actually delete the particle held by
-     * particleSet.
-     *
-     * @param particleSet Reference to a C++ container (often a stack) which in turn
-     *   hosts pointers to particles. If we find redundancies, we will delete this
-     *   object where the pointer points to and afterwards remove the pointer from
-     *   the container.
-     *
-     * @return [int,int] representing
-     * [numberOfLocalEliminatedSpatialDuplicates,numberOfVirtualEliminatedSpatialDuplicates]
-     */
-    template <typename ParticleContainer>
-    std::tuple<int, int> eliminateSpatialDuplicates(ParticleContainer& particleSet);
-
-    double relativeSpatialSortingTolerance(const peano4::datamanagement::VertexMarker& marker);
-    double relativeSpatialSortingTolerance(const peano4::datamanagement::CellMarker& marker);
-    double relativeMultilevelSortingTolerance(const peano4::datamanagement::VertexMarker& marker);
-    double relativeMultilevelSortingTolerance(const peano4::datamanagement::CellMarker& marker);
+    double relativeSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
+    double relativeSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
+    double relativeMultilevelSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
+    double relativeMultilevelSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
   } // namespace particles
 } // namespace toolbox
 

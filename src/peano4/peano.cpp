@@ -10,6 +10,7 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/BooleanSemaphore.h"
 #include "tarch/tarch.h"
+#include "tarch/accelerator/DeviceInfo.h"
 
 #include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
@@ -67,6 +68,8 @@ void peano4:: writeCopyrightMessage() {
     buildInfo += ", sycl";
     #elif defined(GPUOffloadingCPP)
     buildInfo += ", C++ offloading";
+    #elif defined(GPUOffloadingCUDA)
+    buildInfo += ", CUDA offloading";
     #else
     buildInfo += ", no gpu support";
     #endif
@@ -122,6 +125,9 @@ int peano4::initParallelEnvironment([[maybe_unused]] int* argc, [[maybe_unused]]
   #endif
 
   writeCopyrightMessage();
+
+  tarch::accelerator::offloadCapabilityTest();
+  tarch::accelerator::printDeviceInformation();
 
   return result;
 }

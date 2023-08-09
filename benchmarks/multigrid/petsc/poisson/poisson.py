@@ -27,6 +27,13 @@ parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       defau
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
+#add a 9 point stencil which will 
+#be passed to PETSc at matrix initialisation stage
+stencil=[
+  [-1/3, -1/3, -1/3],
+  [-1/3,  8/3, -1/3],
+  [-1/3, -1/3, -1/3]
+]
 
 project = petsc.Project(project_name = "Poisson", 
                         namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
@@ -36,7 +43,8 @@ project = petsc.Project(project_name = "Poisson",
 solver = petsc.solvers.CollocatedLowOrderDiscretisation("Poisson", 
                                                         1,
                                                         args.meshsize,
-                                                        args.meshsize
+                                                        args.meshsize,
+                                                        stencil
                                                         )
 
 project.add_solver( solver )
@@ -54,8 +62,8 @@ if args.mode=="asserts":
 cube_size = 1.0
 project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
-  offset                = [0.0, 0.0, 0.0],
-  domain_size           = [ cube_size, cube_size, cube_size],
+  offset                = [ 0.0       for _ in range(args.dimensions) ],
+  domain_size           = [ cube_size for _ in range(args.dimensions) ],
 )
 
 

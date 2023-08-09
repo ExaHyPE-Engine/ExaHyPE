@@ -195,10 +195,21 @@ void step() {
 
         repositories::computeLocalToGlobalMapsForAllSolvers();
         const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
-        logInfo( "step()", "total no of dofs=" << totalNumberOfDegreesOfFreedom );
+        logInfo( "step()", "total no of dofs="  << totalNumberOfDegreesOfFreedom );
 
-        // todo Dmitry
+        {% if Project_Name=="HDG" %}
+        const int totalNumberOfFaceDofs  = repositories::getTotalFaceDofs();
+        const int totalNumberOfCellDofs  = repositories::getTotalCellDofs();
+        const int totalDofs              = totalNumberOfFaceDofs + totalNumberOfCellDofs;
+        logInfo( "step()", "total no of face dofs=" << totalNumberOfFaceDofs );
+        logInfo( "step()", "total no of cell dofs=" << totalNumberOfCellDofs );
+        logInfo( "step()", "initialising petsc matrix with " << totalDofs << " dofs" );
+        repositories::instanceOfPetsc.initMatrixAndVectors( totalDofs );
 
+        {%else%}
+        repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );
+        {% endif %}
+        
         watch.stop();
         initMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -210,6 +221,9 @@ void step() {
         observers::Assemble  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+
+        //assemble the matrix
+        repositories::instanceOfPetsc.assemble();
         watch.stop();
         assembleMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -219,7 +233,11 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
 
         watch.start();
+        {% if Project_Name=="Poisson" %}
         // solve
+        repositories::instanceOfPetsc.petscSolve();
+        {% endif %}
+
         watch.stop();
         solveMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -230,7 +248,15 @@ void step() {
 
         observers::MapSolutionOntoMesh  observer;
         watch.start();
+
+        //move data from petsc to c++
+        {% if Project_Name=="Poisson" %}
+        repositories::instanceOfPetsc.convertToStdVector();
+        {% endif %}
+        
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        
+        repositories::instanceOfPetsc.petscDestroy();
         watch.stop();
         mapSolutionOntoMeshMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -263,9 +289,12 @@ int main(int argc, char** argv) {
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
+  tarch::la::Vector<Dimensions, double> x = {{DomainOffset}};
+  tarch::la::Vector<Dimensions, double> h = {{DomainSize}};
+
   peano4::initSingletons(
-    {{DomainOffset}},
-    {{DomainSize}}
+    x,
+    h
   );
 
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {

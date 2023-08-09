@@ -63,6 +63,7 @@ Peano4Core_SOURCES = \
   peano4/grid/GridStatistics.cpp \
   peano4/grid/GridTraversalEvent.cpp \
   peano4/grid/GridTraversalEventGenerator.cpp \
+  peano4/grid/LoadStoreComputeFlag.cpp \
   peano4/grid/PeanoCurve.cpp \
   peano4/grid/Spacetree.cpp \
   peano4/grid/TraversalObserver.cpp \
@@ -97,14 +98,19 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/la/DynamicMatrix.cpp \
  tarch/accelerator/accelerator.cpp \
  tarch/accelerator/Device.cpp \
+ tarch/accelerator/DeviceInfo.cpp \
  tarch/accelerator/cpp/accelerator.cpp \
  tarch/accelerator/cpp/Device.cpp \
+ tarch/accelerator/cpp/DeviceInfo.cpp \
  tarch/accelerator/omp/accelerator.cpp \
  tarch/accelerator/omp/Device.cpp \
+ tarch/accelerator/omp/DeviceInfo.cpp \
  tarch/accelerator/omp/GPUMemoryManager.cpp \
  tarch/accelerator/sycl/accelerator.cpp \
  tarch/accelerator/sycl/Device.cpp \
+ tarch/accelerator/sycl/DeviceInfo.cpp \
  tarch/accelerator/cuda/ErrorCheck.cpp \
+ tarch/accelerator/cuda/DeviceInfo.cpp \
  tarch/multicore/BooleanSemaphore.cpp \
  tarch/multicore/multicore.cpp \
  tarch/multicore/Core.cpp \
