@@ -5,8 +5,20 @@
 #include <list>
 #include <vector>
 
+#include "peano4/datamanagement/VertexEnumerator.h"
+
 namespace toolbox {
   namespace particles {
+    /**
+     * Check if all particles are either gathered or host the empt set
+     */
+    template <typename T>
+    void ensureAllParticleListsAreGatheredOrEmpty(
+      peano4::datamanagement::VertexEnumerator<T> vertices
+    );
+
+
+
     /**
      * Validate encoding of particle lists
      *

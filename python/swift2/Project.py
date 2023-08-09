@@ -67,10 +67,10 @@ class Project(object):
         self.algorithm_step_plot = peano4.solversteps.Step("Plot", False)
 
         self.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_use_stlsets_to_construct_active_sets
+            swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec
         )
         self.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_use_stlsets_to_construct_active_sets
+            swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals
         )
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):

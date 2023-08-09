@@ -5,6 +5,7 @@
 \li \subpage page_toolbox_particles_mesh_storage
 \li \subpage page_toolbox_particles_mesh_traversal
 \li \subpage page_toolbox_particles_mesh_consistency
+\li \subpage toolbox_particles_memorypool
 
 Peano's particle toolbox provides features to add tracers to your code, but
 also to add particles which swim around. We have some features to dump

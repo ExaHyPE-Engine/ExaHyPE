@@ -101,6 +101,8 @@ class Particle(peano4.toolbox.particles.Particle):
           Consult our code release papers: In short, a particle does not uniquely
           belong to one cell but can belong to many cells. We nevertheless want to
           update them only once.
+          
+        @see swift2.actionsets.UpdateParticleMarker
 
         """
         super(Particle, self).__init__(name)

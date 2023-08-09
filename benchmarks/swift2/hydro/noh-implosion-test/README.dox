@@ -56,5 +56,26 @@ python3 noh.py -np 320 -plot 0 -et 0.001
  accuracies per attribute.
 
 
+## Vectorisation studies
+
+The Noh benchmark is one of our classic test cases to study vectorisation of 
+the kernels. Our first subject of study is the function swift2::kernels::forceKernelVectorised()
+which is a nice function to see what has to be done to get good SIMD 
+efficiency. Before we tweak this function, I recommend to re-translate with
+the Intel compiler, to include -O3 -xHost in the code, and then to manipulate
+the Makefile:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
+	rm observers/StephydroPartForceLoop_sweep72peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4.o
+	$(CXX) -qopt-report=3 $(CXXFLAGS) -c -o observers/StephydroPartForceLoop_sweep72peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4.o observers/StephydroPartForceLoop_sweep72peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4.cpp
+	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o noh2D
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These instructions follow @ref swift_particle_new_solver "Swift's generic recommendations"
+when it comes to the development of vectorised solvers.
+
+ 
  
  */

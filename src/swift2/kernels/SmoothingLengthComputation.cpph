@@ -63,6 +63,7 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
     const double h_old_dim           = std::pow(h_old, hydro_dimensions);
     const double h_old_dim_minus_one = std::pow(h_old, hydro_dimensions - 1);
     double       h_new;
+<<<<<<< HEAD
     /* TODO: remove this after debugging */
     const double h_current = localParticle->getSmoothingLength();
 
@@ -105,6 +106,48 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
       }
       break;
     }
+=======
+
+    // for now, make sure this fails even without debug mode
+    if (localParticle->getWcount() < 1.e-5 * kernel_root) {
+      std::cout << "GOT NO NEIGHBOURS " << localParticle->toString() << std::endl;
+      std::abort();
+    }
+    //   [> No neighbours case <]
+    //   [> Double h and try again <]
+    //   h_new = 2.f * h_old;
+    //  // else {
+
+    // If we are using alternative definition of number of neighbours, e.g.
+    // mass weighted, then we'd need to make adaptations here.
+    // p->density.wcount = p->rho * inv_mass;
+    // p->density.wcount_dh = p->density.rho_dh * inv_mass;
+
+    // Compute one step of the Newton-Raphson scheme
+    const double wcount   = localParticle->getWcount();
+    const double n_sum    = wcount * h_old_dim;
+    const double n_target = eta_dim;
+    const double f        = n_sum - n_target;
+    const double f_prime  = localParticle->getWcount_dh() * h_old_dim + hydro_dimensions * wcount * h_old_dim_minus_one;
+
+    // Improve the bisection bounds
+    if (n_sum < n_target) {
+      left = std::max(left, h_old);
+    } else if (n_sum > n_target) {
+      right = std::min(right, h_old);
+    }
+
+    // Skip if h is already h_max and we don't have enough neighbours
+    // Same if we are below h_min
+    if (((h_old >= hydro_h_max) && (f < 0.)) || ((h_old <= hydro_h_min) && (f > 0.))) {
+      if (not localParticle->getIsBoundaryParticle()) {
+        std::cout << "EARLY EXIT ABCDEF " << localParticle->toString() << std::endl;
+      }
+      break;
+    }
+
+    assertion4((not localParticle->getIsBoundaryParticle()) and (left < right), left, right, localParticle->toString(), activeParticles.size() );
+>>>>>>> branch 'particles-sml-fix' of https://gitlab.lrz.de/hpcsoftware/Peano.git
 
     // Normal case: Use Newton-Raphson to get a better value of h
 
