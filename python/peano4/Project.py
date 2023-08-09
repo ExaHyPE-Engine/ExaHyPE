@@ -119,6 +119,7 @@ class Project (object):
       print( "threw away all data and ran garbage collection" )
 
   def build(self,
+            make=True,
             make_clean_first=True,
             throw_away_data_after_build=False,
             number_of_parallel_builds=-1,
@@ -136,11 +137,14 @@ class Project (object):
       throw_away_data_after_build: Bool
         see generate()
     """
-    if number_of_parallel_builds<=0:
+    if number_of_parallel_builds <= 0:
         number_of_parallel_builds = multiprocessing.cpu_count()
 
     if not self.is_generated:
       self.generate()
+
+    if not make:
+      return
 
     if make_clean_first:
       print( "clean up project ..." )
@@ -155,10 +159,14 @@ class Project (object):
     if not self.is_built:
       print( "start to compile with concurrency level of " + str(number_of_parallel_builds) + " ..." )
       try:
-        from peano4.output.Helper import find_cmake_build_dir
-        cmake_build_dir = find_cmake_build_dir()
+        from peano4.output.Helper import find_CMake_build_dir
+        cmake_build_dir = find_CMake_build_dir()
         if cmake_build_dir != "":
-          command = f"cd {cmake_build_dir} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
+          # Configuring twice is necessary because of the following
+          # Generated application needs to be added as a target, this forces cmake .. unless the user calls from the bash
+          # Generated applications CMakeLists might change the CMAKE_BUILD_TYPE for the change the generate the new possible targets
+          # The second cmake .. is necessary
+          command = f"cd {cmake_build_dir} && cmake .. && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
           process = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
           process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)

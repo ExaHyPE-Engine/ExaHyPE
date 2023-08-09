@@ -7,8 +7,8 @@ from enum import Enum
     
 
 class SolverVariant(Enum):
-  WithVirtualFunctions = 0,
-  Stateless            = 1,
+  WithVirtualFunctions = 0
+  Stateless            = 1
   Accelerator          = 2
 
 

@@ -39,11 +39,6 @@ project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesByCoord
   particle_set=tracer_particles, 
   coordinates=[ [x,x,x], [x,x,x] ]
   ))
-    
-project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
-                                                self,
-                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
-                                                ))
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In this example, we add the actual tracer insertion to the initialisation.
@@ -56,7 +51,19 @@ Once
 inserted, you can run your code and visualise the particles. However,
 these particles do not track the actual data of
 interest. To facilitate this, you have to map your solution onto the
-particle first. Let `thesolver` be your  solver instance in the Python
+particle first. 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+my_tracing = exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                thesolver,
+                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
+                                                )
+project.add_action_set_to_timestepping( my_tracing )
+project.add_action_set_to_initialisation( my_tracing )                                                
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Let `thesolver` be your  solver instance in the Python
 script. Not all solvers currently support tracers (efficiently), but we
 are continuously improving the tracer support. With the solver instance
 and the tracers, we can couple the two ingredients. You have to pick
@@ -66,6 +73,16 @@ note that you will have to pick an interpolation that fits to your
 solver. In the snippet above, we use a Finite Volume solver and
 therefore pick a projection from the `exahype2::fv` namespace. Other
 discretisations will require other interpolation schemes.
+
+It is clear that you have to add the tracing to the time stepping. After
+each step, you want to have an updated solution dumped into the tracer.
+Further to that, we add the tracing to the initialisation. If we forget to
+do this, we will have garbage within the tracer prior to the first time 
+step. If we don't dump the initial conditions, you don't have to care
+about this step. 
+
+
+
 
 - See exahype2/fv/Tracer.h for an overview of pre-defined routines
   that map the solution data from Finite Volumes onto particles. As 

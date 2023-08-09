@@ -44,6 +44,11 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
+  _solverState = SolverState::Suspended;
+}
+
+
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize(bool ofCurrentlyRunningGridSweep) const {
   return ofCurrentlyRunningGridSweep ? _minCellHThisTimeStep : _minCellH;
 }
@@ -186,6 +191,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::GridInitialisation;
       break;
     case SolverState::GridInitialisation:
+      _solverState = SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0;
+      break;
+    case SolverState::Suspended:
       _solverState = SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0;
       break;
     case SolverState::Plotting:

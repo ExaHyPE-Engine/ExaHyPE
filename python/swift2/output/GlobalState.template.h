@@ -41,8 +41,8 @@
   double getMinTimeStepSize();
   double getMaxTimeStepSize();
 
-  double getMinCutOffRadius();
-  double getMaxCutOffRadius();
+  double getMinSearchRadius();
+  double getMaxSearchRadius();
 
   void startGridConstructionStep();
   void startInitialisationStep();

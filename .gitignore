@@ -6,6 +6,7 @@
 *.lo
 *.o
 *.obj
+*.tsm
 
 # Precompiled Headers
 *.gch
@@ -247,7 +248,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.black_formatting_env/
+.formatting_python_env/
 
 # Spyder project settings
 .spyderproject
@@ -280,18 +281,26 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# Misc
-.DS_Store
-/Debug/
-
 # Generated documentation
 doxygen-html/
 
+# Submodules
 submodules/
 
+# Unit tests
+UnitTests2d*
+UnitTests3d*
+
+# Output files
+*patch-file*
+*.pvd
+*.err
+*.out
+
+# Misc
+.DS_Store
+/Debug/
+*.tmp
+*.trs
+*.sh
 compile_commands.json
-
-UnitTests2d
-UnitTests3d
-
-.gitignore

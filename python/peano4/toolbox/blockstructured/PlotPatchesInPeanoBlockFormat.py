@@ -55,7 +55,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     """
     super(PlotPatchesInPeanoBlockFormat,self).__init__(priority=1,parallel=False)
 
-    valid_datatypes = {"float", "double", "long double"}
+    valid_datatypes = {"float", "double", "long double", "std::float16_t", "std::bfloat16_t"}
 
     self._plot_cell_data           = plot_cell_data
     
@@ -327,6 +327,6 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
   def get_static_initialisations(self,full_qualified_classname):
     return """
-tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + "::_semaphore(\"""" + full_qualified_classname + """\");
+tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + """::_semaphore;
 """
     

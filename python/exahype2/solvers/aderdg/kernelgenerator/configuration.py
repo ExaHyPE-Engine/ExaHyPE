@@ -72,7 +72,9 @@ class Configuration:
     validPrecisions = [
         "float",
         "double",
-        "long double"
+        "long double",
+        "std::float16_t",
+        "std::bfloat16_t"
     ]
 
 

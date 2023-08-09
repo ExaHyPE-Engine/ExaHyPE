@@ -79,32 +79,6 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::Vertex
   flushIfPatchIsComplete();
 }
 
-template<typename T>
-void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, T* values ) {
-  for (int i=0; i<_numberOfUnknowns; i++) {
-    if ( std::isnan(values[i]) ) {
-      _out << " nan";
-    }
-    else {
-      if ( std::abs(values[i]) < std::numeric_limits<T>::min() ) values[i] = 0.0;
-      if (tarch::la::equals(values[i],0.0)) {
-        _out << " 0";
-      }
-      else {
-        _out << " " << values[i];
-      }
-    }
-    _entryCounter++;
-  }
-  flushIfPatchIsComplete();
-}
-
-template void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, float* values );
-
-#ifndef __NVCOMPILER
-template void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( int index, long double* values );
-#endif
-
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::close() {}
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::assignRemainingVerticesDefaultValues() {

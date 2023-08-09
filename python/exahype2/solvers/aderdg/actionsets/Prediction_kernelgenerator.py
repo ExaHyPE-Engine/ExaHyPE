@@ -1,23 +1,33 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
 from .AbstractAderDGActionSet import AbstractAderDGActionSet
 from ..kernels import create_array_and_convert_from_type
 
-#import peano4
+# import peano4
 import peano4.solversteps
 import jinja2
 
+
 class Prediction_kernelgenerator(AbstractAderDGActionSet):
-  """
-  
-  The extrapolated solution from the space-time predictor has to be projected onto
-  the faces, so we can then solve the Riemann problems. So the projection 
-  happens in one grid sweep, the corresponding Riemann solve in the next one.
-  
-  """
-  
-  TemplateProject = """
+    """
+
+    The extrapolated solution from the space-time predictor has to be projected onto
+    the faces, so we can then solve the Riemann problems. So the projection
+    happens in one grid sweep, the corresponding Riemann solve in the next one.
+
+    """
+
+    TemplateProject = """
+
+  bool isHangingCell = false;
+  for(int d=0; d<2*Dimensions; d++){
+    if(fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
+      isHangingCell = true;
+      break;
+    }
+  }
+
   if ({{PREDICATE}}) {
   
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
@@ -39,51 +49,66 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     #endif
     
     constexpr int spaceTimeBasisSize = spaceBasisSize*(Order+1);
-    
-
     constexpr int totalSize = generated::kernels::AderDG::{{LINEARITY}}::getFusedSTPVISize();  
+
+    {% if NUMBER_OF_PREDICTOR_PRECISIONS!=1 %}
+    ::exahype2::PrecisionCommand myPrecision = repositories::{{SOLVER_INSTANCE}}.precisionCriterion(
+      luh,
+      marker.x(),
+      marker.h(),
+      timeStepSize,
+      repositories::{{SOLVER_INSTANCE}}.getSolverState()
+    );
+
+    switch(myPrecision){
+    {% endif %}
+
+    {% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}
+    {% if NUMBER_OF_PREDICTOR_PRECISIONS!=1 %}
+    case ::exahype2::PrecisionCommand::{{PRECISIONS_CAPITALIZED[PRECISION_NUM]}}:
+    {
+    {% endif %}
     
-    {{PREDICTOR_COMPUTATION_PRECISION}} memory[totalSize] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} memory[totalSize] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
         
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lQi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlQiShift();
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lQhi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlQhiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlQiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlQhiShift();
 
     {% if USE_LFI is sameas True %}
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lFi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlFiShift();
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lFhi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlFhiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlFiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlFhiShift();
     {% else %}
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lFi           = nullptr;
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lFhi          = nullptr;
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi           = nullptr;
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi          = nullptr;
     {% endif %}    
 
     {% if USE_LSI is sameas True %}
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lSi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlSiShift();
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lShi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlShiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lSi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlSiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lShi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlShiShift();
     {% else %}
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lSi           = nullptr;
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lShi          = nullptr;
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lSi           = nullptr;
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lShi          = nullptr;
     {% endif %}
     
     {% if USE_GRADQ is sameas True %}
-    {{PREDICTOR_COMPUTATION_PRECISION}}* gradQ         = memory + generated::kernels::AderDG::{{LINEARITY}}::getgradQShift(); 
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ         = memory + generated::kernels::AderDG::{{LINEARITY}}::getgradQShift(); 
     {% else %}
-    {{PREDICTOR_COMPUTATION_PRECISION}}* gradQ         = nullptr;
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ         = nullptr;
     {% endif %}
     
     {% if USE_PSI is sameas True %}    
-    {{PREDICTOR_COMPUTATION_PRECISION}}* PSi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getPSiShift();
-    {{PREDICTOR_COMPUTATION_PRECISION}}* PSderivatives = memory + generated::kernels::AderDG::{{LINEARITY}}::getPSderivativesShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getPSiShift();
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSderivatives = memory + generated::kernels::AderDG::{{LINEARITY}}::getPSderivativesShift();
     {% else %}
-    {{PREDICTOR_COMPUTATION_PRECISION}}* PSi           = nullptr;
-    {{PREDICTOR_COMPUTATION_PRECISION}}* PSderivatives = nullptr;
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSi           = nullptr;
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* PSderivatives = nullptr;
     {% endif %}
         
-    {{PREDICTOR_COMPUTATION_PRECISION}} lduh[generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize()];
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} lduh[generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize()]{0.0};
         
-    {{PREDICTOR_STORAGE_PRECISION}} lQhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndFaceTotalSize()]{0.0};
-    {{PREDICTOR_STORAGE_PRECISION}} lFhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndFluxTotalSize()]{0.0};
-    //{{PREDICTOR_STORAGE_PRECISION}} lGradQhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndGradQTotalSize()]{0.0};
-    
+    {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndFaceTotalSize()]{0.0};
+    {{CORRECTOR_COMPUTATION_PRECISION}} lFhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndFluxTotalSize()]{0.0};
+    //{{CORRECTOR_COMPUTATION_PRECISION}} lGradQhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndGradQTotalSize()]{0.0};
 
     {% if IS_LINEAR is sameas True %}
 
@@ -99,7 +124,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     
     if(pointSources != nullptr) {
         // perform pointsource
-        numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISION}}, {{PREDICTOR_STORAGE_PRECISION}}>(
+        numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
           repositories::{{SOLVER_INSTANCE}},
           lduh,
           lQhbnd,
@@ -121,7 +146,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
           pointSources // will be deleted in the end if set
         );    
     } else {
-        numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral_WithoutPS<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISION}}, {{PREDICTOR_STORAGE_PRECISION}}>(
+        numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral_WithoutPS<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
           repositories::{{SOLVER_INSTANCE}},
           lduh,
           lQhbnd,
@@ -148,7 +173,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     {% else %}{# point_sources #}
     
     //linear, no pointSources
-    int numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISION}}, {{PREDICTOR_STORAGE_PRECISION}}>(
+    int numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
       lduh,
       lQhbnd,
@@ -174,10 +199,10 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
 
     {% else %} {# nonlinear #}
     
-    {{PREDICTOR_COMPUTATION_PRECISION}} rhs[(NumberOfVariables+NumberOfParameters)*spaceTimeBasisSize];
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} rhs[(NumberOfVariables+NumberOfParameters)*spaceTimeBasisSize];
 
     //nonlinear
-    int numberOfIterations = generated::kernels::AderDG::nonlinear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISION}}, {{PREDICTOR_STORAGE_PRECISION}}>(
+    int numberOfIterations = generated::kernels::AderDG::nonlinear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
         lduh,
         lQhbnd,
@@ -207,7 +232,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
       lduh, 
       timeStepSize
     );
-      
+    
     /*
     Copy the estimates into the face data containers. Note that peano uses a different ordering of
     the faces that the kernels, so these are reordered somewhat.
@@ -220,69 +245,97 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
     */
   
-    const int basisElementsByFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFaceSize();
-    const int fluxElementsByFace   = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
+    const int basisElementsPerFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFaceSize();
+    const int fluxElementsPerFace   = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
 
     for(int d=0; d<Dimensions; d++){
       //Projected solution estimations
-      std::copy_n(&lQhbnd[2*d*basisElementsByFace], basisElementsByFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsByFace);
-      std::copy_n(&lQhbnd[(2*d+1)*basisElementsByFace], basisElementsByFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value);
+      std::copy_n(&lQhbnd[2*d*basisElementsPerFace], basisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsPerFace);
+      std::copy_n(&lQhbnd[(2*d+1)*basisElementsPerFace], basisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value);
       
       //Projected flux estimations
-      std::copy_n(&lFhbnd[2*d*fluxElementsByFace], fluxElementsByFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsByFace);
-      std::copy_n(&lFhbnd[(2*d+1)*fluxElementsByFace], fluxElementsByFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value);            
+      std::copy_n(&lFhbnd[2*d*fluxElementsPerFace], fluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace);
+      std::copy_n(&lFhbnd[(2*d+1)*fluxElementsPerFace], fluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value);            
 
       //Timestamp information for boundary handling
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setNewTimeStamp(1, timeStamp);
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).setNewTimeStamp(0, timeStamp);      
     }
+
+    {% if NUMBER_OF_PREDICTOR_PRECISIONS!=1 %}
+      break;
+      }
+    {% endif %}
+
+    {% endfor %}
+
+    {% if NUMBER_OF_PREDICTOR_PRECISIONS!=1 %}
+      default:
+        assertion1WithExplanation(false, myPrecision, " chosen precision was not in the previously specified options, as such there are no compiled kernels for this option");
+        assert(false);
+      }
+    {% endif %}
   
     repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, marker.h()(0) );
   }
 
 """
-  
-  def __init__(self,solver,guard):
-    """
-    
-    guard_project: String (C++ code)
-      Predicate which controls if the solution is actually projected
-      
-    guard_safe_old_time_step: String (C++ code)
-      Predicate which controls if the projection should be copied into
-      the old solution and the time step should also be moved over
-    
-    """
-    super(Prediction_kernelgenerator,self).__init__(solver)
-    self.guard      = guard
-    self._use_lfi   = solver._is_linear or solver._flux_implementation!="<none>"
-    self._use_lsi   = solver._source_term_implementation!="<none>" or (not solver._is_linear and solver._ncp_implementation!="<none>")
-    self._use_gradQ = solver._ncp_implementation!="<none>"
-    self._use_psi   = solver._is_linear and solver._point_sources_implementation!="<none>"
 
-  def get_body_of_operation(self,operation_name):
-    result = ""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]  = self.guard
-      d[ "USE_LFI" ]    = self._use_lfi
-      d[ "USE_LSI" ]    = self._use_lsi
-      d[ "USE_GRADQ" ]  = self._use_gradQ
-      d[ "USE_PSI" ]    = self._use_psi
-      
-      result = jinja2.Template(self.TemplateProject).render(**d)
-      pass 
-    return result
+    def __init__(self, solver, guard):
+        """
 
+        guard_project: String (C++ code)
+          Predicate which controls if the solution is actually projected
 
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
+        guard_safe_old_time_step: String (C++ code)
+          Predicate which controls if the projection should be copied into
+          the old solution and the time step should also be moved over
 
-  def get_includes(self):
-    
-    linearity = ( "linear" if self._solver._is_linear else "nonlinear" )
-    return super(Prediction_kernelgenerator,self).get_includes() + """
-#include "../generated/kernels/aderdg/""" + linearity + """/Kernels.h"
+        """
+        super(Prediction_kernelgenerator, self).__init__(solver)
+        self.guard = guard
+        self._use_lfi = solver._is_linear or solver._flux_implementation != "<none>"
+        self._use_lsi = solver._source_term_implementation != "<none>" or (
+            not solver._is_linear and solver._ncp_implementation != "<none>"
+        )
+        self._use_gradQ = solver._ncp_implementation != "<none>"
+        self._use_psi = (
+            solver._is_linear and solver._point_sources_implementation != "<none>"
+        )
+
+    def get_body_of_operation(self, operation_name):
+        result = ""
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
+        ):
+            d = {}
+            self._solver._init_dictionary_with_default_parameters(d)
+            self._solver.add_entries_to_text_replacement_dictionary(d)
+            d["PREDICATE"] = self.guard
+            d["USE_LFI"] = self._use_lfi
+            d["USE_LSI"] = self._use_lsi
+            d["USE_GRADQ"] = self._use_gradQ
+            d["USE_PSI"] = self._use_psi
+            d["PRECISIONS_CAPITALIZED"] = [
+                x.replace(" ", "_").capitalize()
+                for x in d["PREDICTOR_COMPUTATION_PRECISIONS"]
+            ]
+
+            result = jinja2.Template(self.TemplateProject).render(**d)
+            pass
+        return result
+
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")
+
+    def get_includes(self):
+        linearity = "linear" if self._solver._is_linear else "nonlinear"
+        return (
+            super(Prediction_kernelgenerator, self).get_includes()
+            + """
+#include "../generated/kernels/aderdg/"""
+            + linearity
+            + """/Kernels.h"
       """
+        )

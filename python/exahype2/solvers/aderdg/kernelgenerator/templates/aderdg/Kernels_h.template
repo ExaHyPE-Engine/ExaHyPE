@@ -21,6 +21,12 @@
 
 #include "tarch/la/Vector.h"
 
+{% if predictorStoragePrecision=="std::float16_t" or correctorComputePrecision=="std::float16_t" or correctorStoragePrecision=="std::float16_t" or "std::float16_t" in predictorComputePrecisions %}
+#include <stdfloat>
+{% elif predictorStoragePrecision=="std::bfloat16_t" or correctorComputePrecision=="std::bfloat16_t" or correctorStoragePrecision=="std::bfloat16_t" or "std::bfloat16_t" in predictorComputePrecisions %}
+#include <stdfloat>
+{% endif %}
+
 //forward declaration of the user solver
 {% for namespaceName in solverNamespaceList %}
 namespace {{namespaceName}} {
@@ -166,13 +172,13 @@ namespace {{namespaceName}} {
     const double dt
   );
 
-template <typename pStoreType, typename cCompType>
+template <typename cCompType>
   void riemannSolver( 
     {{solverName}}& solver,
     cCompType* __restrict__ FL,
     cCompType* __restrict__ FR,
-    const pStoreType* __restrict__ const QL,
-    const pStoreType* __restrict__ const QR,
+    const cCompType* __restrict__ const QL,
+    const cCompType* __restrict__ const QR,
     const double t,
     const double dt,
     const tarch::la::Vector<Dimensions,double>& faceCentre,
@@ -189,14 +195,14 @@ template <typename pStoreType, typename cCompType>
     const double last_dt
   );
 
-  template <typename pStoreType, typename cCompType>
+  template <typename cCompType>
   void boundaryConditions(
     {{solverName}}& solver,
     cCompType* fluxOut, 
-    pStoreType* stateOut, 
+    cCompType* stateOut, 
     const cCompType* const fluxIn, 
-    const pStoreType* const stateIn, 
-    const pStoreType* const gradStateIn, 
+    const cCompType* const stateIn, 
+    const cCompType* const gradStateIn, 
     const tarch::la::Vector<Dimensions,double>& cellCentre,
     const tarch::la::Vector<Dimensions,double>& cellSize,
     const double t,const double dt, 

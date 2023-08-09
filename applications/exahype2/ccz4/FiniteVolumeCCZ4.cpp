@@ -1,7 +1,7 @@
 #include "FiniteVolumeCCZ4.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/NonCriticalAssertions.h"
-#include "exahype2/fv/PatchAccess.h"
+#include "exahype2/fv/CellAccess.h"
 
 #include <algorithm>
 
@@ -22,7 +22,8 @@ tarch::logging::Log   applications::exahype2::ccz4::FiniteVolumeCCZ4::_log( "app
 //pre-process, solve the puncture equations
 void applications::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* tp){
     //first we set the parameter. TODO:find a way to read parameter from python script
-    //int swi=0;//0--single black hole, 1--BBH hoc, 2--BBH rotation, 3--GW150914
+    //int swi=0;//0--single black hole,  2--BBH hoc, 2--BBH rotation, 3--GW150914
+    //bbhtype=0 head on, 1-b=3, 2-b=2
     
 	if (CCZ4swi==0){
 		tp->par_b=1.0;
@@ -48,7 +49,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* t
     tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
     tp->TP_epsilon=1e-6;}
 		
-	if (CCZ4swi==1){
+	if (CCZ4swi==2 and CCZ4BBHType==0){
 		tp->par_b=2.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
 		tp->target_M_plus=0.5;//adm mass
@@ -199,12 +200,12 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
     constexpr int NumberOfRefinementLayers = 3;
     double Radius[NumberOfRefinementLayers] = {5.0*1.8, 3.0*1.8, 1.5*1.8};
     double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
-    ::exahype2::fv::PatchAccess access(
+    ::exahype2::CellAccess access(
       Q,                         // make it initially point to input
-      NumberOfDoFsPerAxisInCell, // defined in superclass
       1,                         // halo size, which you know as user
       NumberOfUnknowns,          // defined in superclass
       NumberOfAuxiliaryVariables // defined in superclass
+      NumberOfDoFsPerAxisInCell, // defined in superclass
     );
     double laplacian=0.0;
     for (int unknown=0; unknown<NumberOfUnknowns; unknown++) {

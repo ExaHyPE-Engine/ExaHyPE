@@ -1,0 +1,52 @@
+/**
+
+\page tarch_plotting Plotting
+
+All plotting in Peano is typically realised through the files in tarch/plotter. 
+The idea is that you have an action set which dumps the data. To do so, it owns
+a plotter class. This implies that each tree in the system owns its own plotter
+and writes (logically) into its own output file. The plotter under the hood 
+might do something clever with merging those guys, but logically it is a one 
+file per action set approach.
+ 
+
+## Action set pattern
+
+You never know how much meta data plotter object holds and when this data is 
+dumped into the file. Therefore, most action sets which dump data allocate the
+plotter object on the heap within beginTraversal(). They delete this object in
+endTraversal(), which is the latest point when the plotter will actually stream
+its data into a file.
+
+
+## Parallel plotting
+
+Most plotters either are shipped with a dedicated index file class which you 
+can wrap around the actual plotter, or they provide a constructor which can 
+coordinate an action set's plotting with all the other plotting that's going
+on in parallel. For the Peano mesh format plotter, the constructor looks 
+similar to
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+    Dimensions, snapshotFileName.str(), "grid",
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
+    repositories::getMinTimeStamp()
+  );    
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+and the AppendNewData flag indicates that the code should look up the index 
+file "grid.file-format-specific-extension" and add a new snapshot called 
+snapshotFileName.str() to it.
+
+Before we discuss how we implement this constructor, let's clarify that this 
+constructor is neither thread-safe nor MPI-safe. That is, you should not call
+it concurrently from two threads or two ranks. To ensure that this does not
+happen, you typically wrap the construction into a tarch::mpi::Lock region
+around an global instance of tarch::mpi::BooleanSemaphore.
+
+
+A comprehensive (and documented) version of such a plotter is tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter.
+
+
+*/

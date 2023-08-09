@@ -141,43 +141,8 @@ void   peano4::grid::GridStatistics::setMinH(int index, double value) {
 
 
 #ifdef Parallel
-void peano4::grid::GridStatistics::sendAndPollDanglingMessages(const peano4::grid::GridStatistics& message, int destination, int tag, MPI_Comm communicator ) {
-  peano4::grid::GridStatistics::send(
-    message, destination, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridStatistics", "sendAndPollDanglingMessages()",destination, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridStatistics", "sendAndPollDanglingMessages()", destination, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
 
-
-void peano4::grid::GridStatistics::receiveAndPollDanglingMessages(peano4::grid::GridStatistics& message, int source, int tag, MPI_Comm communicator ) {
-  peano4::grid::GridStatistics::receive(
-    message, source, tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridStatistics", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridStatistics", "receiveAndPollDanglingMessages()", source, tag );
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
-}
-#endif
-    
-#ifdef Parallel
-
-#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype peano4::grid::GridStatistics::Datatype;
 #endif
 
@@ -232,9 +197,9 @@ void peano4::grid::GridStatistics::initDatatype() {
   NumberOfAttributes++;
 
   MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
-  int*          blocklen = new int[NumberOfAttributes]; 
+  int*          blocklen = new int[NumberOfAttributes];
   MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
-  
+
   int counter            = 0;
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
@@ -260,12 +225,12 @@ void peano4::grid::GridStatistics::initDatatype() {
   subtypes[counter] = MPI_DOUBLE;
   blocklen[counter] = Dimensions;
   counter++;
-   
+
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
   MPI_Get_address( &instances[0], &baseFirstInstance );
   MPI_Get_address( &instances[1], &baseSecondInstance );
-  
+
   counter = 0;
   MPI_Get_address( &(instances[0]._numberOfLocalUnrefinedCells), &disp[counter] );
   counter++;
@@ -290,8 +255,8 @@ void peano4::grid::GridStatistics::initDatatype() {
     disp[i] = disp[i] - disp[0];
   }
 
-  int errorCode = 0; 
-  MPI_Datatype tmpType; 
+  int errorCode = 0;
+  MPI_Datatype tmpType;
   errorCode += MPI_Type_create_struct( NumberOfAttributes, blocklen, disp, subtypes, &tmpType );
   errorCode += MPI_Type_create_resized( tmpType, offset, extent, &Datatype );
   errorCode += MPI_Type_commit( &Datatype );
@@ -299,7 +264,7 @@ void peano4::grid::GridStatistics::initDatatype() {
   if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
 
   delete[] subtypes;
-  delete[] blocklen; 
+  delete[] blocklen;
   delete[] disp;
 
   #else
@@ -346,43 +311,79 @@ void peano4::grid::GridStatistics::receive(peano4::grid::GridStatistics& buffer,
 
 
 void peano4::grid::GridStatistics::send(
-  const peano4::grid::GridStatistics& buffer, 
-  int destination, 
-  int tag, 
-  std::function<void()> startCommunicationFunctor, 
-  std::function<void()> waitFunctor, 
-  MPI_Comm communicator 
+  const peano4::grid::GridStatistics& buffer,
+  int destination,
+  int tag,
+  std::function<void()> startCommunicationFunctor,
+  std::function<void()> waitFunctor,
+  MPI_Comm communicator
 ) {
-  MPI_Request sendRequestHandle; 
-  int         flag = 0; 
-  MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle ); 
+  MPI_Request sendRequestHandle;
+  int         flag = 0;
+  MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle );
   MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
-  startCommunicationFunctor(); 
-  while (!flag) { 
+  startCommunicationFunctor();
+  while (!flag) {
     waitFunctor();
-    MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
+    MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
   }
 }
 
 
 void peano4::grid::GridStatistics::receive(
-  peano4::grid::GridStatistics& buffer, 
-  int source, 
-  int tag, 
-  std::function<void()> startCommunicationFunctor, 
-  std::function<void()> waitFunctor, 
-  MPI_Comm communicator 
-) {   
+  peano4::grid::GridStatistics& buffer,
+  int source,
+  int tag,
+  std::function<void()> startCommunicationFunctor,
+  std::function<void()> waitFunctor,
+  MPI_Comm communicator
+) {
   MPI_Status  status;
-  MPI_Request receiveRequestHandle; 
-  int         flag = 0; 
-  MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle ); 
+  MPI_Request receiveRequestHandle;
+  int         flag = 0;
+  MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle );
   MPI_Test( &receiveRequestHandle, &flag, &status );
-  startCommunicationFunctor(); 
-  while (!flag) { 
+  startCommunicationFunctor();
+  while (!flag) {
     waitFunctor();
-    MPI_Test( &receiveRequestHandle, &flag, &status ); 
+    MPI_Test( &receiveRequestHandle, &flag, &status );
   }
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
 #endif
+
+#ifdef Parallel
+void peano4::grid::GridStatistics::sendAndPollDanglingMessages(const peano4::grid::GridStatistics& message, int destination, int tag, MPI_Comm communicator ) {
+  peano4::grid::GridStatistics::send(
+    message, destination, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridStatistics", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridStatistics", "sendAndPollDanglingMessages()", destination, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+
+
+void peano4::grid::GridStatistics::receiveAndPollDanglingMessages(peano4::grid::GridStatistics& message, int source, int tag, MPI_Comm communicator ) {
+  peano4::grid::GridStatistics::receive(
+    message, source, tag,
+    [&]() {
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridStatistics", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridStatistics", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+#endif
+    

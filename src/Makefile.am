@@ -2,8 +2,8 @@ AUTOMAKE_OPTIONS = subdir-objects
 #
 # By default, automake does dfs. We need the libs to be built first however.
 # So we add the . explicitly. Please note that it is not enough to add your
-# directory here. You also have to add any new directory to the root's 
-# configure.ac script and rerun the whole autotool pipeline (see comment 
+# directory here. You also have to add any new directory to the root's
+# configure.ac script and rerun the whole autotool pipeline (see comment
 # within configure.ac as well as its very last line).
 #
 SUBDIRS = . \
@@ -19,28 +19,28 @@ SUBDIRS = . \
   unittests
 
 #
-# I want Peano4 to be as fast as possible and thus build it as static library
-# such that a linker/compiler can ipo. One of the other reasons for this is 
-# that I have a couple of singletons and I did struggle with singletons and 
-# shared libraries. 
+# I want Peano to be as fast as possible and thus build it as static library
+# such that a linker/compiler can ipo. One of the other reasons for this is
+# that I have a couple of singletons and I did struggle with singletons and
+# shared libraries.
 #
 lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a        libTarch_trace.a        libTarch_stats.a \
                 libPeano4Core2d.a libPeano4Core2d_debug.a libPeano4Core2d_asserts.a libPeano4Core2d_trace.a libPeano4Core2d_stats.a \
                 libPeano4Core3d.a libPeano4Core3d_debug.a libPeano4Core3d_asserts.a libPeano4Core3d_trace.a libPeano4Core3d_stats.a
 
-libTarch_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
+libTarch_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE)
 libTarch_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE)
 libTarch_asserts_a_CXXFLAGS = $(CXXFLAGS_PEANO_2D_ASSERTS)
 libTarch_debug_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_DEBUG)
 libTarch_stats_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_STATS)
 
-libPeano4Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE) 
-libPeano4Core2d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_STATS) 
+libPeano4Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)
+libPeano4Core2d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_STATS)
 libPeano4Core2d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_TRACE)
-libPeano4Core2d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_2D_ASSERTS) 
+libPeano4Core2d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_2D_ASSERTS)
 libPeano4Core2d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_DEBUG)
 
-libPeano4Core3d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_3D_RELEASE) 
+libPeano4Core3d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_3D_RELEASE)
 libPeano4Core3d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_STATS)
 libPeano4Core3d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_TRACE)
 libPeano4Core3d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_3D_ASSERTS)
@@ -63,6 +63,7 @@ Peano4Core_SOURCES = \
   peano4/grid/GridStatistics.cpp \
   peano4/grid/GridTraversalEvent.cpp \
   peano4/grid/GridTraversalEventGenerator.cpp \
+  peano4/grid/LoadStoreComputeFlag.cpp \
   peano4/grid/PeanoCurve.cpp \
   peano4/grid/Spacetree.cpp \
   peano4/grid/TraversalObserver.cpp \
@@ -97,14 +98,19 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/la/DynamicMatrix.cpp \
  tarch/accelerator/accelerator.cpp \
  tarch/accelerator/Device.cpp \
+ tarch/accelerator/DeviceInfo.cpp \
  tarch/accelerator/cpp/accelerator.cpp \
  tarch/accelerator/cpp/Device.cpp \
+ tarch/accelerator/cpp/DeviceInfo.cpp \
  tarch/accelerator/omp/accelerator.cpp \
  tarch/accelerator/omp/Device.cpp \
+ tarch/accelerator/omp/DeviceInfo.cpp \
  tarch/accelerator/omp/GPUMemoryManager.cpp \
  tarch/accelerator/sycl/accelerator.cpp \
  tarch/accelerator/sycl/Device.cpp \
+ tarch/accelerator/sycl/DeviceInfo.cpp \
  tarch/accelerator/cuda/ErrorCheck.cpp \
+ tarch/accelerator/cuda/DeviceInfo.cpp \
  tarch/multicore/BooleanSemaphore.cpp \
  tarch/multicore/multicore.cpp \
  tarch/multicore/Core.cpp \
@@ -185,8 +191,9 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/timing/Watch.cpp \
  tarch/timing/Measurement.cpp \
  tarch/timing/GlidingAverageMeasurement.cpp \
+ tarch/timing/TPSCalculator.cpp \
  tarch/services/Service.cpp \
- tarch/services/ServiceRepository.cpp 
+ tarch/services/ServiceRepository.cpp
 
 #
 # Map defined source sequences onto libraries

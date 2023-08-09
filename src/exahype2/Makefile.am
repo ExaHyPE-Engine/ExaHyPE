@@ -6,15 +6,16 @@ if UseExaHyPE
 endif
 
 
-
 ExaHyPE2Sources = \
   CellData.cpp \
+  CellAccess.cpp \
   EnclaveBookkeeping.cpp \
   EnclaveTask.cpp \
   LoadBalancingConfiguration.cpp \
   NonCriticalAssertions.cpp \
   PlotFilter.cpp \
   RefinementControl.cpp \
+  PrecisionControl.cpp \
   RefinementControlService.cpp \
   TimeStepping.cpp \
   UserInterface.cpp \
@@ -45,7 +46,6 @@ ExaHyPE2Sources = \
   fd/fd4/LoopBody.cpp \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
-  fv/PatchAccess.cpp \
   fv/PostprocessingKernels.cpp \
   fv/Tracer.cpp \
   fv/tests/InterpolationRestrictionTest.cpp \
@@ -56,15 +56,15 @@ ExaHyPE2Sources = \
 
 
 libExaHyPE2Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)
-libExaHyPE2Core2d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_TRACE)  
-libExaHyPE2Core2d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_2D_ASSERTS)  
-libExaHyPE2Core2d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_DEBUG)  
+libExaHyPE2Core2d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_TRACE)
+libExaHyPE2Core2d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_2D_ASSERTS)
+libExaHyPE2Core2d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_DEBUG)
 libExaHyPE2Core2d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_STATS)
 
 libExaHyPE2Core3d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_3D_RELEASE)
-libExaHyPE2Core3d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_TRACE)  
-libExaHyPE2Core3d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_3D_ASSERTS)  
-libExaHyPE2Core3d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_DEBUG)  
+libExaHyPE2Core3d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_TRACE)
+libExaHyPE2Core3d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_3D_ASSERTS)
+libExaHyPE2Core3d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_DEBUG)
 libExaHyPE2Core3d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_STATS)
 
 
@@ -79,5 +79,3 @@ libExaHyPE2Core3d_trace_a_SOURCES   = $(ExaHyPE2Sources)
 libExaHyPE2Core3d_asserts_a_SOURCES = $(ExaHyPE2Sources)
 libExaHyPE2Core3d_debug_a_SOURCES   = $(ExaHyPE2Sources)
 libExaHyPE2Core3d_stats_a_SOURCES   = $(ExaHyPE2Sources)
-
-
