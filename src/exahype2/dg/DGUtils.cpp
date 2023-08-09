@@ -1,12 +1,4 @@
 #include "exahype2/dg/DGUtils.h"
-#include "exahype2/fv/PatchUtils.h"
-
-#include "tarch/Assertions.h"
-#include "tarch/la/la.h"
-
-#include "peano4/utils/Loop.h"
-
-#include "peano4/datamanagement/CellMarker.h"
 
 
 void exahype2::dg::copyOneSideOfFaceProjection(
@@ -231,56 +223,3 @@ std::string exahype2::dg::plotFace(
     Dimensions==2
   );
 }
-
-
-template <typename QStoreType>
-QStoreType exahype2::dg::evaluatePolynomial(
-  const peano4::datamanagement::CellMarker&    marker,
-  int                                          order,
-  const double* __restrict__                   QuadratureNodes1d,
-  int                                          unknownsPerDoF,
-  const QStoreType* __restrict__               Q,
-  const tarch::la::Vector<Dimensions,double>&  x,
-  int                                          unknown
-) {
-  QStoreType result = 0.0;
-  dfor(currentDoF,order+1) {
-    double denominator = 1.0;
-    double enumerator  = 1.0;
-    for (int d=0; d<Dimensions; d++) {
-      for (int i=0; i<order+1; i++) {
-        if ( i!=currentDoF(d) ) {
-          double normalisedQuadratePointDistance = QuadratureNodes1d[currentDoF(d)]-QuadratureNodes1d[i];
-          double distanceToQuadraturePoint1d     = x(d)-( QuadratureNodes1d[i]*marker.h()(d)+marker.getOffset()(d) );
-          denominator *= normalisedQuadratePointDistance * marker.h()(d);
-          enumerator  *= distanceToQuadraturePoint1d;
-        }
-      }
-    }
-    int dofLinearised = peano4::utils::dLinearised(currentDoF,order+1);
-    result += enumerator/denominator * Q[ dofLinearised * unknownsPerDoF + unknown ];
-  }
-  return result;
-}
-
-
-
-template float exahype2::dg::evaluatePolynomial(
-  const peano4::datamanagement::CellMarker&    marker,
-  int                                          order,
-  const double* __restrict__                   QuadratureNodes1d,
-  int                                          unknownsPerDoF,
-  const float* __restrict__                    Q,
-  const tarch::la::Vector<Dimensions,double>&  x,
-  int                                          unknown
-);
-
-template double exahype2::dg::evaluatePolynomial(
-  const peano4::datamanagement::CellMarker&    marker,
-  int                                          order,
-  const double* __restrict__                   QuadratureNodes1d,
-  int                                          unknownsPerDoF,
-  const double* __restrict__                   Q,
-  const tarch::la::Vector<Dimensions,double>&  x,
-  int                                          unknown
-);

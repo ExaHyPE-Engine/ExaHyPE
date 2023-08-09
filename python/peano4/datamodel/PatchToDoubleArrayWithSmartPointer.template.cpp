@@ -5,7 +5,7 @@
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _dataSmartPointer(
-    tarch::allocateMemory< {{FLOAT_TYPE}} >( Cardinality, tarch::MemoryLocation::Heap ),
+    tarch::allocateMemory< {{FLOAT_TYPE}} >( {{MPI_ELEMENTS_PER_FLOAT}}*Cardinality, tarch::MemoryLocation::Heap ),
     [] (auto p) {
       tarch::freeMemory( p, tarch::MemoryLocation::Heap );
     }
@@ -214,7 +214,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   int errorCode = MPI_Type_vector(
     1,           // number of blocks (count)
-    Cardinality, // number of entries per block (blocklength),
+    {{MPI_ELEMENTS_PER_FLOAT}}*Cardinality, // number of entries per block (blocklength),
     0,           // no stride as we work with a continuous datatype,
     {{MPI_FLOAT_TYPE}},
     &Datatype

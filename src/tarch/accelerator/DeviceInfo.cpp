@@ -26,6 +26,9 @@
 
 namespace tarch::accelerator {
   std::vector<std::vector<std::string>> queryDeviceInformation() {
+    // If we have CPP we cant have any information and in the benchmarks we already have distribution
+    // Therefore we do not call the CUDA API, otherwise we always try to prefer the CUDA API as it gives us
+    // the maximum amount of information
     std::vector<std::vector<std::string>> devInfo;
 #if defined(GPUOffloadingCPP)
     tarch::accelerator::cpp::queryDeviceInformation(devInfo);
@@ -44,6 +47,7 @@ namespace tarch::accelerator {
   }
 
   void printDeviceInformation() {
+    // see queryDeviceInformation
     auto propertymatrix = queryDeviceInformation();
 #if defined(GPUOffloadingCPP)
     // Can't get any information with cpp GPU offloading rn
@@ -75,6 +79,14 @@ namespace tarch::accelerator {
     int                                          numberOfDevices,
     const std::vector<std::string>&              identifiers
   ) {
+    // Although the code looks scary:
+    // Transpose the matrix on the fly,
+    // Pad columns so that every entry of the column has the same length
+    // Pad = empty string before
+    // First row is for identifiers
+    // First column for accelerator ids
+    // Separators between the first columns and the rest
+
     unsigned int propertyCount = identifiers.size();
 
     std::stringstream ss;
@@ -146,6 +158,7 @@ namespace tarch::accelerator {
   }
 
   void offloadCapabilityTest() {
+    // Try to run the kernels in the configured backend
     std::vector<bool> testResults;
 #if defined(GPUOffloadingCUDA)
     testResults = tarch::accelerator::cuda::testKernelLaunch();
@@ -168,9 +181,13 @@ namespace tarch::accelerator {
     }
 #endif
 
-#if defined(GPUOffloadingCUDA) or defined(GPUOffloadingSYCL) or  defined(GPUOffloadingOMP) or defined(GPUOffloadingCPP)
+#if defined(GPUOffloadingCUDA) or defined(GPUOffloadingSYCL) or defined(GPUOffloadingOMP) or defined(GPUOffloadingCPP)
     unsigned int offloadCapableGPUCount = 0;
     std::string  failMessage;
+
+    // If one of the GPUs fail to launch but we have multiple, then we inform which ones
+    // failed by adding them to the message in the first loop.
+    // If all of the available GPUs fail, we throw a runtime error that everything failed
     for (unsigned int i = 0; i < testResults.size(); i++) {
       if (!testResults[i]) {
         // Using std::format would be nice but 10.06.2023 CUDA does support gcc upto 12, no std::format supprot
@@ -207,7 +224,7 @@ namespace tarch::accelerator {
     results = tarch::accelerator::cuda::runBenchmarks();
     parseBenchmarkResults(results, propertyMatrix);
 #elif defined(GPUOffloadingSYCL)
-    results     = tarch::accelerator::sycl::runBenchmarks();
+    results = tarch::accelerator::sycl::runBenchmarks();
     parseBenchmarkResults(results, propertyMatrix);
 #elif defined(GPUOffloadingOMP)
     results     = tarch::accelerator::omp::runBenchmarks();
@@ -226,6 +243,7 @@ namespace tarch::accelerator {
     // A * 1e-9 / (B * 1e-9) = A / B
     // Therefore Byte / NanoSecond = GB / Second
     for (uint i = 0; i < benchmarkResults.size(); i++) {
+      // Parse the results, bring nanoseconds to something humans would like more and add the units
       std::stringstream ss;
       auto&             benchmarkResult = benchmarkResults[i];
       double            cpuToGpu        = benchmarkResult.allocatedDataSize * benchmarkResult.repeats

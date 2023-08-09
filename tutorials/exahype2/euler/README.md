@@ -7,7 +7,7 @@ Assuming we have built the ExaHyPE 2 engine and the core libraries successfully,
 
 Assuming this was successful, you should see several files have appeared in your working directory.
 We will ignore most of these for now but know that these contain the implementation of the ExaHyPE 2 project.
-One file, in particular, is of interest to us now: the file simply named advection is the executable for our implementation.
+One file, in particular, is of interest to us now: the file simply named euler-* is the executable for our implementation.
 We will therefore run this executable file by using the following command:
 
     ./euler-<dimensions>d
