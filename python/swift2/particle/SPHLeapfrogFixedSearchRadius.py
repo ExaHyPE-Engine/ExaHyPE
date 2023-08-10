@@ -59,6 +59,10 @@ class SPHLeapfrogFixedSearchRadius(Particle):
     points, you have a vertex marker which gives you the position of the
     vertex to which a particular is associated, and you have the localParticles.
     This is a vector of pointers in this particular case.
+    
+    The force calculation does exist in two variants: There's the default one 
+    and then we have one that is aggressively optimised. The latter one requires
+    us to have properly sorted particle-mesh associations.
 
     ## Precision
 
