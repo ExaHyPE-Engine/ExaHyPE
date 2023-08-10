@@ -221,7 +221,7 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
 
     if verbose:
         print(
-            "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: start graph construction"
+            "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: start graph construction: {}, {}".format( amr_logic, optimisation )
         )
 
     for current_species_set in species_sets:
