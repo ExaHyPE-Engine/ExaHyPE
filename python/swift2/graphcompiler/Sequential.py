@@ -167,6 +167,7 @@ def translate_one_step_of_species_into_mesh_traversal(
 
 def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets, 
                                                                       optimisation: Optimisation,
+                                                                      use_initialisation_steps, 
                                                                       verbose,
                                                                       ):
     """!
@@ -217,11 +218,29 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
 
     if verbose:
         print(
-            "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: start graph construction with optimisation {}".format( optimisation )
+            "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: start graph construction with optimisation {} (is initialisation={})".format( optimisation,use_initialisation_steps )
         )
 
     for current_species_set in species_sets:
-        for step in current_species_set.particle_model.algorithm_steps():
+        if verbose:
+            print(
+                 "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: handle species set {}".format( current_species_set )
+            )
+    
+        if use_initialisation_steps:
+            per_species_set   = current_species_set.particle_model.initialisation_steps()
+            observer_preamble = "Init"
+        else:
+            per_species_set   = current_species_set.particle_model.algorithm_steps()
+            observer_preamble = "Step"
+
+        if optimisation==Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE and not current_species_set.generator.gather_particles:
+            print(
+                 "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: WARNING have been asked to vectorise for species {}, but species does not support gathered data structures. Vectorisation disabled".format(current_species_set.particle_model.name) 
+            )
+            optimisation = Optimisation.NONE
+
+        for step in per_species_set:
             if optimisation==Optimisation.NONE:
                 use_lists_to_construct_active_sets = False
                 add_additional_dummy_sweep         = False
@@ -241,7 +260,7 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
                 mesh_traversals                     = mesh_traversals,
                 alter_particle_position             = alter_particle_position,
                 use_lists_to_construct_active_sets   = use_lists_to_construct_active_sets,
-                preamble                            = "Step",
+                preamble                            = observer_preamble,
                 verbose                             = verbose,
             )
 
@@ -287,6 +306,7 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec(spe
                                                                              ):
     return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
                                                                              optimisation = Optimisation.NONE,
+                                                                             use_initialisation_steps = False,
                                                                              verbose      = verbose
                                                                              )
 
@@ -294,7 +314,19 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec(spe
 def  serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise(species_sets,
                                                                                                          verbose,
                                                                                                          ):
-     return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
-                                                                              optimisation = Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
-                                                                              verbose      = verbose
-                                                                              )
+    return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
+                                                                             optimisation = Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
+                                                                             use_initialisation_steps = False,
+                                                                             verbose      = verbose
+                                                                             )
+
+def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(species_sets,
+                                                                         verbose,
+                                                                         ):
+    return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_sets = species_sets,
+                                                                             optimisation = Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
+                                                                             use_initialisation_steps = True,
+                                                                             verbose      = verbose
+                                                                             )
+                                                                             
+                                                                             
