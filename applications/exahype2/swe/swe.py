@@ -73,11 +73,11 @@ scenarios = [
 
 coordinate_filter = "((-?[0-9]+\.?[0-9]*(e-?[0-9]+)?)|(inf))"
 def parse_coordinate_pair(coords):
-  if re.search("^\[%s\,%s\]$" % (coordinate_filter, coordinate_filter), coords):
-      splits = re.split("[\[ | \] | \,]", coords)
+  if re.search("^\[%s\\s*\,\\s*%s\]$" % (coordinate_filter, coordinate_filter), coords):
+      splits = re.split("[\[\]\,]", coords)
       return [float(splits[1]), float(splits[2])]
   else:
-    raise ValueError("Could not parse the illegal coordinates: {}! Is there maybe a white space within the brackets?".format(coords)) 
+    raise ValueError("Could not parse the illegal coordinates: {}!".format(coords)) 
 
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - SWE Application Script')
@@ -93,7 +93,7 @@ parser.add_argument("-sc",      "--scenario",          dest="scenario",       ch
 parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch. Default is %f." % patch_size)
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time in seconds between plots and also between database entries when probes are used. Default is %f." % plot_interval)
 parser.add_argument("-cs",      "--custom-solver",     dest="custom_solver",  choices=custom_solver_implementations,required=False,   help="Custom solver to be used as user defined solver. Has to be set if --solver has been set to some user defined option.")
-parser.add_argument("-wd",      "--width",             dest="width",          type=str,                   required=False,             help="Specify size of domain in meters as [x,y] as string (e.g. [10,10], [7e6,4e6]). Needed to guarantee physicality of tsunami simulations.")
+parser.add_argument("-wd",      "--width",             dest="width",          type=str,                   required=False,             help="Specify size of domain in meters as [x, y] as string (e.g. [10, 10], [7e6, 4e6]). Needed to guarantee physicality of tsunami simulations.")
 
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. finite volume cell Default is %f." % amr_levels)
 parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=False,              help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
@@ -101,7 +101,7 @@ parser.add_argument("-gpu",     "--gpu",               dest="gpu",            ac
 parser.add_argument("-maxd",    "--max_dimension_netcdf",dest="max_dimension_netcdf",type=int,            required=False,             help="Use when netCDF4 python package not installed to pass maximum dimension to the program.")
 parser.add_argument("-maxh",    "--max-cell-size",     dest="max_cell_size",  type=float,                 default=maximum_cell_size,  help="Maximum size in meters of a single finite volume cell on each axis")
 
-parser.add_argument("-probes",  nargs='+',             dest="probe_coordinates",type=str,                 required=False,             help="Provide one or more tuples of coordinates [x,y] for probes (e.g. [15,20.23] [5,14.123]). Coordinates have to be in reference to the simulation domain and must not contain any white spaces!")
+parser.add_argument("-probes",  nargs='+',             dest="probe_coordinates",type=str,                 required=False,             help="Provide one or more tuples of coordinates [x, y] for probes (e.g. [15, 20.23] [5, 14.123]). Coordinates have to be in reference to the simulation domain.")
 
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   required=False,             help="Set order of time discretisation for Runge-Kutta scheme." )
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   required=False,             help="Set order of space discretisation for Discontinuous Galerkin." )
@@ -116,14 +116,14 @@ parser.add_argument("-nc-key-displ-y",                 dest="nc_key_displ_y",  t
 parser.add_argument("-nc-key-displ-displ",             dest="nc_key_displ_displ",type=str,                default="z",                help="Key for displacement values in displacement netCDF file. Default is z.")
 
 parser.add_argument(            "--no-compile",        dest="compile",        action="store_false",       default=True,               help="Compile. Default is True.")
-parser.add_argument(            "--uq-displacement-origin",dest="uq_displacement_origin",type=str,        required=False,             help="Move displacement for uncertainty quantification. Expects argument [x,y] denoting the center of the displacement file within the coordinate system of the bathymetry file. To move only one dimension, set the other one to inf.")
-parser.add_argument(            "--no-dynamic-h",      dest="dynamic_h",      action="store_false",       default=True,               help="Dynamically adapt max cell size for highest netCDF resolution. Default is True.")
+parser.add_argument(            "--uq-displacement-origin",dest="uq_displacement_origin",type=str,        required=False,             help="Move displacement for uncertainty quantification. Expects argument [x, y] denoting the center of the displacement file within the coordinate system of the bathymetry file. To move only one dimension, set the other one to inf.")
+parser.add_argument(            "--dynamic-h",         dest="dynamic_h",      action="store_true",        default=False,              help="Dynamically adapt max cell size for highest netCDF resolution. Default is False.")
 
 parser.add_argument(            "--guided-amr",        dest="guided_amr",      action="store_true",       default=False,              help="Use guided AMR, only available with the \"Tsunami\" scenario. Optionally pass in an already computed adjoint simulation file in netCDF format using the flag --gamr-file.")
 parser.add_argument(            "--gamr-file",          dest="gamr_file",      type=str,                  required=False,             help="Pass in an already computed adjoint simulation output file in netCDF format. Expects to have keys \"x\",\"y\" and \"h\", \"hu\", \"hv\", \"b\".")
 parser.add_argument(            "--gamr-start-time",    dest="gamr_start_time",type=float,                required=False,             help="Begin of temporal region of interest. Default is 0.")
 parser.add_argument(            "--gamr-checkpoints",   dest="gamr_checkpoints",type=int,                 default=0,                  help="Number of times output should be written in adjoint simulation. Default is 0 (=Infinity)")
-parser.add_argument("--gamr-area-of-interest", nargs="+",dest="gamr_area_of_interest",type=str,           required=False,             help="Define area of interest for guided AMR. Pass in either a square [x1,x2] [y1,y2] or a circle [x1,y1] [r, inf]. Coordinates are in the same system as the bathymetry.")
+parser.add_argument("--gamr-area-of-interest", nargs="+",dest="gamr_area_of_interest",type=str,           required=False,             help="Define area of interest for guided AMR. Pass in either a square [x1, x2] [y1, y2] or a circle [x1, y1] [r, inf]. Coordinates are in the same system as the bathymetry.")
 parser.add_argument(            "--gamr-writer-flush",  dest="gamr_writer_flush", type=int,               default=0,                  help="Define after how many writer operations the writer flushes the buffer to the disk.")
 parser.add_argument(            "--adjoint-only",       dest="adjoint_only",    action="store_true",      default=False,              help="Set to only run adjoint simulation and no forward simulation. Used to simply generate file for guided amr.")
 args = parser.parse_args()
