@@ -116,7 +116,8 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Noh", executable="noh2D"
 )
 
-project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+if not args.no_vec:
+  project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
 
 
 # Initialise the SPH particle --------------------------------------------------
@@ -242,7 +243,12 @@ particle.data.expose_all_attributes_in_header_file()
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
-particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+
+if args.no_vec:
+    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(particle_set)
+else:
+    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+
 
 if args.asserts:
     build_mode = peano4.output.CompileMode.Asserts
