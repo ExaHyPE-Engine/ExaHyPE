@@ -32,7 +32,6 @@ class AbstractParticleSetGenerator(object):
             + " >"
         )
 
-
     def get_header_file_include(self):
         return (
             """
@@ -331,3 +330,6 @@ as published in the paper below:
        }
 
 """
+
+    def __str__(self):
+        return "{{ {}, {} }}".format( self.particle_model.name, self.generator.__class__ )
