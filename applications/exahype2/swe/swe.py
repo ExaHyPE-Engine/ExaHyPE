@@ -93,13 +93,13 @@ parser.add_argument("-sc",      "--scenario",          dest="scenario",       ch
 parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch. Default is %f." % patch_size)
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time in seconds between plots and also between database entries when probes are used. Default is %f." % plot_interval)
 parser.add_argument("-cs",      "--custom-solver",     dest="custom_solver",  choices=custom_solver_implementations,required=False,   help="Custom solver to be used as user defined solver. Has to be set if --solver has been set to some user defined option.")
-parser.add_argument("-wd",      "--width",             dest="width",          type=str,                   required=False,             help="Specify size of domain in meters as [x, y] as string (e.g. [10, 10], [7e6, 4e6]). Needed to guarantee physicality of tsunami simulations.")
+parser.add_argument("-wd",      "--width",             dest="width",          type=str,                   required=False,             help="Specify size of domain in meters as [x, y] as string (e.g. [10, 10], [7e6, 4e6]). Needed to guarantee physicality of tsunami simulations. Note that some scenarios have a fixed width.")
 
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. finite volume cell Default is %f." % amr_levels)
 parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=False,              help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
 
 parser.add_argument("-maxd",    "--max_dimension_netcdf",dest="max_dimension_netcdf",type=int,            required=False,             help="Use when netCDF4 python package not installed to pass maximum dimension to the program.")
-parser.add_argument("-maxh",    "--max-cell-size",     dest="max_cell_size",  type=float,                 default=maximum_cell_size,  help="Maximum size in meters of a single finite volume cell on each axis")
+parser.add_argument("-maxh",    "--max-cell-size",     dest="max_cell_size",  type=float,                 default=maximum_cell_size,  help="Maximum size in meters of a single finite volume cell on each axis.")
 
 parser.add_argument("-probes",  nargs='+',             dest="probe_coordinates",type=str,                 required=False,             help="Provide one or more tuples of coordinates [x, y] for probes (e.g. [15, 20.23] [5, 14.123]). Coordinates have to be in reference to the simulation domain.")
 
@@ -158,6 +158,7 @@ elif args.scenario == "Radial_Obstacle_Dam_Break":
   my_pde = Radial_Obstacle_Dam_Break(width=width, refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Artificial_Tsunami":
+  width = [10e3,10e3]
   from scenarios.artificial_tsunami import Artificial_Tsunami
   my_pde = Artificial_Tsunami(width=width, refinement_tolerance=args.amr_tol)
 
