@@ -235,9 +235,12 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(species_se
             observer_preamble = "Step"
 
         if optimisation==Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE and not current_species_set.generator.gather_particles:
-            print(
-                 "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: WARNING have been asked to vectorise for species {}, but species does not support gathered data structures. Vectorisation disabled".format(current_species_set.particle_model.name) 
-            )
+            # suppress warning if we run in release version without verbose, as the 
+            # initialisation might always be off
+            if not use_initialisation_steps and not verbose:
+                 print(
+                     "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: WARNING have been asked to vectorise for species {}, but species does not support gathered data structures. Vectorisation disabled".format(current_species_set.particle_model.name) 
+                 )
             optimisation = Optimisation.NONE
 
         for step in per_species_set:
