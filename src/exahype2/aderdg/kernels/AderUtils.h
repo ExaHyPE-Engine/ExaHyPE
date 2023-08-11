@@ -10,6 +10,7 @@
 
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
+#include "peano4/utils/Loop.h"
 
 
 namespace exahype2 {
@@ -39,6 +40,28 @@ namespace exahype2 {
       const double* __restrict__          quadraturePoints
     );
 
+    template<typename T>
+    void computeCellErrorIntegral(
+      std::function< void(
+        const tarch::la::Vector<Dimensions,double>&   position,
+        const double                                  t,
+        const double                                  dt,
+        double*                                       sol
+      ) >   exactSolution,
+      const tarch::la::Vector<Dimensions,double>&  cellCentre,
+      const tarch::la::Vector<Dimensions,double>&  cellSize,
+      double                                       t,
+      double                                       dt,
+      int                                          Order,
+      const double* __restrict__                   quadratureWeights,
+      const double* __restrict__                   quadraturePoints,
+      const int                                    unknowns,
+      const int                                    auxiliary_variables,
+      T* __restrict__                              Q,
+      double                                       errors[3]
+    );
+
   }
 }
 
+#include "AderUtils.cpph"
