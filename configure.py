@@ -30,6 +30,7 @@ args = parser.parse_args()
 
 cflags = ''
 #cxxflags = '-std=c++20 -W -Wall -Wextra'
+cxxflags = '-std=c++20 -w'
 nvccflags = ''
 fortranflags = ''
 
