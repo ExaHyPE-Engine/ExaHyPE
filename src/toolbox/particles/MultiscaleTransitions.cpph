@@ -2,13 +2,6 @@
 #include "peano4/datamanagement/VertexMarker.h"
 #include "tarch/la/VectorOperations.h"
 
-template <typename Particle>
-bool toolbox::particles::particleWillBeDroppedFurther(
-  const Particle& particle, const peano4::datamanagement::CellMarker& marker
-) {
-  return marker.hasBeenRefined() and tarch::la::smallerEquals(particle.getSearchRadius(), tarch::la::min(marker.h()));
-}
-
 
 template <typename Particle>
 toolbox::particles::ParticleReassociationInstruction toolbox::particles::
@@ -108,16 +101,25 @@ std::bitset<Dimensions> toolbox::particles::getParticleAssociationWithinCell(
 
 template <typename Particle>
 bool toolbox::particles::sieveParticle(const Particle& particle, const ::peano4::datamanagement::VertexMarker& marker) {
-  return
-      marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE)
-      and
-      (tarch::la::min( marker.h() )     * MultilevelSortingTolerance * AsymmetricSortingDamping >= 2.0 * particle.getSearchRadius()) // fitsIntoThisGridResolution
-      and
-      (
-        not (tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getSearchRadius()) // fitsIntoNextFinerGridResolution
-        or
-        not marker.hasBeenRefined()
-      );
+  bool belongsIntoNeighbouringCells =   marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE);
+  bool fitsIntoCurrentMeshLevel     =   tarch::la::min( marker.h() )     * MultilevelSortingTolerance * AsymmetricSortingDamping >= 2.0 * particle.getSearchRadius();
+  bool willNotBeDroppedFurther      =   tarch::la::greater( 2.0 * particle.getSearchRadius(), tarch::la::min( marker.h() )/3.0 )
+                                     or not marker.hasBeenRefined();
+
+  return belongsIntoNeighbouringCells and fitsIntoCurrentMeshLevel and willNotBeDroppedFurther;
+}
+
+
+template <typename Particle>
+bool toolbox::particles::particleWillBeDroppedFurther(
+  const Particle& particle, const peano4::datamanagement::CellMarker& marker
+) {
+  static tarch::logging::Log _log("toolbox::particles");
+  bool result = marker.hasBeenRefined() and tarch::la::smallerEquals(particle.getSearchRadius()*2.0, tarch::la::min(marker.h())/3.0);
+  if (result) {
+    logDebug( "particleWillBeDroppedFurther(...)", "particle " << particle.toString() << " within " << marker.toString() << " will be dropped further" );
+  }
+  return result;
 }
 
 
