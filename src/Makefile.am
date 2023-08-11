@@ -223,7 +223,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
 # Since currently there is a cuda file only in one directory, and therefore I did not want to
 # bloat the variable names.
 
-# Note, any identfying after the if of the lines will result with an error
+# Note, any identing after the if of the lines will result with an error
 if GPUOffloadingCUDA
 # When you want to add new files you can use both relative or absolute pathing, just be sure that the pattern in the rules matches
 CUDA_TARCH_ACCELERATOR_SRC= tarch/accelerator/cuda/TestKernels.cu
@@ -234,33 +234,40 @@ CUDA_TARCH_ACCELERATOR_OBJS_TRACE=  tarch/accelerator/cuda/libTarch_trace_a-Test
 CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS=  tarch/accelerator/cuda/libTarch_asserts_a-TestKernels.o
 CUDA_TARCH_ACCELERATOR_OBJS_DEBUG=  tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
 
-# TODO: Assure that the rules will compile when every rule will be given with the C++ compiler $(CXX)
-# Define the rules per target and directory
+# Common flags given to nvcc is used in both device and host code
+# These should be optimation flags (e.g. -O3), warning flags (e.g. -Wall)
+# debugging flags (e.g. -g), std flags (e.g. -std=c++20) or definitions (e.g. -DPEANO_DEBUG=4)
+# or include paths (e.g. -I/path/...) or linker flags (e.g. -L/path/...)
+# In case these do not work, you might need to do $(FLAGS) -Xcompiler="$(FLAGS)" but then also
+# split the $(CXX) to compiler=CXX[0] and args=CXX[1:] and to $(args) -Xcompiler="$(args) if not
+# using a common flag that needs to be replicated.
 $(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE): tarch/accelerator/cuda/libTarch_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) $(NVCC_FLAGS_RELEASE) $(CXXFLAGS_PEANO_2D_RELEASE) -Xcompiler="$(CXXFLAGS_PEANO_2D_RELEASE)" -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_RELEASE) $(CXXFLAGS_PEANO_2D_RELEASE) -c $< -o $@ 
 
 $(CUDA_TARCH_ACCELERATOR_OBJS_STATS): tarch/accelerator/cuda/libTarch_stats_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) $(NVCC_FLAGS_STATS) $(CXXFLAGS_PEANO_2D_STATS) -Xcompiler="$(CXXFLAGS_PEANO_2D_STATS)" -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_STATS) $(CXXFLAGS_PEANO_2D_STATS) -c $< -o $@ 
 
 $(CUDA_TARCH_ACCELERATOR_OBJS_TRACE): tarch/accelerator/cuda/libTarch_trace_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) $(NVCC_FLAGS_TRACE) $(CXXFLAGS_PEANO_2D_TRACE) -Xcompiler="$(CXXFLAGS_PEANO_2D_TRACE)" -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_TRACE) $(CXXFLAGS_PEANO_2D_TRACE) -c $< -o $@ 
 
 $(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS): tarch/accelerator/cuda/libTarch_asserts_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) $(NVCC_FLAGS_ASSERTS) $(CXXFLAGS_PEANO_2D_ASSERTS) -Xcompiler="$(CXXFLAGS_PEANO_2D_ASSERTS)" -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_ASSERTS) $(CXXFLAGS_PEANO_2D_ASSERTS) -c $< -o $@ 
 
 $(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG): tarch/accelerator/cuda/libTarch_debug_a-%.o: tarch/accelerator/cuda/%.cu
 	@echo "  NVCC     $@"
-	$(NVCC) $(NVCC_FLAGS_DEBUG) $(CXXFLAGS_PEANO_2D_DEBUG) -Xcompiler="$(CXXFLAGS_PEANO_2D_DEBUG)" -c $< -o $@ 
+	$(NVCC) $(NVCC_FLAGS_DEBUG) $(CXXFLAGS_PEANO_2D_DEBUG) -c $< -o $@ 
 
-libTarch_a_LIBADD         = $(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE) $(CUDA_LIBS)
-libTarch_stats_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_STATS) $(CUDA_LIBS)
-libTarch_trace_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_TRACE) $(CUDA_LIBS)
-libTarch_asserts_a_LIBADD = $(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS) $(CUDA_LIBS)
-libTarch_debug_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG) $(CUDA_LIBS)
+# adding $(CUDA_LIBS) not necessary to libtarch as it is only needed for executables and it is already added
+# to PEANO_LDADD, having it twice might cause issues
+libTarch_a_LIBADD         = $(CUDA_TARCH_ACCELERATOR_OBJS_RELEASE)
+libTarch_stats_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_STATS)
+libTarch_trace_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_TRACE)
+libTarch_asserts_a_LIBADD = $(CUDA_TARCH_ACCELERATOR_OBJS_ASSERTS)
+libTarch_debug_a_LIBADD   = $(CUDA_TARCH_ACCELERATOR_OBJS_DEBUG)
 endif 
 
 libTarch_a_SOURCES         = $(Tarch_SOURCES)

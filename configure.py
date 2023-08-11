@@ -30,7 +30,7 @@ args = parser.parse_args()
 
 cflags = ''
 #cxxflags = '-std=c++20 -W -Wall -Wextra'
-cxxflags = '-std=c++20 -w'
+nvccflags = ''
 fortranflags = ''
 
 # Merge in any additional flags needed for the selected multithreading backend
@@ -67,6 +67,9 @@ if args.gpu == 'omp' and args.toolchain == "gcc":
 if args.gpu == 'sycl' and args.toolchain == "intel":
   cxxflags += ' -fsycl -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
 
+if args.gpu == 'cuda': #arch flag is needed independent of toolchain
+  nvccflags += f'-arch={args.arch}'
+
 # Call the ./configure script with the specified arguments
 configure_args = []
 if args.multithreading is not None:
@@ -82,16 +85,12 @@ if args.gpu is not None:
   else:
     configure_args.append(f'--with-gpu={args.gpu}')
 
+# CUDA path is only needed on automake builds
+# CMake automatically finds it
 if args.gpu == "cuda":
-  if args.cuda_path:
-    configure_args.append(f'--with-cuda={args.cuda_path}')
-
-  # Would be better if architecture flag was given as a C++ flag, but it will be used by
-  # the nvcc compiler (e.g. -arch={args.arch}) but this approach is problematic as the 
-  # flag will be then used by the C++ compiler (nvc++, g++ etc.) and will result with compiler
-  # errors.
-  if args.arch:
-    configure_args.append(f'--with-cuda-gpu-arch={args.arch}')
+  if args.cuda_path is not None:
+    if not args.cmake:
+      configure_args.append(f'--with-cuda={args.cuda_path}')
 
 if args.mpi is not None:
   if args.cmake:
@@ -188,6 +187,10 @@ else:
       "CXX": "{} {}".format(args.cxx, cxxflags),
       "FC": "{} {}".format(args.fc, fortranflags),
   }
+
+  if args.gpu == "cuda":
+    if args.cuda_path:
+      env_vars["NVCC"] = "{}/bin/nvcc {}".format(args.cuda_path, nvccflags)
 
   # Create a string to display environment variables like in a terminal
   env_vars_str = ' '.join(f'{key}="{value}"' for key, value in env_vars.items())

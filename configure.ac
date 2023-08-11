@@ -266,22 +266,6 @@ if test "$gpu" == cuda; then
     [with_cuda=""],
   )
 
-  AC_ARG_WITH([cuda-gpu-arch],
-    [AS_HELP_STRING([--with-cuda-gpu-arch=ARCH], [specify GPU architecture])],
-    [ AC_MSG_CHECKING([for GPU architecture])
-      case "$withval" in
-          sm_*)
-            AC_MSG_RESULT(CUDA GPU architecture is $withval); with_cuda_gpu_arch="$withval" ;;
-          *)
-            AC_MSG_ERROR([Invalid architecture. Option should start with 'sm_'.]) ;;
-      esac
-    ],
-    [
-      with_cida_gpu_arch="native"
-    ])
-    GPU_ARCH="$with_cuda_gpu_arch"
-    AC_SUBST(GPU_ARCH)
-
   # We need to apply further checks on CUDA
   if test -n "$with_cuda"
   then
@@ -301,8 +285,9 @@ if test "$gpu" == cuda; then
 
     CUDA_INCLUDE_FLAGS="-I$with_cuda/include"
     CUDA_LIBS="-L$with_cuda/lib64 -lcudart_static"
-    NVCC="$with_cuda/bin/nvcc"
     CUDA_PATH="$with_cuda"
+    #NVCC is read from the environment variable
+    NVCC="$NVCC"
 
     AC_SUBST(CUDA_INCLUDE_FLAGS)
     AC_SUBST(CUDA_LIBS)
@@ -324,7 +309,8 @@ if test "$gpu" == cuda; then
   CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE   $CUDA_INCLUDE_FLAGS"
   CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG   $CUDA_INCLUDE_FLAGS"
 
-  # Necessary for executables and unittests
+  # Necessary for executables and unittests to link to CUDA libraries as we will
+  # have compiled CUDA code
   LDADD_PEANO_2D_RELEASE=" $LDADD_PEANO_2D_RELEASE $CUDA_LIBS"
   LDADD_PEANO_2D_STATS="   $LDADD_PEANO_2D_STATS   $CUDA_LIBS"
   LDADD_PEANO_2D_ASSERTS=" $LDADD_PEANO_2D_ASSERTS $CUDA_LIBS" 
@@ -337,7 +323,7 @@ if test "$gpu" == cuda; then
   LDADD_PEANO_3D_TRACE="   $LDADD_PEANO_3D_TRACE   $CUDA_LIBS"
   LDADD_PEANO_3D_DEBUG="   $LDADD_PEANO_3D_DEBUG   $CUDA_LIBS"
 
-  NVCC_FLAGS="-forward-unknown-to-host-compiler -arch=$with_cuda_gpu_arch -I$srcdir_full_path/src -ccbin=$CXX"
+  NVCC_FLAGS="-forward-unknown-to-host-compiler -I$srcdir_full_path/src -ccbin=$CXX"
 
   NVCC_FLAGS_RELEASE="$NVCC_FLAGS"
   NVCC_FLAGS_STATS="$NVCC_FLAGS"
