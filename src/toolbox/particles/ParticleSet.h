@@ -169,9 +169,16 @@ public:
   /**
    * Clear stats
    *
-   * Has to be called per rank prior to any mesh traversal assembling stats.
-   * I typically realise this in the prepare traversal event. See
+   * Has to be called per rank prior to any collection of stats.
+   * I used to call this routine in the prepare traversal event, i.e. in
    * peano4.toolbox.particles.AbstractUpdateParticleGridAssociation.get_body_of_prepareTraversal().
+   * However, this is not clever, as the reassignment usually spans multiple
+   * grid sweeps. If we clear the stats prior to each of these sweeps, we
+   * will only get a state snapshot from what happened in the last sweep.
+   *
+   * Therefore, I now typically call this clear routine directly after I've
+   * written stats to the terminal. This differs to how I treat
+   * clearParticleStateStatistics().
    */
   static void clearReassignmentStatistics();
 
@@ -179,8 +186,9 @@ public:
    * Clear stats
    *
    * Has to be called per rank prior to any mesh traversal assembling stats.
-   * I typically realise this in the prepare traversal event. See
+   * I call this routine in the prepare traversal event, i.e. in
    * peano4.toolbox.particles.UpdateParallelState.get_body_of_prepareTraversal().
+   * This means I really get only a snapshot from one grid sweep.
    */
   static void clearParticleStateStatistics();
 
@@ -193,7 +201,8 @@ public:
     int numberOfLiftsInThisTree,
     int numberOfDropsInThisTree,
     int numberOfReassignmentsInThisTree,
-    int numberOfSievesInThisTree
+    int numberOfLiftsIntoSieveSetInThisTree,
+    int numberOfDropsFromSieveSetInThisTree
   );
 
   static void updateNumberOfLocalParticleStatistics(
@@ -283,7 +292,9 @@ protected:
    * See class documentation of toolbox::particles::ParticleSet for
    * an overview of the statistics tracked.
    */
-  static int _numberOfSieves;
+  static int _numberOfLiftsIntoSieveSet;
+
+  static int _numberOfDropsFromSieveSet;
 
   /**
    * Set by parallel state analysis

@@ -193,18 +193,6 @@ bool toolbox::particles::SieveParticles<T>::hasParticlesToBeSievedIntoVertices()
 
 
 template <typename T>
-int toolbox::particles::SieveParticles<T>::getNumberOfParticlesToBeSieved() const {
-  return _particlesThatHaveToBeSieved.size();
-}
-
-
-template <typename T>
-int toolbox::particles::SieveParticles<T>::getNumberOfParticlesThatCanNotBeLiftedWithinTheirTree() const {
-  return _particlesThatCanNotBeLiftedWithinTheirTree.size();
-}
-
-
-template <typename T>
 typename toolbox::particles::SieveParticles<T>::ParticleList toolbox::particles::SieveParticles<
   T>::getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker) {
   tarch::multicore::Lock lock(_particlesToBeSievedSemaphore);

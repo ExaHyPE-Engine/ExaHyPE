@@ -129,7 +129,8 @@ any operation in the primary mesh sweep.
   _numberOfParticleReassignmentsOnCurrentLevel = 0;
   _numberOfLifts  = 0;
   _numberOfDrops  = 0;
-  _numberOfSieves = 0;
+  _numberOfLiftsIntoSieveSet = 0;
+  _numberOfDropsFromSieveSet = 0;
 """
     )
 
@@ -139,7 +140,8 @@ any operation in the primary mesh sweep.
     _numberOfLifts,
     _numberOfDrops,
     _numberOfParticleReassignmentsOnCurrentLevel,
-    _numberOfSieves
+    _numberOfLiftsIntoSieveSet,
+    _numberOfDropsFromSieveSet
   );
 """
     )
@@ -210,7 +212,7 @@ any operation in the primary mesh sweep.
   if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
     auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker );
 
-    _numberOfSieves += sievedParticles.size();
+    _numberOfDropsFromSieveSet += sievedParticles.size();
 
     fineGridVertex{{PARTICLES_CONTAINER}}.addParticles( sievedParticles );
     fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates();
@@ -248,6 +250,7 @@ any operation in the primary mesh sweep.
     coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).grabParticles( fineGridVertex{{PARTICLES_CONTAINER}} );
   }
   else {
+    _numberOfLiftsIntoSieveSet += fineGridVertex{{PARTICLES_CONTAINER}}.size();
     fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeLiftedLocally();
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
   }
@@ -283,14 +286,7 @@ any operation in the primary mesh sweep.
   int  _numberOfParticleReassignmentsOnCurrentLevel;
   int  _numberOfLifts;
   int  _numberOfDrops;
-  int  _numberOfSieves;
+  int  _numberOfLiftsIntoSieveSet;
+  int  _numberOfDropsFromSieveSet;
 """
         ).render(**self.d)
-
-    def get_body_of_prepareTraversal(self):
-        template = jinja2.Template(
-            """
-  vertexdata::{{PARTICLES_CONTAINER}}::clearReassignmentStatistics();
-"""
-        )
-        return template.render(**self.d)

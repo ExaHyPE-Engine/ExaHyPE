@@ -143,6 +143,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
           break;
         case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
           logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " has to be sieved globally. Current assocation=" << marker.toString() );
+          _numberOfLiftsIntoSieveSet++;
           p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);
           break;
         case 0:
