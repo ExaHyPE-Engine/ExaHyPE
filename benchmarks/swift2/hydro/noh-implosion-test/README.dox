@@ -76,6 +76,44 @@ solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
 These instructions follow @ref swift_particle_new_solver "Swift's generic recommendations"
 when it comes to the development of vectorised solvers.
 
- 
+
+All the changes that are required within the Python script to switch to a 
+particular optimisation are all encoded via the script argument optimisation.
+Run the Python script with --help to get an overview, and search the script
+for args.optimisation for details.
+The steps are rather simple:
+
+1. If the optimisation is enabled, we first need another graph compiler. We use
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if args.optimisation != "none":
+  project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   here, which might not be the best compiler but does the job.
+2. Next, we have to switch to a coalesced memory access. This is not required 
+   if we only study the impact of the memory re-arrangement:    
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
+    name=name,
+    dimensions_hydro=hydro_dimensions,
+    cfl_factor=args.cfl_factor,
+    initial_time_step_size=args.timestep_size,
+    constant_time_step_size=True,
+    swift_project_namespace=project_namespace,
+    particles_per_cell=particles_per_cell,
+    min_h=max_cell_size,
+    max_h=max_cell_size,
+    use_optimised_coalesced_memory_access_kernels = args.optimisation == "vectorise-per-vertex"
+)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3. Finally, we alter the actual administration of the particle sets:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+particle_set = project.add_particle_species(particle)
+
+if  args.optimisation == "continuous-per-vertex" or args.optimisation == "vectorise-per-vertex":
+    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+else:
+    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(particle_set)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
  
  */
