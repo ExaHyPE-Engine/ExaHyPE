@@ -13,7 +13,7 @@ dimensions            = 2 # this is fixed to 2 in pde.py
 width                 = [10, 10]
 offset                = [0, 0] # this is fixed to [0, 0]
 end_time              = 0.02
-time_step_relaxation  = 0.5 # taken from tutorial
+time_step_relaxation  = 0.4 
 plot_interval         = 0.005 # taken from tutorial
 patch_size            = 4 # 32
 maximum_cell_size     = 0.1
@@ -146,14 +146,17 @@ if args.solver in user_defined_solvers and args.custom_solver is None:
 my_pde = None
 if args.scenario == "Radial_Dam_Break":
   # This is the default scenario
+  width[1] = width[0]
   from scenarios.radial_dam_break import Radial_Dam_Break
   my_pde = Radial_Dam_Break(width=width, refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Radial_Bathymetry_Dam_Break":
+  width[1] = width[0]
   from scenarios.radial_bathymetry_dam_break import Radial_Bathymetry_Dam_Break
   my_pde = Radial_Bathymetry_Dam_Break(width=width, refinement_tolerance=args.amr_tol)
 
 elif args.scenario == "Radial_Obstacle_Dam_Break":
+  width[1] = width[0]
   from scenarios.radial_obstacle_dam_break import Radial_Obstacle_Dam_Break
   my_pde = Radial_Obstacle_Dam_Break(width=width, refinement_tolerance=args.amr_tol)
 
