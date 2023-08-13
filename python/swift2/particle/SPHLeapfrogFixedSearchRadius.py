@@ -170,11 +170,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self._eta_factor = 1.2348
         self._h_hydro_min = 1e-6
         self._h_hydro_max = 1.0 / 3.0 / 2  # Approximated value for coarsest grid level
-<<<<<<< HEAD
-        self._h_tolerance = 1e-4
-=======
         self._h_tolerance = 1e-6
->>>>>>> branch 'particles-sml-fix' of https://gitlab.lrz.de/hpcsoftware/Peano.git
         self._h_max_iterations = 30
 
         # Minimal SPH parameters
