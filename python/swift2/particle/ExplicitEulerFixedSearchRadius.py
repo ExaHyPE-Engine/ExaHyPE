@@ -132,6 +132,7 @@ class ExplicitEulerFixedSearchRadius(Particle):
                 touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
                 cell_kernel="""
                                          ::swift2::kernels::genericInteraction<globaldata::{}>(
+                                           marker,
                                            localParticles,
                                            activeParticles,
                                            [&] (globaldata::{}* localParticle, const globaldata::{} * const globalParticle) -> void {{
@@ -153,7 +154,7 @@ class ExplicitEulerFixedSearchRadius(Particle):
             AlgorithmStep(
                 name="UpdatePositionAndVelocity",
                 dependencies=AlgorithmStep.Dependencies.SELF,
-                effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
+                effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN,
                 touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
                 touch_vertex_last_time_kernel="""::swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize( localParticles );""",
                 prepare_traversal_kernel="""::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{}>({},{});""".format(
