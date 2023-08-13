@@ -257,8 +257,13 @@ verbose: {True, False}
                 #   State
                 # =========
                 #
+                # See discussion in peano4.toolbox.UpdateParallelState why it is insufficient
+                # to only plug into i+1 and i+4.
+                #
                 steps_to_update_parallel_state = {
+                    (i + 0) % len(steps),
                     (i + 1) % len(steps),
+                    (i + 3) % len(steps),
                     (i + 4) % len(steps),
                 }
                 if verbose:
@@ -431,6 +436,10 @@ instead of two times.
                 #
                 #   State
                 # =========
+                #
+                # See discussion in peano4.toolbox.UpdateParallelState why it is sufficient
+                # to only plug into i+1 here.
+                #
                 #
                 steps_to_update_parallel_state = {
                     (i + 1) % len(steps),
