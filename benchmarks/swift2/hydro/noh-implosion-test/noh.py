@@ -88,6 +88,14 @@ parser.add_argument(
     help="Switch on assertions",
 )
 parser.add_argument(
+    "-no-vec",
+    "--on-vectorisation",
+    dest="no_vec",
+    action="store_true",
+    default=False,
+    help="Disable vectorisation",
+)
+parser.add_argument(
     "-ms",
     "--mantissa-size",
     dest="mantissa_size",
@@ -107,6 +115,9 @@ project_namespace = ["benchmarks", "swift2", "noh"]
 project = swift2.Project(
     namespace=project_namespace, project_name="Noh", executable="noh2D"
 )
+
+if not args.no_vec:
+  project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
 
 
 # Initialise the SPH particle --------------------------------------------------
@@ -142,6 +153,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=particles_per_cell,
     min_h=max_cell_size,
     max_h=max_cell_size,
+    use_optimised_coalesced_memory_access_kernels = not args.no_vec
 )
 
 
@@ -225,10 +237,18 @@ if args.mantissa_size > 0:
     particle.v_full.valid_mantissa_bits = args.mantissa_size
     particle.u_full.valid_mantissa_bits = args.mantissa_size
 
+particle.data.expose_all_attributes_in_header_file()
+
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
+
+if args.no_vec:
+    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(particle_set)
+else:
+    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+
 
 if args.asserts:
     build_mode = peano4.output.CompileMode.Asserts

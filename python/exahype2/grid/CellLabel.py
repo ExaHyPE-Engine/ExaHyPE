@@ -7,7 +7,7 @@ import peano4.datamodel.DaStGen2
 
 
 class UpdateCellLabel(ActionSet):
-  """
+  """! Update the cell label within a sweep
   
   Update the cell label initialises cell labels correctly when a cell is 
   created, and it also resets the update flag.
@@ -15,6 +15,12 @@ class UpdateCellLabel(ActionSet):
   It is important that this label update happens before the actual cell
   update. This is ensured via a correct invocation order in 
   FV.add_actions_to_perform_time_step(). 
+  
+  Cell labels exist everywhere and are not masked out via the LoadStoreCompute
+  flag. That is, we store them persistently in each and every cell on all 
+  resolution levels all the time - even if the underlying solver des not 
+  exist in such a cell. In this case, the cell label should be false all the
+  time.
   
   """
   def get_attribute_name(solver_name):

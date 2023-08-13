@@ -12,20 +12,39 @@ page.
 All of the recommendations there apply for SWIFT, too.
 
 
-## Translating algorithmic steps onto mesh traversals and on-node parallelisation
-
-To be written ...
 
 
-## Single core performance per species
+## Optimisting the single core performance of individual species (vectorisation)
 
-Our code base offers a variety of algorithmic variants per solver species. We 
-do not yet know or even think that there is one combination of different 
-variants that performs for all solver for all setups. Therefore, you might have
-to run through some trial and error.
+To enable proper vectorisation is not trivial within a Lagrangian framework, 
+as we typically need the right instructions, i.e. compute kernels, but also 
+a fitting memory layout. 
+As a user, you are responsible to ensure that the memory layout is properly
+chosen, and then you can activate the solvers' vectorisation.
 
 
-### Maintaining the active sets
+
+Some of Swift's solvers are however already well-prepared to exploit the knowledge about 
+optimised memory layouts and proper setups of action sets and hence can be 
+vectorised.
+This does not hold for all solvers. You have to study their documentation,
+typically alter some switches and then tune the memory layout and particle
+handling as described below.
+Please note that not all solvers are compatible with all graph compiler 
+flavours either. Again, this is something you might want to check with the
+solver documentation.
+
+Even if your solver does not support vectorisation, you might benefit from the
+discussions below such as the memory pool and the different flavours of active
+set handling. 
+The impact just won't be that big.
+The page @ref swift_particle_new_solver provides further details how to write 
+vectorised solvers, i.e. how to prepare solvers to be able to exploit continuous,
+well-administered memory.
+
+
+
+### Step 1: Maintaining the active sets
 
 There are two different versions how to maintain the active sets: We can either
 build them up as proper sets and add particles to the set whenever we 
@@ -39,15 +58,29 @@ particle in touchCellLastTime() where it is within the set and then we can
 remove it. We also miss out on any adjacent memory storage. The list variant
 is faster and preserves the ordering of the particles per vertex/cell (see the
 remarks below), but it works if and only if the particle-mesh association 
-remains invariant. If in doubt, we might have to use some dummy mesh traversals.
+remains invariant. Such an "ordered" particle sequence allows you to use 
+compute kernels with coalesced memory access, i.e. vectorisation.
+This insight gives rise to a third variant, where we use the coalesced memory
+storage and insert sorting sweeps whenever the particle positions change, such
+that we can always work with properly sorted particles.
 
 Whether or not to use one variant or the other is a decision that's made by the 
 graph compiler. Some compiler flavours support different active set 
 construction variants, others are tied to one variant only.
+By default, the project initialises its graph compiler with the variant
+that does not try to vectorise or use sorted particles.
+You can alter that in your code:
 
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### Storage of particles and maintaining the particle-mesh association
+Just pick another variant (consult namespace docu) here. Please note that these
+operations do typically unfold their potential if and only if you use a fully
+vectorised solver in combination with a proper particle memory management below.
+
+### Step 2: Storage of particles and maintaining the particle-mesh association
 
 Maintaining the association of particles to meshes is key, as Peano traverses 
 the mesh and issues the particle updates for those particles tied to particular
@@ -102,13 +135,43 @@ toolbox::particles::memorypool::GlobalContinuousMemoryPool.
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_GlobalContinuous.png
 
 
-### Using optimised kernels with coalescent memory access
+The code to switch the storage scheme is relatively easy. Capture the particle 
+set that the Swift 2 project returns when you add a particle species:
 
-If you use one of the two memory pools as discussed above and you use the 
-active set construction via lists rather than sets (see two subsections above),
-you can switch to optimised kernels which exploit coalescent memory access.
-They might vectorise better. peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists
-discusses their usage. Not every SPH flavour/species provides such kernels.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+particle_set = project.add_particle_species(particle)
+particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The line above changes the particle set generator, i.e. the class which maps the 
+particle set onto an implementation. 
+
+
+### Step 3: Expose all particle attributes
+
+Vectorisation requires very aggressive inlining. To facilitate such inlining, 
+all the setters and getters of particle attributes have to be available in the
+header. Study the 
+@ref page_dastgen "DaStGen documentation" for remarks how to move getters and
+settings into the header. Notably study the semantics of the function
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+particle.data.expose_all_attributes_in_header_file()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which moves all attribute setters and getters into the header and hence 
+facilitiates very aggressive inlining via copy n paste.
+
+
+
+### Step 4: Equip your solver with vectorised kernels
+
+Some of Swift's solvers are already well-prepared to exploit the knowledge about 
+optimised memory layouts and proper setups of action sets. Once you have 
+followed the steps above, you can now activate this vectorisation. It differs
+from solver to solver how to do this, but most offer a boolean flag in their
+constructor.
+
 
 
  */

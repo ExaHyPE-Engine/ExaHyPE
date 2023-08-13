@@ -67,7 +67,7 @@ class Project(object):
         self.algorithm_step_plot = peano4.solversteps.Step("Plot", False)
 
         self.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals
+            swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec
         )
         self.initialisation_steps_task_graph_compiler = (
             swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals
@@ -435,11 +435,12 @@ but it will never become closer than these constraints.
         # Create mesh traversals aka solver steps
         #
         initialisation_steps = self.initialisation_steps_task_graph_compiler(
-            self._particle_species_set
+            species_sets                       = self._particle_species_set,
+            verbose                            = verbose
         )
         solver_steps = self.algorithm_steps_task_graph_compiler(
             species_sets                       = self._particle_species_set,
-            use_lists_to_construct_active_sets = False
+            verbose                            = verbose
         )
 
         #

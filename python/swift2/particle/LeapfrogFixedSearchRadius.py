@@ -177,7 +177,7 @@ class LeapfrogFixedSearchRadius(Particle):
             AlgorithmStep(
                 name="Drift",
                 dependencies=AlgorithmStep.Dependencies.SELF,
-                effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
+                effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN,
                 touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
                 touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( localParticles );""",
                 includes="""

@@ -50,7 +50,7 @@ class BooleanArray(Boolean):
             raise NotImplementedError(
                 f"Attribute {name}: This data type can't work with qualifiers (yet)"
             )
-        Boolean.__init__(self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initva)
+        Boolean.__init__(self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initval)
         self._cardinality = cardinality
         self.compress = compress
 

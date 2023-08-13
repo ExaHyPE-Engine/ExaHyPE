@@ -142,7 +142,7 @@ void peano4::stacks::STDVectorOverContainerOfPointers<T>::clone(const STDVectorO
 
   Base::_data.clear();
   Base::_currentElement = data._currentElement;
-  Base::_data.resize(Base::_currentElement);
+  Base::_data.resize(Base::_currentElement, T(T::ObjectConstruction::NoData));
 
   logDebug("clone()", "copy over stack of size " << data.size());
 

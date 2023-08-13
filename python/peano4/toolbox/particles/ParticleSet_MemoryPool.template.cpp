@@ -41,7 +41,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
               _numberOfReplacedVirtualParticles++;
             }
             else {
-              logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
+              logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here. It is not yet stored here. Scatter prior to insertion" );
               _memoryPool.scatter();
               _memoryPool.container.push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
@@ -174,13 +174,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(const peano4::da
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(const peano4::datamanagement::VertexMarker& marker) {
-  return true;
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
-  return true;
+::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(const peano4::datamanagement::VertexMarker& marker) {
+  return ::peano4::grid::LoadStoreComputeFlag::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream;
 }
 
 
@@ -276,6 +271,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::size() const {
   return _memoryPool.container.size();
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::empty() const {
+  return _memoryPool.container.empty();
 }
 
 

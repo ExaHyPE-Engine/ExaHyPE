@@ -38,6 +38,38 @@ of a performance analyis tool to uncover what is going wrong and the statistics
 then can help to clarify why this happens from an application's point of view.
  
 
+## Compiler feedback
+
+Any optimisation should be guided by compiler feedback and proper performance
+analysis. For the (online) performance analysis, Peano provides tailored 
+extensions for some tools such as Intel's VTune or the NVIDIA NSight tools.
+They are realised as bespoke @ref tarch_logging "logging devices".
+
+If you want to use compiler feedback, we do routinely use the Intel toolchain.
+For them, the flag -qopt-report=3 yields useful feedback. However, running the 
+whole code with compiler feedback quickly becomes tedious. I therefore 
+recommend that you first find the observer class which invokes the compute kernel
+you are interested in. After that, create the Makefile (only once, as it will 
+be overwritten). Within the makefile, alter the linker step:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+OPTIMISED_FILE=observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4
+
+
+#
+# Linker arguments are read from left to right and objects are thrown away
+# per step if they are not required anymore. That is: left libraries can
+# depend objects right but not the other way round.
+#
+solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
+        rm $(OPTIMISED_FILE).o*
+        $(CXX) -qopt-report=3 $(CXXFLAGS) -c -o $(OPTIMISED_FILE).o $(OPTIMISED_FILE).cpp
+        $(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o noh2D
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You throw away the object file and then you rebuild this single file yet with 
+the optimisation reports on. 
 
 ## Single core optimisation
 

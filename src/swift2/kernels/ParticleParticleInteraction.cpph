@@ -1,15 +1,22 @@
 #include "swift2/kernels/equation_of_state.h"
 #include "swift2/kernels/kernel_hydro.h"
 #include "swift2/kernels/SmoothingLengthComputation.h"
+<<<<<<< HEAD
+=======
+#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "toolbox/particles/MultiscaleTransitions.h"
+
+>>>>>>> branch 'particles-sml-fix' of https://gitlab.lrz.de/hpcsoftware/Peano.git
 
 template <typename Particle, typename ParticleContainer>
 void swift2::kernels::genericInteraction(
+  const peano4::datamanagement::CellMarker&                                          marker,
   const ParticleContainer&                                                           localParticles,
   const ParticleContainer&                                                           activeParticles,
   std::function<void(Particle* localParticle, const Particle* const activeParticle)> interaction
 ) {
   for (auto* localParticle : localParticles) {
-    if (not localParticle->getCellHasUpdatedParticle()) {
+    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())) {
       for (auto* activeParticle : activeParticles) {
         interaction(localParticle, activeParticle);
       }
@@ -21,67 +28,82 @@ void swift2::kernels::genericInteraction(
 template <typename Particle>
 void swift2::kernels::densityKernel(Particle* localParticle, const Particle* activeParticle) {
 
-  const int hydroDimensions = localParticle->getHydroDimensions();
+  const double hydroDimensions = localParticle->getHydroDimensions();
 
   /* Retrieve basic properties of local and active particles */
   const double h_a = localParticle->getSmoothingLength();
-  const double m_a = localParticle->getMass();
-  const double m_b = activeParticle->getMass();
 
   /* Distance between the particles */
-  tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
-  const double                          r  = tarch::la::norm2(dx);
-
-  /* Normalized distance to evaluate kernel */
-  const double q_a = r / h_a;
+  const tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
+  const double                                r  = tarch::la::norm2(dx);
 
   /* Compute the actual interaction radius */
   const double iactR = kernel_gamma * h_a;
 
-  /* Velocity terms for viscosity */
-  tarch::la::Vector<Dimensions, double> dv_ab;
-  tarch::la::Vector<Dimensions, double> curlvr(0.0);
+  if (
+    tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) /* Self-contribution is calculated elsewhere */
+    // and
+    // not localParticle->getIsBoundaryParticle()
+  ) {
 
-  if(
-    tarch::la::smaller( r, iactR )
-    and
-    tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */
-    and
-    not localParticle->getIsBoundaryParticle()
-    )
-    {
+    if (localParticle->getPartid() == activeParticle->getPartid()) {
+      std::cout << "!!!!!!!!!!!!!!!! INTERACTING SAME PARTILCE WITH ID " << localParticle->getPartid() << std::endl;
+    }
+    if (localParticle->getPartid() == PROBLEMPART) {
+      std::cout
+        << "DENSITY KERNEL: INTERACTING localParticle " << localParticle->getPartid() << " and activeParticle "
+        << activeParticle->getPartid() << std::endl;
+    }
+
+    // const double m_a = localParticle->getMass();
+    const double m_b     = activeParticle->getMass();
+    const double h_a_inv = 1. / h_a;
+    // Normalized distance to evaluate kernel
+    const double qa = r * h_a_inv;
 
     // Evaluate kernel and its derivative
+    double w_a, dwa_dx;
+    kernel_deval(qa, w_a, dwa_dx);
+    const double dwa_dh = -(hydroDimensions * w_a + qa * dwa_dx);
 
-    /* SWIFT KERNEL */
-    double w_a, dwa_dx, dwa_dh;
-    kernel_deval(q_a, w_a, dwa_dx);
-    dwa_dh = -(hydroDimensions * w_a + q_a * dwa_dx);
-
-    /* Increment density */
+    // Increment density
     localParticle->setDensity(localParticle->getDensity() + m_b * w_a);
+    // localParticle->setDensity(localParticle->getDensity() + (m_b * w_a) * h_a_inv);
 
-    /* Increment drho/dh */
+    // Increment drho/dh. Note that minus sign was absorbed into dwa_dh
     localParticle->setRho_dh(localParticle->getRho_dh() + m_b * dwa_dh);
+    // localParticle->setRho_dh(localParticle->getRho_dh() + m_b * dwa_dh * h_a_inv * h_a_inv);
 
-    /* Increment fractional number density */
+    // Increment fractional number density
     localParticle->setWcount(localParticle->getWcount() + w_a);
+    // localParticle->setWcount(localParticle->getWcount() + w_a * h_a_inv);
 
-    /* Increment dWcount/dh */
+    // Increment dWcount/dh. Note that minus sign was absorbed into dwa_dh
     localParticle->setWcount_dh(localParticle->getWcount_dh() + dwa_dh);
+    // localParticle->setWcount_dh(localParticle->getWcount_dh() + dwa_dh * h_a_inv * h_a_inv);
+
+
+    // Compute dv dot r
+    // Velocity terms for viscosity
+    tarch::la::Vector<Dimensions, double> dv;
+    tarch::la::Vector<Dimensions, double> curlvr(0.0);
+
+    if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
+      std::cout
+        << "DENSITY_IACT " << localParticle->getPartid() << " and " << activeParticle->getPartid() << " x= "
+        << activeParticle->getX()[0] << " w_a " << w_a << " dwa_dx " << dwa_dx << " dwa_dh " << dwa_dh << std::endl;
 
     /* Now we need to compute the div terms */
     const double r_inv = r ? 1.0 / r : 0.0;
     const double fac_a = m_b * dwa_dx * r_inv;
 
-    /* Compute dv dot r */
-    dv_ab             = localParticle->getV() - activeParticle->getV();
-    const double dvdr = tarch::la::dot(dv_ab, dx);
+    dv                = localParticle->getV() - activeParticle->getV();
+    const double dvdr = tarch::la::dot(dv, dx);
     localParticle->setDiv_v(localParticle->getDiv_v() - fac_a * dvdr);
 
     /* Compute dv cross r */
     /* 2D Term only has 1 component (z) */
-    const double curlvr2D = dv_ab[0] * dx[1] - dv_ab[1] * dx[0];
+    const double curlvr2D = dv[0] * dx[1] - dv[1] * dx[0];
     localParticle->setRot_v(localParticle->getRot_v() + fac_a * curlvr2D);
     // @TODO Mladen: Implement 3D curl
     if (hydroDimensions == 3)
@@ -96,6 +118,159 @@ void swift2::kernels::densityKernel(Particle* localParticle, const Particle* act
 
 template <typename Particle>
 void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activeParticle) {
+  // Grab static parameters
+  const int    hydroDimensions = localParticle->getHydroDimensions();
+  const double alphaAV         = localParticle->getAlphaAV();
+  const double betaAV          = localParticle->getBetaAV();
+
+assertion3(localParticle->getDensityIactCounter() == 1, "Local Particle in Force loop didn't do density loop", localParticle->getPartid(), localParticle->toString());
+assertion3(activeParticle->getDensityIactCounter() == 1, "Active Particle in force loop didn't do density loop", activeParticle->getPartid(), activeParticle->toString());
+  // No cosmology yet: a^{(3 gamma - 5 )/ 2} = 1.
+  const double fac_mu    = 1.;
+  const double a2_Hubble = 0.; // a**2 * H, where H = da/dt / a. = 0 without cosmo
+
+  // Distance between the two particles
+  tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
+
+  const double r     = tarch::la::norm2(dx);
+  const double r_inv = r ? 1.0 / r : 0.0;
+
+  // Get actual interaction radius
+  const double h_a   = localParticle->getSmoothingLength();
+  const double iactR = kernel_gamma * h_a;
+
+  if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0)) {
+    // and not localParticle->getIsBoundaryParticle()) {
+
+    // Retrieve basic properties of local and active particles
+    const double m_a = localParticle->getMass();
+    const double m_b = activeParticle->getMass();
+
+    const double rho_a = localParticle->getDensity();
+    const double rho_b = activeParticle->getDensity();
+
+    const double P_a = localParticle->getPressure();
+    const double P_b = activeParticle->getPressure();
+
+    // Get kernel for ha
+    const double h_a_inv     = 1. / h_a;
+    const double h_a_inv_dp1 = std::pow(h_a_inv, hydroDimensions + 1); // 1/h^{dim + 1}
+    const double qa          = r * h_a_inv;
+    double       wa, dwa_dqa;
+    // Evaluate kernel and its derivative for particle a
+    kernel_deval(qa, wa, dwa_dqa);
+    const double dwa_dr = dwa_dqa * h_a_inv_dp1;
+
+
+    // Dimensionless distance to evaluate kernel
+    const double h_b         = activeParticle->getSmoothingLength();
+    const double h_b_inv     = 1. / h_b;
+    const double h_b_inv_dp1 = std::pow(h_b_inv, hydroDimensions + 1); // 1/h^{dim + 1}
+    const double qb          = r * h_b_inv;
+    double       wb, dwb_dqb;
+    // Evaluate kernel and its derivative for particle b
+    kernel_deval(qb, wb, dwb_dqb);
+    const double dwb_dr = dwb_dqb * h_b_inv_dp1;
+
+    // Variable smoothing length term
+
+    // SWIFT "f"
+    const double f_ab = 1.0 - localParticle->getF() / m_b;
+    const double f_ba = 1.0 - activeParticle->getF() / m_a;
+
+    // Compute gradient terms
+    const double P_over_rho2_a = P_a / (rho_a * rho_a) * f_ab;
+    const double P_over_rho2_b = P_b / (rho_b * rho_b) * f_ba;
+
+    // Compute dv dot r.
+    double dvdr = tarch::la::dot((localParticle->getV() - activeParticle->getV()), dx);
+
+    // Add Hublle flow: Skipped for now
+    const double dvdr_Hubble = 0.;
+
+    /* Are the particles moving towards each others ? */
+    const double omega_ab = std::min(dvdr, dvdr_Hubble);
+    const double mu_ab    = fac_mu * r_inv * omega_ab; /* This is 0 or negative */
+
+    /* Compute sound speeds and signal velocity */
+    const double v_sig = localParticle->getSoundSpeed() + activeParticle->getSoundSpeed() - betaAV * mu_ab;
+
+    /* Balsara term */
+    const double balsara_a = localParticle->getBalsara();
+    const double balsara_b = activeParticle->getBalsara();
+
+    /* Construct the full viscosity term */
+    const double rho_ab = 0.5 * (rho_a + rho_b);
+    const double visc   = -0.25 * v_sig * mu_ab * (balsara_a + balsara_b) / rho_ab;
+
+    /* Convolve with the kernel */
+    const double visc_acc_term = 0.5 * visc * (dwa_dr * f_ab + dwb_dr * f_ba) * r_inv;
+
+    /* SPH acceleration term */
+    const double sph_acc_term = (P_over_rho2_a * dwa_dr + P_over_rho2_b * dwb_dr) * r_inv;
+
+    // Assemble the acceleration
+    const double acc = sph_acc_term + visc_acc_term;
+
+    assertion9(
+      std::isfinite(visc_acc_term),
+      visc_acc_term,
+      localParticle->toString(),
+      activeParticle->toString(),
+      dwa_dr,
+      f_ab,
+      dwb_dr,
+      f_ba,
+      r_inv,
+      visc
+    );
+    assertion3(std::isfinite(sph_acc_term), sph_acc_term, localParticle->toString(), activeParticle->toString());
+
+    // Use the force
+    localParticle->setA(localParticle->getA() - m_b * acc * dx);
+
+    /* Get the time derivative for u. */
+    const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * dwa_dr;
+
+    /* Viscosity term */
+    const double visc_du_term = 0.5 * visc_acc_term * dvdr_Hubble;
+
+    // Assemble the energy equation term
+    const double du_dt_a = sph_du_term_a + visc_du_term;
+
+    const double udot = localParticle->getUDot();
+
+    // Internal energy time derivative
+    localParticle->setUDot(localParticle->getUDot() + m_b * du_dt_a);
+
+    /* Get the time derivative for h. */
+    localParticle->setHDot(localParticle->getHDot() - m_b * dvdr * r_inv / rho_b * dwa_dr * f_ab);
+
+    // Update the signal velocity
+    localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), v_sig));
+
+    assertion6(not std::isnan(localParticle->getHDot()), localParticle->toString(), dvdr, r_inv, dwa_dr, f_ab, f_ba);
+    assertion7(
+      not tarch::la::isEntryNan(localParticle->getA()),
+      localParticle->toString(),
+      sph_acc_term,
+      visc_acc_term,
+      f_ab,
+      f_ba,
+      activeParticle->getF(),
+      activeParticle->getIsBoundaryParticle()
+    );
+  }
+}
+
+
+template <typename Particle>
+void swift2::kernels::forceKernelVectorised(
+  Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle
+) InlineMethod {
+
+assertion3(localParticle->getDensityIactCounter() == 1, "Local Particle in Force loop didn't do density loop", localParticle->getPartid(), localParticle->toString());
+assertion3(activeParticle->getDensityIactCounter() == 1, "Active Particle in force loop didn't do density loop", activeParticle->getPartid(), activeParticle->toString());
 
   // Grab static parameters
   const int    hydroDimensions = localParticle->getHydroDimensions();
@@ -115,131 +290,152 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
   const double h_a = localParticle->getSmoothingLength();
   const double h_b = activeParticle->getSmoothingLength();
 
-  /* Distance between the two particles */
+  // Distance between the two particles
   tarch::la::Vector<Dimensions, double> dx    = localParticle->getX() - activeParticle->getX();
   const double                          r     = tarch::la::norm2(dx);
   const double                          r_inv = r ? 1.0 / r : 0.0;
 
+  // Dimensionless distance to evaluate kernel
+  const double h_a_inv = 1. / h_a;
+  const double h_b_inv = 1. / h_b;
+  const double q_a     = r * h_a_inv;
+  const double q_b     = r * h_b_inv;
+
   // Get actual interaction radius
   const double iactR = kernel_gamma * h_a;
 
-  if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle()) {
+  const double mask = tarch::la::smaller(r, iactR);
 
-    // Dimensionless distance to evaluate kernel
-    const double h_a_inv = 1. / h_a;
-    const double h_b_inv = 1. / h_b;
-    const double q_a     = r * h_a_inv;
-    const double q_b     = r * h_b_inv;
+  // Get actual interaction radius
+  double wa, wb;
+  double wa_dr, wb_dr;
+  double dw_dqa, dw_dqb;
 
-    double wa, wb;
-    double wa_dr, wb_dr;
-    double dw_dqa, dw_dqb;
+  // Evaluate kernel and its derivative for particle a
+  kernel_deval(q_a, wa, dw_dqa);
 
-    // Evaluate kernel and its derivative for particle a
-    kernel_deval(q_a, wa, dw_dqa);
+  // Evaluate kernel and its derivative for particle b
+  kernel_deval(q_b, wb, dw_dqb);
 
-    // Evaluate kernel and its derivative for particle b
-    kernel_deval(q_b, wb, dw_dqb);
+  wa_dr = dw_dqa * std::pow(h_a_inv, (hydroDimensions + 1));
+  wb_dr = dw_dqb * std::pow(h_b_inv, (hydroDimensions + 1));
 
-    wa_dr = dw_dqa * std::pow(h_a_inv, (hydroDimensions + 1));
-    wb_dr = dw_dqb * std::pow(h_b_inv, (hydroDimensions + 1));
+  // Variable smoothing length term
 
-    /* Variable smoothing length term */
+  // SWIFT "f"
+  const double f_ab = 1.0 - localParticle->getF() / m_b;
+  const double f_ba = 1.0 - activeParticle->getF() / m_a;
 
-    /* SWIFT "f" */
-    const double f_ab = 1.0 - localParticle->getF() / m_b;
-    const double f_ba = 1.0 - activeParticle->getF() / m_a;
+  // Compute gradient terms
+  const double P_over_rho2_a = P_a / (rho_a * rho_a) * f_ab;
+  const double P_over_rho2_b = P_b / (rho_b * rho_b) * f_ba;
 
-    /* Compute gradient terms */
-    const double P_over_rho2_a = P_a / (rho_a * rho_a) * f_ab;
-    const double P_over_rho2_b = P_b / (rho_b * rho_b) * f_ba;
+  // Compute dv dot r.
+  double dvdr = tarch::la::dot((localParticle->getV() - activeParticle->getV()), dx);
 
-    /* Compute dv dot r. */
-    double dvdr = tarch::la::dot((localParticle->getV() - activeParticle->getV()), dx);
 
-    /* Are the particles moving towards each others ? */
-    const double omega_ab = std::min(dvdr, 0.0);
-    const double mu_ab    = r_inv * omega_ab; /* This is 0 or negative */
+  // Are the particles moving towards each others ?
+  const double omega_ab = std::min(dvdr, 0.0);
+  const double mu_ab    = r_inv * omega_ab;
 
-    /* Compute sound speeds and signal velocity */
-    const double v_sig = localParticle->getSoundSpeed() + activeParticle->getSoundSpeed() - betaAV * mu_ab;
+  // Compute sound speeds and signal velocity
+  const double v_sig = localParticle->getSoundSpeed() + activeParticle->getSoundSpeed() - betaAV * mu_ab;
 
-    /* Balsara term */
-    const double balsara_a = localParticle->getBalsara();
-    const double balsara_b = activeParticle->getBalsara();
+  // Balsara term
+  const double balsara_a = localParticle->getBalsara();
+  const double balsara_b = activeParticle->getBalsara();
 
-    /* Construct the full viscosity term */
-    const double rho_ab = 0.5 * (rho_a + rho_b);
-    const double visc   = -0.25 * v_sig * mu_ab * (balsara_a + balsara_b) / rho_ab;
+  // Construct the full viscosity term
+  const double rho_ab = 0.5 * (rho_a + rho_b);
+  const double visc   = -0.25 * v_sig * mu_ab * (balsara_a + balsara_b) / rho_ab;
 
-    /* Convolve with the kernel */
-    const double visc_acc_term = 0.5 * visc * (wa_dr * f_ab + wb_dr * f_ba) * r_inv;
+  // Convolve with the kernel
+  const double visc_acc_term = 0.5 * visc * (wa_dr * f_ab + wb_dr * f_ba) * r_inv;
 
-    /* SPH acceleration term */
-    const double sph_acc_term = (P_over_rho2_a * wa_dr + P_over_rho2_b * wb_dr) * r_inv;
+  // SPH acceleration term
+  const double sph_acc_term = (P_over_rho2_a * wa_dr + P_over_rho2_b * wb_dr) * r_inv;
 
-    /* Assemble the acceleration */
-    const double acc = sph_acc_term + visc_acc_term;
+  // Assemble the acceleration
+  const double acc = sph_acc_term + visc_acc_term;
 
-    assertion9(
-      std::isfinite(visc_acc_term),
-      visc_acc_term,
-      localParticle->toString(),
-      activeParticle->toString(),
-      wa_dr,
-      f_ab,
-      wb_dr,
-      f_ba,
-      r_inv,
-      visc
-    );
-    assertion3(std::isfinite(sph_acc_term), sph_acc_term, localParticle->toString(), activeParticle->toString());
+  assertion9(
+    std::isfinite(visc_acc_term),
+    visc_acc_term,
+    localParticle->toString(),
+    activeParticle->toString(),
+    wa_dr,
+    f_ab,
+    wb_dr,
+    f_ba,
+    r_inv,
+    visc
+  );
+  assertion3(std::isfinite(sph_acc_term), sph_acc_term, localParticle->toString(), activeParticle->toString());
 
-    /* Use the force */
-    localParticle->setA(localParticle->getA() - m_b * acc * dx);
+  // Use the force
+  localParticle->setA(localParticle->getA() - mask * m_b * acc * dx);
 
-    /* Get the time derivative for u. */
-    const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * wa_dr;
+  // Get the time derivative for u.
+  const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * wa_dr;
 
-    /* Viscosity term */
-    const double visc_du_term = 0.5 * visc_acc_term * dvdr;
+  // Viscosity term
+  const double visc_du_term = 0.5 * visc_acc_term * dvdr;
 
-    /* Assemble the energy equation term */
-    const double du_dt_a = sph_du_term_a + visc_du_term;
+  // Assemble the energy equation term
+  const double du_dt_a = sph_du_term_a + visc_du_term;
 
-    const double udot = localParticle->getUDot();
+  const double udot = localParticle->getUDot();
 
-    /* Internal energy time derivative */
-    localParticle->setUDot(localParticle->getUDot() + m_b * du_dt_a);
+  // Internal energy time derivative
+  localParticle->setUDot(localParticle->getUDot() + mask * m_b * du_dt_a);
 
-    /* Get the time derivative for h. */
-    localParticle->setHDot(localParticle->getHDot() - m_b * dvdr * r_inv / rho_b * wa_dr * f_ab);
+  // Get the time derivative for h.
+  localParticle->setHDot(localParticle->getHDot() - mask * m_b * dvdr * r_inv / rho_b * wa_dr * f_ab);
 
-    /* Update the signal velocity */
-    localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), v_sig));
+  // Update the signal velocity
+  // localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), mask * v_sig));
+  const double currentAV = localParticle->getV_sig_AV();
+  const double biggerAV  = mask * v_sig;
+  const double newAV     = biggerAV > currentAV ? biggerAV : currentAV;
+  localParticle->setV_sig_AV(newAV);
 
-    assertion6(not std::isnan(localParticle->getHDot()), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba);
-    assertion7(
-      not tarch::la::isEntryNan(localParticle->getA()),
-      localParticle->toString(),
-      sph_acc_term,
-      visc_acc_term,
-      f_ab,
-      f_ba,
-      activeParticle->getF(),
-      activeParticle->getIsBoundaryParticle()
-    );
-  }
+  assertion6(not std::isnan(localParticle->getHDot()), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba);
+  assertion7(
+    not tarch::la::isEntryNan(localParticle->getA()),
+    localParticle->toString(),
+    sph_acc_term,
+    visc_acc_term,
+    f_ab,
+    f_ba,
+    activeParticle->getF(),
+    activeParticle->getIsBoundaryParticle()
+  );
 }
 
 
 template <typename ParticleContainer>
 void swift2::kernels::computeDensityWithConstantSmoothingLengths(
-  const ParticleContainer& localParticles, const ParticleContainer& activeParticles
+  const peano4::datamanagement::CellMarker& marker,
+  const ParticleContainer&                  localParticles,
+  const ParticleContainer&                  activeParticles
 ) {
+<<<<<<< HEAD
+=======
+  /* Don't use this yet. */
+  std::cout << "swift2::kernels::computeDensity: Don't use this. It's not implemented properly yet." << std::endl;
+  std::abort();
+>>>>>>> branch 'particles-sml-fix' of https://gitlab.lrz.de/hpcsoftware/Peano.git
   for (auto* localParticle : localParticles) {
-    if (not localParticle->getCellHasUpdatedParticle()) {
+    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())) {
       for (auto* activeParticle : activeParticles) {
+<<<<<<< HEAD
+=======
+        if (localParticle->getPartid() == PROBLEMPART) {
+          std::cout
+            << "DENSITY KERNEL: CHECKING localParticle " << localParticle->getPartid() << " and activeParticle "
+            << activeParticle->getPartid() << std::endl;
+        }
+>>>>>>> branch 'particles-sml-fix' of https://gitlab.lrz.de/hpcsoftware/Peano.git
         swift2::kernels::densityKernel(localParticle, activeParticle);
       }
     }
@@ -249,10 +445,26 @@ void swift2::kernels::computeDensityWithConstantSmoothingLengths(
 
 template <typename ParticleContainer>
 void swift2::kernels::computeDensityWithConstantSearchRadius(
-  const ParticleContainer& localParticles, const ParticleContainer& activeParticles
+  const peano4::datamanagement::CellMarker& marker,
+  const ParticleContainer&                  localParticles,
+  const ParticleContainer&                  activeParticles
 ) {
+  static tarch::logging::Log _log("swift2::kernels");
   for (auto* localParticle : localParticles) {
+<<<<<<< HEAD
     if (not localParticle->getCellHasUpdatedParticle()) {
+=======
+    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX()) and not toolbox::particles::particleWillBeDroppedFurther(*localParticle, marker)) {
+      if (localParticle->getPartid() == PROBLEMPART) {
+        logInfo(
+          "computeDensityWithConstantSearchRadius",
+          "STARTING DENSITY FOR PROBLEMPART "
+            << PROBLEMPART << " with " << activeParticles.size() << " active particles associated to cell "
+            << marker.toString()
+        );
+      }
+
+>>>>>>> branch 'particles-sml-fix' of https://gitlab.lrz.de/hpcsoftware/Peano.git
       swift2::kernels::findSmoothingLengthWithConstantSearchRadius(localParticle, activeParticles);
     }
   }
@@ -261,17 +473,24 @@ void swift2::kernels::computeDensityWithConstantSearchRadius(
 
 template <typename ParticleContainer>
 void swift2::kernels::computeDensity(
-  const ParticleContainer& localParticles, const ParticleContainer& activeParticles
+  const peano4::datamanagement::CellMarker& marker,
+  const ParticleContainer&                  localParticles,
+  const ParticleContainer&                  activeParticles
 ) {
 
   /* Don't use this yet. */
+<<<<<<< HEAD
   assertionMsg(false, "Don't use this. It's not implemented properly yet.");
+=======
+  std::cout << "swift2::kernels::computeDensity: Don't use this. It's not implemented properly yet." << std::endl;
+  std::abort();
+>>>>>>> branch 'particles-sml-fix' of https://gitlab.lrz.de/hpcsoftware/Peano.git
 
   /* Grab static parameters */
   const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
 
   for (auto* localParticle : localParticles) {
-    if (not localParticle->getCellHasUpdatedParticle()) {
+    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())) {
       for (auto* activeParticle : activeParticles) {
 
         /* Retrieve basic properties of local and active particles */
@@ -293,14 +512,11 @@ void swift2::kernels::computeDensity(
         tarch::la::Vector<Dimensions, double> dv_ab;
         tarch::la::Vector<Dimensions, double> curlvr(0.0);
 
-        if(
-          tarch::la::smaller( r, iactR )
-          and
-          tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */
-          and
-          not localParticle->getIsBoundaryParticle()
-          )
-          {
+        if (
+          tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) /* Self-contribution is calculated elsewhere */
+          // and
+          // not localParticle->getIsBoundaryParticle()
+        ) {
 
           // Evaluate kernel and its derivative
 
@@ -351,12 +567,58 @@ void swift2::kernels::computeDensity(
 
 template <typename ParticleContainer>
 void swift2::kernels::computeHydroForce(
-  const ParticleContainer& localParticles, const ParticleContainer& activeParticles
+  const peano4::datamanagement::CellMarker& marker,
+  const ParticleContainer&                  localParticles,
+  const ParticleContainer&                  activeParticles
 ) {
   for (auto* localParticle : localParticles) {
-    if (not localParticle->getCellHasUpdatedParticle()) {
+    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())) {
       for (auto* activeParticle : activeParticles) {
         swift2::kernels::forceKernel(localParticle, activeParticle);
+      }
+    }
+  }
+}
+
+
+template <typename ParticleContainer>
+void swift2::kernels::computeHydroForce(
+  const peano4::datamanagement::CellMarker& marker,
+  const ParticleContainer&                  particlesAssociatedWithLocalVertices,
+  const std::vector<int>&                   numberOfParticlesPerLocalVertex,
+  const ParticleContainer&                  activeParticles,
+  const std::vector<int>&                   numberOfActiveParticlesPerVertexAdded
+) {
+  typename std::list<typename ParticleContainer::value_type>::const_iterator localParticlesIterator
+    = particlesAssociatedWithLocalVertices.begin();
+
+  for (auto localParticlesChunkSize : numberOfParticlesPerLocalVertex) {
+    typename ParticleContainer::value_type localParticlesChunk = *localParticlesIterator;
+    std::advance(localParticlesIterator, localParticlesChunkSize);
+
+    typename std::list<typename ParticleContainer::value_type>::const_iterator activeParticlesIterator
+      = activeParticles.begin();
+    for (auto activeParticlesChunkSize : numberOfActiveParticlesPerVertexAdded) {
+      typename ParticleContainer::value_type activeParticlesChunk = *activeParticlesIterator;
+      std::advance(activeParticlesIterator, activeParticlesChunkSize);
+
+      for (int localParticleNumberInThisChunk = 0; localParticleNumberInThisChunk < localParticlesChunkSize;
+           localParticleNumberInThisChunk++) {
+        if (
+          marker.isContained(localParticlesChunk[localParticleNumberInThisChunk].getX())
+          and
+          not localParticlesChunk[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
+          and
+          not toolbox::particles::particleWillBeDroppedFurther( localParticlesChunk[localParticleNumberInThisChunk], marker)
+        ) {
+          for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
+               activeParticleNumberInThisChunk++) {
+            swift2::kernels::forceKernelVectorised(
+              localParticlesChunk + localParticleNumberInThisChunk,
+              activeParticlesChunk + activeParticleNumberInThisChunk
+            );
+          }
+        }
       }
     }
   }
