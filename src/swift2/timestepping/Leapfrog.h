@@ -93,10 +93,6 @@ namespace swift2 {
     template <typename Particle>
     void leapfrogKickExtraWithGlobalTimeStepSize(Particle& localParticle);
 
-    // @TODO docu
-    template <typename Particle>
-    void kickResetPredictedValues(Particle& localParticle);
-
     /**
      * Predict hydro terms (SWIFT)
      * Relevant for inactive particles when using local-timestepping, but always

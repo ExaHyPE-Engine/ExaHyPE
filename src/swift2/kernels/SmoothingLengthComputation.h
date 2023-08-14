@@ -5,21 +5,6 @@
 namespace swift2 {
   namespace kernels {
 
-
-    /**
-     *@todo add documentation
-     */
-    template <typename Particle>
-    void hydro_end_density(Particle& localParticle);
-
-
-    /**
-     *@todo add documentation
-     */
-    template <typename Particle>
-    void hydro_prepare_density(Particle& localParticle);
-
-
     /**
      *@brief find the smoothing length of a localParticle
      * iteratively while looping over the neighboring activeParticles.
