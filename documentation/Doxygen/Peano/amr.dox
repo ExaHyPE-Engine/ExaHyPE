@@ -188,13 +188,27 @@ adjacent mesh cells.
 Coarsening a mesh is tricky, as coarsening areas have to span quite some cells 
 to actively remove mesh cells.
 This is a natural consequence of Peano's "at least" policy.
-At the same time, you want a coarsening never ever 
+At the same time, you want a coarsening never ever to eliminate a mesh part 
+that you want, as this might need to oscillations where you erase and refine
+and erase again, while it also should not be cancelled out by a refine event 
+"accidentially". 
 
+To enable Peano to erase safely, I usually identify refine cells of which I 
+want to remove the children, and then I trigger an erase event which has 
+three times the side line of this very cell. That is, if a cell has the mesh
+size h, the erase event has the size 3Ch where the C is a value slightly larger
+than 1. I often use 3.1h overall. This means that a cell tells Peano "hey, please
+erase my children and the children of the neighbours".
 
+Working with these extremely aggressive coarsening factors is important for 
+refinement patterns which are non hexahedral, and it is important along domain
+boundaries, where we cannot hope that a neighbour concatenates their erase 
+command to ours. Yet, while this will eliminate small refined patches that might 
+have been left out or are close to the boundary, such an aggressive erase will 
+leed to oscillations, as we might now ask for an erase over a cell which we 
+actually wanna keep.  
 
-### Avoid oscillations
-
-To avoid osciallations, you can introduce a "keep this mesh" event through 
+To avoid oscillations, you can introduce a "keep this mesh" event through 
 artificial refinement instructions. Refinements overwrite erase instructions.
 Therefore, you can always trigger a refinement event for a cell which actually
 does not refine this cell any further (just make the event span the whole cell

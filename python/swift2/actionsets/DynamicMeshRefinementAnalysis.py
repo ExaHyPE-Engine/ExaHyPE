@@ -256,7 +256,7 @@ class DynamicMeshRefinementAnalysis(ActionSet):
     and
     marker.h()(0)<{{MAX_H}} // we will remove the suboctants
   ) {
-    const double ScaleMarker = 3.1;
+    const double ScaleMarker = 3.0 * (1.0+{{SCALE_MARKER}});
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Erase );
     newEntry.setOffset( marker.getOffset() + marker.h() * (1.0-ScaleMarker) / 2.0 );
