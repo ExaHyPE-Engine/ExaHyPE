@@ -21,10 +21,14 @@ class DynamicMeshRefinementAnalysis(ActionSet):
     and coarsening commands.
 
     Different to the default toolbox variant, Swift's marker doesn't need to
-    distinguish a new and an old marker.
+    distinguish a new and an old marker and we use the marker information
+    straightaway throughout the steps up.
 
     Please consult the constructor, i.e. __init__(), for some information
     on algorithm variants and the implementation.
+    
+    To understand the code's behaviour, it is resonable to read through 
+    @ref peano_amr_tex "Peano's generic AMR description".
 
     """
 
@@ -202,35 +206,34 @@ class DynamicMeshRefinementAnalysis(ActionSet):
 
   /*
 
+   To understand the code's behaviour, it is resonable to read through 
+   @ref peano_amr_tex "Peano's generic AMR description".
+
+   Refine
+   ======
+   
+   Refine if we have not yet reached the finest mesh resolution and violate
+   the max particle count. This implies that we actually get a mesh which is
+   slightly finer then min_h or this species.
+   
    Erase
    =====
 
    If we want to erase a cell, we actually make the region that is to be
-   erased slightly bigger. While we can pick this blow-up factor arbitrarily
-   (up to a factor of three might make sense in some cases), but if we make
-   is 2.0, then an erased cell covers half of its neighbour. If we have a
-   cell which hosts a particle, this cell will then maybe not coarsen, but
-   all of its neighbours do, so the cell is eliminated. This triggers a
-   mesh oscillation. So the factor should either be smaller than 2.0, or we
-   have to veto that an area with particles is overwritten. Indeed we go
-   down the latter route and mark cells that we may not erase with a refine
-   event which describes the mesh status quo.
-
-
-   This is a tricky part. Our idea is that we mark only examine refined cells
+   erased slightly bigger. This is in line with @ref peano_amr_tex "Peano's generic AMR description". 
+   Furthermore, we mark only refined cells
    one level above the finest mesh. These are cells which will be refined and
    have been refined, and also carry only few particles such that we could
-   safely erase their children. While we only examine refined cells, we do not
-   examine refined cells which have refined children. To find this out, we
-   look at the flag getParentOfRefinedCell().
-
+   safely erase their children plus have no refined children. To find out if
+   this holds for a cell, we look at the flag getParentOfRefinedCell().
+   
   */
   if (
     not marker.willBeRefined()
     and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MAX_PARTICLES_PER_CELL}}
     and
-    marker.h()(0)/3.0>{{MIN_H}}
+    marker.h()(0)>{{MIN_H}}
   ) {
     const double ScaleMarker = {{SCALE_MARKER}};
     peano4::grid::GridControlEvent newEntry;
@@ -253,7 +256,7 @@ class DynamicMeshRefinementAnalysis(ActionSet):
     and
     marker.h()(0)<{{MAX_H}} // we will remove the suboctants
   ) {
-    const double ScaleMarker = 3.1;
+    const double ScaleMarker = 2.0 - {{SCALE_MARKER}};
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Erase );
     newEntry.setOffset( marker.getOffset() + marker.h() * (1.0-ScaleMarker) / 2.0 );
