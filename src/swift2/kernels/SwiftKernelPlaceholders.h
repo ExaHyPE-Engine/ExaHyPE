@@ -108,4 +108,4 @@ namespace swift2 {
   } // namespace kernelPlaceholders
 } // namespace swift2
 
-#include "SwiftKernels.cpph"
+#include "SwiftKernelPlaceholders.cpph"

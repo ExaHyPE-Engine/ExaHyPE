@@ -1,6 +1,6 @@
 #include <cfloat>
 
-#include "SwiftKernels.h"
+#include "swift2/kernels/SwiftKernelPlaceholders.h"
 #include "tarch/logging/Log.h"
 
 template <typename Particle, typename ParticleContainer>

@@ -6,7 +6,6 @@
 #include <list>
 #include <vector>
 
-#include "SwiftKernels.h"
 #include "tarch/la/Vector.h"
 
 
