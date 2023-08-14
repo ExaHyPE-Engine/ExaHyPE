@@ -19,7 +19,7 @@ setH( __h);
 std::string peano4::grid::GridControlEvent::toString() const {
   std::ostringstream out;
   out << "(";
-  out << "refinementControl=" << (_refinementControl==RefinementControl::Refine? "Refine" : "")  << (_refinementControl==RefinementControl::Erase? "Erase" : "") ;
+  out << "refinementControl=" << (_refinementControl==RefinementControl::Refine? "Refine" : "")  << (_refinementControl==RefinementControl::Erase? "Erase" : "")  << (_refinementControl==RefinementControl::Keep? "Keep" : "") ;
   out << ","; 
   out << "offset=" << _offset;
   out << ","; 

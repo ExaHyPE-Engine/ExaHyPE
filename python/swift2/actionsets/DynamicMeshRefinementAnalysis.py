@@ -26,8 +26,8 @@ class DynamicMeshRefinementAnalysis(ActionSet):
 
     Please consult the constructor, i.e. __init__(), for some information
     on algorithm variants and the implementation.
-    
-    To understand the code's behaviour, it is resonable to read through 
+
+    To understand the code's behaviour, it is resonable to read through
     @ref peano_amr_tex "Peano's generic AMR description".
 
     """
@@ -63,7 +63,7 @@ class DynamicMeshRefinementAnalysis(ActionSet):
         max_particles_per_cell=65536,
         min_h=0.1,
         max_h=0.01,
-        scale_marker=0.8,
+        scale_marker=0.95,
     ):
         """!
 
@@ -232,15 +232,15 @@ class DynamicMeshRefinementAnalysis(ActionSet):
     not marker.willBeRefined()
     and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MAX_PARTICLES_PER_CELL}}
-    and
-    marker.h()(0)>{{MIN_H}}
   ) {
     const double ScaleMarker = {{SCALE_MARKER}};
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );
     newEntry.setOffset( marker.getOffset() + marker.h() * (1.0-ScaleMarker) / 2.0 );
     newEntry.setWidth( marker.h() * ScaleMarker );
-    newEntry.setH( marker.h()/3.0 * 1.1 );
+    newEntry.setH( 
+      tarch::la::greater( marker.h()(0), {{MIN_H}} ) ? marker.h()/3.0 * 1.1 : marker.h() * 1.1
+    );
     _localGridControlEvents.push_back(newEntry);
     logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }
@@ -256,7 +256,7 @@ class DynamicMeshRefinementAnalysis(ActionSet):
     and
     marker.h()(0)<{{MAX_H}} // we will remove the suboctants
   ) {
-    const double ScaleMarker = 2.0 - {{SCALE_MARKER}};
+    const double ScaleMarker = 3.1;
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Erase );
     newEntry.setOffset( marker.getOffset() + marker.h() * (1.0-ScaleMarker) / 2.0 );
