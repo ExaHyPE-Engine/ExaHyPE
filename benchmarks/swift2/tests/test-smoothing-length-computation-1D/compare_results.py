@@ -44,7 +44,7 @@ parser.add_argument(
     "-n",
     "--neighbours",
     dest="nneigh",
-    type=float, # this is not a typo. We want average number of neighbours, which needn't be an int.
+    type=float,  # this is not a typo. We want average number of neighbours, which needn't be an int.
     default=None,
     help="Number of neighbours to search for. You must specify either --eta or --neighbours",
 )
@@ -96,9 +96,13 @@ if eta is None and nneigh is None:
 if eta is not None and nneigh is not None:
     raise ValueError("You need to specify either --eta or --neighbours, not both")
 if nneigh is not None:
-    eta = swift2.sphtools.eta_from_number_of_neighbours(nneigh, kernel=kernel, ndim=ndim)
+    eta = swift2.sphtools.eta_from_number_of_neighbours(
+        nneigh, kernel=kernel, ndim=ndim
+    )
 else:
-    nneigh = swift2.sphtools.number_of_neighbours_from_eta(eta, kernel=kernel, ndim=ndim)
+    nneigh = swift2.sphtools.number_of_neighbours_from_eta(
+        eta, kernel=kernel, ndim=ndim
+    )
 
 # above this (relative) threshold, treat deviations as an error
 # Make this tolerance dependant on the used h_tolerance. Add a
@@ -122,7 +126,7 @@ print(" --- comparison tolerance:       ", comparison_tolerance)
 
 if icfile.endswith(".hdf5"):
     # Doing a hdf5 run.
-    vtufile="particles-0.vtu"
+    vtufile = "particles-0.vtu"
 
     hfile = h5py.File(icfile, "r")
     gas = hfile["PartType0"]
@@ -132,7 +136,7 @@ if icfile.endswith(".hdf5"):
 
 elif icfile.endswith(".vtu"):
     # Doing a snapshot verification
-    vtufile=icfile
+    vtufile = icfile
 
     reader = ParticleVTUReader(vtufile=vtufile, verbose=False)
     partData = reader.load()
@@ -141,8 +145,6 @@ elif icfile.endswith(".vtu"):
 
 else:
     raise ValueError("Unrecognized file type {icfile}, looking for .vtu or .hdf5 file.")
-
-
 
 
 # Sort by particle ID
@@ -155,7 +157,7 @@ coords = coords[sort_ic]
 # -------------------------
 
 tree = KDTree(coords)
-distances, indexes = tree.query(coords, k=nneigh + 10*ndim)
+distances, indexes = tree.query(coords, k=nneigh + 10 * ndim)
 neighbours = coords[indexes]
 
 npart = coords.shape[0]

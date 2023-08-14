@@ -70,7 +70,6 @@ void swift2::kernelPlaceholders::hydro_end_density(Particle& localParticle) {
 }
 
 
-
 template <typename Particle>
 void swift2::kernelPlaceholders::hydro_prepare_force(Particle& localParticle) {
 
@@ -123,9 +122,11 @@ void swift2::kernelPlaceholders::hydro_prepare_force(Particle& localParticle) {
 
   float grad_h_term;
   // Ignore changing-kernel effects when h ~= h_max
-  if (h_a >  0.9999 * hydro_h_max) {
+  if (h_a > 0.9999 * hydro_h_max) {
     grad_h_term = 0.;
-    logWarning("hydro_prepare_force", "h ~ h_max for particle with ID " << localParticle->getPartid() << " h = " << h_a);
+    logWarning(
+      "hydro_prepare_force", "h ~ h_max for particle with ID " << localParticle->getPartid() << " h = " << h_a
+    );
   } else {
     const double grad_W_term = common_factor * localParticle->getWcount_dh();
     if (grad_W_term < -0.9999) {
@@ -136,13 +137,12 @@ void swift2::kernelPlaceholders::hydro_prepare_force(Particle& localParticle) {
          expression, since that would lead to overflow or excessive round
          off and cause excessively high accelerations in the force loop */
       grad_h_term = 0.;
-      logWarning("hydro_prepare_force",
-        "grad_W_term very small for particle with ID " << localParticle->getPartid() <<
-        " h:" << h_a <<
-        " wcount:" << localParticle->getWcount() <<
-        " wcount_dh:" << localParticle->getWcount_dh() <<
-        " grad_W_term:" << grad_W_term <<
-        " common_factor:" << common_factor);
+      logWarning(
+        "hydro_prepare_force",
+        "grad_W_term very small for particle with ID "
+          << localParticle->getPartid() << " h:" << h_a << " wcount:" << localParticle->getWcount() << " wcount_dh:"
+          << localParticle->getWcount_dh() << " grad_W_term:" << grad_W_term << " common_factor:" << common_factor
+      );
     } else {
       grad_h_term = common_factor * localParticle->getRho_dh() / (1. + grad_W_term);
     }
@@ -160,7 +160,6 @@ void swift2::kernelPlaceholders::hydro_prepare_force(Particle& localParticle) {
   localParticle->setSoundSpeed(soundspeed);
   localParticle->setBalsara(balsara);
 }
-
 
 
 template <typename Particle>

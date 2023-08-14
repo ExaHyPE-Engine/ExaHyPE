@@ -51,11 +51,9 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(const Parti
 
       // Kick the particle
       particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
-
     }
   }
 }
-
 
 
 template <typename ParticleContainer>
@@ -66,10 +64,7 @@ void swift2::timestepping::computeSPHLeapfrogKickWithGlobalTimeStepSize(
                                   * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
                                       .getMinTimeStepSize();
   for (auto* particle : localParticles) {
-    if (
-      particle->getParallelState()
-      == std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-    ) {
+    if (particle->getParallelState() == std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local) {
 
       /* Kick the particle */
       particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
@@ -89,10 +84,7 @@ template <typename ParticleContainer>
 void swift2::timestepping::computePredictHydro(const ParticleContainer& localParticles) {
 
   for (auto* particle : localParticles) {
-    if (
-      particle->getParallelState()
-      == std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-    ) {
+    if (particle->getParallelState() == std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local) {
 
       swift2::kernelPlaceholders::hydro_predict_extra(particle);
     }

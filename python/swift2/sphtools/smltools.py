@@ -81,7 +81,6 @@ def find_smoothing_length(
         the smoothing length
     """
 
-
     # This is for debugging purposes
     verbose = False
 
