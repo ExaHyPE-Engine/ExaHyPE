@@ -1,125 +1,72 @@
-stages:
-  - build
-  - test
-  - benchmark
-  - simulate
-
 gcc-build:
   stage: build
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/gcc:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
   script:
     - pwd
     - ls
     - whoami
     - hostname
-    - lscpu
+    - echo $SINGULARITY_CACHEDIR
     - echo $CI_COMMIT_SHA
     - echo $CI_COMMIT_BRANCH
     - echo "Running CI with $(nproc) cores"
-    - bash .continuous_integration/configure.sh <<< $'1\n gcc\n g++\n 2\n 1\n'$
-    - make -j $(nproc)
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} python3 configure.py --exahype --swift --petsc
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} make -j $(nproc --all)
   artifacts:
     paths:
-      - /*
-  retry: 2
+      - ./*
+    exclude:
+      - ".git*"
+      - ".git/**/*"
+    expire_in: 2 hours
+  retry: 0
 
 gcc-test:
   stage: test
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/gcc:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
   needs:
     - job: gcc-build
   script:
-    - src/unittests/UnitTests2d
-    - src/unittests/UnitTests3d
-  artifacts:
-    paths:
-      - /*
-  retry: 2
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} make check
+  retry: 0
 
-gcc-benchmark-kernels:
-  stage: benchmark
+gcc-tutorials:
+  stage: tutorials
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/gcc:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
   needs:
-    - job: gcc-test
+    - job: gcc-build
   script:
-    - cd benchmarks/exahype2/euler/kernel-benchmarks
-    - python3 fv-rusanov-kernel-benchmarks.py
-    - ls
-  artifacts:
-    paths:
-      - /*
-  retry: 2
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/euler; python3 euler.py'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/euler; make -j'
+  retry: 0
 
-gcc-benchmark-gauge-wave:
-  stage: benchmark
+gcc-applications:
+  stage: applications
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/gcc:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
   needs:
-    - job: gcc-test
+    - job: gcc-build
   script:
-    - cd benchmarks/exahype2/ccz4/gauge-wave
-    - python3 convergence-study.py -s fv
-    - ls
-  artifacts:
-    paths:
-      - /*
-  retry: 2
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; python3 euler.py --no-make --executable=euler'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; make -j'
+  retry: 0
 
-gcc-simulate-acoustic-wave:
-  stage: simulate
+gcc-benchmarks:
+  stage: benchmarks
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/gcc:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
   needs:
-    - job: gcc-benchmark-kernels
-    - job: gcc-benchmark-gauge-wave
+    - job: gcc-build
   script:
-    - cd applications/exahype2/acoustic-wave
-    - python3 acoustic-wave.py -s FVRusanovGlobalAdaptiveEnclave
-    - ls
-  artifacts:
-    paths:
-      - /*
-  retry: 2
-
-gcc-simulate-elastic-wave:
-  stage: simulate
-  allow_failure: false
-  tags:
-    - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/gcc:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
-  needs:
-    - job: gcc-benchmark-kernels
-    - job: gcc-benchmark-gauge-wave
-  script:
-    - cd applications/exahype2/elastic-wave
-    - python3 elastic-wave.py -s FVRusanovGlobalAdaptiveEnclave
-    - ls
-  artifacts:
-    paths:
-      - /*
-  retry: 2
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py --no-make --executable=kernel-benchmarks'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; make -j'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks
+  retry: 0
