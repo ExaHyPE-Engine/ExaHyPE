@@ -1,0 +1,69 @@
+nvidia-build-cmake:
+  stage: build
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  script:
+    - pwd
+    - ls
+    - whoami
+    - hostname
+    - echo $SINGULARITY_CACHEDIR
+    - echo $CI_COMMIT_SHA
+    - echo $CI_COMMIT_BRANCH
+    - echo "Running CI with $(nproc) cores"
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} python3 configure.py --exahype --swift --cmake=build
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< ' cd build; make -j $(nproc --all)'
+  artifacts:
+    paths:
+      - ./build/*
+    expire_in: 2 hours
+  retry: 0
+
+nvidia-test-cmake:
+  stage: test
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  needs:
+    - job: nvidia-build-cmake
+  script:
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< ' cd build; ctest --verbose'
+  retry: 0
+
+nvidia-tutorials-cmake:
+  stage: tutorials
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  needs:
+    - job: nvidia-build-cmake
+  script:
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/euler; python3 euler.py'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/euler; make -j'
+  retry: 0
+
+nvidia-applications-cmake:
+  stage: applications
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  needs:
+    - job: nvidia-build-cmake
+  script:
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; python3 euler.py --no-make --executable=euler'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; make -j'
+  retry: 0
+
+nvidia-benchmarks-cmake:
+  stage: benchmarks
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  needs:
+    - job: nvidia-build-cmake
+  script:
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py --no-make --executable=kernel-benchmarks'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; make -j'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} build/benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks
+  retry: 0

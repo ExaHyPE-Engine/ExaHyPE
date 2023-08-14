@@ -1,0 +1,9 @@
+formatting:
+  stage: formatting
+  allow_failure: true
+  tags:
+    - ${RUNNER_TAG}
+  dependencies: []
+  script:
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} python3 format.py -d -v -f=.
+  retry: 0
