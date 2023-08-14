@@ -1,6 +1,6 @@
 /**
 
- @page benchmarks_swift2_hydro_noh_imposion_test NOH implosion test
+ @page benchmarks_swift2_hydro_noh_imposion_test Noh implosion test
  
  Simple Noh implosion test benchmark with @f$ N ^d @f$ particles. You specify 
  the @f$ N @f$ on the command line, as well as some other arguments. The setup
@@ -36,9 +36,15 @@
  20 |            9 (3x3) |                   81 (9x9) |
  40 |            9 (3x3) |                   81 (9x9) |
  80 |           81 (9x9) |                729 (27x27) |
-160 |        729 (27x27) |               6561 (81x81) |
-320 |        729 (27x27) |               6561 (81x81) |
-640 |       6561 (81x81) |                      59049 |
+160 |        729 (27x27) |              6,561 (81x81) |
+320 |        729 (27x27) |              6,561 (81x81) |
+640 |      6,561 (81x81) |             59,049 |
+
+
+As always, the important detail is to study all artifacts that our Python API 
+produces. Per executable, you will obtain a README-my-exec.md file which 
+details your settings, provides 
+
 
  
  ## Benchmark different configurations

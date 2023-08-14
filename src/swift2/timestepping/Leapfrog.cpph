@@ -81,8 +81,10 @@ void swift2::timestepping::computeSPHLeapfrogKickWithGlobalTimeStepSize(
 
 
 template <typename ParticleContainer>
-void swift2::timestepping::computePredictHydro(const ParticleContainer& localParticles) {
-
+void swift2::timestepping::computePredictHydro(
+  const ParticleContainer&  localParticles,
+  const int                 hydroDimensions
+) {
   for (auto* particle : localParticles) {
     if (particle->getParallelState() == std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local) {
 
