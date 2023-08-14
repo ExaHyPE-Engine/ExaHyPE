@@ -42,11 +42,13 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     def implementation_of_refinement_criterion(self):
         return """
         ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-        if (Q[0] > 0.0 && std::abs(Q[0] + Q[3]) >= %f) { 
-            result = ::exahype2::RefinementCommand::Refine;
-        }
-        else {
-            result = ::exahype2::RefinementCommand::Erase;
+        if(t > 0.0){
+            if (Q[0] > 0.0 && std::abs(Q[0] + Q[3]) >= %f) { 
+                result = ::exahype2::RefinementCommand::Refine;
+            }
+            else {
+                result = ::exahype2::RefinementCommand::Erase;
+            }
         }
         return result;
         """ % (self.amr_tol)
