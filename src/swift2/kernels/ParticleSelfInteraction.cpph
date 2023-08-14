@@ -319,101 +319,9 @@ void swift2::kernels::endDensityCalculationWithConstantSearchRadius(const Partic
 template <typename ParticleContainer>
 void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& localParticles) {
 
-  /* Grab static parameters */
-  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
-  // const double etaFactor = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
-  const double alphaAV = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
-
   for (auto* particle : localParticles) {
     // if (not particle->getIsBoundaryParticle()) {
-
-    /* Retrieve basic properties of local and active particles */
-    const double rho_a = particle->getDensity();
-    const double m_a   = particle->getMass();
-    const double h_a   = particle->getSmoothingLength();
-    const double u_a   = particle->getU();
-
-    const double h_inv = 1.0 / h_a;
-
-    /* Compute the norm of the curl */
-    double curl_v = 0;
-
-    if (hydroDimensions != 3) { /* in 2D sims Rot_v is a scalar */
-      curl_v = std::sqrt(particle->getRot_v() * particle->getRot_v());
-    } else {
-      assertionMsg(false, "3D curl_v term to be implemented (straightforward, but have only run 2D so far...)");
-    }
-
-    /* Compute the norm of div v */
-    const double abs_div_v = tarch::la::abs(particle->getDiv_v());
-
-    /* Compute the pressure */
-    const double P_a = gas_pressure_from_internal_energy(rho_a, u_a);
-    assertion1(std::isfinite(P_a), particle->toString());
-    assertion1(P_a > 0., particle->toString());
-
-    /* Compute the sound speed */
-    const double soundspeed = gas_soundspeed_from_pressure(rho_a, P_a);
-    assertion1(std::isfinite(soundspeed), particle->toString());
-
-    /* Compute the "grad h" term  - Note here that we have \tilde{x}
-     * as 1 as we use the local number density to find neighbours. This
-     * introduces a j-component that is considered in the force loop,
-     * meaning that this cached grad_h_term gives:
-     *
-     * f_ij = 1.f - grad_h_term_i / m_j */
-    const double common_factor = h_a / hydroDimensions / particle->getWcount();
-
-    float grad_h_term;
-    /* Ignore changing-kernel effects when h ~= h_max */
-    // @TODO: add a global h_max
-    // if (p->h > 0.9999f * hydro_props->h_max) {
-    //   grad_h_term = 0.f;
-    //   warning("h ~ h_max for particle with ID %lld (h: %g)", p->id, p->h);
-    // } else {
-    const double grad_W_term = common_factor * particle->getWcount_dh();
-    if (grad_W_term < -0.9999) {
-      /* if we get here, we either had very small neighbour contributions
-         (which should be treated as a no neighbour case in the ghost) or
-         a very weird particle distribution (e.g. particles sitting on
-         top of each other). Either way, we cannot use the normal
-         expression, since that would lead to overflow or excessive round
-         off and cause excessively high accelerations in the force loop */
-      grad_h_term = 0.f;
-      printf(
-        "grad_W_term very small for particle with ID %d (h: %g, wcount: "
-        "%g, wcount_dh: %g gradW=%g common_factor=%g).\n",
-        particle->getPartid(),
-        h_a,
-        particle->getWcount(),
-        particle->getWcount_dh(),
-        grad_W_term,
-        common_factor
-      );
-    } else {
-      grad_h_term = common_factor * particle->getRho_dh() / (1.f + grad_W_term);
-    }
-
-    particle->setF(grad_h_term);
-    // }
-
-    /* Compute the Balsara Switch */
-    const double balsara = alphaAV * abs_div_v / (abs_div_v + curl_v + 0.0001 * soundspeed * h_inv);
-
-    assertion6(std::isfinite(balsara), particle->toString(), balsara, abs_div_v, curl_v, soundspeed, alphaAV);
-
-    /* Update variables */
-    particle->setPressure(P_a);
-    particle->setSoundSpeed(soundspeed);
-    particle->setBalsara(balsara);
-
-    /* Reset the acceleration*/
-    particle->setA(0.0);
-
-    /* Reset the time derivatives */
-    particle->setUDot(0.0);
-    particle->setHDot(0.0);
-    particle->setV_sig_AV(2.0 * particle->getSoundSpeed());
+    swift2::kernelPlaceholders::hydro_prepare_force(particle);
     // } is boundary particle
   }
 }
@@ -421,14 +329,9 @@ void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& loca
 template <typename ParticleContainer>
 void swift2::kernels::endHydroForceCalculation(const ParticleContainer& localParticles) {
 
-  /* Grab static parameters */
-  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
-
   for (auto* particle : localParticles) {
     // if (not particle->getIsBoundaryParticle()) {
-    particle->setHDot(particle->getHDot() * particle->getSmoothingLength() / hydroDimensions);
-
-    assertion2(std::isfinite(particle->getHDot()), particle->toString(), particle->getSmoothingLength());
+    swift2::kernelPlaceholders::hydro_end_force(particle);
     // }
   }
 }

@@ -448,8 +448,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
             touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-            touch_vertex_last_time_kernel="""::swift2::timestepping::computePredictHydro(
-                      localParticles, {} );""",
+            touch_vertex_last_time_kernel="""::swift2::timestepping::computePredictHydro(localParticles);""",
             includes="""
                                        #include "Constants.h"
                                        #include "swift2/timestepping/Leapfrog.h"
