@@ -99,7 +99,7 @@ namespace swift2 {
      * used.
      */
     template <typename ParticleContainer>
-    void computePredictHydro(const ParticleContainer& localParticles, const int hydroDimensions);
+    void computePredictHydro(const ParticleContainer& localParticles);
 
 
     /**
