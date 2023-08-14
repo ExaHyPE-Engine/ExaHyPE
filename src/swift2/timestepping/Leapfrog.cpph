@@ -37,8 +37,30 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
 
 
 template <typename ParticleContainer>
-void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
-  const ParticleContainer& localParticles, const int kickNumber, const bool isSPH
+void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
+  const double timeStepSizeKick = 0.5
+                                  * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
+                                      .getMinTimeStepSize();
+  for (auto* particle : localParticles) {
+    if (
+      particle->getParallelState()
+      == std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
+      and
+      not particle->getIsBoundaryParticle()
+    ) {
+
+      // Kick the particle
+      particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
+
+    }
+  }
+}
+
+
+
+template <typename ParticleContainer>
+void swift2::timestepping::computeSPHLeapfrogKickWithGlobalTimeStepSize(
+  const ParticleContainer& localParticles, const int kickNumber
 ) {
   const double timeStepSizeKick = 0.5
                                   * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
@@ -51,20 +73,15 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
       // not particle->getIsBoundaryParticle()
     ) {
 
-      if (isSPH) {
-        /* @ TODO why do we need the isSPH check here? */
-        /* Kick the particle */
-        particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
+      /* @ TODO why do we need the isSPH check here? */
+      /* Kick the particle */
+      particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
 
-        swift2::kernelPlaceholders::hydro_kick_extra(particle);
-        /* In SWIFT SPH, Kick 1 and Kick 2 are slightly different as Kick 2 does
-         * some extra operations. Not relevant for non-hydro systems */
-        if (kickNumber == 2) {
-          swift2::kernelPlaceholders::hydro_reset_predicted_values(particle);
-
-        } else { /* vanilla kick */
-          particle->setV(particle->getV() + timeStepSizeKick * particle->getA());
-        }
+      swift2::kernelPlaceholders::hydro_kick_extra(particle);
+      /* In SWIFT SPH, Kick 1 and Kick 2 are slightly different as Kick 2 does
+       * some extra operations. Not relevant for non-hydro systems */
+      if (kickNumber == 2) {
+        swift2::kernelPlaceholders::hydro_reset_predicted_values(particle);
       }
     }
   }

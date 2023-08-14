@@ -57,9 +57,33 @@ namespace swift2 {
      */
 
     template <typename ParticleContainer>
-    void computeLeapfrogKickWithGlobalTimeStepSize(
-      const ParticleContainer& localParticles, const int kickNumber, const bool isSPH
-    );
+    void computeLeapfrogKickWithGlobalTimeStepSize(const ParticleContainer& localParticles);
+
+    /**
+     *  Kick steps. There are two kick steps in the KDK scheme, in which we
+     *  update the particle velocity by a half-timestep using:
+     *
+     *  Kick1:
+     *     {\bf v}^{n+\frac{1}{2}} &= {\bf v}^{n} + {\bf a}^{n}\frac{\Delta t}{2}
+     *  Kick2:
+     *     {\bf v}^{n+1} &= {\bf v}^{n+\frac{1}{2}} + {\bf a}^{n+1}\frac{\Delta t}{2}
+     *
+     * Notice that the last kick in this sequence is implicit if ${\bf a}$
+     * depends on ${\bf v}$ (e.g. due to artificial viscosity terms), which in
+     * principle requires extra treatments (see e.g. Price et al. 2017).
+     *
+     * This version is for the SPH time integration, where we access additional
+     * particle fields which are otherwise not present, such as the time derivative
+     * of the internal energy.
+     *
+     * @param kickNumber: wether we are doing first (kick 1) or second (kick 2) in
+     * the leapfrog scheme.
+     * @param isSPH: whether we are running an SPH simulation or not. True means
+     * we not only update the velocity but also other SPH variables.
+     */
+    template <typename ParticleContainer>
+    void computeSPHLeapfrogKickWithGlobalTimeStepSize(const ParticleContainer& localParticles, const int kickNumber);
+
 
     /**
      * Kick extra step, i.e. update some thermodynamic
