@@ -1,5 +1,6 @@
 #include "DimensionalSplitting.hpp"
 #include "tarch/multicore/multicore.h"
+#include "tarch/la/ScalarOperations.h"
 
 applications::exahype2::swe::adjoint::DimensionalSplitting::DimensionalSplitting(size_t l_nX, size_t l_nY, double l_dx, double l_dy, double *h, double *hu, double *hv, double *b) :
 l_nX_(l_nX),
@@ -66,7 +67,7 @@ double applications::exahype2::swe::adjoint::DimensionalSplitting::compute_numer
     }
 
     // Steady states in x dimension?
-    if (max_x_wave_speed > 0)
+    if (tarch::la::greater(max_x_wave_speed, 0.0))
         update_unknowns_x_sweep(0.4 * l_dx_ / max_x_wave_speed);
 
     double max_y_wave_speed = 0.0;
@@ -95,7 +96,7 @@ double applications::exahype2::swe::adjoint::DimensionalSplitting::compute_numer
     }
 
     max_wave_speed = std::max(max_x_wave_speed, max_y_wave_speed);
-    if(max_wave_speed > 0.00001)
+    if(tarch::la::greater(max_wave_speed, 0.0))
     {
         double max_time_step = 0.4 * l_dx_ / max_wave_speed;
         update_unknowns_y_sweep(max_time_step);

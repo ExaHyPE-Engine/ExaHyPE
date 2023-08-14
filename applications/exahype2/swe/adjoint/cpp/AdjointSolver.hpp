@@ -1,6 +1,7 @@
 #ifndef applications_exahype2_swe_adjoint_adjoint_solver_h_
 #define applications_exahype2_swe_adjoint_adjoint_solver_h_
 #include <cmath>
+#include "tarch/la/ScalarOperations.h"
 namespace applications::exahype2::swe::adjoint
 {
     class AdjointSolver
@@ -10,7 +11,7 @@ namespace applications::exahype2::swe::adjoint
                                                     double &h_netup_r, double &hu_netup_l, double &hu_netup_r, double &maxEdgeSpeed)
             {
                 // Steady states && land mass
-                if ((m_h_l == m_h_r && m_hu_l == m_hu_r && bat_l == bat_r) || (bat_r >= 0 && bat_l >= 0))
+                if ((tarch::la::equals(m_h_l, m_h_r) && tarch::la::equals(m_hu_l, m_hu_r) && tarch::la::equals(bat_l, bat_r)) || (tarch::la::equals(m_h_l, 0.0) && tarch::la::equals(m_h_r, 0.0)))
                 {
                     h_netup_l = 0.0;
                     h_netup_r = 0.0;
@@ -20,14 +21,14 @@ namespace applications::exahype2::swe::adjoint
                     return;
                 }
                 // Is left cell wet and right cell dry?
-                else if (bat_r >= 0 && bat_l < 0)
+                else if (tarch::la::equals(m_h_r, 0.0) && tarch::la::greater(m_h_l, 0.0))
                 {
                     m_h_r = m_h_l;
                     m_hu_r = -m_hu_l;
                     bat_r = bat_l;
                 }
                 // Is right cell wet and left cell dry?
-                else if (bat_l >= 0 && bat_r < 0)
+                else if (tarch::la::equals(m_h_l, 0.0) && tarch::la::greater(m_h_r, 0.0))
                 {
                     m_h_l = m_h_r;
                     m_hu_l = -m_hu_r;
@@ -49,7 +50,7 @@ namespace applications::exahype2::swe::adjoint
                 double beta0 = delta0 + c_r * delta1;
                 //beta[1] = (-delta[0] + cL * delta[1])
                 double beta1 = -delta0 + c_l * delta1;
-                if(c_l + c_r != 0.0)
+                if(!tarch::la::equals(c_l + c_r, 0.0))
                 {
                     beta0 /= (c_l + c_r);
                     beta1 /= (c_l + c_r);

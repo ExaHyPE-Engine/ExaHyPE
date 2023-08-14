@@ -1,5 +1,6 @@
 #include "SWEAdjoint.hpp"
 #include "tarch/multicore/multicore.h"
+#include "tarch/la/ScalarOperations.h"
 
 void inline applications::exahype2::swe::adjoint::SWEAdjoint::set_ghost_layer()
 {
@@ -42,7 +43,7 @@ bool inline applications::exahype2::swe::adjoint::SWEAdjoint::hump_criterion_squ
     double x_max = std::max(area_of_interest_coord_0_, area_of_interest_coord_1_);
     double y_min = std::min(area_of_interest_coord_2_, area_of_interest_coord_3_);
     double y_max = std::max(area_of_interest_coord_2_, area_of_interest_coord_3_);
-    return x_min < x_cdf && x_max > x_cdf && y_min < y_cdf && y_max > y_cdf;
+    return tarch::la::smaller(x_min, x_cdf) && tarch::la::greater(x_max, x_cdf) && tarch::la::smaller(y_min, y_cdf) && tarch::la::greater(y_max, y_cdf);
 }
 
 bool inline applications::exahype2::swe::adjoint::SWEAdjoint::hump_criterion_circle(double x, double y)
@@ -54,7 +55,7 @@ bool inline applications::exahype2::swe::adjoint::SWEAdjoint::hump_criterion_cir
     double radius = area_of_interest_coord_2_;
     double distance_x = x_cdf - x_center;
     double distance_y = y_cdf - y_center; 
-    return sqrt((distance_x * distance_x) + (distance_y * distance_y)) < radius;
+    return tarch::la::smaller(sqrt((distance_x * distance_x) + (distance_y * distance_y)), radius);
 }
 
 void inline applications::exahype2::swe::adjoint::SWEAdjoint::run_simulation()
@@ -69,7 +70,7 @@ void inline applications::exahype2::swe::adjoint::SWEAdjoint::run_simulation()
         std::cout << "Simulating time: " << t << std::endl;
         t += dimensional_splitting.compute_numerical_fluxes();
         set_ghost_layer();
-        if(checkpoints_ == nullptr || checkpoints_[checkpoint] <= t)
+        if(checkpoints_ == nullptr || tarch::la::smallerEquals(checkpoints_[checkpoint], t))
         {
             std::cout << "Writing time step to file" << std::endl;
             netcdf_writer_->writeTimeStep(h_, hu_, hv_, t, checkpoint);

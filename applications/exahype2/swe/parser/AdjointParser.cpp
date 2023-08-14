@@ -1,5 +1,7 @@
 #include "AdjointParser.h"
 #include <iostream>
+#include "tarch/la/ScalarOperations.h"
+
 using namespace applications::exahype2::swe::parser::NetCDFHelper;
 
 applications::exahype2::swe::parser::AdjointParser::AdjointParser(const char *adjoint_file_path, double start_time){
@@ -18,7 +20,7 @@ applications::exahype2::swe::parser::AdjointParser::~AdjointParser(){
 void applications::exahype2::swe::parser::AdjointParser::interpolate_values(size_t i_index, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b, double *interpolated_values){
     double x_cdf = NetCDFHelper::transformIndexSimulationToCDFRange(i_x, size_x_adjoint_, min_x_adjoint_, max_x_adjoint_);
     double y_cdf = NetCDFHelper::transformIndexSimulationToCDFRange(i_y, size_y_adjoint_, min_y_adjoint_, max_y_adjoint_);
-    if(x_cdf < min_x_adjoint_ || x_cdf > max_x_adjoint_ || y_cdf < min_y_adjoint_ || y_cdf > max_y_adjoint_)
+    if(tarch::la::smaller(x_cdf, min_x_adjoint_) || tarch::la::greater(x_cdf, max_x_adjoint_) || tarch::la::smaller(y_cdf, min_y_adjoint_) || tarch::la::greater(y_cdf, max_y_adjoint_))
         return;
     int array_index = NetCDFHelper::transformIndexCDFRangeToArray(x_cdf, y_cdf, min_x_adjoint_, min_y_adjoint_, max_x_adjoint_, max_y_adjoint_, size_x_adjoint_, size_y_adjoint_);
     int array_index_shift = (number_timestamps_ - i_index - 1) * array_index; // reverese time as adjoint simulation has to be backwards in time but is computed forwards in time
@@ -40,7 +42,7 @@ double applications::exahype2::swe::parser::AdjointParser::calculate_inner_produ
     // interpolated_values[2] is hv
     // interpolated_values[3] is bathymetry
 
-    if(interpolated_values[3] >= 0.f)
+    if(tarch::la::equals(interpolated_values[0], 0.0))
         return 0.f;
     
     return std::abs(i_eta * (interpolated_values[0] + interpolated_values[3])
@@ -50,7 +52,7 @@ double applications::exahype2::swe::parser::AdjointParser::calculate_inner_produ
 
 double applications::exahype2::swe::parser::AdjointParser::max_inner_product(double i_t, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b){
 
-    if(i_t != t_last_call_)
+    if(!tarch::la::equals(i_t, t_last_call_))
     {
         t_last_call_ = i_t;
         set_start_index(i_t);
@@ -66,7 +68,7 @@ double applications::exahype2::swe::parser::AdjointParser::max_inner_product(dou
     for(size_t i = inner_product_start_index_; i < number_timestamps_; i++)
     {
         t_current = adjoint_timestamps_[i];
-        if(i_t < t_current && t_nm <= t_comp)
+        if(tarch::la::smaller(i_t, t_current) && tarch::la::smallerEquals(t_nm, t_comp))
         {
             inner_product_current = calculate_inner_product(i, i_x, i_y, i_eta, i_hu, i_hv, i_b);
             max_inner_product = std::max(inner_product_current, max_inner_product);
@@ -75,7 +77,7 @@ double applications::exahype2::swe::parser::AdjointParser::max_inner_product(dou
         else
             break;
     }
-    if(max_inner_product > 0 && false)
+    if(tarch::la::greater(max_inner_product, 0.0) && false)
         std::cout << "max_inner_product: " << max_inner_product << std::endl;
     return max_inner_product;
 }
@@ -84,7 +86,7 @@ void applications::exahype2::swe::parser::AdjointParser::set_start_index(double 
     double t_nm = adjoint_timestamps_[inner_product_start_index_ - 1];
     for(size_t i = inner_product_start_index_; i < number_timestamps_; i++)
     {
-        if(t_nm <= i_t + (t_f_ - t_s_) && adjoint_timestamps_[i] > i_t)
+        if(tarch::la::smallerEquals(t_nm, i_t + (t_f_ - t_s_)) && tarch::la::greater(adjoint_timestamps_[i], i_t))
         {
             inner_product_start_index_ = i;
             return;

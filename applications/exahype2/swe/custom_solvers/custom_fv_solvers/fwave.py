@@ -54,15 +54,15 @@ class FWave(solver.Solver):
     const double z_1[2]{alpha[0], alpha[0] * lambda_roe[0]};
     const double z_2[2]{alpha[1], alpha[1] * lambda_roe[1]};
 
-    APDQ[0] = -((lambda_roe[0] > 0 ? z_1[0] : 0) + (lambda_roe[1] > 0 ? z_2[0] : 0));
+    APDQ[0] = -((tarch::la::greater(lambda_roe[0], 0.0) ? z_1[0] : 0) + (tarch::la::grater(lambda_roe[1], 0) ? z_2[0] : 0));
     APDQ[1] = 0.0;
     APDQ[2] = 0.0;
-    APDQ[normal+1] = -((lambda_roe[0] > 0 ? z_1[1] : 0) + (lambda_roe[1] > 0 ? z_2[1] : 0));
+    APDQ[normal+1] = -((tarch::la::greater(lambda_roe[0], 0) ? z_1[1] : 0) + (tarch::la::greater(lambda_roe[1], 0) ? z_2[1] : 0));
 
-    AMDQ[0] = (lambda_roe[0] < 0 ? z_1[0] : 0) + (lambda_roe[1] < 0 ? z_2[0] : 0);
+    AMDQ[0] = (tarch::la::smaller(lambda_roe[0], 0) ? z_1[0] : 0) + (tarch::la::smaller(lambda_roe[1], 0) ? z_2[0] : 0);
     AMDQ[1] = 0.0;
     AMDQ[2] = 0.0;
-    AMDQ[normal+1] = (lambda_roe[0] < 0 ? z_1[1] : 0) + (lambda_roe[1] < 0 ? z_2[1] : 0);
+    AMDQ[normal+1] = (tarch::la::smaller(lambda_roe[0], 0) ? z_1[1] : 0) + (tarch::la::smaller(lambda_roe[1], 0) ? z_2[1] : 0);
 
     return std::max(std::abs(lambda_roe[0]), std::abs(lambda_roe[1]));
     """  % (self.epsilon, self.epsilon)

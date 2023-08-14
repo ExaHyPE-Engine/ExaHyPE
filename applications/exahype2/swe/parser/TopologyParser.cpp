@@ -176,7 +176,7 @@ double applications::exahype2::swe::parser::TopologyParser::sample_bathymetry(do
   auto x_cdf = transformIndexSimulationToCDFRange(x, l_nX_, min_x_bathymetry_, max_x_bathymetry_);
   auto y_cdf = transformIndexSimulationToCDFRange(y, l_nY_, min_y_bathymetry_, max_y_bathymetry_);
   // No defined bathymetry
-  if (x_cdf > max_x_bathymetry_ || x_cdf < min_x_bathymetry_ || y_cdf > max_y_bathymetry_ || y_cdf < min_y_bathymetry_)
+  if (tarch::la::greater(x_cdf, max_x_bathymetry_) || tarch::la::smaller(x_cdf, min_x_bathymetry_) || tarch::la::greater(y_cdf, max_y_bathymetry_) || tarch::la::smaller(y_cdf, min_y_bathymetry_))
       return 20.f;
   return bathymetry_[transformIndexCDFRangeToArray(x_cdf, y_cdf, min_x_bathymetry_, min_y_bathymetry_, max_x_bathymetry_, max_y_bathymetry_, x_bathymetry_, y_bathymetry_)];
 }
@@ -196,7 +196,7 @@ double applications::exahype2::swe::parser::TopologyParser::sample_displacement(
     y_cdf -= uq_displacement_origin_y_ - ((max_y_displacement_ + min_y_displacement_) / 2);
 
   // Is displacement defined 
-  if (x_cdf <= max_x_displacement_ && x_cdf >= min_x_displacement_ && y_cdf <= max_y_displacement_ && y_cdf >= min_y_displacement_)
+  if (tarch::la::smallerEquals(x_cdf, max_x_displacement_) && tarch::la::greaterEquals(x_cdf, min_x_displacement_) && tarch::la::smallerEquals(y_cdf, max_y_displacement_) && tarch::la::greaterEquals(y_cdf, min_y_displacement_))
     return displacement_[transformIndexCDFRangeToArray(x_cdf, y_cdf, min_x_displacement_, min_y_displacement_, max_x_displacement_, max_y_displacement_, x_displacement_, y_displacement_)];
   return 0.0;
 }

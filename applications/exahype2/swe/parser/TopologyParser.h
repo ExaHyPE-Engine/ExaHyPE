@@ -5,6 +5,7 @@
 #endif
 #include "NetCDFReader.hpp"
 #include "NetCDFHelper.hpp"
+#include "tarch/la/ScalarOperations.h"
 
 namespace applications::exahype2::swe::parser {
   class TopologyParser;
