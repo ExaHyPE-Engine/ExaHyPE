@@ -263,8 +263,6 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
   globalNumberOfDropsFromSieveSet = _numberOfDropsFromSieveSet;
   globalNumberOfReassignments = _numberOfReassignments;
 
-  globalNumberOfAssignmentsToGlobalSieve = sieveParticles.getNumberOfParticlesToBeSieved();
-
   globalNumberOfRemainingLocalParticles = _numberOfRemainingLocalParticles;
   globalNumberOfIncomingLocalParticles  = _numberOfIncomingLocalParticles;
   globalNumberOfLeavingLocalParticles   = _numberOfLeavingLocalParticles;
