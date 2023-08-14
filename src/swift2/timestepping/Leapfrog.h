@@ -5,7 +5,7 @@
 
 #include <list>
 #include <vector>
-#include "swift2/kernels/SwiftKernels.h"
+#include "swift2/kernels/SwiftKernelPlaceholders.h"
 
 
 namespace swift2 {

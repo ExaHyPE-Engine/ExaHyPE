@@ -94,13 +94,16 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
       break;
     }
 
-    assertion4(
-      (not localParticle->getIsBoundaryParticle()) and (left < right),
-      left,
-      right,
-      localParticle->toString(),
-      activeParticles.size()
-    );
+    // TODO MLaden: check this condition here.
+    if (not localParticle->getIsBoundaryParticle()){
+      assertion4(
+        (left < right),
+        left,
+        right,
+        localParticle->toString(),
+        activeParticles.size()
+      );
+    }
 
     // Normal case: Use Newton-Raphson to get a better value of h
     // Avoid floating point exception from f_prime = 0
