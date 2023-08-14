@@ -11,8 +11,6 @@ template <typename Particle, typename ParticleContainer>
 void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
   Particle& localParticle, const ParticleContainer& activeParticles
 ) {
-  static tarch::logging::Log _log("swift2::kernels");
-
   localParticle->setDensityIactCounter(1);
 
   /* Grab static parameters */
