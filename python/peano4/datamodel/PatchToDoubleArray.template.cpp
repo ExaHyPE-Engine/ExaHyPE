@@ -176,9 +176,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
     MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}}, {{MPI_FLOAT_TYPE}}, {{MPI_FLOAT_TYPE}} };
 
     #if Dimensions==2
-    int blocklen[] = { Dimensions, Dimensions, {{MPI_ELEMENTS_PER_FLOAT*CARDINALITY_2D}} };
+    int blocklen[] = { Dimensions, Dimensions, {{MPI_ELEMENTS_PER_FLOAT}}*{{CARDINALITY_2D}} };
     #else
-    int blocklen[] = { Dimensions, Dimensions, {{MPI_ELEMENTS_PER_FLOAT*CARDINALITY_3D}} };
+    int blocklen[] = { Dimensions, Dimensions, {{MPI_ELEMENTS_PER_FLOAT}}*{{CARDINALITY_3D}} };
     #endif
 
     const int NumberOfAttributes = 3;
@@ -186,9 +186,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
     MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}} };
     
     #if Dimensions==2
-    int blocklen[] = { {{MPI_ELEMENTS_PER_FLOAT*CARDINALITY_2D}} };
+    int blocklen[] = { {{MPI_ELEMENTS_PER_FLOAT}}*{{CARDINALITY_2D}} };
     #else
-    int blocklen[] = { {{MPI_ELEMENTS_PER_FLOAT*CARDINALITY_3D}} };
+    int blocklen[] = { {{MPI_ELEMENTS_PER_FLOAT}}*{{CARDINALITY_3D}} };
     #endif
   
     const int NumberOfAttributes = 1;  
