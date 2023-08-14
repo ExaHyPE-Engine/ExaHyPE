@@ -127,7 +127,7 @@ class HdgFirstDiscretisation(Solver):
 
 
   def add_to_create_grid(self, observer):
-    observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h),False)
+    observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h))
     pass
 
   

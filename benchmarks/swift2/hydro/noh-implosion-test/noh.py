@@ -1,6 +1,5 @@
 import os
 import argparse
-import math
 import numpy as np
 
 import peano4
@@ -32,14 +31,6 @@ parser.add_argument(
     dest="clean_temporary_directories",
     action="store_true",
     help="Remove temporary directories before script starts",
-)
-parser.add_argument(
-    "-d",
-    "--dimensions",
-    dest="dimensions",
-    type=int,
-    default=2,
-    help="Spatial dimensions (default 2)",
 )
 parser.add_argument(
     "-np",
@@ -117,30 +108,44 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Noh", executable="noh2D"
 )
 
+project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets
+project.initialisation_steps_task_graph_compiler = swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets
+
 
 # Initialise the SPH particle --------------------------------------------------
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
 
 name = "hydroPart"
-dimensions = args.dimensions
 
-particle_per_cell = 20
-max_cell_size = (
-    1.0 / args.particle_number * particle_per_cell / math.sqrt(args.dimensions)
+dimensions = 2
+hydro_dimensions = 2  # dimensions for the hydro
+
+particles_per_cell = 200
+total_number_of_particles = args.particle_number**hydro_dimensions
+total_number_of_cells = total_number_of_particles / particles_per_cell
+cells_per_dimension = total_number_of_cells ** (1.0 / hydro_dimensions)
+max_cell_size = 1.0 / cells_per_dimension
+print(
+    "{} particles in total fit into {} cells, i.e. {} cells per dimension. This gives h={}".format(
+        total_number_of_particles,
+        total_number_of_cells,
+        cells_per_dimension,
+        max_cell_size,
+    )
 )
 
 particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     name=name,
-    dimensions_hydro=dimensions,
+    dimensions_hydro=hydro_dimensions,
     cfl_factor=args.cfl_factor,
     initial_time_step_size=args.timestep_size,
     constant_time_step_size=True,
     swift_project_namespace=project_namespace,
-    is_sph=True,
-    particles_per_cell=20,
-    min_h=max_cell_size / particle_per_cell,
+    particles_per_cell=particles_per_cell,
+    min_h=max_cell_size,
     max_h=max_cell_size,
+    use_optimised_coalesced_memory_access_kernels=True
 )
 
 
@@ -153,7 +158,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
 
 
 # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
-HYDRO_DIMENSIONS = dimensions
+HYDRO_DIMENSIONS = hydro_dimensions
 
 # Particle number along 1 dimension
 HYDRO_PART_NUMBER = args.particle_number
@@ -173,23 +178,11 @@ gamma_hydro_list_symbols = [
 GAMMA = gamma_hydro_list[0]
 GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
-# Artificial viscosity parameters ---------------------------------------------
-ALPHA_AV = particle.alpha_av
-BETA_AV = particle.beta_av
-
-# Newton-Raphson parameters --------------------------------------------------
-# Maximum allowed number of iterations and convergence tolerance
-HYDRO_DEFAULT_MAX_ITERATIONS = particle.h_max_iterations
-H_TOLERANCE = particle.h_tolerance
-
 # SPH kernel -------------------------------------------------------
 kernel_list = ["M5"]
 kernel_list_symbols = ["QUARTIC_SPLINE_KERNEL"]
 KERNEL = kernel_list[0]
 KERNEL_SYMBOL = kernel_list_symbols[0]
-
-# Smoothing-length free parameter (resolution "eta_neighbours").
-SMOOTH_ETA_FAC = particle.eta_factor
 
 if KERNEL == "M5" and HYDRO_DIMENSIONS == 1:
     KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
@@ -198,11 +191,15 @@ if KERNEL == "M5" and HYDRO_DIMENSIONS == 2:
 else:
     print(f"Unable to determine the kernel support radius. Please check.")
 
-# Max/min allowed values for smoothing length h
-HYDRO_h_MAX = max_cell_size / 2.0
-HYDRO_h_MIN = particle.h_hydro_min
+hydro_h_max = max_cell_size / 2
+particle.h_hydro_max = hydro_h_max
 
-particle.h_hydro_max = HYDRO_h_MAX
+# particle.h_hydro_min = 1e-6
+# particle.h_max_iterations = 10
+# particle.h_tolerance = 1e-4
+# particle.eta_factor = 1.2348
+# particle.beta_av = 3.0
+# particle.alpha_av = 0.8
 
 # IMPORTANT: Reduce the mantissa size for particle attributes -------------------
 # Native size is 53 (double precision)
@@ -232,10 +229,13 @@ if args.mantissa_size > 0:
     particle.v_full.valid_mantissa_bits = args.mantissa_size
     particle.u_full.valid_mantissa_bits = args.mantissa_size
 
+particle.data.expose_all_attributes_in_header_file()
+
 # Add particle to the SWIFT project --------------------------------------------
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
+particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
 
 if args.asserts:
     build_mode = peano4.output.CompileMode.Asserts
@@ -390,7 +390,7 @@ print(f"Effective dimensions of the Simulation: {HYDRO_DIMENSIONS}")
 print(f"Global time-step size: {GLOBAL_TIME_STEP_SIZE}")
 print(f"Number of particles (1D): {HYDRO_PART_NUMBER}")
 print(f"Adiabatic index: {GAMMA}")
-print(f"Smoothing length free factor: {SMOOTH_ETA_FAC}")
+print(f"Smoothing length free factor: {particle.eta_factor}")
 print("-----------------------------------------------------------------------")
 
 
@@ -404,30 +404,7 @@ peano4_project.constants.export_const_with_type(
 peano4_project.constants.export_const_with_type(
     "GLOBAL_TIME_STEP_SIZE", str(GLOBAL_TIME_STEP_SIZE), "double"
 )
-peano4_project.constants.export_const_with_type(
-    "CFL_CONSTANT", str(CFL_CONSTANT), "double"
-)
 peano4_project.constants.export_const_with_type("GAMMA", GAMMA, "double")
-peano4_project.constants.export_const_with_type("ALPHA_AV", str(ALPHA_AV), "double")
-peano4_project.constants.export_const_with_type("BETA_AV", str(BETA_AV), "double")
-peano4_project.constants.export_const_with_type(
-    "HYDRO_DEFAULT_MAX_ITERATIONS", str(HYDRO_DEFAULT_MAX_ITERATIONS), "int"
-)
-peano4_project.constants.export_const_with_type(
-    "H_TOLERANCE", str(H_TOLERANCE), "double"
-)
-peano4_project.constants.export_const_with_type(
-    "KERNEL_SUPPORT_RAD", KERNEL_SUPPORT_RAD, "double"
-)
-peano4_project.constants.export_const_with_type(
-    "HYDRO_h_MAX", str(HYDRO_h_MAX), "double"
-)
-peano4_project.constants.export_const_with_type(
-    "HYDRO_h_MIN", str(HYDRO_h_MIN), "double"
-)
-peano4_project.constants.export_const_with_type(
-    "SMOOTH_ETA_FAC", str(SMOOTH_ETA_FAC), "double"
-)
 
 # Export symbols for compilation (e.g. for SPH kernel) -----------------------
 peano4_project.output.makefile.add_CXX_flag(

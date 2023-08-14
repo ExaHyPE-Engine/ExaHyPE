@@ -115,6 +115,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   , smartmpi::Task(_enclaveTaskTypeId)
   #endif
 {
+  // @todo Name is not good. Should be SOLVE_VOLUME_INTEGRAL_ENCLAVE_TASK, so we can
+  //       distinguish different task types once we map other steps onto tasks, too
+  setPriority( {{ENCLAVE_TASK_PRIORITY}} );
   std::copy_n( copyOfLinearCombinationOfPreviousShots, _numberOfInputValues, _inputValues );
 }
 

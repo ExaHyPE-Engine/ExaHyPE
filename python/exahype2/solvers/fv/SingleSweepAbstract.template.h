@@ -43,7 +43,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       TimeStep,
       Plotting,
       TimeStepAfterGridInitialisation,
-      PlottingAfterGridInitialisation
+      PlottingAfterGridInitialisation,
+      Suspended
     };
 
     static std::string toString(SolverState);
@@ -240,6 +241,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * implementation is still invoked, too.
      */
     virtual void startSimulation() override;
+
+
+    virtual void suspendSolversForOneGridSweep() override;
+
 
     /**
      * Feel free to overwrite in user code, but ensure the superclass
