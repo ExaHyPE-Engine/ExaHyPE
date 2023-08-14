@@ -9,10 +9,10 @@ class FWave(solver.Solver):
     def implementation_of_riemann_solver(self):
         return """    
     const double g = 9.81;
-    const bool leftWet = QL[3] < 0.0; 
-    // const bool leftWet = tarch::la::greater(QL[0], 0.0, %f); // does not work that well for some reason
-    const bool rightWet = QR[3] < 0.0; 
-    // const bool rightWet = tarch::la::greater(QR[0], 0.0, %f);
+    // const bool leftWet = QL[3] < 0.0; 
+    const bool leftWet = tarch::la::greater(QL[0], %f);
+    // const bool rightWet = QR[3] < 0.0; 
+    const bool rightWet = tarch::la::greater(QR[0], %f);
     const bool leftDry = !leftWet;
     const bool rightDry = !rightWet;
 

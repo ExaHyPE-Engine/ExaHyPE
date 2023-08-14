@@ -42,8 +42,8 @@ class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     def implementation_of_refinement_criterion(self):
         return """
         ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-        if(t > 0.0){
-            if (Q[0] > 0.0 && std::abs(Q[0] + Q[3]) >= %f) { 
+        if(tarch::la::greater(t, 0.0)){
+            if (tarch::la::greater(Q[0], 0.0) && tarch::la::greaterEquals(std::abs(Q[0] + Q[3]), %f)) { 
                 result = ::exahype2::RefinementCommand::Refine;
             }
             else {
