@@ -88,12 +88,12 @@ parser.add_argument(
     help="Switch on assertions",
 )
 parser.add_argument(
-    "-no-vec",
-    "--on-vectorisation",
-    dest="no_vec",
-    action="store_true",
-    default=False,
-    help="Disable vectorisation",
+    "-opt",
+    "--optimisation",
+    dest="optimisation",
+    choices=["none", "continuous-per-vertex", "vectorise-per-vertex"],
+    default="none",
+    help="Optimisation strategy to use (default: none)",
 )
 parser.add_argument(
     "-ms",
@@ -116,7 +116,10 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Noh", executable="noh2D"
 )
 
-project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+if args.optimisation != "none":
+    project.algorithm_steps_task_graph_compiler = (
+        swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+    )
 
 
 # Initialise the SPH particle --------------------------------------------------
@@ -152,7 +155,8 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=particles_per_cell,
     min_h=max_cell_size,
     max_h=max_cell_size,
-    use_optimised_coalesced_memory_access_kernels = not args.no_vec
+    use_optimised_coalesced_memory_access_kernels=args.optimisation
+    == "vectorise-per-vertex",
 )
 
 
@@ -242,7 +246,21 @@ particle.data.expose_all_attributes_in_header_file()
 # Notice that you any change to the particle will not take effect after adding
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
-particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+
+if (
+    args.optimisation == "continuous-per-vertex"
+    or args.optimisation == "vectorise-per-vertex"
+):
+    particle_set.generator = (
+        peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+    )
+else:
+    particle_set.generator = (
+        peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
+            particle_set
+        )
+    )
+
 
 if args.asserts:
     build_mode = peano4.output.CompileMode.Asserts

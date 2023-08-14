@@ -85,7 +85,7 @@ tarch::MemoryLocation.
 
 Peano realises a strict cell-wise traversal paradigm, where individual
 actions @ref peano_action_sets "are tied to single cells, faces or vertices".
-Therefore, @ref peano_amr_tex "Peano's AMR" is also controlled by sets of 
+Therefore, @ref page_peano_amr_tex "Peano's AMR" is also controlled by sets of 
 refine and erase events. The decision to refine or erase a mesh is made
 by Peano by comparing each and every mesh entity against the set of 
 erase and refine commands. This happens in 

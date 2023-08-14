@@ -1,6 +1,6 @@
 /**
 
- @page benchmarks_swift2_hydro_noh_imposion_test NOH implosion test
+ @page benchmarks_swift2_hydro_noh_imposion_test Noh implosion test
  
  Simple Noh implosion test benchmark with @f$ N ^d @f$ particles. You specify 
  the @f$ N @f$ on the command line, as well as some other arguments. The setup
@@ -36,9 +36,15 @@
  20 |            9 (3x3) |                   81 (9x9) |
  40 |            9 (3x3) |                   81 (9x9) |
  80 |           81 (9x9) |                729 (27x27) |
-160 |        729 (27x27) |               6561 (81x81) |
-320 |        729 (27x27) |               6561 (81x81) |
-640 |       6561 (81x81) |                      59049 |
+160 |        729 (27x27) |              6,561 (81x81) |
+320 |        729 (27x27) |              6,561 (81x81) |
+640 |      6,561 (81x81) |             59,049 |
+
+
+As always, the important detail is to study all artifacts that our Python API 
+produces. Per executable, you will obtain a README-my-exec.md file which 
+details your settings, provides 
+
 
  
  ## Benchmark different configurations
@@ -61,21 +67,115 @@ python3 noh.py -np 320 -plot 0 -et 0.001
 The Noh benchmark is one of our classic test cases to study vectorisation of 
 the kernels. Our first subject of study is the function swift2::kernels::forceKernelVectorised()
 which is a nice function to see what has to be done to get good SIMD 
-efficiency. Before we tweak this function, I recommend to re-translate with
-the Intel compiler, to include -O3 -xHost in the code, and then to manipulate
-the Makefile:
+efficiency, but it makes sense to study more than this simple single kernel. 
+Before we tweak this function, I recommend to re-translate with
+the Intel compiler, and to include "-O3 -xHost" in the code.
+Alternatively, you might want to use "-Ofast -march=native".
+After that, I typically add one more flag to the setup: "-qopt-report=3".
 
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
-	rm observers/StephydroPartForceLoop_sweep72peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4.o
-	$(CXX) -qopt-report=3 $(CXXFLAGS) -c -o observers/StephydroPartForceLoop_sweep72peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4.o observers/StephydroPartForceLoop_sweep72peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4.cpp
-	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o noh2D
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 These instructions follow @ref swift_particle_new_solver "Swift's generic recommendations"
-when it comes to the development of vectorised solvers.
+when it comes to the development of vectorised solvers. 
+You might want to add the optimisation report to all of Peano, but then you'll 
+get a mass of optimisation reports which are difficult to digest. Therefore, I 
+often only add this flag to the actual project's Makefile. 
+However, any Python script rerun will overwrite the Makefile.
+Therefore, it is important to make backups.
 
+
+
+### Code changes
+
+All the changes that are required within the Python script to switch to a 
+particular optimisation are all encoded via the script argument optimisation.
+Run the Python script with --help to get an overview, and search the script
+for args.optimisation for details.
+The steps are rather simple:
+
+1. If the optimisation is enabled, we first need another graph compiler. We use
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if args.optimisation != "none":
+  project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   here, which might not be the best compiler but does the job.
+2. Next, we have to switch to a coalesced memory access. This is not required 
+   if we only study the impact of the memory re-arrangement:    
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
+    name=name,
+    dimensions_hydro=hydro_dimensions,
+    cfl_factor=args.cfl_factor,
+    initial_time_step_size=args.timestep_size,
+    constant_time_step_size=True,
+    swift_project_namespace=project_namespace,
+    particles_per_cell=particles_per_cell,
+    min_h=max_cell_size,
+    max_h=max_cell_size,
+    use_optimised_coalesced_memory_access_kernels = args.optimisation == "vectorise-per-vertex"
+)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3. Finally, we alter the actual administration of the particle sets:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+particle_set = project.add_particle_species(particle)
+
+if  args.optimisation == "continuous-per-vertex" or args.optimisation == "vectorise-per-vertex":
+    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+else:
+    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(particle_set)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+
+### Insights
+
+- The kernel ***swift2::kernels::forceKernelVectorised()*** is used by the 
+  routine computeHydroForce(). It makes sense to grep the cpp files within 
+  observers for a call to this routine, and then to open the corresponding
+  .optrpt file of the cpp file. Vectorisation should be successful for the 
+  routine calling forceKernelVectorised() and look similar to
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        LOOP BEGIN at ../../../../src/swift2/kernels/ParticleParticleInteraction.cpph (580, 7)
+
+            LOOP BEGIN at ../../../../src/swift2/kernels/ParticleParticleInteraction.cpph (589, 11)
+                remark #15300: LOOP WAS VECTORIZED
+                remark #15305: vectorization support: vector length 4
+                remark #15475: --- begin vector loop cost summary ---
+                remark #15476: scalar cost: 310.000000 
+                remark #15477: vector cost: 148.000000 
+                remark #15478: estimated potential speedup: 2.062500 
+                remark #15309: vectorization support: normalized vectorization overhead 0.140625
+                remark #15482: vectorized math library calls: 3 
+                remark #15484: vector function calls: 0 
+                remark #15485: serialized function calls: 0
+                remark #15488: --- end vector loop cost summary ---
+                remark #15447: --- begin vector loop memory reference summary ---
+                remark #15450: unmasked unaligned unit stride loads: 0 
+                remark #15451: unmasked unaligned unit stride stores: 0 
+                remark #15456: masked unaligned unit stride loads: 0 
+                remark #15457: masked unaligned unit stride stores: 0 
+                remark #15458: masked indexed (or gather) loads: 0 
+                remark #15459: masked indexed (or scatter) stores: 0 
+                remark #15462: unmasked indexed (or gather) loads: 19 
+                remark #15463: unmasked indexed (or scatter) stores: 0 
+                remark #15567: Gathers are generated due to non-unit stride index of the corresponding loads.
+                remark #15554: Unmasked VLS-optimized loads (each part of the group counted separately): 0
+                remark #15555: Masked VLS-optimized loads (each part of the group counted separately): 0
+                remark #15556: Unmasked VLS-optimized stores (each part of the group counted separately): 0
+                remark #15557: Masked VLS-optimized stores (each part of the group counted separately): 0
+                remark #15497: vector compress: 0 
+                remark #15498: vector expand: 0 
+                remark #15474: --- end vector loop memory reference summary ---
+                remark #25587: Loop has reduction
+
+                LOOP BEGIN at ../../../../src/swift2/kernels/kernel_hydro.h (206, 3)
+                    remark #25436: Loop completely unrolled by 3
+                LOOP END
+
+                LOOP BEGIN at ../../../../src/swift2/kernels/kernel_hydro.h (206, 3)
+                    remark #25436: Loop completely unrolled by 3
+                LOOP END
+            LOOP END
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
  
  */

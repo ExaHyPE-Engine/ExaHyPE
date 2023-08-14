@@ -196,7 +196,7 @@ citation of the original SWIFT paper
             readme_text += (
                 """
 
-    We assume that you use a domain of ("""
+We assume that you use a domain of ("""
                 + str(self._domain_offset[0])
                 + ""","""
                 + str(self._domain_size[0] - self._domain_offset[0])
@@ -247,19 +247,56 @@ The coarsest regular mesh hence will host """
 
 Once this resultion is reached, the mesh will stop the initial load balancing, insert the 
 particles and then kick off the simulation. The mesh might be refined and erased subsequently,
-but it will never become closer than these constraints.
+but it will never become coarser than these constraints.
+
+Each particle provides its own additional meshing constraints:
+
+Species | max_h | coarsest level | min_h | finest level
+--------|-------|----------------|-------|-------------"""
+        )
+
+        for i in self._particle_species:
+            readme_text += """
+{} | {} | {} | {} | {}
+""".format(
+                i.name,
+                self.real_mesh_size(i.max_h)[0],
+                self.real_mesh_size(i.max_h)[1],
+                self.real_mesh_size(i.min_h)[0],
+                self.real_mesh_size(i.min_h)[1],
+            )
+
+        readme_text += """
+
+The meshing quantities abive are species-specific. Once you have multiple 
+particle species, the actual grid results from a combination of their 
+properties, and some species particles might reside on different resolution 
+levels.
 
 """
-        )
         self._project.output.readme.add_package_description(readme_text)
 
-    def __real_max_mesh_size(self):
+    def real_mesh_size(self, target_h):
+        """!
+
+        Translate a mesh size into its real Peano mesh size
+
+        Peano uses three-partitioning. That is, it will neve be able to match
+        given refinement instructions exactly. All it can do is to approximate
+        them. See @ref
+
+        Return a tuple of mesh size and mesh levels
+
+        """
         h = self._domain_size[0]
         level = 0
-        while h > self._global_max_h:
+        while h > target_h:
             h = h / 3.0
             level += 1
         return (h, level)
+
+    def __real_max_mesh_size(self):
+        return self.real_mesh_size(self._global_max_h)
 
     def __configure_makefile(self):
         self._project.output.makefile.set_dimension(self._dimensions)
@@ -435,12 +472,10 @@ but it will never become closer than these constraints.
         # Create mesh traversals aka solver steps
         #
         initialisation_steps = self.initialisation_steps_task_graph_compiler(
-            species_sets                       = self._particle_species_set,
-            verbose                            = verbose
+            species_sets=self._particle_species_set, verbose=verbose
         )
         solver_steps = self.algorithm_steps_task_graph_compiler(
-            species_sets                       = self._particle_species_set,
-            verbose                            = verbose
+            species_sets=self._particle_species_set, verbose=verbose
         )
 
         #

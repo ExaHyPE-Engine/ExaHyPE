@@ -160,7 +160,7 @@ class LeapfrogFixedSearchRadius(Particle):
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
                 touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
-                        localParticles, 1 , false);""",
+                        localParticles);""",
                 prepare_traversal_kernel="""::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{}>({},{});""".format(
                     self.name, self.cfl_factor, self.initial_time_step_size
                 ),
@@ -210,7 +210,7 @@ class LeapfrogFixedSearchRadius(Particle):
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
                 touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
-                        localParticles, 2, false );""",
+                        localParticles);""",
                 includes="""
                                          #include "Constants.h"
                                          #include "swift2/timestepping/Leapfrog.h"

@@ -29,6 +29,7 @@ namespace swift2 {
      */
     template <typename Particle, typename ParticleContainer>
     void genericInteraction(
+      const peano4::datamanagement::CellMarker&                                          marker,
       const ParticleContainer&                                                           localParticles,
       const ParticleContainer&                                                           activeParticles,
       std::function<void(Particle* localParticle, const Particle* const activeParticle)> interaction
@@ -50,7 +51,8 @@ namespace swift2 {
      * This operation struggles to vectorise, as we have the statement
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *   if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle()) {
+     *   if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle())
+     * {
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * in there. This if statement encapsulates quite a lot of operations. The
@@ -89,10 +91,7 @@ namespace swift2 {
      *   remove this flag anyway.
      */
     template <typename Particle>
-    void forceKernelVectorised(
-      Particle* __restrict__         localParticle,
-      const Particle* __restrict__   activeParticle
-    );
+    void forceKernelVectorised(Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle);
 
     /**
      * @brief Non-symmetric density calculation (as per Swift terminology).
@@ -113,6 +112,8 @@ namespace swift2 {
      * dx : Vector separating the two particles (x_loc - x_act)
      * r  : Distance between the two particles  (|| dx ||)
      *
+     * @todo Mladen: check docu once this is fixed.
+     *
      *
      * @param ParticleContainer Typicaly either
      *         std::list<Particle *>
@@ -122,7 +123,11 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeDensity(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
+    void computeDensity(
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles
+    );
 
     /**
      * @brief Same as computeDensity(...), but doesn't modify the particles' search radii.
@@ -130,7 +135,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSearchRadius(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles
     );
 
     /**
@@ -145,7 +152,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSmoothingLengths(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles
     );
 
     /** Hydro Force calculation particle-particle kernel
@@ -169,7 +178,11 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeHydroForce(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
+    void computeHydroForce(
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles
+    );
 
 
     /**
@@ -201,11 +214,11 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeHydroForce(
-      const peano4::datamanagement::CellMarker&  marker,
-      const ParticleContainer&                   particlesAssociatedWithLocalVertices,
-      const std::vector<int>&                    numberOfParticlesPerLocalVertex,
-      const ParticleContainer&                   activeParticles,
-      const std::vector<int>&                    numberOfActiveParticlesPerVertexAdded
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localVertices,
+      const std::vector<int>&                   numberOfParticlesPerVertex,
+      const ParticleContainer&                  activeParticles,
+      const std::vector<int>&                   numberOfActiveParticlesPerVertex
     );
   } // namespace kernels
 } // namespace swift2

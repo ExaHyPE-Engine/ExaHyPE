@@ -101,7 +101,7 @@ class Particle(peano4.toolbox.particles.Particle):
           Consult our code release papers: In short, a particle does not uniquely
           belong to one cell but can belong to many cells. We nevertheless want to
           update them only once.
-          
+
         @see swift2.actionsets.UpdateParticleMarker
 
         """
@@ -122,7 +122,7 @@ class Particle(peano4.toolbox.particles.Particle):
         self.particles_per_cell = particles_per_cell
         self.min_h = min_h
         self.max_h = max_h
-        
+
         pass
 
     @abstractmethod
@@ -161,19 +161,18 @@ class Particle(peano4.toolbox.particles.Particle):
             + self.name
             + """
 
-  Mesh properties:
+Particle properties:
 
-  - particles per cell:         """
+- particles per cell:         """
             + str(self.particles_per_cell)
             + """
-  - h_min:                      """
+- h_min:                      """
             + str(self.min_h)
             + """
-  - h_max:                      """
+- h_max:                      """
             + str(self.max_h)
             + """
-
-  Attributes: """
+- attributes: """
             + str(len(self.data._attributes))
             + """
 

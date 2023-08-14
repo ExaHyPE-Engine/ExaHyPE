@@ -1,10 +1,75 @@
 /**
-\page peano_amr_tex AMR
+\page peano_amr_tex Adaptive mesh refinement (AMR)
 
-Adaptive mesh refinement {#section:amr}
-========================
+Peano's AMR philosophy is guided by few simple principles:
 
- realises a multi-step refinement and erasing[^1] strategy.
+1. The user recommends mesh properties, and Peano will produce a mesh that is
+   at least as fine as requested. However, the code might decide to work with
+   a finer mesh than requested for various reasons: To create full trees, to 
+   avoid topology changes between MPI, and so forth.
+2. Peano adds or removes at most one mesh level at a time.
+3. Peano does not use separate remeshing grid sweeps, i.e. the dynamic 
+   adaptivity is integrated into the normal mesh traversals that you also can
+   use to implement your solver's functionality.
+   
+   
+## AMR workflow and lifecycle
+
+All AMR instructions in Peano are formalised via objects of the type 
+peano4::grid::GridControlEvent. Each event spans a certain geometric 
+area and is either a refine or an erase event.
+I try to speak of refine and erase and not of refine and coarsen,
+as the latter is a term used in a multigrid context and usually
+means that you still keep the fine data somewhere. In contrast, Peano's
+erase means that the grid is really thrown away.
+
+
+Prior to each mesh traversal, the automaton running through the mesh 
+asks the active observer hosting one or multiple @ref peano_action_sets "action sets" for 
+a list of grid control events. While is runs through the mesh, it takes 
+these events into account.
+
+### or-based refinement and refinement arguments
+
+In Peano, a cell is refined, if one of its vertices carries a refinement
+flag. That is, we flag vertices (not cells), and the cells are refined
+if the or combination over all vertices yields true.
+
+Further to the definition above, we realise some simple policies which
+can be summarised as conservative refinement:
+
+1.  All refinement and erase instructions are "at least" instructions.
+    Peano will match them, but it might always decide to make the mesh
+    slighlty finer. Notably, it might ignore erase instructions.
+
+2.  Peano adds or removes at most one grid level per mesh traversal.
+
+Peano will label a vertex as refine, if any of its adjacent cells overlaps
+with a refinement event.  will label vertices as "to be erased"
+(i.e. remove their refined flag), if all of its adjacent cells fit into
+an erase area. The code will glue various events together, i.e. if you
+have a patchwork of refine events, it will create one large refine
+event.
+
+
+
+
+
+
+
+
+
+If you want to refine a region, create a refinement event which
+coincides with the cell size which you want to refine. If you want to
+erase a grid region, create a similar event, but then blow it up by a
+factor of three. Otherwise,  might simply ignore it.
+
+
+   
+
+## Internal AMR workflow
+
+Peano realises a multi-step refinement and erasing strategy.
 
 1.  Each subpartition asks the action set (clone) for the refinement and
     coarsening decisions at the startup of the mesh traversal. For this,
@@ -15,40 +80,30 @@ Adaptive mesh refinement {#section:amr}
 
 3.  In the subsequent mesh traversal, the mesh is actually altered.
 
-or-based refinement and refinement arguments
---------------------------------------------
 
-In , a cell is refined, if one of its vertices carries a refinement
-flag. That is, we flag vertices (not cells), and the cells are refined
-if the or combination over all vertices yields true.
+   
+   
+   
+   
+   
+   
+   While we can pick this blow-up factor arbitrarily
+   (up to a factor of three might make sense in some cases), but if we make
+   is 2.0, then an erased cell covers half of its neighbour. If we have a
+   cell which hosts a particle, this cell will then maybe not coarsen, but
+   all of its neighbours do, so the cell is eliminated. This triggers a
+   mesh oscillation. So the factor should either be smaller than 2.0, or we
+   have to veto that an area with particles is overwritten. Indeed we go
+   down the latter route and mark cells that we may not erase with a refine
+   event which describes the mesh status quo.
 
-Further to the definition above, we realise some simple policies which
-can be summarised as conservative refinement:
 
-1.  All refinement and erase instructions are "at least" instructions.
-     will match them, but it might always decide to make the mesh
-    slighlty finer. Notably, it might ignore erase instructions.
+   This is a tricky part. Our idea is that 
 
-2.   adds or removes at most one grid level per mesh traversal.
 
-'s dynamic AMR is realiesd via `GridControlEvent`s. They mark a certain
-area within the domain and clarify which resolution you would like to
-have within this area. Each event is also marked with a refine or erase
-marker, i.e. you can specify whether you'd expect  to refine towards
-this resolution or erase mesh parts up to a certain level of mesh
-detail.
+Erase 3.0
 
- will label a vertex as refine, if any of its adjacent cells overlaps
-with a refinement event.  will label vertices as "to be erased"
-(i.e. remove their refined flag), if all of its adjacent cells fit into
-an erase area. The code will glue various events together, i.e. if you
-have a patchwork of refine events, it will create one large refine
-event.
-
-If you want to refine a region, create a refinement event which
-coincides with the cell size which you want to refine. If you want to
-erase a grid region, create a similar event, but then blow it up by a
-factor of three. Otherwise,  might simply ignore it.
+ 
 
 Vertex lifecycle
 ----------------
@@ -89,10 +144,6 @@ add another (static) boolean which you set to true whenever
 `getGridControlEvents()` is invoked. The central events are then cleared
 by `beginIteration()` if and only if the boolean is set.
 
-[^1]: I try to speak of refine and erase and not of refine and coarsen,
-    as the latter is a term used in a multigrid context and usually
-    means that you still keep the fine data somewhere. In contrast, 's
-    erase means that the grid is really thrown away.
 
 Consult @ref page_peano_performance_optimisation "the generic optimisation remarks" for 
 some details around performance flaws tied to dynamic mesh refinement.
