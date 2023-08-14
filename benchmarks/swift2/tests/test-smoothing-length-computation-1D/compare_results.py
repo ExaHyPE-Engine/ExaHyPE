@@ -15,22 +15,54 @@ import swift2.sphtools
 
 
 parser = argparse.ArgumentParser(
-    description="Compare Smoothing Length Results With Expectations"
+    description="""
+    Compare Smoothing Length Results With Expectations. This script assumes that
+    particles may have variable smoothing lengths.
+
+    This script has two main modes of usage, which are determined by the
+    provided initial conditions file via the `--ic-file` argument.
+
+    If the IC file is a hdf5 file, the script assumes that we're running a
+    unit test where swift2 is computing smoothing lengths from randompy sampled
+    particles. It will then look for a `particles-0.vtu` file in this directory
+    to compare results to.
+
+    If the IC file is a .vtu file, the script assumes that you want to verify a
+    swift2 snapshot. It will then compute smoothing lengths for the particle positions
+    given in the .vtu file, and compare them to the smoothing lengths from the same
+    .vtu file.
+    """
 )
 parser.add_argument(
     "-ic",
     "--ic-file",
     dest="ic_filename",
-    default="test_sml_1D.hdf5",
-    help="Initial conditions hdf5 file",
+    help="Initial conditions file. Must be a .hdf5 or .vtu file.",
+    required=True,
 )
 parser.add_argument(
     "-n",
     "--neighbours",
     dest="nneigh",
+    type=float, # this is not a typo. We want average number of neighbours, which needn't be an int.
+    default=None,
+    help="Number of neighbours to search for. You must specify either --eta or --neighbours",
+)
+parser.add_argument(
+    "-e",
+    "--eta",
+    dest="eta",
+    type=float,
+    default=None,
+    help="Target resolution eta. You must specify either --eta or --neighbours",
+)
+parser.add_argument(
+    "-d",
+    "--ndim",
+    dest="ndim",
     type=int,
-    default=5,
-    help="Number of neighbours to search for",
+    help="Number of dimensions to work with",
+    required=True,
 )
 parser.add_argument(
     "-ht",
@@ -52,10 +84,21 @@ parser.add_argument(
 
 args = parser.parse_args()
 icfile = args.ic_filename
-nneigh = args.nneigh
 h_tolerance = args.h_tol
 kernel = args.kernel
-eta = swift2.sphtools.eta_from_number_of_neighbours(nneigh, kernel=kernel, ndim=1)
+ndim = args.ndim
+
+eta = args.eta
+nneigh = args.nneigh
+
+if eta is None and nneigh is None:
+    raise ValueError("You need to specify either --eta or --neighbours")
+if eta is not None and nneigh is not None:
+    raise ValueError("You need to specify either --eta or --neighbours, not both")
+if nneigh is not None:
+    eta = swift2.sphtools.eta_from_number_of_neighbours(nneigh, kernel=kernel, ndim=ndim)
+else:
+    nneigh = swift2.sphtools.number_of_neighbours_from_eta(eta, kernel=kernel, ndim=ndim)
 
 # above this (relative) threshold, treat deviations as an error
 # Make this tolerance dependant on the used h_tolerance. Add a
@@ -67,6 +110,7 @@ comparison_tolerance = max(comparison_tolerance, 1.0e-4)
 
 print(" Running comparison")
 print(" --- IC file:                    ", icfile)
+print(" --- Dimensions:                 ", ndim)
 print(" --- SPH Kernel:                 ", kernel)
 print(" --- Target number of neighbours:", nneigh)
 print(" --- Target eta:                 ", eta)
@@ -76,11 +120,30 @@ print(" --- comparison tolerance:       ", comparison_tolerance)
 # Get IC data
 # -------------------------
 
-hfile = h5py.File(icfile, "r")
-gas = hfile["PartType0"]
-coords = gas["Coordinates"][:]
-ids = gas["ParticleIDs"][:]
-hfile.close()
+if icfile.endswith(".hdf5"):
+    # Doing a hdf5 run.
+    vtufile="particles-0.vtu"
+
+    hfile = h5py.File(icfile, "r")
+    gas = hfile["PartType0"]
+    coords = gas["Coordinates"][:]
+    ids = gas["ParticleIDs"][:]
+    hfile.close()
+
+elif icfile.endswith(".vtu"):
+    # Doing a snapshot verification
+    vtufile=icfile
+
+    reader = ParticleVTUReader(vtufile=vtufile, verbose=False)
+    partData = reader.load()
+    coords = partData.x
+    ids = partData.partid
+
+else:
+    raise ValueError("Unrecognized file type {icfile}, looking for .vtu or .hdf5 file.")
+
+
+
 
 # Sort by particle ID
 sort_ic = np.argsort(ids)
@@ -91,11 +154,8 @@ coords = coords[sort_ic]
 # Get expected results
 # -------------------------
 
-# TODO: to enable periodic wrapping, specify boxsize in KDTree call
 tree = KDTree(coords)
-# add + 1: KDTree will find particle itself as neighbour too
-# TODO: adapt the +10
-distances, indexes = tree.query(coords, k=nneigh + 10)
+distances, indexes = tree.query(coords, k=nneigh + 10*ndim)
 neighbours = coords[indexes]
 
 npart = coords.shape[0]
@@ -107,7 +167,7 @@ for i in range(npart):
     xp = neighbours[i, 0, :]
     xn = neighbours[i, 1:, :]
     h = swift2.sphtools.find_smoothing_length(
-        xp, xn, kernel=kernel, eta=eta, h_tolerance=h_tolerance, ndim=1
+        xp, xn, kernel=kernel, eta=eta, h_tolerance=h_tolerance, ndim=ndim
     )
     sml_python[i] = h
 
@@ -115,7 +175,7 @@ for i in range(npart):
 # Read in peano output
 # -------------------------------
 
-reader = ParticleVTUReader(vtufile="particles-0.vtu", verbose=False)
+reader = ParticleVTUReader(vtufile=vtufile, verbose=False)
 partData = reader.load()
 sml_peano = partData.smoothingLength
 partIDs_peano = partData.partid
@@ -152,17 +212,10 @@ print(f"\nSummary run with {nneigh} neighbours:")
 print(f"Finished with {errors} errors.")
 if errors > 0:
     print("Before you panic:")
-    print(" - Are you using the correct KERNEL_GAMMA in this script?")
-    print("   They vary from kernel to kernel, and for different dimensions.")
+    print(" - Are you using the correct kernel in this script?")
     print(" - Are you using the correct resolution eta in this script?")
     print("Other ToDo's left for this script: ")
     print(" - corrections for periodic wrapping ")
 
-
-#  outputfile = "sml_peano.txt"
-#  f = open(outputfile, "w")
-#  for i in range(sml_peano.shape[0]):
-#      f.write("{0:8d},{1:12.6f}\n".format(ids[i], sml_peano[i]))
-#  f.close()
 
 sys.exit(errors)
