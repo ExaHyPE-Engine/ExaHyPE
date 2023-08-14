@@ -2,7 +2,6 @@
 
 #include "swift2/kernels/equation_of_state.h"
 #include "swift2/kernels/kernel_hydro.h"
-// #include "swift2/kernels/SmoothingLengthComputation.h"
 
 
 template <typename ParticleContainer, typename Particle>
@@ -267,6 +266,7 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const Par
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSearchRadius(const ParticleContainer& localParticles) {
 
+  assertionMsg(false, "Don't use this.");
   std::abort();
   return;
 
@@ -326,8 +326,6 @@ void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& loca
 
   for (auto* particle : localParticles) {
     // if (not particle->getIsBoundaryParticle()) {
-
-assertion3(particle->getDensityIactCounter() == 1, "Local Particle in prepare Force didn't do density loop", particle->getPartid(), particle->toString());
 
     /* Retrieve basic properties of local and active particles */
     const double rho_a = particle->getDensity();
@@ -428,7 +426,6 @@ void swift2::kernels::endHydroForceCalculation(const ParticleContainer& localPar
 
   for (auto* particle : localParticles) {
     // if (not particle->getIsBoundaryParticle()) {
-assertion3(particle->getDensityIactCounter() == 1, "Local Particle in end Force didn't do density loop", particle->getPartid(), particle->toString());
     particle->setHDot(particle->getHDot() * particle->getSmoothingLength() / hydroDimensions);
 
     assertion2(std::isfinite(particle->getHDot()), particle->toString(), particle->getSmoothingLength());
@@ -444,8 +441,6 @@ void swift2::kernels::flagBoundaryParticles(
   const tarch::la::Vector<Dimensions, double>& domainSize,
   const tarch::la::Vector<Dimensions, double>& domainOffset
 ) {
-
-  return;
 
   /* TODO MLADEN: Document parameters? */
   for (auto* particle : localParticles) {

@@ -44,16 +44,6 @@ void swift2::kernels::densityKernel(Particle* localParticle, const Particle* act
     // not localParticle->getIsBoundaryParticle()
   ) {
 
-    if (localParticle->getPartid() == activeParticle->getPartid()) {
-      std::cout << "!!!!!!!!!!!!!!!! INTERACTING SAME PARTILCE WITH ID " << localParticle->getPartid() << std::endl;
-    }
-    if (localParticle->getPartid() == PROBLEMPART) {
-      std::cout
-        << "DENSITY KERNEL: INTERACTING localParticle " << localParticle->getPartid() << " and activeParticle "
-        << activeParticle->getPartid() << std::endl;
-    }
-
-    // const double m_a = localParticle->getMass();
     const double m_b     = activeParticle->getMass();
     const double h_a_inv = 1. / h_a;
     // Normalized distance to evaluate kernel
@@ -66,30 +56,21 @@ void swift2::kernels::densityKernel(Particle* localParticle, const Particle* act
 
     // Increment density
     localParticle->setDensity(localParticle->getDensity() + m_b * w_a);
-    // localParticle->setDensity(localParticle->getDensity() + (m_b * w_a) * h_a_inv);
 
     // Increment drho/dh. Note that minus sign was absorbed into dwa_dh
     localParticle->setRho_dh(localParticle->getRho_dh() + m_b * dwa_dh);
-    // localParticle->setRho_dh(localParticle->getRho_dh() + m_b * dwa_dh * h_a_inv * h_a_inv);
 
     // Increment fractional number density
     localParticle->setWcount(localParticle->getWcount() + w_a);
-    // localParticle->setWcount(localParticle->getWcount() + w_a * h_a_inv);
 
     // Increment dWcount/dh. Note that minus sign was absorbed into dwa_dh
     localParticle->setWcount_dh(localParticle->getWcount_dh() + dwa_dh);
-    // localParticle->setWcount_dh(localParticle->getWcount_dh() + dwa_dh * h_a_inv * h_a_inv);
 
 
     // Compute dv dot r
     // Velocity terms for viscosity
     tarch::la::Vector<Dimensions, double> dv;
     tarch::la::Vector<Dimensions, double> curlvr(0.0);
-
-    if (localParticle->getPartid() == PROBLEMPART && PRINTOUT)
-      std::cout
-        << "DENSITY_IACT " << localParticle->getPartid() << " and " << activeParticle->getPartid() << " x= "
-        << activeParticle->getX()[0] << " w_a " << w_a << " dwa_dx " << dwa_dx << " dwa_dh " << dwa_dh << std::endl;
 
     /* Now we need to compute the div terms */
     const double r_inv = r ? 1.0 / r : 0.0;
@@ -121,8 +102,6 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
   const double alphaAV         = localParticle->getAlphaAV();
   const double betaAV          = localParticle->getBetaAV();
 
-assertion3(localParticle->getDensityIactCounter() == 1, "Local Particle in Force loop didn't do density loop", localParticle->getPartid(), localParticle->toString());
-assertion3(activeParticle->getDensityIactCounter() == 1, "Active Particle in force loop didn't do density loop", activeParticle->getPartid(), activeParticle->toString());
   // No cosmology yet: a^{(3 gamma - 5 )/ 2} = 1.
   const double fac_mu    = 1.;
   const double a2_Hubble = 0.; // a**2 * H, where H = da/dt / a. = 0 without cosmo
@@ -266,9 +245,6 @@ template <typename Particle>
 void swift2::kernels::forceKernelVectorised(
   Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle
 ) InlineMethod {
-
-assertion3(localParticle->getDensityIactCounter() == 1, "Local Particle in Force loop didn't do density loop", localParticle->getPartid(), localParticle->toString());
-assertion3(activeParticle->getDensityIactCounter() == 1, "Active Particle in force loop didn't do density loop", activeParticle->getPartid(), activeParticle->toString());
 
   // Grab static parameters
   const int    hydroDimensions = localParticle->getHydroDimensions();
@@ -433,18 +409,8 @@ void swift2::kernels::computeDensityWithConstantSearchRadius(
   const ParticleContainer&                  localParticles,
   const ParticleContainer&                  activeParticles
 ) {
-  static tarch::logging::Log _log("swift2::kernels");
   for (auto* localParticle : localParticles) {
     if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX()) and not toolbox::particles::particleWillBeDroppedFurther(*localParticle, marker)) {
-      if (localParticle->getPartid() == PROBLEMPART) {
-        logDebug(
-          "computeDensityWithConstantSearchRadius",
-          "STARTING DENSITY FOR PROBLEMPART "
-            << PROBLEMPART << " with " << activeParticles.size() << " active particles associated to cell "
-            << marker.toString()
-        );
-      }
-
       swift2::kernels::findSmoothingLengthWithConstantSearchRadius(localParticle, activeParticles);
     }
   }
@@ -457,9 +423,6 @@ void swift2::kernels::computeDensity(
   const ParticleContainer&                  localParticles,
   const ParticleContainer&                  activeParticles
 ) {
-
-//  std::cout << "swift2::kernels::computeDensity: Don't use this. It's not implemented properly yet." << std::endl;
-//  std::abort();
 
   /* Grab static parameters */
   const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();

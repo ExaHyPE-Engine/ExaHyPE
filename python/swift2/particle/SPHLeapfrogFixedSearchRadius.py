@@ -59,8 +59,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
     points, you have a vertex marker which gives you the position of the
     vertex to which a particular is associated, and you have the localParticles.
     This is a vector of pointers in this particular case.
-    
-    The force calculation does exist in two variants: There's the default one 
+
+    The force calculation does exist in two variants: There's the default one
     and then we have one that is aggressively optimised. The latter one requires
     us to have properly sorted particle-mesh associations.
 
@@ -265,10 +265,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self.data.add_attribute(self.is_boundary_part)
         self.data.add_attribute(self.Ncount)
         self.data.add_attribute(self.part_id)
-
-        # TEMPORARY DEBUGGING
-        self.density_iact_counter = dastgen2.attributes.Integer("DensityIactCounter");
-        self.data.add_attribute(self.density_iact_counter)
 
         # Algorithm Steps ---------------------------------------------------------------
         self.algorithm_steps_dict = {}

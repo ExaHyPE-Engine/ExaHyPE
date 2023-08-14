@@ -7,7 +7,6 @@
 template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
 
-  // } else {
   const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
                                 .getMinTimeStepSize();
 
@@ -27,23 +26,10 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
 
       particle->setX(particle->getX() + timeStepSize * particle->getV_full());
 
-      int id = particle->getPartid();
-      if (id == 796 or id == 797 or id == 798 or id == 799 or id == 800 or id == 801 or id == 802 or id == 803 or id == 804)
-        std::cout << "Particle ID " << id << " was drifted to " << particle->getX() << std::endl;
-
       assertion1(tarch::la::isEntryFinite(particle->getX()), particle->toString());
-
-      // TODO: this is for sod only for now. Move box size in later
-      assertion2(tarch::la::oneGreaterEquals(particle->getX(), 0.), "X < 0", particle->toString());
-      assertion2(tarch::la::oneSmallerEquals(particle->getX(), 2.), "X > BOXSIZE", particle->toString());
 
       // Note that original SWIFT predicts the velocities at this point. We moved that
       // into computePredictHydro()
-      // TODO MLADEN: check whether computePredictHydro is still necessary as such. Could be
-      // it's still a separate grid sweep, which it needn't be.
-
-      particle->setDensityIactCounter(0);
-
 
       /* Flag this particle as Moved */
       particle->setMoveState(std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved);
@@ -112,8 +98,6 @@ void swift2::timestepping::leapfrogKickExtraWithGlobalTimeStepSize(Particle& loc
   /* In principle, this time-step could be different than that used for normal kick */
   double dt_kick_therm = 0.5 * localParticle->getSpecies().getMinTimeStepSize();
 
-  // std::cout << "dt_therm " << dt_therm << std::endl;
-
   /* Integrate the internal energy forward in time */
   const double delta_u = localParticle->getUDot() * dt_kick_therm;
 
@@ -135,9 +119,6 @@ void swift2::timestepping::computePredictHydro(const ParticleContainer& localPar
   const double dt_kick_hydro = timeStepSize;
   const double dt_drift      = timeStepSize;
   const double dt_therm      = dt_kick_hydro;
-  // const double dt_kick_hydro = 0.;
-  // const double dt_drift      = 0.;
-  // const double dt_therm      = 0.;
 
   // @TODO: Mladen: This is only valid for the "Minimal" SPH scheme
   // Needs cleanup. Should be moved to a "swift kernels" file.
