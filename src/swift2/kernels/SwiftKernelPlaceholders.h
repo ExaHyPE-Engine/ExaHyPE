@@ -64,6 +64,15 @@ namespace swift2 {
     void hydro_prepare_force(Particle& localParticle);
 
     /**
+     * @brief Reset acceleration fields of a particle
+     *
+     * Resets all hydro acceleration and time derivative fields in preparation
+     * for the sums taking place in the various force interactions.
+     */
+    template <typename Particle>
+    void hydro_reset_acceleration(Particle& localParticle);
+
+    /**
      * @brief Finishes the force calculation.
      *
      * Multiplies the force and accelerations by the appropiate constants

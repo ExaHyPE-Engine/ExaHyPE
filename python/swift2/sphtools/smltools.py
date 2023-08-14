@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """!
-Tool related to the (computation of) the smoothing length.
+Tools related to the (computation of) the smoothing length.
 """
 
 from .sph_kernels import (
@@ -14,7 +14,32 @@ from numpy import ndarray, sqrt, cbrt, pi
 
 def _neighbour_loop(r: ndarray, h: float, kernel: str, ndim: int):
     """!
-    TODO: docu
+    A neighbour interaction loop used to determine the smoothing lengths.
+
+    Parameters
+    ----------
+
+    r: ndarray
+        distances from the particle to the neighbours
+
+    h: float
+        current guess for the particle's smoothing length
+
+    kernel: str
+        which SPH kernel to use.
+
+    ndim: int
+        number of dimensions to work for.
+
+
+    Returns
+    -------
+
+    wcount: float
+        sum of particle's kernel weight at neighbour positions
+
+    wcount_dh: float
+        sum of particle's kernel derivative weight at neighbour positions
     """
     wcount = 0.0
     wcount_dh = 0.0
@@ -56,7 +81,8 @@ def find_smoothing_length(
         the smoothing length
     """
 
-    # TODO: for debugging
+
+    # This is for debugging purposes
     verbose = False
 
     # get distances between particles
@@ -134,7 +160,6 @@ def find_smoothing_length(
         h_new = max(h_new, left)
         h_new = min(h_new, right)
 
-        # TODO temporary
         if verbose:
             print("h_new=", h_new)
             print("wcount", wcount)

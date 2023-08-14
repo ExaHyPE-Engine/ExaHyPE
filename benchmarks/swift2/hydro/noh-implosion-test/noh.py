@@ -93,7 +93,7 @@ parser.add_argument(
     dest="optimisation",
     choices=["none", "continuous-per-vertex", "vectorise-per-vertex"],
     default="none",
-    help="Type of time integrator to use (default: leapfrog)",
+    help="Optimisation strategy to use (default: none)",
 )
 parser.add_argument(
     "-ms",
