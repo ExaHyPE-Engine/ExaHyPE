@@ -335,7 +335,7 @@ if(WITH_NETCDF)
     target_compile_definitions(project_options INTERFACE UseNetCDF)
     target_link_libraries(project_options INTERFACE ${NETCDF_LIBRARIES} ${NETCDF_LIBRARIES_CXX})
     target_include_directories(project_options INTERFACE ${NETCDF_INCLUDES} )
-    set(WITH_HDF5 ON)
+    #set(WITH_HDF5 ON)
 endif()
 
 if(WITH_OTTER)
