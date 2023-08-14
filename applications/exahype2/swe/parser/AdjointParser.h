@@ -37,10 +37,6 @@ class applications::exahype2::swe::parser::AdjointParser {
      * @param i_index index of timestamp of adjoint solution for which the inner product is to be calculated
      * @param i_x coordinate of x-dimension of simulation which is being interpolated
      * @param i_y coordinate of y-dimension of simulation which is being interpolated
-     * @param i_eta free surface of current cell (h + b)
-     * @param i_hu momentum in x-dimension of current cell
-     * @param i_hv momentum in y-dimension of current cell
-     * @param i_b bathymetry of current cell
      * @param interpolated_values array to be filled with adjoint solution values in the order (h, hu, hv, b)
      */
     void interpolate_values(size_t i_index, double i_x, double i_y, double *interpolated_values);
@@ -51,10 +47,7 @@ class applications::exahype2::swe::parser::AdjointParser {
      * @param i_index index of timestamp that poses as upper limit for current simulation time for interpolation
      * @param i_x coordinate of x-dimension of simulation for which the inner product is to be calculated
      * @param i_y coordinate of y-dimension of simulation for which the inner product is to be calculated
-     * @param i_eta free surface of current cell (h + b)
-     * @param i_hu momentum in x-dimension of current cell
-     * @param i_hv momentum in y-dimension of current cell
-     * @param i_b bathymetry of current cell
+     * @param Q state vector of current cell
      * @return double inner product of current cell and adjoint solution for specific interpolated timestamp
      */
     double calculate_inner_product(size_t i_index, double i_x, double i_y, const double* Q);
@@ -86,10 +79,7 @@ class applications::exahype2::swe::parser::AdjointParser {
      * @param i_t current simulation time
      * @param i_x coordinate of x-dimension of simulation for which the maximum inner product is to be calculated
      * @param i_y coordinate of y-dimension of simulation for which the maximum inner product is to be calculated
-     * @param i_eta free surface of current cell (h + b)
-     * @param i_hu momentum in x-dimension of current cell
-     * @param i_hv momentum in y-dimension of current cell
-     * @param i_b bathymetry in current cell
+     * @param Q state vector of current cell
      * @return double maximum inner product of current cell and interpolated adjoint solution
      */
     double max_inner_product(double i_t, double i_x, double i_y, const double* Q);
