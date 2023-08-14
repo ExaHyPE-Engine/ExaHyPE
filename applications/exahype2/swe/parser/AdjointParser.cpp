@@ -1,6 +1,7 @@
 #include "AdjointParser.h"
 #include <iostream>
 #include "tarch/la/ScalarOperations.h"
+#include "../Constants.h"
 
 using namespace applications::exahype2::swe::parser::NetCDFHelper;
 
@@ -17,9 +18,9 @@ applications::exahype2::swe::parser::AdjointParser::~AdjointParser(){
     delete this->adjoint_timestamps_; 
 }
 
-void applications::exahype2::swe::parser::AdjointParser::interpolate_values(size_t i_index, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b, double *interpolated_values){
-    double x_cdf = NetCDFHelper::transformIndexSimulationToCDFRange(i_x, size_x_adjoint_, min_x_adjoint_, max_x_adjoint_);
-    double y_cdf = NetCDFHelper::transformIndexSimulationToCDFRange(i_y, size_y_adjoint_, min_y_adjoint_, max_y_adjoint_);
+void applications::exahype2::swe::parser::AdjointParser::interpolate_values(size_t i_index, double i_x, double i_y, double *interpolated_values){
+    double x_cdf = NetCDFHelper::transformIndexSimulationToCDFRange(i_x, DomainSize(0), min_x_adjoint_, max_x_adjoint_);
+    double y_cdf = NetCDFHelper::transformIndexSimulationToCDFRange(i_y, DomainSize(1), min_y_adjoint_, max_y_adjoint_);
     if(tarch::la::smaller(x_cdf, min_x_adjoint_) || tarch::la::greater(x_cdf, max_x_adjoint_) || tarch::la::smaller(y_cdf, min_y_adjoint_) || tarch::la::greater(y_cdf, max_y_adjoint_))
         return;
     int array_index = NetCDFHelper::transformIndexCDFRangeToArray(x_cdf, y_cdf, min_x_adjoint_, min_y_adjoint_, max_x_adjoint_, max_y_adjoint_, size_x_adjoint_, size_y_adjoint_);
@@ -31,26 +32,33 @@ void applications::exahype2::swe::parser::AdjointParser::interpolate_values(size
     return;
 }
 
-double applications::exahype2::swe::parser::AdjointParser::calculate_inner_product(size_t i_index, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b){
-    if(i_b >= 0.f)
-        return 0.f;
+double applications::exahype2::swe::parser::AdjointParser::calculate_inner_product(size_t i_index, double i_x, double i_y, const double* Q){
+    if(tarch::la::equals(Q[0], 0.0))
+    {
+        std::cout << "h = 0!" << std::endl;
+        return 0.0;
+    }
 
     double interpolated_values[4]{0};
-    interpolate_values(i_index, i_x, i_y, i_eta, i_hu, i_hv, i_b, interpolated_values);
+    interpolate_values(i_index, i_x, i_y, interpolated_values);
     // interpolated_values[0] is h
     // interpolated_values[1] is hu
     // interpolated_values[2] is hv
     // interpolated_values[3] is bathymetry
 
     if(tarch::la::equals(interpolated_values[0], 0.0))
-        return 0.f;
+    {
+        std::cout << "h_p = 0!" << std::endl;
+        std::cout << interpolated_values[0] << std::endl;
+        return 0.0;
+    }
     
-    return std::abs(i_eta * (interpolated_values[0] + interpolated_values[3])
-                    + i_hu * interpolated_values[1]
-                    + i_hv * interpolated_values[2]);
+    return std::abs((Q[0] + Q[3]) * (interpolated_values[0] + interpolated_values[3])
+                    + Q[1] * interpolated_values[1]
+                    + Q[2] * interpolated_values[2]);
 }
 
-double applications::exahype2::swe::parser::AdjointParser::max_inner_product(double i_t, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b){
+double applications::exahype2::swe::parser::AdjointParser::max_inner_product(double i_t, double i_x, double i_y, const double* Q){
 
     if(!tarch::la::equals(i_t, t_last_call_))
     {
@@ -63,21 +71,21 @@ double applications::exahype2::swe::parser::AdjointParser::max_inner_product(dou
     double t_current;
     double inner_product_current;
     double t_comp = i_t + (t_f_ - t_s_);
-    double max_inner_product = calculate_inner_product(inner_product_start_index_-1, i_x, i_y, i_eta, i_hu, i_hv, i_b);
+    double max_inner_product = calculate_inner_product(inner_product_start_index_-1, i_x, i_y, Q);
 
     for(size_t i = inner_product_start_index_; i < number_timestamps_; i++)
     {
         t_current = adjoint_timestamps_[i];
         if(tarch::la::smaller(i_t, t_current) && tarch::la::smallerEquals(t_nm, t_comp))
         {
-            inner_product_current = calculate_inner_product(i, i_x, i_y, i_eta, i_hu, i_hv, i_b);
+            inner_product_current = calculate_inner_product(i, i_x, i_y, Q);
             max_inner_product = std::max(inner_product_current, max_inner_product);
             t_nm = t_current;
         }
         else
             break;
     }
-    if(tarch::la::greater(max_inner_product, 0.0) && false)
+    if(false && tarch::la::greater(max_inner_product, 0.0))
         std::cout << "max_inner_product: " << max_inner_product << std::endl;
     return max_inner_product;
 }

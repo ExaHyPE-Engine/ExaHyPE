@@ -39,7 +39,7 @@ class Tsunami(scenarios.template_scenario.Template_Scenario):
         return """
         ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
         if(tarch::la::greater(t, 0.0)){
-            double inner_product = adjoint_parser.max_inner_product(t, volumeCentre(0), volumeCentre(1), Q[0] + Q[3], Q[1], Q[2], Q[3]);
+            double inner_product = adjoint_parser.max_inner_product(t, volumeCentre(0), volumeCentre(1), Q);
             if (tarch::la::greater(Q[0], 0.0) && tarch::la::greaterEquals(inner_product, %f)) { 
                 result = ::exahype2::RefinementCommand::Refine;
             }

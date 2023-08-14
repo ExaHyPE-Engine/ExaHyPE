@@ -43,7 +43,7 @@ class applications::exahype2::swe::parser::AdjointParser {
      * @param i_b bathymetry of current cell
      * @param interpolated_values array to be filled with adjoint solution values in the order (h, hu, hv, b)
      */
-    void interpolate_values(size_t i_index, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b, double *interpolated_values);
+    void interpolate_values(size_t i_index, double i_x, double i_y, double *interpolated_values);
 
     /**
      * @brief Calculates the inner product of adjoint and current simulation at given timestamp index
@@ -57,7 +57,7 @@ class applications::exahype2::swe::parser::AdjointParser {
      * @param i_b bathymetry of current cell
      * @return double inner product of current cell and adjoint solution for specific interpolated timestamp
      */
-    double calculate_inner_product(size_t i_index, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b);
+    double calculate_inner_product(size_t i_index, double i_x, double i_y, const double* Q);
 
     /**
      * @brief Parses given netCDF file of adjoint simulation and reads out all necessary values
@@ -92,6 +92,6 @@ class applications::exahype2::swe::parser::AdjointParser {
      * @param i_b bathymetry in current cell
      * @return double maximum inner product of current cell and interpolated adjoint solution
      */
-    double max_inner_product(double i_t, double i_x, double i_y, double i_eta, double i_hu, double i_hv, double i_b);
+    double max_inner_product(double i_t, double i_x, double i_y, const double* Q);
 };
 #endif
