@@ -67,11 +67,30 @@ def find_smoothing_length(
 ):
     """!
     Determine the smoothing length of a particle with coordinates xp
-
-    TODO: finish documentation
+    and neighbours with positions xn. This function assumes that the
+    an appropriate amount of neighbours is passed on via the `xn` array
+    of their positions, meaning that max{|xn - xp|} <= gamma * h.
 
     Parameters
     ----------
+
+    xp: ndarray
+        Coordiate of particle to determine smoothing length for
+
+    xn: ndarray
+        Array of coordinates of neighbour particles
+
+    kernel: str
+        Which kernel to use. Choices are given in sph_kernels.py:sph_kernel_list
+
+    eta: float
+        resolution eta to use, "smoothing scale". This determines the number of neighbours.
+
+    h_tolerance: float
+        tolerance to adapt to consider smoothing length converged
+
+    ndim: int
+        number of dimensions to work with
 
 
     Returns
