@@ -38,7 +38,7 @@ struct peano4::grid::GridControlEvent {
   public:
 
     enum class RefinementControl: int {
-      Refine=0, Erase=1, Keep=2
+      Refine=0, Erase=1
     };
 
     GridControlEvent() {}
