@@ -9,106 +9,106 @@ import jinja2
 class AbstractUpdateParticleGridAssociation(ActionSet):
     """!
 
-Associate particles to spacetree vertices
+    Associate particles to spacetree vertices
 
-Use one of the subclasses which realise various sorting algorithms.
-All subclasses realise the particle in dual tree storage scheme.
-Please read through @ref page_toolbox_particles_mesh_storage and
-@ref page_toolbox_particles_mesh_consistency besides the current
-class documentation.
-
-
-If you add the action set
-peano4.toolbox.particles.PlotParticlesInVTKFormat to your algorithm
-step, the resulting file will contain all associativity information.
-You can plot to which vertex a particle belongs to.
+    Use one of the subclasses which realise various sorting algorithms.
+    All subclasses realise the particle in dual tree storage scheme.
+    Please read through @ref page_toolbox_particles_mesh_storage and
+    @ref page_toolbox_particles_mesh_consistency besides the current
+    class documentation.
 
 
-Here's a hand-written cartoon to explain the particle storage:
-
-@image html dual-tree.png
-
-
-A tree with three levels.
-Particles with a large search radius (red) are held on rather coarse levels.
-Particles with very small search radius are sorted (dropped) into the fine grid
-levels.
-Each particle is always associated to its closest vertex (dotted line).
-It is the mesh which holds (owns) the vertices.
-The toolset's predefined action set can automatically maintain/update these
-associations after each grid sweep.
-It also moves particles up and down the grid hierarchy if the particles' search
-radius changes or the grid changes.
+    If you add the action set
+    peano4.toolbox.particles.PlotParticlesInVTKFormat to your algorithm
+    step, the resulting file will contain all associativity information.
+    You can plot to which vertex a particle belongs to.
 
 
-## Move particles
+    Here's a hand-written cartoon to explain the particle storage:
 
-To move a particle, all you have to do is to alter its position:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-myParticle->setX( {17.3, 8.2} );
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Obviously, any change of a particle position could mean that the particle is no
-longer associated to its nearest vertex.
-We have to sort them.
+    @image html dual-tree.png
 
 
-Peano automatically maintains these relations if you add the action set
-peano4.toolbox.particles.UpdateParticleGridAssociation to
-your algorithmic steps.
-As the convention relies on a smaller-equals sign, adaptive meshes are
-automatically supported.
-If particles travel through your domain and the mesh is not very fine, they
-end up in the tree leaves.
-If particles have a large search radius, they are stored in rather coarse
-levels of the tree.
+    A tree with three levels.
+    Particles with a large search radius (red) are held on rather coarse levels.
+    Particles with very small search radius are sorted (dropped) into the fine grid
+    levels.
+    Each particle is always associated to its closest vertex (dotted line).
+    It is the mesh which holds (owns) the vertices.
+    The toolset's predefined action set can automatically maintain/update these
+    associations after each grid sweep.
+    It also moves particles up and down the grid hierarchy if the particles' search
+    radius changes or the grid changes.
 
 
-If you change the search radius or the position of a particle, the particle
-will stay within its current cell/vertex within the tree.
-In the next grid sweep, it will however we held by the ``correct'' vertex,
-i.e. its grid-vertex association will be updated:
-The action set UpdateParticleGridAssociation updates the
-particle-tree association, i.e.~sorts the particles, on-the-fly between two mesh
-traversals.
+    ## Move particles
+
+    To move a particle, all you have to do is to alter its position:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    myParticle->setX( {17.3, 8.2} );
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Obviously, any change of a particle position could mean that the particle is no
+    longer associated to its nearest vertex.
+    We have to sort them.
 
 
-While you do not have to worry about how this sorting is realised, it is
-important to study the action set's documentation (just open the Python code
-documentation of subclasses) and read when data is consistent.
-Here is the general invariants that hold for all of them:
-
-- The very moment you alter a particle's position, you cannot be sure that
-  it is still associated with the nearest vertex. Consequently, neighbourhood
-  searchersmight yield invalid results.
-- In the grid sweep after the position change, the particle will be
-  associated with the correct vertex (unless you change its position once again
-  obviously).
+    Peano automatically maintains these relations if you add the action set
+    peano4.toolbox.particles.UpdateParticleGridAssociation to
+    your algorithmic steps.
+    As the convention relies on a smaller-equals sign, adaptive meshes are
+    automatically supported.
+    If particles travel through your domain and the mesh is not very fine, they
+    end up in the tree leaves.
+    If particles have a large search radius, they are stored in rather coarse
+    levels of the tree.
 
 
-The action set UpdateParticleGridAssociation relies on some global
-data. Therefore, you have to call finishTraversal() on the used
-particle set in your main routine on each rank after all rank-local traversals have termined.
+    If you change the search radius or the position of a particle, the particle
+    will stay within its current cell/vertex within the tree.
+    In the next grid sweep, it will however we held by the ``correct'' vertex,
+    i.e. its grid-vertex association will be updated:
+    The action set UpdateParticleGridAssociation updates the
+    particle-tree association, i.e.~sorts the particles, on-the-fly between two mesh
+    traversals.
 
 
-## Domain decomposition
+    While you do not have to worry about how this sorting is realised, it is
+    important to study the action set's documentation (just open the Python code
+    documentation of subclasses) and read when data is consistent.
+    Here is the general invariants that hold for all of them:
 
-You should combine this action set (or any subclass in fact) with the action
-set UpdateParallelState. Actually, it is sufficient if only the second grid
-sweep - remember that association updates always have to be added to two grid
-sweeps in a row - is added an additional action set that updates the particles'
-parallel state.
+    - The very moment you alter a particle's position, you cannot be sure that
+      it is still associated with the nearest vertex. Consequently, neighbourhood
+      searchersmight yield invalid results.
+    - In the grid sweep after the position change, the particle will be
+      associated with the correct vertex (unless you change its position once again
+      obviously).
 
 
-## Priorities
+    The action set UpdateParticleGridAssociation relies on some global
+    data. Therefore, you have to call finishTraversal() on the used
+    particle set in your main routine on each rank after all rank-local traversals have termined.
 
-The update association should precede any other action set in your step. The
-priority value thus should be very small. As priorities are inverted when we 
-walk from fine to coarse resolutions, this means that all dropping into the mesh
-(in the second grid sweep) happens before anybody else touches the particles,
-while the extraction of particles or moves from fine to coarse are epilogues to
-any operation in the primary mesh sweep.
+
+    ## Domain decomposition
+
+    You should combine this action set (or any subclass in fact) with the action
+    set UpdateParallelState. Actually, it is sufficient if only the second grid
+    sweep - remember that association updates always have to be added to two grid
+    sweeps in a row - is added an additional action set that updates the particles'
+    parallel state.
+
+
+    ## Priorities
+
+    The update association should precede any other action set in your step. The
+    priority value thus should be very small. As priorities are inverted when we
+    walk from fine to coarse resolutions, this means that all dropping into the mesh
+    (in the second grid sweep) happens before anybody else touches the particles,
+    while the extraction of particles or moves from fine to coarse are epilogues to
+    any operation in the primary mesh sweep.
 
     """
 

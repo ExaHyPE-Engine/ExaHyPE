@@ -108,11 +108,11 @@ void toolbox::particles::ParticleSet<T>::clearParticleStateStatistics() {
 
 template <typename T>
 void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
-  int globalNumberOfLifts                    = 0;
-  int globalNumberOfDrops                    = 0;
-  int globalNumberOfLiftsIntoSieveSet        = 0;
-  int globalNumberOfDropsFromSieveSet        = 0;
-  int globalNumberOfReassignments            = 0;
+  int globalNumberOfLifts             = 0;
+  int globalNumberOfDrops             = 0;
+  int globalNumberOfLiftsIntoSieveSet = 0;
+  int globalNumberOfDropsFromSieveSet = 0;
+  int globalNumberOfReassignments     = 0;
 
   int globalNumberOfRemainingLocalParticles = 0;
   int globalNumberOfIncomingLocalParticles  = 0;
@@ -257,11 +257,11 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
 #else
-  globalNumberOfLifts         = _numberOfLifts;
-  globalNumberOfDrops         = _numberOfDrops;
+  globalNumberOfLifts             = _numberOfLifts;
+  globalNumberOfDrops             = _numberOfDrops;
   globalNumberOfLiftsIntoSieveSet = _numberOfLiftsIntoSieveSet;
   globalNumberOfDropsFromSieveSet = _numberOfDropsFromSieveSet;
-  globalNumberOfReassignments = _numberOfReassignments;
+  globalNumberOfReassignments     = _numberOfReassignments;
 
   globalNumberOfRemainingLocalParticles = _numberOfRemainingLocalParticles;
   globalNumberOfIncomingLocalParticles  = _numberOfIncomingLocalParticles;
@@ -280,17 +280,15 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
     logInfo(
       "reduceAndPrintStatistics()",
       "subdomain-local sorting statistics"
-        << ": #lifts=" << globalNumberOfLifts << ", #drops=" << globalNumberOfDrops
-        << ", #lift-into-sieve-set=" << globalNumberOfLiftsIntoSieveSet
-        << ", #drops-from-sieve-set=" << globalNumberOfDropsFromSieveSet
+        << ": #lifts=" << globalNumberOfLifts << ", #drops=" << globalNumberOfDrops << ", #lift-into-sieve-set="
+        << globalNumberOfLiftsIntoSieveSet << ", #drops-from-sieve-set=" << globalNumberOfDropsFromSieveSet
         << ", #reassignments=" << globalNumberOfReassignments
     );
     logInfo(
       "reduceAndPrintStatistics()",
       "particle state updates"
-        << ": #remaining=" << globalNumberOfRemainingLocalParticles
-        << ", #incoming="  << globalNumberOfIncomingLocalParticles
-        << ", #leaving=" << globalNumberOfLeavingLocalParticles
+        << ": #remaining=" << globalNumberOfRemainingLocalParticles << ", #incoming="
+        << globalNumberOfIncomingLocalParticles << ", #leaving=" << globalNumberOfLeavingLocalParticles
         << ", #expired-and-dropped-in-halo=" << globalNumberOfExpiredHaloParticles
     );
     logInfo(
@@ -336,9 +334,9 @@ void toolbox::particles::ParticleSet<T>::updateNumberOfLocalParticleStatistics(
 ) {
   tarch::multicore::Lock lock(_statisticsSemaphore);
   _numberOfRemainingLocalParticles += numberOfRemainingLocalParticles;
-  _numberOfIncomingLocalParticles  += numberOfIncomingLocalParticles;
-  _numberOfLeavingLocalParticles   += numberOfLeavingLocalParticles;
-  _numberOfExpiredHaloParticles    += numberOfExpiredHaloParticles;
+  _numberOfIncomingLocalParticles += numberOfIncomingLocalParticles;
+  _numberOfLeavingLocalParticles += numberOfLeavingLocalParticles;
+  _numberOfExpiredHaloParticles += numberOfExpiredHaloParticles;
 }
 
 
@@ -363,9 +361,8 @@ void toolbox::particles::ParticleSet<T>::finishedTraversal() {
 
 
 template <typename T>
-typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::ParticleSet<T>::getParticlesToBeSievedIntoVertex(
-  const peano4::datamanagement::VertexMarker& marker
-) {
+typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::ParticleSet<
+  T>::getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker) {
   return sieveParticles.getParticlesToBeSievedIntoVertex(marker);
 }
 
@@ -382,25 +379,20 @@ std::string toolbox::particles::ParticleSet<T>::toString(bool addBrackets) const
   if (addBrackets)
     msg << "(";
 
-  msg << "#lifts=" << _numberOfLifts
-      << ", #drops=" << _numberOfDrops
-      << ", #assignments=" << _numberOfReassignments
-      << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet
-      << ", #drops-from-sieve-set=" << _numberOfDropsFromSieveSet
-      << ", #remaining-particles="<< _numberOfRemainingLocalParticles
-      << ", #incoming-particles=" << _numberOfIncomingLocalParticles
-      << ", #leaving-particles=" << _numberOfLeavingLocalParticles
-      << ", #expired-halos=" << _numberOfExpiredHaloParticles
-      << ", #added-virtual-particles=" << _numberOfAddedVirtualParticles
-      << ", #replaced-virtual-particles=" << _numberOfReplacedVirtualParticles
-      << ", #dropped-virtual-particles=" << _numberOfDroppedVirtualParticles
-      << ", #eliminated-virtual-duplicates=" << _numberOfVirtualEliminatedSpatialDuplicates
-      << ", #eliminated-local-duplicates=" << _numberOfLocalEliminatedSpatialDuplicates;
+  msg
+    << "#lifts=" << _numberOfLifts << ", #drops=" << _numberOfDrops << ", #assignments=" << _numberOfReassignments
+    << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet << ", #drops-from-sieve-set="
+    << _numberOfDropsFromSieveSet << ", #remaining-particles=" << _numberOfRemainingLocalParticles
+    << ", #incoming-particles=" << _numberOfIncomingLocalParticles
+    << ", #leaving-particles=" << _numberOfLeavingLocalParticles << ", #expired-halos=" << _numberOfExpiredHaloParticles
+    << ", #added-virtual-particles=" << _numberOfAddedVirtualParticles << ", #replaced-virtual-particles="
+    << _numberOfReplacedVirtualParticles << ", #dropped-virtual-particles=" << _numberOfDroppedVirtualParticles
+    << ", #eliminated-virtual-duplicates=" << _numberOfVirtualEliminatedSpatialDuplicates
+    << ", #eliminated-local-duplicates=" << _numberOfLocalEliminatedSpatialDuplicates;
 
-  #if PeanoDebug>=1
-  msg << ",x=" << _debugX
-      << ",h=" << _debugH;
-  #endif
+#if PeanoDebug >= 1
+  msg << ",x=" << _debugX << ",h=" << _debugH;
+#endif
 
   if (addBrackets)
     msg << ")";

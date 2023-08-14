@@ -253,19 +253,20 @@ Each particle provides its own additional meshing constraints:
 
 Species | max_h | coarsest level | min_h | finest level
 --------|-------|----------------|-------|-------------"""
-)
+        )
 
         for i in self._particle_species:
             readme_text += """
 {} | {} | {} | {} | {}
-""".format( i.name, 
-            self.real_mesh_size(i.max_h)[0],
-            self.real_mesh_size(i.max_h)[1],
-            self.real_mesh_size(i.min_h)[0],
-            self.real_mesh_size(i.min_h)[1],
-            )    
+""".format(
+                i.name,
+                self.real_mesh_size(i.max_h)[0],
+                self.real_mesh_size(i.max_h)[1],
+                self.real_mesh_size(i.min_h)[0],
+                self.real_mesh_size(i.min_h)[1],
+            )
 
-        readme_text += ("""
+        readme_text += """
 
 The meshing quantities abive are species-specific. Once you have multiple 
 particle species, the actual grid results from a combination of their 
@@ -273,20 +274,19 @@ properties, and some species particles might reside on different resolution
 levels.
 
 """
-        )
         self._project.output.readme.add_package_description(readme_text)
-        
-    def real_mesh_size(self,target_h):
+
+    def real_mesh_size(self, target_h):
         """!
-        
+
         Translate a mesh size into its real Peano mesh size
-        
+
         Peano uses three-partitioning. That is, it will neve be able to match
         given refinement instructions exactly. All it can do is to approximate
-        them. See @ref 
-        
-        Return a tuple of mesh size and mesh levels 
-        
+        them. See @ref
+
+        Return a tuple of mesh size and mesh levels
+
         """
         h = self._domain_size[0]
         level = 0
@@ -472,12 +472,10 @@ levels.
         # Create mesh traversals aka solver steps
         #
         initialisation_steps = self.initialisation_steps_task_graph_compiler(
-            species_sets                       = self._particle_species_set,
-            verbose                            = verbose
+            species_sets=self._particle_species_set, verbose=verbose
         )
         solver_steps = self.algorithm_steps_task_graph_compiler(
-            species_sets                       = self._particle_species_set,
-            verbose                            = verbose
+            species_sets=self._particle_species_set, verbose=verbose
         )
 
         #

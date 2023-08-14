@@ -53,7 +53,9 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
     // for now, make sure this fails even without debug mode
     // TODO: Mladen needs to fix this later.
     if (localParticle->getWcount() < 1.e-5 * kernel_root) {
-      logError("findSmoothingLengthWithConstantSearchRadius", "Got particle with no neighbour " << localParticle->toString());
+      logError(
+        "findSmoothingLengthWithConstantSearchRadius", "Got particle with no neighbour " << localParticle->toString()
+      );
     }
     // [> No neighbours case <]
     // [> Double h and try again <]
@@ -83,26 +85,19 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
     // Same if we are below h_min
     if (((h_old >= hydro_h_max) && (f < 0.)) || ((h_old <= hydro_h_min) && (f > 0.))) {
       if (not localParticle->getIsBoundaryParticle()) {
-        logWarning("findSmoothingLengthWithConstantSearchRadius",
-            "Aborting unsuccessful smoothing length computation" <<
-            " partID " << localParticle->getPartid() <<
-            " h_old " << h_old <<
-            " h_min " << hydro_h_min <<
-            " h_max " << hydro_h_max <<
-            " f " << f);
+        logWarning(
+          "findSmoothingLengthWithConstantSearchRadius",
+          "Aborting unsuccessful smoothing length computation"
+            << " partID " << localParticle->getPartid() << " h_old " << h_old << " h_min " << hydro_h_min << " h_max "
+            << hydro_h_max << " f " << f
+        );
       }
       break;
     }
 
     // TODO MLaden: check this condition here.
-    if (not localParticle->getIsBoundaryParticle()){
-      assertion4(
-        (left < right),
-        left,
-        right,
-        localParticle->toString(),
-        activeParticles.size()
-      );
+    if (not localParticle->getIsBoundaryParticle()) {
+      assertion4((left < right), left, right, localParticle->toString(), activeParticles.size());
     }
 
     // Normal case: Use Newton-Raphson to get a better value of h
@@ -112,17 +107,12 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
 
     // Be verbose about the particles that struggle to converge
     if (iteration > max_iterations - 10) {
-        logWarning("findSmoothingLengthWithConstantSearchRadius",
-          "Smoothing length convergence problem: iteration" << iteration <<
-          " part ID " << localParticle->getPartid() <<
-          " h_old " << h_old <<
-          " h_new " << h_new <<
-          " f " << f <<
-          "f_prime" << f_prime <<
-          " n_sum " << n_sum <<
-          " n_target " << n_target <<
-          " left " << left <<
-          "right " << right
+      logWarning(
+        "findSmoothingLengthWithConstantSearchRadius",
+        "Smoothing length convergence problem: iteration"
+          << iteration << " part ID " << localParticle->getPartid() << " h_old " << h_old << " h_new " << h_new << " f "
+          << f << "f_prime" << f_prime << " n_sum " << n_sum << " n_target " << n_target << " left " << left << "right "
+          << right
       );
     }
 
@@ -169,15 +159,18 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
 
       // Ok, this particle is a lost cause...
       localParticle->setSmoothingLength(hydro_h_max);
-      logWarning("findSmoothingLengthWithConstantSearchRadius",
-          "Got a particle that is lost cause. Setting h = h_max , id=" << localParticle->getPartid());
+      logWarning(
+        "findSmoothingLengthWithConstantSearchRadius",
+        "Got a particle that is lost cause. Setting h = h_max , id=" << localParticle->getPartid()
+      );
       // Do some damage control if no neighbours at all were found
       // if (has_no_neighbours) {
       //   ...
       // }
     } else {
-      logError("findSmoothingLengthWithConstantSearchRadius",
-        "Fundamental problem with the smoothing length iteration logic.");
+      logError(
+        "findSmoothingLengthWithConstantSearchRadius", "Fundamental problem with the smoothing length iteration logic."
+      );
     }
   } // smoothing length iteration while loop
 
@@ -186,7 +179,9 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
     // for the time being while we're still developing the essentials. Chances
     // of us having messed something up are higher than encountering a case where
     // max_iterations is not sufficient.
-    logError("findSmoothingLengthWithConstantSearchRadius",
-             "Stopped iterations due to max iterations exceeded. Part ID=" << localParticle->getPartid());
+    logError(
+      "findSmoothingLengthWithConstantSearchRadius",
+      "Stopped iterations due to max iterations exceeded. Part ID=" << localParticle->getPartid()
+    );
   }
 }

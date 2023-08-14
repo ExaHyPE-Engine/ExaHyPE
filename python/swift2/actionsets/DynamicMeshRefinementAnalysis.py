@@ -26,8 +26,8 @@ class DynamicMeshRefinementAnalysis(ActionSet):
 
     Please consult the constructor, i.e. __init__(), for some information
     on algorithm variants and the implementation.
-    
-    To understand the code's behaviour, it is resonable to read through 
+
+    To understand the code's behaviour, it is resonable to read through
     @ref peano_amr_tex "Peano's generic AMR description".
 
     """

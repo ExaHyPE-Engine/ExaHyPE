@@ -10,7 +10,7 @@ import jinja2
 
 class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociation):
     """!
-    
+
     Associate particles to spacetree vertices
 
     Sort particles into the respective levels and cells. This mapping should

@@ -8,9 +8,11 @@ tarch::logging::Log toolbox::particles::SieveParticles<T>::_log("toolbox::partic
 
 
 template <typename T>
-int toolbox::particles::SieveParticles<T>::_SieveReductionTag = tarch::mpi::Rank::reserveFreeTag("toolbox::particles::"
-                                                                                                 "SieveParticles<T>::_"
-                                                                                                 "SieveReductionTag");
+int toolbox::particles::SieveParticles<T>::_SieveReductionTag = tarch::mpi::Rank::reserveFreeTag(
+  "toolbox::particles::"
+  "SieveParticles<T>::_"
+  "SieveReductionTag"
+);
 
 
 template <typename T>

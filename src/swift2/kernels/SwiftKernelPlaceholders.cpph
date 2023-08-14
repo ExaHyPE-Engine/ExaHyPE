@@ -77,8 +77,8 @@ template <typename Particle>
 void swift2::kernelPlaceholders::hydro_prepare_force(Particle& localParticle) {
 
   // Grab static parameters
-  const int hydroDimensions = localParticle->getHydroDimensions();
-  const double alphaAV = localParticle->getAlphaAV();
+  const int    hydroDimensions = localParticle->getHydroDimensions();
+  const double alphaAV         = localParticle->getAlphaAV();
 
   // Retrieve basic properties of local and active particles
   const double rho_a = localParticle->getDensity();
@@ -172,8 +172,8 @@ void swift2::kernelPlaceholders::hydro_prepare_force(Particle& localParticle) {
 template <typename Particle>
 void swift2::kernelPlaceholders::hydro_end_force(Particle& localParticle) {
 
-  const int hydroDimensions = localParticle->getHydroDimensions();
-  const double hydroDimensionsInv = 1. / (double) hydroDimensions;
+  const int    hydroDimensions    = localParticle->getHydroDimensions();
+  const double hydroDimensionsInv = 1. / (double)hydroDimensions;
 
   localParticle->setHDot(localParticle->getHDot() * localParticle->getSmoothingLength() * hydroDimensionsInv);
   assertion2(std::isfinite(localParticle->getHDot()), localParticle->toString(), localParticle->getSmoothingLength());
@@ -183,8 +183,8 @@ void swift2::kernelPlaceholders::hydro_end_force(Particle& localParticle) {
 template <typename Particle>
 void swift2::kernelPlaceholders::hydro_predict_extra(Particle& localParticle) {
 
-  const int hydroDimensions = localParticle->getHydroDimensions();
-  const double timeStepSize = localParticle->getSpecies().getMinTimeStepSize();
+  const int    hydroDimensions = localParticle->getHydroDimensions();
+  const double timeStepSize    = localParticle->getSpecies().getMinTimeStepSize();
   // When integrating in time with cosmology, the three times below will all have
   // different factors/powers of the expansion factor `a` absorbed in them. For
   // now, without cosmology, they are identical.
@@ -264,4 +264,3 @@ void swift2::kernelPlaceholders::hydro_reset_predicted_values(Particle& localPar
   localParticle->setSoundSpeed(soundspeed);
   localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed));
 }
-
