@@ -161,19 +161,18 @@ class Particle(peano4.toolbox.particles.Particle):
             + self.name
             + """
 
-  Mesh properties:
+Particle properties:
 
-  - particles per cell:         """
+- particles per cell:         """
             + str(self.particles_per_cell)
             + """
-  - h_min:                      """
+- h_min:                      """
             + str(self.min_h)
             + """
-  - h_max:                      """
+- h_max:                      """
             + str(self.max_h)
             + """
-
-  Attributes: """
+- attributes: """
             + str(len(self.data._attributes))
             + """
 
