@@ -1,8 +1,10 @@
 /**
 
- @page application_exahype2_selfgravitation Spherical accretion due to self-gravitation
-  u
- This is a 
+@page application_exahype2_selfgravitation Spherical accretion due to self-gravitation
+
+\li \subpage applications_exahype2_euler_selfgravitation_rhs_through_petsc
+\li \subpage application_exahype2_selfgravitation_accretion_through_approximated_rhs
+\li \subpage applications_exahype2_euler_selfgravitation_with_hyperbolic_subcycling
 
  */
  

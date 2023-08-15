@@ -1,6 +1,6 @@
 /**
 
- @page applications_exahype2_euler_selfgravitation_with_Poisson Euler equations with self-gravitation (hyperbolic-elliptic solver coupling)
+ @page applications_exahype2_euler_selfgravitation_with_hyperbolic_subcycling Euler equations with self-gravitation (hyperbolic-elliptic solver coupling)
  
 In this case study, we study an incompressible Euler, which means we
 have the (compressible) Euler equations coupled with a gravity
