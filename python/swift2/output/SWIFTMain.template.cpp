@@ -61,60 +61,25 @@ tarch::timing::Measurement   timeStepMeasurement;
 
 bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
   static bool   gridConstructed                             = false;
-  static bool   initialised                                 = false;
   static double nextMaxPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
   static double nextMinPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
-  static bool   haveJustWrittenSnapshot                     = false;
   static tarch::la::Vector<Dimensions,double> minH          = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
   bool          continueToSolve                             = true;
 
-  if (false) {} // just there to make my script's syntax easier
-  {% for STEP_NUMBER in range(0,INITIALISATIONSTEP_NAMES|length-1) %}
-  /**
-   * Part of one complete time step cycle, i.e. one sequence of steps
-   */
-  else if (
-    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}
-    and
-    repositories::rerunPreviousGridSweep()
-  ) {
-    peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}} )
+  // ==============================================================
+  // Phase x: Rerun previous step once again. Generic for all steps
+  // ==============================================================
+  if ( repositories::rerunPreviousGridSweep() ) {
+    logInfo(
+      "selectNextAlgorithmicStep()",
+      "rerun previous step " << repositories::StepRepository::toString(
+        repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())
+      )
     );
   }
-  else if (
-    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}
-    and
-    not repositories::rerunPreviousGridSweep()
-  ) {
-    peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER+1]}} )
-    );
-  }
-  {% endfor %}
-  {% for STEP_NUMBER in range(0,SOLVERSTEP_NAMES|length-1) %}
-  /**
-   * Part of one complete time step cycle, i.e. one sequence of steps
-   */
-  else if (
-    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[STEP_NUMBER]}}
-    and
-    repositories::rerunPreviousGridSweep()
-  ) {
-    peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[STEP_NUMBER]}} )
-    );
-  }
-  else if (
-    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[STEP_NUMBER]}}
-    and
-    not repositories::rerunPreviousGridSweep()
-  ) {
-    peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[STEP_NUMBER+1]}} )
-    );
-  }
-  {% endfor %}
+  // ==============================
+  // Phase 1: Set up (initial) grid
+  // ==============================
   else if (not gridConstructed) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::CreateGrid )
@@ -129,8 +94,6 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
         ", which his smaller than global h_max=" << GlobalMaxH <<
         ". Continue with load balancing "
       );
-//      ". Stop grid construction"
-//      gridConstructed = true;
     }
     if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
@@ -142,13 +105,24 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
       gridConstructed = true;
     }
   }
-  else if (gridConstructed and not initialised) {
+  // ==============================
+  // Phase 2: Insert the particles
+  // ==============================
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::CreateGrid
+    and
+    gridConstructed
+  ) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitialConditions )
     );
-
-    initialised = true;
   }
+  // ======================================================
+  // Phase 3: Run through the particle initialisation steps
+  // ======================================================
+  //
+  // Phase 3.a: Switch from initialisation (particle insertion) to first initialisation step
+  {% if INITIALISATIONSTEP_NAMES|length>0 %}
   else if (
     repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::InitialConditions
   ) {
@@ -156,14 +130,69 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[0]}} )
     );
   }
+  {% endif %}
+  // Phase 3.b: Run through individual initialisation steps
+  {% for STEP_NUMBER in range(0,INITIALISATIONSTEP_NAMES|length-1) %}
   else if (
-    ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
-    and
-    ( TimeInBetweenPlots==0.0 or haveJustWrittenSnapshot )
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}
   ) {
-    continueToSolve         = false;
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[STEP_NUMBER+1]}} )
+    );
+  }
+  {% endfor %}
+  // Phase 3.c: If last step has finished and is not to be repeated, switch to
+  // time step or plot
+  else if (
+    {% if INITIALISATIONSTEP_NAMES|length>0 %}
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[-1]}}
+    {% else %}
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::InitialConditions
+    {% endif %}
+    and
+    TimeInBetweenPlots>0.0
+  ) {
+    logInfo(
+      "selectNextAlgorithmicStep()",
+      "plot initial condition"
+    );
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+    );
   }
   else if (
+    {% if INITIALISATIONSTEP_NAMES|length>0 %}
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{INITIALISATIONSTEP_NAMES[-1]}}
+    {% else %}
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::InitialConditions
+    {% endif %}
+  ) {
+    logInfo(
+      "selectNextAlgorithmicStep()",
+      "no plotting active, switch to first time step immediately"
+    );
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[0]}} )
+    );
+  }
+  // ============================================
+  // Phase 4: Run through the particle time steps
+  // ============================================
+  //
+  // Phase 4.a: Initial substeps
+  {% for STEP_NUMBER in range(0,SOLVERSTEP_NAMES|length-1) %}
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[STEP_NUMBER]}}
+  ) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[STEP_NUMBER+1]}} )
+    );
+  }
+  {% endfor %}
+  // Phase 4.b: Final step might switch back to 0 or plot. It might also terminate if we don't plot
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[-1]}}
+    and
     ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
     and
     ( TimeInBetweenPlots>0.0 )
@@ -175,14 +204,20 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
     );
-    haveJustWrittenSnapshot = true;
   }
   else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[-1]}}
+    and
+    ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
+  ) {
+    continueToSolve         = false;
+  }
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[-1]}}
+    and
     TimeInBetweenPlots>0.0
     and
     (repositories::getMinTimeStamp()>=nextMinPlotTimeStamp or repositories::getMaxTimeStamp()>=nextMaxPlotTimeStamp)
-    and
-    not haveJustWrittenSnapshot
   ) {
     if (repositories::getMinTimeStamp()>=nextMinPlotTimeStamp) {
       nextMinPlotTimeStamp += TimeInBetweenPlots;
@@ -213,38 +248,34 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
     );
-    haveJustWrittenSnapshot = true;
   }
-  else if ( repositories::rerunPreviousGridSweep() ) {
-    /*
-    assertionEquals(
-      repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()),
-      repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[SOLVERSTEP_NAMES|length-1]}}
-    );
-    */
-
-    peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[SOLVERSTEP_NAMES|length-1]}} )
-    );
-  }
-  else {
-    /*
-    assertionEquals(
-      repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()),
-      repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[SOLVERSTEP_NAMES|length-1]}}
-    );
-    */
-
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[-1]}}
+  ) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[0]}} )
     );
-
-    haveJustWrittenSnapshot = false;
-
-    if (not continueToSolve and TimeInBetweenPlots>0.0) {
-      continueToSolve       = true;
-      nextMinPlotTimeStamp  = repositories::getMinTimeStamp();
-    }
+  }
+  // ======================================================
+  // Phase 5: Switch back from plotting to time stepping
+  // ======================================================
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::Plot
+    and
+    ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )
+  ) {
+    continueToSolve         = false;
+  }
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::Plot
+   ) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[0]}} )
+    );
+  }
+  else {
+    logError( "selectNextAlgorithmicStep", "no switch variant found" );
+    assertion(false);
   }
 
   return continueToSolve;
