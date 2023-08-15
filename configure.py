@@ -45,7 +45,7 @@ if args.multithreading == 'sycl':
   cxxflags += ' -fsycl'
 
 # Merge in any additional flags needed for the selected GPU backend
-if args.gpu and not args.toolchain:
+if args.gpu and not args.gpu == 'cuda' and not args.toolchain:
   print("Error: You need to specify a toolchain when using GPU support")
   exit(-1)
 
@@ -68,8 +68,8 @@ if args.gpu == 'omp' and args.toolchain == "gcc":
 if args.gpu == 'sycl' and args.toolchain == "intel":
   cxxflags += ' -fsycl -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
 
-if args.gpu == 'cuda': #arch flag is needed independent of toolchain
-  nvccflags += f'-arch={args.arch}'
+if args.gpu == 'cuda':
+  nvccflags += f'-arch={args.arch}'  # arch flag is needed independent of toolchain
 
 # Call the ./configure script with the specified arguments
 configure_args = []
@@ -92,6 +92,9 @@ if args.gpu == "cuda":
   if args.cuda_path is not None:
     if not args.cmake:
       configure_args.append(f'--with-cuda={args.cuda_path}')
+  else:
+    print("Error: You need to specify the CUDA path when compiling with CUDA")
+    exit(-1)
 
 if args.mpi is not None:
   if args.cmake:
