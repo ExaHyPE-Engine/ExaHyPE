@@ -2,7 +2,7 @@
 
 @page page_exahype_applications Applications
 
-\li \subpage applications_exahype2_euler_selfgravitation_with_Poisson
+\li \subpage application_exahype2_selfgravitation
 \li \subpage applications_exahype2_ccz4
 
 This directory holds links to some showcase applications of ExaHyPE. Many of these 
