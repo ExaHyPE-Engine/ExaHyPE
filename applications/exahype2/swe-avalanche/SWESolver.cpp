@@ -166,14 +166,14 @@ void applications::exahype2::avalanche::SWESolver::nonconservativeProduct(
 
   switch (normal) {
   case 0: // x
-    BTimesDeltaQ[0] = volumeH(0) * 0.0;
-    BTimesDeltaQ[1] = volumeH(0) * Nu * sqrt(h_centre) * (1.5 * deltaQ[0] * ux + h_centre * uxx);
-    BTimesDeltaQ[2] = volumeH(0) * 0.5 * Nu * sqrt(h_centre) * (1.5 * deltaQ[0] * (uy + vx) + h_centre * (uxy + vxx));
+    BTimesDeltaQ[0] = -(volumeH(0) * 0.0);
+    BTimesDeltaQ[1] = -(volumeH(0) * Nu * sqrt(h_centre) * (1.5 * deltaQ[0] * ux + h_centre * uxx));
+    BTimesDeltaQ[2] = -(volumeH(0) * 0.5 * Nu * sqrt(h_centre) * (1.5 * deltaQ[0] * (uy + vx) + h_centre * (uxy + vxx)));
     break;
   case 1: // y
-    BTimesDeltaQ[0] = volumeH(1) * 0.0;
-    BTimesDeltaQ[1] = volumeH(1) * 0.5 * Nu * sqrt(h_centre) * (1.5 * deltaQ[0] * (uy + vx) + h_centre * (uyy + vxy));
-    BTimesDeltaQ[2] = volumeH(1) * Nu * sqrt(h_centre) * (1.5 * deltaQ[0] * vy + h_centre * vyy);
+    BTimesDeltaQ[0] = -(volumeH(1) * 0.0);
+    BTimesDeltaQ[1] = -(volumeH(1) * 0.5 * Nu * sqrt(h_centre) * (1.5 * deltaQ[0] * (uy + vx) + h_centre * (uyy + vxy)));
+    BTimesDeltaQ[2] = -(volumeH(1) * Nu * sqrt(h_centre) * (1.5 * deltaQ[0] * vy + h_centre * vyy));
     break;
   }
 }

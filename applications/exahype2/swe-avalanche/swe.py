@@ -288,7 +288,7 @@ my_solver.set_implementation(
 ## Independent Constants
 my_solver.add_solver_constants("static constexpr double Gravity = {}; // [m/s^2]".format(9.81))
 my_solver.add_solver_constants("static constexpr double Pi = {};".format(3.14159))
-my_solver.add_solver_constants("static constexpr double Zeta = Pi/4;")
+my_solver.add_solver_constants("static constexpr double Zeta = Pi/4.0;")
 my_solver.add_solver_constants("static constexpr double Zeta1 = Pi/3.0;")
 my_solver.add_solver_constants("static constexpr double Zeta2 = Pi/12.0;")
 my_solver.add_solver_constants("static constexpr double Zeta3 = Pi/15.0;")
