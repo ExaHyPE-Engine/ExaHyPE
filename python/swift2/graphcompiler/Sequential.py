@@ -207,6 +207,21 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
     that all is in place. As we run through the species one by one, we
     also have to make this reasoning one by one.
 
+    ## Initialisation
+    
+    The initialisation is no different to the time stepping besides two
+    places:
+    
+    1. We have to use the initialisation steps rather than the 
+       algorithm steps. 
+    2. We have to insert an additional dummy sweep initially. After 
+       users have inserted their particles, they are scattered all
+       over the place. If the first initialisation phase then relies
+       on continuous AoS data, it will crash.
+       
+    The latter "tweak" obviously can be ignored whenever we work without
+    coalescend memory.
+    
     ## Tree statistics
 
     We assume that there is a tree marker already. So our analysis
@@ -230,6 +245,22 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
                 optimisation, use_initialisation_steps
             )
         )
+
+    if (
+        optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE
+        and 
+        use_initialisation_steps
+       ):
+        if verbose:
+            print(
+                "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: insert initial dummy sweep"
+            )
+        new_step = peano4.solversteps.Step(
+            "InitialisationDummyStep",
+            add_user_defined_actions=False,
+            )
+        mesh_traversals.append(new_step)
+        alter_particle_position.append(True)
 
     for current_species_set in species_sets:
         if verbose:
