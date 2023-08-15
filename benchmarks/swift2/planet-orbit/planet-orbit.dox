@@ -20,7 +20,75 @@ The text below runs through the main steps of this script, but omits technical
 details such as the parsing of command line arguments.
 
 
-## Import core packages
+## Run example benchmark and visualise
+
+Usage is relatively straightforward
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=../../../python
+python3 planet-orbit.py --time-integrator euler -et 5.0 -cs 0.4 -plot 0.01
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The code spills out a series of vtu files for the particles including one pvd 
+file that serves as overview/meta file. You can load this one straight into
+Paraview, e.g. The grid visualisation requires a separate postprocessing step
+before you can visualise it as native file. Please note that the snippet above
+uses an explicit Euler which is not capable to reproduce a stationary orbit, 
+as it is a non-symplectic time integrator.
+
+
+Depending on the mesh size, you get different AMR levels. I extract them into
+a table below, but it actually makes more sense to study the README-orbit-xxx.md
+file that the Python script produces. It provides all the essential information 
+per experiment. 
+
+
+Cell size | Levels | Remarks
+----------|--------|---------
+0.4       | 0      | Regular 81x81 mesh. No dynamic adaptivity (default).
+0.1       | 1      | Around 234 mesh cells with one level of adaptivity.
+0.03      | 2      | Two levels of adaptivity. The number of mesh cells starts to change almost every time step.
+0.01      | 3      | More radical version with three levels of adaptive mesh refinement. 
+
+
+Swift's AMR analysis works on a per-cell basis. For each cell, it studies
+all four adjacent vertices, and sums up the number of particles stored 
+there. As we set the maximum number of particles to 0, every cell that is
+adjacent to a vertex holding the single particle will issue a refine command
+- unless the cell is already refined down to the minimum mesh size.
+ 
+
+
+
+## Visualise resulting mesh
+
+I recommend to use the Python Paraview variant to convert the 
+@ref tarch_patch_files "arising mesh files" into something you can visualise 
+straightforwardly. 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/opt/paraview/bin/pvpython ../../../python/peano4/visualisation/render.py --filter-fine-grid grid.peano-patch-file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+## Clean up
+
+The instruction snippets below clean up the majority of the file spilled out
+by this benchmark. All files that are essential to rerun the benchmark and
+are stored in the repo are kept:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+rm *patch-file *.vtu *.pvd *.o *.bak *.cmake
+rm -rf celldata globaldata observers repositories vertexdata
+rm Constants.h planetorbit-main* Makefile *.md
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+## Tutorial
+
+
+### Import core packages
 
 We need Peano's core Python package, the Swift 2 package, and then we employ
 DaStGen 2 which is basically a tool to write plain C++ classes which hold our
@@ -35,7 +103,7 @@ import dastgen2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-## Set up a project
+### Set up a project
 
 The project is our wrapper of the whole SPH code (which is not really SPH
 but simply a simple Lagrangian model for an object subject to an ODE):
@@ -48,7 +116,7 @@ project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"],
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-## Configure the particle
+### Configure the particle
 
 A particle in Swift is defined by its numerics. In this simple example,
 we don't really have an interaction radius, so we can take the simplest
@@ -71,7 +139,7 @@ particle   = swift2.particle.LeapfrogFixedSearchRadius( name                   =
                                                         )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As we set the interaction radius to
+As we set the interaction radius to 
 zero later on, and as we set the particles_per_cell to zero, the code will run
 into a dilemma:
 There will always be one cell in the mesh which hosts one particle which
@@ -81,7 +149,7 @@ That stops the refinement no matter of the violated particles_pre_cell
 constraint.
 
 
-## Adding additional attributes
+### Adding additional attributes
 
 So far, our particles are primitive. They will hold a position and a maximum
 search radius, as any particle within Peano's particle toolbox owns these
@@ -107,7 +175,7 @@ additional information allows Peano in combination with our LLVM modifications
 to produce particularly memory-efficient code.
 
 
-## Configure the overall simulation
+### Configure the overall simulation
 
 Peano will need to know the value of some general properties.
 For more information, consult the documentation of swift2.Project
@@ -147,7 +215,7 @@ up by the code that the Python script will ultimately produce.
 
 
 
-## Injecting the physics
+### Injecting the physics
 
 We start with the definition of some constants. All of these could be computed
 within the C++ code, too, but it is often more convenient to compute them in
@@ -200,7 +268,7 @@ EARTH_V_INI_Y = str(V_MAX / LENGTH_UNIT * T)
 The actual export happens later.
 
 
-## Add the forces
+### Add the forces
 
 To add the forces, we have attach a C/C++ code snippet to the particle. In our
 present case, the force is hard-coded, i.e. does not depend on other particles.
@@ -266,7 +334,7 @@ benchmarks/swift2/planet-orbit/planet-orbit.py for more documentation how
 these two missing steps are to be realised.
 
 
-## Generate the Peano project and build code
+### Generate the Peano project and build code
 
 We close the discussion with the actual generation of the Peano project that
 has been built up by our Swift Python API. We grab the Peano project from
@@ -296,6 +364,9 @@ You might want to cancel the final build call. Once generate has teminated,
 you will get a plain Makefile in your project directory and you can call
 make outside of the Python script.
 
+
+
+## A sample script using the benchmark/tutorial
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -347,17 +418,6 @@ echo 'Done. Bye!'
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-## Clean up
-
-The instruction snippets below clean up the majority of the file spilled out
-by this benchmark. All files that are essential to rerun the benchmark and
-are stored in the repo are kept:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-rm *patch-file *.vtu *.pvd *.o *.bak *.cmake
-rm -rf celldata globaldata observers repositories vertexdata
-rm Constants.h planetorbit-main* Makefile *.md
-~~~~~~~~~~~~~~~~~~~~~~~~~
 
  */
 

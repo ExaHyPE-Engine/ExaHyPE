@@ -13,7 +13,38 @@ All of the recommendations there apply for SWIFT, too.
 
 
 
-## Maintaining the active sets
+
+## Optimisting the single core performance of individual species (vectorisation)
+
+To enable proper vectorisation is not trivial within a Lagrangian framework, 
+as we typically need the right instructions, i.e. compute kernels, but also 
+a fitting memory layout. 
+As a user, you are responsible to ensure that the memory layout is properly
+chosen, and then you can activate the solvers' vectorisation.
+
+
+
+Some of Swift's solvers are however already well-prepared to exploit the knowledge about 
+optimised memory layouts and proper setups of action sets and hence can be 
+vectorised.
+This does not hold for all solvers. You have to study their documentation,
+typically alter some switches and then tune the memory layout and particle
+handling as described below.
+Please note that not all solvers are compatible with all graph compiler 
+flavours either. Again, this is something you might want to check with the
+solver documentation.
+
+Even if your solver does not support vectorisation, you might benefit from the
+discussions below such as the memory pool and the different flavours of active
+set handling. 
+The impact just won't be that big.
+The page @ref swift_particle_new_solver provides further details how to write 
+vectorised solvers, i.e. how to prepare solvers to be able to exploit continuous,
+well-administered memory.
+
+
+
+### Step 1: Maintaining the active sets
 
 There are two different versions how to maintain the active sets: We can either
 build them up as proper sets and add particles to the set whenever we 
@@ -27,27 +58,29 @@ particle in touchCellLastTime() where it is within the set and then we can
 remove it. We also miss out on any adjacent memory storage. The list variant
 is faster and preserves the ordering of the particles per vertex/cell (see the
 remarks below), but it works if and only if the particle-mesh association 
-remains invariant. If in doubt, we might have to use some dummy mesh traversals.
+remains invariant. Such an "ordered" particle sequence allows you to use 
+compute kernels with coalesced memory access, i.e. vectorisation.
+This insight gives rise to a third variant, where we use the coalesced memory
+storage and insert sorting sweeps whenever the particle positions change, such
+that we can always work with properly sorted particles.
 
 Whether or not to use one variant or the other is a decision that's made by the 
 graph compiler. Some compiler flavours support different active set 
 construction variants, others are tied to one variant only.
 By default, the project initialises its graph compiler with the variant
-swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_use_stlsets_to_construct_active_sets().
+that does not try to vectorise or use sorted particles.
 You can alter that in your code:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets
-project.initialisation_steps_task_graph_compiler = swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_use_stllists_to_construct_active_sets
+project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-These two lines alter the graph compiler in use.
+Just pick another variant (consult namespace docu) here. Please note that these
+operations do typically unfold their potential if and only if you use a fully
+vectorised solver in combination with a proper particle memory management below.
 
-
-## Optimisting the single core performance of individual species
-
-### Storage of particles and maintaining the particle-mesh association
+### Step 2: Storage of particles and maintaining the particle-mesh association
 
 Maintaining the association of particles to meshes is key, as Peano traverses 
 the mesh and issues the particle updates for those particles tied to particular
@@ -114,35 +147,13 @@ The line above changes the particle set generator, i.e. the class which maps the
 particle set onto an implementation. 
 
 
+### Step 3: Expose all particle attributes
 
-### Using optimised kernels with coalescent memory access
-
-If you use one of the two memory pools as discussed above for you particle
-species and if you use the 
-active set construction via lists rather than sets overall,
-you can switch to optimised kernels which exploit coalescent memory access.
-They might vectorise better. 
-
-For this, you actively have to manipulate your kernel invocations, and not 
-every solver supports this, i.e. has these optimisations built in. One 
-variant where you see this feature offered is swift2.particle.SPHLeapfrogFixedSearchRadius.
-Set its constructor's argument use_optimised_coalesced_memory_access_kernels,
-and you should get optimised kernels. Search the implementation for the 
-corresponding attribute _use_optimised_coalesced_memory_access_kernels, 
-and you see how the default kernel invocations are replaced with optimised
-variants.
-
-The implementation of these optimised variants is beyond scope here, but 
-peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists
-discusses their usage. Also, you might want to look into 
-::swift2::kernels::computeHydroForce() for an example of an optimised kernel.
-
-Before you start, I recommend to read through @ref page_peano_performance_optimisation "the generic performance analysis"
-comments. Notably the remarks on compiler feedback (with the Intel toolchain)
-are of great value and can support any optimisation. Furthermore, study the 
+Vectorisation requires very aggressive inlining. To facilitate such inlining, 
+all the setters and getters of particle attributes have to be available in the
+header. Study the 
 @ref page_dastgen "DaStGen documentation" for remarks how to move getters and
-settings into the header, as almost all C++ compilers will need this for 
-aggressive vectorisation. Notably study the semantics of the function
+settings into the header. Notably study the semantics of the function
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 particle.data.expose_all_attributes_in_header_file()
@@ -150,6 +161,17 @@ particle.data.expose_all_attributes_in_header_file()
 
 which moves all attribute setters and getters into the header and hence 
 facilitiates very aggressive inlining via copy n paste.
+
+
+
+### Step 4: Equip your solver with vectorised kernels
+
+Some of Swift's solvers are already well-prepared to exploit the knowledge about 
+optimised memory layouts and proper setups of action sets. Once you have 
+followed the steps above, you can now activate this vectorisation. It differs
+from solver to solver how to do this, but most offer a boolean flag in their
+constructor.
+
 
 
  */

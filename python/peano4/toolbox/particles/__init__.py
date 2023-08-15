@@ -14,7 +14,7 @@ from .ParticleSet                   import ParticleSetGenerator_GlobalContinuous
 
 
 from .ParticleParticleInteraction_Sets         import ParticleParticleInteraction_Sets
-from .ParticleParticleInteraction_StackOfLists import ParticleParticleInteraction_StackOfLists
+from .ParticleParticleInteraction_StackOfListsOverStaticParticles import ParticleParticleInteraction_StackOfListsOverStaticParticles
 from .ParticlePerCellUpdate                    import ParticlePerCellUpdate
 
 
@@ -28,6 +28,7 @@ from .UpdateParticleGridAssociation_LiftDrop import UpdateParticleGridAssociatio
 
 from .UpdateParallelState           import UpdateParallelState
 
+from .GatherParticlesInMemoryPool   import GatherParticlesInMemoryPool
 
 from .InsertRandomParticlesIntoUnrefinedCells               import InsertRandomParticlesIntoUnrefinedCells
 from .InsertParticlesAlongCartesianLayoutIntoUnrefinedCells import InsertParticlesAlongCartesianLayoutIntoUnrefinedCells
