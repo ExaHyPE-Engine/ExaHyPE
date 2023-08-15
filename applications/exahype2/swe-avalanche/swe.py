@@ -33,8 +33,8 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   patch_size            = 3,
   unknowns              = 3,
   auxiliary_variables   = 11,
-  min_volume_h          = 0.55,
-  max_volume_h          = 1.1,
+  min_volume_h          = 0.008,
+  max_volume_h          = 0.08,
   time_step_relaxation  = 0.5
 )
 
@@ -42,7 +42,7 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 # To see which variables (unknowns + auxiliary variables) we can visualise,
 # let's add a plot description for the variables to our solver.
 #
-my_solver.plot_description = "h, hu, hv, b"
+my_solver.plot_description = "h, hu, hv, b, u_x, u_y, u_xx, u_yy, u_xy, v_x, v_y, v_xx, v_yy, v_xy"
 
 my_solver._preprocess_reconstructed_patch = """
         const int patchSize = """ + str( my_solver._patch.dim[0] ) + """;
@@ -214,7 +214,30 @@ my_solver._preprocess_reconstructed_patch = """
  
             const double uXRightYRightNeighbourCell = oldQWithHalo[xRightYRightNeighbourCellSerialized*totalVariables+hu]/oldQWithHalo[xRightYRightNeighbourCellSerialized*totalVariables+h];
             const double vXRightYRightNeighbourCell = oldQWithHalo[xRightYRightNeighbourCellSerialized*totalVariables+hv]/oldQWithHalo[xRightYRightNeighbourCellSerialized*totalVariables+h];
- 
+            
+            // std::cout<<"Hello after division"<<std::endl;
+            // std::cout<<"coordinates: ("<<x<<", "<<y<<")"<<std::endl;
+            // std::cout<<"uCurrentCell: "<<uCurrentCell<<std::endl;
+            // std::cout<<"vCurrentCell: "<<vCurrentCell<<std::endl;
+            // std::cout<<"uXLeftNeighbourCell: "<<uXLeftNeighbourCell<<std::endl;
+            // std::cout<<"vXLeftNeighbourCell: "<<vXLeftNeighbourCell<<std::endl;
+            // std::cout<<"uXRightNeighbourCell: "<<uXRightNeighbourCell<<std::endl;
+            // std::cout<<"vXRightNeighbourCell: "<<vXRightNeighbourCell<<std::endl;
+            // std::cout<<"uYLeftNeighbourCell: "<<uYLeftNeighbourCell<<std::endl;
+            // std::cout<<"vYLeftNeighbourCell: "<<vYLeftNeighbourCell<<std::endl;
+            // std::cout<<"uYRightNeighbourCell: "<<uYRightNeighbourCell<<std::endl;
+            // std::cout<<"vYRightNeighbourCell: "<<vYRightNeighbourCell<<std::endl;
+            // std::cout<<"uXLeftYLeftNeighbourCell: "<<uXLeftYLeftNeighbourCell<<std::endl;
+            // std::cout<<"vXLeftYLeftNeighbourCell: "<<vXLeftYLeftNeighbourCell<<std::endl;
+            // std::cout<<"uXLeftYRightNeighbourCell: "<<uXLeftYRightNeighbourCell<<std::endl;
+            // std::cout<<"vXLeftYRightNeighbourCell: "<<vXLeftYRightNeighbourCell<<std::endl;
+            // std::cout<<"uXRightYLeftNeighbourCell: "<<uXRightYLeftNeighbourCell<<std::endl;
+            // std::cout<<"vXRightYLeftNeighbourCell: "<<vXRightYLeftNeighbourCell<<std::endl;
+            // std::cout<<"uXRightYRightNeighbourCell: "<<uXRightYRightNeighbourCell<<std::endl;
+            // std::cout<<"vXRightYRightNeighbourCell: "<<vXRightYRightNeighbourCell<<std::endl;
+            // std::cout<<std::endl;
+            // std::cout<<std::endl;
+            
             //u_x
             oldQWithHalo[currentCellSerialized*totalVariables+real_var+u_x] = (uXRightNeighbourCell - uXLeftNeighbourCell);
 
@@ -255,7 +278,7 @@ my_solver.set_implementation(
   ncp                   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   flux                  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   refinement_criterion  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  source_term           = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  # source_term           = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
 )
 
 #
@@ -265,7 +288,7 @@ my_solver.set_implementation(
 ## Independent Constants
 my_solver.add_solver_constants("static constexpr double Gravity = {}; // [m/s^2]".format(9.81))
 my_solver.add_solver_constants("static constexpr double Pi = {};".format(3.14159))
-my_solver.add_solver_constants("static constexpr double Zeta = Pi/6.0;")
+my_solver.add_solver_constants("static constexpr double Zeta = Pi/4;")
 my_solver.add_solver_constants("static constexpr double Zeta1 = Pi/3.0;")
 my_solver.add_solver_constants("static constexpr double Zeta2 = Pi/12.0;")
 my_solver.add_solver_constants("static constexpr double Zeta3 = Pi/15.0;")
@@ -277,6 +300,7 @@ my_solver.add_solver_constants("static constexpr double Mu1 = tan(Zeta1);")
 my_solver.add_solver_constants("static constexpr double Mu2 = tan(Zeta2);")
 my_solver.add_solver_constants("static constexpr double Mu3 = tan(Zeta3);")
 my_solver.add_solver_constants("static constexpr double Nu = (2.0/9.0)*(FrictionLengthScale/Beta)*(Gravity*sin(Zeta)/sqrt(Gravity*cos(Zeta)))*(((Mu2-Mu1)/(tan(Zeta)-Mu1))-1); //Granular Viscosity Coefficient")
+# my_solver.add_solver_constants("static constexpr double Nu = 0.0;")
 my_solver.add_solver_constants("static constexpr double Hstart = FrictionLengthScale*(((Mu2-Mu1)/(tan(Zeta)-Mu3))-1) ;")
 my_solver.add_solver_constants("static constexpr double Hstop = FrictionLengthScale*(((Mu2-Mu1)/(tan(Zeta)-Mu1))-1) ;")
 #
@@ -291,10 +315,10 @@ my_project.add_solver( my_solver )
 #
 my_project.set_global_simulation_parameters(
   dimensions            = 2,
-  size                  = [3.0, 3.0],
-  offset                = [0.0, 0.0],
-  min_end_time          = 0.05,
-  max_end_time          = 0.05,
+  size                  = [2.0, 2.0],
+  offset                = [-1.0, -1.0],
+  min_end_time          = 0.020,
+  max_end_time          = 0.020,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = 0.005, # snapshot interval
   periodic_BC           = [False, False, False]
