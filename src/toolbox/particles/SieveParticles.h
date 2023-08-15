@@ -167,10 +167,16 @@ public:
    */
   ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker);
 
+  /**
+   * Fine out how many particles still to sieve
+   *
+   * If you ask how many particles we have to sieve, you will receive the ones
+   * that have not been sieved so far. Therefore, this routine can not be used
+   * for any statistics after a grid sweep to find out how many sieves have
+   * been done.
+   */
   bool hasParticlesToBeSievedIntoVertices() const;
 
-  int getNumberOfParticlesToBeSieved() const;
-  int getNumberOfParticlesThatCanNotBeLiftedWithinTheirTree() const;
 
 private:
   static tarch::logging::Log _log;

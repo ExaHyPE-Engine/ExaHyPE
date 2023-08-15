@@ -107,7 +107,9 @@ namespace swift2 {
      * search radii.
      */
     template <typename ParticleContainer>
-    void endDensityCalculationWithConstantSearchRadius(const ParticleContainer& localParticles);
+    void endDensityCalculationWithConstantSearchRadius(const ParticleContainer& localParticles) {
+      // Nothing to do here.
+    }
 
     /**
      * Resets the acceleration and other variables

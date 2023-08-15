@@ -31,7 +31,7 @@ struct toolbox::particles::memorypool::VertexWiseContinuousMemoryPool {
     VertexWiseContinuousMemoryPool();
 
     void scatter();
-    Container::iterator scatterAndUpdateIterator( const Container::iterator&  p );
+    typename Container::iterator scatterAndUpdateIterator( const typename Container::iterator&  p );
 
     /**
      * Gather the particle
@@ -53,6 +53,11 @@ struct toolbox::particles::memorypool::VertexWiseContinuousMemoryPool {
      */
     void gather();
 
+    /**
+     * Is the vertex data gathered
+     *
+     * This routine returns false if the underlying container is empty.
+     */
     bool isGathered() const;
 
     /**
@@ -65,7 +70,7 @@ struct toolbox::particles::memorypool::VertexWiseContinuousMemoryPool {
      * deleted. If our data is scattered, we can just delete the original one
      * and push back the new copy.
      */
-    void replace( Container::iterator p, T* newCopy );
+    void replace( typename Container::iterator p, T* newCopy );
 
     /**
      * Clears the underlying list of pointers and resets _gatheredDataPointer

@@ -3,6 +3,7 @@
 #pragma once
 
 
+#include "tarch/tarch.h"
 #include "tarch/la/Scalar.h"
 
 #pragma once
@@ -49,9 +50,18 @@ namespace tarch {
     bool equals( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**
+     * Smaller operator for floating point values
+     *
+     * This operation is a header-only operation on purpose, as we use it in
+     * some SPH compute kernels which we want to vectorise aggressively.
+     *
+     * The static here is required to avoid multiple definition errors.
+     *
      * @param tolerance Absolute tolerance when we compare two values.
      */
-    bool smaller( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
+    static bool smaller( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE) InlineMethod {
+      return lhs - rhs < -tolerance;
+    }
 
     /**
      * @param tolerance Absolute tolerance when we compare two values.
