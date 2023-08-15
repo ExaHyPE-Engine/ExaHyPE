@@ -32,7 +32,7 @@ void exahype2::tests::KernelLaunchTest::testDimensions() {
   testDimensionsKernel<<<1, 1>>>(d_value);
 
   // Copy the result back from the device
-  cudaMemcpy(&value, d_value, sizeof(int), cudaMemcpyDeviceToHost);
+  CHECK_CUDA_ERROR(cudaMemcpy(&value, d_value, sizeof(int), cudaMemcpyDeviceToHost));
 
   // Free allocated memory on the device
   CHECK_CUDA_ERROR(cudaFree(d_value));

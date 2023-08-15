@@ -85,23 +85,18 @@ ExaHyPE2_debug_CUDA_OBJS_2D		= tests/libExaHyPE2Core2d_debug_a-KernelLaunchTest.
 ExaHyPE2_stats_CUDA_OBJS_2D		= tests/libExaHyPE2Core2d_stats_a-KernelLaunchTest.o
 
 $(ExaHyPE2_CUDA_OBJS_2D): tests/libExaHyPE2Core2d_a-%.o: tests/%.cu
-	@echo "  NVCC     $@"
 	$(NVCC) $(NVCC_FLAGS_RELEASE) $(CXXFLAGS_PEANO_2D_RELEASE) -c $< -o $@
 
 $(ExaHyPE2_trace_CUDA_OBJS_2D): tests/libExaHyPE2Core2d_trace_a-%.o: tests/%.cu
-	@echo "  NVCC     $@"
 	$(NVCC) $(NVCC_FLAGS_TRACE) $(CXXFLAGS_PEANO_2D_TRACE) -c $< -o $@
 
 $(ExaHyPE2_asserts_CUDA_OBJS_2D): tests/libExaHyPE2Core2d_asserts_a-%.o: tests/%.cu
-	 @echo "  NVCC     $@"
 	$(NVCC) $(NVCC_FLAGS_ASSERTS) $(CXXFLAGS_PEANO_2D_ASSERTS) -c $< -o $@
 
 $(ExaHyPE2_debug_CUDA_OBJS_2D): tests/libExaHyPE2Core2d_debug_a-%.o: tests/%.cu
-	@echo "  NVCC     $@"
 	$(NVCC) $(NVCC_FLAGS_DEBUG) $(CXXFLAGS_PEANO_2D_DEBUG) -c $< -o $@
 
 $(ExaHyPE2_stats_CUDA_OBJS_2D): tests/libExaHyPE2Core2d_stats_a-%.o: tests/%.cu
-	@echo "  NVCC     $@"
 	$(NVCC) $(NVCC_FLAGS_STATS) $(CXXFLAGS_PEANO_2D_STATS) -c $< -o $@
 
 libExaHyPE2Core2d_a_LIBADD          = $(ExaHyPE2_CUDA_OBJS_2D)
