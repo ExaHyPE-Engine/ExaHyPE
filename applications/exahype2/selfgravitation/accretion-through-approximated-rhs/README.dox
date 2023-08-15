@@ -1,8 +1,28 @@
 /**
 
- @page application_exahype2_selfgravitation_accretion_through_approximated_rhs Classic SSInfall experiment with modified right-hand side
+@page application_exahype2_selfgravitation_accretion_through_approximated_rhs Classic SSInfall experiment with modified right-hand side
   
- This is a 
+This directory hosts the original methodology as discussed in 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+@article{10.1093/mnras/stac1991,
+    author = {Zhang, Han and Weinzierl, Tobias and Schulz, Holger and Li, Baojiu},
+    title = "{Spherical accretion of collisional gas in modified gravity I: self-similar solutions and a new cosmological hydrodynamical code}",
+    journal = {Monthly Notices of the Royal Astronomical Society},
+    volume = {515},
+    number = {2},
+    pages = {2464-2482},
+    year = {2022},
+    month = {07},
+    abstract = "{The spherical collapse scenario has great importance in cosmology since it captures several crucial aspects of structure formation. The presence of self-similar solutions in the Einstein-de Sitter (EdS) model greatly simplifies its analysis, making it a powerful tool to gain valuable insights into the real and more complicated physical processes involved in galaxy formation. While there has been a large body of research to incorporate various additional physical processes into spherical collapse, the effect of modified gravity (MG) models, which are popular alternatives to the Λ cold dark matter paradigm to explain the cosmic acceleration, is still not well understood in this scenario. In this paper, we study the spherical accretion of collisional gas in a particular MG model, which is a rare case that also admits self-similar solutions. The model displays interesting behaviours caused by the enhanced gravity and a screening mechanism. Despite the strong effects of MG, we find that its self-similar solution agrees well with that of the EdS model. These results are used to assess a new cosmological hydrodynamical code for spherical collapse simulations introduced here, which is based on the hyperbolic partial differential equation engine ExaHyPE 2. Its good agreement with the theoretical predictions confirms the reliability of this code in modelling astrophysical processes in spherical collapse. We will use this code to study the evolution of gas in more realistic MG models in future work.}",
+    issn = {0035-8711},
+    doi = {10.1093/mnras/stac1991},
+    url = {https://doi.org/10.1093/mnras/stac1991},
+    eprint = {https://academic.oup.com/mnras/article-pdf/515/2/2464/45192162/stac1991.pdf},
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A preprint of this document is available from https://arxiv.org/abs/2203.01174.
 
  */
  
