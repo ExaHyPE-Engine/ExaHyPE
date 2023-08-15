@@ -1,4 +1,4 @@
-#include "GravityModel.h"
+#include "../../selfgravitation/accretion-through-approximated-rhs/GravityModel.h"
 
 
 void applications::exahype2::euler::sphericalaccretion::initialiseHomogeneousDensity(
