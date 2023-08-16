@@ -122,6 +122,12 @@ public:
   /**
    * Add a particle to the list of particles which cannot be lifted
    *
+   * You hand over the pointer to the sieve list. That is, nothing is
+   * copied, but the responsibility for this object, from now on, resides
+   * with the sieve list. It will eventually delete the particle. Therefore
+   * you should not maintain any pointer to the particle anymore once you
+   * hand it over to the sieve list.
+   *
    * The routine is thread-safe. The object does not keep any kind of
    * statistics. You have to maintain stats on your own if you need them.
    */
@@ -161,10 +167,16 @@ public:
    */
   ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker);
 
+  /**
+   * Fine out how many particles still to sieve
+   *
+   * If you ask how many particles we have to sieve, you will receive the ones
+   * that have not been sieved so far. Therefore, this routine can not be used
+   * for any statistics after a grid sweep to find out how many sieves have
+   * been done.
+   */
   bool hasParticlesToBeSievedIntoVertices() const;
 
-  int getNumberOfParticlesToBeSieved() const;
-  int getNumberOfParticlesThatCanNotBeLiftedWithinTheirTree() const;
 
 private:
   static tarch::logging::Log _log;

@@ -24,10 +24,9 @@
  * gave up on this idea.
  *
  * The new version now is a little bit more down to the ground: Each individual
- * vertex hosts a set of pointers, and it also has a unique reference to the
- * pool. By default, a vertex has a "not tied to pool" reference. All the
- * particles are somewhere out there on the heap. When I touch a vertex for the
- * first time, I know a couple of facts:
+ * vertex hosts a set of pointers administered through a memory pool object.
+ * By default, its particles are not tied to pool, i.e. roam on th heap.
+ * When I touch a vertex for the first time, I know a couple of facts:
  *
  * - This vertex data is now on the local call stack. It has been loaded from
  *   the input stack into the local call stack before Peano invokes
@@ -63,7 +62,7 @@
  *
  * The most important exception is the fact that we do not(!) overwrite erase
  * but instead eliminate it from the signature. erase() is very dangerous. We
- * provide a routine removeFromVertex() which returns the "extracted" particle
+ * provide a routine grabParticle() which returns the "extracted" particle
  * which is actually now a copy from the vertex data onto the heap and removes
  * the pointer from the underlying vertex.
  *
@@ -88,5 +87,9 @@
  * for examples of different pool realisations (in C++) and study the various
  * generators shipped with peano4.toolbox.particles.ParticleSet for further
  * flavours.
+ *
+ * You can trigger the resorting in various places. I do recommend to use
+ * the parallel state update. Swift for example implements it there as
+ * documented in swift2.graphcompiler.AMRLogic.add_dynamic_mesh_refinement_and_particle_resorting().
  *
  */

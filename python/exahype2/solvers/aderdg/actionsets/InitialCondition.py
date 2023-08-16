@@ -43,7 +43,11 @@ class InitialCondition(AbstractAderDGActionSet):
     const double timeStepSize = 0.0;
     {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;    
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
-    
+
+    // relevant for tracing et al which kicks in if and only if cell has been
+    // updated
+    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 
 """

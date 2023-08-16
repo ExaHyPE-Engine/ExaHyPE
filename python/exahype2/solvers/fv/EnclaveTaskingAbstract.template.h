@@ -44,7 +44,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       Secondary,
       PlottingInitialCondition,
       PrimaryAfterGridInitialisation,
-      Plotting
+      Plotting,
+      Suspended
     };
 
     static std::string toString(SolverState);
@@ -184,6 +185,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * operation is still invoked.
      */
     virtual void finishPlottingStep() override;
+
+    virtual void suspendSolversForOneGridSweep() override;
 
     /**
      * @param currentTimeStep If you set this to false, you'll get the

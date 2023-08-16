@@ -96,8 +96,11 @@ FORTRAN_OBJS+=$(subst .f,.o,$(subst .f90,.o,$(GENERATED_FORTRAN_SOURCES)))
 FORTRAN_MODULE_OBJS={% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".o") +" "}} {%- endfor %}
 
 {% if USING_CMAKE %}
+# The double cmake .. is necessary to add the generated target to the build there
+# The sceond cmake .. might be necessary to add the newly needed targets due to the changed CMAKE_BUILD_TYPE
+# The build type changes in the first call but propgates only in the second
 all:
-	bash -c "{{CMAKE_MAKE_COMMAND}} && cmake .. && make $(MAKEFLAGS) {{EXECUTABLENAME}}"
+	bash -c "{{CMAKE_MAKE_COMMAND}} && cmake .. && cmake .. && make $(MAKEFLAGS) {{EXECUTABLENAME}}"
 {% else %}
 all: solver
 {% endif %}
@@ -142,7 +145,7 @@ distclean:
 	rm -f $(GENERATED_CXX_SOURCES)
 	rm -f ${GENERATED_FORTRAN_SOURCES}
 	rm -f ${GENERATED_CU_SOURCES}
-	rm -rf globaldata celldata facedata vertexdata observers repositories tasks generated
+	rm -rf globaldata celldata facedata vertexdata observers repositories tasks generated __pycache__
 	rm -f Constants.h
 	rm -f README-*
 	rm -f .gitignore

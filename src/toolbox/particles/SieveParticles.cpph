@@ -8,9 +8,11 @@ tarch::logging::Log toolbox::particles::SieveParticles<T>::_log("toolbox::partic
 
 
 template <typename T>
-int toolbox::particles::SieveParticles<T>::_SieveReductionTag = tarch::mpi::Rank::reserveFreeTag("toolbox::particles::"
-                                                                                                 "SieveParticles<T>::_"
-                                                                                                 "SieveReductionTag");
+int toolbox::particles::SieveParticles<T>::_SieveReductionTag = tarch::mpi::Rank::reserveFreeTag(
+  "toolbox::particles::"
+  "SieveParticles<T>::_"
+  "SieveReductionTag"
+);
 
 
 template <typename T>
@@ -189,18 +191,6 @@ void toolbox::particles::SieveParticles<T>::addParticleThatCanNotBeLiftedWithinI
 template <typename T>
 bool toolbox::particles::SieveParticles<T>::hasParticlesToBeSievedIntoVertices() const {
   return not _particlesThatHaveToBeSieved.empty();
-}
-
-
-template <typename T>
-int toolbox::particles::SieveParticles<T>::getNumberOfParticlesToBeSieved() const {
-  return _particlesThatHaveToBeSieved.size();
-}
-
-
-template <typename T>
-int toolbox::particles::SieveParticles<T>::getNumberOfParticlesThatCanNotBeLiftedWithinTheirTree() const {
-  return _particlesThatCanNotBeLiftedWithinTheirTree.size();
 }
 
 

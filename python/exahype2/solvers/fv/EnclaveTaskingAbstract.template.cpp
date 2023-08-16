@@ -49,6 +49,11 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
+  _solverState = SolverState::Suspended;
+}
+
+
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize(bool ofCurrentlyRunningGridSweep) const {
   return getMinVolumeSize(ofCurrentlyRunningGridSweep) * NumberOfFiniteVolumesPerAxisPerPatch;
 }

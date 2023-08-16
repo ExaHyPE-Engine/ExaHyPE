@@ -11,8 +11,8 @@
 \li \subpage page_peano_runtime_analysis
 \li \subpage page_peano_performance_optimisation
 \li \subpage tarch_accelerator_SYCL
-\li \subpage peano_introduction_tex
-\li \subpage peano_amr_tex
+\li \subpage peano_python_api
+\li \subpage page_peano_amr_tex
 \li \subpage peano_utilities
 
 

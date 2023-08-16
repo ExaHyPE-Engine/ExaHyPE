@@ -59,27 +59,13 @@ __global__ void copyKernelDouble(const double *a, double *b, size_t N)
   }
 }
 
-void copyKernelLauncher(const float *a, float *b, size_t N)
+void maxPotentialBlockSize(int* minGridSize, int* blockSize) {
+  cudaOccupancyMaxPotentialBlockSize(minGridSize, blockSize, copyKernelFloat, 0, 0);
+}
+
+void copyKernelLauncher(const float *a, float *b, size_t N, int gridSize, int blockSize)
 {
-  static tarch::logging::Log _log("tarch::accelerator::cuda::kernel");
-
-  static int called = 0;
-  int blockSize;   // The launch configurator returned block size
-  int minGridSize; // The minimum grid size needed to achieve the
-                   // maximum occupancy for a full device launch
-  int gridSize;    // The actual grid size needed, based on input size
-
-  cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize,
-                                     copyKernelFloat, 0, 0);
-  // Round up according to array size
-  gridSize = (N + blockSize - 1) / blockSize;
-
-  if (called == 0)
-  {
-    logInfo("copyKernel()", "gridSize: " << gridSize << ", blockSize: " << blockSize);
-  }
-  copyKernelFloat<<<gridSize, blockSize>>>(a, b, N);
-  called++;
+  copyKernelFloat<<<gridSize, blockSize, 0>>>(a, b, N);
 }
 
 #endif
