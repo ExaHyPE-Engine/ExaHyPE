@@ -1,28 +1,12 @@
 /**
 
- @page applications_exahype2_euler_selfgravitation_with_Poisson Euler equations with self-gravitation (hyperbolic-elliptic solver coupling)
+ @page applications_exahype2_euler_selfgravitation_with_hyperbolic_subcycling Subcycling of coupled hyperbolic solver
  
-In this case study, we study an incompressible Euler, which means we
-have the (compressible) Euler equations coupled with a gravity
-term which manifests in a pressure Poisson equation. 
-That is, we solve the problem
 
-@f$ \partial _t Q + \nabla \cdot F(Q) = \left(
-  \begin{array}{c}
-  0 \\
-  \rho \nabla \phi \\
-  - (v, \nabla \phi) \rho
-  \end{array} 
- \right)
-@f$
-
-which gives the Euler equation with @f$ Q = (\rho, v, E) \in \mathbb{R}^5 @f$ 
-subject to a modified source term (right-hand side). While @f$ F(Q) @f$  stems
-from the Euler equations in the previous example, a second PDE
-@f$ - \Delta \phi = -\pi G/\rho @f$ adds self-gravitation to this setup.
-
-
-Our discussion below follows the ideas published in 
+In the present application, we solve the @ref application_exahype2_selfgravitation "underlying problem's" 
+Poisson equation by mapping it onto yet another hyperbolic system which evolves 
+on a different time cale. 
+Our discussion follows the ideas published in 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 @article{SchlottkeLakemperWintersEtAl21,

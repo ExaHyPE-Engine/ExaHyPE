@@ -1,4 +1,4 @@
-#include "SSInfall.h"
+#include "../../selfgravitation/accretion-through-approximated-rhs/SSInfall.h"
 
 #include "Constants.h"
 #include "exahype2/RefinementControl.h"
