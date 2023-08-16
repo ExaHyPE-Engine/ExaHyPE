@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath('../../../python'))
 import peano4
 import exahype2
 
-dimensions                = 3
+dimensions                = 2
 unknowns                  = dimensions + 2 # [rho, u, v, (w), e]
 cell_size                 = 0.4
 amr_levels                = 0 # Set to 0 to disable adaptive mesh refinement (AMR)
@@ -14,7 +14,7 @@ patch_size                = 3
 auxiliary_variables       = 0
 end_time                  = 3.0
 plot_interval             = 0.05 # Set to 0 to disable I/O
-mode                      = peano4.output.CompileMode.Debug # Switch here between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'
+mode                      = peano4.output.CompileMode.Release # Switch here between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'
 use_gpu                   = False # Requires a GPU enabled build
 
 if dimensions == 2:
@@ -88,7 +88,7 @@ my_project.set_output_path("solution")
 if not os.path.exists("solution"):
   os.makedirs("solution")
 
-my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
 my_project.set_Peano4_installation("../../../", mode )
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
