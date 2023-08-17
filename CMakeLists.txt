@@ -97,12 +97,13 @@ else()
   message(STATUS "IPO/LTO not supported: ${IPO_ERROR}")
 endif()
 
+add_library(project_warnings INTERFACE)
 add_library(project_options INTERFACE)
 target_compile_features(project_options INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 include(CompilerDefinitions)
 set_project_compiler_definitions(project_options)
 include(CompilerFlags)
-set_project_compiler_flags(project_options)
+set_project_compiler_flags(project_warnings)
 include(LinkerFlags)
 set_project_linker_flags(project_options)
 
@@ -437,7 +438,6 @@ add_subdirectory(src)
 #        REPORT_FOR_TARGET
 #    )
 #endif()
-
 
 display_separator("Project Configuration Summary")
 display_variable(AVAILABLE_PROCESSOR_COUNT)

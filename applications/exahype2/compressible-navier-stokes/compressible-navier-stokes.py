@@ -7,11 +7,9 @@ import peano4
 import exahype2
 
 dimensions                = 2
-unknowns                  = dimensions + 2 # [rho, u, v, (w), e]
 cell_size                 = 0.4
 amr_levels                = 0 # Set to 0 to disable adaptive mesh refinement (AMR)
 patch_size                = 3
-auxiliary_variables       = 0
 end_time                  = 3.0
 plot_interval             = 0.05 # Set to 0 to disable I/O
 mode                      = peano4.output.CompileMode.Release # Switch here between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'
@@ -38,7 +36,7 @@ my_project = exahype2.Project(
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   name                    = "NavierStokesSolver",
   patch_size              = patch_size,
-  unknowns                = unknowns,
+  unknowns                = dimensions + 2, # [rho, u, v, (w), e]
   auxiliary_variables     = dimensions**2,
   max_volume_h            = cell_size,
   min_volume_h            = cell_size * 3.0**(-amr_levels),
