@@ -293,4 +293,4 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
     virtual void clear() override;
 };
 
-
+#include "PeanoTextPatchFileWriter_VertexDataWriter.cpph"

@@ -294,6 +294,25 @@ namespace toolbox {
     template <typename Particle>
     bool dropParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
 
+    /**
+     * Will the particle be dropped further throughout the traversal
+     *
+     * The sorting in Peano usually realises pull semantics. That is, the fine
+     * grid vertex pulls particles down from coarser levels into its own
+     * domain. Particles recursively drop down the resolution cascade.
+     * Throughout the top-down tree traversal, it is often important to know if
+     * a particle will be pulled down further later on throughout the mesh
+     * traversal. This routine tells the user if this will happen. It is
+     * somehow the top-down counterart of dropParticle() and sieveParticle().
+     *
+     * Consult @ref page_toolbox_particles_mesh_traversal "the generic mesh traversal discussion"
+     * for some further "use cases" where this operation becomes absolutely
+     * mandatory.
+     */
+    template <typename Particle>
+    bool particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::CellMarker& marker);
+
+
     double relativeSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
     double relativeSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
     double relativeMultilevelSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);

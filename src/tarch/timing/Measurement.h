@@ -1,6 +1,6 @@
 // Copyright (C) 2009 Technische Universitaet Muenchen
 // This file is part of the Peano project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org#ifndef _PEANO_KERNEL_MULTICORE_MULTILEVELSCHEDULER_ACTION_H_
+// use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
 
@@ -9,11 +9,9 @@
 #include "tarch/logging/Log.h"
 
 
-namespace tarch {
-  namespace timing {
-    class Measurement;
-  }
-}
+namespace tarch::timing {
+  class Measurement;
+} // namespace tarch::timing
 
 
 /**
@@ -29,104 +27,106 @@ namespace tarch {
  * @author Tobias Weinzierl
  */
 class tarch::timing::Measurement {
-  private:
-    static tarch::logging::Log _log;
+private:
+  static tarch::logging::Log _log;
 
-    double          _accuracy;
+  double _accuracy;
 
-    /**
-     * Accumulated value
-     *
-     * The sum of all values divided by _numberOfMeasurements gives the mean
-     * value.
-     */
-    double          _accumulatedValue;
+  /**
+   * Accumulated value
+   *
+   * The sum of all values divided by _numberOfMeasurements gives the mean
+   * value.
+   */
+  double _accumulatedValue;
 
-    /**
-     * To compute the standard deviation, we rely on the formula
-     *
-     * sigma =sqrt( E(x^2) - E(x)^2 )
-     *
-     * with E being the mean value.
-     */
-    double          _accumulatedSquares;
+  /**
+   * To compute the standard deviation, we rely on the formula
+   *
+   * sigma = sqrt(E(x^2) - E(x)^2)
+   *
+   * with E being the mean value.
+   */
+  double _accumulatedSquares;
 
-    /**
-     * Needed to compute average value and variance.
-     */
-    double          _numberOfMeasurements;
-    bool            _isAccurateValue;
-    double          _min;
-    double          _max;
-    double          _minMeasurement;
-    double          _maxMeasurement;
+  /**
+   * Needed to compute average value and variance.
+   */
+  double _numberOfMeasurements;
+  bool   _isAccurateValue;
+  double _min;
+  double _max;
+  double _minMeasurement;
+  double _maxMeasurement;
 
-    double getMeanValue() const;
-    double getMeanValueOfNextStep(double newValue) const;
-  public:
-    Measurement(const double& accuracy=0.0);
+  double getMeanValue() const;
+  double getMeanValueOfNextStep(double newValue) const;
 
-    /**
-     * @return Averaged value (mean value) of all measurements.
-     */
-    double getValue() const;
+public:
+  Measurement(const double& accuracy = 0.0);
+  ~Measurement() = default;
 
-    double getAccumulatedValue() const;
+  /**
+   * @return Averaged value (mean value) of all measurements.
+   */
+  double getValue() const;
 
-    /**
-     * We did face some seg faults (very rarely) where the parameter under the
-     * square root did become slightly negative. This seems to be a round-off
-     * error. We circumnavigate it by adding an absolute value which is
-     * mathematically not required.
-     */
-    double getStandardDeviation() const;
+  double getAccumulatedValue() const;
 
-    /**
-     * Is value accurate
-     *
-     * Whether a value is accurate depends on the last setValue() call. The
-     * class internally holds the mean value of all setValue() calls. If a new
-     * value is set/added, the object checks whether this additional
-     * measurement modifies the mean value more than the given accuracy. If
-     * this is the case, the object does not represent a valid measurement yet.
-     *
-     * @image tarch/timing/Measurement.png
-     *
-     * It does not work if we just compare new values to the mean value. If a
-     * measurement looks similar to the sketch from above (black=mean value,
-     * grey area=accuracy, blue points=values), the measurement never would
-     * become valid.
-     *
-     * I therefore use a normalised mean value
-     *
-     * @f$ valid = | \frac{ m^{(n+1)} - m^{(n)} }{m^{(n)}} | \leq \epsilon = | \frac{m^{(n+1)}}{m^{(n)}}-1  | \leq \epsilon @f$
-     *
-     * where @f$ m^{(n)} @f$ and @f$ m^{(n+1)} @f$ are two subsequent mean
-     * values.
-     */
-    bool isAccurateValue() const;
+  /**
+   * We did face some seg faults (very rarely) where the parameter under the
+   * square root did become slightly negative. This seems to be a round-off
+   * error. We circumnavigate it by adding an absolute value which is
+   * mathematically not required.
+   */
+  double getStandardDeviation() const;
 
-    /**
-     * @see isAccurateValue()
-     */
-    void setAccuracy(const double& value);
+  /**
+   * Is value accurate
+   *
+   * Whether a value is accurate depends on the last setValue() call. The
+   * class internally holds the mean value of all setValue() calls. If a new
+   * value is set/added, the object checks whether this additional
+   * measurement modifies the mean value more than the given accuracy. If
+   * this is the case, the object does not represent a valid measurement yet.
+   *
+   * @image tarch/timing/Measurement.png
+   *
+   * It does not work if we just compare new values to the mean value. If a
+   * measurement looks similar to the sketch from above (black=mean value,
+   * grey area=accuracy, blue points=values), the measurement never would
+   * become valid.
+   *
+   * I therefore use a normalised mean value
+   *
+   * @f$ valid = | \frac{ m^{(n+1)} - m^{(n)} }{m^{(n)}} | \leq \epsilon = | \frac{m^{(n+1)}}{m^{(n)}}-1  | \leq
+   * \epsilon @f$
+   *
+   * where @f$ m^{(n)} @f$ and @f$ m^{(n+1)} @f$ are two subsequent mean
+   * values.
+   */
+  bool isAccurateValue() const;
 
-    void increaseAccuracy( const double& factor );
+  /**
+   * @see isAccurateValue()
+   */
+  void setAccuracy(const double& value);
 
-    /**
-     * Set the value. If the measurement already holds a value, this value is
-     * not overwritten. Instead, the measurement accumulates all values and
-     * returns the average.
-     */
-    void setValue(const double& value);
-    int getNumberOfMeasurements() const;
-    std::string toString() const;
+  void increaseAccuracy(const double& factor);
 
-    double max() const;
-    double min() const;
+  /**
+   * Set the value. If the measurement already holds a value, this value is
+   * not overwritten. Instead, the measurement accumulates all values and
+   * returns the average.
+   */
+  void        setValue(const double& value);
+  int         getNumberOfMeasurements() const;
+  std::string toString() const;
 
-    void erase();
+  double max() const;
+  double min() const;
 
-    double getAccuracy() const;
+  void erase();
+
+  double getAccuracy() const;
 };
-

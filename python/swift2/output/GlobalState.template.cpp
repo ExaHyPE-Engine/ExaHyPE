@@ -136,6 +136,7 @@ void finishTimeStep() {
   globaldata::{{PARTICLE}}::getSpecies().finishTimeStep();
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -173,6 +174,7 @@ void finishInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -184,6 +186,7 @@ void finishInitialConditionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();

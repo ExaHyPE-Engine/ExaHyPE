@@ -8,7 +8,7 @@ import jinja2
 class UpdateParticleMarker(ActionSet):
   def __init__(self, 
                particle_set):
-    """
+    """!
     
     Update particles marker
 

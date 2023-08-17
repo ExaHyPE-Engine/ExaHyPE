@@ -1,8 +1,7 @@
 #include <type_traits>
 
-#include "swift2/kernels/equation_of_state.h"
-#include "swift2/kernels/kernel_hydro.h"
-
+#include "swift2/kernels/SwiftKernelPlaceholders.h"
+#include "tarch/logging/Log.h"
 
 template <typename ParticleContainer, typename Particle>
 void swift2::kernels::genericSelfInteraction(
@@ -16,18 +15,14 @@ void swift2::kernels::genericSelfInteraction(
 
 template <typename ParticleContainer>
 void swift2::kernels::prepareDensityCalculation(const ParticleContainer& localParticles) {
-  for (auto* particle : localParticles) {
-    if (not particle->getIsBoundaryParticle()) {
-      particle->setDensity(0.0);
-      particle->setWcount(0.0);
-      particle->setRho_dh(0.0);
-      particle->setWcount_dh(0.0);
-      particle->setDiv_v(0.0);
-      particle->setRot_v(0.0);
 
-      /* Not originally in SWIFT */
-      particle->setNcount(0);
-    }
+  // This will be necessary for SPH versions with non-constant search radii.
+  // We don't have that just yet.
+  static tarch::logging::Log _log("swift2::kernels");
+  logError("prepareDensityCalculation", "Don't use this yet. You shouldn't need it.");
+
+  for (auto* particle : localParticles) {
+    swift2::kernelPlaceholders::hydro_init_part(particle);
   }
 }
 
@@ -35,400 +30,213 @@ void swift2::kernels::prepareDensityCalculation(const ParticleContainer& localPa
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculation(const ParticleContainer& localParticles) {
 
+  // This will be necessary for SPH versions with non-constant search radii.
+  // We don't have that just yet.
+  static tarch::logging::Log _log("swift2::kernels");
+  logError("endDensityCalculation", "Don't use this. Not implemented yet.");
+
   /* Grab static parameters */
   const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
   const double etaFactor    = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
   const double alphaAV      = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
 
-  assertionMsg(false, "Don't use this yet.");
   // define variables here until next MR that accesses the correct values properly
   const double hTolerance = 1.;
   const double hHydroMin  = 1.;
   const double hHydroMax  = 1.;
 
   for (auto* particle : localParticles) {
-    if (not particle->getIsBoundaryParticle()) {
+    // if (not particle->getIsBoundaryParticle()) {
 
-      // @TODO add adds/multiplies the cosmological terms if need be.
+    // @TODO add adds/multiplies the cosmological terms if need be.
 
-      /* Retrieve some properties */
-      const double m_a = particle->getMass();
-      const double h_a = particle->getSmoothingLength();
+    /* Retrieve some properties */
+    const double m_a = particle->getMass();
+    const double h_a = particle->getSmoothingLength();
 
-      /* Some smoothing length multiples */
-      const double h_inv              = 1.0 / h_a;
-      const double h_inv_dim          = std::pow(h_inv, hydroDimensions);
-      const double h_inv_dim_plus_one = h_inv_dim * h_inv;
+    /* Some smoothing length multiples */
+    const double h_inv              = 1.0 / h_a;
+    const double h_inv_dim          = std::pow(h_inv, hydroDimensions);
+    const double h_inv_dim_plus_one = h_inv_dim * h_inv;
 
-      /* Final operation. Add the self-contributions (i.e. at q=0) */
-      particle->setDensity((particle->getDensity() + m_a * kernel_root) * h_inv_dim);
-      particle->setWcount((particle->getWcount() + kernel_root) * h_inv_dim);
-      particle->setRho_dh((particle->getRho_dh() + m_a * (-hydroDimensions * kernel_root)) * h_inv_dim_plus_one);
-      particle->setWcount_dh((particle->getWcount_dh() + (-hydroDimensions * kernel_root)) * h_inv_dim_plus_one);
+    /* Final operation. Add the self-contributions (i.e. at q=0) */
+    particle->setDensity((particle->getDensity() + m_a * kernel_root) * h_inv_dim);
+    particle->setWcount((particle->getWcount() + kernel_root) * h_inv_dim);
+    particle->setRho_dh((particle->getRho_dh() + m_a * (-hydroDimensions * kernel_root)) * h_inv_dim_plus_one);
+    particle->setWcount_dh((particle->getWcount_dh() + (-hydroDimensions * kernel_root)) * h_inv_dim_plus_one);
 
-      /* Not needed in SWIFT */
+    /* Not needed in SWIFT */
 
-      /* Useful for debugging */
-      particle->setNcount(particle->getNcount() + 1);
+    /* Useful for debugging */
+    particle->setNcount(particle->getNcount() + 1);
 
-      const double rho_inv = 1.0 / particle->getDensity();
-      // @TODO: implement cosmological factors
-      const double a_inv2 = 1.0;
+    const double rho_inv = 1.0 / particle->getDensity();
+    // @TODO: implement cosmological factors
+    const double a_inv2 = 1.0;
 
-      /* Finish calculation of the velocity curl components */
-      particle->setRot_v(particle->getRot_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
+    /* Finish calculation of the velocity curl components */
+    particle->setRot_v(particle->getRot_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
 
-      /* Finish calculation of the velocity divergence */
-      particle->setDiv_v(particle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
+    /* Finish calculation of the velocity divergence */
+    particle->setDiv_v(particle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
 
-      assertion2(std::isfinite(particle->getDensity()), particle->toString(), h_inv_dim);
-      assertion1(particle->getNcount() > 1, particle->toString());
+    assertion2(std::isfinite(particle->getDensity()), particle->toString(), h_inv_dim);
+    assertion1(particle->getNcount() > 1, particle->toString());
 
-      //
-      // =============================
-      // Newton's Apples
-      // =============================
-      //
-      // @TODO Mladen: Why is this here???
-      {
-        //        const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
-        const double hydro_eta_dim = std::pow(etaFactor, hydroDimensions);
-        const double eps           = hTolerance;
+    //
+    // =============================
+    // Newton's Apples
+    // =============================
+    //
+    // @TODO Mladen: Why is this here???
+    {
+      //        const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
+      const double hydro_eta_dim = std::pow(etaFactor, hydroDimensions);
+      const double eps           = hTolerance;
 
-        /* h value at the start of iteration procedure
-         * Here we use the last update on previous time-step */
-        const double h_0 = particle->getSmoothingLengthPrevious();
+      /* h value at the start of iteration procedure
+       * Here we use the last update on previous time-step */
+      const double h_0 = particle->getSmoothingLengthPrevious();
 
-        /* Set initial guess for NR */
-        const double h_init = h_0;
-        // Improved initial guess
-        //        const double h_init = h_0 + particle->getHDot() * timeStepSize;
+      /* Set initial guess for NR */
+      const double h_init = h_0;
+      // Improved initial guess
+      //        const double h_init = h_0 + particle->getHDot() * timeStepSize;
 
-        /* Get some useful values */
-        double h_old = particle->getSmoothingLength();
+      /* Get some useful values */
+      double h_old = particle->getSmoothingLength();
 
-        if (particle->getIterCount() == 0) { /* use initial guess h_init */
-          h_old = h_init;
+      if (particle->getIterCount() == 0) { /* use initial guess h_init */
+        h_old = h_init;
+      }
+
+      const double h_old_dim           = std::pow(h_old, hydroDimensions);
+      const double h_old_dim_minus_one = std::pow(h_old, hydroDimensions - 1);
+
+      double h_new;
+
+      /* Check that smoothing length from previous iteration is non-zero */
+      assertion3(h_old > tarch::la::NUMERICAL_ZERO_DIFFERENCE, particle->toString(), h_init, h_0);
+
+      if (particle->getWcount() < 1e-5) { /* No neighbours case */
+
+        /* Flag that there were no neighbours */
+        particle->setHasNoNeighbours(true);
+
+        /* Verbose */
+        //          logInfo( "touchVertexLastTime()", "no neighbour case for particle " << particle->toString() );
+
+        /* Double h and try again */
+        h_new = 2.0 * h_old;
+
+      } else {
+
+        /* Compute one step of the Newton-Raphson scheme */
+
+        /* SWIFT's calcualtion based on Wcount */
+
+        const double n_sum    = particle->getWcount() * h_old_dim;
+        const double n_target = hydro_eta_dim;
+        const double f        = n_sum - n_target;
+        const double f_prime  = particle->getWcount_dh() * h_old_dim
+                               + hydroDimensions * particle->getWcount() * h_old_dim_minus_one;
+
+        // Debug
+        assertion6(f_prime != 0, particle->toString(), f_prime, h_new, h_old, hHydroMin, hHydroMax);
+
+        /* Skip if h is already h_max and we don't have enough neighbours */
+        /* Same if we are below h_min */
+        /* Same if we have hit the Peano search radius
+         */
+
+        //          tarch::la::Vector<Dimensions,double> GridSize = marker.h();
+        //          const double GridSizeHalf = 0.5 * GridSize(0);
+
+        /* TODO MLADEN: What exactly is going on here?? */
+        const double GridSizeHalf  = 0.5 * 0.3;
+        const double IactParticleH = kernel_gamma * particle->getSmoothingLength();
+
+        if (((particle->getSmoothingLength() >= hHydroMax) && (f < 0.0)) || ((particle->getSmoothingLength() <= hHydroMin) && (f > 0.0)) || tarch::la::greaterEquals(IactParticleH, GridSizeHalf)) {
+
+          /* We have a particle whose smoothing length is already set (wants
+           * to be larger but has already hit the maximum OR wants to be
+           * smaller but has already reached the minimum). So, just tidy up
+           * as if the smoothing length had converged correctly  */
+
+          /* Verbose about this particle */
+          //            logInfo( "touchVertexLastTime()", " This particle is unable to shrink/grow anymore:  " <<
+          //            particle->toString() );
+
+          /* Re-set the value from previous time-step */
+          h_new = h_0;
         }
 
-        const double h_old_dim           = std::pow(h_old, hydroDimensions);
-        const double h_old_dim_minus_one = std::pow(h_old, hydroDimensions - 1);
+        /* Normal case:
+         * We are able to use Newton-Raphson to get a better value of h */
 
-        double h_new;
+        /* Avoid floating point exception from f_prime = 0 */
+        h_new = h_old - f / (f_prime + tarch::la::NUMERICAL_ZERO_DIFFERENCE);
 
-        /* Check that smoothing length from previous iteration is non-zero */
-        assertion3(h_old > tarch::la::NUMERICAL_ZERO_DIFFERENCE, particle->toString(), h_init, h_0);
+        /* Safety check: truncate to the range [ h_old/2 , 2h_old ]. */
+        h_new = std::min(h_new, 2.0 * h_old);
+        h_new = std::max(h_new, 0.5 * h_old);
 
-        if (particle->getWcount() < 1e-5) { /* No neighbours case */
+      } /* end of if( particle->getWcount() < 1e-5 ) else block */
 
-          /* Flag that there were no neighbours */
-          particle->setHasNoNeighbours(true);
+      /* By now we have got h_new for either of the yes/no neighbour cases */
 
-          /* Verbose */
-          //          logInfo( "touchVertexLastTime()", "no neighbour case for particle " << particle->toString() );
+      /* Check convergence */
+      const double residual = std::abs(h_new - h_old) / h_0;
+      particle->setResidual(residual);
 
-          /* Double h and try again */
-          h_new = 2.0 * h_old;
+      if (residual > eps) { /* this particle has not converged */
 
-        } else {
+        /* Ok, correct then */
+        particle->setSmoothingLength(h_new);
 
-          /* Compute one step of the Newton-Raphson scheme */
+        /* Increase the iteration counter */
+        particle->setIterCount(particle->getIterCount() + 1);
 
-          /* SWIFT's calcualtion based on Wcount */
+      } else {
 
-          const double n_sum    = particle->getWcount() * h_old_dim;
-          const double n_target = hydro_eta_dim;
-          const double f        = n_sum - n_target;
-          const double f_prime  = particle->getWcount_dh() * h_old_dim
-                                 + hydroDimensions * particle->getWcount() * h_old_dim_minus_one;
+        /* No need to update */
 
-          // Debug
-          assertion6(f_prime != 0, particle->toString(), f_prime, h_new, h_old, hHydroMin, hHydroMax);
-
-          /* Skip if h is already h_max and we don't have enough neighbours */
-          /* Same if we are below h_min */
-          /* Same if we have hit the Peano search radius
-           */
-
-          //          tarch::la::Vector<Dimensions,double> GridSize = marker.h();
-          //          const double GridSizeHalf = 0.5 * GridSize(0);
-
-          /* TODO MLADEN: What exactly is going on here?? */
-          const double GridSizeHalf  = 0.5 * 0.3;
-          const double IactParticleH = kernel_gamma * particle->getSmoothingLength();
-
-          if (((particle->getSmoothingLength() >= hHydroMax) && (f < 0.0)) || ((particle->getSmoothingLength() <= hHydroMin) && (f > 0.0)) || tarch::la::greaterEquals(IactParticleH, GridSizeHalf)) {
-
-            /* We have a particle whose smoothing length is already set (wants
-             * to be larger but has already hit the maximum OR wants to be
-             * smaller but has already reached the minimum). So, just tidy up
-             * as if the smoothing length had converged correctly  */
-
-            /* Verbose about this particle */
-            //            logInfo( "touchVertexLastTime()", " This particle is unable to shrink/grow anymore:  " <<
-            //            particle->toString() );
-
-            /* Re-set the value from previous time-step */
-            h_new = h_0;
-          }
-
-          /* Normal case:
-           * We are able to use Newton-Raphson to get a better value of h */
-
-          /* Avoid floating point exception from f_prime = 0 */
-          h_new = h_old - f / (f_prime + tarch::la::NUMERICAL_ZERO_DIFFERENCE);
-
-          /* Safety check: truncate to the range [ h_old/2 , 2h_old ]. */
-          h_new = std::min(h_new, 2.0 * h_old);
-          h_new = std::max(h_new, 0.5 * h_old);
-
-        } /* end of if( particle->getWcount() < 1e-5 ) else block */
-
-        /* By now we have got h_new for either of the yes/no neighbour cases */
-
-        /* Check convergence */
-        const double residual = std::abs(h_new - h_old) / h_0;
-        particle->setResidual(residual);
-
-        if (residual > eps) { /* this particle has not converged */
-
-          /* Ok, correct then */
+        /* However, if this is iter 0, we still update */
+        if (particle->getIterCount() == 0) {
           particle->setSmoothingLength(h_new);
-
-          /* Increase the iteration counter */
-          particle->setIterCount(particle->getIterCount() + 1);
-
-        } else {
-
-          /* No need to update */
-
-          /* However, if this is iter 0, we still update */
-          if (particle->getIterCount() == 0) {
-            particle->setSmoothingLength(h_new);
-          }
-
-          /* Flag that particle has already converged */
-          particle->setHasConverged(true);
         }
 
-      } /* End of Newton-Raphson */
-    }
+        /* Flag that particle has already converged */
+        particle->setHasConverged(true);
+      }
+
+    } /* End of Newton-Raphson */
+    // } is boundary particle
   }
 }
 
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const ParticleContainer& localParticles) {
 
-  /* Grab static parameters */
-  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
-  const double etaFactor    = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
-  const double alphaAV      = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
-
-  for (auto* particle : localParticles) {
-    if (not particle->getIsBoundaryParticle()) {
-
-      /* Retrieve some properties */
-      const double m_a = particle->getMass();
-      const double h_a = particle->getSmoothingLength();
-
-      /* Some smoothing length multiples */
-      const double h_inv              = 1.0 / h_a;
-      const double h_inv_dim          = std::pow(h_inv, hydroDimensions);
-      const double h_inv_dim_plus_one = h_inv_dim * h_inv;
-
-      /* Final operation. Add the self-contributions (i.e. at q=0) */
-      particle->setDensity((particle->getDensity() + m_a * kernel_root) * h_inv_dim);
-      particle->setWcount((particle->getWcount() + kernel_root) * h_inv_dim);
-      particle->setRho_dh((particle->getRho_dh() + m_a * (-hydroDimensions * kernel_root)) * h_inv_dim_plus_one);
-      particle->setWcount_dh((particle->getWcount_dh() + (-hydroDimensions * kernel_root)) * h_inv_dim_plus_one);
-
-      /* Not needed in SWIFT */
-      particle->setNcount(particle->getNcount() + 1);
-
-      const double rho_inv = 1.0 / particle->getDensity();
-      // @TODO: implement cosmological factors
-      const double a_inv2 = 1.0;
-
-      /* Finish calculation of the velocity curl components */
-      particle->setRot_v(particle->getRot_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
-
-      /* Finish calculation of the velocity divergence */
-      particle->setDiv_v(particle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
-
-      assertion1(std::isfinite(particle->getDensity()), particle->toString());
-      assertion1(particle->getDensity() >= 0., particle->toString());
-      assertion1(std::isfinite(particle->getWcount()), particle->toString());
-      assertion1(particle->getWcount() >= 0., particle->toString());
-      assertion1(std::isfinite(particle->getRho_dh()), particle->toString());
-      assertion1(std::isfinite(particle->getWcount_dh()), particle->toString());
-    }
-  }
+  static tarch::logging::Log _log("swift2::kernels");
+  logError("endDensityCalculationWithConstantSmoothingLength", "Don't use this. Not implemented yet.");
 }
 
-
-template <typename ParticleContainer>
-void swift2::kernels::endDensityCalculationWithConstantSearchRadius(const ParticleContainer& localParticles) {
-
-  /* Grab static parameters */
-  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
-  const double etaFactor    = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
-  const double alphaAV      = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
-
-  for (auto* particle : localParticles) {
-    if (not particle->getIsBoundaryParticle()) {
-
-      /* Retrieve some properties */
-      const double m_a = particle->getMass();
-      const double h_a = particle->getSmoothingLength();
-
-      /* Some smoothing length multiples */
-      const double h_inv              = 1.0 / h_a;
-      const double h_inv_dim          = std::pow(h_inv, hydroDimensions);
-      const double h_inv_dim_plus_one = h_inv_dim * h_inv;
-
-      /* Final operation. Add the self-contributions (i.e. at q=0) */
-      particle->setDensity((particle->getDensity() + m_a * kernel_root) * h_inv_dim);
-      particle->setWcount((particle->getWcount() + kernel_root) * h_inv_dim);
-      particle->setRho_dh((particle->getRho_dh() + m_a * (-hydroDimensions * kernel_root)) * h_inv_dim_plus_one);
-      particle->setWcount_dh((particle->getWcount_dh() + (-hydroDimensions * kernel_root)) * h_inv_dim_plus_one);
-
-      /* Not needed in SWIFT */
-      particle->setNcount(particle->getNcount() + 1);
-
-      const double rho_inv = 1.0 / particle->getDensity();
-      // @TODO: implement cosmological factors
-      const double a_inv2 = 1.0;
-
-      /* Finish calculation of the velocity curl components */
-      particle->setRot_v(particle->getRot_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
-
-      /* Finish calculation of the velocity divergence */
-      particle->setDiv_v(particle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
-
-      assertion1(std::isfinite(particle->getDensity()), particle->toString());
-      assertion1(particle->getDensity() >= 0., particle->toString());
-      assertion1(std::isfinite(particle->getWcount()), particle->toString());
-      assertion1(particle->getWcount() >= 0., particle->toString());
-      assertion1(std::isfinite(particle->getRho_dh()), particle->toString());
-      assertion1(std::isfinite(particle->getWcount_dh()), particle->toString());
-    }
-  }
-}
 
 template <typename ParticleContainer>
 void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& localParticles) {
 
-  /* Grab static parameters */
-  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
-  // const double etaFactor = std::remove_pointer<typename ParticleContainer::value_type>::type::getEtaFactor();
-  const double alphaAV = std::remove_pointer<typename ParticleContainer::value_type>::type::getAlphaAV();
-
   for (auto* particle : localParticles) {
-    if (not particle->getIsBoundaryParticle()) {
-
-      /* Retrieve basic properties of local and active particles */
-      const double rho_a = particle->getDensity();
-      const double m_a   = particle->getMass();
-      const double h_a   = particle->getSmoothingLength();
-      const double u_a   = particle->getU();
-
-      const double h_inv = 1.0 / h_a;
-
-      /* Compute the norm of the curl */
-      double curl_v = 0;
-
-      if (hydroDimensions != 3) { /* in 2D sims Rot_v is a scalar */
-        curl_v = std::sqrt(particle->getRot_v() * particle->getRot_v());
-      } else {
-        assertionMsg(false, "3D curl_v term to be implemented (straightforward, but have only run 2D so far...)");
-      }
-
-      /* Compute the norm of div v */
-      const double abs_div_v = tarch::la::abs(particle->getDiv_v());
-
-      /* Compute the pressure */
-      const double P_a = gas_pressure_from_internal_energy(rho_a, u_a);
-      assertion1(std::isfinite(P_a), particle->toString());
-      assertion1(P_a > 0., particle->toString());
-
-      /* Compute the sound speed */
-      const double soundspeed = gas_soundspeed_from_pressure(rho_a, P_a);
-      assertion1(std::isfinite(soundspeed), particle->toString());
-
-      /* Compute the "grad h" term  - Note here that we have \tilde{x}
-       * as 1 as we use the local number density to find neighbours. This
-       * introduces a j-component that is considered in the force loop,
-       * meaning that this cached grad_h_term gives:
-       *
-       * f_ij = 1.f - grad_h_term_i / m_j */
-      const double common_factor = h_a / hydroDimensions / particle->getWcount();
-
-      float grad_h_term;
-      /* Ignore changing-kernel effects when h ~= h_max */
-      // @TODO: add a global h_max
-      // if (p->h > 0.9999f * hydro_props->h_max) {
-      //   grad_h_term = 0.f;
-      //   warning("h ~ h_max for particle with ID %lld (h: %g)", p->id, p->h);
-      // } else {
-      const double grad_W_term = common_factor * particle->getWcount_dh();
-      if (grad_W_term < -0.9999) {
-        /* if we get here, we either had very small neighbour contributions
-           (which should be treated as a no neighbour case in the ghost) or
-           a very weird particle distribution (e.g. particles sitting on
-           top of each other). Either way, we cannot use the normal
-           expression, since that would lead to overflow or excessive round
-           off and cause excessively high accelerations in the force loop */
-        grad_h_term = 0.f;
-        printf(
-          "grad_W_term very small for particle with ID %d (h: %g, wcount: "
-          "%g, wcount_dh: %g gradW=%g common_factor=%g).\n",
-          particle->getPartid(),
-          h_a,
-          particle->getWcount(),
-          particle->getWcount_dh(),
-          grad_W_term,
-          common_factor
-        );
-      } else {
-        grad_h_term = common_factor * particle->getRho_dh() / (1.f + grad_W_term);
-      }
-
-      particle->setF(grad_h_term);
-      // }
-
-      /* Compute the Balsara Switch */
-      const double balsara = alphaAV * abs_div_v / (abs_div_v + curl_v + 0.0001 * soundspeed * h_inv);
-
-      assertion6(std::isfinite(balsara), particle->toString(), balsara, abs_div_v, curl_v, soundspeed, alphaAV);
-
-      /* Update variables */
-      particle->setPressure(P_a);
-      particle->setSoundSpeed(soundspeed);
-      particle->setBalsara(balsara);
-
-      /* Reset the acceleration*/
-      particle->setA(0.0);
-
-      /* Reset the time derivatives */
-      particle->setUDot(0.0);
-      particle->setHDot(0.0);
-      particle->setV_sig_AV(2.0 * particle->getSoundSpeed());
-    }
+    swift2::kernelPlaceholders::hydro_prepare_force(particle);
+    swift2::kernelPlaceholders::hydro_reset_acceleration(particle);
   }
 }
 
 template <typename ParticleContainer>
 void swift2::kernels::endHydroForceCalculation(const ParticleContainer& localParticles) {
 
-  /* Grab static parameters */
-  const int hydroDimensions = std::remove_pointer<typename ParticleContainer::value_type>::type::getHydroDimensions();
-
   for (auto* particle : localParticles) {
-    if (not particle->getIsBoundaryParticle()) {
-      particle->setHDot(particle->getHDot() * particle->getSmoothingLength() / hydroDimensions);
-
-      assertion2(std::isfinite(particle->getHDot()), particle->toString(), particle->getSmoothingLength());
-    }
+    swift2::kernelPlaceholders::hydro_end_force(particle);
   }
 }
 
@@ -440,6 +248,7 @@ void swift2::kernels::flagBoundaryParticles(
   const tarch::la::Vector<Dimensions, double>& domainSize,
   const tarch::la::Vector<Dimensions, double>& domainOffset
 ) {
+
   /* TODO MLADEN: Document parameters? */
   for (auto* particle : localParticles) {
     if(

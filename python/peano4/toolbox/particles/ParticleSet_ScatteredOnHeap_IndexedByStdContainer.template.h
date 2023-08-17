@@ -82,7 +82,9 @@
        * Merge two particle sets
        *
        * Please consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" before
-       * you study the implementation remarks below.
+       * you study the implementation remarks below. Furhermore, consult the
+       * documentation of peano4.toolbox.particles.UpdateParallelState which
+       * provides some examples of the functionality added here.
        *
        * @see STDVectorOverContainerOfPointers::startReceive()
        * @see clone()
