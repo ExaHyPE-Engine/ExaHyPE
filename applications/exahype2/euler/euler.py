@@ -8,10 +8,10 @@ import exahype2
 
 dimensions                = 2
 cell_size                 = 0.01
-amr_levels                = 2
+amr_levels                = 0
 patch_size                = 4
-rk_order                  = 4
-dg_order                  = 2
+rk_order                  = 3
+dg_order                  = 1
 end_time                  = 3.0
 plot_interval             = end_time/100
 #plot_interval             = 0
@@ -43,9 +43,9 @@ rkdg_rusanov_solvers = {
 }
 
 solvers = {}
-solvers.update(rkdg_rusanov_solvers)
 solvers.update(fv_rusanov_solvers)
-solver = "FVRusanovGlobalAdaptive"
+solvers.update(rkdg_rusanov_solvers)
+solver = "RKDGRusanovGlobalAdaptive"
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -142,7 +142,22 @@ if solver_type in fv_rusanov_solvers:
     max_volume_h=args.max_cell_size,
     min_volume_h=args.max_cell_size * 3.0**(-args.amr_levels),
     time_step_relaxation=0.5,
-)
+  )
+  #self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
+  my_solver.switch_to_heap_storage(
+    cell_data_storage=storage_types[args.storage],
+    face_data_storage=storage_types[args.storage],
+  )
+
+  #from exahype2.solvers.fv.rusanov.kernels import create_compute_Riemann_kernel_for_Rusanov
+  #my_solver._fused_compute_kernel_call_cpu = create_compute_Riemann_kernel_for_Rusanov(
+  #  my_solver._flux_implementation,
+  #  my_solver._ncp_implementation,
+  #  my_solver._source_term_implementation,
+  #  compute_max_eigenvalue_of_next_time_step=True,
+  #  solver_variant = exahype2.solvers.fv.rusanov.SolverVariant.Multicore,
+  #  kernel_variant = exahype2.solvers.fv.rusanov.KernelVariant.BatchedAoSHeap
+  #)
 elif solver_type in rkdg_rusanov_solvers:
   from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
   my_solver = solvers[solver_type](
@@ -155,7 +170,7 @@ elif solver_type in rkdg_rusanov_solvers:
     max_cell_h                = args.max_cell_size,
     min_cell_h                = args.max_cell_size * 3.0**(-args.amr_levels),
     time_step_relaxation      = 0.5
-)
+  )
 
 if args.enclave:
   my_solver.set_pde_terms_without_state(True)
@@ -199,22 +214,6 @@ else:
 #include "../../../tutorials/exahype2/euler/EulerKernels.h"
 """)
 
-#self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
-my_solver.switch_to_heap_storage(
-  cell_data_storage=storage_types[args.storage],
-  face_data_storage=storage_types[args.storage],
-)
-
-#from exahype2.solvers.fv.rusanov.kernels import create_compute_Riemann_kernel_for_Rusanov
-#my_solver._fused_compute_kernel_call_cpu = create_compute_Riemann_kernel_for_Rusanov(
-#  my_solver._flux_implementation,
-#  my_solver._ncp_implementation,
-#  my_solver._source_term_implementation,
-#  compute_max_eigenvalue_of_next_time_step=True,
-#  solver_variant = exahype2.solvers.fv.rusanov.SolverVariant.Multicore,
-#  kernel_variant = exahype2.solvers.fv.rusanov.KernelVariant.BatchedAoSHeap
-#)
-
 my_project.add_solver(my_solver)
 
 if args.periodic_boundary_conditions:
@@ -240,7 +239,7 @@ my_project.set_global_simulation_parameters(
     periodic_BC=periodic_BC,
 )
 
-solution_dir = str(args.output_path) + "-" + str(args.scenario) + "-" + str(args.dim) + "d"
+solution_dir = str(args.output_path) + "-" + str(solver_name) + "-" + str(args.dim) + "d"
 my_project.set_output_path(solution_dir)
 if not os.path.exists(solution_dir):
   os.makedirs(solution_dir)
@@ -260,11 +259,7 @@ import os
 import sys
 import subprocess
 
-solution_dir = "''' + str(solution_dir) + '''"
-if not os.path.exists(solution_dir):
-    os.makedirs(solution_dir)
-
-output_patch_file = solution_dir + "/solution-''' + str(solver_name) + '''.peano-patch-file"
+output_patch_file = "''' + str(solution_dir) + '''/solution-''' + str(solver_name) + '''.peano-patch-file"
 if os.path.isfile(output_patch_file):
     subprocess.call([
         "python3", "../../../python/peano4/visualisation/render.py",
