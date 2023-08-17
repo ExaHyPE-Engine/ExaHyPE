@@ -128,9 +128,12 @@ class Controller:
                     else "double",
                     "correctorStoragePrecision": args["correctorStoragePrecision"]
                     if "correctorStoragePrecision" in args
-                    else "double",
+                    else "double"
                 }
             )
+            self.config["computePrecisions"] = self.config["predictorComputePrecisions"]
+            if self.config["correctorComputePrecision"] not in self.config["computePrecisions"]:
+                self.config["computePrecisions"].append(self.config["correctorComputePrecisions"])
             self.config["useSourceOrNCP"] = (
                 self.config["useSource"] or self.config["useNCP"]
             )

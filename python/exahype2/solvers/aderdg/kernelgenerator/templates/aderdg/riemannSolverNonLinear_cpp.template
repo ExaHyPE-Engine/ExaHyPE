@@ -40,7 +40,7 @@ void {{codeNamespace}}::riemannSolver(
 ) {
 
 #ifdef __INTEL_COMPILER
-  __assume_aligned(weights2, {{alignmentSize}});
+  __assume_aligned(Quadrature<cCompType>::weights2, {{alignmentSize}});
   __assume_aligned(FL, {{alignmentSize}});
   __assume_aligned(FR, {{alignmentSize}});
   __assume_aligned(QL, {{alignmentSize}});
@@ -54,8 +54,8 @@ void {{codeNamespace}}::riemannSolver(
   for (int xy = 0; xy < {{nDof*nDof3D}}; xy++) { //xy = 1 or 2 spatial dim (1 in 2D, 2 in 3D)
     #pragma omp simd aligned(QavL,QavR,QL,QR:{{alignmentSize}})
     for (int n = 0; n < {{nDataPad}}; n++) {
-      QavL[n] += weights2[xy] * QL[xy*{{nDataPad}}+n];
-      QavR[n] += weights2[xy] * QR[xy*{{nDataPad}}+n];
+      QavL[n] += Quadrature<cCompType>::weights2[xy] * QL[xy*{{nDataPad}}+n];
+      QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy*{{nDataPad}}+n];
     }
   }
   
@@ -193,6 +193,7 @@ void {{codeNamespace}}::riemannSolver(
 
 }
 
+
 template void {{codeNamespace}}::riemannSolver(
   {{solverName}}& solver,
   {{correctorComputePrecision}}* __restrict__ FL, 
@@ -203,4 +204,5 @@ template void {{codeNamespace}}::riemannSolver(
   const double dt,
   const tarch::la::Vector<Dimensions,double>& faceCentre,
   const tarch::la::Vector<Dimensions,double>& dx,
-  const int direction);
+  const int direction
+);

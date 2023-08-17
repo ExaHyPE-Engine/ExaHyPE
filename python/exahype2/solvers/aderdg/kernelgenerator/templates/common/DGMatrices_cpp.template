@@ -11,23 +11,25 @@
  * For the full license text, see LICENSE.txt
  **/ #}
 
-#include <mm_malloc.h> //g++
-
 #include "{{pathToOptKernel}}/DGMatrices.h"
 
 //DGMatrices
-double* {{codeNamespace}}::Kxi;
-double* {{codeNamespace}}::Kxi_T;
-double* {{codeNamespace}}::iK1_T;
-double* {{codeNamespace}}::dudx;
-double* {{codeNamespace}}::dudx_T;
-double* {{codeNamespace}}::FLCoeff;
-double* {{codeNamespace}}::FRCoeff;
-double** {{codeNamespace}}::fineGridProjector1d;
-double** {{codeNamespace}}::fineGridProjector1d_T_weighted;
+template <typename T> T* {{codeNamespace}}::DGMatrices<T>::Kxi;
+template <typename T> T* {{codeNamespace}}::DGMatrices<T>::Kxi_T;
+template <typename T> T* {{codeNamespace}}::DGMatrices<T>::iK1_T;
+template <typename T> T* {{codeNamespace}}::DGMatrices<T>::dudx;
+template <typename T> T* {{codeNamespace}}::DGMatrices<T>::dudx_T;
+template <typename T> T* {{codeNamespace}}::DGMatrices<T>::FLCoeff;
+template <typename T> T* {{codeNamespace}}::DGMatrices<T>::FRCoeff;
+template <typename T> T** {{codeNamespace}}::DGMatrices<T>::fineGridProjector1d;
+template <typename T> T** {{codeNamespace}}::DGMatrices<T>::fineGridProjector1d_T_weighted;
 
+{% for precision_number in range(0,computePrecisions|length) %}
+template class {{codeNamespace}}::DGMatrices<{{computePrecisions[precision_number]}}>;
+{% endfor %}
 
-void {{codeNamespace}}::freeDGMatrices() {
+template <typename T>
+void {{codeNamespace}}::DGMatrices<T>::freeDGMatrices() {
   _mm_free(FLCoeff);
   _mm_free(FRCoeff);
   _mm_free(dudx);
@@ -48,23 +50,24 @@ void {{codeNamespace}}::freeDGMatrices() {
 }
 
 
-void {{codeNamespace}}::initDGMatrices() {
+template <typename T>
+void {{codeNamespace}}::DGMatrices<T>::initDGMatrices() {
   
-  FLCoeff = (double *) _mm_malloc(sizeof(double)*{{nDofPad}}, {{alignmentSize}});
-  FRCoeff = (double *) _mm_malloc(sizeof(double)*{{nDofPad}}, {{alignmentSize}});
+  FLCoeff = (T *) _mm_malloc(sizeof(T)*{{nDofPad}}, {{alignmentSize}});
+  FRCoeff = (T *) _mm_malloc(sizeof(T)*{{nDofPad}}, {{alignmentSize}});
   //note: FLCoeff is also F0
   
-  dudx    = (double *) _mm_malloc(sizeof(double)*{{nDofPad*nDof}}, {{alignmentSize}});
-  dudx_T  = (double *) _mm_malloc(sizeof(double)*{{nDofPad*nDof}}, {{alignmentSize}});
-  iK1_T   = (double *) _mm_malloc(sizeof(double)*{{nDofPad*nDof}}, {{alignmentSize}});
-  Kxi     = (double *) _mm_malloc(sizeof(double)*{{nDofPad*nDof}}, {{alignmentSize}});
-  Kxi_T   = (double *) _mm_malloc(sizeof(double)*{{nDofPad*nDof}}, {{alignmentSize}});
+  dudx    = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
+  dudx_T  = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
+  iK1_T   = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
+  Kxi     = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
+  Kxi_T   = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
 
-  fineGridProjector1d            = new double* [3];
-  fineGridProjector1d_T_weighted = new double* [3];
+  fineGridProjector1d            = new T* [3];
+  fineGridProjector1d_T_weighted = new T* [3];
   for(int i=0; i<3; i++) {
-    fineGridProjector1d[i]            = (double *) _mm_malloc(sizeof(double)*{{nDofPad*nDof}}, {{alignmentSize}});
-    fineGridProjector1d_T_weighted[i] = (double *) _mm_malloc(sizeof(double)*{{nDofPad*nDof}}, {{alignmentSize}});
+    fineGridProjector1d[i]            = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
+    fineGridProjector1d_T_weighted[i] = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
   }
   
 {% for i in nDofPad_seq %}
