@@ -33,7 +33,7 @@ different machine levels (core, node, cluster, gpus).
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
    ./myexecutable --threads XXX
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-   Peano offers @ref peano_runtime_analysis "some Python scripts" that allow 
+   Peano offers @ref page_peano_runtime_analysis "some Python scripts" that allow 
    users to visualise the scalability behaviour. If the scalability is poor,
    consult the section below on Multithreading optimisation.
  
@@ -83,7 +83,7 @@ i.e. you have to swap how a patch is mapped onto a C++ implementation. Most solv
 
 which does the switch for you. Please around with different True, False 
 combinations. 
-Once you have switched, you should also consult @ref peano_performance_optimisation "Peano's generic remarks on alignment", 
+Once you have switched, you should also consult @ref page_peano_performance_optimisation "Peano's generic remarks on alignment", 
 and you might want to change your kernel into a variant which optimises aggressively for vector registers (and can 
 potentially even use GPUs). This topic is discussed below.
 
