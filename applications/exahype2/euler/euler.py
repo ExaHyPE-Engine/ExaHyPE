@@ -8,10 +8,10 @@ import exahype2
 
 dimensions                = 2
 cell_size                 = 0.01
-amr_levels                = 0
+amr_levels                = 3
 patch_size                = 4
-rk_order                  = 3
-dg_order                  = 1
+rk_order                  = 4
+dg_order                  = 2
 end_time                  = 3.0
 plot_interval             = end_time/100
 #plot_interval             = 0
@@ -28,7 +28,7 @@ scenarios = [
   "BreakingDam",
   "BreakingDamWithDynamicAMR",
 ]
-scenario = "PointExplosionWithDynamicAMR"
+scenario = "PointExplosion"
 
 fv_rusanov_solvers = {
   #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep, # admissible_time_step_size = min_h/patch_size*0.01

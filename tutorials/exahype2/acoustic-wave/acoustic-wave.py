@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath("../../../python"))
 #
 # We import the required modules for this project.
 # We always need the 'peano4' module as this is our core project.
-# Since we are creating an 'ExaHyPE' application, we additionally
+# Since we are creating an ExaHyPE 2 application, we additionally
 # need to import the 'exahype2' module.
 #
 import peano4
@@ -21,166 +21,209 @@ import exahype2
 # We specify the space dimensions here.
 # We support either 2- or 3-dimensional problems.
 #
-dimensions = 2
-#
-# We specify the number of AMR levels here.
-#
-amr_levels            = 0
+dimensions = 3
 
 #
-# We first create a new ExaHyPE2 project.
+# The number of finite volumes per axis in one patch.
+#
+patch_size = 16
+
+#
+# The size of a finite volume/cell per axis.
+#
+volume_size = 0.1
+
+#
+# The simulation end time.
+#
+end_time = 1
+
+#
+# Choose domain size and offset.
+#
+if dimensions == 2:
+    size = [10.0, 10.0]
+    offset = [0.0, 0.0]
+else:
+    size = [10.0, 10.0, 10.0]
+    offset = [0.0, 0.0, 0.0]
+
+#
+# If set to False, the project will not compile the project after generation (i.e., you need to invoke the Makefile yourself).
+#
+use_make = True
+
+#
+# If set to True, the project will use a completely symbolic description of the Euler equations.
+# If set to False, pre-defined optimised C++ code will be used instead.
+#
+use_symbolic_description = True
+
+#
+# Choose how often a snapshot is written.
+#
+time_in_between_two_snapshots = end_time/100
+#time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
+
+#
+# Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
+#
+compile_mode=peano4.output.CompileMode.Release
+
+#
+# We first create a new ExaHyPE 2 project.
 # For this, we specify the (nested) namespaces, the name of our main file and our executable name.
 # We amend the executable name by the space dimensions.
 #
 my_project = exahype2.Project(
-  namespace     =["tutorials", "exahype2", "acousticwave"],
-  project_name  ="AcousticWaveTutorial",
-  directory     =".",
-  executable    ="acoustic-wave-" + str(dimensions) + "d"
+  namespace     = ["tutorials", "exahype2", "acousticwave"],
+  project_name  = "AcousticWaveTutorial",
+  directory     = ".",
+  executable    = "acoustic-wave-" + str(dimensions) + "d"
 )
 
 #
-# ExaHyPE supports different types of solvers.
-# For the sake of simplicity we create an enum
-# where we define some of the available solver types
-# which allows us to easily switch between different
-# solvers.
-#
-from enum import Enum
-class SolverType(Enum):
-  FV    = 1 # Finite Volumes (FV)
-  RKDG  = 2 # Runge-Kutta (RK) Discontinuous Galerkin (DG)
-
-#
-# Here we choose the type of solver we want to use.
-#
-solver_type = SolverType.RKDG
-
-#
-# Add the solver using named arguments.
+# Add the Finite Volumes solver using named arguments.
 # This is the way you can add further PDE terms.
 # This requires the 'BlockStructured' toolbox and 'ExaHyPE' to be built.
+# Rusanov is the type of flux that is used to solve the Riemann problem at boundaries between cells.
 #
-if solver_type == SolverType.FV:
-  my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
-    name                  = "AcousticWaveSolver",
-    unknowns              = dimensions + 1,
-    auxiliary_variables   = 0,
-    patch_size            = 17,
-    min_volume_h          = 0.1 * 3.0**(-amr_levels),
-    max_volume_h          = 0.1,
-    time_step_relaxation  = 0.5
-  )
-elif solver_type == SolverType.RKDG:
-  my_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(
-    name                  = "AcousticWaveSolver",
-    unknowns              = dimensions + 1,
-    auxiliary_variables   = 0,
-    rk_order              = 4,
-    polynomials           = exahype2.solvers.GaussLegendreBasis(polynomial_order=2),
-    face_projections      = exahype2.solvers.rkdg.FaceProjections.Solution,
-    min_cell_h            = 0.1 * 3.0**(-amr_levels),
-    max_cell_h            = 0.1,
-    time_step_relaxation  = 0.5
-  )
-
-#
-# To see which variables (unknowns + auxiliary variables) we can visualise,
-# let's add a plot description for the variables to our solver.
-#
-my_solver.plot_description = "p, vx, vy"
-
-#
-# We want to define our PDE symbolically.
-# For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
-#
-pde = exahype2.symhype.FirstOrderConservativePDEFormulation(
-    unknowns=dimensions + 1, auxiliary_variables=0, dimensions=dimensions
+my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
+    name="AcousticWaveSolver",
+    patch_size=patch_size,
+    unknowns=dimensions + 1, # [p, u, v, (w)]
+    auxiliary_variables=0,
+    min_volume_h=volume_size,
+    max_volume_h=volume_size,
+    time_step_relaxation=0.5,
 )
-p = pde.name_Q_entry(0, "p")
-v = pde.name_Q_entries(1, dimensions, "v")
 
-pde.initial_values[0] = 0
-pde.initial_values[1] = 0
-pde.initial_values[2] = 0
+if use_symbolic_description:
+  #
+  # We want to define our PDE symbolically.
+  # For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
+  # For reusability in other applications we implement the PDE model in the Python script pde.py.
+  #
+  from pde import PDE
+  my_pde = PDE(unknowns=dimensions + 1, auxiliary_variables=0, dimensions=dimensions)
 
-pde.boundary_values[0] = 0
-pde.boundary_values[1] = 0
-pde.boundary_values[2] = 0
+  #
+  # Since 'my_pde' only holds the PDE for the acoustic wave equation without initial- or boundary conditions,
+  # we still need to properly define initial- and boundary conditions.
+  # This gives us then a complete description of a 'scenario'.
+  #
+  import sympy
 
-import sympy
+  #
+  # Initial conditions
+  #
+  my_pde.initial_values[0] = 0
+  my_pde.initial_values[1] = 0
+  my_pde.initial_values[2] = 0
+  if dimensions == 3:
+     my_pde.initial_values[3] = 0
 
-rho = sympy.symbols("rho")
-c = sympy.symbols("c")
-K0 = rho * c * c
+  #
+  # Boundary conditions
+  #
+  my_pde.boundary_values[0] = 0
+  my_pde.boundary_values[1] = 0
+  my_pde.boundary_values[2] = 0
+  if dimensions == 3:
+     my_pde.boundary_values[3] = 0
 
-# Flux [unknowns, dimensions]
-pde.F[0, 0] = -K0 * v[0]
-pde.F[1, 0] = -1.0 / rho * p
-pde.F[2, 0] = 0
+  #
+  # Source term
+  #
+  sigma = sympy.symbols("sigma")
+  t0 = sympy.symbols("t0")
+  M0 = sympy.symbols("M0")
+  t = sympy.symbols("t")
+  force = M0 * sympy.exp(-((t - t0) * (t - t0)) / (2.0 * sigma * sigma))
 
-pde.F[0, 1] = -K0 * v[1]
-pde.F[1, 1] = 0
-pde.F[2, 1] = -1.0 / rho * p
+  if dimensions == 2:
+    volume_centre = sympy.sqrt((5 - my_pde.x[0])**2 + (5 - my_pde.x[1])**2)
+    my_pde.sources[0] = sympy.Piecewise((force, volume_centre < 0.1), (0, True)) # p
+  else:
+    volume_centre = sympy.sqrt((5 - my_pde.x[0])**2 + (5 - my_pde.x[1])**2 + (5 - my_pde.x[2])**2)
+    my_pde.sources[0] = sympy.Piecewise((force, volume_centre < 0.1), (0, True)) # p
 
-pde.eigenvalues[0] = c
-pde.eigenvalues[1] = c
-pde.eigenvalues[2] = 0
+  my_pde.sources[1] = 0
+  my_pde.sources[2] = 0
+  if dimensions == 3:
+     my_pde.sources[3] = 0
 
-sigma = sympy.symbols("sigma")
-t0 = sympy.symbols("t0")
-M0 = sympy.symbols("M0")
-t = sympy.symbols("t")
-force = M0 * sympy.exp(-((t - t0) * (t - t0)) / (2.0 * sigma * sigma))
+  my_pde.substitute_expression(my_pde.rho, 2.7)
+  my_pde.substitute_expression(my_pde.c, 6.0)
+  my_pde.substitute_expression(sigma, 0.1149)
+  my_pde.substitute_expression(t0, 0.7)
+  my_pde.substitute_expression(M0, 1000.0)
 
-pde.sources[0] = force
-pde.sources[1] = 0
-pde.sources[2] = 0
+  #
+  # Specify which implementation our solvers uses.
+  # Here we want to set the implementation we get from our symbolically defined PDE,
+  # i.e., we get the C++ implementation which is generated by ExaHyPE's 'symhype' package.
+  #
+  my_solver.set_implementation(
+      initial_conditions=my_pde.implementation_of_initial_conditions(),
+      boundary_conditions=my_pde.implementation_of_boundary_conditions(),
+      flux=my_pde.implementation_of_flux(),
+      eigenvalues=my_pde.implementation_of_max_eigenvalue(),
+      source_term=my_pde.implementation_of_sources(),
+  )
 
-pde.substitute_expression(rho, 2.7)
-pde.substitute_expression(c, 6.0)
-pde.substitute_expression(sigma, 0.1149)
-pde.substitute_expression(t0, 0.7)
-pde.substitute_expression(M0, 1000.0)
+  #
+  # To see which variables (unknowns + auxiliary variables) we can visualise,
+  # let's add a plot description for the variables to our solver.
+  #
+  my_solver.plot_description = my_pde.unknown_identifier_for_plotter()
+else:
+  # Otherwise, we just call our pre-defined C++ kernels from the 'EulerKernels' header file.
+  my_solver.add_user_solver_includes("""
+#include "AcousticWaveKernels.h"
+""")
 
-#
-# Specify which implementation our solvers uses.
-# Here we want to set the implementation we get from our symbolically defined PDE,
-# i.e., we get the C++ implementation which is generated by ExaHyPE's 'symhype' package.
-#
-my_solver.set_implementation(
-    initial_conditions=pde.implementation_of_initial_conditions(),
-    boundary_conditions=pde.implementation_of_boundary_conditions(),
-    flux=pde.implementation_of_flux(),
-    eigenvalues=pde.implementation_of_max_eigenvalue(),
+  my_solver.set_implementation(
+    initial_conditions="""
+  Q[0] = 0.0;
+  Q[1] = 0.0;
+  Q[2] = 0.0;
+""",
+
+    boundary_conditions="""
+  Qoutside[0] = 0.0;
+  Qoutside[1] = 0.0;
+  Qoutside[2] = 0.0;
+""",
+
+    flux="""
+  ::exahype2::acousticwave::flux(Q, faceCentre, volumeH, t, dt, normal, 2.7, 6.0, F);
+""",
+
+    eigenvalues="""
+  return ::exahype2::acousticwave::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, 6.0);
+""",
+
     source_term="""
   const tarch::la::Vector<Dimensions, double> sourceLocation({5, 5});
   if (tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>(sourceLocation)) < 0.1) {
-    %s
+    constexpr double sigma = 0.1149;
+    constexpr double t0 = 0.7;
+    constexpr double M0 = 1000.0;
+
+    const double force = M0*std::exp(-((t-t0)*(t-t0))/(2.0*sigma*sigma));
+
+    S[0] = force;
+    S[1] = 0.0;
+    S[2] = 0.0;
   }
 """
-    % pde.implementation_of_sources(),
-    refinement_criterion="""
-  constexpr bool useDynamicAMR = false;
-  const tarch::la::Vector<Dimensions, double> sourceLocation({5, 5});
-  const double distance = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>(sourceLocation));
-  auto command = tarch::la::equals(t, 0.0)
-    ? (0.8 < distance && distance < 1.0) ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Keep
-    : ::exahype2::RefinementCommand::Keep;
+  )
 
-  if constexpr (useDynamicAMR) {
-    if (tarch::la::greater(t, 0.0)) {
-      if (Q[4] >  0.4) {
-        command = ::exahype2::RefinementCommand::Refine;
-      }
-      if (Q[4] < 0.2) {
-        command = ::exahype2::RefinementCommand::Erase;
-      }
-    }
-  }
-  return command;
-""",
-)
+  if dimensions == 2:
+    my_solver.plot_description = "p, u, v"
+  else:
+    my_solver.plot_description = "p, u, v, w"
 
 #
 # Add the solver to our project
@@ -190,21 +233,14 @@ my_project.add_solver(my_solver)
 #
 # Configure some global parameters
 #
-if dimensions == 2:
-    size = [10.0, 10.0]
-    offset = [0.0, 0.0]
-else:
-    size = [10.0, 10.0, 10.0]
-    offset = [0.0, 0.0, 0.0]
-
 my_project.set_global_simulation_parameters(
     dimensions=dimensions,
     size=size,
     offset=offset,
-    min_end_time=0.20,
-    max_end_time=0.20,
+    min_end_time=end_time,
+    max_end_time=end_time,
     first_plot_time_stamp=0.0,
-    time_in_between_plots=0.001,  # snapshot interval
+    time_in_between_plots=time_in_between_two_snapshots,
     periodic_BC=[False, False, False],
 )
 
@@ -230,9 +266,8 @@ my_project.set_load_balancing(
 # We need to set the location of our core libraries ('Peano4').
 # This helps us to resolve any dependencies.
 # Additionally, we specify the build mode which you can also change to a different mode.
-# Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-my_project.set_Peano4_installation("../../../", mode=peano4.output.CompileMode.Release)
+my_project.set_Peano4_installation("../../../", mode=compile_mode)
 
 #
 # We generate and grab the underlying core project of 'Peano4'.
@@ -241,7 +276,7 @@ my_project.set_Peano4_installation("../../../", mode=peano4.output.CompileMode.R
 my_project = my_project.generate_Peano4_project(verbose=True)
 
 #
-# Optional: Set an floating-point exception handler to the Peano4 project.
+# Optional: Set an floating-point exception handler to the Peano 4 project.
 #
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
@@ -252,16 +287,33 @@ my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 # and toolboxes which have been built before.
 # You can also always invoke 'make' yourself to compile, or cleanup with 'make clean'.
 #
-my_project.build(make_clean_first=True, throw_away_data_after_build=True)
+my_project.build(make=use_make, make_clean_first=True, throw_away_data_after_build=True)
 
-print("Executable is 'acoustic-wave-<dimensions>d'")
+#
+# Create a postprocessing script which converts the output patch files of the simulation
+# to VTU files which can be read by ParaView e.g.
+#
+with open("postprocess.py", "w") as file:
+    file.write('''
+import os
+import sys
+import subprocess
+
+output_patch_file = "solution/solution-AcousticWaveSolver.peano-patch-file"
+if os.path.isfile(output_patch_file):
+    subprocess.call([
+        "python3", "../../../python/peano4/visualisation/render.py",
+        str(output_patch_file),
+    ])
+''')
+
+if use_symbolic_description:
+  print("\nPDE is: ")
+  print(my_pde.__str__())
+
+print("Executable is acoustic-wave-" + str(dimensions) + "d")
 print("Clean object files via 'make clean'")
-print("Recompile the generated code via 'make -j'")
+print("(Re)compile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
 print("Regenerate all code by running 'python3 acoustic-wave.py' again")
-print(
-    "Convert any output via python3 ../../../python/peano4/visualisation/render.py solution/solution-AcousticWaveSolver.peano-patch-file"
-)
-print(
-    "Then you can open the generated .pvd file in a tool of your choice (e.g., ParaView)"
-)
+print("Generate (and convert) any postprocessing data by calling 'python3 postprocess.py'")

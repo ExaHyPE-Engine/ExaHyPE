@@ -115,7 +115,6 @@ $$
 $$
 
 ## Three-dimensional Euler Equations
-
 Finally, we can implement the Euler equations in three dimensions.
 
 The three-dimensional Euler equations are very similar to the two-dimensional equations:
@@ -162,7 +161,6 @@ $$
                     \sqrt[]{\frac{\gamma  p}{\rho}} \\
         \end{array} \right)
 $$
-
 
 t=0.0             |  t=1.0
 :-------------------------:|:-------------------------:
