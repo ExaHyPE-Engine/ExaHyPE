@@ -16,8 +16,6 @@ namespace toolbox {
 } // namespace toolbox
 
 
-
-
 /**
  * Abstract base class for all flavours of particle sets
  *
@@ -31,7 +29,8 @@ namespace toolbox {
  * below
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   subdomain-local sorting statistics: #lifts=0, #drops=0, #sieves=0, #reassignments=0
+ * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   subdomain-local sorting statistics: #lifts=0, #drops=0,
+ * #sieves=0, #reassignments=0
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  * Lift means that a particle was associated to a vertex but left the area
@@ -59,7 +58,8 @@ namespace toolbox {
  *
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   global sorting statistics: #lifts(assignments)-into-sieve-set=0
+ * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   global sorting statistics:
+ * #lifts(assignments)-into-sieve-set=0
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  * This is the counterpart of of the sieve operation. Note that a particle
@@ -69,7 +69,8 @@ namespace toolbox {
  *
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   particle state updates: #remaining=121, #incoming=0, #leaving=0, #expired-and-dropped-halos=51
+ * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   particle state updates: #remaining=121, #incoming=0,
+ * #leaving=0, #expired-and-dropped-halos=51
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  * After each step where particles move, we might want to update their state.
@@ -86,7 +87,9 @@ namespace toolbox {
  *
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   boundary merge statistics: #added new virtual particles (new halo particles)=51, #replaced virtual particles (halo particle updates)=0, #dropped virtual particles (redundant halo information)=0
+ * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   boundary merge statistics: #added new virtual particles
+ * (new halo particles)=51, #replaced virtual particles (halo particle updates)=0, #dropped virtual particles (redundant
+ * halo information)=0
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  * When we merge data sent in from another tree, we ever only consider data
@@ -113,7 +116,8 @@ namespace toolbox {
  * inside a cell, to make a decision if to update them or not.
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   replica deletion statistics: #eliminated local spatial duplicates=0, #eliminated virtual spatial duplicates=0
+ * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   replica deletion statistics: #eliminated local spatial
+ * duplicates=0, #eliminated virtual spatial duplicates=0
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  * Some codes explicitly check for redundant particles in teh mesh and remove
@@ -154,8 +158,8 @@ namespace toolbox {
 template <typename T>
 class toolbox::particles::ParticleSet {
 public:
-  typedef T                 DoFType;
-  typedef std::list<T*>     ParticleList;
+  typedef T             DoFType;
+  typedef std::list<T*> ParticleList;
 
 #if PeanoDebug >= 1
   void                                  setDebugX(const tarch::la::Vector<Dimensions, double>& data);
@@ -164,14 +168,21 @@ public:
   tarch::la::Vector<Dimensions, double> getDebugH() const;
 #endif
 
-  std::string toString(bool addBrackets=true) const;
+  std::string toString(bool addBrackets = true) const;
 
   /**
    * Clear stats
    *
-   * Has to be called per rank prior to any mesh traversal assembling stats.
-   * I typically realise this in the prepare traversal event. See
+   * Has to be called per rank prior to any collection of stats.
+   * I used to call this routine in the prepare traversal event, i.e. in
    * peano4.toolbox.particles.AbstractUpdateParticleGridAssociation.get_body_of_prepareTraversal().
+   * However, this is not clever, as the reassignment usually spans multiple
+   * grid sweeps. If we clear the stats prior to each of these sweeps, we
+   * will only get a state snapshot from what happened in the last sweep.
+   *
+   * Therefore, I now typically call this clear routine directly after I've
+   * written stats to the terminal. This differs to how I treat
+   * clearParticleStateStatistics().
    */
   static void clearReassignmentStatistics();
 
@@ -179,8 +190,9 @@ public:
    * Clear stats
    *
    * Has to be called per rank prior to any mesh traversal assembling stats.
-   * I typically realise this in the prepare traversal event. See
+   * I call this routine in the prepare traversal event, i.e. in
    * peano4.toolbox.particles.UpdateParallelState.get_body_of_prepareTraversal().
+   * This means I really get only a snapshot from one grid sweep.
    */
   static void clearParticleStateStatistics();
 
@@ -193,7 +205,8 @@ public:
     int numberOfLiftsInThisTree,
     int numberOfDropsInThisTree,
     int numberOfReassignmentsInThisTree,
-    int numberOfSievesInThisTree
+    int numberOfLiftsIntoSieveSetInThisTree,
+    int numberOfDropsFromSieveSetInThisTree
   );
 
   static void updateNumberOfLocalParticleStatistics(
@@ -283,7 +296,9 @@ protected:
    * See class documentation of toolbox::particles::ParticleSet for
    * an overview of the statistics tracked.
    */
-  static int _numberOfSieves;
+  static int _numberOfLiftsIntoSieveSet;
+
+  static int _numberOfDropsFromSieveSet;
 
   /**
    * Set by parallel state analysis
@@ -322,7 +337,7 @@ protected:
   static int _numberOfVirtualEliminatedSpatialDuplicates;
   static int _numberOfLocalEliminatedSpatialDuplicates;
 
-  static SieveParticles<T>  sieveParticles;
+  static SieveParticles<T> sieveParticles;
 
 #if PeanoDebug >= 1
   tarch::la::Vector<Dimensions, double> _debugX;
