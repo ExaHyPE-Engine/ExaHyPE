@@ -153,6 +153,7 @@ else:
   my_solver.add_user_solver_includes("""
 #include "EulerKernels.h"
 """)
+
   my_solver.set_implementation(
     initial_conditions="""
   Q[0] = 1.0;
@@ -242,7 +243,7 @@ my_project.set_Peano4_installation("../../../", mode=compile_mode)
 my_project = my_project.generate_Peano4_project(verbose=True)
 
 #
-# Optional: Set an floating-point exception handler to the Peano4 project.
+# Optional: Set an floating-point exception handler to the Peano 4 project.
 #
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
@@ -265,15 +266,11 @@ import os
 import sys
 import subprocess
 
-solution_dir = "solution"
-if not os.path.exists(solution_dir):
-    os.makedirs(solution_dir)
-
-output_patch_file = solution_dir + "/solution-EulerSolver.peano-patch-file"
+output_patch_file = "solution/solution-EulerSolver.peano-patch-file"
 if os.path.isfile(output_patch_file):
     subprocess.call([
         "python3", "../../../python/peano4/visualisation/render.py",
-        str(output_patch_file)
+        str(output_patch_file),
     ])
 ''')
 

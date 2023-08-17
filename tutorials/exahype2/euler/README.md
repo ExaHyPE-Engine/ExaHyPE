@@ -19,7 +19,7 @@ To understand what it is that we have executed, let us take a look at the file w
 
     euler.py
 
-As this is a Python script, should surprise no one that we start with the following:
+As this is a Python script, it should surprise no one that we start with the following:
 
     import peano4
     import exahype2
