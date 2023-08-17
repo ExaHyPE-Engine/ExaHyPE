@@ -58,7 +58,8 @@ def construct_FV_limiter_for_FD4():
                 patch_size=self.SubPatchSize,
                 min_volume_h=1.0/65536,
                 max_volume_h=65536,
-                use_heap_storage=False,
+                use_heap_storage=True,
+                pde_terms_without_state=True,
             )
             self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
 
@@ -186,7 +187,11 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
 
         """
 
-        def __init__(self, name, min_cell_size, max_cell_size):
+        def __init__(self, 
+                     name, 
+                     min_cell_size, 
+                     max_cell_size,
+                     ):
             self._name_without_FD4_extension = name
 
             CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(
@@ -196,7 +201,8 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
                 rk_order=1,
                 min_meshcell_h=min_cell_size / FD4PatchSize,
                 max_meshcell_h=max_cell_size / FD4PatchSize,
-                use_heap_storage=False,
+                use_heap_storage=True,
+                pde_terms_without_state=False
             )
 
             self._user_action_set_includes += """
@@ -486,7 +492,12 @@ def construct_FD4_solver(min_cell_size, max_cell_size):
 
         """
 
-        def __init__(self, name, min_cell_size, max_cell_size, use_heap_storage=False):
+        def __init__(self, 
+                     name, 
+                     min_cell_size, 
+                     max_cell_size, 
+#                     use_heap_storage=False
+                     ):
             self._name_without_FD4_extension = name
 
             CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(

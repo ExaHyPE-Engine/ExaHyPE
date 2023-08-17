@@ -47,7 +47,8 @@ They are realised as bespoke @ref tarch_logging "logging devices".
 
 If you want to use compiler feedback, we do routinely use the Intel toolchain.
 For them, the flag -qopt-report=3 yields useful feedback. However, running the 
-whole code with compiler feedback quickly becomes tedious. I therefore 
+whole code with compiler feedback yields a lot and lot of files. It also seems
+to slow the translation process down. I therefore 
 recommend that you first find the observer class which invokes the compute kernel
 you are interested in. After that, create the Makefile (only once, as it will 
 be overwritten). Within the makefile, alter the linker step:

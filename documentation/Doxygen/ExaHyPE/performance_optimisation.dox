@@ -93,8 +93,10 @@ potentially even use GPUs). This topic is discussed below.
 
 ### The PDE term routines (sources, ncp, fluxes, eigenvalues, ...) are extremely expensive 
 
-In principle, that's what you want to see. If this is the case, then you should next follow the recommendations for GPU
-parallelisation. These focus on GPU efficiency, but the optimisations also pay off significantly for CPUs.
+In principle, that's what you want to see. If this is the case, then you should 
+next follow the @ref page_exahype_gpu "recommendations for GPU parallelisation". 
+These focus on GPU efficiency, but the optimisations also pay off significantly 
+for CPUs.
 
 
 
@@ -148,8 +150,8 @@ use enclave tasking.
 
 ### Very high spin time and not enough trees for the all cores
 
-This topic is covered by @ref page_peano_performance_optimisation "Peano's 
-section calls The code shows very high spin time".
+This topic is covered by 
+@ref page_peano_performance_optimisation "Peano's section calls The code shows very high spin time".
 In ExaHyPE 2's context it means that you do not have enough trees to keep 
 all cores busy, i.e. your mesh is too small or your subpartitions are too 
 big. 

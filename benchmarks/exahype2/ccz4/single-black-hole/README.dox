@@ -36,17 +36,17 @@ all be reinstantiated.
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-     rm *.o *.cmake
-     rm README-*.md
-     rm Makefile CMakeLists.txt
-     rm Abstract*
-     rm -rf celldata facedata globaldata observers tasks vertexdata repositories
+rm *.o *.cmake
+rm README-*.md
+rm Makefile CMakeLists.txt
+rm Abstract*
+rm -rf celldata facedata globaldata observers tasks vertexdata repositories
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 To get rid of the output files, type in
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-     rm *patch-file *vtu *.pvd *.bak
+rm *patch-file *vtu *.pvd *.bak *.csv
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -381,6 +381,9 @@ Rather make the black hole influence area smaller.
 
 ## Optimisation
 
+
+### Domain decomposition
+
 I found that using more than 8 trees per rank slows down the calculations 
 massively and introduces an enormous overhead, when we do the domain 
 partitioning. Therefore, I constrain the maximum number of initial trees 
@@ -388,6 +391,30 @@ to 8 per rank, and then I also introduce a minimal tree size of 100. As
 the documentation of exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration()
 clarifies, this minimal tree size is not used for the initial decomposition
 (this is where the 8 steps in), but it is used afterwards.
+
+
+### Code tuning
+
+The lionshare of the compute time is burnt within the Finite Volume patches.
+I followed a series of optimisation steps to get this part of the code faster:
+
+1. I switched to a @ref page_exahype_performance_optimisation "heap-based" 
+   data storage. 
+2. I notified the solver that @ref page_exahype_gpu "all the ncp, eigenvalue and source terms are side effect-free". 
+   That is, they do not alter any global state and solely the patch outcome.  
+3. I alter the generated Makefile manually. That is, I replace the solver 
+   part with
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
+        rm tasks/*.o
+        $(CXX) $(CXXFLAGS) -qopt-report=3 -c tasks/CCZ4SBH_FD4EnclaveTask.o  tasks/CCZ4SBH_FD4EnclaveTask.cpp
+        $(CXX) $(CXXFLAGS) -qopt-report=3 -c tasks/CCZ4SBH_FVEnclaveTask.o   tasks/CCZ4SBH_FVEnclaveTask.cpp
+        $(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o peano_sbh_2.0
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   This follows @ref page_peano_performance_optimisation "Peano's recommendations" 
+   how to obtain meaningful optimisation reports.
+   
+
 
 
 */
