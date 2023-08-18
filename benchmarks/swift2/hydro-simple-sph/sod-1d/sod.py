@@ -138,6 +138,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=20,
     min_h=args.cell_size,
     max_h=args.cell_size,
+    asserts=args.asserts,
 )
 
 
@@ -348,6 +349,7 @@ if args.clean_temporary_directories:
 peano4_project.generate(
     overwrite=peano4.output.Overwrite.Always, throw_away_data_after_generation=True
 )
+quit()
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 
 # remove output files from previous runs

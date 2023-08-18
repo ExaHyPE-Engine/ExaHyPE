@@ -1,7 +1,7 @@
 # This file is part of the SWIFT2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-from enum import Enum
+from enum import Enum, IntEnum
 
 from abc import abstractmethod
 
@@ -59,6 +59,37 @@ class AlgorithmStep(object):
         ALTER_LOCAL_STATE = 1
         CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN = 2
         CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN = 3
+
+    class SweepStage(IntEnum):
+        """
+        Enumeration of different events during a grid traversal, in order of
+        their execution.
+        If this changes, make sure to also update the dict containing the
+        names of the stages in
+        """
+
+        TOUCH_VERTEX_FIST_TIME = 0
+        CELL_KERNEL = 1
+        TOUCH_VERTEX_LAST_TIME = 2
+        STAGE_COUNT = 3
+
+
+    @staticmethod
+    def get_sweep_stage_name(stage: SweepStage):
+        """
+        Get the name as a string of a sweep stage for a given SweepStage enum.
+        """
+        if stage == AlgorithmStep.SweepStage.TOUCH_VERTEX_FIST_TIME:
+            return "touchVertexFirstTime"
+        elif stage == AlgorithmStep.SweepStage.CELL_KERNEL:
+            return "cellKernel"
+        elif stage == AlgorithmStep.SweepStage.TOUCH_VERTEX_LAST_TIME:
+            return "touchVertexLastTime"
+        elif stage == AlgorithmStep.SweepStage.STAGE_COUNT:
+            return "count"
+        else:
+            raise ValueError("Unknown algorithm stage", stage)
+
 
     def __init__(
         self,

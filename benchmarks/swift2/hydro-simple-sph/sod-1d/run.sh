@@ -30,7 +30,7 @@ fi
 echo 'generate and compile code ...'
 echo python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
 python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE --asserts -v
-# exit
+exit
 
 # run experiment
 echo 'running experiment...'

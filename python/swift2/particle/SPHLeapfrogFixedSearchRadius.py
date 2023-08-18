@@ -139,6 +139,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         min_h=0.3,
         max_h=0.3,
         use_optimised_coalesced_memory_access_kernels=False,
+        asserts=False,
     ):
         super(SPHLeapfrogFixedSearchRadius, self).__init__(
             name,
@@ -267,6 +268,10 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         # Algorithm Steps ---------------------------------------------------------------
         self.algorithm_steps_dict = {}
         self._setup_algorithm_steps_dict()
+
+        # Debugging --------------------------------------------------------------------
+        if asserts:
+            self.add_dependency_checks()
 
     def set_parameters(self):
         """
