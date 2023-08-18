@@ -13,6 +13,9 @@ class RusanovTsunami(solver.Solver):
     double lambdaLeft[3]{0.0};
     double lambdaRight[3]{0.0};
 
+    bool leftDry = !tarch::la::greater(QL[0], %f);
+    bool rightDry = !tarch::la::greater(QR[0], %f);
+
     double h_l = QL[0];
     double hu_l = QL[1];
     double hv_l = QL[2];
@@ -23,7 +26,7 @@ class RusanovTsunami(solver.Solver):
     double hv_r = QR[2];
     double b_r = QR[3];
 
-    if(b_r >= 0 && b_l >= 0)
+    if(leftDry && rightDry)
     {
         for(int i = 0; i < 3; i++)
         {
@@ -32,7 +35,7 @@ class RusanovTsunami(solver.Solver):
         }
         return 0.0;
     } 
-    else if (b_r >= 0 && b_l < 0)
+    else if (rightDry && !leftDry)
     {
         b_r = b_l;
         h_r = h_l;
@@ -47,7 +50,7 @@ class RusanovTsunami(solver.Solver):
         }
         fluxRight[0] *= -1.0;
     }
-    else if (b_l >= 0 && b_r < 0)
+    else if (leftDry && !rightDry)
     {
         b_l = b_r;
         h_l = h_r;
@@ -91,11 +94,11 @@ class RusanovTsunami(solver.Solver):
 
     for(int i = 0; i < 3; i++)
     {
-        APDQ[i] = flux[i];
-        AMDQ[i] = flux[i];
+        APDQ[i] = !rightDry * flux[i];
+        AMDQ[i] = !leftDry * flux[i];
     }
 
-    APDQ[normal + 1] -= 0.25 * g * (h_l + h_r) * (b_r - b_l);
-    AMDQ[normal + 1] += 0.25 * g * (h_l + h_r) * (b_r - b_l);
+    APDQ[normal + 1] -= !rightDry * 0.25 * g * (h_l + h_r) * (b_r - b_l);
+    AMDQ[normal + 1] += !leftDry * 0.25 * g * (h_l + h_r) * (b_r - b_l);
     return smax;
-    """
+    """ % (self.epsilon, self.epsilon)
