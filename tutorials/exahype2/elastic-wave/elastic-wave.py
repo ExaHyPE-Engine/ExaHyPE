@@ -205,9 +205,11 @@ if not os.path.exists("solution"):
 # If you only target a sequential execution, you can omit the load balancing.
 # However, for a parallel build and execution you need to set load balancing.
 # This requires the 'LoadBalancing' toolbox to be built.
+# The type of load balancer can greatly impact the speedup and overall performance.
+# For an overview of available load balancer refer to the documentation.
 #
 my_project.set_load_balancing(
-    "toolbox::loadbalancing::RecursiveBipartition",
+    "toolbox::loadbalancing::SpreadOutHierarchically",
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 
