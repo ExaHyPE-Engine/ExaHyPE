@@ -21,6 +21,7 @@ sph_kernel_list = [
     "wendland_C6",
 ]
 
+
 class _forbidInvalidKernelsDict(dict):
     """
     Modify the default dict to raise an error if a user tries to
@@ -30,17 +31,22 @@ class _forbidInvalidKernelsDict(dict):
     Also limit the available kernels to those specified in the
     sph_kernel_list list.
     """
+
     def __init__(self, *args, blocked_keys=(), ndim=0, **kwargs):
         super().__init__(*args, **kwargs)
         for key in blocked_keys:
             if key not in sph_kernel_list:
-                raise KeyError(f"Invalid kernel key {key}. Only {sph_kernel_list} are permitted")
+                raise KeyError(
+                    f"Invalid kernel key {key}. Only {sph_kernel_list} are permitted"
+                )
         self.blocked_keys = blocked_keys
         self.ndim = ndim
 
     def __setitem__(self, key, value):
         if key not in sph_kernel_list:
-            raise KeyError(f"Invalid kernel key {key}. Only {sph_kernel_list} are permitted")
+            raise KeyError(
+                f"Invalid kernel key {key}. Only {sph_kernel_list} are permitted"
+            )
         super().__setitem__(key, value)
 
     def __getitem__(self, key):
@@ -54,16 +60,18 @@ sph_kernel_macro_name = _forbidInvalidKernelsDict()
 
 # list for 1D, 2D, 3D values of H/h of kernel dicts
 sph_kernel_H_over_h = [
-        _forbidInvalidKernelsDict(blocked_keys=("wendland_C4", "wendland_C6"), ndim=1),
-        _forbidInvalidKernelsDict(ndim=2),
-        _forbidInvalidKernelsDict(ndim=3),]
+    _forbidInvalidKernelsDict(blocked_keys=("wendland_C4", "wendland_C6"), ndim=1),
+    _forbidInvalidKernelsDict(ndim=2),
+    _forbidInvalidKernelsDict(ndim=3),
+]
 
 
 # list for 1D, 2D, 3D values of kernel normalization coefficients of kernel dicts
 sph_kernel_normalization = [
-        _forbidInvalidKernelsDict(blocked_keys=("wendland_C4", "wendland_C6"), ndim=1),
-        _forbidInvalidKernelsDict(ndim=2),
-        _forbidInvalidKernelsDict(ndim=3),]
+    _forbidInvalidKernelsDict(blocked_keys=("wendland_C4", "wendland_C6"), ndim=1),
+    _forbidInvalidKernelsDict(ndim=2),
+    _forbidInvalidKernelsDict(ndim=3),
+]
 
 # dict containing functions that evaluate the kernel
 sph_kernel_eval_function = _forbidInvalidKernelsDict()
@@ -104,7 +112,7 @@ sph_kernel_H_over_h[0]["cubic_spline"] = 1.732051
 sph_kernel_H_over_h[0]["quartic_spline"] = 1.936492
 sph_kernel_H_over_h[0]["quintic_spline"] = 2.121321
 sph_kernel_H_over_h[0]["wendland_C2"] = 1.620185
-sph_kernel_H_over_h[0]["wendland_C4"] = None # not defined in 1D
+sph_kernel_H_over_h[0]["wendland_C4"] = None  # not defined in 1D
 sph_kernel_H_over_h[0]["wendland_C6"] = None  # not defined in 1D
 
 

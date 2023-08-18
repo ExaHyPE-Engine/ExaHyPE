@@ -182,8 +182,7 @@ GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
 kernel = args.kernel
 KERNEL_SYMBOL = sphtools.sph_kernel_macro_name[kernel]
-KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS-1][kernel]
-
+KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
 
 # Additional Particle Parameters -----------------------------------------------
