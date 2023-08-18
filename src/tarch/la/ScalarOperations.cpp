@@ -44,6 +44,7 @@ bool tarch::la::greaterEquals (
 }
 
 
+/*
 bool tarch::la::smaller (
   double lhs,
   double rhs,
@@ -51,6 +52,7 @@ bool tarch::la::smaller (
 ) {
   return lhs - rhs < -tolerance;
 }
+*/
 
 
 bool tarch::la::smallerEquals (
