@@ -79,6 +79,7 @@ include(${_project_options_SOURCE_DIR}/Index.cmake)
 include(${_project_options_SOURCE_DIR}/src/DynamicProjectOptions.cmake)
 dynamic_project_options()
 target_compile_features(project_options INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
+target_compile_options(project_warnings INTERFACE "-w")
 
 include(GNUInstallDirs)
 set(DEFAULT_CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
