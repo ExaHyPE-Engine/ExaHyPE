@@ -101,6 +101,7 @@ include(CompilerDefinitions)
 set_project_compiler_definitions(project_options)
 include(CompilerFlags)
 set_project_compiler_flags(project_warnings)
+target_compile_options(project_warnings INTERFACE "-w")
 include(LinkerFlags)
 set_project_linker_flags(project_options)
 
