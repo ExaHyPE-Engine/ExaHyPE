@@ -7,7 +7,7 @@ import peano4
 import exahype2
 
 dimensions                = 2
-cell_size                 = 0.4
+cell_size                 = 0.1
 amr_levels                = 0 # Set to 0 to disable adaptive mesh refinement (AMR)
 patch_size                = 3
 end_time                  = 3.0
@@ -45,9 +45,9 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 )
 
 if dimensions == 2:
-  my_solver.plot_description = "rho, u, v, e"
+  my_solver.plot_description = "rho, u, v, e, dudx, dudy, dvdx, dvdy"
 else:
-  my_solver.plot_description = "rho, u, v, w, e"
+  my_solver.plot_description = "rho, u, v, w, e, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz"
 
 my_solver.set_implementation(
   ncp                   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
