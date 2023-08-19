@@ -91,7 +91,8 @@ parser.add_argument("-bf",      "--bathymetry-file",   dest="bathymetry_file", t
 parser.add_argument("-df",      "--displacement-file", dest="displacement_file",type=str,                 required=False,             help="Path to file containing displacement relative to the directory this script is located in. Allowed file extensions: %s" % ("|".join(supported_file_types)))
 parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios,          default="Radial_Dam_Break", help="Default is Radial_Dam_Break.")
 parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     type=int,                   default=patch_size,         help="Number of finite volumes per axis (dimension) per patch. Default is %f." % patch_size)
-parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time in seconds between plots and also between database entries when probes are used. Default is %f." % plot_interval)
+parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time in seconds between plots. Default is %f." % plot_interval)
+parser.add_argument("-pri",     "--probe-interval",    dest="probe_interval", type=float,                 default=plot_interval,      help="Time in seconds between database entries when probes are used. Default is %f." % plot_interval)
 parser.add_argument("-cs",      "--custom-solver",     dest="custom_solver",  choices=custom_solver_implementations,required=False,   help="Custom solver to be used as user defined solver. Has to be set if --solver has been set to some user defined option.")
 parser.add_argument("-wd",      "--width",             dest="width",          type=str,                   required=False,             help="Specify size of domain in meters as [x, y] as string (e.g. [10, 10], [7e6, 4e6]). Needed to guarantee physicality of tsunami simulations. Note that some scenarios have a fixed width.")
 
@@ -135,6 +136,9 @@ if not args.output_path.endswith("/"):
 
 if args.width is not None:
   width = parse_coordinate_pair(args.width)
+
+if args.probe_coordinates is not None:
+  probe_interval = args.probe_interval
 
 if args.solver in user_defined_solvers and args.custom_solver is None:
   raise Exception("No custom solver implementation supplied for user defined solver! Please set -cs flag to one of the following values: " + "|".join(custom_solver_implementations) + ".")
@@ -506,14 +510,14 @@ if args.probe_coordinates != None:
     exahype2.tracer.DumpTracerIntoDatabase(
       probes,
       my_solver,
-      output_path + "tracer-test",
+      output_path + ("probes-%s" % executable_name) + ("-displacement-%f-%f" % (displacement_origin_x, displacement_origin_y) if args.uq_displacement_origin is not None else ""),
       65536,
       1e50,
       1e50,
-      plot_interval, # TODO is this a good idea?
+      probe_interval, 
       8,
       False,
-      plot_interval, # starting time of 0 leads to gibberish for t=0 in csv
+      probe_interval, # starting time of 0 leads to gibberish for t=0 in csv
       args.end_time
     )
   )
