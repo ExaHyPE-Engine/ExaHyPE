@@ -143,10 +143,10 @@ if use_symbolic_description:
 
   if dimensions == 2:
     volume_centre = sympy.sqrt((5 - my_pde.x[0])**2 + (5 - my_pde.x[1])**2)
-    my_pde.sources[0] = sympy.Piecewise((force, volume_centre < 0.1), (0, True)) # p
+    my_pde.sources[0] = sympy.Piecewise((force, volume_centre <= my_pde.h[0]), (0, True)) # p
   else:
     volume_centre = sympy.sqrt((5 - my_pde.x[0])**2 + (5 - my_pde.x[1])**2 + (5 - my_pde.x[2])**2)
-    my_pde.sources[0] = sympy.Piecewise((force, volume_centre < 0.1), (0, True)) # p
+    my_pde.sources[0] = sympy.Piecewise((force, volume_centre <= my_pde.h[0]), (0, True)) # p
 
   my_pde.sources[1] = 0
   my_pde.sources[2] = 0
@@ -178,7 +178,7 @@ if use_symbolic_description:
   #
   my_solver.plot_description = my_pde.unknown_identifier_for_plotter()
 else:
-  # Otherwise, we just call our pre-defined C++ kernels from the 'EulerKernels' header file.
+  # Otherwise, we just call our pre-defined C++ kernels from the 'AcousticWaveKernels' header file.
   my_solver.add_user_solver_includes("""
 #include "AcousticWaveKernels.h"
 """)
@@ -188,12 +188,18 @@ else:
   Q[0] = 0.0;
   Q[1] = 0.0;
   Q[2] = 0.0;
+#if Dimensions == 3
+  Q[3] = 0.0;
+#endif
 """,
 
     boundary_conditions="""
   Qoutside[0] = 0.0;
   Qoutside[1] = 0.0;
   Qoutside[2] = 0.0;
+#if Dimensions == 3
+  Qoutside[3] = 0.0;
+#endif
 """,
 
     flux="""
@@ -205,8 +211,12 @@ else:
 """,
 
     source_term="""
+#if Dimensions == 2
   const tarch::la::Vector<Dimensions, double> sourceLocation({5, 5});
-  if (tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>(sourceLocation)) < 0.1) {
+#else
+  const tarch::la::Vector<Dimensions, double> sourceLocation({5, 5, 5});
+#endif
+  if (tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>(sourceLocation)) <= MaxAdmissibleVolumeH) {
     constexpr double sigma = 0.1149;
     constexpr double t0 = 0.7;
     constexpr double M0 = 1000.0;
@@ -216,6 +226,9 @@ else:
     S[0] = force;
     S[1] = 0.0;
     S[2] = 0.0;
+#if Dimensions == 3
+    S[3] = 0.0;
+#endif
   }
 """
   )
