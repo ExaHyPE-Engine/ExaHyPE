@@ -1,5 +1,6 @@
 #include "UnitTests.h"
 
+#include "config.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 
 #if defined(GPUOffloadingCUDA)
