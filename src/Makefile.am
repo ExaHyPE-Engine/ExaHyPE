@@ -213,38 +213,6 @@ libPeano4Core3d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_TRACE)
 libPeano4Core3d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_3D_ASSERTS)
 libPeano4Core3d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_DEBUG)
 
-# !IMPORTANT!
-# If you are adding CUDA files to a folder you will need to do the following:
-# started with if GPUOffloadingCUDA and end with endif
-# between these blocks, the lines need to start without any whitespace on the left
-# due to the rules and limitaitons explained below you need write the following loop manually
-#
-# !Important! the following for loops are suggestions, and might not be the only way to do it
-# but it was the only way I could find after a long period of trial and error. Also, 
-# the names of variables you can freely choose, but I think this way it will be the best.
-# Also check how I did for tarch below.
-#
-#  for mode in [Debug, Release, ...]
-#   <target>_<mode>_CUDA_OBJS = for name in names <path>/<target>_<mode>_a-<name>.o
-#
-# If you need dimensions too, then you need to manually expand 2 for loops like:
-#
-# for mode in [Debug, Release, ...]
-#   for dimension in [2, 3, ...]
-#     <target><dimension>_<mode>_CUDA_OBJS = ...
-#
-# For every group of objects you have created you need to then define a rule:
-# Important: just like in a make file, the second line of the rule needs to start with TAB (not with spaces)
-# These rules will compile one cuda file to all the targets we need
-#
-# for ... #omitted
-# $(<target><dimension>_<mode>_OBJS): <path>/<target>_<mode>_a-%.o: <path>/%.cu
-# 	$(NVCC) $(NVCC_FLAGS_<target>) $(CXXFLAGS_PEANO_<dimension>D_<mode>) -c $< -o $@
-#
-# And then depending on the dimensions and targets:
-# <target><dimension>D_<mode>_a_LIBADD         = $(<target><dimension>D_<mode>_a_CUDA_OBJS)
-#
-
 if GPUOffloadingCUDA
 # The pattern syntax is necessary to compile CUDA source files to multiple targets.
 # Pattern syntax is a GNU extension therefore we can't use it (due to treat-warnings-as-error).
