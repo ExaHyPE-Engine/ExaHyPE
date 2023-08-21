@@ -339,5 +339,63 @@ export I_MPI_CXX=icpx
 ./configure --enable-exahype --enable-blockstructured --enable-loadbalancing --enable-particles CC=icc CXX=icpx --with-multithreading=omp --with-mpi=mpiicpc CXXFLAGS="-std=c++20 -fopenmp -g -funroll-loops -O3 -g3"
 ~~~~~~~~~~~~~~~~~~~~~~~
 
- */
 
+## CUDA
+
+En example way to compile with CUDA support is as follows:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+CC="nvc" CXX="nvc++ -O3 -std=c++17 -lstdc++fs" NVCCFLAGS="-arch=native" ./configure --with-cuda=/opt/nvidia/hpc_sdk/Linux_x86_64/23.7/cuda --gpu=cuda  --enable-exahype  --enable-loadbalancing   --with-multithreading=omp --enable-blockstructured
+~~~~~~~~~~~~~~~~~~~~~~~
+
+In contrast to other GPU Offloading approaches the architecture needs to be given with the argument NVCCFLAGS and not CXXFLAGS or as a part of CXX variables.
+The configure scripts needs the path to the CUDA installation. The CUDA compiler (nvcc) is infered from the cuda path. Furthermore the used gpu backend needs to be set to cuda with gpu=cuda.
+
+An important aspect of CUDA support is that supporting CUDA with Automake is much harder than with CMake.
+To add new CUDA files to the core libraries (tarch, ExaHyPE2, Peano4) with CMake the user needs to create the files, CMake build system handles everything automatically.
+As we are here describing the Automake build system user has to do the following to add new CUDA files to the core files:
+If the user wants to add CUDA kernels to user generated code, refer to the documentation of the python code generator.
+
+The following steps need to be done per folder that has CUDA files inside,
+the entries needed to be added to the corresponding Makfile.am. An example Makefile.am
+can be found in src/Makefile.am.
+
+If you are adding CUDA files to a folder you will need to do the following:
+
+  Start if GPUOffloadingCUDA and end with endif
+  between these blocks, the lines need to start without any whitespace on the left
+  due to the rules and limitaitons explained below you need write the following loop manually
+
+  !Important! the following for loops are suggestions, and might not be the only way to do it
+  but it was the only way I could find after a long period of trial and error. Also, 
+  the names of variables you can freely choose, but I think this way it will be the best.
+  Also check how I did for tarch in src/Makefile.am.
+
+  for mode in [Debug, Release, ...]
+    <target>_<mode>_CUDA_OBJS = for name in names <path>/<target>_<mode>_a-<name>.o
+
+  If you need dimensions too, then you need to manually expand 2 for loops like:
+
+   for mode in [Debug, Release, ...]
+    for dimension in [2, 3, ...]
+      <target><dimension>_<mode>_CUDA_OBJS = ...
+
+  For every group of objects you have created you need to then define a rule:
+  Important: just like in a make file, the second line of the rule needs to start with TAB (not with spaces)
+  These rules will compile one cuda file to all the targets we need
+
+  for ... #omitted
+  $(<target><dimension>_<mode>_OBJS): <path>/<target>_<mode>_a-%.o: <path>/%.cu
+  	$(NVCC) $(NVCC_FLAGS_<target>) $(CXXFLAGS_PEANO_<dimension>D_<mode>) -c $< -o $@
+ 
+  And then depending on the dimensions and targets:
+  <target><dimension>D_<mode>_a_LIBADD         = $(<target><dimension>D_<mode>_a_CUDA_OBJS)
+
+This needs to be done this way because in C++ files the prefixes are added
+automatically. These manually-unrolled loops could be implemented as loops or using
+various bash script commands, but they will all be GNU extensions and therefore we 
+abstained from using them. This means that the only remaining way is to write the items all.
+For example the list of objects could be easily done with loops e.g., # CUDA_OBJS_RELEASE = $(patsubst %.cu,libTarch_a-%.o, $(ITEMS))
+but they are all GNU extensions and therefore the user should not use them.
+
+*/
