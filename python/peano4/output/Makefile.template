@@ -9,11 +9,13 @@
 CXX = {{CXX}}
 FC  = {{FC}}
 DIMENSIONS = {{DIM}}
+NVCC = {{NVCC}}
 
 {% if MODE=="RELEASE" and DIM=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_RELEASE}}
 LDFLAGS  += {{LDFLAGS_PEANO_RELEASE}} {{LDFLAGS}} 
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_RELEASE}} {{LIBS}}
+NVCCFLAGS += {{NVCC_FLAGS_RELEASE}}
 {% endif %}
 
 {% if MODE=="STATS" and DIM=="2" %}
@@ -23,54 +25,63 @@ LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_RELEASE}} {{LIBS}}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_STATS}}
 LDFLAGS  += {{LDFLAGS_PEANO_STATS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_STATS}} {{LIBS}}
+NVCCFLAGS += {{NVCC_FLAGS_STATS}}
 {% endif %}
 
 {% if MODE=="ASSERTS" and DIM=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_ASSERTS}}
 LDFLAGS  += {{LDFLAGS_PEANO_ASSERTS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_ASSERTS}} {{LIBS}}
+NVCCFLAGS += {{NVCC_FLAGS_ASSERTS}}
 {% endif %}
 
 {% if MODE=="TRACE" and DIM=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_TRACE}}
 LDFLAGS  += {{LDFLAGS_PEANO_TRACE}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_TRACE}} {{LIBS}}
+NVCCFLAGS += {{NVCC_FLAGS_TRACE}}
 {% endif %}
 
 {% if MODE=="DEBUG" and DIM=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_DEBUG}}
 LDFLAGS  += {{LDFLAGS_PEANO_DEBUG}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_DEBUG}} {{LIBS}}
+NVCCFLAGS += {{NVCC_FLAGS_DEBUG}}
 {% endif %}
 
 {% if MODE=="RELEASE" and DIM=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_RELEASE}}
 LDFLAGS  += {{LDFLAGS_PEANO_RELEASE}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_RELEASE}} {{LIBS}}
+NVCCFLAGS += {{NVCC_FLAGS_RELEASE}}
 {% endif %}
 
 {% if MODE=="STATS" and DIM=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_STATS}}
 LDFLAGS  += {{LDFLAGS_PEANO_STATS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_STATS}} {{LIBS}}
+NVCCFLAGS += {{NVCC_FLAGS_STATS}}
 {% endif %}
 
 {% if MODE=="ASSERTS" and DIM=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_ASSERTS}}
 LDFLAGS  += {{LDFLAGS_PEANO_ASSERTS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_ASSERTS}} {{LIBS}}
+NVCCFLAGS += {{NVCC_FLAGS_ASSERTS}}
 {% endif %}
 
 {% if MODE=="TRACE" and DIM=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_TRACE}}
 LDFLAGS  += {{LDFLAGS_PEANO_TRACE}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_TRACE}} {{LIBS}}
+NVCCFLAGS += {{NVCC_FLAGS_TRACE}}
 {% endif %}
 
 {% if MODE=="DEBUG" and DIM=="3" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_3D_DEBUG}}
 LDFLAGS  += {{LDFLAGS_PEANO_DEBUG}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_3D_DEBUG}} {{LIBS}}
+NVCCFLAGS += {{NVCC_FLAGS_DEBUG}}
 {% endif %}
 
 FCFLAGS+={{FCFLAGS}}
@@ -113,6 +124,9 @@ all: solver
 	$(FC) $(FCFLAGS) -c -o $@ $<
 
 
+%.o: %.cu
+	$(NVCC) $(NVCCFLAGS) $(CXXFLAGS) -c -o $@ $<
+
 {% for module in FORTRAN_MODULES -%}
 .NOTPARALLEL: {{module | replace(".f90", ".mod") }}
 {{module | replace(".f90", ".mod")}}: {{module | replace(".f90", ".o") + "\n\n" }}
@@ -123,7 +137,7 @@ all: solver
 # per step if they are not required anymore. That is: left libraries can
 # depend objects right but not the other way round.
 #
-solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS)
+solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS) $(GPU_OBJS) $(CU_OBJS)
 	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o {{EXECUTABLENAME}}
 
 {#{% if USING_CMAKE %}
