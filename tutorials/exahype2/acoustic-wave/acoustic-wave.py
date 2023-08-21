@@ -21,7 +21,7 @@ import exahype2
 # We specify the space dimensions here.
 # We support either 2- or 3-dimensional problems.
 #
-dimensions = 3
+dimensions = 2
 
 #
 # The number of finite volumes per axis in one patch.

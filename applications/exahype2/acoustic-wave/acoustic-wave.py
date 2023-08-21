@@ -7,8 +7,8 @@ import peano4
 import exahype2
 
 dimensions                = 2
-cell_size                 = 0.01
-amr_levels                = 3
+cell_size                 = 0.1
+amr_levels                = 0
 patch_size                = 4
 rk_order                  = 4
 dg_order                  = 2
@@ -28,10 +28,7 @@ scenario = "PointExplosion"
 
 fv_rusanov_solvers = {
   #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep, # admissible_time_step_size = min_h/patch_size*0.01
-  #"FVRusanovGlobalFixedEnclave":exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
   "FVRusanovGlobalAdaptive":exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep,
-  "FVRusanovGlobalAdaptiveEnclave":exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
-  #"FVRusanovLocalEnclave":exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking,
 }
 
 rkdg_rusanov_solvers = {
@@ -73,7 +70,7 @@ parser.add_argument("-et",      "--end-time",          dest="end_time",       ty
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
 
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. size of a finite volume cell.")
-parser.add_argument("-sym",     "--symbolic",          dest="symbolic",       action="store_true",        default=use_symbolic_description, help="Use the symbolic PDE description of the Euler equations.")
+parser.add_argument("-sym",     "--symbolic",          dest="symbolic",       action="store_true",        default=use_symbolic_description, help="Use the symbolic PDE description of the acoustic wave equation.")
 
 parser.add_argument("-pbc",     "--periodic-boundary-conditions",  dest="periodic_boundary_conditions",   action="store_true",        help="Use periodic boundary conditions" )
 
@@ -195,7 +192,7 @@ else:
   else:
     my_solver.plot_description = "p, u, v, w"
   my_solver.add_user_solver_includes("""
-#include "../../../tutorials/exahype2/euler/AcousticWaveKernels.h"
+#include "../../../tutorials/exahype2/acoustic-wave/AcousticWaveKernels.h"
 """)
 
 my_project.add_solver(my_solver)
@@ -206,10 +203,10 @@ else:
   periodic_BC = [False, False, False]
 
 if args.dim == 2:
-  size                    = [1.0, 1.0]
+  size                    = [10.0, 10.0]
   offset                  = [0.0, 0.0]
 else:
-  size                    = [1.0, 1.0, 1.0]
+  size                    = [10.0, 10.0, 10.0]
   offset                  = [0.0, 0.0, 0.0]
 
 my_project.set_global_simulation_parameters(
