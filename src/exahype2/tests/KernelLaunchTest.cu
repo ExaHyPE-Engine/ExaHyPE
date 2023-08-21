@@ -1,5 +1,7 @@
 #include "KernelLaunchTest.h"
 
+#include "tarch/tests/TestMacros.h"
+
 #include "tarch/accelerator/cuda/ErrorCheck.h"
 
 
@@ -8,13 +10,14 @@ __global__ static void testDimensionsKernel(int* d) {
   d[0] = 2;
 #elif Dimensions == 3
   d[0] = 3;
+#else
+  #error "Only 2 or 3 dimensions are supported!
 #endif
 }
 
 
 exahype2::tests::KernelLaunchTest::KernelLaunchTest():
-  TestCase ("exahype2::tests::KernelLaunchTest") {
-}
+  TestCase("exahype2::tests::KernelLaunchTest") {}
 
 
 void exahype2::tests::KernelLaunchTest::run() {
