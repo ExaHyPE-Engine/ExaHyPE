@@ -27,10 +27,10 @@ def write_file(overwrite,overwrite_is_default,full_qualified_filename):
 
 def find_CMake_build_dir():
   """
-  This function searches for the CMake build directory by iteratively checking parent directories. 
+  This function searches for the CMake build directory by iteratively checking parent directories.
   Starting from the callers directory (using getcwd), iterating until root directory of peano and
-  this is computed using the location of this file therefore adapt the code if the file is moved 
-  somewhere else. Using CMake means that it was configured before, and therefore a CMakeCache.txt 
+  this is computed using the location of this file therefore adapt the code if the file is moved
+  somewhere else. Using CMake means that it was configured before, and therefore a CMakeCache.txt
   exists.
 
   :return: The path to the CMake build directory if found, or an empty string otherwise.

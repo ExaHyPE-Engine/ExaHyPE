@@ -10,7 +10,7 @@
 #include "tarch/Assertions.h"
 
 namespace tarch::accelerator::cuda {
-  inline void tarch::accelerator::cuda::checkError(cudaError_t code, const char *file, int line) {
+  inline void checkError(cudaError_t code, const char *file, int line) {
     assertion(code == cudaSuccess);
     if (code != cudaSuccess) {
       std::stringstream ss;
