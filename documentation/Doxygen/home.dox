@@ -13,6 +13,7 @@
 \li @subpage page_compiler_specific_settings
 \li @subpage page_conventions
 \li @subpage page_dastgen
+\li @subpage page_third_party
 \li @subpage page_faq
 
 \tableofcontents
