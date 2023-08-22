@@ -8,10 +8,10 @@ import exahype2
 
 dimensions                = 2
 cell_size                 = 0.1
-amr_levels                = 0
+amr_levels                = 2
 patch_size                = 4
-rk_order                  = 4
-dg_order                  = 2
+rk_order                  = 2
+dg_order                  = 1
 end_time                  = 3.0
 plot_interval             = end_time/100
 #plot_interval             = 0
