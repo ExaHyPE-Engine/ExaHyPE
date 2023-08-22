@@ -26,7 +26,7 @@ namespace tarch {
  *
  * If we have more tasks than the given threshold in this phase of the
  * computation, we deploy them to a GPU (see below). This behaviour is controlled
- * via fuseTasksImmediatelyWhenSpawned(), i.e. it kicks in directly when we
+ * via fuseTasksImmediatelyWhenSpawned(int taskType), i.e. it kicks in directly when we
  * spawn the task and a set of tasks consequently might be deployed onto an
  * accelerator while we still run through the mesh. Due to this check, idling
  * threads throughout the mesh traversal will get the left-overs and compete
@@ -67,7 +67,7 @@ public:
   virtual void            endBSPSection(int nestedParallelismLevel) override;
   virtual int             getNumberOfTasksToHoldBack(int taskType) override;
   virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice(int taskType) override;
-  virtual bool            fuseTasksImmediatelyWhenSpawned() override;
+  virtual bool            fuseTasksImmediatelyWhenSpawned(int taskType) override;
   virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType)
     override;
 };

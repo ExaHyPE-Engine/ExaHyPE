@@ -29,7 +29,7 @@ tarch::multicore::orchestration::AllOnGPU::FuseInstruction tarch::multicore::orc
            : FuseInstruction(_device, 1, std::numeric_limits<int>::max());
 }
 
-bool tarch::multicore::orchestration::AllOnGPU::fuseTasksImmediatelyWhenSpawned() { return false; }
+bool tarch::multicore::orchestration::AllOnGPU::fuseTasksImmediatelyWhenSpawned(int taskType) { return false; }
 
 tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::AllOnGPU::
   paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {

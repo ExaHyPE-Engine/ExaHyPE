@@ -446,6 +446,25 @@ solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
    updates of the limited regions are computed in parallel. Still, we see those
    massive imbalances.
    
+   I hence introduce a tailored task orchestration:
+   
+   - Add the main cpp file to the repository.
+   - Remove the default flags, i.e. do not call exahype2::parseCommandLineArguments().
+     The "new" code does not accept any arguments. 
+   - Introduce a new class MulticoreOrchestration. It inherits from 
+     tarch::multicore::orchestration::Strategy.
+   - Create an instance of this class and invoke tarch::multicore::setOrchestration() 
+     to activate it.
+   - Add the file to the project, such that the makefile picks it up:
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    peano4_project.output.makefile.add_cpp_file(
+        "MulticoreOrchestration.cpp"
+    )
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~
+     
+     
+   Consult the documentation of the MulticoreOrchestration for information on 
+   its behaviour. 
 
 
 */

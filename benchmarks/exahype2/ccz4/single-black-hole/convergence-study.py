@@ -841,6 +841,9 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_cpp_file(
         "../../../../applications/exahype2/ccz4/libtwopunctures/Newton.cpp"
     )
+    peano4_project.output.makefile.add_cpp_file(
+        "MulticoreOrchestration.cpp"
+    )
     peano4_project.output.makefile.add_CXX_flag("-DIncludeTwoPunctures")
     if added_limiter:
         peano4_project.output.makefile.add_CXX_flag("-DCoupleWithFV")

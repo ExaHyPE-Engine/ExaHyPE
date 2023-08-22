@@ -301,7 +301,7 @@ void tarch::multicore::spawnTask(Task* task) {
     logDebug("spawnTask(...)", "enqueued task (#tasks=" << localNonblockingTasks[threadNumber]->tasks.size() << ")");
 
     auto fusionCommand = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice(task->getTaskType());
-    if (localNonblockingTasks[threadNumber]->tasks.size() >= fusionCommand.minTasks and orchestrationStrategy->fuseTasksImmediatelyWhenSpawned()) {
+    if (localNonblockingTasks[threadNumber]->tasks.size() >= fusionCommand.minTasks and orchestrationStrategy->fuseTasksImmediatelyWhenSpawned(task->getTaskType())) {
       internal::copyInternalTaskQueueOverIntoGlobalQueue(threadNumber);
       internal::fusePendingTasks(fusionCommand);
     }

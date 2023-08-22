@@ -15,6 +15,10 @@ namespace tarch {
 
 /**
  * Interface for any task orchestration
+ *
+ * There are multiple orchestration strategies implementing this interface and
+ * hence guiding the task execution pattern. You can create those and make them
+ * live by calling tarch::multicore::setOrchestration().
  */
 class tarch::multicore::orchestration::Strategy {
 public:
@@ -73,6 +77,11 @@ public:
    * Is not const, as I want strategies give the opportunity to adopt
    * decisions after each call.
    *
+   * This routine is called once per task spawned (to know if we
+   * maybe should immediately map it onto a native task), and then
+   * an arbitrary number of times for the end of the BSP section.
+   *
+   *
    * @param taskType Either actual task type if we get a task or
    *   EndOfBSPSection if it is not asked for a particular task
    *   type or, well, at the end of a fork-join part.
@@ -104,19 +113,27 @@ public:
    * If you set this flag, tasks are immediately fused. You can ensure
    * that only idling threads fuse tasks. In this case, return false.
    */
-  virtual bool fuseTasksImmediatelyWhenSpawned() = 0;
+  virtual bool fuseTasksImmediatelyWhenSpawned(int taskType) = 0;
 
   /**
    * Determine how to handle/realise parallelisation within fork/join region
    *
-   * If you want threads to run through the queues and to process tasks,
-   * then return true here. If you return true, the default behaviour is
-   * that a traversal (grid sweep) task does not terminate when it has
-   * completed its traversal, but instead polls the task queue. By
-   * default, a task will always first try to process its local tasks.
+   * Peano models its execution with multiple parallel, nested fork/join
+   * sections. You could also think of these as mini-BSP sections. This
+   * routine guides the orchestration how to map those BSP sections onto
+   * tasks.
+   *
+   * The decision can be guided by basically arbitrary contextual factors. The
+   * most important one for me is the nesting factor. As we work mainly with
+   * OpenMP, where tasks are tied to one core, it makes limited sense to have
+   * nested parallel fors. Notably, it makes stuff slower. So usually, I return
+   * ExecutionPolicy::RunSerially with anything with a nesting level greater
+   * than 1.
    *
    * @param nestedParallelismLevel Please compare with tarch::multicore::spawnAndWait()
-   *   which ensures that this flag equals 1 on the top level.
+   *   which ensures that this flag equals 1 on the top level. A parameter of
+   *   0 would mean that no fork/join region has been opened. For such a
+   *   parameter, the code would not query this function.
    *
    * @param taskType We assume that all numberOfTasks tasks are of the same
    *   type.

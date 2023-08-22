@@ -48,7 +48,7 @@ public:
   /**
    * No
    */
-  virtual bool fuseTasksImmediatelyWhenSpawned() override;
+  virtual bool fuseTasksImmediatelyWhenSpawned(int taskType) override;
 
   /**
    * No if we encounter nested parallelism.

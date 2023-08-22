@@ -45,7 +45,7 @@ tarch::multicore::orchestration::BackfillAndDeployRoundRobin::FuseInstruction ta
   );
 }
 
-bool tarch::multicore::orchestration::BackfillAndDeployRoundRobin::fuseTasksImmediatelyWhenSpawned() { return true; }
+bool tarch::multicore::orchestration::BackfillAndDeployRoundRobin::fuseTasksImmediatelyWhenSpawned(int taskType) { return true; }
 
 tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::
   BackfillAndDeployRoundRobin::paralleliseForkJoinSection(

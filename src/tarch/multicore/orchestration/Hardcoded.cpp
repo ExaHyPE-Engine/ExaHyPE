@@ -11,7 +11,6 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     0,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
-    false,                           // processPendingTasksWhileWaiting
     1
   );
 }
@@ -23,7 +22,6 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     0,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
-    false,                           // processPendingTasksWhileWaiting
     1
   );
 }
@@ -35,7 +33,6 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     0,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
-    true,                            // processPendingTasksWhileWaiting
     1
   );
 }
@@ -49,7 +46,6 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
     numberOfTasksToFuse,               // tasksToFuse
     targetDevice,                      // deviceForFusedTasks
     fuseImmediately,                   // fuseTasksImmediatelyWhenSpawned
-    processTasksWhileWaitingInBSPArea, // processPendingTasksWhileWaiting
     1
   );
 }
@@ -60,7 +56,6 @@ tarch::multicore::orchestration::Hardcoded::Hardcoded(
   int  maxTasksToFuse,
   int  deviceForFusedTasks,
   bool fuseTasksImmediatelyWhenSpawned,
-  bool processPendingTasksWhileWaiting,
   int  maxNestedConcurrency
 ):
   _numberOfTasksToHoldBack(numberOfTasksToHoldBack),
@@ -68,7 +63,6 @@ tarch::multicore::orchestration::Hardcoded::Hardcoded(
   _maxTasksToFuse(maxTasksToFuse),
   _deviceForFusedTasks(deviceForFusedTasks),
   _fuseTasksImmediatelyWhenSpawned(fuseTasksImmediatelyWhenSpawned),
-  _processPendingTasksWhileWaiting(processPendingTasksWhileWaiting),
   _maxNestedConcurrency(maxNestedConcurrency) {}
 
 void tarch::multicore::orchestration::Hardcoded::startBSPSection(int nestedParallelismLevel) {}
@@ -84,7 +78,7 @@ tarch::multicore::orchestration::Hardcoded::FuseInstruction tarch::multicore::or
   );
 }
 
-bool tarch::multicore::orchestration::Hardcoded::fuseTasksImmediatelyWhenSpawned() {
+bool tarch::multicore::orchestration::Hardcoded::fuseTasksImmediatelyWhenSpawned(int taskType) {
   return _fuseTasksImmediatelyWhenSpawned;
 }
 

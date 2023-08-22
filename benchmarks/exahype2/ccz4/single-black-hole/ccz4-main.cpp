@@ -44,6 +44,8 @@
 #include "exahype2/UserInterface.h"
 #include "exahype2/UnitTests.h"
 
+#include "MulticoreOrchestration.h"
+
 //#ifdef UseFenv
 //#include "tarch/FenvWrapper.h"
 //#endif
@@ -423,10 +425,12 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidBuild;
   }
 
-  if (not exahype2::parseCommandLineArguments(argc,argv) ) {
-    logError("main()", "Invalid command line arguments.");
+//  if (not exahype2::parseCommandLineArguments(argc,argv) ) {
+  if (argc!=1) {
+    logError("main()", "Application does not accept command line arguments");
     return ExitCodeInvalidArguments;
   }
+  tarch::multicore::setOrchestration( new benchmarks::exahype2::ccz4::MulticoreOrchestration() );
 
   repositories::DataRepository::initDatatypes();
 
