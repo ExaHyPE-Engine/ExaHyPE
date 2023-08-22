@@ -58,6 +58,8 @@ public:
    */
   virtual void endBSPSection(int nestedParallelismLevel) = 0;
 
+  static constexpr int EndOfBSPSection = -1;
+
   /**
    * Tell the runtime system how many tasks to hold back: If there
    * are more tasks than the result, the tasking system will map them
@@ -70,8 +72,12 @@ public:
    *
    * Is not const, as I want strategies give the opportunity to adopt
    * decisions after each call.
+   *
+   * @param taskType Either actual task type if we get a task or
+   *   EndOfBSPSection if it is not asked for a particular task
+   *   type or, well, at the end of a fork-join part.
    */
-  virtual int getNumberOfTasksToHoldBack() = 0;
+  virtual int getNumberOfTasksToHoldBack(int taskType) = 0;
 
   /**
    * How many tasks to fuse and to which device to deploy
@@ -88,8 +94,11 @@ public:
    * - The third entry is the maximum number of tasks to fuse. Never
    *   batch more than this count into one (meta) task.
    *
+   * @param taskType Either actual task type if we get a task or
+   *   EndOfBSPSection if it is not asked for a particular task
+   *   type or, well, at the end of a fork-join part.
    */
-  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice() = 0;
+  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice(int taskType) = 0;
 
   /**
    * If you set this flag, tasks are immediately fused. You can ensure

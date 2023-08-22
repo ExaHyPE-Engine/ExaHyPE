@@ -32,12 +32,12 @@ void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::endBSPSection
   }
 }
 
-int tarch::multicore::orchestration::BackfillAndDeployRoundRobin::getNumberOfTasksToHoldBack() {
+int tarch::multicore::orchestration::BackfillAndDeployRoundRobin::getNumberOfTasksToHoldBack(int taskType) {
   return _inBSPSection ? std::numeric_limits<int>::max() : 0;
 }
 
 tarch::multicore::orchestration::BackfillAndDeployRoundRobin::FuseInstruction tarch::multicore::orchestration::
-  BackfillAndDeployRoundRobin::getNumberOfTasksToFuseAndTargetDevice() {
+  BackfillAndDeployRoundRobin::getNumberOfTasksToFuseAndTargetDevice(int taskType) {
   int deviceForFusedTasks = _nextDeviceToUse;
   toggleDevice();
   return tarch::multicore::orchestration::BackfillAndDeployRoundRobin::FuseInstruction(

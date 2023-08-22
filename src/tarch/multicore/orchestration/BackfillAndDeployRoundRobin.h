@@ -17,7 +17,7 @@ namespace tarch {
  *
  * This mapping holds back all tasks in the user-defined queues throughout the
  * "active" BSP section, i.e. no tasks should become a native one directly when
- * it is spawned. getNumberOfTasksToHoldBack() returns inf while one thread at
+ * it is spawned. getNumberOfTasksToHoldBack(int taskType) returns inf while one thread at
  * least is still traversing its subdomain.
  *
  * If a thread becomes idle while others still traverse their domain, it
@@ -65,8 +65,8 @@ public:
 
   virtual void            startBSPSection(int nestedParallelismLevel) override;
   virtual void            endBSPSection(int nestedParallelismLevel) override;
-  virtual int             getNumberOfTasksToHoldBack() override;
-  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice() override;
+  virtual int             getNumberOfTasksToHoldBack(int taskType) override;
+  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice(int taskType) override;
   virtual bool            fuseTasksImmediatelyWhenSpawned() override;
   virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType)
     override;

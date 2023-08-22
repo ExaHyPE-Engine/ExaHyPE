@@ -81,8 +81,8 @@ public:
 
   virtual void            startBSPSection(int nestedParallelismLevel) override;
   virtual void            endBSPSection(int nestedParallelismLevel) override;
-  virtual int             getNumberOfTasksToHoldBack() override;
-  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice() override;
+  virtual int             getNumberOfTasksToHoldBack(int taskType) override;
+  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice(int taskType) override;
   virtual bool            fuseTasksImmediatelyWhenSpawned() override;
   virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType)
     override;

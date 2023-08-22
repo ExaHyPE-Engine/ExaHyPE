@@ -75,10 +75,10 @@ void tarch::multicore::orchestration::Hardcoded::startBSPSection(int nestedParal
 
 void tarch::multicore::orchestration::Hardcoded::endBSPSection(int nestedParallelismLevel) {}
 
-int tarch::multicore::orchestration::Hardcoded::getNumberOfTasksToHoldBack() { return _numberOfTasksToHoldBack; }
+int tarch::multicore::orchestration::Hardcoded::getNumberOfTasksToHoldBack(int taskType) { return _numberOfTasksToHoldBack; }
 
 tarch::multicore::orchestration::Hardcoded::FuseInstruction tarch::multicore::orchestration::Hardcoded::
-  getNumberOfTasksToFuseAndTargetDevice() {
+  getNumberOfTasksToFuseAndTargetDevice(int taskType) {
   return tarch::multicore::orchestration::Hardcoded::FuseInstruction(
     _deviceForFusedTasks, _minTasksToFuse, _maxTasksToFuse
   );
