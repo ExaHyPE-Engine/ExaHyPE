@@ -104,16 +104,17 @@ def using_cuda_backend():
       return using_cuda_backend.using_cuda_backend_cached_value
   else: # Check for CUDA while we are using Automake backend
     config_log_path = find_configure_log()
-    constant = "CUDA_PATH"
-    value = ""
+
+    if config_log_path == "":
+      using_cuda_backend.using_cuda_backend_cached_value = False
+      return using_cuda_backend.using_cuda_backend_cached_value
+
     for line in open(config_log_path):
-      if re.search(constant + " *=", line) and line.startswith(constant):
-        try:
-            flags = line.split("=", 1)[1].strip()
-            value = flags
-        except:
-            print("Error in " + line + " for token " + constant)
-    using_cuda_backend.using_cuda_backend_cached_value = value != ""
+      if line.startswith("GPUOffloadingCUDA_TRUE=''"):
+        using_cuda_backend.using_cuda_backend_cached_value = True
+        return using_cuda_backend.using_cuda_backend_cached_value
+
+    using_cuda_backend.using_cuda_backend_cached_value = False
     return using_cuda_backend.using_cuda_backend_cached_value
 
   return using_cuda_backend.using_cuda_backend_cached_value
