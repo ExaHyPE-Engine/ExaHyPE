@@ -54,7 +54,7 @@ else:
 use_make = True
 
 #
-# If set to True, the project will use a completely symbolic description of the Euler equations.
+# If set to True, the project will use a completely symbolic description of the acoustic wave equation.
 # If set to False, pre-defined optimised C++ code will be used instead.
 #
 use_symbolic_description = False
