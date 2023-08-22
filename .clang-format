@@ -119,7 +119,6 @@ IncludeCategories:
     Priority:        2
     SortPriority:    8
     CaseSensitive:   false
-    CaseSensitive:   false
   - Regex:           '"[^/]+/[^/]+"' # 1 /
     Priority:        2
     SortPriority:    10
