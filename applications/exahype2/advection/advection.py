@@ -8,7 +8,7 @@ import exahype2
 
 dimensions                = 2
 cell_size                 = 0.1
-amr_levels                = 3
+amr_levels                = 2
 patch_size                = 4
 rk_order                  = 2
 dg_order                  = 1
@@ -38,7 +38,7 @@ rkdg_rusanov_solvers = {
 solvers = {}
 solvers.update(fv_rusanov_solvers)
 solvers.update(rkdg_rusanov_solvers)
-solver = "FVRusanovGlobalAdaptive"
+solver = "RKDGRusanovGlobalAdaptive"
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -258,5 +258,5 @@ print("Executable is ", executable_name)
 print("Clean object files via 'make clean'")
 print("Recompile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
-print("Regenerate all code by running 'python3 acoustic-wave.py' again")
+print("Regenerate all code by running 'python3 advection.py' again")
 print("Generate (and convert) any postprocessing data by calling 'python3 postprocess.py'")

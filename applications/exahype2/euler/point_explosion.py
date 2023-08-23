@@ -36,10 +36,10 @@ class PointExplosion:
             Q[1] = 0;
             Q[2] = 0;
             #if Dimensions == 2
-            Q[3] = ((std::sqrt(std::pow(0.5 - volumeCentre(0), 2) + std::pow(0.5 - volumeCentre(1), 2)) <= MaxAdmissibleVolumeH) ? (1.0) : (0.05));
+            Q[3] = ((std::sqrt(std::pow(0.5 - volumeCentre(0), 2) + std::pow(0.5 - volumeCentre(1), 2)) <= MaxAdmissibleCellH) ? (1.0) : (0.05));
             #else
             Q[3] = 0;
-            Q[4] = ((std::sqrt(std::pow(0.5 - volumeCentre(0), 2) + std::pow(0.5 - volumeCentre(1), 2) + std::pow(0.5 - volumeCentre(2), 2)) <= MaxAdmissibleVolumeH) ? (1.0) : (0.05));
+            Q[4] = ((std::sqrt(std::pow(0.5 - volumeCentre(0), 2) + std::pow(0.5 - volumeCentre(1), 2) + std::pow(0.5 - volumeCentre(2), 2)) <= MaxAdmissibleCellH) ? (1.0) : (0.05));
             #endif
             """
 
@@ -89,7 +89,7 @@ class PointExplosion:
         // If you only have this thing, then you work with static AMR,
         // as you never invoke erase.
         if (tarch::la::equals(t, 0.0)) {
-          bool isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < MaxAdmissibleVolumeH);
+          bool isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < MaxAdmissibleCellH);
           if (isInTheCentre) {
             result = ::exahype2::RefinementCommand::Refine;
           }
