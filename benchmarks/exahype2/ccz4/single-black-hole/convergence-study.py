@@ -53,12 +53,24 @@ def construct_FV_limiter_for_FD4():
             self,
             name,
         ):
+            """!
+
+            Construct the limiter
+            
+            use_heap_storage is a boolean. The superclass exahype2.ccz4.CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking 
+            documents in detail what this flag means, but it cannot harm to 
+            repeat the core message once again: True means proper storage on 
+            the heap. False means use the heap but administer it via a smart
+            pointer. Independent of the flag, data is never held on the call
+            stack.
+
+            """
             super(Limiter, self).__init__(
                 name=name + "_FV",
                 patch_size=self.SubPatchSize,
                 min_volume_h=1.0/65536,
                 max_volume_h=65536,
-                use_heap_storage=True,
+                use_heap_storage=False, # See superclass docu
                 pde_terms_without_state=True,
             )
             self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
@@ -201,7 +213,7 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
                 rk_order=1,
                 min_meshcell_h=min_cell_size / FD4PatchSize,
                 max_meshcell_h=max_cell_size / FD4PatchSize,
-                use_heap_storage=True,
+                use_heap_storage=False, # See superclass docu
                 pde_terms_without_state=False
             )
 
@@ -496,7 +508,7 @@ def construct_FD4_solver(min_cell_size, max_cell_size):
                      name, 
                      min_cell_size, 
                      max_cell_size, 
-#                     use_heap_storage=False
+                     use_heap_storage=False, # See superclass docu
                      ):
             self._name_without_FD4_extension = name
 
@@ -828,6 +840,9 @@ if __name__ == "__main__":
     )
     peano4_project.output.makefile.add_cpp_file(
         "../../../../applications/exahype2/ccz4/libtwopunctures/Newton.cpp"
+    )
+    peano4_project.output.makefile.add_cpp_file(
+        "MulticoreOrchestration.cpp"
     )
     peano4_project.output.makefile.add_CXX_flag("-DIncludeTwoPunctures")
     if added_limiter:

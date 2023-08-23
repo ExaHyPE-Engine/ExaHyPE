@@ -35,14 +35,14 @@ We however use a whole set of tools around it:
 - MPI2 (optional). MPI's multithreaded support is required.
 - Intel's Threading Building Blocks (TBB), OpenMP 5 or SYCL. We also can work with C++
   threads, but found their performance suboptimal.
-- The Visualization Toolkit (VTK) if you want to use the built-in
-  visualisation facilities (optional).
 - Doxygen if you want to create HTML pages of PDFs of the in-code
-  documentation.
+  documentation (recommended).
 
-I test and maintain Peano  for Linux only.
+We test and maintain Peano  for Linux only.
 If you prefer Windows or MacOS, it should work as long as you provide the
-mandatory tools from above, but I won't be able to help.
+mandatory tools from above, but we won't be able to help.
+Peano is well-integrated with a number of @ref page_third_party "third party tools", 
+but these are all optional. 
 
 
 Configure Peano

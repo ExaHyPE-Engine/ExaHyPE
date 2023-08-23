@@ -407,14 +407,64 @@ I followed a series of optimisation steps to get this part of the code faster:
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
         rm tasks/*.o
-        $(CXX) $(CXXFLAGS) -qopt-report=3 -c tasks/CCZ4SBH_FD4EnclaveTask.o  tasks/CCZ4SBH_FD4EnclaveTask.cpp
-        $(CXX) $(CXXFLAGS) -qopt-report=3 -c tasks/CCZ4SBH_FVEnclaveTask.o   tasks/CCZ4SBH_FVEnclaveTask.cpp
+        $(CXX) $(CXXFLAGS) -qopt-report=3 -c tasks/CCZ4SBH_FD4EnclaveTask.cpp -o tasks/CCZ4SBH_FD4EnclaveTask.o
+        $(CXX) $(CXXFLAGS) -qopt-report=3 -c tasks/CCZ4SBH_FVEnclaveTask.cpp  -o tasks/CCZ4SBH_FVEnclaveTask.o
         $(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o peano_sbh_2.0
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    This follows @ref page_peano_performance_optimisation "Peano's recommendations" 
-   how to obtain meaningful optimisation reports.
+   how to obtain meaningful optimisation reports. However, it will result in 
+   many warnings, as the compiler will be unable to inline and consequently
+   vectorise the required static functions. 
+4. Tracing with Otter reveals that the Finite Volume and FD4 patches are 
+   spawned as enclave tasks. However, they drop in in totally random order.
+   When we visualise the CPU occupation, we get an image similar to the one
+   below.
    
-
+   @image html vtune00.png
+   
+   One time step starts at 115s. We have four threads here. Their partitions 
+   are not perfectly balanced. This leads to an oversubscribed thread 3. The
+   primary sweep is relatively cheap, as most patch updates are 
+   deployed into tasks and hence not computed. Arround 118s, all four threads
+   start the second grid sweep which again is very short besides on the fourth
+   thread. It also remains a mystery why the heavy Finite Volume patch updates,
+   which are all clearly visible (there are 7 of them), all are executed 
+   sequentially.
+   
+   Things start to make sense once we study the result of 
+   tarch::multicore::orchestration::createDefaultStrategy() and run VTune once
+   more with native threading. The default implementation always tries to hold
+   back 16 tasks to be able to fuse them on the GPU. Unfortunately, our 
+   expensive Finite Volume patches are among these 16. Therefore, they are 
+   really only processed when a thread requests their outcome. 
+   The native task realisation maps all enclave tasks onto proper (OpenMP)
+   tasks
+   
+   @image html vtune01.png
+      
+   and hence does a significantly better job. Finally, also some of the patch
+   updates of the limited regions are computed in parallel. Still, we see those
+   massive imbalances.
+   
+   I hence introduce a tailored task orchestration:
+   
+   - Add the main cpp file to the repository.
+   - Remove the default flags, i.e. do not call exahype2::parseCommandLineArguments().
+     The "new" code does not accept any arguments. 
+   - Introduce a new class MulticoreOrchestration. It inherits from 
+     tarch::multicore::orchestration::Strategy.
+   - Create an instance of this class and invoke tarch::multicore::setOrchestration() 
+     to activate it.
+   - Add the file to the project, such that the makefile picks it up:
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    peano4_project.output.makefile.add_cpp_file(
+        "MulticoreOrchestration.cpp"
+    )
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~
+     
+     
+   Consult the documentation of the MulticoreOrchestration for information on 
+   its behaviour. 
 
 
 */

@@ -72,6 +72,42 @@ solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
 You throw away the object file and then you rebuild this single file yet with 
 the optimisation reports on. 
 
+
+## Inter-procedural optimisation
+
+Most successful vectorsation passes depend upon successful inlining (despite
+marking functions as vectorisable). To facilitate this inlining, you can either
+move implementations into the header, or you can use ipo. The following remarks
+discuss ipo in the context of the Intel compiler, but we assume similar 
+workflows to apply to any LLVM-based toolchain.
+
+The switch to ipo requires some manual modifications of the underlying 
+Makefile:
+
+1. We remove the object files manually which have been produced by the standard
+   compilation process.
+2. We retranslate all the cpp files again in one rush using the -c -ipo option.
+3. All the resulting object files will end up in the root directly. We 
+   consequently rescatter them, i.e. move them again into the places where the 
+   object files had originally been placed.
+4. We add -ipo as additional linker command, as the linker otherwise will not 
+   recognise the object file format. Furthermore, I repeat the opt-report flag
+   for the linker phase. Otherwise, I'll not get any feedback. 
+   
+Here is an example excerpt of a successful, modified Makefile:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
+    rm tasks/*.o AbstractCCZ4SBH_FD4.o  AbstractCCZ4SBH_FV.o  CCZ4SBH_FD4.o  CCZ4SBH_FV.o
+    $(CXX) $(CXXFLAGS) -qopt-report=3 -ipo -c tasks/CCZ4SBH_FD4EnclaveTask.cpp tasks/CCZ4SBH_FVEnclaveTask.cpp AbstractCCZ4SBH_FD4.cpp AbstractCCZ4SBH_FV.cpp CCZ4SBH_FD4.cpp CCZ4SBH_FV.cpp
+    mv *Task.o tasks
+    $(CXX) -ipo -O3 -qopt-report=3 $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o peano_sbh_2.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+The final ipo optimisation report will end up in a file ipo_out.optrpt.
+
+
 ## Single core optimisation
 
 ### The code fails to use aligned data
