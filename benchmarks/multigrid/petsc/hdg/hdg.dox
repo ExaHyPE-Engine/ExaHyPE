@@ -170,6 +170,8 @@ We note that some terms here do not exist:
 
 ## Cell operations
 
+The above equations mean that we have to traverse all cells of the domain, and insert the following terms: 
+
 
 
 
