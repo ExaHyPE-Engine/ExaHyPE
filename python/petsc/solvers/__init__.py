@@ -2,3 +2,4 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .CollocatedLowOrderDiscretisation import CollocatedLowOrderDiscretisation
 from .HdgFirstDiscretisation           import HdgFirstDiscretisation
+from .MixedPoisson                     import MixedPoisson
