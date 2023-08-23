@@ -33,8 +33,9 @@ exahype2::EnclaveTask::EnclaveTask(
   _maxEigenvalue(-1.0) {
   logTraceIn("EnclaveTask(...)");
   logTraceOut("EnclaveTask(...)");
-  OTTER_DECLARE_HANDLE(enclave_task);
-  OTTER_INIT_TASK(enclave_task, OTTER_NULL_TASK, 1, otter_add_to_pool, otter::label::enclave);
+  OTTER_DEFINE_TASK(
+    enclave_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::enclave_with_typeid, enclaveTaskTypeId
+  );
 }
 
 

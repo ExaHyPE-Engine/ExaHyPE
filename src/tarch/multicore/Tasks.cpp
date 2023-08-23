@@ -151,7 +151,8 @@ bool tarch::multicore::internal::fusePendingTasks(
     auto pp = globalNonblockingTasks.tasks.begin();
     while (
       pp != globalNonblockingTasks.tasks.end() and (*pp)->getTaskType() == myTask->getTaskType()
-      and /*(*pp)->getTaskType() == myTask->canFuse()*/ (*pp)->canFuse() and tasksOfSameType.size() < fuseInstruction.maxTasks - 1
+      and /*(*pp)->getTaskType() == myTask->canFuse()*/ (*pp)->canFuse()
+      and tasksOfSameType.size() < fuseInstruction.maxTasks - 1
     ) {
       tasksOfSameType.push_back(*pp);
       pp = globalNonblockingTasks.tasks.erase(pp);
@@ -243,9 +244,8 @@ tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
   Task(taskType, priority),
   _taskFunctor(taskFunctor) {
   OTTER_DECLARE_HANDLE(step_task);
-  OTTER_DECLARE_HANDLE(this_task);
   OTTER_BORROW_FROM_POOL(step_task, otter::label::step);
-  OTTER_INIT_TASK(this_task, step_task, 555, otter_add_to_pool, otter::label::TaskWithCopyOfFunctor);
+  OTTER_DEFINE_TASK(this_task, step_task, otter_add_to_pool, otter::label::TaskWithCopyOfFunctor);
 }
 
 bool tarch::multicore::TaskWithCopyOfFunctor::run() {
@@ -263,9 +263,8 @@ tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(
   Task(taskType, priority),
   _taskFunctor(taskFunctor) {
   OTTER_DECLARE_HANDLE(step_task);
-  OTTER_DECLARE_HANDLE(this_task);
   OTTER_BORROW_FROM_POOL(step_task, otter::label::step);
-  OTTER_INIT_TASK(this_task, step_task, 444, otter_add_to_pool, otter::label::TaskWithoutCopyOfFunctor);
+  OTTER_DEFINE_TASK(this_task, step_task, otter_add_to_pool, otter::label::TaskWithoutCopyOfFunctor);
 }
 
 bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
@@ -306,12 +305,11 @@ void tarch::multicore::spawnTask(Task* task) {
   assertion1(threadNumber >= 0, threadNumber);
   assertion2(threadNumber < localNonblockingTasks.size(), threadNumber, localNonblockingTasks.size());
 
-  #ifdef UseSmartMPI
+#ifdef UseSmartMPI
   if (task->isSmartMPITask() and smartmpi::spawn(dynamic_cast<smartmpi::Task*>(task))) {
-  }
-  else
-  #endif
-  if (localNonblockingTasks[threadNumber]->tasks.size() >= orchestrationStrategy->getNumberOfTasksToHoldBack(task->getTaskType())) {
+  } else
+#endif
+    if (localNonblockingTasks[threadNumber]->tasks.size() >= orchestrationStrategy->getNumberOfTasksToHoldBack(task->getTaskType())) {
     logDebug("spawnTasks(int)", "spawn native task of type " << task->getTaskType());
     native::spawnTask(task);
   } else {
@@ -370,7 +368,9 @@ void tarch::multicore::spawnAndWait(const std::vector<Task*>& tasks) {
 
       internal::copyInternalTaskQueuesOverIntoGlobalQueue();
       int  numberOfPendingTasks = tarch::multicore::internal::getNumberOfWithholdPendingTasks();
-      auto fusionInstruction    = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice(tarch::multicore::orchestration::Strategy::EndOfBSPSection);
+      auto fusionInstruction    = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice(
+        tarch::multicore::orchestration::Strategy::EndOfBSPSection
+      );
 
       bool successInFusing = true;
       while (successInFusing and globalNonblockingTasks.tasks.size() >= fusionInstruction.minTasks) {
@@ -380,7 +380,9 @@ void tarch::multicore::spawnAndWait(const std::vector<Task*>& tasks) {
       if (not globalNonblockingTasks.tasks.empty()) {
         int numberOfTasksToProcessNow = std::max(
           0,
-          static_cast<int>(globalNonblockingTasks.tasks.size()) - orchestrationStrategy->getNumberOfTasksToHoldBack(tarch::multicore::orchestration::Strategy::EndOfBSPSection)
+          static_cast<int>(globalNonblockingTasks.tasks.size())
+            - orchestrationStrategy
+                ->getNumberOfTasksToHoldBack(tarch::multicore::orchestration::Strategy::EndOfBSPSection)
         );
         internal::mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
       }
