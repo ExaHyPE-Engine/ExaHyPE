@@ -49,23 +49,88 @@ Later on, we will use a value unknowns_per_cell_dof. This is
            unknowns_per_cell_dof = 3
 
 
-## Discontinuous Galerkin formulation
+## Discontinuous Galerkin formulation: the geometric arrangement
 
-We make things more complicated next:            
-Before, we @ref benchmark_multigrid_petsc_poisson "required that our test functions were linear"
-and continuous. 
-Now, we drop this continuous requirement. Our intention/ratinoale is that we could get a more accurate solution
+
+Our intention is to puzzle the solution together from very primitive small 
+shape functions:
+We want to construct a solution to our system by concatenating the scaled 
+shape functions over the domain into one solution. In 1d, this looked, 
+for the @ref benchmark_multigrid_petsc_poisson "continuous case with linear shape functions"
+similar to 
+
+@image html ../poisson/testFunction.png
+
+Each "hat functions" above is scaled by a weight @f$ u_i @f$ and then we add 
+them all up, constructing a piece-wise linear continuous solution. 
+Consequently, we end up with one unknown per vertex in our mesh: We have to
+know the right scaling.
+
+
+In the present project, we make things more complicated: 
+We drop this continuous requirement. Our intention/ratinoale is that we could get a more accurate solution
 by using piecewise functions that don't "connect" with each other.
-           
-We want to construct a solution to our system by concatenating scaled shape 
-functions over the domain into one solution. Previously,             
+This means that we need more weights:
 
-
-@image html documentation/cellFlat.png
-@image html documentation/gaussLobatto.png
-@image html documentation/phiHat.png
 @image html documentation/piecewise.png
+
+Previously, we had one weight per vertex. Now, we need two weights per cell to 
+construct the blue lines: If we associate the weights still with the vertices,
+we have a left value and a right one. 
+
+In summary, this discontinuous Galerkin approach implies that we need (in 1d) 
+twice the number of weights as we have jumps, and we need three scalars instead
+of one, as we work with a mixed, first-order formulation. 
+
+We have quite some freedom to arrange these weights. For the remainder, we use
+Gauss-Lobatto, which means that we place the weights exactly at the cell 
+corners. There are other schemes like Gauss-Legendre, where the weights do not
+have to be in the corner. 
+So for Gauss-Lobatto, we have arrangements such as the ones below:
+
+
+@image html documentation/gaussLobatto.png
+
+The left side uses a polynomial degree of one in line with our 1d examples 
+above. This means, we need four degrees of freedom per cell, but then each 
+degree of freedom carries three functions, as we have three PDEs. The right
+examples showcases an example with $p=2$. In general, we need @f$ (p+1)^d @f$
+degrees of freedom per cell and have @f$ 3 \cdot (p+1)^d @f$ unknowns per 
+cell.
+
+In the code, we expect the user to specify the number of unknowns equired
+per cell plus the polynomial order:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver = petsc.solvers.MixedPoisson("MP",
+                                    polynomial_degree = 2,
+                                    unknowns_per_cell_dof = 3,
+                                    [...]
+                                    )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The code takes this information, runs through the mesh and allocates (from
+PETSc) @f$ 3 \cdot (2+1)^d @f$ unknown indices. That means, so far, we are
+trying to solve a system 
+
+@f$ A x = b @f$
+
+where x has @f$ 3 |\mathbf{C}| \cdot (p+1)^d @f$ entries. This is not the 
+end of the story. Only a start. 
+
+
+
+## The weak formulation
+
+Since we have a first order formulation, we can simply integrate. We take the inner product with a test 
+function @f$ \psi @f$, and then integrate over the cell:
+
+@f$ \int_\text{cell} ( -\text{div} \ \phi, \psi ) dxdy = \int_\text{cell} ( f, \psi ) dxdy @f$.
+
+
 @image html documentation/testFuctionDG.png
+@image html documentation/cellFlat.png
+@image html documentation/phiHat.png
 
 */
 
@@ -88,7 +153,6 @@ The DG formulation means that we have, for a given polynomial degree @f$ n @f$, 
 We note that @f$ (n+1)^{d-1} @f$ Dofs will reside on each face.
 We arrange these points spatially in a Gauss-Lobatto pattern for the duration of this tutorial.
 
-@image html gaussLobatto.png
 
 We then aim to solve @f$ d+1 @f$ equations for each of these points:
 
@@ -98,11 +162,6 @@ We then aim to solve @f$ d+1 @f$ equations for each of these points:
 
 
 ## Let's integrate 
-
-Since we have a first order formulation, we can simply integrate. We take the inner product with a test 
-function @f$ \psi @f$, and then integrate over the cell:
-
-@f$ \int_\text{cell} ( -\text{div} \ \phi, \psi ) dxdy = \int_\text{cell} ( f, \psi ) dxdy @f$.
 
 Obviously, we will want to integrate over the whole domain. But for now we just consider this 
 integral in each cell, as we can sum over them eventually.
