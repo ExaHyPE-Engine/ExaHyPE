@@ -17,7 +17,7 @@ As ever, we aim to solve:
 
 @f$ - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u = f @f$
 
-which is a second-order equation. Let us first introduce a helper variable @f$ \phi @f$, so we can instead 
+which is a second-order equation. Let us first introduce a helper vector @f$ \phi = (\phi _x, \phi _y) @f$, so we can instead 
 write in a first-order formulation:
 
 @f$ \phi_x = \partial_x u, \ \phi_y = \partial_y u @f$. 
@@ -32,8 +32,18 @@ pressure in CFD applications.
 The whole introduction of the helper variable allows us to rewrite the PDE in 
 first order, noting that the left hand side is just a divergence:
 
-@f$ - \partial_x \phi_x - \partial_y \phi_y = f @f$ \n
-@f$ - \text{div} \ \phi = f @f$.
+\f{eqnarray*}{
+- \partial_x \phi_x - \partial_y \phi_y = - \text{div} \ \phi & = & f, \\
+  \phi_x - \partial_x u & = & 0, \\
+  \phi_y - \partial_y u & = & 0. 
+\f}
+
+
+We can write the second and third line as one with the gradient:
+\f{eqnarray*}{
+  - \text{div} \ \phi & = & f, \\
+  \phi - \nabla u & = & 0. 
+\f}
 
 Nothing has been gained so far, despite the fact that the gradient is now 
 explicitly available in our formulation. Some codes can use this for their 
@@ -122,10 +132,50 @@ end of the story. Only a start.
 
 ## The weak formulation
 
-Since we have a first order formulation, we can simply integrate. We take the inner product with a test 
-function @f$ \psi @f$, and then integrate over the cell:
+If we want to solve our system of equations (with three equations), we have to 
+test both the first and the second line (if we assume that the first one is 
+scalar and the second one over a vector). Once we switch to a weak sformulation, we hence need tests for both
+equations. In math words, we draw test functions from the solution space and 
+from the helper space. Let us call them @f$ \psi _u @f$ and @f$ \psi _\phi @f$.
+One tests against u and one from against the gradient space. 
+Therefore, @f$ \psi _u: \Omega \mapsto \mathbb{R}^2 @f$ and @f$ \psi _\phi: \Omega \mapsto \mathbb{R} @f$, as the latter tests the scalar equation.
 
-@f$ \int_\text{cell} ( -\text{div} \ \phi, \psi ) dxdy = \int_\text{cell} ( f, \psi ) dxdy @f$.
+
+As we take all these tests from the same function space as the shape functions,
+we know that they all have local support. Integration hence yields
+
+\f{eqnarray*}{
+  \int _\Omega ( -\text{div} \ \phi, \psi _\phi ) dx &=& \int_{\text{cell}_\phi} ( -\text{div} \ \phi, \psi _\phi ) dx  \ \ \ \forall \psi _\phi 
+  \\  
+   &=& \int_{\text{cell}_{\psi _\phi }} ( \phi \nabla \psi _\phi ) dx - \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x)  
+   = \int_{\text{cell}_{\psi _\phi }} f \cdot \psi _\phi dx,
+\f}
+
+for the first equation where the @f$ n @f$ is the outer normal of the cell. The
+second equation gives us 
+
+\f{eqnarray*}{
+  \int _\Omega ( \phi, \psi _u ) dx - \int _\Omega ( \nabla u, \psi _u ) dx
+   &=& \int _{\text{cell}_{\psi _u}} ( \phi, \psi _u ) dx - \int _{\text{cell}_{\psi _u}} ( \nabla u, \psi _u ) dx
+  \\  
+   &=& \int _{\text{cell}_{\psi _u}} ( \phi, \psi _u ) dx + \int _{\text{cell}_{\psi _u}}  u \cdot \text{div} \psi _u dx
+    - \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x) = 0.
+\f}
+
+We note that some terms here do not exist:
+
+- @f$ (n, \phi ) @f$ does not exist on the faces of a cell. It jumps. The term  @f$ \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x) @f$ in the first weak formulation therefore does not make sense.
+- @f$ u @f$ does not exist on the faces of a cell. It jumps. The term  @f$ \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x) @f$ in the second weak formulation therefore does not make sense. 
+
+
+## Cell operations
+
+
+
+
+In the first line, we exploit the fact that the support of the test function is 
+localised. Even though the integral originally spanned the whole domain, it 
+boils down to an integral over one cell only.
 
 
 @image html documentation/testFuctionDG.png
@@ -134,6 +184,11 @@ function @f$ \psi @f$, and then integrate over the cell:
 
 */
 
+
+ \\
+  &=& \int_\text{cell} ( \phi, \text{div} \ \psi ) dxdy - \int_\text{cell} \text{div} ( \phi \psi ) dx dy \\ 
+
+       &=& \int_\text{cell} ( \phi, \text{div} \ \psi ) dxdy - \int_{\partial c} \phi \cdot \hat{n} \ \psi dS(x)
 
 # How does this differ from the continuous case?
 
