@@ -1306,7 +1306,7 @@ class ADERDG(object):
             if value not in PrecisionType.keys():
                 raise AssertionError(
                     "one of the chosen precisions was not a valid choice. valid choices are: "
-                    + PrecisionType.keys()
+                    + ", ".join(PrecisionType.keys())
                 )
             if PrecisionType[value]=="std::float16_t" or PrecisionType[value]=="std::bfloat16_t":
               self._use_half_precision = True
