@@ -171,7 +171,7 @@ peano4_project.generate()
 
   At time of writing, these can be seen in lines 788-815 of configure.ac, at the top level of Peano.
 
-  ## Current Workflow
+  # Internal workflow
 
   During EnumerateAndInit stage, we request one index in the LocalToGlobalMap for each
   degree of freedom. Each time this occurs, we increase the index count on each subtree.
@@ -182,7 +182,8 @@ peano4_project.generate()
   During InitVertexDof stage, we store each Value and Rhs that we encounter. 
   When it comes to the InitPetsc stage, we send these values to PetscData class, 
   which then uses these values to initialise two Petsc vectors. So far, we have implemented 
-  a method to return the values from the solution vector from PETSc back to c++.
+  a method to return the values from the solution vector from PETSc back to C++.
+
 
 # The mathematics: Continuous Ritz-Galerkin for non-mathematicians
 
@@ -204,9 +205,9 @@ For emphasis, we want the above equation to hold for every test function @f$ \ph
 Let's attempt make this concrete, by way of an example. We depict in the image below
 the following situation:
 
-\li A 1D domain, cut up into discrete chunks of width @f$ h @f$
-\li We pick test functions @f$ \phi @f$ that are piecewise linear, and each span two cells. Furthermore normalised to a maximum height of 1
-\li We have a value for @f$ u @f$ at the boundary of each cell 
+- A 1D domain, cut up into discrete chunks of width @f$ h @f$.
+- We pick test functions @f$ \phi @f$ that are piecewise linear, and each span two cells. Furthermore normalised to a maximum height of 1.
+- We have a value for @f$ u @f$ at the boundary of each cell.
 
 What we aim to do here is to show how we update @f$ u @f$, based on our formulation.
 
@@ -216,6 +217,7 @@ From here onwards, we pick our @f$ u @f$ to be a member of some space of polynom
 as the @f$ u_i @f$. Concretely:
 
 @f$ u = \sum_i u_i \ \phi_i @f$.
+
 
 Returning to the integral above, we can integrate by parts to obtain
 
@@ -237,6 +239,9 @@ Next, let's discretise. Rather than taking an integral across the whole domain, 
 \f{eqnarray*}{
   = \sum_{i, \ k} \ \int_{c_k} \ (\nabla \phi_i, \ \nabla \phi) dx \ \ \ \forall \phi
 \f}
+
+*/
+
 
 <!-- 
 WE COMMENT THIS OUT. I DON'T THINK IT'S READY YET
@@ -450,6 +455,4 @@ the sum across f$ j @f$, but with opposite signs;
 hence each of these terms will cancel out in a telescopic fashion.
 
   
- */
- 
  
