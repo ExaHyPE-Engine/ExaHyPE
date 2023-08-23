@@ -1,0 +1,12 @@
+/**
+
+ @page benchmarks_exahype2_euler_spherical_accretion_upscaling Upscaling experiments for the spherical accretion
+ 
+ This is a cut-down/reduced version of the @ref application_exahype2_selfgravitation_accretion_through_approximated_rhs "classic SSInfall" setup
+ from one of our papers which we use for upscaling studies. For details on the 
+ Physical model and the underlying problem, please consult the original 
+ application's documentation.
+
+ */
+ 
+ 

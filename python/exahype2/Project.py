@@ -32,7 +32,7 @@ class Project(object):
     @see generate_Peano4_project()
     """
 
-    def __init__(self, namespace, project_name, directory=".", executable=""):
+    def __init__(self, namespace, project_name, executable, directory="."):
         self._project = peano4.Project(namespace, project_name, directory)
         self._project.output.makefile.add_cmake_core_library("ExaHyPE2Core")
 

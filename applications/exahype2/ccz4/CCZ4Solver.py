@@ -289,6 +289,8 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStep(
         patch_size,
         min_volume_h,
         max_volume_h,
+        use_heap_storage,
+        pde_terms_without_state
     ):
         AbstractCCZ4Solver.__init__(self)
         exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep.__init__(
@@ -363,13 +365,17 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
 
     """
 
-    def __init__(
-        self, name, patch_size, min_volume_h, max_volume_h, use_heap_storage=False
-    ):
+    def __init__(self, 
+                 name, 
+                 patch_size, 
+                 min_volume_h, 
+                 max_volume_h, 
+                 use_heap_storage,
+                 pde_terms_without_state,
+                 ):
         """!
 
         Construct solver with enclave tasking and adaptive time stepping
-
 
 
         ## Attributes
@@ -394,6 +400,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
             min_volume_h=min_volume_h,
             max_volume_h=max_volume_h,
             time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation,
+            pde_terms_without_state=pde_terms_without_state
         )
         self._add_standard_includes()
 
@@ -697,7 +704,8 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
         rk_order,
         min_meshcell_h,
         max_meshcell_h,
-        use_heap_storage=False,
+        use_heap_storage,
+        pde_terms_without_state,
     ):
         """!
 
@@ -730,6 +738,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             max_meshcell_h=max_meshcell_h,
             time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation
             / 16.0,
+            pde_terms_without_state = pde_terms_without_state,
         )
 
         self._add_standard_includes()

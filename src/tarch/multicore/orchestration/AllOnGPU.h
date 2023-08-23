@@ -33,7 +33,7 @@ public:
    * Within a BSP section, I hold all tasks back. Afterwards, I release all
    * of them.
    */
-  virtual int getNumberOfTasksToHoldBack() override;
+  virtual int getNumberOfTasksToHoldBack(int taskType) override;
 
   /**
    * Return how many tasks to fuse at least, at most and to which device
@@ -43,12 +43,12 @@ public:
    *   such that the lower limit is never exceeded. Return the device
    *   otherwise with a min size of 1.
    */
-  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice() override;
+  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice(int taskType) override;
 
   /**
    * No
    */
-  virtual bool fuseTasksImmediatelyWhenSpawned() override;
+  virtual bool fuseTasksImmediatelyWhenSpawned(int taskType) override;
 
   /**
    * No if we encounter nested parallelism.

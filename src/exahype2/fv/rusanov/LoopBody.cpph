@@ -223,6 +223,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   double* __restrict__ QOut,
   const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
 ) {
+  [[clang::always_inline]]
   Solver::sourceTerm(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),
     ::exahype2::fv::getVolumeCentre(patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex),
@@ -234,7 +235,12 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   );
 
   // scatter
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+//  #if defined(SharedOMP)
+//  #pragma omp unroll
+//  #endif
+  #pragma unroll
+  for (int unknown = 0; unknown < Solver::NumberOfUnknowns; unknown++) {
+// for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
     QOut[QOutEnumerator(
       patchIndex, volumeIndex, unknown
     )] = dt * QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)]
@@ -251,9 +257,12 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
 #endif
   }
 
-  for (int unknown = QInEnumerator._unknowns;
-       unknown < QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables;
-       unknown++) {
+  for (
+    int unknown = QInEnumerator._unknowns;
+    // unknown < QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables;
+    unknown < Solver::NumberOfUnknowns + Solver::NumberOfAuxiliaryVariables;
+    unknown++
+  ) {
     QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] = QIn[QInEnumerator(patchIndex, volumeIndex, unknown)];
 
 #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
@@ -285,7 +294,7 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
   int                                          normal,
   double* __restrict__ QMaxEigenvalue,
   QMaxEigenvalueEnumeratorType QMaxEigenvalueEnumerator
-) {
+) InlineMethod {
   double QInGathered[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
 
 // gather
