@@ -498,9 +498,102 @@ and Peano internally scales it then with @f$ h^{d-1} @f$.
  
 # Discontinuous Galerkin formulations
 
+The above discussion strongly enforces continuity. This is neither clever - we 
+give away the freedom that we have gained through the introduction of 
+cell-wise continuous shapes - nor does it guarantee a (good) solution. After all,
+we glue the functions where tightly together and hence avoid that they wobble 
+around freely and approximate the real solution. Notably for low orders p, 
+the function space now might not be able anymore to approximate the real solution.
 
-In a Discontinuous Galerkin (DG) formulation, we accept that the 
+A natural solution to this is to allow the functions within the cell to be 
+discontinuous along the faces, but not too much. A "simple" idea is to approximate
+the non-existing values through the averages from left and right:
 
+\f{eqnarray*}{
+  \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x)  
+  & \approx & 
+  \int_{\partial \text{cell}_{\psi _\phi }} [[ \phi ]] \psi _\phi dS(x)  
+  =
+  \frac{1}{2} \int_{\partial \text{cell}_{\psi _\phi }} \left( \phi ^+ + \phi ^- \right) \psi _\phi dS(x)  
+  \\
+  \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
+  & \approx & 
+  \int _{\partial \text{cell}_{\psi _u}}  [[u]] \cdot (n, \psi _u) dS(x)
+  = 
+  \frac{1}{2}
+  \int _{\partial \text{cell}_{\psi _u}}  (u^- + u^+) \cdot ( n, \psi _u ) dS(x)
+\f}
+
+
+There are two ways to implement this scheme:
+
+1. We don't use any constraint equation (see continuous case), but let the 
+   face-to-cell projection use the average of left and right value.
+2. We introduce a helper dof.
+
+The first variant is close-to-trivial and certainly a good sanity check. The 
+face-to-face matrix here is empty/zero, but the user has to take the averaging
+into account within the projection matrix passed in.
+
+
+The second variant is more sophsticiated, yet allows users later to implement
+more sophisticated schemes and notably the hybridised variant. For this one,
+we assume that a face has explicit values @f$ (\lambda _u, \lambda _\phi) @f$ 
+which represent these averages. So the face has the left and the right projection,
+but also a value which explicitly computes this arising approximation. We model
+this by
+
+        unknowns_per_cell_dof = 4
+
+which is an overkill here. 
+
+1. The unknown 0 on a vertical face is the  solution projection from the left;
+2. Unknown 1 is the $\phi _x$ projection from the left;
+3. The unknown 2 represents this @f$ [[u]] @f$ value;
+4. The unknown 3 represents the @f$ [[(\phi, n)]] = [[\phi_ x]] @f$ value;
+5. The next one (unknown 5) 2 is the solution projection from the right;
+6. Then we have $\phi _x$ projection from the left;
+7. We store @f$ [[u]] @f$ once again, which is redundant;
+8. ...
+
+This redundancy makes no sense here, but there are PDEs which yield non-symmetric
+approximations, i.e. this @f$ [[u]] @f$ for example looks different depending on
+wheather we look from the left or the right onto the face, and we want our data
+structures to be well-prepared for this.
+
+With the doubled unknowns per face degree of freedom, we have to amend our 
+projection matrices. This means adding a whole lot of additional zero rows, as 
+the new values are not determined by the projection at all. The face-to-cell
+projection also has to be added way more zero rows. This time, it takes the two
+additional unknowns and maps them back onto the cell solution.
+
+This leaves us with the task to determine the values of the new unknowns. For
+this, we hand a new face-to-face matrix over to the API which computes the 
+average into the new unknowns: 
+
+
+\f{eqnarray*}{
+  \begin{pmatrix}
+  0 & 0 & 0 & 0     & 0 & 0 & 0 & 0     & 0 & 0 & 0 & 0     & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0     & 0 & 0 & 0 & 0     & 0 & 0 & 0 & 0     & 0 & 0 & 0 & 0 \\
+  \frac{1}{2} & 0 & 0 & 0     & \frac{1}{2} & 0 & 0 & 0     & 0 & 0 & 0 & 0   & 0 & 0 & 0 & 0 \\
+  0 & \frac{1}{2} & 0 & 0     & 0 & \frac{1}{2} & 0 & 0     & 0 & 0 & 0 & 0   & 0 & 0 & 0 & 0 \\
+  \dots
+  \end{pmatrix}
+\f}
+
+
+The first two rows refer to projected values from the left. They are sole 
+input values (should be brought to the right by the solver in this context) 
+and hence not subject to any additional equations.
+The third line averages the @f$ u @f$ values from left and right, the
+fourth line addresses the normal projections of @f$ \phi @f$. 
+
+
+# Hybridised DG
+
+With these helper variables, we have implemented a very simple Discontinuous
+Galerkin method.
 
 approximate the solution:
 
