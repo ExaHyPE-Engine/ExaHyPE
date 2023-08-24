@@ -19,7 +19,7 @@ namespace {{N}} {
 
 void {{NAMESPACE | join("::")}}::repositories::computeLocalToGlobalMapsForAllSolvers() {
   {% for SOLVER in SOLVER_INSTANCES %}
-  {% if SOLVER_INSTANCES[0][0]=="HDG" %}
+  {% if SOLVER_INSTANCES[0][0]!="Poisson" %}
     {{SOLVER[1]}}.getFaceLocalToGlobalMap().computeLocalToGlobalMap();
     {{SOLVER[1]}}.getCellLocalToGlobalMap().computeLocalToGlobalMap();
   {% else %}
@@ -32,7 +32,7 @@ void {{NAMESPACE | join("::")}}::repositories::computeLocalToGlobalMapsForAllSol
 int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom() {
   int result = 0;
   {% for SOLVER in SOLVER_INSTANCES %}
-  {% if SOLVER_INSTANCES[0][0]=="HDG" %}
+  {% if SOLVER_INSTANCES[0][0]!="Poisson" %}
   // result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getTotalNumberOfIndices();
   result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getTotalNumberOfIndices();
   {% else %}
