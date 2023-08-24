@@ -1,11 +1,7 @@
-#include "config.h"
-
-#if defined(UseOtter)
-#define OTTER_TASK_GRAPH_ENABLE_USER
-#endif
-
-#include "EnclaveBookkeeping.h"
 #include "EnclaveTask.h"
+
+#include "config.h"
+#include "EnclaveBookkeeping.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/otter.h"

@@ -1,17 +1,14 @@
-#include "config.h"
-#if defined(UseOtter)
-#define OTTER_TASK_GRAPH_ENABLE_USER
-#endif
+#include "Tasks.h"
 
 #include <queue>
 #include <set>
 #include <thread>
 
 #include "BooleanSemaphore.h"
+#include "config.h"
 #include "Core.h"
 #include "Lock.h"
 #include "multicore.h"
-#include "Tasks.h"
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/multicore/otter.h"

@@ -1,11 +1,7 @@
-#include "config.h"
-
-#if defined(UseOtter)
-#define OTTER_TASK_GRAPH_ENABLE_USER
-#endif
-
-#include "Node.h"
 #include "SpacetreeSet.h"
+
+#include "config.h"
+#include "Node.h"
 #include "tarch/tarch.h"
 #include "peano4/grid/grid.h"
 #include "peano4/grid/PeanoCurve.h"
