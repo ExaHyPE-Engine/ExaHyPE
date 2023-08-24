@@ -70,7 +70,7 @@ parser.add_argument("-et",      "--end-time",          dest="end_time",       ty
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
 
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. size of a finite volume cell.")
-parser.add_argument("-sym",     "--symbolic",          dest="symbolic",       action="store_true",        default=use_symbolic_description, help="Use the symbolic PDE description of the acoustic wave equation.")
+parser.add_argument("-sym",     "--symbolic",          dest="symbolic",       action="store_true",        default=use_symbolic_description, help="Use the symbolic PDE description of the advection equation.")
 
 parser.add_argument("-pbc",     "--periodic-boundary-conditions",  dest="periodic_boundary_conditions",   action="store_true",        help="Use periodic boundary conditions" )
 
