@@ -55,7 +55,7 @@ use_make = True
 
 #
 # If set to True, the project will use a completely symbolic description of the Euler equations.
-# If set to False, pre-defined optimised C++ code will be used instead.
+# If set to False, pre-defined optimised C++ kernels will be used instead.
 #
 use_symbolic_description = False
 

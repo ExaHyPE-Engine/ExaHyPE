@@ -21,7 +21,7 @@ import exahype2
 # We specify the space dimensions here.
 # We support either 2- or 3-dimensional problems.
 #
-dimensions = 2
+dimensions = 3
 
 #
 # The number of finite volumes per axis in one patch.
@@ -55,7 +55,7 @@ use_make = True
 
 #
 # If set to True, the project will use a completely symbolic description of the acoustic wave equation.
-# If set to False, pre-defined optimised C++ code will be used instead.
+# If set to False, pre-defined optimised C++ kernels will be used instead.
 #
 use_symbolic_description = False
 
@@ -139,14 +139,16 @@ if use_symbolic_description:
   t0 = sympy.symbols("t0")
   M0 = sympy.symbols("M0")
   t = sympy.symbols("t")
+
+  max_h = sympy.symbols("MaxAdmissibleVolumeH")
   force = M0 * sympy.exp(-((t - t0) * (t - t0)) / (2.0 * sigma * sigma))
 
   if dimensions == 2:
-    volume_centre = sympy.sqrt((5 - my_pde.x[0])**2 + (5 - my_pde.x[1])**2)
-    my_pde.sources[0] = sympy.Piecewise((force, volume_centre <= my_pde.h[0]), (0, True)) # p
+    point_source = sympy.sqrt((5 - my_pde.x[0])**2 + (5 - my_pde.x[1])**2)
+    my_pde.sources[0] = sympy.Piecewise((force, point_source <= max_h), (0, True)) # p
   else:
-    volume_centre = sympy.sqrt((5 - my_pde.x[0])**2 + (5 - my_pde.x[1])**2 + (5 - my_pde.x[2])**2)
-    my_pde.sources[0] = sympy.Piecewise((force, volume_centre <= my_pde.h[0]), (0, True)) # p
+    point_source = sympy.sqrt((5 - my_pde.x[0])**2 + (5 - my_pde.x[1])**2 + (5 - my_pde.x[2])**2)
+    my_pde.sources[0] = sympy.Piecewise((force, point_source <= max_h), (0, True)) # p
 
   my_pde.sources[1] = 0
   my_pde.sources[2] = 0
@@ -211,24 +213,24 @@ else:
 """,
 
     source_term="""
-#if Dimensions == 2
-  const tarch::la::Vector<Dimensions, double> sourceLocation({5, 5});
-#else
-  const tarch::la::Vector<Dimensions, double> sourceLocation({5, 5, 5});
+  S[0] = 0.0;
+  S[1] = 0.0;
+  S[2] = 0.0;
+#if Dimensions == 3
+  S[3] = 0.0;
 #endif
-  if (tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>(sourceLocation)) <= MaxAdmissibleVolumeH) {
+
+#if Dimensions == 2
+  const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({5, 5})) <= MaxAdmissibleVolumeH;
+#else
+  const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({5, 5, 5})) <= MaxAdmissibleVolumeH;
+#endif
+  if (pointSource) {
     constexpr double sigma = 0.1149;
     constexpr double t0 = 0.7;
     constexpr double M0 = 1000.0;
-
     const double force = M0*std::exp(-((t-t0)*(t-t0))/(2.0*sigma*sigma));
-
     S[0] = force;
-    S[1] = 0.0;
-    S[2] = 0.0;
-#if Dimensions == 3
-    S[3] = 0.0;
-#endif
   }
 """
   )

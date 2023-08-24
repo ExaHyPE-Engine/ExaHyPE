@@ -55,7 +55,7 @@ use_make = True
 
 #
 # If set to True, the project will use a completely symbolic description of the advection equation.
-# If set to False, pre-defined optimised C++ code will be used instead.
+# If set to False, pre-defined optimised C++ kernels will be used instead.
 #
 use_symbolic_description = False
 
@@ -108,7 +108,7 @@ if use_symbolic_description:
   my_pde = PDE(unknowns=dimensions, auxiliary_variables=0, dimensions=dimensions)
 
   #
-  # Since 'my_pde' only holds the PDE for the acoustic wave equation without initial- or boundary conditions,
+  # Since 'my_pde' only holds the PDE for the advection equation without initial- or boundary conditions,
   # we still need to properly define initial- and boundary conditions.
   # This gives us then a complete description of a 'scenario'.
   #

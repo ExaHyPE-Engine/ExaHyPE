@@ -44,15 +44,15 @@ namespace exahype2::acousticwave {
     assertion3(normal < Dimensions, faceCentre, t, normal);
 #endif
 
-    const double K_0 = rho * c * c;
+    const double K0 = rho * c * c;
 
-    F[0]          = K_0 * Q[normal + 1];
+    F[0]          = -K0 * Q[normal + 1];
     F[1]          = 0.0;
     F[2]          = 0.0;
 #if Dimensions == 3
     F[3]          = 0.0;
 #endif
-    F[normal + 1] = (1 / rho) * Q[0];
+    F[normal + 1] = -(1.0 / rho) * Q[0];
   }
 
   static void flux(

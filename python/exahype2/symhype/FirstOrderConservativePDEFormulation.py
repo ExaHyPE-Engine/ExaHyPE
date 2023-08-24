@@ -47,7 +47,7 @@ class FirstOrderConservativePDEFormulation(PDE):
               result += " + "
               result += str(self.ncp[i])
             result += ") = "
-            if isinstance(self.sources[i], numbers.Number) or isinstance(self.sources[i], sympy.Piecewise):
+            if isinstance(self.sources[i], numbers.Number) or isinstance(self.sources[i], sympy.Expr):
               result += str(self.sources[i]) + "\n"
             else:
               result += "0\n"
@@ -70,7 +70,7 @@ class FirstOrderConservativePDEFormulation(PDE):
                   result += " + "
                   result += str(self.ncp[i][j])
             result += ") & = & "
-            if isinstance(self.sources[i], numbers.Number) or isinstance(self.sources[i], sympy.Piecewise):
+            if isinstance(self.sources[i], numbers.Number) or isinstance(self.sources[i], sympy.Expr):
               result += str(self.sources[i]) + " \\\\"
             else:
               result += "0 \\\\"
