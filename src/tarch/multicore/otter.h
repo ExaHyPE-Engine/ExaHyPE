@@ -2,9 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "config.h"
-
 
 /**
  * @page tarch_multicore_otter Otter task tracing
@@ -60,32 +58,47 @@
  * incompatibilities, i.e. whenever Otter has updated its signatures.
  */
 namespace otter {
+  namespace label {
+    static const char* root                     = "[ROOT TASK]";
+    static const char* step                     = "[STEP TASK]";
+    static const char* enclave                  = "[anonymous enclave task]";
+    static const char* traverse_fmt             = "[traversal task %d of %d]";
+    static const char* unknown                  = "unknown task";
+    static const char* TaskWithCopyOfFunctor    = "TaskWithCopyOfFunctor";
+    static const char* TaskWithoutCopyOfFunctor = "TaskWithoutCopyOfFunctor";
+  } // namespace label
 
-  #if !defined(UseOtter)
-  #endif
-}
+  namespace phase {
+    static const char* init                  = "init";
+    static const char* plot                  = "plot";
+    static const char* timestep              = "time-step";
+    static const char* create_grid           = "create-grid";
+    static const char* create_grid_no_refine = "create-grid-but-postpone-refinement";
+    static const char* create_grid_converge  = "create-grid-and-converge-load-balancing";
+  } // namespace phase
 
+} // namespace otter
 
 #if defined(UseOtter)
-#include "otter-task-graph/otter-task-graph.h"
+#include <otter/otter-task-graph-user.h>
 #else
 
-// use sub header:
-// https://github.com/Otter-Taskification/otter/blob/dev/include/otter/otter-task-graph-stub.h
-
-#define OTTER_SRC_ARGS()
-#define otter_task_context void
-#define otter_sync_children
-#define otter_sync_descendants
-#define otterTraceInitialise()
-#define otterTraceFinalise()
-#define otterTraceStart()
-#define otterTraceStop()
-#define otterTaskBegin(...) ((void*)0)
-#define otterTaskEnd(...)
-#define otterSynchroniseTasks(...)
-#define otterPhaseBegin(...)
-#define otterPhaseEnd()
-#define otterPhaseSwitch(...)
+#define OTTER_INITIALISE()
+#define OTTER_FINALISE()
+#define OTTER_DECLARE_HANDLE(...)
+#define OTTER_DEFINE_TASK(...)
+#define OTTER_INIT_TASK(...)
+#define OTTER_DEFINE_TASK(...)
+#define OTTER_ADD_TO_POOL(...)
+#define OTTER_POP_LABEL(...)
+#define OTTER_BORROW_LABEL(...)
+#define OTTER_REMOVE_FROM_POOL(...)
+#define OTTER_BORROW_FROM_POOL(...)
+#define OTTER_TASK_START(...)
+#define OTTER_TASK_END(...)
+#define OTTER_TASK_WAIT_FOR(...)
+#define OTTER_PHASE_BEGIN(...)
+#define OTTER_PHASE_END(...)
+#define OTTER_PHASE_SWITCH(...)
 
 #endif
