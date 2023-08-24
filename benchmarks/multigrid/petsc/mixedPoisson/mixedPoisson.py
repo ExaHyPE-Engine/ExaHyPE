@@ -52,10 +52,10 @@ solver = petsc.solvers.MixedPoisson("MP",
                                     args.meshsize,
                                     args.meshsize,
                                     args.dimensions,
-                                    cellCellMatrix,   #12x12
+                                    cellCellMassMatrix,   #12x12
+                                    cellCellSystemMatrix,   #12x12
                                     cellToFaceMatrix, #12x8
-                                    FaceToCellMatrix, #8x12
-                                    FaceFaceMatrix,   #4x4 <- this is across the 
+                                    FaceFaceMatrix,   #8x8 <- this is across the 
                                     )
 
 project.add_solver( solver )
