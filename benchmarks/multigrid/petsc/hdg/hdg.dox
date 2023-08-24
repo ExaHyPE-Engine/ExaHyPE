@@ -597,46 +597,55 @@ Hybridised DG is, from a data structure point of view, very similar to the
 Discontinuous Galerkin scheme as presented above. Let
 
 @f$
-\lambda := [[u]] 
+\lambda_u := [[u]]  \qquad \text{and} \qquad \lambda_\phi := [[\phi]]
 @f$ 
 
-denote one additional variables, i.e.
+denote the additional variables, i.e.
 
-        unknowns_per_face_dof = 3
+        unknowns_per_face_dof = 4
 
 Again, the left and right @f$ \lambda @f$ are the same, but we keep it redundantly.
-Next, we assume that we, somehow, know the 
-@f$ \lambda @f$ (which other manuscript also call @f$ \hat{u} @f$). In 
+Next, we assume that we know the 
+@f$ \lambda _u @f$ (which other manuscript also call @f$ \hat{u} @f$) somehow. In 
 this case, we can evaluate 
 
 @f$
   \int _{\partial \text{cell}_{\psi _u}}  \lambda _u \cdot (n, \psi _u) dS(x)
 @f$
 
-within the face-to-cell projection. Our idea is that we allow the code to 
-pick this @f$ \lambda _u @f$ quite freely, as lon gas the jumps between the 
-@f$ \phi @f$ disappear weakly:
-
-@f$
-\int _{face} [[ (n,\phi) ]] \cdot \psi _f dS(x) = 0 \quad \forall \quad \psi _f.
-@f$
-
-So the @f$ \lambda _u @f$ is now really an additional degree of freedom, not
-just a mere average. The instruction how to compute it results from fixing a 
-magic constant @f$ \gamma > @f$ and imposing
+within the face-to-cell projection. 
+The @f$ \lambda _u @f$ is now really an additional degree of freedom, not
+just a mere average. The @f$ \lambda _\phi @f$ which we restrict later into 
+the cell in contrast remains a helper variable, which results directly from
+other quantities. To compute it, we fix a magic constant @f$ \gamma > @f$ and enforce
 
 
 
 \f{eqnarray*}{
  \lambda _\phi & := & [[ (n,\phi) ]] + \gamma \left( [[u]] - \lambda _u \right) \\
    & = & \frac{1}{2} (n,\phi)^+ + \frac{1}{2} (n,\phi)^- + \frac{\gamma}{2} u^+ + \frac{\gamma}{2} u^- - \gamma \lambda _u
- \\
- \Rightarrow
+\f}
+
+
+This means, the very moment we have computed @f$ \lambda _u @f$, we can derive
+@f$ \lambda _\phi @f$ and throw the face integrals back into the cells.
+
+
+
+HDG's idea is that we allow the code to 
+pick this @f$ \lambda @f$ quite freely, as long as the jumps between the 
+@f$ \phi @f$ along the normals disappear weakly:
+
+\f{eqnarray*}{
+  \int _{face} [[ (n,\phi) ]] \cdot \psi _f dS(x) & = & 0 \quad \forall \quad \psi _f
+  \\
+  \Rightarrow
   \int _{face} \lambda _u \cdot \psi _f dS(x) & = & \int _{face} \frac{1}{2} \left( \frac{1}{\gamma} (n,\phi)^+ + \frac{1}{\gamma} (n,\phi)^- + u^+ + u^- \right) \psi _f dS(x) \quad \forall \quad \psi _f.
 \f}
 
 
-We have a new equation system to solve for @f$ \lambda _u @f$. This equation 
+So the @f$ \lambda @f$ is now really an additional degree of freedom, not
+just a mere average, and we obtain it by solving a new equation system. This equation 
 system is represented by the face-to-face matrix. 
 
 The rationale behind the construction of @f$ \lambda _u @f$ is not too difficult:
