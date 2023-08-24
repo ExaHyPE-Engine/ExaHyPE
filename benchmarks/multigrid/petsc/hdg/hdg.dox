@@ -482,7 +482,7 @@ Once the values are uniquely defined on the face, we have to add the missing ter
 
 back to the equation. For this, we expect the user to hand in the face-to-cell 
 projection matrix. It is from @f$ \mathbb{R}^{ 2K \cdot (p+1)^{d-1} \times 2K \cdot (p+1)^{d-1} } @f$
-and takes the @f$ u @f$ and @f$ n \phi @f$ value (it is not unique if you want to 
+and takes the @f$ u @f$ and @f$ n \cdot \phi @f$ value (it is not unique if you want to 
 pick the left or right one; choose either as they are the same due to the 
 constraints above), tests them against the corresponding test function restricted
 to the face, and adds the result back to the linear equation system line that 
@@ -552,7 +552,11 @@ which is an overkill here.
 
 
 1. The unknown 0 on a vertical face is the  solution projection from the left;
+<<<<<<< HEAD
 2. Unknown 1 is the @f$ \phi _x @f$ projection from the left;
+=======
+2. Unknown 1 is the @f$\phi _x@f$ projection from the left;
+>>>>>>> branch 'multigrid-sean' of https://gitlab.lrz.de/hpcsoftware/Peano.git
 3. The unknown 2 represents this @f$ [[u]] @f$ value;
 4. The unknown 3 represents the @f$ [[(\phi, n)]] = [[\phi_ x]] @f$ value;
 5. The next one (unknown 5) 2 is the solution projection from the right;
