@@ -400,26 +400,19 @@ a permutation which is handled within the Python API. For a continuous setup and
 \f}
 
 This matrix, supplemented with a zero right-hand side, glues the solution together.
+It might be surprising that we only have four equations with eight unknowns on the
+face. However, it is important to note that these "unknown" are not really unknowns.
+They are projections. Since they are projections, they always follow the solution 
+within the cells (as discussed in the section before). This means, they are helper
+variables which just represent the solution on the face. As we impose four additional
+equations per face, we actually take an (almost) well-defined system, and we add an
+additional constraint. We kind of create a saddle point problem, where the solution
+is subject to additional face-constraint equations.
 
-It might be reasonable, and indeed is later on used, to enforce this continuity 
-only for the solution @f$ u @f$, but not for the helper function @f$ \phi @f$. In 
-this case, the matrix degenerates to 
 
-
-
-\f{eqnarray*}{
-  \begin{pmatrix}
-  1 & 0 &    -1 & 0 &     0 & 0 &    0 & 0 \\
-  0 & 0 &     0 & 0 &     0 & 0 &    0 & 0 \\
-  0 & 0 &     0 & 0 &     1 & 0 &   -1 & 0 \\
-  0 & 0 &     0 & 0 &     0 & 0 &    0 & 0 \\
-  \end{pmatrix}
-\f}
-
-@todo I think there's an additional four constraints missing. Not sure how to do this, but Alex and Sean might have this in their notes already somewhere.
  
-
 ### A discontinuous Galerkin formulation
+
 
 In a DG formulation, we approximate the solution:
 
@@ -431,10 +424,11 @@ In a DG formulation, we approximate the solution:
   \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
   & \approx & 
   \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
-\f$
+\f}
 
 
 */
 
 
-\
+
+@f$ \lambda @f$ ist sein neuer Parameter
