@@ -32,7 +32,7 @@ class Project(object):
     @see generate_Peano4_project()
     """
 
-    def __init__(self, namespace, project_name, directory=".", executable=""):
+    def __init__(self, namespace, project_name, executable, directory="."):
         self._project = peano4.Project(namespace, project_name, directory)
         self._project.output.makefile.add_cmake_core_library("ExaHyPE2Core")
 
@@ -606,3 +606,26 @@ thus appreciate any citation of the original release paper
         self._project.output.makefile.set_mode(self._build_mode)
 
         return self._project
+
+
+    def register_new_user_defined_algorithmic_step(self,
+                                                   step,
+                                                   ):
+        """! Add all the use operations to new algorithmic step
+        
+Use this routine whenever you have created your own 
+@ref page_architecture "algorithmic step". Please note that the routine should
+be called after you have created all of your solvers. Otherwise, we'll miss out
+a few of your solvers and the data access patterns will/might be corrupted.
+
+The routine has no side-effects, i.e. does not alter the underlying project.
+It only manipulates the step. Therefore, you can even call it after you have 
+distilled the Peano project from the ExaHyPE project, i.e. after you have 
+called exahype2.Project.generate_Peano4_project().
+
+step: peano4.solversteps.Step
+  
+        """
+        for solver in self._solvers:
+            solver.add_use_data_statements_to_Peano4_solver_step(step)
+

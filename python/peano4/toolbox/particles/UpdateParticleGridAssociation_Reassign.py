@@ -9,7 +9,8 @@ import jinja2
 
 
 class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociation):
-    """
+    """!
+
     Associate particles to spacetree vertices
 
     Sort particles into the respective levels and cells. This mapping should
@@ -142,6 +143,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
           break;
         case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
           logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " has to be sieved globally. Current assocation=" << marker.toString() );
+          _numberOfLiftsIntoSieveSet++;
           p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);
           break;
         case 0:

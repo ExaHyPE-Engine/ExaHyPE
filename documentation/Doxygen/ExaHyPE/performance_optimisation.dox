@@ -9,7 +9,7 @@ features to spot some flaws, a proper performance optimisation has to be guided
 by external performance analysis tools.
 Furthermore, please read @ref page_peano_performance_optimisation "Peano's generic performance optimisation remarks" parallel to this 
 page.
-All of the recommendations on  apply for ExaHyPE, too.
+All of the recommendations there apply for ExaHyPE, too.
 
 
 The page consists of two big parts.
@@ -33,7 +33,7 @@ different machine levels (core, node, cluster, gpus).
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
    ./myexecutable --threads XXX
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-   Peano offers @ref peano_runtime_analysis "some Python scripts" that allow 
+   Peano offers @ref page_peano_runtime_analysis "some Python scripts" that allow 
    users to visualise the scalability behaviour. If the scalability is poor,
    consult the section below on Multithreading optimisation.
  
@@ -83,7 +83,7 @@ i.e. you have to swap how a patch is mapped onto a C++ implementation. Most solv
 
 which does the switch for you. Please around with different True, False 
 combinations. 
-Once you have switched, you should also consult @ref peano_performance_optimisation "Peano's generic remarks on alignment", 
+Once you have switched, you should also consult @ref page_peano_performance_optimisation "Peano's generic remarks on alignment", 
 and you might want to change your kernel into a variant which optimises aggressively for vector registers (and can 
 potentially even use GPUs). This topic is discussed below.
 
@@ -93,8 +93,10 @@ potentially even use GPUs). This topic is discussed below.
 
 ### The PDE term routines (sources, ncp, fluxes, eigenvalues, ...) are extremely expensive 
 
-In principle, that's what you want to see. If this is the case, then you should next follow the recommendations for GPU
-parallelisation. These focus on GPU efficiency, but the optimisations also pay off significantly for CPUs.
+In principle, that's what you want to see. If this is the case, then you should 
+next follow the @ref page_exahype_gpu "recommendations for GPU parallelisation". 
+These focus on GPU efficiency, but the optimisations also pay off significantly 
+for CPUs.
 
 
 
@@ -148,8 +150,8 @@ use enclave tasking.
 
 ### Very high spin time and not enough trees for the all cores
 
-This topic is covered by @ref page_peano_performance_optimisation "Peano's 
-section calls The code shows very high spin time".
+This topic is covered by 
+@ref page_peano_performance_optimisation "Peano's section calls The code shows very high spin time".
 In ExaHyPE 2's context it means that you do not have enough trees to keep 
 all cores busy, i.e. your mesh is too small or your subpartitions are too 
 big. 

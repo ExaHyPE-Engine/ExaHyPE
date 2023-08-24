@@ -149,6 +149,10 @@ namespace toolbox {
      *   Remove it completely from mesh and push it into a global list of
      *   particles which shall be sieved in the next step.
      *
+     * When we try to lift to the next coarser level, we have to check if the
+     * target vertex is local. If not, we have to sieve.
+     *
+     *
      * ## Algorithm
      *
      * If a particle is not local, we keep it, as we don't dare to make a
@@ -175,6 +179,7 @@ namespace toolbox {
      * All of these considerations apply if and only if a particle is local. If
      * a particle is virtual, it is a copy from another rank. In this case, we
      * should not change its position, and we should not change its association.
+     *
      *
      * @see LiftingTolerance
      */
@@ -288,6 +293,25 @@ namespace toolbox {
 
     template <typename Particle>
     bool dropParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
+
+    /**
+     * Will the particle be dropped further throughout the traversal
+     *
+     * The sorting in Peano usually realises pull semantics. That is, the fine
+     * grid vertex pulls particles down from coarser levels into its own
+     * domain. Particles recursively drop down the resolution cascade.
+     * Throughout the top-down tree traversal, it is often important to know if
+     * a particle will be pulled down further later on throughout the mesh
+     * traversal. This routine tells the user if this will happen. It is
+     * somehow the top-down counterart of dropParticle() and sieveParticle().
+     *
+     * Consult @ref page_toolbox_particles_mesh_traversal "the generic mesh traversal discussion"
+     * for some further "use cases" where this operation becomes absolutely
+     * mandatory.
+     */
+    template <typename Particle>
+    bool particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::CellMarker& marker);
+
 
     double relativeSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
     double relativeSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);

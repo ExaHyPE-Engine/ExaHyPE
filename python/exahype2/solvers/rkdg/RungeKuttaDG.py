@@ -686,12 +686,12 @@ We use RK("""
                 self._face_data_storage
             )
 
-        self._estimate_projection.generator.store_persistent_condition = (
-            self._store_face_data_default_guard()
+        self._estimate_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_face_data_to_compute_kernels_default_guard(),
+            self._load_face_data_default_guard(),
+            self._store_face_data_default_guard(),
         )
-        self._estimate_projection.generator.load_persistent_condition = (
-            self._load_face_data_default_guard()
-        )
+        
         self._estimate_projection.generator.includes += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
@@ -702,22 +702,20 @@ We use RK("""
             )
         )
 
-        self._old_solution_projection.generator.store_persistent_condition = (
-            self._store_face_data_default_guard()
-        )
-        self._old_solution_projection.generator.load_persistent_condition = (
-            self._load_face_data_default_guard()
+        self._old_solution_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_face_data_to_compute_kernels_default_guard(),
+            self._load_face_data_default_guard(),
+            self._store_face_data_default_guard(),
         )
         self._old_solution_projection.generator.includes += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
 
-        self._current_time_step.generator.store_persistent_condition = (
-            self._store_cell_data_default_guard()
-        )
-        self._current_time_step.generator.load_persistent_condition = (
-            self._load_cell_data_default_guard()
+        self._current_time_step.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
         )
         self._current_time_step.generator.includes += """
 #include "peano4/utils/Loop.h"
@@ -729,22 +727,20 @@ We use RK("""
             )
         )
 
-        self._rhs_estimates.generator.store_persistent_condition = (
-            self._store_cell_data_default_guard()
-        )
-        self._rhs_estimates.generator.load_persistent_condition = (
-            self._load_cell_data_default_guard()
+        self._rhs_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
         )
         self._rhs_estimates.generator.includes += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
 
-        self._linear_combination_of_estimates.generator.store_persistent_condition = (
-            self._store_cell_data_default_guard()
-        )
-        self._linear_combination_of_estimates.generator.load_persistent_condition = (
-            self._load_cell_data_default_guard()
+        self._rhs_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
         )
         self._linear_combination_of_estimates.generator.includes += """
 #include "peano4/utils/Loop.h"
@@ -757,11 +753,10 @@ We use RK("""
         self._old_solution_projection.generator.send_condition = "false"
         self._old_solution_projection.generator.receive_and_merge_condition = "false"
 
-        self._Riemann_solution.generator.store_persistent_condition = (
-            self._store_face_data_default_guard()
-        )
-        self._Riemann_solution.generator.load_persistent_condition = (
-            self._load_face_data_default_guard()
+        self._Riemann_solution.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_face_data_to_compute_kernels_default_guard(),
+            self._load_face_data_default_guard(),
+            self._store_face_data_default_guard(),
         )
         self._Riemann_solution.generator.includes += """
 #include "repositories/SolverRepository.h" 
@@ -936,6 +931,27 @@ We use RK("""
             self._baseline_action_set_priority
         )  # touch cell last time, i.e. leave cell
 
+
+    def _provide_cell_data_to_compute_kernels_default_guard(self):
+        return (
+                        "not marker.willBeRefined() "
+                        + "and repositories::"
+                        + self.get_name_of_global_instance()
+                        + ".getSolverState()!="
+                        + self._name
+                        + "::SolverState::GridConstruction"
+                )
+
+    def _provide_face_data_to_compute_kernels_default_guard(self):
+        return (
+                        "not marker.willBeRefined() "
+                        + "and repositories::"
+                        + self.get_name_of_global_instance()
+                        + ".getSolverState()!="
+                        + self._name
+                        + "::SolverState::GridConstruction"
+               )
+                
     def _store_cell_data_default_guard(self):
         """!
 

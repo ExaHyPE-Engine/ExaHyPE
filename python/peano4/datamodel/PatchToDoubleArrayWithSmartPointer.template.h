@@ -16,11 +16,16 @@
 #include "tarch/mpi/mpi.h"
 
 #include "peano4/utils/Globals.h"
+#include "peano4/grid/LoadStoreComputeFlag.h"
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/grid/TraversalObserver.h"
+
+{% if FLOAT_TYPE=="std::float16_t" or FLOAT_TYPE=="std::bfloat16_t" %}
+#include <stdfloat>
+{% endif %}
 
 
 {% for item in NAMESPACE -%}
@@ -185,14 +190,10 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     const peano4::datamanagement::VertexMarker& marker
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
   ) const;
-  static bool loadPersistently(
+  static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(
     const peano4::datamanagement::VertexMarker& marker
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
   );
-  bool storePersistently(
-    const peano4::datamanagement::VertexMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
   {% endif -%}
 
   {% if DATA_ASSOCIATION == 2 -%}
@@ -205,14 +206,10 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     const peano4::datamanagement::FaceMarker& marker
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
   ) const;
-  static bool loadPersistently(
+  static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(
     const peano4::datamanagement::FaceMarker& marker
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
   );
-  bool storePersistently(
-    const peano4::datamanagement::FaceMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
   {% endif -%}
 
   {% if DATA_ASSOCIATION == 3 -%}
@@ -225,14 +222,10 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     const peano4::datamanagement::CellMarker& marker
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
   ) const;
-  static bool loadPersistently(
+  static ::peano4::grid::LoadStoreComputeFlag loadStoreComputeFlag(
     const peano4::datamanagement::CellMarker& marker
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
   );
-  bool storePersistently(
-    const peano4::datamanagement::CellMarker& marker
-    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-  ) const;
   {% endif -%}
   
   

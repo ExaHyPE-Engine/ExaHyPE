@@ -38,6 +38,75 @@ of a performance analyis tool to uncover what is going wrong and the statistics
 then can help to clarify why this happens from an application's point of view.
  
 
+## Compiler feedback
+
+Any optimisation should be guided by compiler feedback and proper performance
+analysis. For the (online) performance analysis, Peano provides tailored 
+extensions for some tools such as Intel's VTune or the NVIDIA NSight tools.
+They are realised as bespoke @ref tarch_logging "logging devices".
+
+If you want to use compiler feedback, we do routinely use the Intel toolchain.
+For them, the flag -qopt-report=3 yields useful feedback. However, running the 
+whole code with compiler feedback yields a lot and lot of files. It also seems
+to slow the translation process down. I therefore 
+recommend that you first find the observer class which invokes the compute kernel
+you are interested in. After that, create the Makefile (only once, as it will 
+be overwritten). Within the makefile, alter the linker step:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+OPTIMISED_FILE=observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4
+
+
+#
+# Linker arguments are read from left to right and objects are thrown away
+# per step if they are not required anymore. That is: left libraries can
+# depend objects right but not the other way round.
+#
+solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
+        rm $(OPTIMISED_FILE).o*
+        $(CXX) -qopt-report=3 $(CXXFLAGS) -c -o $(OPTIMISED_FILE).o $(OPTIMISED_FILE).cpp
+        $(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o noh2D
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You throw away the object file and then you rebuild this single file yet with 
+the optimisation reports on. 
+
+
+## Inter-procedural optimisation
+
+Most successful vectorsation passes depend upon successful inlining (despite
+marking functions as vectorisable). To facilitate this inlining, you can either
+move implementations into the header, or you can use ipo. The following remarks
+discuss ipo in the context of the Intel compiler, but we assume similar 
+workflows to apply to any LLVM-based toolchain.
+
+The switch to ipo requires some manual modifications of the underlying 
+Makefile:
+
+1. We remove the object files manually which have been produced by the standard
+   compilation process.
+2. We retranslate all the cpp files again in one rush using the -c -ipo option.
+3. All the resulting object files will end up in the root directly. We 
+   consequently rescatter them, i.e. move them again into the places where the 
+   object files had originally been placed.
+4. We add -ipo as additional linker command, as the linker otherwise will not 
+   recognise the object file format. Furthermore, I repeat the opt-report flag
+   for the linker phase. Otherwise, I'll not get any feedback. 
+   
+Here is an example excerpt of a successful, modified Makefile:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
+    rm tasks/*.o AbstractCCZ4SBH_FD4.o  AbstractCCZ4SBH_FV.o  CCZ4SBH_FD4.o  CCZ4SBH_FV.o
+    $(CXX) $(CXXFLAGS) -qopt-report=3 -ipo -c tasks/CCZ4SBH_FD4EnclaveTask.cpp tasks/CCZ4SBH_FVEnclaveTask.cpp AbstractCCZ4SBH_FD4.cpp AbstractCCZ4SBH_FV.cpp CCZ4SBH_FD4.cpp CCZ4SBH_FV.cpp
+    mv *Task.o tasks
+    $(CXX) -ipo -O3 -qopt-report=3 $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o peano_sbh_2.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+The final ipo optimisation report will end up in a file ipo_out.optrpt.
+
 
 ## Single core optimisation
 
@@ -53,7 +122,7 @@ tarch::MemoryLocation.
 
 Peano realises a strict cell-wise traversal paradigm, where individual
 actions @ref peano_action_sets "are tied to single cells, faces or vertices".
-Therefore, @ref peano_amr_tex "Peano's AMR" is also controlled by sets of 
+Therefore, @ref peano_amr "Peano's AMR" is also controlled by sets of 
 refine and erase events. The decision to refine or erase a mesh is made
 by Peano by comparing each and every mesh entity against the set of 
 erase and refine commands. This happens in 

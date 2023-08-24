@@ -1,5 +1,6 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+from .Attribute import Attribute
 from .Double import Double
 
 
@@ -19,13 +20,25 @@ class DoubleArray(Double):
 
     """
 
-    def __init__(self, name, cardinality, valid_mantissa_bits=None, ifdefs=[]):
-        Double.__init__(self, name, ifdefs=ifdefs)
+    def __init__(
+        self,
+        name,
+        cardinality,
+        valid_mantissa_bits=None,
+        ifdefs=[],
+        qualifier=Attribute.Qualifier.NONE,
+        initval=None,
+    ):
+        if qualifier != Attribute.Qualifier.NONE:
+            raise NotImplementedError(
+                f"Attribute {name}: This data type can't work with qualifiers (yet)"
+            )
+        Double.__init__(self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initval)
 
         self._cardinality = cardinality
         self._valid_mantissa_bits = valid_mantissa_bits
 
-    def get_methods(self, _full_qualified_class_name):
+    def get_methods(self, _full_qualified_class_name, for_declaration=True):
         accessor_name = self._name[:1].title() + self._name[1:]
         return [
             ("get" + accessor_name + "() const", "const double*"),

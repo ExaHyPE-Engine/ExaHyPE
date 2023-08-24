@@ -5,7 +5,7 @@
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _dataSmartPointer(
-    tarch::allocateMemory< {{FLOAT_TYPE}} >( Cardinality, tarch::MemoryLocation::Heap ),
+    tarch::allocateMemory< {{FLOAT_TYPE}} >( {{MPI_ELEMENTS_PER_FLOAT}}*Cardinality, tarch::MemoryLocation::Heap ),
     [] (auto p) {
       tarch::freeMemory( p, tarch::MemoryLocation::Heap );
     }
@@ -139,24 +139,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
+::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(
   const peano4::datamanagement::VertexMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{STORE_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
-  return {{LOAD_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
-  const peano4::datamanagement::VertexMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{STORE_PERSISTENT_CONDITION}};
+) {
+  return {{LOAD_STORE_COMPUTE_FLAG}};
 }
 {% endif -%}
 
@@ -183,19 +170,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(
+::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(
   const peano4::datamanagement::FaceMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) {
-  return {{LOAD_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
-  const peano4::datamanagement::FaceMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{STORE_PERSISTENT_CONDITION}};
+  return {{LOAD_STORE_COMPUTE_FLAG}};
 }
 {% endif -%}
 
@@ -222,19 +201,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(
+::peano4::grid::LoadStoreComputeFlag {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadStoreComputeFlag(
   const peano4::datamanagement::CellMarker& marker
   {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
 ) {
-  return {{LOAD_PERSISTENT_CONDITION}};
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
-  const peano4::datamanagement::CellMarker& marker
-  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
-) const {
-  return {{STORE_PERSISTENT_CONDITION}};
+  return {{LOAD_STORE_COMPUTE_FLAG}};
 }
 {% endif -%}
 
@@ -243,7 +214,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   int errorCode = MPI_Type_vector(
     1,           // number of blocks (count)
-    Cardinality, // number of entries per block (blocklength),
+    {{MPI_ELEMENTS_PER_FLOAT}}*Cardinality, // number of entries per block (blocklength),
     0,           // no stride as we work with a continuous datatype,
     {{MPI_FLOAT_TYPE}},
     &Datatype

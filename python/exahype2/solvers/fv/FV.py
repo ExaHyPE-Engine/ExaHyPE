@@ -602,11 +602,10 @@ The finest mesh width of """
 #include "repositories/SolverRepository.h" 
 """
 
-        self._patch.generator.store_persistent_condition = (
-            self._store_cell_data_default_guard()
-        )
-        self._patch.generator.load_persistent_condition = (
-            self._load_cell_data_default_guard()
+        self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
         )
 
         self._patch_overlap_old.generator.send_condition = "false"
@@ -618,22 +617,23 @@ The finest mesh width of """
         self._patch_overlap_update.generator.send_condition = "false"
         self._patch_overlap_update.generator.receive_and_merge_condition = "false"
 
-        self._patch_overlap_old.generator.store_persistent_condition = (
-            self._store_face_data_default_guard()
-        )
-        self._patch_overlap_old.generator.load_persistent_condition = (
-            self._load_face_data_default_guard()
-        )
-
-        self._patch_overlap_new.generator.store_persistent_condition = (
-            self._store_face_data_default_guard()
-        )
-        self._patch_overlap_new.generator.load_persistent_condition = (
-            self._load_face_data_default_guard()
+        self._patch_overlap_old.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+          self._provide_face_data_to_compute_kernels_default_guard(),
+          self._load_face_data_default_guard(),
+          self._store_face_data_default_guard(),
         )
 
-        self._patch_overlap_update.generator.store_persistent_condition = "false"
-        self._patch_overlap_update.generator.load_persistent_condition = "false"
+        self._patch_overlap_new.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+          self._provide_face_data_to_compute_kernels_default_guard(),
+          self._load_face_data_default_guard(),
+          self._store_face_data_default_guard(),
+        )
+
+        self._patch_overlap_update.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+          self._provide_face_data_to_compute_kernels_default_guard(),
+          "false",
+          "false"
+        )
 
         self._patch.generator.includes += """
 #include "../repositories/SolverRepository.h"
@@ -793,6 +793,37 @@ The finest mesh width of """
         self._action_set_preprocess_solution.priority = (
             self._baseline_action_set_priority
         )
+
+    def _provide_cell_data_to_compute_kernels_default_guard(self):
+        """! Default logic when to create cell data or not
+            
+        ExaHyPE allows you to define when you want to load or store data, and
+        you can also define if you need some grid data for your computations. 
+        You might have some temporary data per cell which is neither stored 
+        nor loaded, but that has to be there while you compute. Or there might
+        be cells which don't need to store a particular piece of data. See
+        ::peano4::grid::LoadStoreComputeFlag for some details. This predicate
+        here is a default. Particular solvers will take it as a starting point
+        to make more detailed rules: an enclave solver for example might 
+        decide to take the information where to store data, but to toggle the 
+        storage on and off depending on the solver phase.
+    
+        """
+        return "not marker.willBeRefined() and repositories::{}.getSolverState()!={}::SolverState::GridConstruction".format(
+                   self.get_name_of_global_instance(),
+                   self._name
+               )
+
+    def _provide_face_data_to_compute_kernels_default_guard(self):
+        return (
+                        "not marker.willBeRefined() "
+                        + "and repositories::"
+                        + self.get_name_of_global_instance()
+                        + ".getSolverState()!="
+                        + self._name
+                        + "::SolverState::GridConstruction"
+                )
+                
 
     def _store_cell_data_default_guard(self):
         """!

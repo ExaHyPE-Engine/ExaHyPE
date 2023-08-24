@@ -10,7 +10,8 @@ from .AbstractUpdateParticleGridAssociation import AbstractUpdateParticleGridAss
 
 
 class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociation):
-    """
+    """!
+
     Associate particles to spacetree vertices
 
     Sort particles into the respective levels and cells. This mapping should
@@ -127,8 +128,10 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
         p++;
         break;
       case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
+        _numberOfLiftsIntoSieveSet++;
         logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
         p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
+        assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );    
         break;
       case 0:
       case 1:
@@ -140,8 +143,11 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
       case 6:
       case 7:
       #endif
-        p = coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).move( p, fineGridVertex{{PARTICLES_CONTAINER}} );
         _numberOfLifts ++;
+        logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " to next coarser vertex " << instruction << ". Previously assigned to " << marker.toString() );
+        p = coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).grabParticle( p, fineGridVertex{{PARTICLES_CONTAINER}} );
+        assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                    fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );    
+        assertion2( coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );    
         break;
       default:
         assertionMsg( false, "value not implemented" );

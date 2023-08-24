@@ -29,6 +29,11 @@
 #include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
 {% endif %}
 
+{% if USE_HALF_PRECISION==True %}
+#include <stdfloat>
+{% endif %}
+
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
@@ -68,8 +73,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
       GridConstruction,
       GridInitialisation,
       Prediction,
+      PredictionOnHangingCells,
       Correction,
-      Plotting
+      Plotting,
+      Suspended
     };
 
     static std::string toString(SolverState);
@@ -228,6 +235,23 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     ) {% if ADAPTIVE_PRECISION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
     {% endif %}
 
+    {% if ERROR_MEASUREMENT_IMPLEMENTATION!="<none>" %}
+    /**
+     * Exact solution of the equation at a given point and time
+     *
+     * @param x             position
+     * @param t             Time
+     * @param dt            Timestep size
+     * @param sol           Solution of the equation
+     */
+    virtual void analyticalSolution(
+      const tarch::la::Vector<Dimensions,double>&   x,
+      const double                                  t,
+      const double                                  dt,
+      double*                                       sol
+    ) {% if ERROR_MEASUREMENT_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
+    {% endif %}
+
     {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
     /**
      * Evaluate precision criterion over cell
@@ -279,6 +303,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     virtual void finishGridInitialisationStep() override;
 
 
+    virtual void suspendSolversForOneGridSweep() override;
 
 
     /**
