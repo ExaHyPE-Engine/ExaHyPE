@@ -301,9 +301,46 @@ The additional 2d here stems from the fact that each cell has 2d faces.
 
 
 Let @f$ p=1 @f$, then the projection matrix for 
-Gauss-Lobatto equals
+Gauss-Lobatto equals (the left vector is simply a row enumeration, for ease of reading)
 
 \f{eqnarray*}{
+
+  \begin{bmatrix}
+  0\\
+  1\\
+  2\\
+  3\\
+  4\\
+  5\\
+  6\\
+  7\\
+  8\\
+  9\\
+  10\\
+  11\\
+  12\\
+  13\\
+  14\\
+  15\\
+  16\\
+  17\\
+  18\\
+  19\\
+  20\\
+  21\\
+  22\\
+  23\\
+  24\\
+  25\\
+  26\\
+  27\\
+  28\\
+  29\\
+  30\\
+  31\\
+\end{bmatrix}
+
+
   \begin{pmatrix}
   0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
   0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
@@ -321,6 +358,22 @@ Gauss-Lobatto equals
   0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
   0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
   0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
   \end{pmatrix}
 \f}
 
@@ -341,6 +394,21 @@ face, and so forth. One could only use the projection to the left face and
 then construct the other three matrices through permutations. We do not go
 down this route and instead expect the user to hand in the projection 
 matrix for all faces in one go. 
+
+Below we demonstrate how the rows and columns of the projection matrix 
+should be enumerated. For each pink dot, we have two indices. This is
+because each point holds the @f$ u @f$ value and the @f$ (\phi, n) @f$.
+We are viewing this situation from the perspective of the central cell,
+meaning that some of these indices are unavailable to us. In particular,
+the (pink) face indices 0,1, 4, 5, 8, 9, 10, 11, 18, 19, 22, 23, 28, 29,
+30 and 31 are all situated on neighbouring cells. We do not project onto
+these, and leave it until later, when we are actually in these cells to 
+do so.
+
+We note explicitly that the three unknowns per cell dof are @f$ u @f$,
+@f$ \phi_x @f$ and @f$ \phi_y @f$.
+
+@image html documentation/projection.png
 
 
 
