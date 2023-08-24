@@ -552,11 +552,7 @@ which is an overkill here.
 
 
 1. The unknown 0 on a vertical face is the  solution projection from the left;
-<<<<<<< HEAD
-2. Unknown 1 is the @f$ \phi _x @f$ projection from the left;
-=======
 2. Unknown 1 is the @f$\phi _x@f$ projection from the left;
->>>>>>> branch 'multigrid-sean' of https://gitlab.lrz.de/hpcsoftware/Peano.git
 3. The unknown 2 represents this @f$ [[u]] @f$ value;
 4. The unknown 3 represents the @f$ [[(\phi, n)]] = [[\phi_ x]] @f$ value;
 5. The next one (unknown 5) 2 is the solution projection from the right;
