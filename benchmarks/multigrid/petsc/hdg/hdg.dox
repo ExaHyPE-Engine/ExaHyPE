@@ -83,7 +83,7 @@ know the right scaling.
 
 
 In the present project, we make things more complicated: 
-We drop this continuous requirement. Our intention/ratinoale is that we could get a more accurate solution
+We drop this continuous requirement. Our intention/rationale is that we could get a more accurate solution
 by using piecewise functions that don't "connect" with each other.
 This means that we need more weights:
 
@@ -109,7 +109,7 @@ So for Gauss-Lobatto, we have arrangements such as the ones below:
 The left side uses a polynomial degree of one in line with our 1d examples 
 above. This means, we need four degrees of freedom per cell, but then each 
 degree of freedom carries three functions, as we have three PDEs. The right
-examples showcases an example with $p=2$. In general, we need @f$ (p+1)^d @f$
+examples showcases an example with @f$p=2@f$. In general, we need @f$ (p+1)^d @f$
 degrees of freedom per cell and have @f$ 3 \cdot (p+1)^d @f$ unknowns per 
 cell.
 
@@ -139,10 +139,10 @@ end of the story. Only a start.
 
 If we want to solve our system of equations (with three equations), we have to 
 test both the first and the second line (if we assume that the first one is 
-scalar and the second one over a vector). Once we switch to a weak sformulation, we hence need tests for both
+scalar and the second one over a vector). Once we switch to a weak formulation, we hence need tests for both
 equations. In math words, we draw test functions from the solution space and 
 from the helper space. Let us call them @f$ \psi _u @f$ and @f$ \psi _\phi @f$.
-One tests against u and one from against the gradient space. 
+One tests against u and one tests against the gradient space. 
 Therefore, @f$ \psi _u: \Omega \mapsto \mathbb{R}^2 @f$ and @f$ \psi _\phi: \Omega \mapsto \mathbb{R} @f$, as the latter tests the scalar equation.
 
 
@@ -240,7 +240,7 @@ the solution there at the moment. Therefore, we introduce
 @f$ 2K \cdot (p+1)^{d-1} @f$ unknowns per face: 
 
 - We work with polynomials over the face which are drawn from the same shape
-  space as our volumentric shape functions, but restricted to the face. 
+  space as our volumetric shape functions, but restricted to the face. 
   We get the @f$ (p+1) @f$ for the polynomial and the @f$ -1 @f$ in the 
   exponent, as we work only on the faces.
 - We note that @f$ \phi @f$ does not exist on the face. This is because our 
@@ -284,7 +284,7 @@ holds @f$ 2K \cdot (p+1)^{d-1} @f$ unknowns per face. These unknowns are
 given entries in the PETSc solution vector. However, they are not real 
 unknowns: They merely hold the solution values on the face. We therefore
 have to "eliminate" them, i.e. tell PETSc how to determine their value.
-This is a project from the cell onto the face.
+This is a projection from the cell onto the face.
 
 
 We highlight what this projection matrix looks like for Gauss-Lobatto.
@@ -300,10 +300,47 @@ arrangement. Independent of the dof layout, our projection matrix is from
 The additional 2d here stems from the fact that each cell has 2d faces.
 
 
-Let @f$ p=1$ @f$, then the projection matrix for 
-Gauss-Lobatto equals
+Let @f$ p=1 @f$, then the projection matrix for 
+Gauss-Lobatto equals (the left vector is simply a row enumeration, for ease of reading)
 
 \f{eqnarray*}{
+
+  \begin{bmatrix}
+  0\\
+  1\\
+  2\\
+  3\\
+  4\\
+  5\\
+  6\\
+  7\\
+  8\\
+  9\\
+  10\\
+  11\\
+  12\\
+  13\\
+  14\\
+  15\\
+  16\\
+  17\\
+  18\\
+  19\\
+  20\\
+  21\\
+  22\\
+  23\\
+  24\\
+  25\\
+  26\\
+  27\\
+  28\\
+  29\\
+  30\\
+  31\\
+\end{bmatrix}
+
+
   \begin{pmatrix}
   0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
   0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
@@ -321,6 +358,22 @@ Gauss-Lobatto equals
   0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
   0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
   0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
   \end{pmatrix}
 \f}
 
@@ -341,6 +394,21 @@ face, and so forth. One could only use the projection to the left face and
 then construct the other three matrices through permutations. We do not go
 down this route and instead expect the user to hand in the projection 
 matrix for all faces in one go. 
+
+Below we demonstrate how the rows and columns of the projection matrix 
+should be enumerated. For each pink dot, we have two indices. This is
+because each point holds the @f$ u @f$ value and the @f$ (\phi, n) @f$.
+We are viewing this situation from the perspective of the central cell,
+meaning that some of these indices are unavailable to us. In particular,
+the (pink) face indices 0,1, 4, 5, 8, 9, 10, 11, 18, 19, 22, 23, 28, 29,
+30 and 31 are all situated on neighbouring cells. We do not project onto
+these, and leave it until later, when we are actually in these cells to 
+do so.
+
+We note explicitly that the three unknowns per cell dof are @f$ u @f$,
+@f$ \phi_x @f$ and @f$ \phi_y @f$.
+
+@image html documentation/projection.png
 
 
 
