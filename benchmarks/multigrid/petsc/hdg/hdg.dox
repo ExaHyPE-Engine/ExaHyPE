@@ -351,51 +351,90 @@ is required here, so our code does not expect a face-to-cell projection
 matrix.
 
 
+## Face terms
+
+With the projection matrix, we now know what the solution components on the 
+face look like. With this knowledge, we can realise the missing terms from
+the weak formulation:
+
+\f$
+  \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x)  
+\f$
+
+and 
+
+\f$
+  \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
+\f$
+
+both have been neglected so far. 
+
+
+### A continuous Galerkin formulation
+
+
+We have observed before, that @f$ (n, \phi ) @f$ and @f$ u @f$ do not exist if 
+the solution has jumps. The simplest way to fix this is to ensure that the 
+solution does not have jumps, i.e. to switch to a continuous Galerking 
+formulation. This is not what we typically do, but it is possible within our
+framework and a nice sanity check. Furthermore, we need exactly this technique
+for a weak continuity enforcement later.
+
+If both @f$ u @f$ and @f$ \phi @f$ are continuous, then their values on the
+faces exist. They have to be the same. Our code introduces a face-to-face
+coupling matrix. It is from @f$ \mathbb{R}^{ 2K \cdot (p+1)^{d-1} \times 2K \cdot (p+1)^{d-1} } @f$ 
+and describes how the face degrees of freedom (these are the projections of the 
+solution onto the face) interact. We expect this matrix to describe the interaction
+for a face with the normal along x. The matrices for all other faces result from
+a permutation which is handled within the Python API. For a continuous setup and
+@f$ p=1 @f$, the matrix is  
+
+
+\f{eqnarray*}{
+  \begin{pmatrix}
+  1 & 0 &    -1 & 0 &     0 & 0 &    0 & 0 \\
+  0 & 1 &     0 & -1 &    0 & 0 &    0 & 0 \\
+  0 & 0 &     0 & 0 &     1 & 0 &   -1 & 0 \\
+  0 & 0 &     0 & 0 &     0 & 1 &    0 & -1    
+  \end{pmatrix}
+\f}
+
+This matrix, supplemented with a zero right-hand side, glues the solution together.
+
+It might be reasonable, and indeed is later on used, to enforce this continuity 
+only for the solution @f$ u @f$, but not for the helper function @f$ \phi @f$. In 
+this case, the matrix degenerates to 
+
+
+
+\f{eqnarray*}{
+  \begin{pmatrix}
+  1 & 0 &    -1 & 0 &     0 & 0 &    0 & 0 \\
+  0 & 0 &     0 & 0 &     0 & 0 &    0 & 0 \\
+  0 & 0 &     0 & 0 &     1 & 0 &   -1 & 0 \\
+  0 & 0 &     0 & 0 &     0 & 0 &    0 & 0 \\
+  \end{pmatrix}
+\f}
+
+@todo I think there's an additional four constraints missing. Not sure how to do this, but Alex and Sean might have this in their notes already somewhere.
+ 
+
+### A discontinuous Galerkin formulation
+
+In a DG formulation, we approximate the solution:
+
+\f{eqnarray*}{
+  \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x)  
+  & \approx & 
+  \int_{\partial \text{cell}_{\psi _\phi }} [[ \phi ]] \psi _\phi dS(x)  
+  \\
+  \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
+  & \approx & 
+  \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
+\f$
 
 
 */
 
 
-So, we introduce a new variable @f$ \hat{\phi} :=  [[ \phi \cdot \hat{n} ]]@f$, which is the
-average of @f$ \phi @f$ in the left cell and the right cell. Below is a simplistic depiction, with a 1D cell.
-
-
-Having introduced this, we can rewrite the right-hand integral as:
-
-\f{eqnarray*}{
-      &\approx& \int_\text{cell} ( \phi, \nabla \psi ) \ dxdy - \int_\text{face} [[ \phi \cdot \hat{n} ]] \cdot \psi \ dS(x)
-\f}
-
-Let's now discuss how we update @f$ u @f$ every step, using this formulation.
-
-## How do we choose the basis functions this time?
-
-Again, we have piecewise linear functions, but this time they are no longer continuous.
-See the sketch below.
-
-@image html testFunctionDG.png
-
-The difference is that this time we have:
-\li A 1D domain, cut into chunks of width @f$ h @f$
-\li Our piecewise linear basis functions have been cut in half, and we relax the requirement that they're continuous
-\li We now have two values for @f$ u @f$ on the boundary of each cell: at the boundary of cell @f$ i @f$, we have @f$ u_\pm @f$
-
-*warning-used wrong symbol in the picture. should instead be* @f$ \psi @f$
-
-
-## The Face Integral
-
-
-If we solve our equation correctly, then our @f$ \hat{\phi} @f$ should end up in the middle. We think of this as another constraint we are placing on the solution.
-We note also that when we enter each cell to perform some solver steps, we already
-know our approximate solution @f$ u @f$, meaning we can drop the use of our helper
-variable @f$ \phi @f$. Our solution will rest on correctly updating @f$ u @f$ and 
-@f$ \hat{\phi} @f$
-
-
-Let's now work out the contribution to the problem matrix that comes from this term. Let's now move to a 2D cell, where we have degree 1 Gauss-Lobatto points. This means we have 2 degrees of freedom on each face (which coincide spatially with the vertices), as well as 4 degrees of freedom on each cell (which again coincide with each vertex). This can be seen in page \ref multigrid_enumeration. Note that the vertices 
-labelled (clockwise from bottom left) as 0, 2, 3, 1, which is an enumeration we keep throughout.
-
-
-
-
+\
