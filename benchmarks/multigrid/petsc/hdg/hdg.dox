@@ -343,15 +343,8 @@ down this route and instead expect the user to hand in the projection
 matrix for all faces in one go. 
 
 
-For the explicit assembly, we have to construct the dofs on the faces
-from the dofs in the cells. We need a projection from cell to faces. In other 
-schemes, we also have to go the other way round, i.e. from faces to cells.
-Often, we can work with the transpose in this case. However, no such thing
-is required here, so our code does not expect a face-to-cell projection 
-matrix.
 
-
-## Face terms
+# Continuous Galerkin
 
 With the projection matrix, we now know what the solution components on the 
 face look like. With this knowledge, we can realise the missing terms from
@@ -367,15 +360,12 @@ and
   \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
 \f$
 
-both have been neglected so far. 
+both have been neglected so far, and both do not exist:
+@f$ (n, \phi ) @f$ and @f$ u @f$ do not exist as 
+the solution has jumps. 
 
-
-### A continuous Galerkin formulation
-
-
-We have observed before, that @f$ (n, \phi ) @f$ and @f$ u @f$ do not exist if 
-the solution has jumps. The simplest way to fix this is to ensure that the 
-solution does not have jumps, i.e. to switch to a continuous Galerking 
+The simplest way to fix this is to ensure that the 
+solution does not have jumps, i.e. to switch to a continuous Galerkin
 formulation. This is not what we typically do, but it is possible within our
 framework and a nice sanity check. Furthermore, we need exactly this technique
 for a weak continuity enforcement later.
@@ -410,11 +400,41 @@ additional constraint. We kind of create a saddle point problem, where the solut
 is subject to additional face-constraint equations.
 
 
+In the code, we hand the constraint equation in, and the mesh traversal will evaluate
+it, i.e. insert the corresponding lines, into the system matrix. 
+
+
+Once the values are uniquely defined on the face, we have to add the missing terms 
+
+@f$ 
+  \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x)  
+  \quad \text{and} \quad 
+  \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
+@f$
+
+back to the equation. For this, we expect the user to hand in the face-to-cell 
+projection matrix. It is from @f$ \mathbb{R}^{ 2K \cdot (p+1)^{d-1} \times 2K \cdot (p+1)^{d-1} } @f$
+and takes the @f$ u @f$ and @f$ n \phi @f$ value (it is not unique if you want to 
+pick the left or right one; choose either as they are the same due to the 
+constraints above), tests them against the corresponding test function restricted
+to the face, and adds the result back to the linear equation system line that 
+determines the value of the cell dof.
+
+
+While the projection onto the face is "direct" in the sense that we sample a 
+polynomial at a point (for Gauss-Lobatto is degenerates to pick a value), the 
+projection back is slightly more involved, as it comprises an integral over the
+face. Again, we assume that the user hands in the matrix over the unit face, 
+and Peano internally scales it then with @f$ h^{d-1} @f$. 
+
  
-### A discontinuous Galerkin formulation
+# Discontinuous Galerkin formulations
 
 
-In a DG formulation, we approximate the solution:
+In a Discontinuous Galerkin (DG) formulation, we accept that the 
+
+
+approximate the solution:
 
 \f{eqnarray*}{
   \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x)  
