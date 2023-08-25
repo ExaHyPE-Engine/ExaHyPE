@@ -1,5 +1,5 @@
 /**
-\page peano_amr_tex Adaptive mesh refinement (AMR)
+@page page_peano_amr Adaptive mesh refinement (AMR)
 
 Peano's AMR philosophy is guided by few simple principles:
 

@@ -45,6 +45,7 @@ namespace applications {
  * shells is not fixed a priori, i.e. in theory it could grow as the buckets
  * are built up upon demand.
  *
+ * @image html onion-model.png
  *
  * ## Interpolation
  *
