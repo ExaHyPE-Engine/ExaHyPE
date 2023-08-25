@@ -314,6 +314,7 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  gridCellH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       Offloadable
 ) {
