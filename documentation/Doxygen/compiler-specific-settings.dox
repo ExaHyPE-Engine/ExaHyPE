@@ -329,15 +329,38 @@ to check where the error was raised.
 
 ### DINE
 
-We have to write this part next week when we start the workshop.
+<img width="20%" src="https://www.dur.ac.uk/images/cosma/cosma_white.png" />
+
+DINE (Durham Intelligent NIC Environment) is a small supercomputer attached to
+Cosma, which we use to prototype some of our algorithms. Access is through the
+Cosma loging nodes (login8.cosma.dur.ac.uk). As Cosma and DINE feature the same
+generation of AMD chips, you can compile on Cosma8 and ship the executable to 
+DINE.
 
 ~~~~~~~~~~~~~~~~~~~~~~~
+module unload python
+module load python/3.10.12
+
 module load oneAPI
 module load intel_mpi
 module load gnu_comp/11.1.0
 export I_MPI_CXX=icpx
-./configure --enable-exahype --enable-blockstructured --enable-loadbalancing --enable-particles CC=icc CXX=icpx --with-multithreading=omp --with-mpi=mpiicpc CXXFLAGS="-std=c++20 -fopenmp -g -funroll-loops -O3 -g3"
+./configure --enable-exahype --enable-blockstructured --enable-loadbalancing --enable-particles CC=icc CXX=icpx --with-multithreading=omp --with-mpi=mpiicpc CXXFLAGS="-std=c++20 -fopenmp -funroll-loops -Ofast"
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+There are a few things to consider whenever you use DINE:
+
+- The default Python version usually is a little bit too old, so 
+  switching to a more recent Python package is reasonable. 
+- Don't use the -xHost flag in configure. The resulting code will crash on 
+  DINE. You can use 
+  ~~~~~~~~~~~~~~~~~~~~~~~
+  -march=native
+  ~~~~~~~~~~~~~~~~~~~~~~~
+- Try not to dump data into the home directory, as this one is backe up and has
+  a quota. DINE mounts the Cosma 5 data directory (/cosma5/data/do009/myaccount)
+  which you should use to store data files.
+  
 
  */
 

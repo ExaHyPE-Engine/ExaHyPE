@@ -214,7 +214,7 @@ def construct_limited_FD4_solver(min_cell_size, max_cell_size):
                 min_meshcell_h=min_cell_size / FD4PatchSize,
                 max_meshcell_h=max_cell_size / FD4PatchSize,
                 use_heap_storage=False, # See superclass docu
-                pde_terms_without_state=False
+                pde_terms_without_state=True
             )
 
             self._user_action_set_includes += """
@@ -519,6 +519,8 @@ def construct_FD4_solver(min_cell_size, max_cell_size):
                 rk_order=1,
                 min_meshcell_h=min_cell_size / FD4PatchSize,
                 max_meshcell_h=max_cell_size / FD4PatchSize,
+                use_heap_storage=False, # See superclass docu
+                pde_terms_without_state=True
             )
 
             self._user_action_set_includes += """

@@ -25,7 +25,14 @@ export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 python3 convergence-study.py -cs 2 -plot -s fd4-rk1-limited-ps-6
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-As always, the parameter --help makes the Python script yield further info.
+As always, the parameter --help makes the Python script yield further info,
+while the sections below enlist characteristic choices of the parameters.
+Depending on your system, you might have to load the GSL module separately
+before you build the application:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module load gsl
+~~~~~~~~~~~~~~~~~~~~~~~
 
 
 ## Clean up old and temporary files
@@ -79,11 +86,13 @@ it is possible to benchmark it once you disable plots, the tracers, and you use
 an unreasonable coarse mesh. Here are my default profiling setups that I use.
 The upper one tests "only" FD4, the lower one profiles a limited setup. 
 
-~~~~~~~~~~~~~~~~~~~~~~~
-python3 convergence-study.py -cs 2 -s fd4-rk1-ps-6 -no-tracer -et 0.01
-python3 convergence-study.py -cs 1 -s fd4-rk1-ps-3 -no-tracer -et 0.01
-python3 convergence-study.py -cs 2 -s fd4-rk1-limited-ps-3 -no-tracer -et 0.01
-~~~~~~~~~~~~~~~~~~~~~~~
+
+Name                    | Cell size | Limiter patch size | End time | Call
+------------------------|-----------|--------------------|----------|----------
+Default without limiter | 2.0       | 6                  | 0.01     | python3 convergence-study.py -cs 2 -s fd4-rk1-ps-6 -no-tracer -et 0.01
+Fine with small limiter | 1.0       | 3                  | 0.01     | python3 convergence-study.py -cs 1 -s fd4-rk1-limited-ps-3 -no-tracer -et 0.01
+
+
 
 
 
@@ -92,44 +101,19 @@ python3 convergence-study.py -cs 2 -s fd4-rk1-limited-ps-3 -no-tracer -et 0.01
 
 Han's original setup uses the full-blown CCZ4 setup with 
 
-
 ~~~~~~~~~~~~~~~~~~~~~~~
 python3 ccz4.py -ext adm -impl fd4-rk1-adaptive -s single-puncture -maxh 0.4 -minh 0.04 -ps 6 -plt 0.5 -et 100 -exn sbh27 --domain_r 9.0 --ReSwi 7 -cfl 0.1 -outdir ./ --KOSigma 8.0 -sommerfeld
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-We mirror this setup by 
+and aims for a final time of at least 46. We mirror these properties in the 
+following configurations:
+
+Name   | Cell size | Limiter patch size | End time | Plot    | AMR levels | Required nodes | Call
+-------|-----------|--------------------|----------|---------|------------|----------------|--------
+Small test |  2.0  | 6                  | 60.0     | yes     |        2   |             1  | python3 convergence-study.py -plot -cs 2 -s fd4-rk1-limited-ps-6 -et 60.0
+Large test |  1.0  | 6                  | 60.0     | yes     |        3   |             x  | python3 convergence-study.py -plot -cs 1 -s fd4-rk1-limited-ps-6 -et 60.0
 
 
-Code time should be 46
-
-python3 convergence-study.py -cs 2 -plot -et 60
-
-
-I found it advantageous to use 
-
-~~~~~~~~~~~~~~~~~~~~~~~
---threading-model native
-~~~~~~~~~~~~~~~~~~~~~~~
-
-as command line argument with CCZ4. The employed FD4 scheme works with very 
-wide boundary layers of width 3. Therefore, any task that is not processed
-immediately introduces a huge memory overhead. Along these lines, picking
-
-~~~~~~~~~~~~~~~~~~~~~~~
---threading-model fuse-or-process-immediately-1
-~~~~~~~~~~~~~~~~~~~~~~~
-
-might be reasonably whenever you are really short of main memory. Furthermore,
-this scheme will also immediately start to spawn the Finite Volume patches as
-tasks which are extremely expensive compared to their higher order cell
-counterparts. If they are not immediately processed, they will lead to serial
-compute phases later down the line.
-
-
-On the long term, we will want to have a scheduler which takes priorities into
-account as we already give enclave tasks of the Finite Volume scheme higher
-priority. See the discussion below. A better schedule should bring the 
-Finite Volume tasks forward and primarily ship those to GPUs.
 
  
 

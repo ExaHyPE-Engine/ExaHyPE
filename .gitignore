@@ -304,3 +304,4 @@ UnitTests3d*
 *.trs
 *.sh
 compile_commands.json
+/documentation/
