@@ -7,16 +7,16 @@ import peano4
 import exahype2
 
 dimensions                = 2
-cell_size                 = 0.01
-amr_levels                = 3
+cell_size                 = 0.1
+amr_levels                = 0
 patch_size                = 4
 rk_order                  = 2
 dg_order                  = 1
 end_time                  = 3.0
 plot_interval             = end_time/100
 #plot_interval             = 0
+use_gpu                   = False
 use_make                  = True
-use_enclave_tasking       = False
 use_symbolic_description  = False
 output_path               = "solution"
 
@@ -31,18 +31,22 @@ scenarios = [
 scenario = "PointExplosion"
 
 fv_rusanov_solvers = {
-  #"FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep, # admissible_time_step_size = min_h/patch_size*0.01
+  "FVRusanovGlobalFixed":exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
+  "FVRusanovGlobalFixedEnclave":exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
   "FVRusanovGlobalAdaptive":exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep,
+  "FVRusanovGlobalAdaptiveEnclave":exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 }
 
 rkdg_rusanov_solvers = {
-  "RKDGRusanovGlobalAdaptive": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep
+  "RKDGRusanovGlobalFixed": exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep,
+  "RKDGRusanovGlobalAdaptive": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep,
+  "RKDGRusanovGlobalAdaptiveEnclave": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 }
 
 solvers = {}
 solvers.update(fv_rusanov_solvers)
 solvers.update(rkdg_rusanov_solvers)
-solver = "RKDGRusanovGlobalAdaptive"
+solver = "RKDGRusanovGlobalFixed"
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -63,7 +67,6 @@ storage_type = "CallStack"
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler Application Script')
 
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     default=solver,             help="|".join(solvers.keys()))
-parser.add_argument("-e",       "--enclave",           dest="enclave",        action="store_true",        default=use_enclave_tasking, help="Use enclave tasking")
 parser.add_argument("-o",       "--output",            dest="output_path",    type=str,                   default=output_path,        help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default=build_mode,         help="|".join(build_modes.keys()))
 parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
@@ -75,6 +78,7 @@ parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  ty
 
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. size of a finite volume cell.")
 parser.add_argument("-sym",     "--symbolic",          dest="symbolic",       action="store_true",        default=use_symbolic_description, help="Use the symbolic PDE description of the Euler equations.")
+parser.add_argument("-gpu",     "--gpu",               dest="use_gpu",        action="store_true",        default=use_gpu,            help="Use GPU offloading (requires a GPU enabled Peano build).")
 
 parser.add_argument("-pbc",     "--periodic-boundary-conditions",  dest="periodic_boundary_conditions",   action="store_true",        help="Use periodic boundary conditions" )
 
@@ -122,15 +126,17 @@ my_project = exahype2.Project(
 )
 
 solver_type = args.solver
-if args.enclave:
+if args.use_gpu:
   if not "Enclave" in solver_type:
     solver_type += "Enclave"
     if solver_type not in solvers:
-      raise ValueError("The requested solver {} is not available for enclave tasking!".format(solver_type))
+      raise ValueError("The requested solver {} is not available for GPU offloading!".format(solver_type))
 solver_name = "EulerSolver" + str(args.scenario) + str(solver_type)
+if args.use_gpu:
+  solver_name += "GPU"
 
 my_solver = None
-if solver_type in fv_rusanov_solvers:
+if solver_type in fv_rusanov_solvers and "Adaptive" in solver_type:
   my_solver = solvers[solver_type](
     name=solver_name,
     patch_size=args.patch_size,
@@ -155,7 +161,19 @@ if solver_type in fv_rusanov_solvers:
   #  solver_variant = exahype2.solvers.fv.rusanov.SolverVariant.Multicore,
   #  kernel_variant = exahype2.solvers.fv.rusanov.KernelVariant.BatchedAoSHeap
   #)
-elif solver_type in rkdg_rusanov_solvers:
+elif solver_type in fv_rusanov_solvers and "Fixed" in solver_type:
+  min_h = args.max_cell_size * 3.0**(-args.amr_levels)
+  admissible_time_step_size = min_h/patch_size*0.5
+  my_solver = solvers[solver_type](
+    name=solver_name,
+    patch_size=args.patch_size,
+    unknowns=args.dim + 2, # [rho, u, v, (w), e]
+    auxiliary_variables=0,
+    max_volume_h=args.max_cell_size,
+    min_volume_h=min_h,
+    normalised_time_step_size=admissible_time_step_size,
+  )
+elif solver_type in rkdg_rusanov_solvers and "Adaptive" in solver_type:
   from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
   my_solver = solvers[solver_type](
     name                      = solver_name,
@@ -168,8 +186,23 @@ elif solver_type in rkdg_rusanov_solvers:
     min_cell_h                = args.max_cell_size * 3.0**(-args.amr_levels),
     time_step_relaxation      = 0.5
   )
+elif solver_type in rkdg_rusanov_solvers and "Fixed" in solver_type:
+  from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
+  min_h = args.max_cell_size * 3.0**(-args.amr_levels)
+  admissible_time_step_size = min_h/patch_size*0.5
+  my_solver = solvers[solver_type](
+    name                      = solver_name,
+    rk_order                  = args.rk_order,
+    polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
+    face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2?
+    unknowns                  = args.dim + 2, # [rho, u, v, (w), e]
+    auxiliary_variables       = 0,
+    max_cell_h                = args.max_cell_size,
+    min_cell_h                = min_h,
+    time_step_size            = admissible_time_step_size,
+  )
 
-if args.enclave:
+if args.use_gpu:
   my_solver.set_pde_terms_without_state(True)
 
 if args.scenario == "PointExplosion":

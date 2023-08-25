@@ -114,6 +114,12 @@ $$
                         \end{array} \right)
 $$
 
+t=0.0             |  t=1.0
+:-------------------------:|:-------------------------:
+![](Euler_2D_start.png)  |  ![](Euler_2D_end.png)
+
+-------------------------*The computed energy of the 2D Euler equations at times t=0.0 and t=1.0*-------------------------
+
 ## Three-dimensional Euler Equations
 Finally, we can implement the Euler equations in three dimensions.
 
