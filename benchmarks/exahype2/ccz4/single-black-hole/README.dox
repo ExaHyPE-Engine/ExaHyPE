@@ -108,13 +108,17 @@ python3 ccz4.py -ext adm -impl fd4-rk1-adaptive -s single-puncture -maxh 0.4 -mi
 and aims for a final time of at least 46. We mirror these properties in the 
 following configurations:
 
-Name   | Cell size | Limiter patch size | End time | Plot    | AMR levels | Required nodes | Call
--------|-----------|--------------------|----------|---------|------------|----------------|--------
-Small test |  2.0  | 6                  | 60.0     | yes     |        2   |             1  | python3 convergence-study.py -plot -cs 2 -s fd4-rk1-limited-ps-6 -et 60.0
-Large test |  1.0  | 6                  | 60.0     | yes     |        3   |             x  | python3 convergence-study.py -plot -cs 1 -s fd4-rk1-limited-ps-6 -et 60.0
+Name             | Cell size | Limiter patch size | End time | Plot    |   AMR levels/FV patches  |     Required nodes     | Call
+---------------------|-------|--------------------|----------|---------|--------------------------|------------------------|--------
+Small test with vis  |  2.0  | 6                  | 60.0     | yes     | 2 (h_min=0.111111) / 7   | 1 (around 5.8% of mem) | python3 convergence-study.py -plot -cs 2 -s fd4-rk1-limited-ps-6 -et 60.0
+Medium test with vis |  0.5  | 6                  | 60.0     | yes     | 3 (h_min=0.037037) / 7   | 1 (around 40% of mem)  | python3 convergence-study.py -plot -cs 0.5 -s fd4-rk1-limited-ps-6 -et 60.0
+Large test with vis  |  0.1  | 6                  | 60.0     | yes     | 4 (h_min=0.0123457) / 33 | 1 (around 30% of mem)* | python3 convergence-study.py -plot -cs 0.1 -s fd4-rk1-limited-ps-6 -et 60.0
+---------------------|-------|--------------------|----------|---------|--------------------------|------------------------|--------
+Production test 0    | 0.05  | 6                  | 60.0     | yes     |                      4   |                     x  | python3 convergence-study.py -cs 0.05 -s fd4-rk1-limited-ps-6 -et 60.0
+ 
 
-
-
+* It is clear that the excessive use of AMR here ensures that no enclave tasks 
+  are left anymore. 
  
 
 ## Code remarks (FD4-FV scheme)
