@@ -288,7 +288,7 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-  otterTraceInitialise();
+  OTTER_INITIALISE();
 
 #if defined(SharedOMP)
 #pragma omp parallel
@@ -366,7 +366,7 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().writeToCSV();
 
-  otterTraceFinalise();
+  OTTER_FINALISE();
 
   peano4::shutdownSingletons();
   repositories::DataRepository::shutdownDatatypes();

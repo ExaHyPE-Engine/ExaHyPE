@@ -268,7 +268,7 @@ void {
   case repositories::StepRepository::Steps::InitialConditions: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("initial-conditions");
     watch.start();
-    otterPhaseBegin("initial-conditions");
+    OTTER_PHASE_SWITCH("initial-conditions");
     observers::InitialConditions observer;
     observers::InitialConditions::prepareTraversal();
     repositories::startInitialisationStep();
@@ -281,7 +281,7 @@ void {
   case repositories::StepRepository::Steps::Plot: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("plot");
     watch.start();
-    otterPhaseSwitch("plot");
+    OTTER_PHASE_SWITCH("plot");
     observers::Plot observer;
     observers::Plot::prepareTraversal();
     repositories::startPlotStep();
@@ -294,7 +294,7 @@ void {
   case repositories::StepRepository::Steps::{{ SOLVERSTEP_NAMES[0] }}: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("time-step");
     watch.start();
-    otterPhaseSwitch("{{SOLVERSTEP_NAMES[0]}}");
+    OTTER_PHASE_SWITCH("{{SOLVERSTEP_NAMES[0]}}");
     observers::{
       { SOLVERSTEP_NAMES[0] }
     }
@@ -315,7 +315,7 @@ void {
     {% for STEP_NUMBER in range(1,SOLVERSTEP_NAMES|length-1) %
     }
   case repositories::StepRepository::Steps::{{ SOLVERSTEP_NAMES[STEP_NUMBER] }}: {
-    otterPhaseSwitch("{{SOLVERSTEP_NAMES[STEP_NUMBER]}}");
+    OTTER_PHASE_SWITCH("{{SOLVERSTEP_NAMES[STEP_NUMBER]}}");
     repositories::startIntermediateStep();
     observers::{
       { SOLVERSTEP_NAMES[STEP_NUMBER] }
@@ -334,7 +334,7 @@ void {
   } break;
     { % endfor % }
   case repositories::StepRepository::Steps::{{ SOLVERSTEP_NAMES[-1] }}: {
-    otterPhaseSwitch("{{SOLVERSTEP_NAMES[-1]}}");
+    OTTER_PHASE_SWITCH("{{SOLVERSTEP_NAMES[-1]}}");
     observers::{
       { SOLVERSTEP_NAMES[-1] }
     }
@@ -357,7 +357,7 @@ void {
     {% for STEP_NUMBER in range(0,INITIALISATIONSTEP_NAMES|length) %
     }
   case repositories::StepRepository::Steps::{{ INITIALISATIONSTEP_NAMES[STEP_NUMBER] }}: {
-    otterPhaseSwitch("{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}");
+    OTTER_PHASE_SWITCH("{{INITIALISATIONSTEP_NAMES[STEP_NUMBER]}}");
     repositories::startInitialisationStep();
     observers::{
       { INITIALISATIONSTEP_NAMES[STEP_NUMBER] }
@@ -455,7 +455,7 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-  otterTraceInitialise();
+  OTTER_INITIALISE();
 
 
 #if defined(SharedOMP)
@@ -511,7 +511,7 @@ int main(int argc, char** argv) {
   }
 #endif
 
-  otterTraceFinalise();
+  OTTER_FINALISE();
 
   peano4::shutdownSingletons();
   {
