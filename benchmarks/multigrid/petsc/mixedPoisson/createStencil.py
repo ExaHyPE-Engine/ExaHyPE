@@ -150,7 +150,7 @@ class MatrixGenerator:
       output += 0.25 * w * eval2d
     return output * factor
 
-  def getMatrixPart1(self):
+  def getU_U_coupling(self):
     '''
     this needs scaling by h**2. 
     this is for u - v coupling.
@@ -164,11 +164,11 @@ class MatrixGenerator:
         output[i,j] += self.evaluateIntegral2d(functions2d=[ self.getPoly2d(i), self.getPoly2d(j) ])
     return output
   
-  def getMatrixPart2(self, dim):
+  def get_UV__coupling(self, dim):
     '''
     pass in a dimension argument - note that we are 
-    producing 2.1 to denote the x deriv 
-    and       2.2 to denote the y deriv 
+    producing 2.1 to denote the x deriv <- this is for u
+    and       2.2 to denote the y deriv <- this is for v
     SEE NOTES!
     '''
     output = np.zeros((self.celldofs, self.celldofs))
@@ -200,7 +200,7 @@ class MatrixGenerator:
     #for now, reuse the other part
     return self.getMatrixPart3(faceNo, dim)
   
-  def getMatrixPart5(self, dim):
+  def get_P_UV_coupling_part5(self, dim):
     '''
     dim to take \psi derivative in
     '''
@@ -210,7 +210,7 @@ class MatrixGenerator:
         output[i,j] += self.evaluateIntegral2d(functions2d=[ self.getDeriv2d(i, dim), self.getPoly2d(j) ])
     return output
 
-  def getMatrixPart6(self, faceNo, dim):
+  def get_P_UV_coupling_part6(self, faceNo, dim):
     '''
     boundary faces
     '''
@@ -234,6 +234,61 @@ class MatrixGenerator:
         output[i,j] += self.evaluateIntegral1d(faceNo=faceNo, functions2d=[ self.getPoly2d(i), self.getPoly2d(j) ])
     return output
 
+  def getCellCellMatrix(self):
+    '''
+    here we amalgamate the coupling for
+    u-v, u-p, v-p etc
+    ie all of parts 1, 2, 5,
+
+    warning - a lot of different scaling will be needed
+              at different locations. handle this later
+    '''
+    output = np.zeros((3*self.celldofs, 3*self.celldofs)) # 3 * celldofs since we have u,v,p at each point
+
+    #first, the u-u coupling
+    temp = self.getU_U_coupling()
+    for i in range(temp.shape[0]):
+      for j in range(temp.shape[1]):
+        output[3*i, 3*i] = temp[i,j]
+    
+    #repeat for v-v
+    #haven't changed this yet - for now these are identical
+    temp = self.getU_U_coupling()
+    for i in range(temp.shape[0]):
+      for j in range(temp.shape[1]):
+        output[3*i + 1, 3*i + 1] = temp[i,j]
+
+    # u-p coupling
+    #take the x deriv for this one
+    temp = self.get_UV__coupling(0)
+    for i in range(temp.shape[0]):
+      for j in range(temp.shape[1]):
+        #u on the rows, and p on the columns
+        output[3*i, 3*j + 2] = temp[i,j]
+    
+    # v-p coupling
+    temp = self.get_UV__coupling(1)
+    for i in range(temp.shape[0]):
+      for j in range(temp.shape[1]):
+        #v on the rows, and p on the columns
+        output[3*i + 1, 3*j + 2] = temp[i,j]
+
+    #p-u coupling
+    temp = self.get_P_UV_coupling_part5(0) #ignore part 6 for now as this sits only on boundary faces
+    for i in range(temp.shape[0]):
+      for j in range(temp.shape[1]):
+        #p on the rows, u on the cols
+        output[3*i+2, 3*j] = temp[i,j]
+    
+    #p-v coupling
+    temp = self.get_P_UV_coupling_part5(1)
+    for i in range(temp.shape[0]):
+      for j in range(temp.shape[1]):
+        #p on the rows, v on the cols
+        output[3*i+2, 3*j + 1] = temp[i,j]
+    
+    return output
+
   def getAllMatrices(self):
     '''
     returns a dict with all the matrices involved
@@ -241,10 +296,16 @@ class MatrixGenerator:
     '''
     output = {}
 
-    temp = self.getMatrixPart1()
-    output["partOne"] = [temp.shape, self.convertMatrixToInitList(temp)]
-
+    temp = self.getCellCellMatrix()
+    output["cellToCell"] = [temp.shape, self.convertMatrixToInitList(temp)]
     return output
+
+def prod(iterable):
+  prod = 1
+  for it in iterable:
+    prod *= it
+  return prod
+
 
 if __name__ == "__main__":
   generator = MatrixGenerator(2, 1)

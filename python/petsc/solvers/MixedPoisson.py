@@ -36,8 +36,8 @@ class MixedPoisson(Solver):
   def __init__(self,
                name,
                polynomial_degree,
-               cell_dofs,
-               face_dofs,
+               unknowns_per_cell_dof, 
+               unknowns_per_face_dof,
                min_h,
                max_h,
                dimensions,
@@ -66,21 +66,21 @@ class MixedPoisson(Solver):
     self._vertexDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._vertexDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
 
-    self._cell_unknowns = cell_dofs
+    self._cell_unknowns = unknowns_per_cell_dof * (polynomial_degree + 1) ** dimensions
     ## add in all the attributes we need for a cell dofs
     self._cellDof = peano4.datamodel.DaStGen2( name )
-    self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(cell_dofs) ) )
-    self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(cell_dofs) ) )
+    self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self._cell_unknowns) ) )
+    self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(self._cell_unknowns) ) )
     
     self._cellDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._cellDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
 
     #add in some unknowns for the faces 
     #our aim is to have multiple dofs per face, but we just store the starting index in "number"
-    self._face_unknowns = face_dofs
+    self._face_unknowns = unknowns_per_face_dof * (polynomial_degree + 1) ** (dimensions - 1)
     self._faceDof = peano4.datamodel.DaStGen2( name )
-    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(face_dofs) ) )
-    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs"  ,  str(face_dofs) ) )
+    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self._face_unknowns) ) )
+    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs"  ,  str(self._face_unknowns) ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     
