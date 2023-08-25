@@ -187,7 +187,6 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         #pragma omp simd
         #endif
         for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
-          [[clang::always_inline]]
           internal::computeMaxEigenvalue_LoopBody<Solver>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
