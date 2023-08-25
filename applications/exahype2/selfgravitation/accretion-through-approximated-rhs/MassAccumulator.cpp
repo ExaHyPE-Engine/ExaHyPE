@@ -1,4 +1,4 @@
-#include "MassAccumulator.h"
+#include "../../selfgravitation/accretion-through-approximated-rhs/MassAccumulator.h"
 
 #include <cmath>
 

@@ -940,7 +940,20 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
 ) {
   assertion( numberOfDoFsPerAxisInDestinationPatch>numberOfDoFsPerAxisInSourcePatch );
 
+  #if Dimensions==2 and defined(SharedOMP)
+  #pragma omp taskloop for collapse(2)
+  for( int destinationVolume0 = 0; destinationVolume0 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume0++ )
+  for( int destinationVolume1 = 0; destinationVolume1 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume1++ ) {
+    tarch::la::Vector<Dimensions, int> destinationVolume = { destinationVolume0, destinationVolume1 };
+  #elif Dimensions==3 and defined(SharedOMP)
+  #pragma omp taskloop for collapse(3)
+  for( int destinationVolume0 = 0; destinationVolume0 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume0++ )
+  for( int destinationVolume1 = 0; destinationVolume1 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume1++ )
+  for( int destinationVolume2 = 0; destinationVolume2 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume2++ ) {
+    tarch::la::Vector<Dimensions, int> destinationVolume = { destinationVolume0, destinationVolume1, destinationVolume2 };
+  #else
   dfor( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch ) {
+  #endif
     const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch) * unknowns;
     for (int unknown=0; unknown<unknowns; unknown++) {
       destinationValues[baseIndexDestination+unknown] = 0.0;
@@ -960,6 +973,8 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
 
       int outsidePatchAlongCoordinateAxis = 0;
       for (int d=0; d<Dimensions; d++) {
+//        outsidePatchAlongCoordinateAxis +=  ( sourceVolume(d) <  haloSourcePatch ) ? 1 : 0;
+//        outsidePatchAlongCoordinateAxis +=  ( sourceVolume(d) >= haloSourcePatch+numberOfDoFsPerAxisInSourcePatch ) ? 1 : 0;
         if ( sourceVolume(d) <  haloSourcePatch )                                   outsidePatchAlongCoordinateAxis++;
         if ( sourceVolume(d) >= haloSourcePatch+numberOfDoFsPerAxisInSourcePatch )  outsidePatchAlongCoordinateAxis++;
       }
@@ -977,6 +992,7 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
 
       tarch::la::Vector<Dimensions, int> amendedSourceVolume = sourceVolume;
       if (isFromUnitialisedDiagonal) {
+        #pragma unroll
         for (int d=0; d<Dimensions; d++) {
           amendedSourceVolume(d) = std::max( amendedSourceVolume(d), haloSourcePatch );
           amendedSourceVolume(d) = std::min( amendedSourceVolume(d), haloSourcePatch + numberOfDoFsPerAxisInSourcePatch - 1 );

@@ -13,7 +13,10 @@ namespace tarch {
       class Strategy;
 
       /**
-       * Use toString() to see valid options
+       * Parse the realisation string
+       *
+       * Use toString() to see valid options. The result can be set active by
+       * passing the object on to tarch::multicore::setOrchestration().
        */
       Strategy* parseRealisation(const std::string& realisation);
 

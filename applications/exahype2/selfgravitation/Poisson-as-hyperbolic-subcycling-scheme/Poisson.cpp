@@ -1,4 +1,4 @@
-#include "Poisson.h"
+#include "../../selfgravitation/Poisson-as-hyperbolic-subcycling-scheme/Poisson.h"
 
 #include "exahype2/RefinementControl.h"
 #include "tarch/multicore/Lock.h"
