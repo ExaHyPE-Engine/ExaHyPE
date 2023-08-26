@@ -225,6 +225,7 @@ else:
 #else
   const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({5, 5, 5})) <= MaxAdmissibleVolumeH;
 #endif
+
   if (pointSource) {
     constexpr double sigma = 0.1149;
     constexpr double t0 = 0.7;

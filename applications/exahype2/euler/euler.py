@@ -8,7 +8,7 @@ import exahype2
 
 dimensions                = 2
 cell_size                 = 0.1
-amr_levels                = 0
+amr_levels                = 3
 patch_size                = 4
 rk_order                  = 2
 dg_order                  = 1

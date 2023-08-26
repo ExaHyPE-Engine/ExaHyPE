@@ -32,14 +32,6 @@ class PointExplosion:
           max_h = sympy.symbols("MaxAdmissibleVolumeH")
           point_source = sympy.sqrt((10 - self.pde.x[0])**2 + (10 - self.pde.x[1])**2)
 
-          t0 = sympy.symbols("t0")
-          M0 = sympy.symbols("M0")
-          t = sympy.symbols("t")
-          force = M0 * t / (t0 * t0) * (sympy.exp(-t / t0))
-
-          max_h = sympy.symbols("MaxAdmissibleVolumeH")
-          point_source = sympy.sqrt((10 - self.pde.x[0])**2 + (10 - self.pde.x[1])**2)
-
           self.pde.sources[0] = 0
           self.pde.sources[1] = 0
           self.pde.sources[2] = 0
@@ -107,6 +99,7 @@ class PointExplosion:
             S[2] = 0.0;
             S[3] = 0.0;
             S[4] = 0.0;
+
             const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({10, 10})) <= MaxAdmissibleVolumeH;
             if (pointSource) {
               constexpr double t0 = 0.1;

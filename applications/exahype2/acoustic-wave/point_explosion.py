@@ -28,14 +28,16 @@ class PointExplosion:
           t0 = sympy.symbols("t0")
           M0 = sympy.symbols("M0")
           t = sympy.symbols("t")
+
+          max_h = sympy.symbols("MaxAdmissibleVolumeH")
           force = M0 * sympy.exp(-((t - t0) * (t - t0)) / (2.0 * sigma * sigma))
 
           if dimensions == 2:
-              volume_centre = sympy.sqrt((5 - self.pde.x[0])**2 + (5 - self.pde.x[1])**2)
-              self.pde.sources[0] = sympy.Piecewise((force, volume_centre <= self.pde.h[0]), (0, True)) # p
+              point_source = sympy.sqrt((5 - self.pde.x[0])**2 + (5 - self.pde.x[1])**2)
+              self.pde.sources[0] = sympy.Piecewise((force, point_source <= max_h), (0, True)) # p
           else:
-              volume_centre = sympy.sqrt((5 - self.pde.x[0])**2 + (5 - self.pde.x[1])**2 + (5 - self.pde.x[2])**2)
-              self.pde.sources[0] = sympy.Piecewise((force, volume_centre <= self.pde.h[0]), (0, True)) # p
+              point_source = sympy.sqrt((5 - self.pde.x[0])**2 + (5 - self.pde.x[1])**2 + (5 - self.pde.x[2])**2)
+              self.pde.sources[0] = sympy.Piecewise((force, point_source <= max_h), (0, True)) # p
 
           self.pde.sources[1] = 0
           self.pde.sources[2] = 0
@@ -100,26 +102,27 @@ class PointExplosion:
           return self.pde.implementation_of_sources()
         else:
             return """
-            #if Dimensions == 2
-            const tarch::la::Vector<Dimensions, double> sourceLocation({5, 5});
-            #else
-            const tarch::la::Vector<Dimensions, double> sourceLocation({5, 5, 5});
+            S[0] = 0.0;
+            S[1] = 0.0;
+            S[2] = 0.0;
+            #if Dimensions == 3
+            S[3] = 0.0;
             #endif
-            if (tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>(sourceLocation)) <= MaxAdmissibleCellH) {
+
+            #if Dimensions == 2
+            const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({5, 5})) <= MaxAdmissibleVolumeH;
+            #else
+            const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({5, 5, 5})) <= MaxAdmissibleVolumeH;
+            #endif
+
+            if (pointSource) {
               constexpr double sigma = 0.1149;
               constexpr double t0 = 0.7;
               constexpr double M0 = 1000.0;
-
               const double force = M0*std::exp(-((t-t0)*(t-t0))/(2.0*sigma*sigma));
-
               S[0] = force;
-              S[1] = 0.0;
-              S[2] = 0.0;
-              #if Dimensions == 3
-              S[3] = 0.0;
-              #endif
             }
-"""
+            """
 
 
     def implementation_of_refinement_criterion(self):
