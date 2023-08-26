@@ -82,17 +82,12 @@ class PDE(object):
         So if you have 10 unknowns and 2 auxiliary variables, the name you assign the
         10s Q entry is the one for the first auxiliary variable.
         There's also a dedicated routine for auxiliary variables if you prefer this one.
+        @see name_auxiliary_variable
         """
         self.Q[offset_in_Q] = sympy.symbols(name)
         return self.Q[offset_in_Q]
 
     def name_auxiliary_variable(self,number,name):
-        """
-        Q covers both unknowns plus auxiliary variables. They simply are concatenated.
-        So if you have 10 unknowns and 2 auxiliary variables, the name you assign the
-        10th Q entry is the one for the first auxiliary variable.
-        There's also a dedicated routine for auxiliary variables if you prefer this one.
-        """
         self.Q[number + self.unknowns] = sympy.symbols(name)
         return self.Q[number + self.unknowns]
 
