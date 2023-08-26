@@ -33,12 +33,12 @@ class Boolean(Attribute):
 
         elif self._is_const_static:
             if for_declaration:
-                getter = ("get" + accessor_name + "()", "const static bool")
+                getter = ("get" + accessor_name + "()", "static bool")
             else:
-                getter = ("get" + accessor_name + "()", "const bool")
+                getter = ("get" + accessor_name + "()", "bool")
 
         elif self._is_const:
-            getter = ("get" + accessor_name + "()", "const bool")
+            getter = ("get" + accessor_name + "()", "bool")
 
         elif self._is_constexpr:
             getter = ("get" + accessor_name + "()", "constexpr bool")
