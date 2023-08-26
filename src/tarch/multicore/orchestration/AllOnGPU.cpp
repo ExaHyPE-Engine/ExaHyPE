@@ -18,18 +18,18 @@ void tarch::multicore::orchestration::AllOnGPU::endBSPSection(int nestedParallel
   }
 }
 
-int tarch::multicore::orchestration::AllOnGPU::getNumberOfTasksToHoldBack() {
+int tarch::multicore::orchestration::AllOnGPU::getNumberOfTasksToHoldBack(int taskType) {
   return _isInBspSection ? std::numeric_limits<int>::max() : 0;
 }
 
 tarch::multicore::orchestration::AllOnGPU::FuseInstruction tarch::multicore::orchestration::AllOnGPU::
-  getNumberOfTasksToFuseAndTargetDevice() {
+  getNumberOfTasksToFuseAndTargetDevice(int taskType) {
   return _isInBspSection
            ? FuseInstruction(-1, std::numeric_limits<int>::max(), 0)
            : FuseInstruction(_device, 1, std::numeric_limits<int>::max());
 }
 
-bool tarch::multicore::orchestration::AllOnGPU::fuseTasksImmediatelyWhenSpawned() { return false; }
+bool tarch::multicore::orchestration::AllOnGPU::fuseTasksImmediatelyWhenSpawned(int taskType) { return false; }
 
 tarch::multicore::orchestration::Strategy::ExecutionPolicy tarch::multicore::orchestration::AllOnGPU::
   paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int codeLocationIdentifier) {

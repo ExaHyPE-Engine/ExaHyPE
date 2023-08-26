@@ -142,7 +142,7 @@ respectively, and then appended to these the one or three "material
 parameters". For the flux and the eigenvalue, we ignore these material
 parameters, i.e. the code looks exactly as the plain Euler equations for
 the first part. The source term 
-::examples::exahype2::selfgravitation::Poisson::sourceTerm()
+applications::exahype2::euler::selfgravitation::Poisson::sourceTerm()
 however now takes the material parameter
 as input.
 
@@ -335,20 +335,20 @@ naming conventions. To make the whole thing finally work, we tweak the
 Poisson solver:
 
 -   We let the Poisson solver keep track of the gradient deltas.
-    Actually, we use two deltas. examples::exahype2::selfgravitation::Poisson::_currentMaxGradientDelta is used to
+    Actually, we use two deltas. applications::exahype2::euler::selfgravitation::Poisson::_currentMaxGradientDelta is used to
     analyse the current delta which we change throughout the grid
-    traversal, while examples::exahype2::selfgravitation::Poisson::_previousMaxGradientDelta holds the result from
+    traversal, while applications::exahype2::euler::selfgravitation::Poisson::_previousMaxGradientDelta holds the result from
     the previous grid traversal.
 
--   We introduce a new function examples::exahype2::selfgravitation::Poisson::reportGradientDelta() that accepts the
+-   We introduce a new function applications::exahype2::euler::selfgravitation::Poisson::reportGradientDelta() that accepts the
     `delta` as we have computed it above.
 
--   We hook into examples::exahype2::selfgravitation::Poisson::startTimeStep() 
+-   We hook into applications::exahype2::euler::selfgravitation::Poisson::startTimeStep() 
     to roll the deltas over. Hook in means we call the superclass 
     AbstractPoisson::startTimeStep() and then add the additional
     instructions. 
 
--   We overwrite examples::exahype2::selfgravitation::Poisson::getAdmissibleTimeStepSize(). If the two delta values do
+-   We overwrite applications::exahype2::euler::selfgravitation::Poisson::getAdmissibleTimeStepSize(). If the two delta values do
     not differ that much anymore, we assume we have converged and we use
     the time step size the other solver would use. If the two delta
     values differ significantly, we assume that we have not yet convered

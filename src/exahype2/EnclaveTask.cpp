@@ -1,25 +1,26 @@
 #include "EnclaveTask.h"
-#include "EnclaveBookkeeping.h"
 
+#include "config.h"
+#include "EnclaveBookkeeping.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/otter.h"
 
 
-tarch::logging::Log  exahype2::EnclaveTask::_log( "exahype2::EnclaveTask" );
+tarch::logging::Log exahype2::EnclaveTask::_log("exahype2::EnclaveTask");
 
 
 exahype2::EnclaveTask::EnclaveTask(
-  int                                            enclaveTaskTypeId,
-  const ::peano4::datamanagement::CellMarker&    marker,
-  double                                         t,
-  double                                         dt,
-  double* __restrict__                           inputValues,
-  int                                            numberOfInputValues,
-  int                                            numberOfResultValues,
-  Functor                                        functor
+  int                                         enclaveTaskTypeId,
+  const ::peano4::datamanagement::CellMarker& marker,
+  double                                      t,
+  double                                      dt,
+  double* __restrict__ inputValues,
+  int     numberOfInputValues,
+  int     numberOfResultValues,
+  Functor functor
 ):
-  tarch::multicore::Task(enclaveTaskTypeId,tarch::multicore::Task::DefaultPriority),
+  tarch::multicore::Task(enclaveTaskTypeId, tarch::multicore::Task::DefaultPriority),
   _taskNumber(tarch::multicore::reserveTaskNumber()),
   _marker(marker),
   _t(t),
@@ -29,37 +30,40 @@ exahype2::EnclaveTask::EnclaveTask(
   _numberOfInputValues(numberOfInputValues),
   _numberOfResultValues(numberOfResultValues),
   _functor(functor),
-  _maxEigenvalue( -1.0 ) {
-  logTraceIn( "EnclaveTask(...)" );
-  logTraceOut( "EnclaveTask(...)" );
+  _maxEigenvalue(-1.0) {
+  logTraceIn("EnclaveTask(...)");
+  logTraceOut("EnclaveTask(...)");
+  OTTER_DEFINE_TASK(
+    enclave_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::enclave_with_typeid, enclaveTaskTypeId
+  );
 }
 
 
 bool exahype2::EnclaveTask::run() {
-  logTraceInWith1Argument( "run()", getTaskId() );
+  logTraceInWith1Argument("run()", getTaskId());
 
-  [[maybe_unused]] otter_task_context *task = otterTaskBegin(OTTER_SRC_ARGS(), NULL);
+  OTTER_REMOVE_FROM_POOL(enclave_task, otter::label::enclave_with_typeid, getTaskId());
+
+  OTTER_TASK_START(enclave_task);
   computeTask();
+  EnclaveBookkeeping::getInstance().finishedTask(getTaskId(), _numberOfResultValues, _outputValues, _maxEigenvalue);
+  OTTER_TASK_END(enclave_task);
 
-  EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
-  otterTaskEnd(task);
-  logTraceOut( "run()" );
+  logTraceOut("run()");
   return false;
 }
 
 
 void exahype2::EnclaveTask::computeTask() {
-  assertion( _outputValues==nullptr );
-  assertion( _numberOfResultValues>0 );
-  assertion( _inputValues!=nullptr );
+  assertion(_outputValues == nullptr);
+  assertion(_numberOfResultValues > 0);
+  assertion(_inputValues != nullptr);
 
-  _outputValues = tarch::allocateMemory<double>( _numberOfResultValues, tarch::MemoryLocation::Heap );
+  _outputValues = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::Heap);
 
-  logDebug( "computeTask()", "lambda=" << _maxEigenvalue );
+  logDebug("computeTask()", "lambda=" << _maxEigenvalue);
   _functor();
 }
 
 
-int exahype2::EnclaveTask::getTaskId() const {
-  return _taskNumber;
-}
+int exahype2::EnclaveTask::getTaskId() const { return _taskNumber; }

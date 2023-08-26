@@ -187,7 +187,7 @@ class Project (object):
         # Check the return code for linker errors
         # Raise exception with errors
         if process.returncode != 0:
-          linker_error_message = process.stdout.decode().strip() + "\n" + error_message
+          linker_error_message = process.stderr.decode().strip() + "\n" + error_message
           raise Exception(linker_error_message)
         print("compile completed successfully")
         self.is_built = True

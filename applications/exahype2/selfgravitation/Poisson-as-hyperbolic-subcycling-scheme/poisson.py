@@ -44,7 +44,12 @@ print("\nConfiguring {}D Euler problem. Buildmode is {}, nbuilds={}.\n".format(a
 # Create a project and configure it to end up in a subnamespace (and thus
 # subdirectory).
 #
-project = exahype2.Project(["applications", "exahype2", "euler", "selfgravitation"], "Poisson", ".")
+project = exahype2.Project(
+  namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
+  project_name  = "Poisson",
+  directory     = ".",
+  executable    = "subcycling-scheme"
+)
 
 #
 # Add the Finite Volumes solver
