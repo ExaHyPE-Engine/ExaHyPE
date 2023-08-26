@@ -14,34 +14,33 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 class SeparateSweeps( RungeKuttaDG ):
   """
     Probably the simplest solver you could think off. 
-
     We run over the grid twice per Runge Kutta step. In the first step,
     we compute the linear reconstruction, project this one onto the faces
     and also compute the volumetric prediction. In the second step, we 
     solve the Riemann problem and add it to the prediction.
-    
-    In the attribute terminology, I call the two runs over the grid sweeps,
-    i.e. I work with two grid sweeps per Runge Kutta step.
 
+    In the attribute terminology, I call the two runs over the grid sweeps,
+    i.e., I work with two grid sweeps per Runge Kutta step.
   """
 
-
-  def __init__(self, 
-               name, 
-               rk_order, 
-               polynomial_basis, 
+  def __init__(self,
+               name,
+               rk_order,
+               polynomial_basis,
                number_of_face_projections,
-               unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
+               unknowns,
+               auxiliary_variables,
+               min_cell_h,
+               max_cell_h,
+               plot_grid_properties):
     """
-
     The super call invokes the creation of the data sets, where the guards have
     to be known already. So I bring those guys forward and then call the superclass
     constructor.
-
     """
     self._name     = name
     self._rk_order = rk_order
-    
+
     self._initialisation_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
@@ -49,7 +48,7 @@ class SeparateSweeps( RungeKuttaDG ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
     ")"
-    
+
     self._primary_sweeps_of_Runge_Kutta_step_on_cell = [
       "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
     ]
@@ -63,34 +62,34 @@ class SeparateSweeps( RungeKuttaDG ):
     self._secondary_sweeps_of_Runge_Kutta_step_on_face = [
       "{} and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self._store_face_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
     ]
-    
+
     self._any_primary_sweep_of_a_Runge_Kutta_step_on_cell   = " or ".join( self._primary_sweeps_of_Runge_Kutta_step_on_cell )
     self._any_secondary_sweep_of_a_Runge_Kutta_step_on_cell = " or ".join( self._secondary_sweeps_of_Runge_Kutta_step_on_cell )
 
     self._any_primary_sweep_of_a_Runge_Kutta_step_on_face   = " or ".join( self._primary_sweeps_of_Runge_Kutta_step_on_face )
     self._any_secondary_sweep_of_a_Runge_Kutta_step_on_face = " or ".join( self._secondary_sweeps_of_Runge_Kutta_step_on_face )
-        
-    super(SeparateSweeps, self).__init__(name, 
-                                         rk_order, 
-                                         polynomial_basis, 
+
+    super(SeparateSweeps, self).__init__(name,
+                                         rk_order,
+                                         polynomial_basis,
                                          number_of_face_projections,
-                                         unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
-    
+                                         unknowns,
+                                         auxiliary_variables,
+                                         min_cell_h,
+                                         max_cell_h,
+                                         plot_grid_properties)
+
     self._solver_template_file_class_name     = "SeparateSweeps"
-   
+
     self.create_action_sets()
     self.create_data_structures()
-    
-
 
   def create_data_structures(self):
     """
-    
-     First, call the superclass' create_data_structures() to ensure that all 
+     First, call the superclass' create_data_structures() to ensure that all
      the data structures are in place.
 
-     The linear combination is to be computed if and only if      
-    
+     The linear combination is to be computed if and only if
     """
     super(SeparateSweeps, self).create_data_structures()
 
@@ -99,14 +98,12 @@ class SeparateSweeps( RungeKuttaDG ):
 
     self._Riemann_solution.generator.send_condition               = "false"
     self._Riemann_solution.generator.receive_and_merge_condition  = "false"
-    
-            
+
   def create_action_sets(self):
     """
-
       We invoke the superclass which creates all the action sets, and then we
       set the appropriate guards.
-      
+
         - _action_set_update_face_label - can be done always
         - _action_set_update_cell_label - can be done always
         - _action_set_linear_combination_of_estimates - primary sweeps only, as
@@ -130,30 +127,25 @@ class SeparateSweeps( RungeKuttaDG ):
         - _action_set_AMR - very last secondary sweep, i.e. after we have 
           the final solution.
         - _action_set_postprocess_solution - same as for item above.
-      
-            
+
       :: Guards around linear combination of estimates
-      
+
       We rely on the action set LinearCombination as it is initialised in the 
       superclass. So the only thing we have to do is to ensure that the 
       linear combination over the estimates is computed if and only if this 
       is required. For the separate sweeps, we compute the linear combinations
       if the cell holds data, i.e. is on the finest level, and if it is the 
       primary of the two sweeps which realise a RK step, i.e. the one where
-      we later on project onto the faces.  
-      
+      we later on project onto the faces.
     """
     super(SeparateSweeps, self).create_action_sets()
-    
     self._action_set_linear_combination_of_estimates.guards                                  = self._primary_sweeps_of_Runge_Kutta_step_on_cell
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guards = self._primary_sweeps_of_Runge_Kutta_step_on_face
     self._action_set_project_linear_combination_onto_faces.guards                            = self._primary_sweeps_of_Runge_Kutta_step_on_cell
     self._action_set_solve_volume_integral.guards                                            = self._primary_sweeps_of_Runge_Kutta_step_on_cell
-        
+
     self._action_set_add_volume_and_face_solution.guards = self._secondary_sweeps_of_Runge_Kutta_step_on_cell
     self._action_set_solve_Riemann_problem.guards        = self._secondary_sweeps_of_Runge_Kutta_step_on_face
     self._action_set_handle_boundary.guards              = self._secondary_sweeps_of_Runge_Kutta_step_on_face
 
     self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)
-    
-
