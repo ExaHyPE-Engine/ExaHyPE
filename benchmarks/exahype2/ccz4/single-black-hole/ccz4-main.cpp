@@ -337,7 +337,7 @@ void step() {
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-grid" );
         repositories::loadBalancer.enable(false);
-        otterPhaseBegin( "init" );
+        OTTER_PHASE_BEGIN( "init" );
 
         repositories::startGridInitialisationStep();
         
@@ -358,7 +358,7 @@ void step() {
         const double minTimeStepSize = repositories::getMinTimeStepSize();
         const double maxTimeStepSize = repositories::getMaxTimeStepSize();
 
-        otterPhaseSwitch( "plot" );
+        OTTER_PHASE_SWITCH( "plot" );
         repositories::startPlottingStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
 
         observers::PlotSolution  observer;
@@ -385,7 +385,7 @@ void step() {
         const double minMeshSize     = repositories::getMinMeshSize();
         const double maxMeshSize     = repositories::getMaxMeshSize();
 
-        otterPhaseSwitch( "time-step" );
+        OTTER_PHASE_SWITCH( "time-step" );
         repositories::startTimeStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
         
         observers::TimeStep  observer;
@@ -456,7 +456,7 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().clear();
 
-  otterTraceInitialise();
+  OTTER_INITIALISE();
 
   #if defined(SharedOMP)
   #pragma omp parallel
@@ -503,7 +503,7 @@ int main(int argc, char** argv) {
 
   tarch::logging::Statistics::getInstance().writeToCSV();
 
-  otterTraceFinalise();
+  OTTER_FINALISE();
 
   repositories::finishSimulation();
 
