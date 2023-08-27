@@ -16,13 +16,16 @@
 #include "tarch/la/Vector.h"
 
 #include "../config.h"
-#if SharedTBB
+#if defined(SharedTBB)
 #include <oneapi/tbb/parallel_for.h>
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/blocked_range2d.h>
 #include <oneapi/tbb/blocked_range3d.h>
 #endif
 
+#if defined(SharedSYCL)
+#include "tarch/multicore/sycl/Core.h"
+#endif
 
 namespace peano4 {
   namespace utils {
@@ -234,6 +237,9 @@ namespace peano4 {
  *
  * Don't use a { after the parallel_dfor. It is included in the macro. Also
  * don't close it with a }. Instead, use the end_parallel_dfor macro.
+ *
+ * This macro works great on the CPU. I recommend not to use it on the GPU,
+ * where you usually have specialised parallel for realisations anyway.
  */
 #if Dimensions==2 and defined(SharedOMP)
 #define parallel_dfor(counter, max) \
@@ -280,6 +286,26 @@ namespace peano4 {
       tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1, counter##2 };
 
 #define end_parallel_dfor });
+#elif Dimensions==2 and defined(SharedSYCL)
+#define parallel_dfor(counter, max) \
+  tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
+    handle.parallel_for( \
+      sycl::range<2>{max,max}, \
+      [&](sycl::id<2> counter##Iterator \
+    ) { \
+      tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]) };
+
+#define end_parallel_dfor }); });
+#elif Dimensions==3 and defined(SharedOMP)
+#define parallel_dfor(counter, max) \
+  tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
+    handle.parallel_for( \
+      sycl::range<3>{max,max,max}, \
+      [&](sycl::id<3> counter##Iterator \
+    ) { \
+      tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]), static_cast<int>(counter##Iterator[2]) };
+
+#define end_parallel_dfor }); });
 #else
 #define parallel_dfor(counter, max) \
   for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \

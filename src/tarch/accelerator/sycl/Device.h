@@ -9,9 +9,13 @@
  * changes from time to time, and as SYCL uses a couple of macros and functions
  * that we use in Peano, too. Examples are Dimensions and assertions.
  *
- * Therefore, I provide a dedicated SYCL.h header in tarch/multicore/tbb which
+ * Therefore, I provide a dedicated SYCL.h header in tarch/multicore/sycl which
  * wraps around the standard SYCL headers. I strongly recommend all Peano files
- * to use this header rather than SYCL directly.
+ * to use this header rather than SYCL directly:
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * #include "tarch/multicore/sycl/Core.h"
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  * Besides the fancy includes, the SYCL header also provides the tarch::accelerator::getSYCLQueue()
  * routine. When you start up the Peano's Core object, it will automatically

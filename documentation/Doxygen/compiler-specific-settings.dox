@@ -2,6 +2,11 @@
 
 @page page_compiler_specific_settings Vendor software stacks and system- and compiler-specific settings
 
+
+\li @subpage tarch_accelerator_SYCL
+\li @subpage page_machines
+
+
 <!-- Add this one for href links to subitems -->
 \tableofcontents
 
@@ -193,173 +198,6 @@ the OpenMP target instructions:
 ~~~~~~~~~~~~~~~~~~~~~~~
 ./configure CC=clang CXX=clang++  CXXFLAGS="-O3 -std=c++20 -mtune=native -march=native -fopenmp" -fopenmp-targets=nvptx64 --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp
 ~~~~~~~~~~~~~~~~~~~~~~~
-
-# Example machine configurations
-
-## Hamilton
-
-<img width="20%" src="https://nccadmin.webspace.durham.ac.uk/wp-content/themes/core/assets/img/theme/branding-assets/durham-university-logo.svg" />
-
-Hamilton 8 is Durham's internal supercomputer.
-It is a system powered by AMD EPYC processors.
-I nevertheless prefer the Intel toolchain on the machine:
-
-~~~~~~~~~~~~~~~~~~~~~~
-module purge
-module load oneapi
-export FLAVOUR_NOCONFLICT=1
-module load gcc
-module load intelmpi
-
-export I_MPI_CXX=icpx
-~~~~~~~~~~~~~~~~~~~~~~
-
-Hamilton's oneapi module is built against a GCC version which is too old and lacks
-important features within its standard library.
-Therefore, you have to manuall load the latest gcc.
-This is usually prevented by the system and leads to a conflict (so that you
-can't have multiple GCC versions loaded).
-We therefore have to disable conflict checks a priori.
-
-
-If you use mpiicpc, the MPI wrapper still refers to icpc even though icpc is
-officially deprecated.
-Therefore, I manually have to repoint it to icpx.
-The other options to do this (via additional script arguments, e.g.) all failed
-on this machine.
-
-
-- MPI production runs
-~~~~~~~~~~~~~~~~~~~~~~
-./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran
-~~~~~~~~~~~~~~~~~~~~~~
-- Performance analysis runs with single node tracing
-~~~~~~~~~~~~~~~~~~~~~~
-module load vtune
-./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes -I${VTUNE_HOME}/vtune/latest/include" LDFLAGS="-fiopenmp -g -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itt
-~~~~~~~~~~~~~~~~~~~~~~
-- MPI performance analysis runs
-~~~~~~~~~~~~~~~~~~~~~~
-module load vtune
-./configure CC=icpx CXX=icpx CXXFLAGS="-I${VTUNE_HOME}/vtune/latest/include -I${VT_ROOT}/include -Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g -L${VT_LIB_DIR} -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-lVT ${VT_ADD_LIBS} -littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itac
-~~~~~~~~~~~~~~~~~~~~~~
-
-
-Further to these flags, I @ref faq "pause and resume the data collection" manually in
-ExaHyPE and Swift. This is however something I do in the main() routine of
-the respective applications.
-
-
-## NCC
-
-I recommend atm to use `gpu10`, `gpu11` or `gpu12`, i.e. the A100
-machines. By default, I usually work with NVC++ on this cluster, but the
-OneAPI software stack should work, too.
-
-~~~~~~~~~~~~~~~~~~~~~~~
-module load nsight-systems cuda llvm
-module load mvapich2/2.3.5-2
-
-./configure --enable-exahype --enable-loadbalancing-toolbox --with-multithreading=omp --with-mpi=mpicxx --with-gpu=omp CXX=clang++ CXXFLAGS="-fopenmp -fopenmp-targets=nvptx64-nvidia-cuda"
-~~~~~~~~~~~~~~~~~~~~~~~
-
-### OpenMP with NVC++
-
-I use the setup
-
-~~~~~~~~~~~~~~~~~~~~~~~
-./configure CXX=nvc++ CC=nvc++ CXXFLAGS="-O4 --std=c++17 -mp=gpu -gpu=cc80" LDFLAGS="-mp=gpu -gpu=cc80" --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-blockstructured --enable-loadbalancing CPP=cpp FC=/apps/nvidia-hpc-sdk/Linux_x86_64/22.3/compilers/bin/nvfortran
-~~~~~~~~~~~~~~~~~~~~~~~
-
-on the A100 nodes.
-
-We had some issues (compiler crashes) with NVC++ 2022.5. Those are filed
-with NVIDIA. For the time being, please revert to another compiler
-generation. Version 2022.3 works for example.
-
-Some nodes (e.g. gpu3) have Titan XP which doesn't support OpenMP
-offloading; only GPUs with compute capability >=70 can offload with
-OpenMP. You can check the GPU model with `nvidia-smi -L`.
-
-Note that there is a bug in the NVIDIA software stack at the moment.
-Many runs will crash with a complaint about a lack of visible devices.
-Ensure hence that you set the following environment before you start
-your experiments:
-
-
-~~~~~~~~~~~~~~~~~~~~~~~
-export CUDA_VISIBLE_DEVICES=0
-~~~~~~~~~~~~~~~~~~~~~~~
-
-### SYCL offloading with oneAPI
-
-I used this to configure Peano with Intel's TBB enabled
-
-~~~~~~~~~~~~~~~~~~~~~~~
-source /opt/intel/oneapi/setvars.sh
-module load cuda
-
-./configure CC=clang CXX=clang++ LIBS="-ltbb" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda,spir64 -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda,spir64 -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Codeplay's website has some useful information on compiler flags. Here's
-a short explaination of the above SYCL related flags:
-- `-fsycl` tells the compiler to link SYCL libraries and makes it aware of
-SYCL code.
-- `-fsycl-targets=` allows the compiler to generate code for different devices,
-e.g., different vendors, host or device.
-- `-Xsycl-target-backend=` is required if you want to select a specific device 
-architecture. For example, I put `--cuda-gpu-arch=sm_80` after it to compile for
-A100 with compute capability 8.0.
-
-It also needs at least 2023.0.0 version of oneAPI with Codeplay's nvidia
-GPU plugin which is not installed on NCC. They encourage the use of 
-Intel's own compiler (`icx` and `icpx`), however, I have issues getting
-them to work when compiling for multiple devices.Additionally, `icpx` 
-seems to use a lower precision by default in favour of performance, use 
-`-fp-model` to change this behaviour.
-
-I had linker errors about undefined referennces when building Peano with
-TBB. Just add the path to any relevant library if you experienced this.
-
-When running the executable on the GPU, include `SYCL_DEVICE_FILTER=gpu`
-before the terminal command to explicitly tell SYCL to run the code on GPU.
-In the case of a runtime error, it is also useful to add `SYCL_PI_TRACE=2`
-to check where the error was raised.
-
-### DINE
-
-<img width="20%" src="https://www.dur.ac.uk/images/cosma/cosma_white.png" />
-
-DINE (Durham Intelligent NIC Environment) is a small supercomputer attached to
-Cosma, which we use to prototype some of our algorithms. Access is through the
-Cosma loging nodes (login8.cosma.dur.ac.uk). As Cosma and DINE feature the same
-generation of AMD chips, you can compile on Cosma8 and ship the executable to 
-DINE.
-
-~~~~~~~~~~~~~~~~~~~~~~~
-module unload python
-module load python/3.10.12
-
-module load oneAPI
-module load intel_mpi
-module load gnu_comp/11.1.0
-export I_MPI_CXX=icpx
-./configure --enable-exahype --enable-blockstructured --enable-loadbalancing --enable-particles CC=icc CXX=icpx --with-multithreading=omp --with-mpi=mpiicpc CXXFLAGS="-std=c++20 -fopenmp -funroll-loops -Ofast"
-~~~~~~~~~~~~~~~~~~~~~~~
-
-There are a few things to consider whenever you use DINE:
-
-- The default Python version usually is a little bit too old, so 
-  switching to a more recent Python package is reasonable. 
-- Don't use the -xHost flag in configure. The resulting code will crash on 
-  DINE. You can use 
-  ~~~~~~~~~~~~~~~~~~~~~~~
-  -march=native
-  ~~~~~~~~~~~~~~~~~~~~~~~
-- Try not to dump data into the home directory, as this one is backe up and has
-  a quota. DINE mounts the Cosma 5 data directory (/cosma5/data/do009/myaccount)
-  which you should use to store data files.
   
 
  */
