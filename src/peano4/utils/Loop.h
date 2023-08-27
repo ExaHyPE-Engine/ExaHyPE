@@ -15,6 +15,15 @@
 #include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
 
+#include "../config.h"
+#if SharedTBB
+#include <oneapi/tbb/parallel_for.h>
+#include <oneapi/tbb/blocked_range.h>
+#include <oneapi/tbb/blocked_range2d.h>
+#include <oneapi/tbb/blocked_range3d.h>
+#endif
+
+
 namespace peano4 {
   namespace utils {
     /**
@@ -218,6 +227,68 @@ namespace peano4 {
 #define dfor(counter, max) \
   for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \
        peano4::utils::dInc(counter, max))
+
+
+/**
+ * Parallel version of dfor
+ *
+ * Don't use a { after the parallel_dfor. It is included in the macro. Also
+ * don't close it with a }. Instead, use the end_parallel_dfor macro.
+ */
+#if Dimensions==2 and defined(SharedOMP)
+#define parallel_dfor(counter, max) \
+  _Pragma( "#pragma omp taskloop for collapse(2)" ) \
+  for( int counter##0 = 0; counter##0 < max; counter##0++ ) \
+  for( int counter##1 = 0; counter##1 < max; counter##1++ ) { \
+    tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1 };
+
+#define end_parallel_dfor }
+#elif Dimensions==3 and defined(SharedOMP)
+#define parallel_dfor(counter, max) \
+  _Pragma( "#pragma omp taskloop for collapse(2)" ) \
+  for( int counter##0 = 0; counter##0 < max; counter##0++ ) \
+  for( int counter##1 = 0; counter##1 < max; counter##1++ ) \
+  for( int counter##2 = 0; counter##2 < max; counter##2++ ) { \
+    tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1, counter##2 };
+
+#define end_parallel_dfor }
+#elif Dimensions==2 and defined(SharedTBB)
+#define parallel_dfor(counter, max) \
+  tbb::parallel_for( \
+    tbb::blocked_range2d<int>( \
+      0, max, \
+      0, max \
+  ), \
+  [&]( const tbb::blocked_range2d<int>&  range ) { \
+    for( int counter##1 = range.rows().begin();  counter##1 < range.rows().end();  counter##1++ ) \
+    for( int counter##2 = range.cols().begin();  counter##2 < range.cols().end();  counter##2++ ) { \
+      tarch::la::Vector<Dimensions, int> counter = { counter##1, counter##2 };
+
+#define end_parallel_dfor });
+#elif Dimensions==3 and defined(SharedTBB)
+#define parallel_dfor(counter, max) \
+  tbb::parallel_for( \
+    tbb::blocked_range3d<int>( \
+      0, max, \
+      0, max, \
+      0, max \
+  ), \
+  [&]( const tbb::blocked_range3d<int>&  range ) { \
+    for( int counter##0 = range.pages().begin(); counter##0 < range.pages().end(); counter##0++ ) \
+    for( int counter##1 = range.rows().begin();  counter##1 < range.rows().end();  counter##1++ ) \
+    for( int counter##2 = range.cols().begin();  counter##2 < range.cols().end();  counter##2++ ) { \
+      tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1, counter##2 };
+
+#define end_parallel_dfor });
+#else
+#define parallel_dfor(counter, max) \
+  for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \
+       peano4::utils::dInc(counter, max))
+
+#define end_parallel_dfor }
+#endif
+
+
 
 
 /**

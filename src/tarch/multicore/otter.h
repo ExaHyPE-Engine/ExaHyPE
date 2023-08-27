@@ -37,7 +37,10 @@
  * - Add --with-otter to your configure call.
  * - Augment your CXXFLAGS="... -Iotter-dir/include".
  * - Augment your LDFLAGS="... -Lotter-dir/libs".
- * - Augment your LIBS="... lotter-task-graph".
+ * - Augment your LIBS="... lotter-task-graph -lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5".
+ *   It is important that the HDF5 libs are enlisted ***after*** the otter
+ *   libs, as C++'s linker reads libraries from left to right and resolves
+ *   dependencies from left to right.
  *
  * Analogous steps are required if you use cmake.
  *
