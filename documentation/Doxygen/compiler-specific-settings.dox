@@ -28,8 +28,8 @@ settings and properties:
 - Peano offers special toolchains for special vendors.
 
 
+## Realisation of Peano's internal compiler-specific switches
 
-# Compiler-specific settings
 
 Peano relies on a header tarch/compiler/CompilerSpecificSettings.h.
 This header reads out the compiler version and includes a particular flavour
@@ -48,7 +48,7 @@ Consult the file implementation for details.
 
 
 
-# Intel (oneAPI) toolchain
+## Intel (oneAPI) toolchain
 
 <img width="10%" src="https://upload.wikimedia.org/wikipedia/en/f/fa/OneAPI-rgb-3000.png" />
 
@@ -76,7 +76,7 @@ Most production runs will not use the Intel toolchain, but rather set all
 Intel-specific flags for compiler and linker manually.
 
 
-## Intel compiler flags
+### Intel compiler flags
 
 At the moment, we add the following flags to the compile when the Intel toolchain is
 activated:
@@ -93,7 +93,7 @@ activated:
   to all debug and assert builds.
 
 
-## The loggers
+### The loggers
 
 Even though you have switched to the Intel loggers, you will not get
 any trace information if you build in release mode. You have to switch
@@ -110,7 +110,7 @@ For further discussion on logging, please see the \ref tarch_logging "generic lo
 
 
 
-# NVIDIA NVC++ toolchain
+## NVIDIA NVC++ toolchain
 
 <img width="20%" src="https://www.nvidia.com/content/dam/en-zz/Solutions/about-nvidia/logo-and-brand/01-nvidia-logo-vert-500x200-2c50-p@2x.png" />
 
@@ -125,7 +125,7 @@ It refuses, for example, to place temporary array variables on the call stack.
 So you might have to play around with the software configuration.
 
 
-## OpenMP and OpenMP offloading
+### OpenMP and OpenMP offloading
 
 NVIDIA's compiler does not support all of OpenMP. Therefore, its OpenMP
 implementation is rather picky when it comes to copy constructors and
@@ -146,7 +146,7 @@ Found 0 devices
 devices if you run the code.
 
 
-## Source code annotation
+### Source code annotation
 
 NVIDIA's NVPTX logging is supported by picking the
 
@@ -158,14 +158,14 @@ toolchain.
 
 
 
-# AMD toolchain
+## AMD toolchain
 
 For the AMD toolchain we need to load either ROCm or AOMP. Both modules
 should have AMD's version of Clang. With the AMD toolchain we use AMD's
 modified Clang. We again need to point `CXX` and `CC` to the Clang
 compiler.
 
-## OpenMP
+### OpenMP
 
 The Clang compiler does not support omp_get_mapped_ptr() at the moment.
 We have implemented a workaround mk_omp_get_mapped_ptr() in
@@ -183,7 +183,7 @@ where `<gpu-arch>` is either `gfx906` (MI 50), `gfx908` (MI 100), or
 `gfx90a` (MI 200 series).
 
 
-# Clang (native)
+## Clang (native)
 
 On Ubuntu and many other systems, clang is not shipped automatically
 with OpenMP. Instead, you have to install the package `libomp-dev`.
@@ -201,4 +201,5 @@ the OpenMP target instructions:
   
 
  */
+      std::size_t counter##Range = static_cast<std::size_t>(max);
 

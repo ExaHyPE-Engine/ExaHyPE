@@ -14,6 +14,7 @@
 
 #include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
+#include "tarch/accelerator/accelerator.h"
 
 #include "../config.h"
 #if defined(SharedTBB)
@@ -124,11 +125,22 @@ namespace peano4 {
      * Although the mapping might be slow, it is still faster than computing the
      * partial sums of a to the power of b.
      *
+     *
+     * ## GPU programming
+     *
+     * The d-linear loops are used mainly on the host, but I provide a SYCL
+     * implementation of d-linear, too. SYCL does not really distinguish the
+     * host queue from the accelerator queue at the moment. I therefore have to
+     * mark the dLinearised() routine as GPU offloadable. See parallel_dfor
+     * for a discussion of when this is required.
+     *
+     *
+     *
      * @return the linearisation of the counter, i.e. the k-th component is
      *         multiplied by max^k and the results are accumulated.
      */
-    int dLinearised(const tarch::la::Vector<Dimensions, int>& counter, int max);
-    int dLinearised(const std::bitset<Dimensions>& counter);
+    GPUCallableMethod int dLinearised(const tarch::la::Vector<Dimensions, int>& counter, int max);
+    GPUCallableMethod int dLinearised(const std::bitset<Dimensions>& counter);
 
     /**
      * Special 2d variant of dLinearised that works also if you compile with other
@@ -240,6 +252,35 @@ namespace peano4 {
  *
  * This macro works great on the CPU. I recommend not to use it on the GPU,
  * where you usually have specialised parallel for realisations anyway.
+ *
+ *
+ * ## OpenMP
+ *
+ * OpenMP relies on pragmas around the nexted for loops, which is tricky as
+ * parallel_dfor itself is a pragma. I hijack the construct
+ *
+ *              _Pragma( "#pragma my embedded pragma" )
+ *
+ * which is, to the best of my knowledge, a C99 instruction and not C++17.
+ *
+ *
+ * ## TBB
+ *
+ * TBB is, in my opinion, the most straightforward implementation, as it
+ * supports d-dimensional ranges: It has loop collapsing built-in. I use the
+ * TBB ranges, embed a nested for loop into the range, and then puzzle the
+ * counter of interest together from the ranges indices again.
+ *
+ *
+ *
+ * ## SYCL
+ *
+ * Different to TBB, SYCL has this accelerator paradigm in mind, even though we
+ * submit to the host queue. Therefore, we have to capture the variables via =.
+ * Furthermore, the SYCL code does not really "see" that this thing is always
+ * executed on the host. Therefore, I have to mark the dLinearised() routine as
+ * GPU offloadable, which is a little bit annoying.
+ *
  */
 #if Dimensions==2 and defined(SharedOMP)
 #define parallel_dfor(counter, max) \
@@ -270,7 +311,9 @@ namespace peano4 {
     for( int counter##2 = range.cols().begin();  counter##2 < range.cols().end();  counter##2++ ) { \
       tarch::la::Vector<Dimensions, int> counter = { counter##1, counter##2 };
 
-#define end_parallel_dfor });
+#define end_parallel_dfor \
+    } \
+  });
 #elif Dimensions==3 and defined(SharedTBB)
 #define parallel_dfor(counter, max) \
   tbb::parallel_for( \
@@ -285,27 +328,36 @@ namespace peano4 {
     for( int counter##2 = range.cols().begin();  counter##2 < range.cols().end();  counter##2++ ) { \
       tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1, counter##2 };
 
-#define end_parallel_dfor });
+#define end_parallel_dfor \
+    } \
+  });
 #elif Dimensions==2 and defined(SharedSYCL)
 #define parallel_dfor(counter, max) \
+  std::size_t counter##Range = max; \
   tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
     handle.parallel_for( \
-      sycl::range<2>{max,max}, \
-      [&](sycl::id<2> counter##Iterator \
-    ) { \
-      tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]) };
+      sycl::range<2>{counter##Range,counter##Range}, \
+      [=](sycl::id<2> counter##Iterator) { \
+        tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]) };
 
-#define end_parallel_dfor }); });
-#elif Dimensions==3 and defined(SharedOMP)
+#define end_parallel_dfor \
+      } \
+    ); \
+  }).wait();
+#elif Dimensions==3 and defined(SharedSYCL)
 #define parallel_dfor(counter, max) \
+  std::size_t counter##Range = max; \
   tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
     handle.parallel_for( \
-      sycl::range<3>{max,max,max}, \
-      [&](sycl::id<3> counter##Iterator \
-    ) { \
-      tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]), static_cast<int>(counter##Iterator[2]) };
+      sycl::range<3>{counter##Range,counter##Range,counter##Range}, \
+      [=](sycl::id<3> counter##Iterator) { \
+        tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]), static_cast<int>(counter##Iterator[2]) };
 
-#define end_parallel_dfor }); });
+
+#define end_parallel_dfor \
+      } \
+    ); \
+  }).wait();
 #else
 #define parallel_dfor(counter, max) \
   for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \

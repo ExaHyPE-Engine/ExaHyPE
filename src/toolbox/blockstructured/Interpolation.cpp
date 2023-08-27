@@ -990,7 +990,6 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
         destinationValues[baseIndexDestination+unknown] += weight * sourceValues[baseIndexSource+unknown];
       }
     }
-  }
   end_parallel_dfor
 }
 
