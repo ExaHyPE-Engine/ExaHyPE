@@ -13,17 +13,15 @@ import os
 
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
-from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import (
-    ReconstructPatchAndApplyFunctor,
-)
+from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
 
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     Template = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
-  if ( 
+  if (
     not marker.hasBeenRefined()
-    and 
+    and
     marker.hasBeenEnclaveCell()
     and
     {{PREDICATES[PREDICATE_NO]}}
@@ -33,7 +31,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     #elif Dimensions==3
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
     #endif
-    
+
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
     if ( taskNumber>=0 ) {
       double maxEigenvalue; // not used here
