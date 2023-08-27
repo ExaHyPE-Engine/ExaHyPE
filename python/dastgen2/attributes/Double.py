@@ -46,12 +46,12 @@ class Double(Attribute):
 
         elif self._is_const_static:
             if for_declaration:
-                getter = ("get" + accessor_name + "()", "const static double")
+                getter = ("get" + accessor_name + "()", "static double")
             else:
-                getter = ("get" + accessor_name + "()", "const double")
+                getter = ("get" + accessor_name + "()", "double")
 
         elif self._is_const:
-            getter = ("get" + accessor_name + "()", "const double")
+            getter = ("get" + accessor_name + "()", "double")
 
         elif self._is_constexpr:
             getter = ("get" + accessor_name + "()", "constexpr double")
