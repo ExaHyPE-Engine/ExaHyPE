@@ -22,14 +22,24 @@
  *
  * To build Peano against Otter, you have to add --with-otter on the
  * configuration prompt or to add the respective extension to your cmake call.
- * It is not enabled by default. Otter itself is based upon CMake. See the Otter
- * documentation linked above for instructions on building and installing it.
+ * It is not enabled by default. Otter itself is based upon CMake. See the
+ * Otter documentation linked above for instructions on building and installing
+ * it. In the remaining text I assume that you have typed in
  *
- * You should add `-lotter-task-graph` in LIBS and CXXFLAGS.
+ * ~~~~~~~~~~~~~~~~~~~~~~~~
+ * cmake --build .
+ * cmake --install . --prefix otter-dir
+ * ~~~~~~~~~~~~~~~~~~~~~~~~
  *
- * If you installed Otter to a custom location and are not using the module file
- * provided with Otter, you should also add -I<otter-install-path> to your
- * CXXFLAGS and -L<otter-install-path> to your LDFLAGS.
+ * so Otter is properly installed. There are only few steps required to build
+ * the system:
+ *
+ * - Add --with-otter to your configure call.
+ * - Augment your CXXFLAGS="... -Iotter-dir/include".
+ * - Augment your LDFLAGS="... -Lotter-dir/libs".
+ * - Augment your LIBS="... lotter-task-graph".
+ *
+ * Analogous steps are required if you use cmake.
  *
  *
  * ## Using Otter
