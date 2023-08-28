@@ -7,10 +7,10 @@ import peano4
 import exahype2
 
 dimensions                = 2
-cell_size                 = 0.1
+cell_size                 = 0.4
 amr_levels                = 0 # Set to 0 to disable adaptive mesh refinement (AMR)
 patch_size                = 3
-end_time                  = 3.0
+end_time                  = 6.0
 plot_interval             = 0.05 # Set to 0 to disable I/O
 mode                      = peano4.output.CompileMode.Release # Switch here between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'
 use_gpu                   = False # Requires a GPU enabled build
@@ -28,8 +28,9 @@ prandtl_number            = 0.7
 lid_driven_cavity_velocity = 1.0 # Wall velocity for lid-driven cavity
 
 my_project = exahype2.Project(
-  ["applications", "exahype2", "CompressibleNavierStokes"],
-  "CompressibleNavierStokesApplication", ".",
+  namespace = ["applications", "exahype2", "CompressibleNavierStokes"],
+  project_name = "CompressibleNavierStokesApplication",
+  directory = ".",
   executable="compressible-navier-stokes-" + str(dimensions) + "d"
 )
 
