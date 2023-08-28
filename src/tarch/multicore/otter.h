@@ -22,13 +22,14 @@
  *
  * To build Peano against Otter, you have to add --with-otter on the
  * configuration prompt or to add the respective extension to your cmake call.
- * It is not enabled by default. Otter itself is based upon CMake. You might
- * want to install it on your system, but a simple make usually does the
- * job as long as you get a build directly within Otter which hosts all the
- * libraries and includes.
+ * It is not enabled by default. Otter itself is based upon CMake. See the Otter
+ * documentation linked above for instructions on building and installing it.
  *
- * - Add -Imyotter/include/api to your CFLAGS.
- * - Add -Imyotter/build/include to your CFLAGS.
+ * You should add `-lotter-task-graph` in LIBS and CXXFLAGS.
+ *
+ * If you installed Otter to a custom location and are not using the module file
+ * provided with Otter, you should also add -I<otter-install-path> to your
+ * CXXFLAGS and -L<otter-install-path> to your LDFLAGS.
  *
  *
  * ## Using Otter
@@ -62,6 +63,7 @@ namespace otter {
     static const char* root                     = "[ROOT TASK]";
     static const char* step                     = "[STEP TASK]";
     static const char* enclave                  = "[anonymous enclave task]";
+    static const char* enclave_with_typeid      = "[enclave task (typeid=%d)]";
     static const char* traverse_fmt             = "[traversal task %d of %d]";
     static const char* unknown                  = "unknown task";
     static const char* TaskWithCopyOfFunctor    = "TaskWithCopyOfFunctor";
@@ -88,7 +90,6 @@ namespace otter {
 #define OTTER_DECLARE_HANDLE(...)
 #define OTTER_DEFINE_TASK(...)
 #define OTTER_INIT_TASK(...)
-#define OTTER_DEFINE_TASK(...)
 #define OTTER_ADD_TO_POOL(...)
 #define OTTER_POP_LABEL(...)
 #define OTTER_BORROW_LABEL(...)
