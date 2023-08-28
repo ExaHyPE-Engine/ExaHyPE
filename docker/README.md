@@ -3,10 +3,10 @@
 Build the Docker image via
 
 ```shell
-docker build -t peanoframework/<toolchain> -f toolchains/Dockerfile.<toolchain> .
+docker build -t peanoframework/<toolchain> -f Dockerfile.<toolchain> .
 ```
 
-Login into the Dockerhub account you want to push to:
+Login into your Dockerhub account:
 
 ```shell
 docker login
