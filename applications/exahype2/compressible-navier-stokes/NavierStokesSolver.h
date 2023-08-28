@@ -174,7 +174,7 @@ public:
 
     if (normal == 0) {
       F[u] = Q[u] * Q[u] / Q[rho] + pressure;
-      F[v] = Q[v] * Q[v] / Q[rho];
+      F[v] = Q[v] * Q[u] / Q[rho];
 #if Dimensions == 3
       F[w] = Q[w] * Q[u] / Q[rho];
 #endif
