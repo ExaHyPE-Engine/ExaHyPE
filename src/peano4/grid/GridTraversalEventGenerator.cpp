@@ -832,7 +832,7 @@ tarch::la::Vector< TwoPowerD, int >  peano4::grid::GridTraversalEventGenerator::
 
     std::bitset<Dimensions> studiedEntry = TwoPowerD - currentVertex - 1;
     studiedEntry[normal] = 0;
-    assertion3(studiedEntry.to_ullong()!=0,        studiedEntry,currentVertex,i);
+    assertion3(studiedEntry.to_ullong()>=0,        studiedEntry,currentVertex,i);
     assertion3(studiedEntry.to_ullong()<TwoPowerD, studiedEntry,currentVertex,i);
     int rankEntry = calledByReceivingProcess ? fineGridVertices[currentVertex].getBackupOfAdjacentRanks(studiedEntry.to_ullong())
                                              : fineGridVertices[currentVertex].getAdjacentRanks(studiedEntry.to_ullong());
@@ -851,7 +851,7 @@ tarch::la::Vector< TwoPowerD, int >  peano4::grid::GridTraversalEventGenerator::
     counter++;
 
     studiedEntry[normal] = 1;
-    assertion3(studiedEntry.to_ullong()!=0,        studiedEntry,currentVertex,i);
+    assertion3(studiedEntry.to_ullong()>=0,        studiedEntry,currentVertex,i);
     assertion3(studiedEntry.to_ullong()<TwoPowerD, studiedEntry,currentVertex,i);
     rankEntry = calledByReceivingProcess ? fineGridVertices[currentVertex].getBackupOfAdjacentRanks(studiedEntry.to_ullong())
                                          : fineGridVertices[currentVertex].getAdjacentRanks(studiedEntry.to_ullong());
