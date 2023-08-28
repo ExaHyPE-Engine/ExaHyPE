@@ -1,28 +1,33 @@
 #include "GridVertex.h"
 
-
-
 #include <sstream>
 #include <algorithm>
 
-
-
-peano4::grid::GridVertex::GridVertex(State  __state, tarch::la::Vector<TwoPowerD,int>  __adjacentRanks, tarch::la::Vector<TwoPowerD,int>  __backupOfAdjacentRanks, bool  __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, bool  __isAntecessorOfRefinedVertexInCurrentTreeSweep, bool  __hasBeenParentOfSubtreeVertexInPreviousTreeSweep, bool  __isParentOfSubtreeVertexInCurrentTreeSweep, int  __numberOfAdjacentRefinedLocalCells, tarch::la::Vector<Dimensions,double>  __x, int  __level){
-setState( __state);
-setAdjacentRanks( __adjacentRanks);
-setBackupOfAdjacentRanks( __backupOfAdjacentRanks);
-setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep( __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep);
-setIsAntecessorOfRefinedVertexInCurrentTreeSweep( __isAntecessorOfRefinedVertexInCurrentTreeSweep);
-setHasBeenParentOfSubtreeVertexInPreviousTreeSweep( __hasBeenParentOfSubtreeVertexInPreviousTreeSweep);
-setIsParentOfSubtreeVertexInCurrentTreeSweep( __isParentOfSubtreeVertexInCurrentTreeSweep);
-setNumberOfAdjacentRefinedLocalCells( __numberOfAdjacentRefinedLocalCells);
-#if PeanoDebug>0
-setX( __x);
-#endif 
-setLevel( __level);
+peano4::grid::GridVertex::GridVertex(
+  [[maybe_unused]] State __state,
+  [[maybe_unused]] tarch::la::Vector<TwoPowerD, int> __adjacentRanks,
+  [[maybe_unused]] tarch::la::Vector<TwoPowerD, int> __backupOfAdjacentRanks,
+  [[maybe_unused]] bool __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep,
+  [[maybe_unused]] bool __isAntecessorOfRefinedVertexInCurrentTreeSweep,
+  [[maybe_unused]] bool __hasBeenParentOfSubtreeVertexInPreviousTreeSweep,
+  [[maybe_unused]] bool __isParentOfSubtreeVertexInCurrentTreeSweep,
+  [[maybe_unused]] int __numberOfAdjacentRefinedLocalCells,
+  [[maybe_unused]] tarch::la::Vector<Dimensions, double> __x,
+  [[maybe_unused]] int __level
+) {
+  setState( __state);
+  setAdjacentRanks( __adjacentRanks);
+  setBackupOfAdjacentRanks( __backupOfAdjacentRanks);
+  setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep( __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep);
+  setIsAntecessorOfRefinedVertexInCurrentTreeSweep( __isAntecessorOfRefinedVertexInCurrentTreeSweep);
+  setHasBeenParentOfSubtreeVertexInPreviousTreeSweep( __hasBeenParentOfSubtreeVertexInPreviousTreeSweep);
+  setIsParentOfSubtreeVertexInCurrentTreeSweep( __isParentOfSubtreeVertexInCurrentTreeSweep);
+  setNumberOfAdjacentRefinedLocalCells( __numberOfAdjacentRefinedLocalCells);
+  #if PeanoDebug>0
+  setX( __x);
+  #endif 
+  setLevel( __level);
 }
-
-
 
 peano4::grid::GridVertex::GridVertex( const GridVertex& copy ) {
   setState( copy.getState() );
@@ -35,13 +40,30 @@ peano4::grid::GridVertex::GridVertex( const GridVertex& copy ) {
   setNumberOfAdjacentRefinedLocalCells( copy.getNumberOfAdjacentRefinedLocalCells() );
 #if PeanoDebug>0
   setX( copy.getX() );
-#endif 
+#endif
   setLevel( copy.getLevel() );
 }
 
+peano4::grid::GridVertex& peano4::grid::GridVertex::operator = (const GridVertex& other) {
+  if (this == &other) {
+    return *this; // Self-assignment check
+  }
 
+  setState(other.getState());
+  setAdjacentRanks(other.getAdjacentRanks());
+  setBackupOfAdjacentRanks(other.getBackupOfAdjacentRanks());
+  setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(other.getHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep());
+  setIsAntecessorOfRefinedVertexInCurrentTreeSweep(other.getIsAntecessorOfRefinedVertexInCurrentTreeSweep());
+  setHasBeenParentOfSubtreeVertexInPreviousTreeSweep(other.getHasBeenParentOfSubtreeVertexInPreviousTreeSweep());
+  setIsParentOfSubtreeVertexInCurrentTreeSweep(other.getIsParentOfSubtreeVertexInCurrentTreeSweep());
+  setNumberOfAdjacentRefinedLocalCells(other.getNumberOfAdjacentRefinedLocalCells());
+#if PeanoDebug>0
+  setX(other.getX());
+#endif
+  setLevel(other.getLevel());
 
-
+  return *this;
+}
 
 std::string peano4::grid::GridVertex::toString() const {
   std::ostringstream out;

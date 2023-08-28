@@ -5,15 +5,10 @@
 #include "tarch/tests/TestCase.h"
 #include "tarch/logging/Log.h"
 
-
 #include "grid.h"
 #include "GridTraversalEvent.h"
 #include "AutomatonState.h"
 #include "GridVertex.h"
-
-
-
-
 
 namespace peano4 {
   namespace grid {
@@ -24,8 +19,6 @@ namespace peano4 {
     }
   }
 }
-
-
 
 /**
  * Translate grid traversal automaton's transitions into user events
@@ -85,7 +78,7 @@ class peano4::grid::GridTraversalEventGenerator {
   private:
     friend class peano4::grid::tests::GridTraversalEventGeneratorTest;
 
-    static tarch::logging::Log  _log;
+    static tarch::logging::Log _log;
 
     /**
      * Number of underlying tree
@@ -232,9 +225,9 @@ class peano4::grid::GridTraversalEventGenerator {
       const std::set< int >&                    joinTriggered,
       const std::set< int >&                    joining
     ) const;
+
   public:
     GridTraversalEventGenerator(int id);
-
 
     /**
      * Study the adjacency flags and do ignore hanging nodes.
@@ -277,7 +270,6 @@ class peano4::grid::GridTraversalEventGenerator {
       bool        joiningIsConsideredLocal
     ) const;
 
-
     /**
      * A spacetree node as 2^d adjacent vertices. So there are 2^d integers
      * stored within these vertices that overlap with the current node. They
@@ -301,7 +293,6 @@ class peano4::grid::GridTraversalEventGenerator {
       bool          splittingIsConsideredLocal,
       bool          joiningIsConsideredLocal
     ) const;
-
 
     /**
      * Create description of an enter cell traversal.
@@ -366,7 +357,6 @@ class peano4::grid::GridTraversalEventGenerator {
       bool                                      spacetreeStateIsRunning
     ) const;
 
-
     /**
      * When we fork or join, the worker's locality analysis identifies local
      * vertices and faces. It also identifies local cells. That's all correct.
@@ -402,7 +392,6 @@ class peano4::grid::GridTraversalEventGenerator {
      */
     GridTraversalEvent createPrunedEnterCellTraversalEvent( SpacetreeState spacetreeState, const GridTraversalEvent& event ) const;
     GridTraversalEvent createPrunedLeaveCellTraversalEvent( SpacetreeState spacetreeState, const GridTraversalEvent& event ) const;
-
 
     /**
      * You pass in the vertices and it gives you back the cell type.
@@ -471,7 +460,4 @@ class peano4::grid::GridTraversalEventGenerator {
       int faceNumber,
       bool useBackedUpAdjacencyInformation
     ) const;
-
 };
-
-

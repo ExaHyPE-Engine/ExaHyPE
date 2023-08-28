@@ -2,14 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/logging/Log.h"
 #include "PatchWriter.h"
 
-
 #include <fstream>
 #include <vector>
-
 
 namespace tarch {
   namespace plotter {
@@ -168,6 +165,7 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
          std::stringstream _out;
 
          void flushIfPatchIsComplete();
+
        public:
          VertexDataWriter(
            const std::string& identifier,
@@ -177,8 +175,9 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
            double*            mapping,
            tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter& writer
          );
+
          ~VertexDataWriter();
-         
+
          /**
           * @see https://www.cplusplus.com/reference/iomanip/setprecision/
           */
@@ -202,7 +201,7 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
           * different variable types. Should likely have been handled more cleanly but since template functions cannot
           * be virtual this needed to be handled on the lowest level.
           */
-         template<typename T>
+         template <typename T>
          void plotVertex( int index, T* values );
 
          virtual void close() override;

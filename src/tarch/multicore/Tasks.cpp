@@ -73,10 +73,11 @@ namespace {
 
     if (myTask != nullptr) {
       bool requeue = myTask->run();
-      if (requeue)
+      if (requeue) {
         spawnTask(myTask);
-      else
+      } else {
         delete myTask;
+      }
     }
     return myTask != nullptr;
   }
@@ -93,13 +94,15 @@ namespace {
 
     if (myTask != nullptr) {
       bool requeue = myTask->run();
-      if (requeue)
+      if (requeue) {
         spawnTask(myTask);
-      else
+      } else {
         delete myTask;
+      }
       return true;
-    } else
+    } else {
       return false;
+    }
   }
 } // namespace
 

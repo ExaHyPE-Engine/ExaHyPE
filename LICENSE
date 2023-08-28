@@ -10,7 +10,7 @@ based on Peano. Thus, the terms and conditions of this license cover the whole
 combination. As a special exception, the copyright holders of Peano give you
 permission to
  - link it with independent modules or
- - to instantiate templates and macros from Peano's source files 
+ - to instantiate templates and macros from Peano's source files
 to produce an executable, regardless of the license terms of these independent
 modules, and to copy and distribute the resulting executable under terms of
 your choice, provided that you also meet, for each linked independent module,

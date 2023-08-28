@@ -28,8 +28,8 @@ parser.add_argument('--arch', choices=[
 args = parser.parse_args()
 
 cflags = ''
-#cxxflags = '-std=c++20 -W -Wall -Wextra'
 cxxflags = '-std=c++20 -w'
+#cxxflags = '-std=c++20 -W -Wall -Wextra'
 fortranflags = ''
 
 # Merge in any additional flags needed for the selected multithreading backend
