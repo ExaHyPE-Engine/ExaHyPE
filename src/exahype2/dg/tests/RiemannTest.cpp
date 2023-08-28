@@ -2,7 +2,7 @@
 #include "TestUtils.h"
 #include "../Riemann.h"
 #include "../DGUtils.h"
-#include "enumerator/FaceAoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
 
 exahype2::dg::tests::RiemannTest::RiemannTest():
   tarch::tests::TestCase( "exahype2::dg::tests::RiemannTest" ) {

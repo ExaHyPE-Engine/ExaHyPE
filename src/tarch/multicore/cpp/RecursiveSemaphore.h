@@ -43,7 +43,7 @@ class tarch::multicore::RecursiveSemaphore {
     /**
      * You may not copy a semaphore
      */
-    inline RecursiveSemaphore& operator = (const RecursiveSemaphore& semaphore) { return *this; }
+    inline RecursiveSemaphore& operator = (const RecursiveSemaphore&) { return *this; }
 
   public:
     RecursiveSemaphore();
