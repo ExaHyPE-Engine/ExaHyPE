@@ -331,27 +331,27 @@ endif()
 if(WITH_PETSC)
   find_package(PETSc REQUIRED)
   target_compile_definitions(project_options INTERFACE UsePETSc)
-  target_link_system_libraries(project_options INTERFACE ${PETSc_LIBRARIES})
-  target_include_system_directories(project_options INTERFACE ${PETSc_INCLUDE_DIRS})
+  target_link_libraries(project_options INTERFACE ${PETSc_LIBRARIES})
+  target_include_directories(project_options INTERFACE ${PETSc_INCLUDE_DIRS})
 endif()
 
 if(WITH_LIBXSMM)
   find_package(LIBXSMM REQUIRED)
   target_compile_definitions(project_options INTERFACE UseLibXSMM)
-  target_link_system_libraries(project_options INTERFACE ${LIBXSMM_LIBRARIES})
-  target_include_system_directories(project_options INTERFACE ${LIBXSMM_INCLUDE_DIRS})
+  target_link_libraries(project_options INTERFACE ${LIBXSMM_LIBRARIES}) #target_link_system_libraries
+  target_include_directories(project_options INTERFACE ${LIBXSMM_INCLUDE_DIRS}) #target_include_system_directories
 endif()
 
 if(WITH_VTK)
   find_package(VTK REQUIRED)
   target_compile_definitions(project_options INTERFACE UseVTK)
-  target_link_system_libraries(project_options INTERFACE VTK::CommonCore)
+  target_link_libraries(project_options INTERFACE VTK::CommonCore)
 endif()
 
 if(WITH_HDF5)
   find_package(HDF5 REQUIRED)
   target_compile_definitions(project_options INTERFACE UseHDF5)
-  target_link_system_libraries(project_options INTERFACE HDF5::HDF5)
+  target_link_libraries(project_options INTERFACE HDF5::HDF5)
 endif()
 
 if(WITH_NETCDF)
