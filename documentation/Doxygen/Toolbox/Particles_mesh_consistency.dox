@@ -71,6 +71,26 @@ if you want to get a warning if particles tunnel - in some applications, this is
 unphysical.
 
 
+
+# Timing of particle changes
+
+I recommend that you never alter the particle positions throughout the
+traversal. The only time you should set a new position is within
+touchVertexLastTime(). This gives Peano's particle toolbox the time to
+re-sort the particles in-between two traversals as long as you ensure 
+that every mesh sweep where you alter the particle position also resorts.
+
+As long as you alter particle positions only in touchVertexLastTime(),
+you can then assume that the mesh topology is consistent throughout the
+traversal. That is, all particles within the search readius are properly
+indexed and available. This implies that you also should not alter the 
+search radius throughout the mesh traversal. You can do so, but you have 
+to accept that the mesh then becomes inconsistent, i.e. you might see more
+or less particles than what you actually would require, as the particle-mesh
+association is not updated yet.
+
+
+
 # Uniqueness of particle changes
 
 Most codes move a particle in touchVertexLastTime().
@@ -106,24 +126,31 @@ has not been used yet and then reset it wrongly to not moved again.
 Similar patterns hold for other state updates.
 
 
+Further to that, I recommend that you work with special care in any 
+parallel simulations: Particles then have a parallel state which indicated
+whether they are halo particles (virtual ones) or real ones. I recommend
+only to alter the positions of real particles:
 
-# Timing of particle changes
 
-I recommend that you never alter the particle positions throughout the
-traversal. The only time you should set a new position is within
-touchVertexLastTime(). This gives Peano's particle toolbox the time to
-re-sort the particles in-between two traversals as long as you ensure 
-that every mesh sweep where you alter the particle position also resorts.
+~~~~~~~~~~~~~~~~~
+if (
+  particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
+  and
+  particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
+) {
+  // update position
 
-As long as you alter particle positions only in touchVertexLastTime(),
-you can then assume that the mesh topology is consistent throughout the
-traversal. That is, all particles within the search readius are properly
-indexed and available. This implies that you also should not alter the 
-search radius throughout the mesh traversal. You can do so, but you have 
-to accept that the mesh then becomes inconsistent, i.e. you might see more
-or less particles than what you actually would require, as the particle-mesh
-association is not updated yet.
+  particle->setMoveState( std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved );
+}  
+~~~~~~~~~~~~~~~~~
 
+
+Keeping track of parallel states is not totally straightforward, as there are 
+numerous pitfalls. Study the documentation of peano4.toolbox.particles.UpdateParallelState
+for details on these pitfalls. Once again however, I maintain two different particle
+states, i.e. a parallel state and a new parallel state. You may assume that the 
+parallel state as used above is always consistent throughout one mesh sweep, but 
+might change between two sweeps.
 
 
 */

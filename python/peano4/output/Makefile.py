@@ -370,6 +370,15 @@ did search for a file """
                 "CXXFLAGS",
                 "LDFLAGS",
                 "LIBS",
+                "CUDA_LIBS",
+                "NVCC",
+                "CUDA_PATH",
+                "CUDA_INCLUDE_FLAGS",
+                "NVCC_FLAGS_RELEASE",
+                "NVCC_FLAGS_STATS",
+                "NVCC_FLAGS_ASSERTS",
+                "NVCC_FLAGS_TRACE",
+                "NVCC_FLAGS_DEBUG"
             ]
 
             for line in input:

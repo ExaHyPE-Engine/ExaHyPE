@@ -7,19 +7,28 @@
 #   autoheader
 #   automake --add-missing
 #
-#
 # Summary:
 #   libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
 #
 #
+# Make and test:
+# ---------------------------
+#   make -j
+#   make check
+#
+#
 # Cleanup
-# -------
-#   rm -rf aclocal.m4 compile src/config.* configure *sh Makefile Makefile.in missing stamp* ar-lib autom4te.cache *.log libtool depcomp *.scan  
-#   find . -name Makefile -delete
-#   find . -name Makefile.in -delete
+# ---------------------------
+#   make clean
+#   make distclean
+#   git clean -xf
+#   rm -rf submodules
+#
+# Summary:
+#   make clean && make distclean && git clean -xf && rm -rf submodules
 #
 #
-AC_INIT([Peano],[4.0])
+AC_INIT([Peano], [4.0])
 AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE(foreign -Wall -Werror)
@@ -35,8 +44,7 @@ AC_PROG_MAKE_SET
 #
 # Default installation is current path
 #
-AC_PREFIX_DEFAULT( "libs" )
-
+AC_PREFIX_DEFAULT("libs")
 
 #
 # This is just a sanity check whether the right files/directories do exist
@@ -47,7 +55,7 @@ AC_CONFIG_SRCDIR([src/peano4/peano.cpp])
 # Pipe system-specific findings into a file config.h
 #
 AC_CONFIG_HEADERS([config.h])
-   
+
 #
 # I wanna build libraries
 #
@@ -55,54 +63,35 @@ AM_PROG_AR
 LT_INIT
 AC_CONFIG_MACRO_DIRS([m4])
 
-
-# 
-# Checks for programs.
+#
+# Checks for programs
 #
 AC_PROG_CXX
 AC_PROG_FC
 
-
-
-#
-# OpenMP Options
-# We need those separately from the Peano build as we use OpenMP for 
-# postprocessing scripts, e.g.
-#
 AC_LANG(C++)
 
-
-#
-# Compiler options. Allow icpc and gnu. Plus minimum version check.
-#
-
 #AX_COMPILER_VENDOR
-
 #AX_CXX_COMPILE_STDCXX_11
-
-
 
 srcdir_full_path=`cd $srcdir && pwd`
 
-
 #
 # ===============================================================
-#   Define all the compiler and linker variables of Peano
+# Define all the compiler and linker variables of Peano
 # ===============================================================
 #
-
-CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0"
-CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics"
-CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g -O0"
-CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g"
+CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0 -O2"
+CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics -O2"
+CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g -O2"
+CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g -O2"
 CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g -O0"
 
-CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0"
-CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics"
-CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g -O0"
-CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g"
+CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0 -O2"
+CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics -O2"
+CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g -O2"
+CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g -O2"
 CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0"
-
 
 LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src "
 LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src "
@@ -110,23 +99,22 @@ LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src -g"
 LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src -g"
 LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src -g"
 
-
 LDADD_PEANO_2D_RELEASE=" -lPeano4Core2d         -lTarch"
 LDADD_PEANO_2D_STATS="   -lPeano4Core2d_stats   -lTarch_stats"
-LDADD_PEANO_2D_ASSERTS=" -lPeano4Core2d_asserts -lTarch_asserts" 
+LDADD_PEANO_2D_ASSERTS=" -lPeano4Core2d_asserts -lTarch_asserts"
 LDADD_PEANO_2D_TRACE="   -lPeano4Core2d_trace   -lTarch_trace"
 LDADD_PEANO_2D_DEBUG="   -lPeano4Core2d_debug   -lTarch_debug"
 
 LDADD_PEANO_3D_RELEASE=" -lPeano4Core3d         -lTarch"
 LDADD_PEANO_3D_STATS="   -lPeano4Core3d_stats   -lTarch_stats"
-LDADD_PEANO_3D_ASSERTS=" -lPeano4Core3d_asserts -lTarch_asserts" 
+LDADD_PEANO_3D_ASSERTS=" -lPeano4Core3d_asserts -lTarch_asserts"
 LDADD_PEANO_3D_TRACE="   -lPeano4Core3d_trace   -lTarch_trace"
 LDADD_PEANO_3D_DEBUG="   -lPeano4Core3d_debug   -lTarch_debug"
 
 
 #
 # ===============================================================
-#   Parallelisation backends
+# Parallelisation backends
 #
 # These configurations establish the multithreading, MPI and GPU
 # environment.
@@ -137,7 +125,7 @@ LDADD_PEANO_3D_DEBUG="   -lPeano4Core3d_debug   -lTarch_debug"
 # Multithreading
 #
 AC_ARG_WITH(
-  multithreading, 
+  multithreading,
   AS_HELP_STRING([--with-multithreading],[switch on multithreading [default=no,cpp,omp,tbb,sycl]]),
   [
     AC_MSG_CHECKING(for multithreading)
@@ -149,13 +137,12 @@ AC_ARG_WITH(
       sycl)   AC_MSG_RESULT([build with SYCL tasking on host]);      multithreading=sycl ;;
       *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, cpp or sycl to define target]);            multithreading=false ;;
     esac
-  ], 
-  [ 
-    AC_MSG_CHECKING(for multithreading); 
+  ],
+  [
+    AC_MSG_CHECKING(for multithreading);
     AC_MSG_RESULT(no); multithreading=false
   ]
 )
-
 
 if test "$multithreading" == cpp; then
   AC_DEFINE([SharedCPP], [1], [SharedCPP])
@@ -192,14 +179,14 @@ AC_ARG_WITH(mpi,
       *)     AC_MSG_RESULT(use mpi c++ command ${withval});  mpi=${withval}  ;;
     esac ],
   [ AC_MSG_CHECKING(for mpi); AC_MSG_RESULT(no); mpi=false ])
- 
+
 #AC_DEFUN([AC_PROG_USERMPI], [AC_CHECK_PROG(USERMPI,"${mpi}",yes)])
 
 
 if test "$mpi" != false; then
   CXX=$mpi
   AC_DEFINE([Parallel], [1], [Parallel])
-  
+
   AC_CHECK_PROG( USERMPI, $mpi, "yes" )
   if test x"$USERMPI" != x"yes" ; then
     AC_MSG_WARN([The specified MPI compiler (${mpi}) was not found in the path. If it is a global path, please ignore this message.])
@@ -211,7 +198,7 @@ fi
 # GPU support
 #
 AC_ARG_WITH(
-  gpu, 
+  gpu,
   AS_HELP_STRING([--with-gpu],[build with the GPU support. Not all targets are supported for all programming models, but you will need some threading model enabled [default=no,omp,hip,sycl,cpp]]),
   [
     AC_MSG_CHECKING(for gpu)
@@ -221,11 +208,12 @@ AC_ARG_WITH(
       hip)   AC_MSG_RESULT(build with HIP GPU support);            gpu=hip ;;
       cpp)   AC_MSG_RESULT(build with C++ GPU support);            gpu=cpp ;;
       sycl)  AC_MSG_RESULT(build with SYCL GPU support);           gpu=sycl ;;
+      cuda)  AC_MSG_RESULT(build with CUDA GPU suppport);          gpu=cuda ;;
       *)     AC_MSG_FAILURE([use omp, cpp or sycl to define target]);            gpu=false ;;
     esac
-  ], 
-  [ 
-    AC_MSG_CHECKING(for gpu); 
+  ],
+  [
+    AC_MSG_CHECKING(for gpu);
     AC_MSG_RESULT(no); gpu=false
   ]
 )
@@ -235,7 +223,7 @@ AM_CONDITIONAL([GPUOffloadingOMP],    [test "$gpu" == omp])
 AM_CONDITIONAL([GPUOffloadingSYCL],   [test "$gpu" == sycl])
 AM_CONDITIONAL([GPUOffloadingHIP],    [test "$gpu" == hip])
 AM_CONDITIONAL([GPUOffloadingCPP],    [test "$gpu" == cpp])
-
+AM_CONDITIONAL([GPUOffloadingCUDA],   [test "$gpu" == cuda])
 
 if test "$gpu" == omp; then
   AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
@@ -243,18 +231,89 @@ if test "$gpu" == omp; then
 fi
 
 if test "$gpu" == sycl; then
-  #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([GPUOffloadingSYCL], [1], [GPUOffloadingSYCL])
 fi
 
 if test "$gpu" == hip; then
-  #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([GPUOffloadingHIP], [1], [GPUOffloadingHIP])
 fi
 
 if test "$gpu" == cpp; then
-  #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([GPUOffloadingCPP], [1], [GPUOffloadingCPP])
+fi
+
+if test "$gpu" == cuda; then
+  AC_DEFINE([GPUOffloadingCUDA], [1], [GPUOffloadingCUDA])
+
+  AC_ARG_WITH([cuda],
+    [AS_HELP_STRING([--with-cuda=PATH], [specify CUDA installation path])],
+    [with_cuda="$withval"],
+    [with_cuda=""],
+  )
+
+  # We need to apply further checks on CUDA
+  if test -n "$with_cuda"
+  then
+    # Check the option has argument (empty argument results with a "yes")
+    if test "$with_cuda" = yes
+    then
+      AC_MSG_ERROR([The argument --with-cuda requires the path to CUDA: --with-cuda=<CUDA_PATH>])
+    fi
+
+    # Extract the path from the "--with-cuda" argument and check if the path is valid
+    cuda_path=$(echo "$with_cuda" | sed 's/--with-cuda=//')
+
+    # Check if the path is valid
+    if test ! -d "$cuda_path"; then
+      AC_MSG_ERROR([The input for --with-cuda=$cuda_path is not a valid directory])
+    fi
+
+    CUDA_INCLUDE_FLAGS="-I$with_cuda/include"
+    CUDA_LIBS="-L$with_cuda/lib64 -lcudart_static"
+    CUDA_PATH="$with_cuda"
+    # NVCC is read from the environment variable
+    NVCC="$NVCC"
+
+    AC_SUBST(CUDA_INCLUDE_FLAGS)
+    AC_SUBST(CUDA_LIBS)
+    AC_SUBST(NVCC)
+    AC_SUBST(CUDA_PATH)
+  else
+    AC_MSG_ERROR([If the argument --with-gpu=cuda is given, --with-cuda=<CUDA_PATH> argument is required with the path to the CUDA toolkit])
+  fi
+
+  CXXFLAGS_PEANO_2D_RELEASE=" $CXXFLAGS_PEANO_2D_RELEASE $CUDA_INCLUDE_FLAGS"
+  CXXFLAGS_PEANO_2D_STATS="   $CXXFLAGS_PEANO_2D_STATS   $CUDA_INCLUDE_FLAGS"
+  CXXFLAGS_PEANO_2D_ASSERTS=" $CXXFLAGS_PEANO_2D_ASSERTS $CUDA_INCLUDE_FLAGS"
+  CXXFLAGS_PEANO_2D_TRACE="   $CXXFLAGS_PEANO_2D_TRACE   $CUDA_INCLUDE_FLAGS"
+  CXXFLAGS_PEANO_2D_DEBUG="   $CXXFLAGS_PEANO_2D_DEBUG   $CUDA_INCLUDE_FLAGS"
+
+  CXXFLAGS_PEANO_3D_RELEASE=" $CXXFLAGS_PEANO_3D_RELEASE $CUDA_INCLUDE_FLAGS"
+  CXXFLAGS_PEANO_3D_STATS="   $CXXFLAGS_PEANO_3D_STATS   $CUDA_INCLUDE_FLAGS"
+  CXXFLAGS_PEANO_3D_ASSERTS=" $CXXFLAGS_PEANO_3D_ASSERTS $CUDA_INCLUDE_FLAGS"
+  CXXFLAGS_PEANO_3D_TRACE="   $CXXFLAGS_PEANO_3D_TRACE   $CUDA_INCLUDE_FLAGS"
+  CXXFLAGS_PEANO_3D_DEBUG="   $CXXFLAGS_PEANO_3D_DEBUG   $CUDA_INCLUDE_FLAGS"
+
+  # Necessary for executables and unittests to link to CUDA libraries as we will have compiled CUDA code.
+  LDADD_PEANO_2D_RELEASE=" $LDADD_PEANO_2D_RELEASE $CUDA_LIBS"
+  LDADD_PEANO_2D_STATS="   $LDADD_PEANO_2D_STATS   $CUDA_LIBS"
+  LDADD_PEANO_2D_ASSERTS=" $LDADD_PEANO_2D_ASSERTS $CUDA_LIBS"
+  LDADD_PEANO_2D_TRACE="   $LDADD_PEANO_2D_TRACE   $CUDA_LIBS"
+  LDADD_PEANO_2D_DEBUG="   $LDADD_PEANO_2D_DEBUG   $CUDA_LIBS"
+
+  LDADD_PEANO_3D_RELEASE=" $LDADD_PEANO_3D_RELEASE $CUDA_LIBS"
+  LDADD_PEANO_3D_STATS="   $LDADD_PEANO_3D_STATS   $CUDA_LIBS"
+  LDADD_PEANO_3D_ASSERTS=" $LDADD_PEANO_3D_ASSERTS $CUDA_LIBS"
+  LDADD_PEANO_3D_TRACE="   $LDADD_PEANO_3D_TRACE   $CUDA_LIBS"
+  LDADD_PEANO_3D_DEBUG="   $LDADD_PEANO_3D_DEBUG   $CUDA_LIBS"
+
+  NVCC_FLAGS="-forward-unknown-to-host-compiler -I$srcdir_full_path/src -ccbin=$CXX"
+
+  NVCC_FLAGS_RELEASE="$NVCC_FLAGS -O2"
+  NVCC_FLAGS_STATS="$NVCC_FLAGS -O2"
+  NVCC_FLAGS_ASSERTS="$NVCC_FLAGS -G -O2"
+  NVCC_FLAGS_TRACE="$NVCC_FLAGS -g -O2"
+  NVCC_FLAGS_DEBUG="$NVCC_FLAGS -G -O0"
 fi
 
 
@@ -273,7 +332,7 @@ AM_CONDITIONAL([UsePETSc], [test "x$petsc" = xtrue])
 
 #
 # ===============================================================
-#   Postprocessing and I/O
+# Postprocessing and I/O
 # ===============================================================
 #
 
@@ -289,7 +348,6 @@ AC_ARG_WITH(vtk,
       *)     AC_MSG_RESULT(build against VTK installation);    vtk_include=${withval}  ;;
     esac ],
   [ AC_MSG_CHECKING(for vtk); AC_MSG_RESULT(no); vtk_include=false ])
-  
 
 AM_CONDITIONAL([UseVTK],[test "$vtk_include" != false])
 
@@ -299,11 +357,11 @@ if test "$vtk_include" != false; then
   AC_CHECK_FILE([$vtk_include/vtkVersion.h], [vtkFound="OK"])
   VTK_INCLUDE=-I$vtk_include
   AC_MSG_RESULT(use VTK include argument $VTK_INCLUDE)
- 
+
   AC_SUBST([VTK_INCLUDE])
 
   #
-  # If you specify a version, then I use this one. Otherwise, I search $vtk_include  
+  # If you specify a version, then I use this one. Otherwise, I search $vtk_include
   #
   AC_ARG_WITH(vtk_version,
     AS_HELP_STRING([--with-vtk-version],[specify vtk version (major) [default=autodetect]]),
@@ -316,7 +374,7 @@ if test "$vtk_include" != false; then
   if test x$vtk_version == x"autodetect"; then
     vtk_version_line=$(grep "define VTK_MAJOR_VERSION " $vtk_include/*.h)
     vtk_version=$(echo $vtk_version_line  | rev | cut -d' ' -f 1 | rev)
- 
+
     if test x$vtk_version != "x"; then
       AC_MSG_NOTICE([detected VTK version $vtk_version])
     else
@@ -332,20 +390,20 @@ if test "$vtk_include" != false; then
         yes)   AC_MSG_RESULT(assume VTK libraries have no suffix);    vtk_suffix=""  ;;
 	no)    AC_MSG_RESULT(not set - try to autodetect); vtk_suffix="autodetect";;
         *)     AC_MSG_RESULT(use suffix ${withval});    vtk_suffix=${withval}  ;;
-      esac 
-    ],  
+      esac
+    ],
     [ AC_MSG_CHECKING(for vtk-suffix); AC_MSG_RESULT(not set - try to autodetect); vtk_suffix="autodetect" ])
 
 
   #
-  # So far, every VTK version we had tested had vtkIOCore, so we test this one. On the 
-  # long term, there might be a need for ifs here checking the version.  
-  # 
+  # So far, every VTK version we had tested had vtkIOCore, so we test this one. On the
+  # long term, there might be a need for ifs here checking the version.
+  #
   # You have to very careful with the spaces here. A missing space before/after the ==
   # destroys the semantics. The x that I add before rhs and lhs of the comparison is
-  # a cheap trick. It ensures that the expression is valid even if vtk_suffix is 
+  # a cheap trick. It ensures that the expression is valid even if vtk_suffix is
   # empty
-  # 
+  #
 
   if test x$vtk_suffix == x"autodetect"; then
     vtk_version_line=$(grep "define VTK_MAJOR_VERSION " $vtk_include/*.h)
@@ -361,7 +419,6 @@ if test "$vtk_include" != false; then
   AC_SUBST([VTK_LIBRARY_SUFFIX])
 fi
 
-
 AM_CONDITIONAL([VTK_LIBRARY_VERSION_7],[test "$vtk_version" = "7"])
 AM_CONDITIONAL([VTK_LIBRARY_VERSION_8],[test "$vtk_version" = "8"])
 AM_CONDITIONAL([VTK_LIBRARY_VERSION_9],[test "$vtk_version" = "9"])
@@ -374,7 +431,6 @@ AM_CONDITIONAL([VTK_LIBRARY_VERSION_9],[test "$vtk_version" = "9"])
 #
 #AX_LIB_HDF5
 
-
 AC_ARG_WITH(hdf5,
   AS_HELP_STRING([--with-hdf5],[enable HDF5 support [default=no]]),
   [ AC_MSG_CHECKING(for hdf5)
@@ -383,10 +439,10 @@ AC_ARG_WITH(hdf5,
       *)     AC_MSG_RESULT(build with HDF5 support);  use_hdf5=true  ;;
     esac ],
   [ AC_MSG_CHECKING(for hdf5); AC_MSG_RESULT(no); use_hdf5=false ])
- 
+
 if test "$use_hdf5" == true; then
   AC_DEFINE([UseHDF5], [1], [UseHDF5])
-fi 
+fi
 
 
 #
@@ -429,7 +485,7 @@ fi
 
 #
 # ===============================================================
-#   Floating-point exception handling
+# Floating-point exception handling
 # ===============================================================
 #
 
@@ -447,13 +503,14 @@ if test "$use_fenv" == true; then
   AC_DEFINE([UseFenv], [UseFenv], [UseFenv])
 fi
 
+
 #
 # ===============================================================
-#   Tailored toolchains
+# Tailored toolchains
 #
-# A toolchain in Peano in particular, bespoke compile and build 
+# A toolchain in Peano in particular, bespoke compile and build
 # settings that work well with particular (performance) analysis
-# tools or a suite of dev tools by a particular vendor, or some 
+# tools or a suite of dev tools by a particular vendor, or some
 # bespoke postprocessing tools.
 # ===============================================================
 #
@@ -473,9 +530,9 @@ AC_ARG_WITH(toolchain,
       chrome)    AC_MSG_RESULT(build with logging support for Google Chrome); toolchain=chrome ;;
       gnu)       AC_MSG_RESULT(build with specialised GNU flags); toolchain=gnu ;;
       *)         AC_MSG_FAILURE([default=no (no bespoke toolchain)]); toolchain=false ;;
-    esac 
+    esac
   ],
-  [ 
+  [
     AC_MSG_CHECKING(for toolchain);
     AC_MSG_RESULT(no); toolchain=false
   ]
@@ -484,13 +541,13 @@ AC_ARG_WITH(toolchain,
 if test "$toolchain" == itac; then
   AC_DEFINE([UseITAC], [1], [UseITAC])
   AC_DEFINE([UseLogService], [ITACLogger], [ITACLogger])
-  
+
   CXXFLAGS_PEANO_2D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_2D_STATS+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_2D_ASSERTS+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
   CXXFLAGS_PEANO_2D_TRACE+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_2D_DEBUG+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
-  
+
   CXXFLAGS_PEANO_3D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_3D_STATS+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_3D_ASSERTS+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
@@ -502,13 +559,13 @@ fi
 if test "$toolchain" == itt; then
   AC_DEFINE([UseITT], [1], [UseITT])
   AC_DEFINE([UseLogService], [ITTLogger], [ITTLogger])
-  
+
   CXXFLAGS_PEANO_2D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_2D_STATS+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_2D_ASSERTS+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
   CXXFLAGS_PEANO_2D_TRACE+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_2D_DEBUG+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
-  
+
   CXXFLAGS_PEANO_3D_RELEASE+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_3D_STATS+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_3D_ASSERTS+=" -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
@@ -539,11 +596,9 @@ if test "$toolchain" == gnu; then
 fi
 
 
-
-
 #
 # ===============================================================
-#   Toolboxes (actives with enable)
+# Toolboxes (actives with enable)
 #
 # A toolbox is an optional extension of Peano (package). As there
 # are dependencies between the toolboxes, this part only analyses
@@ -579,10 +634,10 @@ AC_ARG_ENABLE(multiprecision,
     esac ],
   [ AC_MSG_CHECKING(for multiprecision); AC_MSG_RESULT(no); toolbox_multiprecision=false ])
 AM_CONDITIONAL([UseToolboxMultiprecision],[test "x$toolbox_multiprecision" = xtrue])
- 
- 
+
+
 #
-# Load balancing 
+# Load balancing
 #
 AC_ARG_ENABLE(loadbalancing,
   AS_HELP_STRING([--enable-loadbalancing],[enable loadbalancing  [default=false]]),
@@ -596,7 +651,7 @@ AM_CONDITIONAL([UseToolboxLoadBalancing],[test "x$toolbox_loadbalancing" = xtrue
 
 
 #
-# Particles 
+# Particles
 #
 AC_ARG_ENABLE(particles,
   AS_HELP_STRING([--enable-particles],[enable particles  [default=false]]),
@@ -664,41 +719,39 @@ AC_ARG_WITH(delta,
   [ AC_MSG_CHECKING(for delta); AC_MSG_RESULT(no); toolbox_delta=false ])
 # This whole autotools thing is not very nice: If I wanna use an if ... endif (
 # note the syntax which is different to the present file, then I have to declare
-# the variable as I do in the line below. Otherwise, the if thing is not 
-# "exported". Seems the autoconf and the makefile generator are completely 
+# the variable as I do in the line below. Otherwise, the if thing is not
+# "exported". Seems the autoconf and the makefile generator are completely
 # separate with inconsistent syntax.
 AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
-
-
 
 
 #
 # ===============================================================
 #   Setup toolboxes and extensions
 #
-# Run through the set of toolboxes and extensions that are enabled, 
-# configure them properly, i.e. augment the Peano compile and 
-# linker flags, and check for consistency, i.e. whether all 
+# Run through the set of toolboxes and extensions that are enabled,
+# configure them properly, i.e., augment the Peano compile and
+# linker flags, and check for consistency, i.e., whether all
 # dependencies are ok.
 # ===============================================================
 #
 
 
 #
-# FEM 
+# FEM
 #
 if test "$toolbox_finiteelements" != false; then
   AC_DEFINE([UseToolboxFiniteElements], [1], [UseToolboxFiniteElements])
-  
+
   LDADD_PEANO_2D_RELEASE=" -lToolboxFiniteElements2d         $LDADD_PEANO_2D_RELEASE"
   LDADD_PEANO_2D_STATS="   -lToolboxFiniteElements2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lToolboxFiniteElements2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxFiniteElements2d_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lToolboxFiniteElements2d_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lToolboxFiniteElements2d_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lToolboxFiniteElements3d         $LDADD_PEANO_3D_RELEASE"
   LDADD_PEANO_3D_STATS="   -lToolboxFiniteElements3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lToolboxFiniteElements3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxFiniteElements3d_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lToolboxFiniteElements3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lToolboxFiniteElements3d_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -711,20 +764,20 @@ fi
 
 
 #
-# Multiprecision 
+# Multiprecision
 #
 if test "$toolbox_multiprecision" != false; then
   AC_DEFINE([UseToolboxMultiprecision], [1], [UseToolboxMultiprecision])
-  
+
   LDADD_PEANO_2D_RELEASE=" -lToolboxMultiprecision         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxMultiprecision_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lToolboxMultiprecision_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxMultiprecision_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lToolboxMultiprecision_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lToolboxMultiprecision_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lToolboxMultiprecision         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS="   -lToolboxMultiprecision_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lToolboxMultiprecision_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxMultiprecision_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lToolboxMultiprecision_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lToolboxMultiprecision_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -737,20 +790,20 @@ fi
 
 
 #
-# Load balancing 
+# Load balancing
 #
 if test "$toolbox_loadbalancing" != false; then
   AC_DEFINE([UseToolboxLoadBalancing], [1], [UseToolboxLoadBalancing])
-  
+
   LDADD_PEANO_2D_RELEASE=" -lToolboxLoadBalancing2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxLoadBalancing2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lToolboxLoadBalancing2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxLoadBalancing2d_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lToolboxLoadBalancing2d_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lToolboxLoadBalancing2d_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lToolboxLoadBalancing3d         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS="   -lToolboxLoadBalancing3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lToolboxLoadBalancing3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxLoadBalancing3d_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lToolboxLoadBalancing3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lToolboxLoadBalancing3d_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -767,16 +820,16 @@ fi
 #
 if test "$toolbox_blockstructured" != false; then
   AC_DEFINE([UseToolboxBlockstructured], [1], [UseToolboxBlockstructured])
-  
+
   LDADD_PEANO_2D_RELEASE=" -lToolboxBlockstructured2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxBlockstructured2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lToolboxBlockstructured2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxBlockstructured2d_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lToolboxBlockstructured2d_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lToolboxBlockstructured2d_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lToolboxBlockstructured3d         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS="   -lToolboxBlockstructured3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lToolboxBlockstructured3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxBlockstructured3d_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lToolboxBlockstructured3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lToolboxBlockstructured3d_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -789,20 +842,20 @@ fi
 
 
 #
-# Particles 
+# Particles
 #
 if test "$toolbox_particles" != false; then
   AC_DEFINE([UseToolboxParticles], [1], [UseToolboxParticles])
-  
-  LDADD_PEANO_2D_RELEASE+=" -lToolboxParticles2d         $LDADD_PEANO_2D_RELEASE " 
+
+  LDADD_PEANO_2D_RELEASE+=" -lToolboxParticles2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS+="   -lToolboxParticles2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS+=" -lToolboxParticles2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS+=" -lToolboxParticles2d_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE+="   -lToolboxParticles2d_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG+="   -lToolboxParticles2d_debug   $LDADD_PEANO_2D_DEBUG "
 
-  LDADD_PEANO_3D_RELEASE+=" -lToolboxParticles3d         $LDADD_PEANO_3D_RELEASE " 
+  LDADD_PEANO_3D_RELEASE+=" -lToolboxParticles3d         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS+="   -lToolboxParticles3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS+=" -lToolboxParticles3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS+=" -lToolboxParticles3d_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE+="   -lToolboxParticles3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG+="   -lToolboxParticles3d_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -824,13 +877,13 @@ if test "$petsc" != false; then
   fi
   LDADD_PEANO_2D_RELEASE=" -lPETSc         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lPETSc_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lPETSc_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lPETSc_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lPETSc         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS="   -lPETSc_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lPETSc_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lPETSc_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -855,13 +908,13 @@ if test "$toolbox_exahype" != false; then
   fi
   LDADD_PEANO_2D_RELEASE=" -lExaHyPE2Core2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lExaHyPE2Core2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lExaHyPE2Core2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lExaHyPE2Core2d_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lExaHyPE2Core2d_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lExaHyPE2Core2d_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lExaHyPE2Core3d         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS="   -lExaHyPE2Core3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lExaHyPE2Core3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lExaHyPE2Core3d_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lExaHyPE2Core3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lExaHyPE2Core3d_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -874,7 +927,6 @@ fi
 
 
 if test "$use_libxsmm" != false; then
-  #Libxsmm
   echo "Checking whether libxsmm needs to be installed or built"
   if @<:@ ! -d submodules @:>@; then
     mkdir submodules
@@ -885,13 +937,13 @@ if test "$use_libxsmm" != false; then
     cd submodules
     git clone https://github.com/libxsmm/libxsmm.git
     cd libxsmm
-    git checkout 9b7bbb95c
-    #Clean documentation to save space
-    rm -rf samples/ #over 100M of not needed stuff
-    rm -rf documentation/ #around 10M of documentation
+    #git checkout 9b7bbb95c
+    # Clean documentation to save space
+    rm -rf samples/ # Over 100M of not needed stuff
+    rm -rf documentation/ # Around 10M of documentation
     cd ../..
   fi
-  
+
   # build libxsmm
   if @<:@ ! -d submodules/libxsmm/bin @:>@ || @<:@ ! -e submodules/libxsmm/bin/libxsmm_gemm_generator @:>@; then
     REBUILD_LIBXSMM=true
@@ -906,8 +958,6 @@ if test "$use_libxsmm" != false; then
     cd ../..
   fi
   echo "Finished building libxsmm generator"
-
-
 fi
 
 
@@ -924,13 +974,13 @@ if test "$toolbox_swift" != false; then
   fi
   LDADD_PEANO_2D_RELEASE=" -lSWIFT2Core2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lSWIFT2Core2d_stats   $LDADD_PEANO_2D_STATS "
-  LDADD_PEANO_2D_ASSERTS=" -lSWIFT2Core2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_ASSERTS=" -lSWIFT2Core2d_asserts $LDADD_PEANO_2D_ASSERTS "
   LDADD_PEANO_2D_TRACE="   -lSWIFT2Core2d_trace   $LDADD_PEANO_2D_TRACE "
   LDADD_PEANO_2D_DEBUG="   -lSWIFT2Core2d_debug   $LDADD_PEANO_2D_DEBUG "
 
   LDADD_PEANO_3D_RELEASE=" -lSWIFT2Core3d         $LDADD_PEANO_3D_RELEASE "
   LDADD_PEANO_3D_STATS="   -lSWIFT2Core3d_stats   $LDADD_PEANO_3D_STATS "
-  LDADD_PEANO_3D_ASSERTS=" -lSWIFT2Core3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_ASSERTS=" -lSWIFT2Core3d_asserts $LDADD_PEANO_3D_ASSERTS "
   LDADD_PEANO_3D_TRACE="   -lSWIFT2Core3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lSWIFT2Core3d_debug   $LDADD_PEANO_3D_DEBUG "
 
@@ -981,6 +1031,12 @@ AC_SUBST(CXXFLAGS_PEANO_3D_ASSERTS)
 AC_SUBST(CXXFLAGS_PEANO_3D_TRACE)
 AC_SUBST(CXXFLAGS_PEANO_3D_DEBUG)
 
+AC_SUBST(NVCC_FLAGS_RELEASE)
+AC_SUBST(NVCC_FLAGS_STATS)
+AC_SUBST(NVCC_FLAGS_ASSERTS)
+AC_SUBST(NVCC_FLAGS_TRACE)
+AC_SUBST(NVCC_FLAGS_DEBUG)
+
 AC_SUBST(LDFLAGS_PEANO_RELEASE)
 AC_SUBST(LDFLAGS_PEANO_STATS)
 AC_SUBST(LDFLAGS_PEANO_ASSERTS)
@@ -999,10 +1055,6 @@ AC_SUBST(LDADD_PEANO_3D_ASSERTS)
 AC_SUBST(LDADD_PEANO_3D_TRACE)
 AC_SUBST(LDADD_PEANO_3D_DEBUG)
 
-#
-# Kick out makefiles. I'm not sure but it seems that you have to add the directories to
-# Makefile.am in the src subdirectories, too
-#
 AC_CONFIG_FILES([Makefile
   src/Makefile
   src/toolbox/blockstructured/Makefile

@@ -53,7 +53,7 @@ you are interested in. After that, create the Makefile (only once, as it will
 be overwritten). Within the makefile, alter the linker step:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-OPTIMISED_FILE=observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfLists4
+OPTIMISED_FILE=observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4
 
 
 #
@@ -85,7 +85,7 @@ tarch::MemoryLocation.
 
 Peano realises a strict cell-wise traversal paradigm, where individual
 actions @ref peano_action_sets "are tied to single cells, faces or vertices".
-Therefore, @ref peano_amr_tex "Peano's AMR" is also controlled by sets of 
+Therefore, @ref page_peano_amr_tex "Peano's AMR" is also controlled by sets of 
 refine and erase events. The decision to refine or erase a mesh is made
 by Peano by comparing each and every mesh entity against the set of 
 erase and refine commands. This happens in 
