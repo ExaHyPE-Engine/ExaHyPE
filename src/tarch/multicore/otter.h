@@ -27,6 +27,10 @@
  * it. In the remaining text I assume that you have typed in
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~
+ * mkdir build
+ * cd build
+ *
+ * cmake ..
  * cmake --build .
  * cmake --install . --prefix otter-dir
  * ~~~~~~~~~~~~~~~~~~~~~~~~
