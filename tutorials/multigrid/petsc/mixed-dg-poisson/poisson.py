@@ -43,14 +43,12 @@ project = petsc.Project(project_name = "HDG",
                         ) 
                         
                         
-solver = petsc.solvers.HdgFirstDiscretisation("HDG",
-                                              args.degree,
-                                              cellDofs,
-                                              faceDofs,
-                                              args.meshsize,
-                                              args.meshsize,
-                                              args.dimensions,
-                                              )
+solver = petsc.solvers.MixedDiscontinuousGalerkinDiscretisation("Poisson",
+                                                           args.degree,
+                                                           unknowns_per_cell_dof = 3,
+                                                           args.meshsize,
+                                                           args.meshsize,
+                                                           )
 
 project.add_solver( solver )
                         

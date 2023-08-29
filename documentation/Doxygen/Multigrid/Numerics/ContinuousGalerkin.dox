@@ -25,7 +25,7 @@ the following situation:
 
 What we aim to do here is to show how we update @f$ u @f$, based on our formulation.
 
-@image html testFunction.png
+@image html continuous_shape_functions.png
 
 From here onwards, we pick our @f$ u @f$ to be a member of some space of polynomials, and we label the coefficients/weights
 as the @f$ u_i @f$. Concretely:
