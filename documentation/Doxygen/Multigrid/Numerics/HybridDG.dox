@@ -1,26 +1,25 @@
 /**
  
  @page page_multigrid_numerics_Hybrid_DG Hybrid DG
-  
-  We discuss the steps involved in running the file hdg.py.
-While we discuss some of the mathematics behind the solver, the text mainly 
-focuses on how to build the code.
 
-Hybridised DG is, from a data structure point of view, very similar to the 
-Discontinuous Galerkin scheme as presented above. Let
+
+We discuss the realisation of hybrid (mixed) DG formalisms by mean of the Poisson equation.
+
+Before we dive into details, it is important to study @ref page_multigrid_numerics_Mixed_Galerkin "the mixed DG discussion"
+which lays the foundations of the present discussion. Hybridised DG is, from a 
+data structure point of view, very similar to the Discontinuous Galerkin scheme
+as presented above. 
+
+
+# Mathematical approach
+
+Let
 
 @f$
 \lambda_u := [[u]]  \qquad \text{and} \qquad \lambda_\phi := [[ (n,\phi) ]]
 @f$ 
 
-denote the additional variables, i.e.
-
-        unknowns_per_face_dof = 4
-
-Again, the left and right @f$ \lambda _u @f$ are the same and 
-@f$ \lambda _\phi ^+ @f$ and @f$ \lambda _\phi ^- @f$ differ only by their 
-sign, but we keep the information redundantly.
-Next, we assume that we know the 
+denote the additional variables that "to not exist" on the face. Next, we assume that we know the 
 @f$ \lambda _u @f$ (which other manuscript also call @f$ \hat{u} @f$) somehow. 
 If so, we can evaluate 
 
@@ -35,12 +34,14 @@ Furthermore, we fix a magic constant @f$ \gamma > @f$ and enforce
 
 
 \f{eqnarray*}{
- \pm \lambda _\phi & := & [[ (n,\phi) ]] + \gamma \left( [[u]] - \lambda _u \right) \\
-   & = & \frac{1}{2} (n,\phi)^+ + \frac{1}{2} (n,\phi)^- \pm \frac{\gamma}{2} u^+ \pm \frac{\gamma}{2} u^- - \gamma \cdot \pm \lambda _u
+ \lambda _\phi & := & [[ (n,\phi) ]] + \gamma \left( [[u]] - \lambda _u \right) \\
+   & = & \frac{1}{2} (n,\phi)^+ + \frac{1}{2} (n,\phi)^- + \frac{\gamma}{2} u^+ + \frac{\gamma}{2} u^- - \gamma \cdot \lambda _u.
 \f}
 
 
 
+In this equation, the normal is fixed as pointing parallel to the coordinate 
+axis with axis-aligned cubes/squares serving as finite element cells.
 This means, the very moment we have computed @f$ \lambda _u @f$, we can derive
 @f$ \lambda _\phi @f$ and throw the face integrals back into the cells.
 All that is left now is a rule how to determine this @f$ \lambda _u @f$.
@@ -86,7 +87,7 @@ The rationale behind the construction of @f$ \lambda _u @f$ is not too difficult
 My argument goes as follows: If we walk from the left cell to the right, then the
 average gradient in the sketch
 
-@image html phiHat.png
+  @image html documentation/average_gradient.png
 
 is the average of two blue lines. However, if we do an intermediate step into some 
 @f$ \lambda _u @f$ which is very high (higher than any blue line), then we have 
@@ -96,5 +97,38 @@ How much effect the jump has compared to the change
   from left to right derivative is controlled via @f$ \gamma @f$. 
 
 
+# Implementation
+
+Different to the @ref page_multigrid_numerics_Mixed_Galerkin "Discontinous Galerkin formulation"
+where we solve the Riemann problem manually, we have fewer degrees of freedom to 
+be stored per face. If we solve the Riemann problem, we manually derive equations
+for @f$ \lambda _u @f$ and @f$ \lambda _\phi @f$, and these "outcomes" can be different
+left and right of the face. This time, we do not manually derive anything and therefore
+stick to
+
+        unknowns_per_face_dof = 2
+        
+for the Poisson equation. The two helper qualities are used to store the projections
+of the solution or the normal of the gradient onto the face.
+
+Once we pick a hybridised mixed solver, the solver will add an additional @f$ \hat K \cdot (p+1)^{d-1} @f$
+quantities to each face, where the @f$ \hat K @f$ is also referred to as 
+
+        hybrid_formulation_unknowns_per_face_dof = 1
+
+We set it to one here, as we always discuss the Poisson equation. The operators passed
+in therefore change:
+
+- cell-to-cell remains exactly the same as in the @ref page_multigrid_numerics_Mixed_Galerkin "mixed formulation". Nothing has changed here.
+- cell-to-face remains exactly the same as in the @ref page_multigrid_numerics_Mixed_Galerkin "mixed formulation". Nothing has changed here.
+- face-to-face becomes a @f$ \mathbb{R}^{ \hat K \cdot (p+1)^{d-1} \times \hat K \cdot (p+1)^{d-1} } @f$ matrix. It describes how the additional hybrid formulation unknowns interact.
+- face-to-cell changes dimensions compared @ref page_multigrid_numerics_Mixed_Galerkin "to the plain mixed formulation". It is now from @f$ \mathbb{R}^{ K \cdot (p+1)^d \times \hat K \cdot (p+1)^{d-1} } @f$, i.e. describes how the outcome of the additioanl equation system (over @f$ \lambda _u @f$ in the example above) is mapped onto the cell data.
+- There is a new operator face-to-rhs which takes the projections and maps them onto the right-hand side of the additional equation system.
+
+The distinction between an explicit cell-to-face projection of the solution and 
+the face-to-rhs is convenient, as the construction of the right-hand side might
+use the projection from left and right and might, in the future, not be linear.
+This means, that we first have to project the solution and then use it to 
+construct the right-hand side.
 
   */

@@ -242,7 +242,7 @@ the solution there at the moment. Therefore, we introduce
   approximate solution to @f$ u @f$ is discontinuous, meaning we have a jump. 
   See the blue line below or the grey one. We'll discuss the other formalism
   later:
-  @image html documentation/phiHat.png
+  @image html documentation/average_gradient.png
   Therefore, we have two solutions per degree of freedom: The one from the 
   left and the one from the right. This is the factor of two.
 - Finally, we already said that we will store two quantities per degree of 
@@ -284,7 +284,7 @@ This is a projection from the cell onto the face.
 
 We highlight what this projection matrix looks like for Gauss-Lobatto.
 
-@image html cellFlat.png
+@image html degree_of_freedom_semantics_Lobatto.png
 
 Gauss-Lobatto is trivial, as some cell dofs coincide spatially with the 
 face dofs. This is not necessary: Users can use Gauss-Legendre for
@@ -403,7 +403,7 @@ do so.
 We note explicitly that the three unknowns per cell dof are @f$ u @f$,
 @f$ \phi_x @f$ and @f$ \phi_y @f$.
 
-@image html documentation/projection.png
+@image html projection.png
 
 
 
@@ -520,6 +520,11 @@ the non-existing values through the averages from left and right:
   \int _{\partial \text{cell}_{\psi _u}}  (u^- + u^+) \cdot ( n, \psi _u ) dS(x)
 \f}
 
+The image below illustrates this for the gradient @f$ \phi @f$:
+
+  @image html documentation/average_gradient.png
+
+The gradient does not exist at the cell boundaries, but we can simply average it.
 
 
 There are two ways to implement this scheme:
@@ -535,9 +540,9 @@ take into account the sign of the normal.
 
 
 The second variant is more sophsticiated, yet allows users later to implement
-more sophisticated schemes and notably the hybridised variant. For this one,
+more sophisticated schemes aka Riemann solvers. For this one,
 we assume that a face has explicit values @f$ (\lambda _u, \lambda _\phi) @f$ 
-which represent these averages. So the face has the left and the right projection,
+(the sketch above denotes them as @f$ \lambda _phi = \hat \phi @f$) which represent these averages. So the face has the left and the right projection,
 but also a value which explicitly computes this arising approximation. We model
 this by
 
@@ -591,6 +596,9 @@ and hence not subject to any additional equations.
 The third line averages the @f$ u @f$ values from left and right, the
 fourth line addresses the normal projections of @f$ \phi @f$. 
 
+
+@todo Tobias has to think about non-linear Riemann solvers, where we cannot use 
+ a matrix anymore, i.e. do not have a face-to-face operator
  
  */
  
