@@ -973,8 +973,10 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
         distanceAlongCoordinateAxis = 1.0 - distanceAlongCoordinateAxis / h ;
         weight *= std::max(0.0, distanceAlongCoordinateAxis);
       }
+      #if !defined(SharedSYCL)
       assertion( tarch::la::greaterEquals(weight, 0.0) );
       assertion( tarch::la::smallerEquals(weight, 1.0) );
+      #endif
 
       tarch::la::Vector<Dimensions, int> amendedSourceVolume = sourceVolume;
       if (isFromUnitialisedDiagonal) {
