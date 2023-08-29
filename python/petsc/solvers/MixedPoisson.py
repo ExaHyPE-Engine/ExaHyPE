@@ -41,7 +41,11 @@ class MixedPoisson(Solver):
                min_h,
                max_h,
                dimensions,
-               generated_matrices):
+               cellCellMassMatrix,
+               cellCellSystemMatrix,
+               cellToFaceMatrix,
+               FaceFaceMatrix
+               ):
     """!
    
  Test comment (C)
@@ -53,9 +57,12 @@ class MixedPoisson(Solver):
                                               max_h
                                               )
 
-    self.polynomial_degree   = polynomial_degree
-    self.dimensions          = dimensions
-    self.generated_matrices  = generated_matrices
+    self.polynomial_degree     = polynomial_degree
+    self.dimensions            = dimensions
+    self.cellCellMassMatrix    = cellCellMassMatrix
+    self.cellCellSystemMatrix  = cellCellSystemMatrix
+    self.cellToFaceMatrix      = cellToFaceMatrix
+    self.FaceFaceMatrix        = FaceFaceMatrix
 
     #this code below is somewhat redundant 
     self.quadrature_points, self.weights, self.poly_coeffs = \
@@ -255,6 +262,13 @@ class MixedPoisson(Solver):
     points, weights = leggauss( self.polynomial_degree + 1 )
 
     return points, weights, coeffs
+
+  def convertMatrixToInitList(self, matrix):
+    output = "{ " + str(matrix[0,0])
+    for el in matrix.flatten():
+      output += f", {str(el)}"
+    output += "}"
+    return output
 
   def get_solver_repository_snippets(self):
 
