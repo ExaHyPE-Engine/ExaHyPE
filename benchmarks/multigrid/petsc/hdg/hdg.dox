@@ -53,7 +53,7 @@ We can write the second and third line as one with the gradient:
 Nothing has been gained so far, despite the fact that the gradient is now 
 explicitly available in our formulation. Some codes can use this for their 
 algorithm. We have indeed "lost" a little bit of efficiency. In the normal
-@ref benchmark_multigrid_petsc_poisson "continuous Galerkin case", we have
+@ref tutorials_multigrid_petsc_poisson "continuous Galerkin case", we have
 only one unknown, i.e. a scalar, per degree of freedom. This time, we have 
 have to maintain three unknowns.
 
@@ -71,7 +71,7 @@ Our intention is to puzzle the solution together from very primitive small
 shape functions:
 We want to construct a solution to our system by concatenating the scaled 
 shape functions over the domain into one solution. In 1d, this looked, 
-for the @ref benchmark_multigrid_petsc_poisson "continuous case with linear shape functions"
+for the @ref tutorials_multigrid_petsc_poisson "continuous case with linear shape functions"
 similar to 
 
 @image html ../poisson/testFunction.png

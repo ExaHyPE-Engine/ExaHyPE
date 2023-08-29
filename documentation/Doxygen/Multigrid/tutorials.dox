@@ -2,7 +2,7 @@
 
 @page multigrid_tutorials Tutorials
 
-\li \subpage benchmark_multigrid_petsc_poisson
+\li \subpage tutorials_multigrid_petsc_poisson
 \li \subpage benchmark_multigrid_petsc_hdg_discretisation
 
 
