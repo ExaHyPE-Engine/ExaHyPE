@@ -41,10 +41,35 @@
  * - Add --with-otter to your configure call.
  * - Augment your CXXFLAGS="... -Iotter-dir/include".
  * - Augment your LDFLAGS="... -Lotter-dir/libs".
- * - Augment your LIBS="... lotter-task-graph -lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5".
- *   It is important that the HDF5 libs are enlisted ***after*** the otter
- *   libs, as C++'s linker reads libraries from left to right and resolves
- *   dependencies from left to right.
+ * - Augment your LIBS="... -lotter-task-graph".
+ *
+ *
+ *
+ * OTF2 is the only mandatory dependency of Otter. If you have built it
+ * as static library, the Otter libraries contains it already, and nothing
+ * is to be done: We don't need to add these libraries to Peano's
+ * configuration. If you have built it as dynamic library - which is the
+ * default on most Ubuntu systems, e.g. - you have to add it to the linker
+ * call explicitly:
+ *
+ * - Augment your LDFLAGS="... -L/opt/otf2/lib" or wherever OTF did and up.
+ * - Augment your LIBS="... -lotf2".
+ *
+ *
+ *
+ * A similar argument holds for HDF5. If you use HDF5 within Otter - which is
+ * optional - you will have to add its shared libraries
+ *
+ *             LIBS="... -lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5"
+ *
+ * to Peano's configuration, too.
+ *
+ *
+ * It is important that the Otter libs are enlisted after all other libraries
+ * of Peano, and that the HDF5 and OTF libs are in turn
+ * enlisted ***after*** the otter libs, as C++'s linker reads libraries from
+ * left to right and resolves dependencies from left to right.
+ *
  *
  * Analogous steps are required if you use cmake.
  *
