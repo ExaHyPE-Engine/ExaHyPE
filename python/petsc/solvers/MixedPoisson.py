@@ -64,6 +64,8 @@ class MixedPoisson(Solver):
     self.cellToFaceMatrix      = cellToFaceMatrix
     self.FaceFaceMatrix        = FaceFaceMatrix
 
+    assert cellCellMassMatrix.shape == cellCellSystemMatrix.shape, "shapes don't match. perform some padding"
+
     #this code below is somewhat redundant 
     self.quadrature_points, self.weights, self.poly_coeffs = \
       self.initGaussLobatto()
@@ -276,7 +278,7 @@ class MixedPoisson(Solver):
     # OBJECT TO PASTE ALL THE CODE THAT WE WANT INSIDE
 
     header = """
-      int getTotalFaceDofs();
+    int getTotalFaceDofs();
     int getTotalCellDofs();
     int getTotalVertexDofs();
 
@@ -356,13 +358,19 @@ class MixedPoisson(Solver):
     #let's add to the header. 
     #time to insert the extra matrices we generated
 
-    for name, mat in self.generated_matrices.items():
-      shape  = mat[0]
-      matrix = mat[1]
-      header += f"""
-    inline tarch::la::Matrix< {shape[0]}, {shape[1]}, double > {name} = {matrix};
-      """
+    # for name, mat in self.generated_matrices.items():
+    #   shape  = mat[0]
+    #   matrix = mat[1]
+    #   header += f"""
+    # inline tarch::la::Matrix< {shape[0]}, {shape[1]}, double > {name} = {matrix};
+    #   """
 
+    header += f"""
+    inline tarch::la::Matrix< {self.cellCellMassMatrix.shape[0]}, {self.cellCellMassMatrix.shape[1]}, double > cellCellMassMatrix = {self.convertMatrixToInitList(self.cellCellMassMatrix)};
+    inline tarch::la::Matrix< {self.cellCellSystemMatrix.shape[0]}, {self.cellCellSystemMatrix.shape[1]}, double > cellCellSystemMatrix = {self.convertMatrixToInitList(self.cellCellSystemMatrix)};
+    inline tarch::la::Matrix< {self.cellToFaceMatrix.shape[0]}, {self.cellToFaceMatrix.shape[1]}, double > cellToFaceMatrix = {self.convertMatrixToInitList(self.cellToFaceMatrix)};
+    inline tarch::la::Matrix< {self.FaceFaceMatrix.shape[0]}, {self.FaceFaceMatrix.shape[1]}, double > FaceFaceMatrix = {self.convertMatrixToInitList(self.FaceFaceMatrix)};
+"""
 
     cpp = """
 int {{NAMESPACE | join("::")}}::repositories::getTotalFaceDofs() {

@@ -775,25 +775,27 @@ class AssemblePETSCMatrixForMP(ActionSet):
     int globalIndex =  repositories::getGlobalCellIndex( localIndex );
 
     //construct the list of row indices we want to use:
-    std::vector<int> rowIndices({{CELL_CARDINALITY}});
+    int rowIndices [{{CELL_CARDINALITY}}];
     //fill this vector up, starting with our global index
-    std::iota(rowIndices.begin(), rowIndices.end(), globalIndex);
+    std::iota(rowIndices, rowIndices + {{CELL_CARDINALITY}}, globalIndex);
 
     //repeat for the colIndices
-    std::vector<int> colIndices({{CELL_CARDINALITY}});
+    int colIndices [{{CELL_CARDINALITY}}];
     //fill this vector up, starting with our global index
-    std::iota(colIndices.begin(), colIndices.end(), globalIndex);
+    std::iota(colIndices, colIndices + {{CELL_CARDINALITY}}, globalIndex);
     
     //we want to scale the matrix down
     //make a copy
-    const int rows = repositories::cellToCell.rows();
-    const int cols = repositories::cellToCell.cols();
+    const int rows = repositories::cellCellMassMatrix.rows();
+    const int cols = repositories::cellCellMassMatrix.cols();
+    const int size = rows * cols;
     double tempMatrix[ rows*cols ];
 
-    //scale, and place into this temporary array
-    std::transform( repositories::cellToCell.data(), repositories::cellToCell.data() + repositories::cellToCell.size(),
-                    tempMatrix,
-                    [&](const double& d){return d*marker.h()[0]*marker.h()[1];} );
+    //scale mass matrix down by h**2
+    std::transform( repositories::cellCellMassMatrix.data(), repositories::cellCellMassMatrix.data() + size,
+                    repositories::cellCellSystemMatrix.data(), // get data from both matrices, combine them together in the lambda
+                    tempMatrix,                                //write result to temp array
+                    [&](double m, double s){return m*marker.h()[0]*marker.h()[1] + s*marker.h()[0]*0.5;} ); //scale mass matrix by h**2, system matrix by 0.5h, sum the result
 
     //send to petsc
     repositories::instanceOfPetsc.insertLocalMatrix( rows, rowIndices, cols, colIndices, tempMatrix );
