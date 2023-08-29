@@ -27,6 +27,8 @@ parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       defau
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-deg", "--degree",             dest="degree",         type=int, default=1, help="Polynomial degree")
+parser.add_argument("-upcd","--unknowns_per_cell_dof", dest="unknowns_per_cell_dof",     type=int, default=3, help="unknowns per cell dof")
+parser.add_argument("-upfd","--unknowns_per_face_dof", dest="unknowns_per_face_dof",     type=int, default=2, help="unknowns per face dof")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.1, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
@@ -34,28 +36,24 @@ args = parser.parse_args()
 assert args.degree == 1, "not ready for degree 2 yet"
 assert args.dimensions == 2, "not ready for 3d yet"
 
-matrices = MatrixGenerator(args.dimensions, args.degree).getAllMatrices()
-
-#below is only temporary
-cellDofs = 3 * (args.degree + 1) **  args.dimensions      #multiply by 3 to account for u, v, p
-faceDofs =     (args.degree + 1) ** (args.dimensions - 1)
-
 project = petsc.Project(project_name = "mixedPoisson", 
                         namespace = [ "benchmarks", "multigrid", "petsc", "mp" ]
                         ) 
+
+matrices = MatrixGenerator(args.dimensions, args.degree, args.unknowns_per_cell_dof, args.unknowns_per_face_dof)
                         
                         
 solver = petsc.solvers.MixedPoisson("MP",
                                     args.degree,
-                                    unknowns_per_cell_dof, # should be 3
-                                    unknowns_per_face_dof, # should be 2
+                                    args.unknowns_per_cell_dof, # should be 3
+                                    args.unknowns_per_face_dof, # should be 2
                                     args.meshsize,
                                     args.meshsize,
                                     args.dimensions,
-                                    cellCellMassMatrix,     #12x12
-                                    cellCellSystemMatrix,   #12x12
-                                    cellToFaceMatrix, #12x8
-                                    FaceFaceMatrix,   #8x8 <- this is across the 
+                                    matrices.getCellCellMassMatrix(),     #12x12
+                                    matrices.getCellCellSystemMatrix(),   #12x12
+                                    matrices.getCellToFaceMatrix(),       #16x12
+                                    matrices.getFaceFaceMatrix(),         #8x8
                                     )
 
 project.add_solver( solver )

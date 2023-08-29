@@ -765,11 +765,47 @@ Consult petsc.Project for details
 class AssemblePETSCMatrixForMP(ActionSet):
   ## add templates
   
+  templateTCFT = """
+  if (not marker.willBeRefined())
+  {
+    //send precomputed cell-cell matrix to petsc!
+
+    //global index
+    std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}.getNumber() );
+    int globalIndex =  repositories::getGlobalCellIndex( localIndex );
+
+    //construct the list of row indices we want to use:
+    std::vector<int> rowIndices({{CELL_CARDINALITY}});
+    //fill this vector up, starting with our global index
+    std::iota(rowIndices.begin(), rowIndices.end(), globalIndex);
+
+    //repeat for the colIndices
+    std::vector<int> colIndices({{CELL_CARDINALITY}});
+    //fill this vector up, starting with our global index
+    std::iota(colIndices.begin(), colIndices.end(), globalIndex);
+    
+    //we want to scale the matrix down
+    //make a copy
+    const int rows = repositories::cellToCell.rows();
+    const int cols = repositories::cellToCell.cols();
+    double tempMatrix[ rows*cols ];
+
+    //scale, and place into this temporary array
+    std::transform( repositories::cellToCell.data(), repositories::cellToCell.data() + repositories::cellToCell.size(),
+                    tempMatrix,
+                    [&](const double& d){return d*marker.h()[0]*marker.h()[1];} );
+
+    //send to petsc
+    repositories::instanceOfPetsc.insertLocalMatrix( rows, rowIndices, cols, colIndices, tempMatrix );
+  }
+  """
+
   def __init__(self, solver):
     super( AssemblePETSCMatrixForMP, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
+    self.d["CELL_CARDINALITY"]   = solver.number_of_cell_unknowns
 
   def get_constructor_body(self):
     return f"""
@@ -783,7 +819,7 @@ class AssemblePETSCMatrixForMP(ActionSet):
     """
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      # result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
+      result = jinja2.Template(self.templateTCFT).render(**self.d)
       pass 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       # result = jinja2.Template(self.templateTVFT).render(**self.d)
@@ -823,7 +859,8 @@ Consult petsc.Project for details
 """    
     return """
 #include "repositories/SolverRepository.h"
-#include <numeric> //for std::iota
+#include <numeric>   //for std::iota
+#include <algorithm> //for std::transform
 """
   def get_attributes(self):
     """!
