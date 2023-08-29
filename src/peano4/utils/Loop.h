@@ -2,12 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 
-/**
- * This file defines some macros for d-dimensional loops.
- *
- * @version $Revision: 1.10 $
- * @author Tobias Weinzierl
- */
 #pragma once
 
 #include <bitset>
@@ -26,6 +20,13 @@
 
 #if defined(SharedSYCL)
 #include "tarch/multicore/sycl/Core.h"
+
+/**
+ * @see peano4::utils::dLinearised() and @ref tarch_accelerator_SYCL
+ */
+#define CPUGPUMethod SYCL_EXTERNAL
+#else
+#define CPUGPUMethod
 #endif
 
 namespace peano4 {
@@ -36,14 +37,20 @@ namespace peano4 {
     typedef std::bitset<Dimensions> LoopDirection;
 
     /**
+     * d-dimensional counterpart of increment operator
+     *
      * This operation performs a d-dimensional increment on a given integer vector:
      * The first component of the vector is incremented. If the first component is
      * greater than max-1, the component is set zero and the next component is
      * incremented by one. This operation is used often by d-dimensional for-loops.
+     *
+     * @see dLinearised() for a discussion of GPU annotation
      */
-    void dInc(tarch::la::Vector<Dimensions, int>& counter, int max);
+    CPUGPUMethod void dInc(tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
+     * d-dimensional counterpart of decrement operator
+     *
      * This operation performs a d-dimensional decrement on a given integer vector:
      * The first component of the vector is decremented. If the first component is
      * smaller than 0, the component is set to max and the next component is
@@ -52,6 +59,8 @@ namespace peano4 {
     void dDec(tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
+     * d-dimensional counterpart of increment, where individula vector components have different max values
+     *
      * This operation performs a d-dimensional increment on a given integer vector:
      * The first component of the vector is incremented. If the first component is
      * greater than max(0)-1, the component is set zero and the next component is
@@ -87,20 +96,30 @@ namespace peano4 {
     void dInc(tarch::la::Vector<Dimensions, int>& counter, int max, LoopDirection& direction);
 
     /**
-     * Element-wise comparison for the for loops.
+     * Element-wise comparison for the for d-dimensional for loops
+     *
+     * Consult dLinearised() for a discussion of GPU aspect. Further to the
+     * discussion therein, we have to disable assertions within a SYCL
+     * context.
+     *
      * @return true if all entries of counter are smaller max
      */
-    int dCmp(const tarch::la::Vector<Dimensions, int>& counter, int max);
+    CPUGPUMethod int dCmp(const tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
-     * Element-wise comparison for the loops.
+     * Element-wise comparison for the for d-dimensional for loops
+     *
+     * Element-wise comparison for the loops. Different to the other dCmp()
+     * operation, this one works fine even if the max range per vector entry is
+     * different.
+     *
      * @return true if all entries of counter are smaller than their corresponding
      *         entries in max
      */
     int dCmp(const tarch::la::Vector<Dimensions, int>& counter, const tarch::la::Vector<Dimensions, int>& max);
 
     /**
-     * compares two vectors with regards to their linearised value.
+     * Compares two vectors with regards to their linearised value
      *
      * @returns true, if dLinearised(counter, XXX) < dLinearised(max, XXX)
      */
@@ -109,6 +128,8 @@ namespace peano4 {
     );
 
     /**
+     * Map d-dimensional vector onto integer index
+     *
      * This operation is called pretty often and, thus, might cause a significant
      * slowdown in the overall performance. Therefore, I introduced a aggressive
      * optimization based on lookup tables. This optimization is switched on if
@@ -134,13 +155,23 @@ namespace peano4 {
      * mark the dLinearised() routine as GPU offloadable. See parallel_dfor
      * for a discussion of when this is required.
      *
+     * Once annotated, we might still get errors if we use SYCL on the host and
+     * have no GPU offloading (via SYCL) enabled: The macro GPUCallableMethod
+     * in this case is not defined. Actually, it is explicitly defined as
+     * empty, so I cannot even overwrite it. Therefore, I introduce the new
+     * macro
+     *
+     *          CPUGPUMethod
+     *
+     * It delegates to SYCL_EXTERNAL, once SYCL is enabled on the CPU.
+     * Consult @ref tarch_accelerator_SYCL as well for further SYCL details.
      *
      *
      * @return the linearisation of the counter, i.e. the k-th component is
      *         multiplied by max^k and the results are accumulated.
      */
-    GPUCallableMethod int dLinearised(const tarch::la::Vector<Dimensions, int>& counter, int max);
-    GPUCallableMethod int dLinearised(const std::bitset<Dimensions>& counter);
+    CPUGPUMethod int dLinearised(const tarch::la::Vector<Dimensions, int>& counter, int max);
+    CPUGPUMethod int dLinearised(const std::bitset<Dimensions>& counter);
 
     /**
      * Special 2d variant of dLinearised that works also if you compile with other
@@ -182,9 +213,13 @@ namespace peano4 {
     void setupLookupTableForDDelinearised();
 
     /**
+     * Construct start vector (0,0,....) for d-dimensional loop
+     *
+     * @see dLinearised() for a discussion of GPU impact.
+     *
      * @return a vector containing zero values only.
      */
-    tarch::la::Vector<Dimensions, int> dStartVector();
+    CPUGPUMethod tarch::la::Vector<Dimensions, int> dStartVector();
 
     /**
      * @return a vector containing only zero values besides the dim-th entry. This
