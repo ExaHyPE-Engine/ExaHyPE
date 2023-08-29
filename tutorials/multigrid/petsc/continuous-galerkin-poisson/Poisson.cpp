@@ -1,4 +1,4 @@
-#include "Poisson.h"
+#include "../continuous-galerkin-poisson/Poisson.h"
 constexpr double pi = 3.14159265358979323846264338328;
 
 double initRhs(
