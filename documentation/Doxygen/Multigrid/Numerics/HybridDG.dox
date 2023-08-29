@@ -29,7 +29,7 @@ If so, we can evaluate
 @f$
 
 within the face-to-cell projection. 
-Furthermore, we fix a magic constant @f$ \gamma > @f$ and enforce
+Furthermore, we fix a magic constant @f$ \gamma > 0 @f$ and enforce
 
 
 

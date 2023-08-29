@@ -242,7 +242,7 @@ the solution there at the moment. Therefore, we introduce
   approximate solution to @f$ u @f$ is discontinuous, meaning we have a jump. 
   See the blue line below or the grey one. We'll discuss the other formalism
   later:
-  @image html documentation/average_gradient.png
+  @image html average_gradient.png
   Therefore, we have two solutions per degree of freedom: The one from the 
   left and the one from the right. This is the factor of two.
 - Finally, we already said that we will store two quantities per degree of 
@@ -433,6 +433,13 @@ formulation. This is not what we typically do, but it is possible within our
 framework and a nice sanity check. Furthermore, we need exactly this technique
 for a weak continuity enforcement later.
 
+Below is a schematic for how we glue these dofs together. When looking locally,
+we always enumerate with the familiar pattern (beginning bottom left). Obviously,
+the numbering shown is merely an indicator, and will not match the global
+indices of these dofs, but this should not concern the user. 
+
+@image html face_to_face_projection.png
+
 If both @f$ u @f$ and @f$ \phi @f$ are continuous, then their values on the
 faces exist. They have to be the same. Our code introduces a face-to-face
 coupling matrix. It is from @f$ \mathbb{R}^{ 2K \cdot (p+1)^{d-1} \times 2K \cdot (p+1)^{d-1} } @f$ 
@@ -442,6 +449,7 @@ for a face with the normal along x. The matrices for all other faces result from
 a permutation which is handled within the Python API. For a continuous setup and
 @f$ p=1 @f$, the matrix is  
 
+@todo Currently we state that this matrix is square (See sentence starting "it is from...") but we draw a matrix which is not square. Either could be correct
 
 \f{eqnarray*}{
   \begin{pmatrix}
@@ -522,7 +530,7 @@ the non-existing values through the averages from left and right:
 
 The image below illustrates this for the gradient @f$ \phi @f$:
 
-  @image html documentation/average_gradient.png
+  @image html average_gradient.png
 
 The gradient does not exist at the cell boundaries, but we can simply average it.
 
@@ -542,7 +550,7 @@ take into account the sign of the normal.
 The second variant is more sophsticiated, yet allows users later to implement
 more sophisticated schemes aka Riemann solvers. For this one,
 we assume that a face has explicit values @f$ (\lambda _u, \lambda _\phi) @f$ 
-(the sketch above denotes them as @f$ \lambda _phi = \hat \phi @f$) which represent these averages. So the face has the left and the right projection,
+(the sketch above denotes them as @f$ \lambda _\phi = \hat \phi @f$) which represent these averages. So the face has the left and the right projection,
 but also a value which explicitly computes this arising approximation. We model
 this by
 
@@ -556,7 +564,7 @@ which is an overkill here.
 3. The unknown 2 represents this @f$ [[u]] @f$ value;
 4. The unknown 3 represents the @f$ [[(\phi, n)]] = [[\phi_ x]] @f$ value;
 5. The next one (unknown 5) 2 is the solution projection from the right;
-6. Then we have @f$\phi _x @f$ projection from the left;
+6. Then we have @f$\phi _x @f$ projection from the right;
 7. We store @f$ [[u]] @f$ once again, which is redundant;
 8. The 7th unknown the @f$ [[(\phi, n)]] = -[[\phi_ x]] @f$ value, so again a redundant quantity subject to an inverted sign;
 9. ...
