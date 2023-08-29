@@ -284,7 +284,7 @@ This is a projection from the cell onto the face.
 
 We highlight what this projection matrix looks like for Gauss-Lobatto.
 
-@image html cellFlat.png
+@image html degree_of_freedom_semantics_Lobatto.png
 
 Gauss-Lobatto is trivial, as some cell dofs coincide spatially with the 
 face dofs. This is not necessary: Users can use Gauss-Legendre for
@@ -403,7 +403,7 @@ do so.
 We note explicitly that the three unknowns per cell dof are @f$ u @f$,
 @f$ \phi_x @f$ and @f$ \phi_y @f$.
 
-@image html documentation/projection.png
+@image html projection.png
 
 
 
