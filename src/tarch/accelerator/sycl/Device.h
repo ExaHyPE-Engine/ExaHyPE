@@ -5,6 +5,12 @@
 /**
  * @page tarch_accelerator_SYCL SYCL support
  *
+ * This page provides a programmer's view on SYCL. If you search for details
+ * for a particular software stack/compiler settings, these are can either be
+ * found @ref page_compiler_specific_settings "on the generic vendor pages" or
+ * you might find SYCL details on the pages for
+ * @ref page_machines "particular machines".
+ *
  * Using SYCL in Peano can be tricky, as SYCL's interface (headers, e.g.) still
  * changes from time to time, and as SYCL uses a couple of macros and functions
  * that we use in Peano, too. Examples are Dimensions and assertions.
@@ -23,18 +29,50 @@
  * number of devices from anywhere in the code, but to get hold of these
  * devices, you should use the getter in the SYCL.h header.
  *
+ *
  * ## Implementation
  *
  * For all macros which are used both in Peano and in SYCL, I use the pragmas
  * push_macro and pop_macro to temporarily undefine them while I include the
  * SYCL headers, and to bring them back into the game afterwards.
  *
+ *
  * ## Dependencies
  *
- * Don't include any other Peano header in the file tarch/accelerator/sycl/Device.h, as all Peano headers might
+ * Don't include any other Peano header in the file tarch/accelerator/sycl/Device.h,
+ * as all Peano headers might
  * indirectly include this one via multicore.h (as they need the macro
  * SYCL_EXTERNAL, e.g.). The only header that this file in turn needs
  * from Peano is the actual config.h.
+ *
+ *
+ * ## SYCL impact on other source code files
+ *
+ * Once we use code in SYCL constructs, we have to take a few constraints into
+ * account:
+ *
+ * - No assertions in the code.
+ * - All functions used have to be marked as SYCL_EXTERNAL, unless they are
+ *   defined in the header.
+ * - No string output via output streams.
+ *
+ * Therefore, a lot of routines in the tarch::la component have ifdefs that
+ * explicitly mask out assertions. They are usually templates and therefore in
+ * headers anyway.
+ *
+ * A further complication arises from the fact that Peano also can use SYCL
+ * on the CPU as multicore front-end. There, I tend to use d-dimensional
+ * for loops quite a lot, as they are defined in peano4/utils/Loop.h. These
+ * loops are realised as macros, which in turn use functions from the header.
+ * These functions have to be marked as SYCL functions now, too, even though
+ * they are only used on the CPU. peano4:utils::dLinearised() provides some
+ * docu.
+ *
+ * Even one step further, the functions rely heavily on the tarch's linear
+ * algebra. Therefore, the linear algebra subcomponent has to disable all the
+ * problematic flavours from the list above if we use SYCL on the GPU
+ * ***or on the CPU***. It does not matter.
+ *
  *
  */
 #if defined(GPUOffloadingSYCL)

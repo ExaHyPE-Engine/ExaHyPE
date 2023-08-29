@@ -31,7 +31,7 @@ template<int Size, typename Scalar>
 tarch::la::Vector<Size,Scalar>&  tarch::la::Vector<Size,Scalar>::operator= (
   const Vector<Size,Scalar>&  toAssign
 ) {
-  #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
+  #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
   assertion(this != &toAssign);
   #endif
 
@@ -49,7 +49,7 @@ tarch::la::Vector<Size,Scalar>::Vector (
   const Vector<Size,Scalar>& toCopy
 ):
   _values() {
-  #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
+  #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
   assertion(this != &toCopy);
   #endif
  
