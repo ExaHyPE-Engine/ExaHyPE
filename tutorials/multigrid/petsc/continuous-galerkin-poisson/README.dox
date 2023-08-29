@@ -1,6 +1,6 @@
 /**
 
- @page tutorials_multigrid_petsc_poisson Continuous Galerking for the Poisson equation with PETSc
+ @page tutorials_multigrid_petsc_continuous_galerkin_poisson Continuous Galerkin for the Poisson equation with PETSc
 
 <!-- Add this one for href links to subitems -->
 \tableofcontents
