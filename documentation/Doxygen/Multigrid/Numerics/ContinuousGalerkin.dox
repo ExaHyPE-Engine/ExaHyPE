@@ -2,6 +2,8 @@
  
  @page page_multigrid_numerics_Continuous_Galerkin Continuous Galerkin
 
+Discussion of normal continuous Galerkin formalism for Poisson equation.
+
 As ever we aim to solve
 
 @f$ -\Delta u \ = \ f @f$.

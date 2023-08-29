@@ -1,7 +1,9 @@
 /**
  
- @page page_multigrid_numerics_Mixed_Galerkin Mixed Discontinous Galerkin formulations
+ @page page_multigrid_numerics_Mixed_Galerkin Mixed Discontinuous Galerkin formulations
  
+ 
+Discussion of normal mixed formalism for Poisson equation with discontinuous continuous Galerkin.
  
 As ever, we aim to solve
 
@@ -62,13 +64,13 @@ only one unknown, i.e. a scalar, per degree of freedom. This time, we have
 have to maintain three unknowns.
 
 
-This means, instead of using an
+This means, we might have had 
 
            unknowns_per_cell_dof = 1
 
-attribute within your code, we now need 
+in a continuous Galerkin setup for the Poisson equation, but now we need to use
 
-           unknowns_per_cell_dof = 3
+           unknowns_per_cell_dof = 1+Dimensions
 
 
 ## Discontinuous Galerkin formulation: the geometric arrangement
@@ -111,42 +113,20 @@ have to be in the corner.
 So for Gauss-Lobatto, we have arrangements such as the ones below:
 
 
-@image html documentation/gaussLobatto.png
+@image html gaussLobatto.png
 
 The left side uses a polynomial degree of one in line with our 1d examples 
 above. This means, we need four degrees of freedom per cell, but then each 
 degree of freedom carries three functions, as we have three PDEs. The right
-examples showcases an example with @f$p=2@f$. In general, we need @f$ (p+1)^d @f$
-degrees of freedom per cell and have @f$ 3 \cdot (p+1)^d @f$ unknowns per 
+examples showcases an example with @f$p=2@f$. In general, we need, for a
+scalar PDE given in second order formulation, @f$ (p+1)^d @f$
+degrees of freedom per cell and have @f$ (d+1) \cdot (p+1)^d @f$ unknowns per 
 cell.
-
-Let us assume that the code looks similar to 
-
-In the code, we expect the user to specify the number of unknowns equired
-per cell plus the polynomial order:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver = petsc.solvers.MixedDiscontinuousGalerkinDiscretisation("Poisson",
-                                                           args.degree,
-                                                           unknowns_per_cell_dof = 3,
-                                                           args.meshsize,
-                                                           args.meshsize,
-                                                           )
-solver = petsc.solvers.MixedPoisson("MP",
-                                    polynomial_degree = 2,
-                                    unknowns_per_cell_dof = 3,
-                                    [...]
-                                    )
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The code takes this information, runs through the mesh and allocates (from
-PETSc) @f$ 3 \cdot (2+1)^d @f$ unknown indices. That means, so far, we are
-trying to solve a system 
+In this case, we will obtain a system 
 
 @f$ A x = b @f$
 
-where x has @f$ 3 |\mathbf{C}| \cdot (p+1)^d @f$ entries. This is not the 
-end of the story. Only a start. 
+where x has @f$ (d+1) |\mathbf{C}| \cdot (p+1)^d @f$ entries. 
 
 
 
@@ -204,11 +184,11 @@ The above equations mean that we have to traverse all cells of the domain, and i
 
 
 The first and the third term can be added up into a ***system matrix***, 
-while the second term forms a ***mass matrix***. Our code expects them 
-
+while the second term forms a ***mass matrix***. 
+A typically code for the two-dimensional Poisson equation then looks similar to 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver = petsc.solvers.MixedPoisson("MP",
+solver = petsc.solvers.MixedDiscontinuousGalerkinDiscretisation("Poisson",
                                     degree = 1,
                                     unknowns_per_cell_dof = 3, 
                                     [...]

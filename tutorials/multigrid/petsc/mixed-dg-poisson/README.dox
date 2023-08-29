@@ -36,4 +36,24 @@ end of the story. Only a start.
 
 
 
+In the code, we expect the user to specify the number of unknowns equired
+per cell plus the polynomial order:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver = petsc.solvers.MixedDiscontinuousGalerkinDiscretisation("Poisson",
+                                                           args.degree,
+                                                           unknowns_per_cell_dof = 3,
+                                                           args.meshsize,
+                                                           args.meshsize,
+                                                           )
+solver = petsc.solvers.MixedPoisson("MP",
+                                    polynomial_degree = 2,
+                                    unknowns_per_cell_dof = 3,
+                                    [...]
+                                    )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
  */
