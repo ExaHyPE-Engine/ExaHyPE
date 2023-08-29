@@ -1,12 +1,18 @@
 /**
 
- @page benchmark_multigrid_petsc_poisson Poisson equation with PETSc
+ @page tutorials_multigrid_petsc_poisson Continuous Galerking for the Poisson equation with PETSc
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
 
  This simple example discusses the steps from the file benchmarks/multigrid/petsc/poisson/poisson.py.
  We omit some technical details (such as the parsing of the command line) and 
  focus on key ingredients. Therefore, it is reasonable to study this description 
  in combination with the actual script.
  
+ 
+ # Code usage
   
  ## Create a project
  
@@ -169,7 +175,7 @@ peano4_project.generate()
 
   At time of writing, these can be seen in lines 788-815 of configure.ac, at the top level of Peano.
 
-  ## Current Workflow
+  # Internal workflow
 
   During EnumerateAndInit stage, we request one index in the LocalToGlobalMap for each
   degree of freedom. Each time this occurs, we increase the index count on each subtree.
@@ -180,7 +186,8 @@ peano4_project.generate()
   During InitVertexDof stage, we store each Value and Rhs that we encounter. 
   When it comes to the InitPetsc stage, we send these values to PetscData class, 
   which then uses these values to initialise two Petsc vectors. So far, we have implemented 
-  a method to return the values from the solution vector from PETSc back to c++.
+  a method to return the values from the solution vector from PETSc back to C++.
 
-  
- */
+*/
+
+ 

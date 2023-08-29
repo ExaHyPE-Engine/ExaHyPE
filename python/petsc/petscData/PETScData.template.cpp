@@ -34,6 +34,16 @@ void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int dofs ){
 
   VecSetUp(_x);
   VecSetUp(_b);
+
+  //explicitly set the diagonals to be 0!
+  int tempRowArray[1];
+  double zero[1] = {0};
+
+  for (int i=0; i<dofs; i++){
+    tempRowArray[0] = i;
+    insertLocalMatrix( 1, tempRowArray, 1, tempRowArray, zero );
+  }
+  
   logTraceOut( "initMatrixAndVectors()" );
 }
 
@@ -110,6 +120,15 @@ void {{NAMESPACE | join("::")}}::PetscData::assemble(){
 
   //print out our contents
   // MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
+  // PetscViewer viewer;
+  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"mat.xml",&viewer);
+  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  // MatView(_A, viewer);
+  
+  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"rhs.xml",&viewer);
+  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  // VecView(_b, viewer);
+  // PetscViewerDestroy(&viewer);
 }
 
 void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
@@ -122,10 +141,6 @@ void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
   //don't know what this does
   PetscFunctionBeginUser;
 
-  // //do the copy
-  // VecDuplicate(_b, &u);
-  // VecCopy(_b, u);
-
   /*
      Create linear solver context
   */
@@ -136,38 +151,35 @@ void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
      also serves as the preconditioning matrix.
   */
   KSPSetOperators(ksp, _A, _A);
-  
-  // KSPGetPC(ksp, &pc);
-  // PCSetType(pc, PCBJACOBI);
+  KSPGetPC(ksp, &pc);
 
   //set runtime options
   KSPSetFromOptions(ksp);
 
-  //the rest comes from the block with isbjacobi. we just do this once
+  PCSetType(pc, PCNONE); //no preconditioner
+  KSPSetType(ksp, KSPGMRES);
   KSPSetUp(ksp);
-  KSPGetPC(ksp, &pc);
-
-  //inside second else block
-  PCSetType(pc, PCBJACOBI);
-  KSPSetType(ksp, KSPCG);
   KSPSetTolerances(ksp, 1.e-7, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
 
   //solve against the "exact" solution u
   KSPSolve(ksp, _b, _x);
 
-  //check error
-  //the line below is why we were getting negatives! _x = _x - _b  
-  // VecAXPY(_x, -1, _b);
-  // VecNorm(_x, NORM_2, &norm);
+  KSPConvergedReason reason;
+  KSPGetConvergedReason(ksp, &reason);
 
   PetscInt its;
   KSPGetIterationNumber(ksp, &its);
   logInfo("petscSolve()", "number of iterations was " << (int)its);
+  logInfo("petscSolve()", "converged for reason " << KSPConvergedReasons[reason]);
 
   //tidy up temp objects
   KSPDestroy(&ksp);
-  // PCDestroy(&pc);
-  // VecDestroy(&u);
+
+  // PetscViewer viewer;
+  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"solution.xml",&viewer);
+  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  // VecView(_x, viewer);
+
   return;
 }
 

@@ -4,6 +4,9 @@
 #include "observers/EnumerateAndInitSolution.h"
 #include "observers/Assemble.h"
 #include "observers/Solve.h"
+{% if Project_Name=="HDG" %}
+#include "observers/InitPETSc.h"
+{% endif %}
 #include "observers/MapSolutionOntoMesh.h"
 #include "observers/Plot.h"
 
@@ -74,11 +77,12 @@ bool selectNextAlgorithmicStep() {
     switch ( stepName ) {
       case repositories::StepRepository::Steps::CreateGrid:
         {
-          peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::EnumerateAndInitSolution )
-          );
+            peano4::parallel::Node::getInstance().setNextProgramStep(
+              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::EnumerateAndInitSolution )
+            );
         }
         break;
+     
       case repositories::StepRepository::Steps::EnumerateAndInitSolution:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
@@ -174,6 +178,7 @@ void step() {
         createGridMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
+    
     case repositories::StepRepository::Steps::EnumerateAndInitSolution:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "enumerate-and-init-solution" );
@@ -191,18 +196,27 @@ void step() {
 
         watch.start();
 
+        {{ADD_DOFS_TO_VERTICES}}
         repositories::computeLocalToGlobalMapsForAllSolvers();
         const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
         logInfo( "step()", "total no of dofs="  << totalNumberOfDegreesOfFreedom );
 
         {% if Project_Name=="HDG" %}
-        const int totalNumberOfFaceDofs  = repositories::getTotalFaceDofs();
+        // const int totalNumberOfFaceDofs  = repositories::getTotalFaceDofs();
         const int totalNumberOfCellDofs  = repositories::getTotalCellDofs();
-        const int totalDofs              = totalNumberOfFaceDofs + totalNumberOfCellDofs;
-        logInfo( "step()", "total no of face dofs=" << totalNumberOfFaceDofs );
-        logInfo( "step()", "total no of cell dofs=" << totalNumberOfCellDofs );
-        logInfo( "step()", "initialising petsc matrix with " << totalDofs << " dofs" );
-        repositories::instanceOfPetsc.initMatrixAndVectors( totalDofs );
+
+        //we added 2**d / 2 constraints for every vertex on the boundary. 
+        //but this overcounts in the corner. we bodge here for 2d only. we should really
+        //count the number of vertex constraints at a later stage (eg when we are totting) up
+        //all the indices
+        static_assert(Dimensions==2);
+        const int totalNumberVertexDofs  = repositories::getTotalVertexDofs(); //THIS ONLY WORKS FOR 2D! MUST TAKE INTO ACCOUNT CORNERS MORE CAREFULLY IN 3D
+        const int totalDofs              = totalNumberOfCellDofs;
+        // logInfo( "step()", "total no of face dofs=" << totalNumberOfFaceDofs );
+        logInfo( "step()", "total no of cell dofs= " << totalNumberOfCellDofs );
+        logInfo( "step()", "total no of vertex constraints = " << totalNumberVertexDofs);
+        logInfo( "step()", "initialising petsc matrix with " << totalDofs + totalNumberVertexDofs << " rows" );
+        repositories::instanceOfPetsc.initMatrixAndVectors( totalDofs + totalNumberVertexDofs );
 
         {%else%}
         repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );
@@ -231,10 +245,8 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
 
         watch.start();
-        {% if Project_Name=="Poisson" %}
         // solve
         repositories::instanceOfPetsc.petscSolve();
-        {% endif %}
 
         watch.stop();
         solveMeasurement.setValue( watch.getCalendarTime() );
@@ -248,9 +260,7 @@ void step() {
         watch.start();
 
         //move data from petsc to c++
-        {% if Project_Name=="Poisson" %}
         repositories::instanceOfPetsc.convertToStdVector();
-        {% endif %}
         
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         

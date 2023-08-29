@@ -9,7 +9,6 @@ import jinja2
 class EnumerateCellsAndFaces(ActionSet):
   """!
 
-Enumerate the vertices    
   
   """
   

@@ -1,13 +1,6 @@
 /**
-
-@page multigrid_continuous_galerkin_tutorial Ritz-Galerkin Tutorial 
-
-Stuff to fix:
-
-We write here a tutorial on the continuous Galerkin method. Hopefully it will shine some light on what goes on inside the 
-DG code. I found the [notes by M. Bader quite helpful here](https://www5.in.tum.de/lehre/vorlesungen/sci_comp/ws16/pde_fem.pdf).
-
-# Formulation
+ 
+ @page page_multigrid_numerics_Continuous_Galerkin Continuous Galerkin
 
 As ever we aim to solve
 
@@ -26,9 +19,9 @@ For emphasis, we want the above equation to hold for every test function @f$ \ph
 Let's attempt make this concrete, by way of an example. We depict in the image below
 the following situation:
 
-\li A 1D domain, cut up into discrete chunks of width @f$ h @f$
-\li We pick test functions @f$ \phi @f$ that are piecewise linear, and each span two cells. Furthermore normalised to a maximum height of 1
-\li We have a value for @f$ u @f$ at the boundary of each cell 
+- A 1D domain, cut up into discrete chunks of width @f$ h @f$.
+- We pick test functions @f$ \phi @f$ that are piecewise linear, and each span two cells. Furthermore normalised to a maximum height of 1.
+- We have a value for @f$ u @f$ at the boundary of each cell.
 
 What we aim to do here is to show how we update @f$ u @f$, based on our formulation.
 
@@ -38,6 +31,7 @@ From here onwards, we pick our @f$ u @f$ to be a member of some space of polynom
 as the @f$ u_i @f$. Concretely:
 
 @f$ u = \sum_i u_i \ \phi_i @f$.
+
 
 Returning to the integral above, we can integrate by parts to obtain
 
@@ -59,6 +53,9 @@ Next, let's discretise. Rather than taking an integral across the whole domain, 
 \f{eqnarray*}{
   = \sum_{i, \ k} \ \int_{c_k} \ (\nabla \phi_i, \ \nabla \phi) dx \ \ \ \forall \phi
 \f}
+
+*/
+
 
 <!-- 
 WE COMMENT THIS OUT. I DON'T THINK IT'S READY YET
@@ -267,13 +264,12 @@ are integrating with @f$ \phi_k @f$:
 \li @f$ \hat{n_{j_\pm}} @f$ denotes the vector that is normal to the cell at the right and left boundaries respectively.
 
 We can afford to lose these last two terms, since they will both appear in consecutive terms of 
-the sum across @f$ j @f$, but with opposite signs; 
+the sum across f$ j @f$, but with opposite signs; 
 @f$ \hat{n_{j_+}} \ = \ -\hat{n_{{n+1}_-}} @f$,
 hence each of these terms will cancel out in a telescopic fashion.
 
+  
 
-
-
-# Towards dimensions 2 and above
-
-*/
+ 
+ */
+ 

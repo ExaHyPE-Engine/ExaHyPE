@@ -6,12 +6,19 @@ import dastgen2
 
 import os
 
+#stuff we need to compute the quadratures
+import numpy as np
+from numpy.polynomial.legendre  import leggauss
+from scipy.interpolate import lagrange
+
 from .Solver                                    import Solver
 from petsc.actionsets.EnumerateCellsAndFaces    import EnumerateCellsAndFaces
+from petsc.actionsets.EnumerateVertices         import EnumerateVerticesGeneral
 from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
-from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
-from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixOnCellsAndFaces
+from petsc.actionsets.InitPetsc                 import SendDofsToVertices
+from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScCellSolutionOnVerticesBackOntoMesh
+from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixWithQuadratures
 
 from abc import abstractmethod
 
@@ -42,14 +49,12 @@ class HdgFirstDiscretisation(Solver):
   """
   def __init__(self,
                name,
+               polynomial_degree,
                cell_dofs,
                face_dofs,
                min_h,
                max_h,
-               stencilFF,
-               stencilsCF,
-               stencilsFC,
-               stencilCC):
+               dimensions):
     """!
    
  Test comment (C)
@@ -61,13 +66,33 @@ class HdgFirstDiscretisation(Solver):
                                                     max_h
                                                   )
 
+    self.polynomial_degree = polynomial_degree
+    self.dimensions        = dimensions
 
+    self.quadrature_points, self.weights, self.poly_coeffs = \
+      self.initGaussLobatto()
 
     #hardcode one unknown on vertices for now
-    self._vertex_unknowns = 1
+    self._vertex_unknowns = 2 ** ( self.dimensions ) ## will be same as number of cells surrounding each vertex
     self._vertexDof = peano4.datamodel.DaStGen2( name )
-    # self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_unknowns) ) )
-    # self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(number_of_unknowns) ) )
+
+    '''
+     ---   ---
+    |   | |   |
+    | 2 | | 3 |
+     ---   ---
+         v
+     ---   ---
+    |   | |   |
+    | 0 | | 1 |
+     ---   ---
+
+     the vertex v needs to store the top-right    dof for cell 0, 
+                                 the top-left     dof for cell 1, 
+                                 the bottom-right dof for cell 2, 
+                                 the bottom-left  dof for cell 3, 
+    '''
+    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4IntegerArray( "dofIndices",  str(self._vertex_unknowns) ) )
     self._vertexDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._vertexDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
 
@@ -76,8 +101,9 @@ class HdgFirstDiscretisation(Solver):
     self._cellDof = peano4.datamodel.DaStGen2( name )
     self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(cell_dofs) ) )
     self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(cell_dofs) ) )
+    
     self._cellDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
-    # self._cellDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["interior", "exterior"] ) )
+    self._cellDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
 
     #add in some unknowns for the faces 
     #our aim is to have multiple dofs per face, but we just store the starting index in "number"
@@ -88,10 +114,6 @@ class HdgFirstDiscretisation(Solver):
     self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     
-    self.stencilsFF = stencilFF
-    self.stencilsCF = stencilsCF
-    self.stencilsFC = stencilsFC
-    self.stencilCC  = stencilCC
     pass
 
 
@@ -130,10 +152,8 @@ class HdgFirstDiscretisation(Solver):
     observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h))
     pass
 
-  
   def add_to_enumerate(self, observer):
     pass
-  
   
   def add_to_enumerate_and_init_solution(self, observer):
     """!
@@ -146,17 +166,21 @@ class HdgFirstDiscretisation(Solver):
     """
     observer.add_action_set( InitVertexDoFs(self) ) 
     observer.add_action_set( InitFaceAndCellDoFs(self) ) 
+    observer.add_action_set( EnumerateVerticesGeneral(self) )
     observer.add_action_set( EnumerateCellsAndFaces(self) ) 
     pass
   
   
   def add_to_assemble(self, observer):
-    observer.add_action_set( AssemblePETSCMatrixOnCellsAndFaces(self) )
+    observer.add_action_set( AssemblePETSCMatrixWithQuadratures(self) )
     pass
+
+  def add_to_init_petsc(self, observer):
+    observer.add_action_set( SendDofsToVertices(self) )
   
 
   def add_to_map_solution_onto_mesh(self, observer):
-    observer.add_action_set( ProjectPETScSolutionOnVerticesBackOntoMesh(self) )
+    observer.add_action_set( ProjectPETScCellSolutionOnVerticesBackOntoMesh(self) )
     pass
   
   
@@ -201,6 +225,7 @@ class HdgFirstDiscretisation(Solver):
         "VERTEX_CARDINALITY": self._vertex_unknowns,
         "CELL_CARDINALITY":   self._cell_unknowns,
         "FACE_CARDINALITY":   self._face_unknowns,
+        "POLYNOMIAL_DEGREE":  self.polynomial_degree,
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -242,3 +267,267 @@ class HdgFirstDiscretisation(Solver):
   def number_of_face_unknowns(self):
     return self._face_unknowns
   
+
+  '''
+  use numpy/scipy to calculate gaussian quadratures correctly
+  returns: points, weights and an (n+1) * (n+1) array of 
+    polynomial coefficients
+  '''
+  def initGaussLobatto(self):
+    #construct poly coeffs first
+    coeffs = []
+    x = np.linspace(-1,1, self.polynomial_degree + 1)
+    for j in range(self.polynomial_degree + 1):
+      y = np.zeros_like(x)
+      y[j] = 1.0
+      coeffs.append( list( lagrange(x,y).coeffs ) )
+    
+    #finally construct the points and weights
+    points, weights = leggauss( self.polynomial_degree + 1 )
+
+    return points, weights, coeffs
+
+  def get_solver_repository_snippets(self):
+    header = """
+    int getTotalFaceDofs();
+    int getTotalCellDofs();
+    int getTotalVertexDofs();
+
+    /**
+    * we order the matrix so that cell-cell coupling sits
+    * in the top left, with face-face coupling in the bottom right
+    */
+    int getGlobalCellIndex(std::pair<int,int> localIndex);
+    int getGlobalFaceIndex(std::pair<int,int> localIndex);
+    int getGlobalVertexIndex(std::pair<int,int> localIndex);
+
+    /*
+    * store points, weight and coefficients for gaussian
+    * quadratures. aligned left to right / bottom to top
+    */
+    const std::vector<std::vector<double>> quadPoints = {{QUADRATURE_POINTS}};
+    const std::vector<double> quadWeights             = {{WEIGHTS}};
+    const std::vector<std::vector<double>> polyCoeffs = {{POLY_COEFFS}};
+
+    const int polynomialDegree = {{POLY_DEGREE}};
+
+    /*
+    we will enumerate our DoFs 0 -> (n+1)^d.
+    for now we only have 1D basis functions, and we promote them to 2d by taking their product.
+    we do this by taking the x position of the quadrature point, and pulling out an appropriate basis function
+    and then      taking the y position of the quadrature point, and pulling out an appropriate basis function
+    and multiplying them together.
+
+    dof ordering, with polynomial degree n:
+
+
+    .......................
+    .......................
+    .......................
+    n+1 - n+2 - .... - 2n+1
+    0   - 1   - .... -    n
+
+    so this method will pick out (x,y) coords for each dof. 
+
+    This is temporary - I haven't ironed out where the dofs should sit physically. we 
+    should be able to get some correct local matrices.
+
+    TODO upgrade to 3d
+    */
+    const std::vector<int> convertDofIndexToXYCoordinate(const int& dofIndex);
+
+    /*
+    method to evaluate polynomial at given point, given a set of coefficients
+    */
+    double evalPoly( const std::vector<double>& coeffs, const double& quadPoint );
+
+    /*
+    overload to:
+      - convert index into a tuple that describes position in the cell
+      - evaluate the 1d basis at each of the points
+      - take the product
+
+      ie we promote a 1d basis to an n-dimensional basis by evaluating 
+      our basis polynomial at (x,y,z,...) and taking the product
+      poly(x)*poly(y)*poly(z)*...
+    */
+    double evalPoly( const int& index, const std::vector<double>& quadPoint );
+
+    /*
+    need to specify in which dimension we are taking derivative
+    */
+    double evalDeriv( const int& dofIndex, const int& dimension, const std::vector<double>& quadPoint );
+    double evalDeriv( const std::vector<double>& coeffs, const double& quadPoint );
+
+    tarch::la::Vector<Dimensions,double> convertQuadPointToRealLocation( 
+      const int& quadIndex,
+      const tarch::la::Vector<Dimensions,double>& cellCentre,
+      const tarch::la::Vector<Dimensions,double>& cellH
+     );
+"""
+    cpp = """
+int {{NAMESPACE | join("::")}}::repositories::getTotalFaceDofs() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getTotalCellDofs() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getTotalVertexDofs() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getVertexLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalCellIndex(std::pair<int,int> localIndex) {
+  int result;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getGlobalIndex(localIndex);
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalFaceIndex(std::pair<int,int> localIndex) {
+  int result;
+  result += getTotalCellDofs();
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getGlobalIndex(localIndex);
+  {% endfor %}
+  return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalVertexIndex(std::pair<int,int> localIndex) {
+  int result;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getVertexLocalToGlobalMap().getGlobalIndex(localIndex);
+  {% endfor %}
+  return result;
+}
+
+/*
+overload to actually perform polynomial eval
+*/
+double {{NAMESPACE | join("::")}}::repositories::evalPoly( const std::vector<double>& coeffs, const double& quadPoint ){
+  double output = 0;
+  double x      = 1;
+  //coeffs are ordered from highest degree to lowest degree,
+  //so iterate from back to front
+  for (auto iter=coeffs.crbegin(); iter!=coeffs.crend(); iter++){
+    output += (*iter) * x;
+    x *= quadPoint;
+  }
+  return output;
+}
+
+/*
+overload to:
+  - convert index into a tuple that describes position in the cell
+  - evaluate the 1d basis at each of the points
+  - take the product
+
+  ie we promote a 1d basis to an n-dimensional basis by evaluating 
+  our basis polynomial at (x,y,z,...) and taking the product
+  poly(x)*poly(y)*poly(z)*...
+*/
+double {{NAMESPACE | join("::")}}::repositories::evalPoly( const int& index, const std::vector<double>& quadPoint ){
+  //convert index to pair of indices
+  const std::vector<int> indices = convertDofIndexToXYCoordinate(index);
+  double output = 1;
+
+  /*
+  let our dof   indices be ordered [d0, d1, ...]
+  and our point indices be ordered [p0, p1, ...]
+
+  then we actually want to return 
+
+  eval(d0, p0) * eval(d1, p1) * ...
+  */
+
+  auto indexIter = indices.cbegin();
+  auto pointIter = quadPoint.cbegin();
+
+  for (; indexIter!=indices.end(), pointIter!=quadPoint.end(); indexIter++, pointIter++)
+    output *= evalPoly( polyCoeffs[ *indexIter ], *pointIter );
+
+  return output;
+}
+
+
+const std::vector<int> {{NAMESPACE | join("::")}}::repositories::convertDofIndexToXYCoordinate(const int& dofIndex){
+  std::vector<int> output;
+  
+  //get x coord by taking modulo with polynomialDegree + 1
+  const int x = dofIndex % (polynomialDegree + 1);
+  output.push_back(x);
+
+  //take off the x coordinate, divide by (polynomialDegree + 1) to determine
+  //how many blocks north we are
+  const int y = dofIndex / (polynomialDegree + 1);
+  output.push_back(y);
+
+  return output;
+}
+
+double {{NAMESPACE | join("::")}}::repositories::evalDeriv( const int& dofIndex, const int& dimension, const std::vector<double>& quadPoint ){
+  if (dimension >= Dimensions) throw std::runtime_error("taking derivative in wrong dimension!");
+
+  //convert index to pair of indices
+  const std::vector<int> indices = convertDofIndexToXYCoordinate(dofIndex);
+  double output = 1;
+
+  for (int iter = 0; iter!=indices.size(); iter++){
+    //we want to eval deriv, but only in one dimension
+    output *= (iter == dimension)
+      ? evalDeriv( polyCoeffs[ indices[iter] ], quadPoint[iter] )
+      : evalPoly(  polyCoeffs[ indices[iter] ], quadPoint[iter] );
+  }
+
+  return output;
+}
+
+double {{NAMESPACE | join("::")}}::repositories::evalDeriv( const std::vector<double>& coeffs, const double& quadPoint ){
+  double output = 0;
+  double x      = 1;
+  double derivFactor = 1; //factor to account for falling powers of x
+
+  for (auto iter=coeffs.crbegin()+1; iter!=coeffs.crend(); iter++){
+    output += (*iter) * x * derivFactor;
+    x *= quadPoint; derivFactor++;
+  }
+  return output;
+}
+
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::repositories::convertQuadPointToRealLocation(
+  const int& quadIndex,
+  const tarch::la::Vector<Dimensions,double>& cellCentre,
+  const tarch::la::Vector<Dimensions,double>& cellH
+){
+  //get the quadrature point associated with this index
+  const std::vector<double> quadPoint = quadPoints[quadIndex];
+  tarch::la::Vector<Dimensions,double> output;
+
+  for (int i=0; i<Dimensions; i++){
+    //init output to be centre of the cell
+    output[i] =  cellCentre[i];
+    
+    //move from centre -> quadpoint, weighted by the size of the cell
+    //need to divide by 2 - want to make sure that furthest from the 
+    //centre we move is h/2
+    output[i] += quadPoint[i] * cellH[i]/2;
+  }
+  return output;  
+}
+
+"""
+    return header, cpp

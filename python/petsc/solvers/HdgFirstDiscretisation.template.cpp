@@ -1,14 +1,15 @@
 #include "{{CLASSNAME}}.h"
+#include "repositories/SolverRepository.h" //bad template practice; quick fix
 constexpr double pi = 3.14159265358979323846264338328;
 
-double poissonRHS(
+double f(
   const tarch::la::Vector<Dimensions, double>&  x
 ){
-  double rhs = Dimensions * pi * pi;
-  for (int i = 0; i < Dimensions; i++){
-    rhs *= std::sin( pi * x[i] );
+  double f = -8 * pi * pi;
+  for (int i=0; i<Dimensions; i++){
+    f *= std::sin( 2 * pi * x[i] );
   }
-  return rhs;  
+  return f;
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
@@ -53,17 +54,34 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellInit(
   tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  value,
   tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  rhs  
 ) {
-  //begin at bottom left
-  tarch::la::Vector<Dimensions, double> tempX = {x[0] - h[0]/2, x[1] - h[1]/2};
+  double cellSize = 1;
+  for (int i=0; i<Dimensions; i++)
+    cellSize *= h[i];
 
-  //this only works for 2d
-  //hardcode 2 since 2 vertices in each dimension
-  for (int i=0; i<2; i++){
-    for (int j=0; j<2; j++){
-      rhs[ i*2 + j ]   = poissonRHS( { tempX[0] + j*h[0], tempX[1] + i*h[1] } );
-      value[ i*2 + j ] = 0;
+  //set entries of "value" to 0
+  for (int i=0; i<{{CELL_CARDINALITY}}; i++)
+    value[i] = 0;
+  
+  const int nPlusOne = {{POLYNOMIAL_DEGREE}}+1; ///polynomial degree + 1
+  //proper loop for rhs construction
+  //we loop over point i in the mesh:
+  for (int i=0; i<{{CELL_CARDINALITY}}; i++)
+  {
+    //we take the integral over the whole cell
+    double integral=0;
+    int p=0; int w=0;
+    for (; p<repositories::quadWeights.size(); p++, w++){
+      const std::vector<double> localQuadPoint  = {{NAMESPACE | join("::")}}::repositories::quadPoints[p];
+      const double              localQuadWeight = {{NAMESPACE | join("::")}}::repositories::quadWeights[w];
+      const tarch::la::Vector<Dimensions,double> quadPointInCell = {{NAMESPACE | join("::")}}::repositories::convertQuadPointToRealLocation(
+        p, x, h
+      );
+
+      integral += 0.25 * cellSize * localQuadWeight * repositories::evalPoly(i, localQuadPoint) * f(quadPointInCell);
     }
+    rhs[i] = integral;
   }
+
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::faceInit(

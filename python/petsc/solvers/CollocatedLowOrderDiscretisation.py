@@ -92,7 +92,9 @@ I wanna see if this one applies to the solver or hte init
   
   def add_to_enumerate(self, observer):
     pass
-  
+
+  def add_to_init_petsc(self, observer):
+    pass
   
   def add_to_enumerate_and_init_solution(self, observer):
     """!

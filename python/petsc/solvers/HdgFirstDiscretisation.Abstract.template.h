@@ -89,6 +89,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     ::petsc::LocalToGlobalMap&  getFaceLocalToGlobalMap();
     ::petsc::LocalToGlobalMap&  getCellLocalToGlobalMap();
+    ::petsc::LocalToGlobalMap&  getVertexLocalToGlobalMap();
   protected:
     static tarch::logging::Log  _log;
 
@@ -99,6 +100,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     ::petsc::LocalToGlobalMap  _faceLocalToGlobalMap;
     ::petsc::LocalToGlobalMap  _cellLocalToGlobalMap;
+    ::petsc::LocalToGlobalMap  _vertexLocalToGlobalMap;
 };
 
 

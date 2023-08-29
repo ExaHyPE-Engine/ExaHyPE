@@ -135,6 +135,7 @@ class AssemblePetscMatrixOnVertices(ActionSet):
 
     //send these to petsc
     repositories::instanceOfPetsc.insertValueAndRHS(val, rhs, globalIndex);
+
   }
   """
   
@@ -273,6 +274,14 @@ Define body of constructor
     _stencilBottomRight = {{_stencil(2,1)/2.0, _stencil(2,2)/1.0, _stencil(1,1)/4.0, _stencil(1,2)/2.0 }};
     _stencilBottomLeft  = {{_stencil(2,0)/1.0, _stencil(2,1)/2.0, _stencil(1,1)/4.0, _stencil(1,1)/2.0 }};
 """
+
+
+'''
+
+This class is somewhat deprecated. was put in place for demonstrating firedrake code, but we move
+away from this now.
+
+'''
 
 class AssemblePETSCMatrixOnCellsAndFaces(ActionSet):
   ## add templates
@@ -536,4 +545,327 @@ Consult petsc.Project for details
     {stencilsFC};
 
   const tarch::la::Matrix<{self.d["stencilRowsCC"]},{self.d["stencilColsCC"]},double> _stencilCC = {self.d["STENCILCC"]};
+"""
+
+
+class AssemblePETSCMatrixWithQuadratures(ActionSet):
+  ## add templates
+  
+  templateTouchCellFirstTime="""
+  /*
+  we need to create a matrix which we will pass to petsc.
+
+  SIDE NOTE - WE WILL HAVE (FOR NOW) THE SAME VALUES IN EACH CELL (WE DO THE EXACT SAME CALCULATION)
+  but we do it on each cell, rather than just reading off a value
+  */
+  tarch::la::Matrix<{{CELL_CARDINALITY}},{{CELL_CARDINALITY}},double> localMatrix;
+
+  /*
+  need a two-level loop - we follow the code in main.py (at time of writing, line 52) here:
+  https://bitbucket.org/em459/hybridisableaderdg/src/prototype-development/src/prototype/main.py
+  */
+  if (not marker.willBeRefined())
+  {
+
+    for (int i=0; i<{{CELL_CARDINALITY}}; i++){
+      for (int j=0; j<{{CELL_CARDINALITY}}; j++){
+        //third level - loop over all the quad points and weights
+        int p = 0; int w = 0;
+        for (; p<repositories::quadWeights.size(); p++, w++){
+          const std::vector<double> localQuadPoint  = repositories::quadPoints[p];
+          const double              localQuadWeight = repositories::quadWeights[w];
+          double gradDotGrad = repositories::evalDeriv( i, 0, localQuadPoint ) * repositories::evalDeriv( j, 0, localQuadPoint ) * marker.h()[0] / marker.h()[1]
+                             + repositories::evalDeriv( i, 1, localQuadPoint ) * repositories::evalDeriv( j, 1, localQuadPoint ) * marker.h()[1] / marker.h()[0];
+          localMatrix(i,j) += - localQuadWeight * gradDotGrad;
+        }
+      }
+    }
+    //we can send to petsc now.
+
+    //get global index
+    std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}.getNumber() );
+    int globalIndex =  repositories::getGlobalCellIndex( localIndex );
+
+    //construct the list of row indices we want to use:
+    std::vector<int> rowIndices({{CELL_CARDINALITY}});
+    //fill this vector up, starting with our global index
+    std::iota(rowIndices.begin(), rowIndices.end(), globalIndex);
+
+    //repeat for the colIndices
+    std::vector<int> colIndices({{CELL_CARDINALITY}});
+    //fill this vector up, starting with our global index
+    std::iota(colIndices.begin(), colIndices.end(), globalIndex);
+
+    //send to petsc
+    repositories::instanceOfPetsc.insertLocalMatrix( rowIndices, colIndices, localMatrix );
+
+    //do the same for rhs vector
+    repositories::instanceOfPetsc.insertRHS( fineGridCell{{SOLVER_NAME}}.getRhs(), globalIndex );
+
+    //insert zeroes into solution vectors
+    repositories::instanceOfPetsc.insertX( fineGridCell{{SOLVER_NAME}}.getValue(), globalIndex );
+
+  }
+  """
+
+  templateTVFT = """
+    /*
+    matrix should look like:
+
+    A T^T
+    T 0.
+
+    we insert the following into T and T transpose
+    */
+    if (not marker.willBeRefined()
+        and
+        fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
+    ){
+      //static int calls = 10; calls++;
+      //std::cout << fineGridVertex{{SOLVER_NAME}}.getDofIndices() << " " << calls << "\\n";
+      //std::cout << fineGridVertex{{SOLVER_NAME}}.toString()      << "\\n\\n";
+
+      //starting point should be be the total number of cell dofs; right now 
+      //we place the constraints into the matrix
+      const int startIndex   = repositories::getTotalCellDofs();
+      const int vertexNumber = fineGridVertex{{SOLVER_NAME}}.getNumber();
+      const int baseIndex  = fineGridVertex{{SOLVER_NAME}}.getDofIndices(0); //we constrain relative to this element
+
+
+      for (int i=1; i<TwoPowerD; i++){
+        int otherIndex = fineGridVertex{{SOLVER_NAME}}.getDofIndices(i);
+
+        if (otherIndex != -1){
+          int rowIndex = startIndex + vertexNumber + i - 1; //add on i-1 since i starts at 1
+
+          std::vector<int> rows = { rowIndex };
+          std::vector<int> cols = { baseIndex, otherIndex };
+          tarch::la::Matrix<1,2, double > vals          = {1,-1};
+          tarch::la::Matrix<2,1, double > valsTranspose = {1,-1};
+
+          //insert into row
+          repositories::instanceOfPetsc.insertLocalMatrix(rows, cols, vals);
+
+          //insert into transpose
+          repositories::instanceOfPetsc.insertLocalMatrix(cols, rows, valsTranspose);
+        }
+      }
+      
+    }
+
+    else if (not marker.willBeRefined()
+        and
+        fineGridVertex{{SOLVER_NAME}}.getType() == vertexdata::{{SOLVER_NAME}}::Type::Dirichlet)
+    {
+      //this time we are on the boundary.
+      //starting point should be be the total number of cell dofs; right now 
+      //we place the constraints into the matrix
+      const int startIndex   = repositories::getTotalCellDofs();
+      const int vertexNumber = fineGridVertex{{SOLVER_NAME}}.getNumber();
+
+      int numberOfNonTrivialEntries = 0;
+      for (int i=0; i<TwoPowerD; i++)
+      {
+        if (fineGridVertex{{SOLVER_NAME}}.getDofIndices(i) != -1) //this element has been set
+          numberOfNonTrivialEntries++;
+      }
+
+      for (int i=0; i<numberOfNonTrivialEntries; i++)
+      {
+        int otherIndex = fineGridVertex{{SOLVER_NAME}}.getDofIndices(i);
+        if (otherIndex != -1)
+        {
+          int rowIndex = startIndex + vertexNumber + i; //how far down we want 
+
+          std::vector<int> rows = { rowIndex };
+          std::vector<int> cols = { otherIndex }; //we want to constraint exactly this element
+          tarch::la::Matrix<1,1,double> vals = {1};
+
+          repositories::instanceOfPetsc.insertLocalMatrix(rows, cols, vals);
+          repositories::instanceOfPetsc.insertLocalMatrix(cols, rows, vals);
+
+
+        }
+      }
+
+    }
+  """
+
+  def __init__(self, solver):
+    super( AssemblePETSCMatrixWithQuadratures, self ).__init__()
+    self.d = {}
+    self.d["SOLVER_INSTANCE"]    = solver.instance_name()
+    self.d["SOLVER_NAME"]        = solver.typename()
+    self.d["CELL_CARDINALITY"]   = solver.number_of_cell_unknowns
+
+  def get_constructor_body(self):
+    return f"""
+    _spacetreeId = treeNumber;
+"""
+
+
+  def get_body_of_operation(self, operation_name):
+    """!
+    for now, only touch cell first time
+    """
+    ## add touchcellfirsttime
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
+      pass 
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
+      result = jinja2.Template(self.templateTVFT).render(**self.d)
+      pass
+
+    return result
+
+  def get_action_set_name(self):
+    """!
+    
+    Configure name of generated C++ action set
+    
+    This action set will end up in the directory observers with a name that
+    reflects how the observer (initialisation) is mapped onto this action 
+    set. The name pattern is ObserverName2ActionSetIdentifier where this
+    routine co-determines the ActionSetIdentifier. We make is reflect the
+    Python class name.
+     
+    """
+    return __name__.replace(".py", "").replace(".", "_")
+  
+  def user_should_modify_template(self):
+    """!
+    
+    The action set that Peano will generate that corresponds to this class
+    should not be modified by users and can safely be overwritten every time
+    we run the Python toolkit.
+    
+    """
+    return False
+
+  def get_includes(self):
+    """!
+   
+Consult petsc.Project for details
+    
+"""    
+    return """
+#include "repositories/SolverRepository.h"
+#include <numeric> //for std::iota
+"""
+  def get_attributes(self):
+    """!
+    """
+
+    return f"""
+  int _spacetreeId;
+"""
+
+
+class AssemblePETSCMatrixForMP(ActionSet):
+  ## add templates
+  
+  templateTCFT = """
+  if (not marker.willBeRefined())
+  {
+    //send precomputed cell-cell matrix to petsc!
+
+    //global index
+    std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}.getNumber() );
+    int globalIndex =  repositories::getGlobalCellIndex( localIndex );
+
+    //construct the list of row indices we want to use:
+    std::vector<int> rowIndices({{CELL_CARDINALITY}});
+    //fill this vector up, starting with our global index
+    std::iota(rowIndices.begin(), rowIndices.end(), globalIndex);
+
+    //repeat for the colIndices
+    std::vector<int> colIndices({{CELL_CARDINALITY}});
+    //fill this vector up, starting with our global index
+    std::iota(colIndices.begin(), colIndices.end(), globalIndex);
+    
+    //we want to scale the matrix down
+    //make a copy
+    const int rows = repositories::cellToCell.rows();
+    const int cols = repositories::cellToCell.cols();
+    double tempMatrix[ rows*cols ];
+
+    //scale, and place into this temporary array
+    std::transform( repositories::cellToCell.data(), repositories::cellToCell.data() + repositories::cellToCell.size(),
+                    tempMatrix,
+                    [&](const double& d){return d*marker.h()[0]*marker.h()[1];} );
+
+    //send to petsc
+    repositories::instanceOfPetsc.insertLocalMatrix( rows, rowIndices, cols, colIndices, tempMatrix );
+  }
+  """
+
+  def __init__(self, solver):
+    super( AssemblePETSCMatrixForMP, self ).__init__()
+    self.d = {}
+    self.d["SOLVER_INSTANCE"]    = solver.instance_name()
+    self.d["SOLVER_NAME"]        = solver.typename()
+    self.d["CELL_CARDINALITY"]   = solver.number_of_cell_unknowns
+
+  def get_constructor_body(self):
+    return f"""
+    _spacetreeId = treeNumber;
+"""
+
+
+  def get_body_of_operation(self, operation_name):
+    """!
+    for now, only touch cell first time
+    """
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      pass 
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
+      # result = jinja2.Template(self.templateTVFT).render(**self.d)
+      pass
+
+    return result
+
+  def get_action_set_name(self):
+    """!
+    
+    Configure name of generated C++ action set
+    
+    This action set will end up in the directory observers with a name that
+    reflects how the observer (initialisation) is mapped onto this action 
+    set. The name pattern is ObserverName2ActionSetIdentifier where this
+    routine co-determines the ActionSetIdentifier. We make is reflect the
+    Python class name.
+     
+    """
+    return __name__.replace(".py", "").replace(".", "_")
+  
+  def user_should_modify_template(self):
+    """!
+    
+    The action set that Peano will generate that corresponds to this class
+    should not be modified by users and can safely be overwritten every time
+    we run the Python toolkit.
+    
+    """
+    return False
+
+  def get_includes(self):
+    """!
+   
+Consult petsc.Project for details
+    
+"""    
+    return """
+#include "repositories/SolverRepository.h"
+#include <numeric>   //for std::iota
+#include <algorithm> //for std::transform
+"""
+  def get_attributes(self):
+    """!
+    """
+
+    return f"""
+  int _spacetreeId;
 """

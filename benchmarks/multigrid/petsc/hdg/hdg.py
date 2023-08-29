@@ -1,6 +1,8 @@
 """
 
- Simple Poisson solver on the unit cube.
+FOR NOW, WE FIX THE NUMBER OF DOFS TO BE THE SAME AS 
+THE NUMBER OF GAUSSIAN POINTS
+
 
 """
 
@@ -28,7 +30,6 @@ parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       defau
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
-
 '''
 set the number of cell and face dofs
 '''
@@ -37,54 +38,18 @@ set the number of cell and face dofs
 cellDofs = (args.degree + 1) **  args.dimensions 
 faceDofs = (args.degree + 1) ** (args.dimensions - 1)
 
-'''
-add some stencils
-'''
-
-from stencils import stencilsCF, stencilsFC, stencilCC, stencilsFF
-
-for stencil in stencilsFF:
-  if len(stencil)    != faceDofs \
-  or len(stencil[0]) != faceDofs:
-    print("incorrect dimensions for stencilFF")
-    exit()
-
-for stencil in stencilsCF:
-  if len(stencil)    != cellDofs \
-  or len(stencil[0]) != faceDofs:
-    print("incorrect dimensions for stencilCF")
-    exit()
-
-for stencil in stencilsFC:
-  if len(stencil)    != faceDofs \
-  or len(stencil[0]) != cellDofs:
-    print("incorrect dimensions for stencilFC")
-    exit()
-
-
-if len(stencilCC)    != cellDofs \
-or len(stencilCC[0]) != cellDofs:
-  print("incorrect dimensions for stencilCC")
-  exit()
-
-if args.degree != 1:
-  print('for now, we just want to get visualisation working with degree = 1')
-  exit()
-
 project = petsc.Project(project_name = "HDG", 
                         namespace = [ "benchmarks", "multigrid", "petsc", "hdg" ]
                         ) 
                         
                         
-solver = petsc.solvers.HdgFirstDiscretisation("HDG", 
+solver = petsc.solvers.HdgFirstDiscretisation("HDG",
+                                              args.degree,
                                               cellDofs,
                                               faceDofs,
                                               args.meshsize,
                                               args.meshsize,
-                                              stencilsFF,
-                                              stencilsCF,
-                                              stencilsFC,
-                                              stencilCC
+                                              args.dimensions,
                                               )
 
 project.add_solver( solver )

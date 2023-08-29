@@ -296,11 +296,11 @@ UnitTests3d*
 *.pvd
 *.err
 *.out
+/documentation/
 
-# Misc
-.DS_Store
-/Debug/
-*.tmp
-*.trs
-*.sh
-compile_commands.json
+*.o.*
+*.trs*
+*.xml
+*.def
+
+builds/
