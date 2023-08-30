@@ -16,10 +16,16 @@ as presented above.
 Let
 
 @f$
-\lambda_u := [[u]]  \qquad \text{and} \qquad \lambda_\phi := [[ (n,\phi) ]]
+\lambda_u := u|_\text{face} \qquad \text{and} \qquad \lambda_\phi := n \cdot \phi |_\text{face}
 @f$ 
 
-denote the additional variables that "to not exist" on the face. Next, we assume that we know the 
+denote the additional variables that "to not exist" on the face, as there
+is a left and a right value at every face where two different cells meet
+We don't know which to pick under the integral a priori. Here our @f$ \lambda_u @f$ is 
+just our solution u, but evaluated on the face. Since we have a jump, this means 
+that we have a different value depending on which cell we are
+considering. Previously, we took the average for example, to come up with a meaningful
+value. This time, we assume that we know the 
 @f$ \lambda _u @f$ (which other manuscript also call @f$ \hat{u} @f$) somehow. 
 If so, we can evaluate 
 
@@ -29,7 +35,7 @@ If so, we can evaluate
 @f$
 
 within the face-to-cell projection. 
-Furthermore, we fix a magic constant @f$ \gamma > @f$ and enforce
+Furthermore, we fix a magic constant @f$ \gamma > 0 @f$ and enforce
 
 
 
@@ -87,7 +93,7 @@ The rationale behind the construction of @f$ \lambda _u @f$ is not too difficult
 My argument goes as follows: If we walk from the left cell to the right, then the
 average gradient in the sketch
 
-  @image html documentation/average_gradient.png
+  @image html average_gradient.png
 
 is the average of two blue lines. However, if we do an intermediate step into some 
 @f$ \lambda _u @f$ which is very high (higher than any blue line), then we have 
