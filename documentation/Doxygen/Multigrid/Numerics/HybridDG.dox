@@ -87,7 +87,7 @@ The rationale behind the construction of @f$ \lambda _u @f$ is not too difficult
 My argument goes as follows: If we walk from the left cell to the right, then the
 average gradient in the sketch
 
-  @image html documentation/average_gradient.png
+  @image html average_gradient.png
 
 is the average of two blue lines. However, if we do an intermediate step into some 
 @f$ \lambda _u @f$ which is very high (higher than any blue line), then we have 
