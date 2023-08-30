@@ -110,10 +110,19 @@ We have quite some freedom to arrange these weights. For the remainder, we use
 Gauss-Lobatto, which means that we place the weights exactly at the cell 
 corners. There are other schemes like Gauss-Legendre, where the weights do not
 have to be in the corner. 
-So for Gauss-Lobatto, we have arrangements such as the ones below:
 
+We depict these arrangements here:
 
 @image html gaussLobatto.png
+
+We show a scheme for both Gauss-Legendre (above) and Gauss-Lobatto (below).
+We note that for Lobatto, the face dofs coincide spatially with the cell dofs,
+but for now we do not use them. Each cell dof
+holds a value for @f$ u, \ \phi_x \ \text{and} \phi_y @f$. Each face dof holds a value for 
+@f$ u, \ \text{and} \phi_x @f$ for each vertical face, and 
+@f$ u, \ \text{and} \phi_y @f$ for each horizontal face. We show also how these unknowns
+are arranged in memory for the cells. For each cell, we store an array of doubles, with
+length @f$ K (p+1)^d @f$, K being the number of unknowns per cell dof. 
 
 The left side uses a polynomial degree of one in line with our 1d examples 
 above. This means, we need four degrees of freedom per cell, but then each 
@@ -129,6 +138,10 @@ In this case, we will obtain a system
 where x has @f$ (d+1) |\mathbf{C}| \cdot (p+1)^d @f$ entries. 
 
 
+## Matrix arrangement
+
+Currently, the code enumerates cell dofs first, and then face dofs after.
+We expect the number of cell dofs to be 
 
 # The weak formulation
 
