@@ -1,10 +1,12 @@
 #include "tarch/multicore/Tasks.h"
 
+#include "config.h"
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/otter.h"
 #include "tarch/services/ServiceRepository.h"
 
 #ifdef UseSmartMPI

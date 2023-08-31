@@ -5,6 +5,7 @@
 #include <thread>
 
 #include "BooleanSemaphore.h"
+#include "config.h"
 #include "Core.h"
 #include "Lock.h"
 #include "multicore.h"
@@ -150,7 +151,8 @@ bool tarch::multicore::internal::fusePendingTasks(
     auto pp = globalNonblockingTasks.tasks.begin();
     while (
       pp != globalNonblockingTasks.tasks.end() and (*pp)->getTaskType() == myTask->getTaskType()
-      and /*(*pp)->getTaskType() == myTask->canFuse()*/ (*pp)->canFuse() and tasksOfSameType.size() < fuseInstruction.maxTasks - 1
+      and /*(*pp)->getTaskType() == myTask->canFuse()*/ (*pp)->canFuse()
+      and tasksOfSameType.size() < fuseInstruction.maxTasks - 1
     ) {
       tasksOfSameType.push_back(*pp);
       pp = globalNonblockingTasks.tasks.erase(pp);
@@ -240,17 +242,35 @@ tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
   int taskType, int priority, const std::function<bool()>& taskFunctor
 ):
   Task(taskType, priority),
-  _taskFunctor(taskFunctor) {}
+  _taskFunctor(taskFunctor) {
+  OTTER_BORROW_FROM_POOL(step_task, otter::label::step);
+  OTTER_DEFINE_TASK(this_task, step_task, otter_add_to_pool, otter::label::TaskWithCopyOfFunctor);
+}
 
-bool tarch::multicore::TaskWithCopyOfFunctor::run() { return _taskFunctor(); }
+bool tarch::multicore::TaskWithCopyOfFunctor::run() {
+  OTTER_REMOVE_FROM_POOL(this_task, otter::label::TaskWithCopyOfFunctor);
+  OTTER_TASK_START(this_task);
+  bool result = _taskFunctor();
+  OTTER_TASK_END(this_task);
+  return result;
+}
 
 tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(
   int taskType, int priority, std::function<bool()>& taskFunctor
 ):
   Task(taskType, priority),
-  _taskFunctor(taskFunctor) {}
+  _taskFunctor(taskFunctor) {
+  OTTER_BORROW_FROM_POOL(step_task, otter::label::step);
+  OTTER_DEFINE_TASK(this_task, step_task, otter_add_to_pool, otter::label::TaskWithoutCopyOfFunctor);
+}
 
-bool tarch::multicore::TaskWithoutCopyOfFunctor::run() { return _taskFunctor(); }
+bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
+  OTTER_REMOVE_FROM_POOL(this_task, otter::label::TaskWithoutCopyOfFunctor);
+  OTTER_TASK_START(this_task);
+  bool result = _taskFunctor();
+  OTTER_TASK_END(this_task);
+  return result;
+}
 
 bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
   assertion(maxTasks >= 0);
@@ -285,8 +305,8 @@ void tarch::multicore::spawnTask(Task* task) {
   if (task->isSmartMPITask() and smartmpi::spawn(dynamic_cast<smartmpi::Task*>(task))) {
   } else
 #endif
-    if (localNonblockingTasks[threadNumber]->tasks.size() >= orchestrationStrategy->getNumberOfTasksToHoldBack()) {
-    logDebug("spawnTasks(int)", "spawn native task");
+    if (localNonblockingTasks[threadNumber]->tasks.size() >= orchestrationStrategy->getNumberOfTasksToHoldBack(task->getTaskType())) {
+    logDebug("spawnTasks(int)", "spawn native task of type " << task->getTaskType());
     native::spawnTask(task);
   } else {
     tarch::multicore::Lock lock(localNonblockingTasks[threadNumber]->semaphore);
@@ -299,8 +319,8 @@ void tarch::multicore::spawnTask(Task* task) {
 
     logDebug("spawnTask(...)", "enqueued task (#tasks=" << localNonblockingTasks[threadNumber]->tasks.size() << ")");
 
-    auto fusionCommand = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
-    if (localNonblockingTasks[threadNumber]->tasks.size() >= fusionCommand.minTasks and orchestrationStrategy->fuseTasksImmediatelyWhenSpawned()) {
+    auto fusionCommand = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice(task->getTaskType());
+    if (localNonblockingTasks[threadNumber]->tasks.size() >= fusionCommand.minTasks and orchestrationStrategy->fuseTasksImmediatelyWhenSpawned(task->getTaskType())) {
       internal::copyInternalTaskQueueOverIntoGlobalQueue(threadNumber);
       internal::fusePendingTasks(fusionCommand);
     }
@@ -342,12 +362,11 @@ void tarch::multicore::spawnAndWait(const std::vector<Task*>& tasks) {
         BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true
       );
 
-      // AT: ideally would record the handle of the encountering task here to correctly identify child tasks
-      otterSynchroniseTasks(NULL, otter_sync_children);
-
       internal::copyInternalTaskQueuesOverIntoGlobalQueue();
       int  numberOfPendingTasks = tarch::multicore::internal::getNumberOfWithholdPendingTasks();
-      auto fusionInstruction    = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
+      auto fusionInstruction    = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice(
+        tarch::multicore::orchestration::Strategy::EndOfBSPSection
+      );
 
       bool successInFusing = true;
       while (successInFusing and globalNonblockingTasks.tasks.size() >= fusionInstruction.minTasks) {
@@ -356,7 +375,10 @@ void tarch::multicore::spawnAndWait(const std::vector<Task*>& tasks) {
 
       if (not globalNonblockingTasks.tasks.empty()) {
         int numberOfTasksToProcessNow = std::max(
-          0, static_cast<int>(globalNonblockingTasks.tasks.size()) - orchestrationStrategy->getNumberOfTasksToHoldBack()
+          0,
+          static_cast<int>(globalNonblockingTasks.tasks.size())
+            - orchestrationStrategy
+                ->getNumberOfTasksToHoldBack(tarch::multicore::orchestration::Strategy::EndOfBSPSection)
         );
         internal::mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
       }
@@ -370,8 +392,6 @@ void tarch::multicore::spawnAndWait(const std::vector<Task*>& tasks) {
         BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true
       );
 
-      // AT: ideally would record the handle of the encountering task here to correctly identify child tasks
-      otterSynchroniseTasks(NULL, otter_sync_children);
     } break;
     }
 
