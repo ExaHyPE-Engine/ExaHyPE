@@ -59,6 +59,8 @@ private:
    */
   int _rank;
 
+  double _maxTimestamp;
+
   struct Entry {
     tarch::la::Vector<Dimensions, double> x;
     double                                timestamp;

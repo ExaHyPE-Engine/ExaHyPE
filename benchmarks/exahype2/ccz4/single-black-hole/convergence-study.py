@@ -797,7 +797,12 @@ if __name__ == "__main__":
             [(i / domain_size[0] / 2.0), 0, 0] for i in range(0, number_of_tracers)
         ]
         my_primary_solver.add_tracer(
-            name="PrimaryTracer", coordinates=tracer_coordinates, project=project
+            name="PrimaryTracer", 
+            coordinates=tracer_coordinates, 
+            project=project,
+            number_of_entries_between_two_db_flushes = number_of_tracers,
+            data_delta_between_two_snapsots = 1e-6,
+            time_delta_between_two_snapsots = 0.0,
         )
         if added_limiter:
             my_secondary_solver.add_tracer(

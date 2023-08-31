@@ -1,6 +1,6 @@
 #!/bin/bash -l
-#SBATCH -o slurm-2.0.out
-#SBATCH -e slurm-2.0.err
+#SBATCH -o slurm-1.0.out
+#SBATCH -e slurm-1.0.err
 #SBATCH -p bluefield1
 #SBATCH -A durham
 #SBATCH -t 72:00:00
@@ -15,7 +15,7 @@ module load gnu_comp/11.1.0
 export I_MPI_CXX=icpx
 module load gsl
 
-MESH_SIZE=2.0
+MESH_SIZE=1.0
 # I always try to pipe into cosma8's data directory, but only cosma5 is mounted
 OUPUT_DIRECTORY=/cosma5/data/do009/frmh84/sbh-$MESH_SIZE
 echo $OUPUT_DIRECTORY
