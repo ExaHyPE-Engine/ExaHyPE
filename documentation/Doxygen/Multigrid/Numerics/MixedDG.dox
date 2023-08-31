@@ -128,7 +128,7 @@ In this case, we will obtain a system
 
 @f$ A x = b @f$
 
-where x has @f$ (d+1) \mathbb{C} \cdot (p+1)^d @f$ entries, where @f$ \mathbb{C}  @f$ 
+where x has @f$ (d+1) |\mathbb{C}| \cdot (p+1)^d @f$ entries, where @f$ \mathbb{C}  @f$ 
 is set of cells in the mesh.
 
 <!--
@@ -259,32 +259,42 @@ face terms.
 ## Data storage
 
 Peano does not support global data access. That is, you cannot access cell data
-from faces, and you cannot access data from neighbouring cells. Instead, cell
-and face data are strictly separated. To solve the face terms, we want to 
-formalise some equations on the faces. However, faces so far do not hold any
-data. We will argue about the solution over the face, but we do not even know
-the solution there at the moment. Therefore, we introduce 
+from faces, and you cannot access data from neighbouring cells within a cell
+either. You can access the faces of a cell within a cell, but cell
+and face data are strictly separated. 
+
+To solve the equations over the faces, we therefore have to project the solution
+onto the face, then solve the equation there, and afterwards project the outcome
+back into the cell's degrees of freedom. However, faces so far do not hold any
+data. To argue about the solution over the face, we have to know
+the solution there first. Therefore, we introduce 
 @f$ 2K \cdot (p+1)^{d-1} @f$ unknowns per face: 
 
 - We work with polynomials over the face which are drawn from the same shape
   space as our volumetric shape functions, but restricted to the face. 
   We get the @f$ (p+1) @f$ for the polynomial and the @f$ -1 @f$ in the 
-  exponent, as we work only on the faces.
+  exponent, as we work only on the faces, i.e. a submanifold.
 - We note that @f$ \phi @f$ does not exist on the face. This is because our 
   approximate solution to @f$ u @f$ is discontinuous, meaning we have a jump. 
   See the blue line below or the grey one. We'll discuss the other formalism
   later:
   @image html average_gradient.png
-  Therefore, we have two solutions per degree of freedom: The one from the 
+  Therefore, we have two solutions per degree of freedom on the face: The one from the 
   left and the one from the right. This is the factor of two.
 - Finally, we already said that we will store two quantities per degree of 
   freedom: We will have to handle solution jumps in @f$ u @f$ along the face
   and we will have to discuss the normal component of @f$ (n, \phi ) @f$. So
   this gives us an additional factor of two.
   
-The enumeration of the degrees of freedom on the face is discussed in @ref tbd.
-The Python API only has to know that we deal with two quantities of interest, 
-i.e. @f$ u @f$ and @f$ (n, \phi ) @f$. It can then compute the actual number of 
+We use the term ***degree of freedom on a face***, but this is not 100% right: 
+Indeed, we argue over dofs on the face, but they are not "free" - they follow
+the solution strictly.
+The enumeration of the degrees of freedom on the face is discussed in @ref multigrid_enumeration.
+
+
+The Python API of typical mixed formulation DG solvers has to know that we deal 
+with two quantities of interest, 
+i.e. @f$ u @f$ and @f$ (n, \phi ) @f$. Given this numer of two, it can then compute the actual number of 
 unknowns per face automatically:
 
 
@@ -301,6 +311,45 @@ solver = petsc.solvers.MixedPoisson("MP",
                                     [...]
                                     )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+The code above creates additional degrees of freedom for the faces. We will
+deal with the fact that they are not free later on. This means that we solve
+an augmented system
+
+@f$ Ax=b @f$
+
+where @f$ A \in \mathbb{R}^{ K |\mathbb{C}| \cdot (p+1)^d + 2 \hat K |\mathbb{F}| \cdot (p+1)^{d-1} \times K |\mathbb{C}| \cdot (p+1)^d + 2 \hat K |\mathbb{F}| \cdot (p+1)^{d-1} } @f$.
+The "new" quantity @f$ \mathbb{F} @f$ denotes the set of faces.
+
+
+For the Poisson equation, @f$ K = d+1 @f$ continues to denote the number of
+unknowns per cell dof, while @f$ \hat K = 2 @f$ encodes that we have to project
+the solution and the derivative along the normal onto each face.
+When we solver allocated @f$ A @f$, it assigns each face a set of indices. 
+Different to the cells, there's no need to assign the face any double values, 
+i.e. each face only stores one integer which encodes the first dof number.  
+
+
+Mathematically, the system now has been extended into 
+
+@f$ 
+ Ax = 
+ \begin{bmatrix}
+ A_{cc} & A_{fc} \\
+ A_{cf} & id \\
+ \end{bmatrix}
+ \begin{bmatrix}
+ x_{c} \\ x_f
+ \end{bmatrix}
+ = 
+ \begin{bmatrix}
+ b_{c} \\ 0
+ \end{bmatrix}
+@f$ 
+
+where we have to specify the involved matrices further. We will also discuss 
+a realisation below which introduces even further helper dofs.
 
 
 
