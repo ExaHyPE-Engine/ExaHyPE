@@ -1,6 +1,9 @@
 from custom_solvers import solver
 
 class HLLEM(solver.Solver):
+    """
+    This solver currently does not work! Please choose a different solver for the time being.
+    """
 
     def __init__(self, epsilon=1e-2):
         self.epsilon = epsilon

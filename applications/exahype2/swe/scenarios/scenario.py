@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 class Scenario(ABC):
     """
     This class provides an interface all scenarios should derive and implement.
-    Methods, whose functionality is implemented via sympy, e. g. in the constructor, must not be implemented again.
+    Methods, whose functionality is implemented via sympy, e. g. in the constructor, do not have to be implemented again.
     """
     @abstractmethod
     def __init__(self):

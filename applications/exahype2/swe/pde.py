@@ -19,14 +19,14 @@ class PDE(exahype2.symhype.FirstOrderConservativePDEFormulation, ABC):
 
     # speed in x direction
     self.u = sympy.Piecewise(
-      (self.hu / self.h, self.h > 0.0), 
-      (0.0, True)
+                              (self.hu / self.h, self.h > 0.0), 
+                              (0.0, True)
       )
 
     # speed in y direction
     self.v = sympy.Piecewise(
-      (self.hv / self.h, self.h > 0.0), 
-      (0.0, True)
+                              (self.hv / self.h, self.h > 0.0), 
+                              (0.0, True)
       )
 
     self.definiton_of_flux()
