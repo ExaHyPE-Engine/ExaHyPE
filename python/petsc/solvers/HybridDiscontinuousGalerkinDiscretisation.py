@@ -23,7 +23,7 @@ from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMP
 from abc import abstractmethod
 
 
-class MixedPoisson(Solver):
+class HybridDiscontinuousGalerkinDiscretisation(Solver):
   """!
    
   this is a copy of the HdgFirstDiscretisation. 
@@ -52,7 +52,7 @@ class MixedPoisson(Solver):
     
    
     """
-    super( MixedPoisson, self ).__init__( name,
+    super( HybridDiscontinuousGalerkinDiscretisation, self ).__init__( name,
                                               min_h,
                                               max_h
                                               )

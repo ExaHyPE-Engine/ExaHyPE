@@ -23,7 +23,7 @@ from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixWithQu
 from abc import abstractmethod
 
 
-class HdgFirstDiscretisation(Solver):
+class MixedDiscontinuousGalerkinDiscretisation(Solver):
   """!
    
   this is a copy of the CollocatedLowOrderDiscretisation, but we rewrite
@@ -61,7 +61,7 @@ class HdgFirstDiscretisation(Solver):
     
    
     """
-    super( HdgFirstDiscretisation, self ).__init__( name,
+    super( MixedDiscontinuousGalerkinDiscretisation, self ).__init__( name,
                                                     min_h,
                                                     max_h
                                                   )

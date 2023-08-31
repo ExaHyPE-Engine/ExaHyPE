@@ -36,14 +36,14 @@ args = parser.parse_args()
 assert args.degree == 1, "not ready for degree 2 yet"
 assert args.dimensions == 2, "not ready for 3d yet"
 
-project = petsc.Project(project_name = "mixedPoisson", 
-                        namespace = [ "benchmarks", "multigrid", "petsc", "mp" ]
+project = petsc.Project(project_name = "hybridPoisson", 
+                        namespace = [ "benchmarks", "multigrid", "petsc", "hp" ]
                         ) 
 
 matrices = MatrixGenerator(args.dimensions, args.degree, args.unknowns_per_cell_dof, args.unknowns_per_face_dof)
                         
                         
-solver = petsc.solvers.HybridDiscontinuousGalerkinDiscretisation("MP",
+solver = petsc.solvers.HybridDiscontinuousGalerkinDiscretisation("HP",
                                     args.degree,
                                     args.unknowns_per_cell_dof, # should be 3
                                     args.unknowns_per_face_dof, # should be 2
