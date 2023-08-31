@@ -43,7 +43,7 @@ project = petsc.Project(project_name = "mixedPoisson",
 matrices = MatrixGenerator(args.dimensions, args.degree, args.unknowns_per_cell_dof, args.unknowns_per_face_dof)
                         
                         
-solver = petsc.solvers.MixedPoisson("MP",
+solver = petsc.solvers.HybridDiscontinuousGalerkinDiscretisation("MP",
                                     args.degree,
                                     args.unknowns_per_cell_dof, # should be 3
                                     args.unknowns_per_face_dof, # should be 2
