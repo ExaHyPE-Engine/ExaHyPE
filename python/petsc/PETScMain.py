@@ -28,12 +28,6 @@ class PETScMain(peano4.runner.DefaultSequence):
     super(PETScMain,self).__init__(project)
     self.overwrite     = True
 
-    if project.project_name == "HDG":
-      self.d[ "ADD_DOFS_TO_VERTICES" ] = self.templateAddDofsToVertices
-    else:
-      self.d[ "ADD_DOFS_TO_VERTICES" ] = ""
-
-
     self.d[ "Project_Name"]  = project.project_name
     self.d[ "DomainOffset" ] = "{" + str(domain_offset[0])
     self.d[ "DomainSize" ]   = "{" + str(domain_size[0])
