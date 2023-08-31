@@ -18,11 +18,11 @@ class PointExplosion:
 
           if dimensions == 2:
             volume_centre = sympy.sqrt((0.5 - self.pde.x[0])**2 + (0.5 - self.pde.x[1])**2)
-            self.pde.initial_values[3] = sympy.Piecewise((1.0, volume_centre <= self.pde.h[0]), (0.05, True)) # e
+            self.pde.initial_values[3] = sympy.Piecewise((1.0, volume_centre < 0.2), (1.01, True)) # e
           else:
             volume_centre = sympy.sqrt((0.5 - self.pde.x[0])**2 + (0.5 - self.pde.x[1])**2 + (0.5 - self.pde.x[2])**2)
             self.pde.initial_values[3] = 0 # w
-            self.pde.initial_values[4] = sympy.Piecewise((1.0, volume_centre <= self.pde.h[0]), (0.05, True)) # e
+            self.pde.initial_values[4] = sympy.Piecewise((1.0, volume_centre < 0.2), (1.01, True)) # e
 
           self.pde.substitute_expression(self.pde.gamma, 1.4)
 
@@ -36,10 +36,10 @@ class PointExplosion:
             Q[1] = 0;
             Q[2] = 0;
             #if Dimensions == 2
-            Q[3] = ((std::sqrt(std::pow(0.5 - volumeCentre(0), 2) + std::pow(0.5 - volumeCentre(1), 2)) <= volumeH[0]) ? (1.0) : (0.05));
+            Q[3] = ((std::sqrt(std::pow(0.5 - volumeCentre(0), 2) + std::pow(0.5 - volumeCentre(1), 2)) < 0.2) ? (1.0) : (1.01));
             #else
             Q[3] = 0;
-            Q[4] = ((std::sqrt(std::pow(0.5 - volumeCentre(0), 2) + std::pow(0.5 - volumeCentre(1), 2) + std::pow(0.5 - volumeCentre(2), 2)) <= volumeH[0]) ? (1.0) : (0.05));
+            Q[4] = ((std::sqrt(std::pow(0.5 - volumeCentre(0), 2) + std::pow(0.5 - volumeCentre(1), 2) + std::pow(0.5 - volumeCentre(2), 2)) < 0.2) ? (1.0) : (1.01));
             #endif
             """
 
@@ -49,7 +49,7 @@ class PointExplosion:
             return self.pde.implementation_of_homogeneous_Neumann_BC()
         else:
             return """
-            ::exahype2::euler::neumannBoundaryConditions(Qinside, Qoutside, faceCentre, volumeH, t, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+            ::exahype2::euler::neumannBoundaryConditions(Qinside, Qoutside, faceCentre, t, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);
             """
 
 
@@ -58,7 +58,7 @@ class PointExplosion:
             return self.pde.implementation_of_flux()
         else:
             return """
-            ::exahype2::euler::flux(Q, faceCentre, volumeH, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables, F);
+            ::exahype2::euler::flux(Q, faceCentre, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables, F);
             """
 
 
@@ -67,7 +67,7 @@ class PointExplosion:
             return self.pde.implementation_of_max_eigenvalue()
         else:
             return """
-            return ::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+            return ::exahype2::euler::maxEigenvalue(Q, faceCentre, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);
             """
 
 
@@ -89,7 +89,7 @@ class PointExplosion:
         // If you only have this thing, then you work with static AMR,
         // as you never invoke erase.
         if (tarch::la::equals(t, 0.0)) {
-          bool isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < 0.2);
+          bool isInTheCentre = (tarch::la::norm2(volumeCentre - circleCentre) < MaxAdmissibleCellH);
           if (isInTheCentre) {
             result = ::exahype2::RefinementCommand::Refine;
           }
