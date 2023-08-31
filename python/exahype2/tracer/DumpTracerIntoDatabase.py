@@ -45,11 +45,16 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
 
         data_delta_between_two_snapsots: Float
          A particle is dumped into the database if it has switched the domain
-         partition or its position has changed more then delta_between_two_snapshots.
-         See toolbox::particles::TrajectoryDatabase::getAction() for a description
-         how the C++ code interprets this threshold, but it is usually the max norm
-         that is used here. If you set it to a very small number, you'll get a lot
-         of entries in your database.
+         partition or its position has changed more then 
+         delta_between_two_snapshots. See 
+         toolbox::particles::TrajectoryDatabase::getAction() for a description
+         how the C++ code interprets this threshold, but it is usually the max 
+         norm that is used here. If you set it to a very small number, you'll 
+         get a lot of entries in your database. 
+         
+         This flag has no impact whatsoever how often the data is dumped into a 
+         file. The frequency of datafile writes is solely controlled via 
+         number_of_entries_between_two_db_flushes.
 
         position_delta_between_two_snapsots: Float
          Similar to data_delta_between_two_snapsots but this time it is not the
@@ -64,13 +69,21 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
          snapshot only after fixed time intervals, set this value to a very high
          threshold, so it never kicks in and triggers a data dump. In this case, only
          the time stamp differences will issue data writes.
+         
+         This flag has no impact whatsoever how often the data is dumped into a 
+         file. The frequency of datafile writes is solely controlled via 
+         number_of_entries_between_two_db_flushes.
 
         time_delta_between_two_snapsots: Float
          this parameter ask the code to dump particle into database after certain time
-         interval of time_delta_between_two_snapsots, even data and position do not change
+         interval of time_delta_between_two_snapsots, even if data and position do not change
          during this time interval. You can set the two parameter above to be extremely big
          to enforce code dump particle with (roughly) regular time interval.
          set it as 0 to switch this feature off.
+         
+         This flag has no impact whatsoever how often the data is dumped into a 
+         file. The frequency of datafile writes is solely controlled via 
+         number_of_entries_between_two_db_flushes.
 
         number_of_entries_between_two_db_flushes: Int
           Number of entries that we dump into the database before it is flushed the next

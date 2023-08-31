@@ -110,7 +110,7 @@ following configurations:
 
 Name             | Cell size | Limiter patch size | End time | Plot    |   AMR levels/FV patches  |     Required nodes     | Call
 ---------------------|-------|--------------------|----------|---------|--------------------------|------------------------|--------
-Small test with vis  |  2.0  | 6                  | 60.0     | yes     | 2 (h_min=0.111111) / 7   | 1 (around 5.8% of mem) | python3 convergence-study.py -plot -cs 2 -s fd4-rk1-limited-ps-6 -et 60.0
+Small test with vis  |  1.0  | 6                  | 60.0     | yes     | 2 (h_min=0.111111) / 7   | 1 (around 5.8% of mem) | python3 convergence-study.py -plot -cs 1.0 -s fd4-rk1-limited-ps-6 -et 60.0
 Medium test with vis |  0.5  | 6                  | 60.0     | yes     | 3 (h_min=0.037037) / 7   | 1 (around 40% of mem)  | python3 convergence-study.py -plot -cs 0.5 -s fd4-rk1-limited-ps-6 -et 60.0
 Large test with vis  |  0.1  | 6                  | 60.0     | yes     | 4 (h_min=0.0123457) / 33 | 1 (around 30% of mem)* | python3 convergence-study.py -plot -cs 0.1 -s fd4-rk1-limited-ps-6 -et 60.0
 ---------------------|-------|--------------------|----------|---------|--------------------------|------------------------|--------
@@ -119,6 +119,9 @@ Production test 0    | 0.05  | 6                  | 60.0     | yes     |        
 
 * It is clear that the excessive use of AMR here ensures that no enclave tasks 
   are left anymore. 
+
+I found that OpenMP is comparatively slow. TBB does a way nicer job. I 
+therefore recommend to use TBB in this case for the benchmarking.
  
 
 ## Code remarks (FD4-FV scheme)

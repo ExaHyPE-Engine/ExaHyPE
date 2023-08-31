@@ -801,7 +801,12 @@ if __name__ == "__main__":
         )
         if added_limiter:
             my_secondary_solver.add_tracer(
-                name="SecondaryTracer", coordinates=tracer_coordinates, project=project
+                name="SecondaryTracer", 
+                coordinates=tracer_coordinates, 
+                project=project,
+                number_of_entries_between_two_db_flushes = number_of_tracers,
+                data_delta_between_two_snapsots = 1e-6,
+                time_delta_between_two_snapsots = 0.0,
             )
 
     # project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
