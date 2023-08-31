@@ -4,9 +4,6 @@
 #include "observers/EnumerateAndInitSolution.h"
 #include "observers/Assemble.h"
 #include "observers/Solve.h"
-{% if Project_Name=="HDG" %}
-#include "observers/InitPETSc.h"
-{% endif %}
 #include "observers/MapSolutionOntoMesh.h"
 #include "observers/Plot.h"
 
