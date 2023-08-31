@@ -26,25 +26,6 @@ from abc import abstractmethod
 class MixedDiscontinuousGalerkinDiscretisation(Solver):
   """!
    
-  this is a copy of the CollocatedLowOrderDiscretisation, but we rewrite
-  to capture DoFs on faces and cells.
-
-  We reuse some of the files from the first attempt at doing the Poisson problem.
-  A quick summary of the ones we reuse and the ones we rewrite:
-
-  Reuse, with the use of jinja if statements to 
-  add the functionality we need:
-    - Project.* in top level
-    - PETScMain.* in top level
-    - AssemblePETScMatrix.py in action sets
-    - ProjectPETScSolutionOnVerticesBackOntoMesh.py
-    - Solver.py
-    - petscData/* (all the routines for PETSc matrices and solvers etc)
-
-  Rewrite:
-    - EnumerateCellsAndFaces.py
-    - InitFaceAndCellDoFs.py
-    - All the templates in the solver directory
   
   """
   def __init__(self,

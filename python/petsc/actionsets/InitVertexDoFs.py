@@ -23,30 +23,6 @@ solver. Besides the actual behaviour, the action set also has to include
 the solver in the first place. This happens in get_includes().
   
   """
-  
-  
-  # TemplateInitVertex = """
-  # if ( not marker.willBeRefined() ) { 
-  #   logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
-    
-  #   repositories::{{SOLVER_INSTANCE}}.init(
-  #     marker.x(),
-  #     marker.h(),
-  #     {% if CARDINALITY==1 %}
-  #     *(fineGridVertex{{SOLVER_NAME}}.getValue().data()),
-  #     *(fineGridVertex{{SOLVER_NAME}}.getRhs().data())
-  #     {% else %}
-  #     fineGridVertex{{SOLVER_NAME}}.getValue(),
-  #     fineGridVertex{{SOLVER_NAME}}.getRhs()
-  #     {% endif %}
-  #   );
-    
-  #   logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
-  # } 
-#  """
-
-#TODO - change calls to setValue and setRhs to reflect higher dimensions - we'll have to consider
-# more than the 0th index
   TemplateInitVertex = """
   auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & vertex ) -> bool {
     for (int i=0; i<Dimensions; i++){
@@ -69,13 +45,6 @@ the solver in the first place. This happens in get_includes().
         fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::DoF );
         break;
     }
-{% if SOLVER_NAME=="HDG" %}
-    //set all the entries of DofIndices to -1
-    tarch::la::Vector<TwoPowerD, int> indices(-1);
-    fineGridVertex{{SOLVER_NAME}}.setDofIndices( indices );
-{% endif %}
-
-{% if SOLVER_NAME=="Poisson" %}
 
     //init two doubles; pass these by reference into init()
     double value, rhs;
@@ -88,12 +57,11 @@ the solver in the first place. This happens in get_includes().
     );
 
     if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet){
-      //place these values into the grid
+      //place these values into the mesh
       fineGridVertex{{SOLVER_NAME}}.setValue(0, value);
       fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);
 
     }
-{% endif %}
   logTraceOut( "touchVertexFirstTime(...)---InitialCondition" );
 }
 """

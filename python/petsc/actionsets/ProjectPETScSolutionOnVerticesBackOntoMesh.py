@@ -21,7 +21,6 @@ corresponding entry in the solution vector reads like.
   
   
   TemplateInitVertex = """
-{% if SOLVER_NAME=="Poisson" %}
   if ( not marker.willBeRefined()
       and
       // we only gave it an index if it was not on the boundary
@@ -41,7 +40,6 @@ corresponding entry in the solution vector reads like.
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   }
-{% endif %}
 """
   
   def __init__(self,
