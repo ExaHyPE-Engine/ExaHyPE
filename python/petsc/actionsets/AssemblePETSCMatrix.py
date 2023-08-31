@@ -323,7 +323,7 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
 
   }
   """
-
+  #don't need this anymore
   templateTVFT = """
     /*
     matrix should look like:
@@ -429,9 +429,6 @@ class AssemblePETSCMatrixWithQuadratures(ActionSet):
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass 
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.templateTVFT).render(**self.d)
-      pass
 
     return result
 

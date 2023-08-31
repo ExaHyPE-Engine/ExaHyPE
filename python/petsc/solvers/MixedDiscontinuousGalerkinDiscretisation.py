@@ -30,12 +30,12 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
   """
   def __init__(self,
                name,
+               dimensions,
                polynomial_degree,
-               cell_dofs,
-               face_dofs,
+               unknowns_per_cell_dof,
                min_h,
                max_h,
-               dimensions):
+               ):
     """!
    
  Test comment (C)
@@ -47,51 +47,37 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
                                                     max_h
                                                   )
 
-    self.polynomial_degree = polynomial_degree
-    self.dimensions        = dimensions
+    self.polynomial_degree     = polynomial_degree
+    self.dimensions            = dimensions
+    self.unknowns_per_cell_dof = unknowns_per_cell_dof
+    self.unknowns_per_face_dof = self.unknowns_per_cell_dof - 1 #only one of them points in the right direction
+
+    self._cell_unknowns = (polynomial_degree + 1) ** dimensions
+    self._face_unknowns = (polynomial_degree + 1) **( dimensions -1 )
 
     self.quadrature_points, self.weights, self.poly_coeffs = \
       self.initGaussLobatto()
-
-    #hardcode one unknown on vertices for now
-    self._vertex_unknowns = 2 ** ( self.dimensions ) ## will be same as number of cells surrounding each vertex
+    
+    self._vertex_unknowns = 1
     self._vertexDof = peano4.datamodel.DaStGen2( name )
-
-    '''
-     ---   ---
-    |   | |   |
-    | 2 | | 3 |
-     ---   ---
-         v
-     ---   ---
-    |   | |   |
-    | 0 | | 1 |
-     ---   ---
-
-     the vertex v needs to store the top-right    dof for cell 0, 
-                                 the top-left     dof for cell 1, 
-                                 the bottom-right dof for cell 2, 
-                                 the bottom-left  dof for cell 3, 
-    '''
-    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4IntegerArray( "dofIndices",  str(self._vertex_unknowns) ) )
+    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self._vertex_unknowns) ) )
+    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(self._vertex_unknowns) ) )
     self._vertexDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._vertexDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
 
-    self._cell_unknowns = cell_dofs
     ## add in all the attributes we need for a cell dofs
     self._cellDof = peano4.datamodel.DaStGen2( name )
-    self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(cell_dofs) ) )
-    self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(cell_dofs) ) )
+    self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self._cell_unknowns) ) )
+    self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(self._cell_unknowns) ) )
     
     self._cellDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._cellDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
 
     #add in some unknowns for the faces 
     #our aim is to have multiple dofs per face, but we just store the starting index in "number"
-    self._face_unknowns = face_dofs
     self._faceDof = peano4.datamodel.DaStGen2( name )
-    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(face_dofs) ) )
-    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs"  ,  str(face_dofs) ) )
+    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self._face_unknowns) ) )
+    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs"  ,  str(self._face_unknowns) ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     
@@ -157,8 +143,7 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
     pass
 
   def add_to_init_petsc(self, observer):
-    observer.add_action_set( SendDofsToVertices(self) )
-  
+    pass
 
   def add_to_map_solution_onto_mesh(self, observer):
     observer.add_action_set( ProjectPETScCellSolutionOnVerticesBackOntoMesh(self) )
