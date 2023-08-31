@@ -246,25 +246,6 @@ class MixedPoisson(Solver):
   def number_of_face_unknowns(self):
     return self._face_unknowns
   
-  '''
-  use numpy/scipy to calculate gaussian quadratures correctly
-  returns: points, weights and an (n+1) * (n+1) array of 
-    polynomial coefficients
-  '''
-  def initGaussLobatto(self):
-    #construct poly coeffs first
-    coeffs = []
-    x = np.linspace(-1,1, self.polynomial_degree + 1)
-    for j in range(self.polynomial_degree + 1):
-      y = np.zeros_like(x)
-      y[j] = 1.0
-      coeffs.append( list( lagrange(x,y).coeffs ) )
-    
-    #finally construct the points and weights
-    points, weights = leggauss( self.polynomial_degree + 1 )
-
-    return points, weights, coeffs
-
   def convertMatrixToInitList(self, matrix):
     output = "{ " + str(matrix[0,0])
     for el in matrix.flatten():
