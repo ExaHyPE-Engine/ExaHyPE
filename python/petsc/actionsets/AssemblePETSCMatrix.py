@@ -8,6 +8,9 @@ import jinja2
 class AssemblePetscMatrixOnVertices(ActionSet):
   """!
   Trigger assembly of PETSc matrix, using values from mesh
+
+  I am aware the code below is very bad. Much of it needs changing.
+  But for now it stays while development on other projects continues
   """
   TemplateInitCell = """
   //init a vector to collect global indices, and recall their position in the 
@@ -246,17 +249,6 @@ Consult petsc.Project for details
     return f"""
   int _spacetreeId;    
   const tarch::la::Matrix<3,3,double> _stencil = {self.d["STENCIL"]};
-
-  /*
-  * splitting the stencil up into portions
-  * _stencilTopRight refers to the top right cell, placing 
-  * the centre of the stencil on the vertex in question
-  * we preserve enumeration order
-  */
-  tarch::la::Vector<TwoPowerD, double> _stencilTopRight;
-  tarch::la::Vector<TwoPowerD, double> _stencilTopLeft;
-  tarch::la::Vector<TwoPowerD, double> _stencilBottomRight;
-  tarch::la::Vector<TwoPowerD, double> _stencilBottomLeft;
 """
       
   def get_constructor_body(self):
@@ -269,10 +261,6 @@ Define body of constructor
     """
     return f"""
     _spacetreeId = treeNumber;
-    _stencilTopRight    = {{_stencil(1,1)/4.0, _stencil(1,2)/2.0, _stencil(0,1)/2.0, _stencil(0,2)/1.0 }};
-    _stencilTopLeft     = {{_stencil(1,0)/2.0, _stencil(1,1)/4.0, _stencil(0,0)/1.0, _stencil(0,1)/2.0 }};
-    _stencilBottomRight = {{_stencil(2,1)/2.0, _stencil(2,2)/1.0, _stencil(1,1)/4.0, _stencil(1,2)/2.0 }};
-    _stencilBottomLeft  = {{_stencil(2,0)/1.0, _stencil(2,1)/2.0, _stencil(1,1)/4.0, _stencil(1,1)/2.0 }};
 """
 
 
