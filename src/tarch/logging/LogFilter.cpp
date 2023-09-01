@@ -10,7 +10,6 @@
 #include <likwid.h>
 #endif
 
-
 const int tarch::logging::LogFilter::FilterListEntry::AnyRank = -1;
 
 const std::string tarch::logging::LogFilter::FilterListEntry::TargetAll   = "all";
@@ -84,15 +83,15 @@ tarch::logging::LogFilter::LogFilter():
   _activeProgramPhase("undef") {
   addFilterListEntry( FilterListEntry( FilterListEntry::TargetAll, false )  );
   #if defined(UseLikwid)
-    likwid_markerInit();
-    likwid_markerStartRegion( _activeProgramPhase.c_str() );
+  likwid_markerInit();
+  likwid_markerStartRegion( _activeProgramPhase.c_str() );
   #endif
 }
 
 tarch::logging::LogFilter::~LogFilter() {
   #if defined(UseLikwid)
-    likwid_markerStopRegion( _activeProgramPhase.c_str() );
-    likwid_markerClose();
+  likwid_markerStopRegion( _activeProgramPhase.c_str() );
+  likwid_markerClose();
   #endif
 }
 
@@ -114,22 +113,22 @@ tarch::logging::LogFilter& tarch::logging::LogFilter::getInstance() {
 
 void tarch::logging::LogFilter::switchProgramPhase(const std::string& activeProgramPhase) {
   #if PeanoDebug>=4
-    std::cout << "switch program phase to " << activeProgramPhase << " and, hence, activate potentially different filter set" << std::endl;
+  std::cout << "switch program phase to " << activeProgramPhase << " and, hence, activate potentially different filter set" << std::endl;
   #endif
 
   _activeProgramPhase = activeProgramPhase;
 
   #if defined(UseLikwid)
-    likwid_markerStopRegion( _activeProgramPhase.c_str() );
-    likwid_markerStartRegion( _activeProgramPhase.c_str() );
+  likwid_markerStopRegion( _activeProgramPhase.c_str() );
+  likwid_markerStartRegion( _activeProgramPhase.c_str() );
   #endif
 }
 
-bool tarch::logging::LogFilter::writeDebug(const std::string& className) {
+bool tarch::logging::LogFilter::writeDebug([[maybe_unused]] const std::string& className) {
   #if PeanoDebug>=4
-    return !filterOut(FilterListEntry::TargetDebug,className);
+  return !filterOut(FilterListEntry::TargetDebug,className);
   #else
-    return false;
+  return false;
   #endif
 }
 
@@ -141,12 +140,12 @@ bool tarch::logging::LogFilter::writeWarning(const std::string& className) {
   return !filterOut(FilterListEntry::TargetWarning,className);
 }
 
-bool tarch::logging::LogFilter::writeTrace(const std::string& className) {
+bool tarch::logging::LogFilter::writeTrace([[maybe_unused]] const std::string& className) {
   #if PeanoDebug>=1
-    const bool result = !filterOut(FilterListEntry::TargetTrace,className);
-    return result;
+  const bool result = !filterOut(FilterListEntry::TargetTrace,className);
+  return result;
   #else
-    return false;
+  return false;
   #endif
 }
 

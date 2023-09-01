@@ -15,11 +15,8 @@
 #include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
-
 #include <list>
 #include <fstream>
-
-
 
 /**
  * For the machine name. If it doesn't work, switch it off in the file
@@ -28,7 +25,6 @@
 #ifdef CompilerHasUTSName
 #include <sys/utsname.h>
 #endif
-
 
 void peano4:: writeCopyrightMessage() {
   static bool wrote = false;
@@ -93,7 +89,6 @@ void peano4:: writeCopyrightMessage() {
   wrote = true;
 }
 
-
 void peano4::fillLookupTables() {
 /*
   Had in in Globals.cpp
@@ -108,26 +103,23 @@ void peano4::fillLookupTables() {
   peano4::utils::setupLookupTableForDDelinearised();
 }
 
-
-int peano4::initParallelEnvironment(int* argc, char*** argv) {
+int peano4::initParallelEnvironment([[maybe_unused]] int* argc, [[maybe_unused]] char*** argv) {
   int result = 0;
   #ifdef Parallel
-  if ( tarch::mpi::Rank::getInstance().init(argc,argv) ) {
+  if ( tarch::mpi::Rank::getInstance().init(argc, argv) ) {
     peano4::parallel::Node::initMPIDatatypes();
 
-  	clock_t timeout = 60;
+    clock_t timeout = 60;
     tarch::mpi::Rank::getInstance().setTimeOutWarning(timeout/4);
     tarch::mpi::Rank::getInstance().setDeadlockTimeOut(timeout);
-  }
-  else {
+  } else {
     result = -2;
   }
   #endif
 
   #ifdef SharedMemoryParallelisation
   if ( tarch::multicore::Core::getInstance().isInitialised() ) {
-  }
-  else {
+  } else {
     result = -3;
   }
   #endif
@@ -137,13 +129,11 @@ int peano4::initParallelEnvironment(int* argc, char*** argv) {
   return result;
 }
 
-
 void peano4::shutdownParallelEnvironment() {
   tarch::multicore::Core::getInstance().shutdown();
   peano4::parallel::Node::shutdownMPIDatatypes();
   tarch::mpi::Rank::getInstance().shutdown();
 }
-
 
 void peano4::initSingletons(
   const tarch::la::Vector<Dimensions,double>&  offset,
@@ -151,11 +141,8 @@ void peano4::initSingletons(
   const std::bitset<Dimensions>&               periodicBC
 ) {
   tarch::services::ServiceRepository::getInstance().init();
-
   tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::getInstance().init();
-
   peano4::parallel::Node::getInstance().init();
-
   peano4::parallel::SpacetreeSet::getInstance().init(
     offset,
     width,
@@ -165,14 +152,10 @@ void peano4::initSingletons(
   writeCopyrightMessage();
 }
 
-
 void peano4::shutdownSingletons() {
   peano4::parallel::Node::getInstance().shutdown();
-
   peano4::parallel::SpacetreeSet::getInstance().shutdown();
-
   tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::getInstance().shutdown();
-
   tarch::services::ServiceRepository::getInstance().shutdown();
 }
 

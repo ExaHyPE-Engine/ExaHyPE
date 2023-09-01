@@ -17,12 +17,11 @@
 #include "tarch/multicore/multicore.h"
 #include "toolbox/particles/UnitTests.h"
 
-#ifdef UseFEExcept
+{% if FENV_ARGS is defined and FENV_ARGS != "" -%}
 #include <fenv.h>
 #pragma float_control(precise, on)
 #pragma STDC FENV_ACCESS ON
-#endif
-
+{% endif -%}
 
 #include "observers/CreateGrid.h"
 #include "observers/InitialConditions.h"
@@ -389,9 +388,9 @@ int main(int argc, char** argv) {
   const int ExitCodeUnitTestsFailed  = 1;
   const int ExitCodeInvalidArguments = 2;
 
-#ifdef UseFEExcept
-  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-#endif
+  {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
+  feenableexcept({{FENV_ARGS}} );
+  {% endif -%}
 
   peano4::initParallelEnvironment(&argc, &argv);
   tarch::multicore::initSmartMPI();

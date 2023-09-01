@@ -28,6 +28,6 @@ void toolbox::loadbalancing::NoLoadBalancing::finishStep() {
 }
 
 
-void toolbox::loadbalancing::NoLoadBalancing::enable( bool value ) {
+void toolbox::loadbalancing::NoLoadBalancing::enable( [[maybe_unused]] bool value ) {
   AbstractLoadBalancing::enable(false);
 }
