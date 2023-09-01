@@ -5,5 +5,8 @@ from .PETScMain import PETScMain
 
 import petsc.solvers
 
+#import matrix generator base class
+import petsc.matrixgenerators
+
 print( "PETSc backend" )
 

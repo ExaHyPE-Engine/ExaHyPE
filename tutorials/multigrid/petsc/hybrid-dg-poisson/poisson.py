@@ -11,7 +11,7 @@ import os, sys
 import argparse
 import peano4
 import petsc
-from   createStencil import MatrixGenerator
+from   matrices import MatrixGenerator
 
 print( """
 
@@ -41,7 +41,8 @@ project = petsc.Project(project_name = "hybridPoisson",
                         ) 
 
 matrices = MatrixGenerator(args.dimensions, args.degree, args.unknowns_per_cell_dof, args.unknowns_per_face_dof)
-                        
+
+exit()                      
                         
 solver = petsc.solvers.HybridDiscontinuousGalerkinDiscretisation("HP",
                                     args.degree,
