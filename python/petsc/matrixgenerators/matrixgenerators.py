@@ -148,3 +148,16 @@ class MatrixGeneratorBase:
   def getCellCellMassMatrix(self):
     raise NotImplementedError
 
+  @abstractmethod
+  def getCellToFaceMatrix(self):
+    '''
+    project cell values onto faces
+    '''
+    raise NotImplementedError
+
+  @abstractmethod
+  def getFaceFaceMatrix(self):
+    '''
+    glue together solution across faces
+    '''
+    raise NotImplementedError

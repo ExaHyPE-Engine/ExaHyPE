@@ -11,6 +11,7 @@ import os, sys
 import argparse
 import peano4
 import petsc
+from matrices import MixedGenerator
 
 print( """
 
@@ -26,11 +27,16 @@ parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       def
 parser.add_argument("-v",   "--verbose",              dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-deg", "--degree",               dest="degree",         type=int, default=1, help="Polynomial degree")
-parser.add_argument("-upcf","--unknowns_per_cell_dof",dest="unknowns_per_cell_dof", type=int, default=3, help="Unknowns per cell dof")
+parser.add_argument("-upcd","--unknowns_per_cell_dof",dest="unknowns_per_cell_dof", type=int, default=3, help="Unknowns per cell dof")
 parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.1, help="Mesh size")
 parser.add_argument("-m",   "--mode",                 dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
+#generate matrices using file next door
+matrices = MixedGenerator(args.dimensions,
+                          args.degree,
+                          args.unknowns_per_cell_dof,
+                          args.unknowns_per_cell_dof - 1) #for now, keep this as one less
 
 project = petsc.Project(project_name = "Mixed", 
                         namespace = [ "benchmarks", "multigrid", "petsc", "mp" ]
@@ -43,6 +49,11 @@ solver = petsc.solvers.MixedDiscontinuousGalerkinDiscretisation("Poisson",
                                                                 args.unknowns_per_cell_dof,
                                                                 args.meshsize,
                                                                 args.meshsize,
+                                                                matrices.getCellCellMassMatrix(),     #12x12
+                                                                matrices.getCellCellSystemMatrix(),   #12x12
+                                                                #for now, we leave this as 32x12
+                                                                matrices.getCellToFaceMatrix(),       #32x12
+                                                                matrices.getFaceFaceMatrix(),         #8x8
                                                                 )
 
 project.add_solver( solver )

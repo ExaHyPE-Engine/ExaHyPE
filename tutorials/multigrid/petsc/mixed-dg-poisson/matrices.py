@@ -17,9 +17,9 @@ class MixedGenerator(MatrixGeneratorBase):
                unknowns_per_face_dof):
 
     super( MixedGenerator, self ).__init__(dimensions, 
-                                            poly_degree,
-                                            unknowns_per_cell_dof,
-                                            unknowns_per_face_dof)
+                                           poly_degree,
+                                           unknowns_per_cell_dof,
+                                           unknowns_per_face_dof)
     
   def getCellCellMassMatrix(self):
     '''
@@ -45,5 +45,12 @@ class MixedGenerator(MatrixGeneratorBase):
 
     return output
 
+  def getCellToFaceMatrix(self):
+    faceDim = self.facedofs * self.unknowns_per_face_dof * 2 * self.dimensions * 2 # * 2 at the end since we are glueing together 2 faces
+    cellDim = self.celldofs * self.unknowns_per_cell_dof
+    return np.zeros((faceDim,cellDim))
   
+  def getFaceFaceMatrix(self):
+    dim = self.facedofs * self.unknowns_per_face_dof * 2 # * 2 at the end since we are glueing together 2 faces
+    return np.zeros((dim,dim))
   
