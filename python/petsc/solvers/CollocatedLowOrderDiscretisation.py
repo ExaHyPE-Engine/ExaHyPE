@@ -208,3 +208,4 @@ int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom()
   return result;
 }
 """
+    return header, cpp
