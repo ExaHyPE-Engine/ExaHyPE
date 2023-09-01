@@ -18,6 +18,6 @@ namespace peano4 {
      * types, I use a simple factory mechanism (aka this routine) to hand out integer
      * types.
      */
-    int getTaskType();
+    int getTaskType(const std::string& className);
   }
 }
