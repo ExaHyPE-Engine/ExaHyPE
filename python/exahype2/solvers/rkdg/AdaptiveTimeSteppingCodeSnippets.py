@@ -2,16 +2,12 @@
 # use, please see the copyright notice at www.peano-framework.org
 import exahype2.solvers.AdaptiveTimeSteppingCodeSnippets
 
-
 class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCodeSnippets ):
   """
-  
   Code snippet generator for fixed time stepping in the Runge-Kutta schemes
-  
   """
   def __init__(self, time_step_relaxation):
     self._time_step_relaxation = time_step_relaxation
-
 
   def create_start_time_step_implementation(self):
     return """
@@ -35,14 +31,11 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
   }
 """
 
-
   def create_finish_time_step_implementation(self):
     """
-    
-    The superclass takes the admissible cell size and divides it by the 
-    maximum eigenvalue. The Finite Volume solvers however operate with 
+    The superclass takes the admissible cell size and divides it by the
+    maximum eigenvalue. The Finite Volume solvers however operate with
     patches, i.e. we have to devide by the volume count per axis.
-    
     """
     return super( AdaptiveTimeSteppingCodeSnippets, self ).create_finish_time_step_implementation() + """
   if ( 

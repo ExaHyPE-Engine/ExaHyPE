@@ -12,4 +12,3 @@ int peano4::parallel::getTaskType(const std::string&  className) {
   logInfo( "getTaskType(string)", "assign task " << className << " id " << taskTypeCounter );
   return taskTypeCounter;
 }
-

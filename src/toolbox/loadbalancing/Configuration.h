@@ -59,8 +59,6 @@ class toolbox::loadbalancing::Configuration {
     virtual std::string toString() const;
 };
 
-
-
 class toolbox::loadbalancing::DefaultConfiguration: public toolbox::loadbalancing::Configuration {
   virtual bool makeSplitDependOnMemory(State state) override;
 

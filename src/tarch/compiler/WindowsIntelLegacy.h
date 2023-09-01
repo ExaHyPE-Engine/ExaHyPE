@@ -2,8 +2,6 @@
 // For a detailed description of the semantics of the settings, please
 // consult LinuxIntel.h which is the most elaborate documentation.
 
-
-
 #define UseTestSpecificCompilerSettings
 //#define CompilerCLANG
 #define CompilerICC
@@ -16,7 +14,6 @@
 #if !defined(noMPISupportsSingleSidedCommunication) and !defined(MPISupportsSingleSidedCommunication)
 #define MPISupportsSingleSidedCommunication
 #endif
-
 
 #if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
 #define UseManualInlining
@@ -36,6 +33,7 @@
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions
 
 #define OpenMPTaskGroup
-#define PRAGMA_PUSH
-#define SILENCE_UNKNOWN_ATTRIBUTE
-#define PRAGMA_POP
+
+#define PragmaPush
+#define SilenceUnknownAttribute
+#define PragmaPop

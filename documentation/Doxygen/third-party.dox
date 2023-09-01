@@ -1,0 +1,29 @@
+/**
+
+\page page_third_party Optional third-party tools and libraries
+
+
+/\li \subpage tarch_multicore_otter
+
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+
+
+
+# The Visualization Toolkit (VTK)
+
+Peano usually dumps data @ref tarch_patch_files "data in its own native file format".
+However, there are several extensions where it directly writes into VTK files
+or cousins of it, such that you can directly visualise the outcome with 
+Paraview of VisIt, e.g. Most users do not need to build Peano directly against
+any third-party visualisation libraries.
+
+
+However, ...
+
+
+
+ */
+ 

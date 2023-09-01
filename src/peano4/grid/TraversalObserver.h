@@ -13,7 +13,7 @@ namespace peano4 {
   namespace grid {
     class TraversalObserver;
     class GridControlEvent;
-    class GridTraversalEvent;
+    struct GridTraversalEvent;
   } // namespace grid
   namespace datamanagement {
     class CellMarker;

@@ -138,21 +138,21 @@ Supported threading models: " << tarch::multicore::orchestration::getListOfReali
 
 bool exahype2::parseCommandLineArguments(int argc, char** argv) {
   if (
-    (argc==2 and std::string(argv[1]).compare( "--help" )!=std::string::npos)
+    (argc == 2 and static_cast<size_t>(std::string(argv[1]).compare( "--help" )) != std::string::npos)
     or
-    (argc==2 and std::string(argv[1]).compare( "-h" )!=std::string::npos)
+    (argc == 2 and static_cast<size_t>(std::string(argv[1]).compare( "-h" )) != std::string::npos)
     or
-    (argc%2!=1)
-  ) {{
+    (argc % 2 != 1)
+  ) {
     printUsage(argv);
     return false;
-  }}
+  }
 
   std::string   logFilterFile = "exahype.log-filter";
   int           cores         = tarch::multicore::Core::UseDefaultNumberOfThreads;
   std::set<int> gpuDevices;
 
-  for (int argument=1; argument<argc; argument+=2) {
+  for (int argument = 1; argument < argc; argument += 2) {
     std::string select = argv[argument];
 
     if ( select.compare( "--threads" ) ==0 ) {
@@ -161,8 +161,7 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
       if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
         logInfo( "parseCommandLineArguments(...)", "manually reset number of used cores to " << cores );
       }
-    }
-    else if ( select.compare( "--gpus" ) ==0 ) {
+    } else if ( select.compare( "--gpus" ) ==0 ) {
       std::string specifier = argv[argument+1];
       std::string delimiter = ",";
       if ( specifier.compare( "all" ) ==0 ) {
@@ -170,16 +169,14 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
         if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
           logInfo( "parseCommandLineArguments(...)", "enable all devices" );
         }
-      }
-      else if (specifier.find( delimiter ) == std::string::npos) {
+      } else if (specifier.find( delimiter ) == std::string::npos) {
         int gpu = std::atoi(specifier.c_str());
         gpuDevices.insert(gpu);
         // manual selection, as log filters are not there yet
         if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
           logInfo( "parseCommandLineArguments(...)", "enable only GPU " << gpu );
         }
-      }
-      else {
+      } else {
         size_t pos = 0;
         std::string token;
         while ((pos = specifier.find(delimiter)) != std::string::npos) {
@@ -194,29 +191,24 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
           logInfo( "parseCommandLineArguments(...)", "manually set GPU filter with " << gpuDevices.size() << " devices enabled" );
         }
       }
-    }
-    else if ( select.compare( "--log-filter-file" ) == 0 ) {
+    } else if ( select.compare( "--log-filter-file" ) == 0 ) {
       logFilterFile = argv[argument+1];
-    }
-    else if ( select.compare( "--timeout" ) == 0 ) {
+    } else if ( select.compare( "--timeout" ) == 0 ) {
       int timeout = std::atoi(argv[argument+1]);
       tarch::mpi::Rank::getInstance().setDeadlockTimeOut( timeout );
       // manual selection, as log filters are not there yet
       if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
         logInfo( "parseCommandLineArguments(...)", "manually set timeout to " << timeout );
       }
-    }
-    else if ( select.compare( "--threading-model" ) == 0 ) {
+    } else if ( select.compare( "--threading-model" ) == 0 ) {
       auto* realisation = tarch::multicore::orchestration::parseRealisation( argv[argument+1] );
       if (realisation!=nullptr) {
         tarch::multicore::setOrchestration(realisation);
-      }
-      else {
+      } else {
         logError( "parseCommandLineArguments(...)", "was not able to set threading strategy " << argv[argument+1] );
         return false;
       }
-    }
-    else {
+    } else {
       printUsage(argv);
       return false;
     }
@@ -235,4 +227,3 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
 
   return true;
 }
-

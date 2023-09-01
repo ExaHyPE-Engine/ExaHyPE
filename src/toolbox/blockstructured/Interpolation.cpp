@@ -39,7 +39,11 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseCo
   return result;
 }
 
-tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal, int overlap) {
+tarch::la::DynamicMatrix* toolbox::blockstructured::internal::createPiecewiseConstantInterpolationMatrix(
+  [[maybe_unused]] int numberOfDoFsPerAxisInPatch,
+  [[maybe_unused]] int normal,
+  [[maybe_unused]] int overlap
+) {
   tarch::la::DynamicMatrix P1d(3,1,{ {1.0},{1.0},{1.0} });
   P1d.replicateRows( 3, numberOfDoFsPerAxisInPatch, 1, true );
 
@@ -48,7 +52,7 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseCo
   );
 }
 
-tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(
+tarch::la::DynamicMatrix* toolbox::blockstructured::internal::createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(
   const tarch::la::DynamicMatrix&  P1d,
   int                              numberOfDoFsPerAxisInPatch,
   int                              normal
@@ -940,7 +944,20 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
 ) {
   assertion( numberOfDoFsPerAxisInDestinationPatch>numberOfDoFsPerAxisInSourcePatch );
 
+  #if Dimensions==2 and defined(SharedOMP)
+  #pragma omp taskloop for collapse(2)
+  for( int destinationVolume0 = 0; destinationVolume0 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume0++ )
+  for( int destinationVolume1 = 0; destinationVolume1 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume1++ ) {
+    tarch::la::Vector<Dimensions, int> destinationVolume = { destinationVolume0, destinationVolume1 };
+  #elif Dimensions==3 and defined(SharedOMP)
+  #pragma omp taskloop for collapse(3)
+  for( int destinationVolume0 = 0; destinationVolume0 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume0++ )
+  for( int destinationVolume1 = 0; destinationVolume1 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume1++ )
+  for( int destinationVolume2 = 0; destinationVolume2 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume2++ ) {
+    tarch::la::Vector<Dimensions, int> destinationVolume = { destinationVolume0, destinationVolume1, destinationVolume2 };
+  #else
   dfor( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch ) {
+  #endif
     const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch) * unknowns;
     for (int unknown=0; unknown<unknowns; unknown++) {
       destinationValues[baseIndexDestination+unknown] = 0.0;
@@ -960,6 +977,8 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
 
       int outsidePatchAlongCoordinateAxis = 0;
       for (int d=0; d<Dimensions; d++) {
+//        outsidePatchAlongCoordinateAxis +=  ( sourceVolume(d) <  haloSourcePatch ) ? 1 : 0;
+//        outsidePatchAlongCoordinateAxis +=  ( sourceVolume(d) >= haloSourcePatch+numberOfDoFsPerAxisInSourcePatch ) ? 1 : 0;
         if ( sourceVolume(d) <  haloSourcePatch )                                   outsidePatchAlongCoordinateAxis++;
         if ( sourceVolume(d) >= haloSourcePatch+numberOfDoFsPerAxisInSourcePatch )  outsidePatchAlongCoordinateAxis++;
       }
@@ -977,6 +996,7 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
 
       tarch::la::Vector<Dimensions, int> amendedSourceVolume = sourceVolume;
       if (isFromUnitialisedDiagonal) {
+        #pragma unroll
         for (int d=0; d<Dimensions; d++) {
           amendedSourceVolume(d) = std::max( amendedSourceVolume(d), haloSourcePatch );
           amendedSourceVolume(d) = std::min( amendedSourceVolume(d), haloSourcePatch + numberOfDoFsPerAxisInSourcePatch - 1 );
@@ -1123,26 +1143,26 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
 }
 
 void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      const double* __restrict__                normalInterpolationMatrix1d,
-      const double* __restrict__                tangentialInterpolationMatrix1d,
-      const double* __restrict__                coarseGridCellValues,
-      const double* __restrict__                coarseGridFaceValues,
-      double* __restrict__                      fineGridFaceValues
+  [[maybe_unused]] const peano4::datamanagement::FaceMarker& marker,
+  [[maybe_unused]] int                                       numberOfDoFsPerAxisInPatch,
+  [[maybe_unused]] int                                       overlap,
+  [[maybe_unused]] int                                       unknowns,
+  [[maybe_unused]] const double* __restrict__                normalInterpolationMatrix1d,
+  [[maybe_unused]] const double* __restrict__                tangentialInterpolationMatrix1d,
+  [[maybe_unused]] const double* __restrict__                coarseGridCellValues,
+  [[maybe_unused]] const double* __restrict__                coarseGridFaceValues,
+  [[maybe_unused]] double* __restrict__                      fineGridFaceValues
 ) {
   assertion(false);
 }
 
 void toolbox::blockstructured::interpolateCell_AoS_tensor_product(
-      const peano4::datamanagement::CellMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       unknowns,
-      const double* __restrict__                interpolationMatrix1d,
-      const double* __restrict__                coarseGridCellValues,
-      double* __restrict__                      fineGridCellValues
+  [[maybe_unused]] const peano4::datamanagement::CellMarker& marker,
+  [[maybe_unused]] int                                       numberOfDoFsPerAxisInPatch,
+  [[maybe_unused]] int                                       unknowns,
+  [[maybe_unused]] const double* __restrict__                interpolationMatrix1d,
+  [[maybe_unused]] const double* __restrict__                coarseGridCellValues,
+  [[maybe_unused]] double* __restrict__                      fineGridCellValues
 ) {
   assertion(false);
 }

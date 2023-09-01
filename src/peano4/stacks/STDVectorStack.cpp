@@ -1,8 +1,12 @@
 #include "STDVectorStack.h"
 
-
 template <>
-void peano4::stacks::STDVectorStack<double>::startSend(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm) {
+void peano4::stacks::STDVectorStack<double>::startSend(
+  [[maybe_unused]] peano4::grid::TraversalObserver::SendReceiveContext,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int tag,
+  [[maybe_unused]] MPI_Comm comm
+) {
   #ifdef Parallel
   assertion( _ioMode==IOMode::None );
   _ioMode = IOMode::MPISend;
@@ -21,9 +25,14 @@ void peano4::stacks::STDVectorStack<double>::startSend(peano4::grid::TraversalOb
   #endif
 }
 
-
 template <>
-void peano4::stacks::STDVectorStack<double>::startReceive(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm, int numberOfElements) {
+void peano4::stacks::STDVectorStack<double>::startReceive(
+  [[maybe_unused]] peano4::grid::TraversalObserver::SendReceiveContext,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int tag,
+  [[maybe_unused]] MPI_Comm comm,
+  [[maybe_unused]] int numberOfElements
+) {
   #ifdef Parallel
   logTraceInWith3Arguments( "startReceive(int,int,int)", rank, tag, numberOfElements );
   assertion3( _ioMode==IOMode::None, rank, tag, numberOfElements );
@@ -47,4 +56,3 @@ void peano4::stacks::STDVectorStack<double>::startReceive(peano4::grid::Traversa
   logTraceOut( "startReceive(int,int,int)" );
   #endif
 }
-

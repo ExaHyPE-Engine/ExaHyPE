@@ -14,14 +14,12 @@
 
 #include <string>
 
-
 namespace tarch {
   namespace multicore {
     class BooleanSemaphore;
     class Lock;
   }
 }
-
 
 /**
  * Boolean Semaphore
@@ -48,15 +46,12 @@ namespace tarch {
      static BooleanSemaphore _mySemaphore;
    };
 
-
-
    MyClass::foo() {
      ...
      Lock myLock( _mySemaphore );
      // critical Section A
      ...
    }
-
 
    MyClass::bar() {
      ...
@@ -139,16 +134,16 @@ class tarch::multicore::BooleanSemaphore {
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore( const BooleanSemaphore& semaphore ) {}
+    BooleanSemaphore( const BooleanSemaphore& ) {}
 
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore& operator=( const BooleanSemaphore& semaphore ) {return *this;}
+    BooleanSemaphore& operator = ( const BooleanSemaphore& ) { return *this; }
+
   public:
     BooleanSemaphore();
     ~BooleanSemaphore();
 };
-
 
 #endif

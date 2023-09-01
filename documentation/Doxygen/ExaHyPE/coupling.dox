@@ -128,7 +128,7 @@ double mynamespace::MySolvergetAdmissibleTimeStepSize() const {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This is the approach used in 
-@ref applications_exahype2_euler_selfgravitation_with_Poisson "Euler example with self-gravitation via the Poisson equation".
+@ref applications_exahype2_euler_selfgravitation_with_hyperbolic_subcycling "Euler example with self-gravitation via the Poisson equation".
 If you want to use local time stepping or run checks on the timestamp per cell,
 you will have to alter the cell's meta data holding its time stamp.
 Things in this case become more involved, i.e. you will have to study the
