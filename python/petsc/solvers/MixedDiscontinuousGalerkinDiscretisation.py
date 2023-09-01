@@ -52,8 +52,8 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
     self.unknowns_per_cell_dof = unknowns_per_cell_dof
     self.unknowns_per_face_dof = self.unknowns_per_cell_dof - 1 #only one of them points in the right direction
 
-    self._cell_unknowns = (polynomial_degree + 1) ** dimensions
-    self._face_unknowns = (polynomial_degree + 1) **( dimensions -1 )
+    self._cell_unknowns = ((polynomial_degree + 1) ** dimensions)       * self.unknowns_per_cell_dof
+    self._face_unknowns = ((polynomial_degree + 1) **( dimensions -1 )) * self.unknowns_per_face_dof
 
     self.quadrature_points, self.weights, self.poly_coeffs = \
       self.initGaussLobatto()

@@ -25,19 +25,12 @@ parser.add_argument("-j",   "--parallel-builds",      dest="j",              typ
 parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",              dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
-parser.add_argument("-deg", "--degree",               dest="degree",         type=int, default=2, help="Polynomial degree")
+parser.add_argument("-deg", "--degree",               dest="degree",         type=int, default=1, help="Polynomial degree")
 parser.add_argument("-upcf","--unknowns_per_cell_dof",dest="unknowns_per_cell_dof", type=int, default=3, help="Unknowns per cell dof")
 parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.1, help="Mesh size")
 parser.add_argument("-m",   "--mode",                 dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
-'''
-set the number of cell and face dofs
-'''
-
-#below is only temporary
-cellDofs = (args.degree + 1) **  args.dimensions 
-faceDofs = (args.degree + 1) ** (args.dimensions - 1)
 
 project = petsc.Project(project_name = "Mixed", 
                         namespace = [ "benchmarks", "multigrid", "petsc", "mp" ]
