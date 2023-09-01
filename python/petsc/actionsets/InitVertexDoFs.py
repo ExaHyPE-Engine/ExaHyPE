@@ -49,7 +49,7 @@ the solver in the first place. This happens in get_includes().
     //init two doubles; pass these by reference into init()
     double value, rhs;
     
-    repositories::{{SOLVER_INSTANCE}}.init(
+    repositories::{{SOLVER_INSTANCE}}.vertexInit(
       marker.x(),
       marker.h(),
       value,

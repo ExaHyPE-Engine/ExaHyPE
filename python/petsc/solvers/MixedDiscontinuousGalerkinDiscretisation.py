@@ -312,6 +312,13 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
      );
 """
     cpp = """
+void {{NAMESPACE | join("::")}}::repositories::computeLocalToGlobalMapsForAllSolvers() {
+  {% for SOLVER in SOLVER_INSTANCES %}
+  {{SOLVER[1]}}.getFaceLocalToGlobalMap().computeLocalToGlobalMap();
+  {{SOLVER[1]}}.getCellLocalToGlobalMap().computeLocalToGlobalMap();
+  {% endfor %}
+} 
+
 int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom() {
   int result = 0;
   {% for SOLVER in SOLVER_INSTANCES %}
