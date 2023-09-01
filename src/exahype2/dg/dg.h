@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
 /**
  * @page exahype2_dg Discontinuous Galerkin
  *
@@ -539,8 +537,3 @@
  * - Point sources are missing
  *
  */
-
-
-
-
-

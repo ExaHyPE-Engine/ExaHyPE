@@ -36,6 +36,7 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Confi
      * and return that value.
      */
     int translateSetMaxNumberOfTreesIntoRealNumberOfTrees(int value) const;
+
   public:
     static constexpr int  UseNumberOfThreads         = -1;
     static constexpr int  UseTwiceTheNumberOfThreads = -2;
@@ -91,7 +92,7 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Confi
      */
     virtual int getMinTreeSize(toolbox::loadbalancing::State state) override;
 
-    std::string toString() const override;
+    virtual std::string toString() const override;
 };
 
 

@@ -1,21 +1,18 @@
 #include "tarch/la/ScalarOperations.h"
-#include <cmath>
 
+#include <cmath>
 
 int tarch::la::abs (int value) {
   return value < 0 ? - value : value;
 }
 
-
 double tarch::la::abs( const std::complex<double>& value ) {
   return std::sqrt( value.real()*value.real() + value.imag() * value.imag() );
 }
 
-
 double tarch::la::abs(double value) {
   return std::abs(value);
 }
-
 
 int tarch::la::aPowI(int i,int a) {
   int result = 1;
@@ -25,7 +22,6 @@ int tarch::la::aPowI(int i,int a) {
   return result;
 }
 
-
 bool tarch::la::greater (
   double lhs,
   double rhs,
@@ -33,7 +29,6 @@ bool tarch::la::greater (
 ) {
   return lhs - rhs >  tolerance;
 }
-
 
 bool tarch::la::greaterEquals (
   double lhs,
@@ -54,7 +49,6 @@ bool tarch::la::smaller (
 }
 */
 
-
 bool tarch::la::smallerEquals (
   double lhs,
   double rhs,
@@ -62,7 +56,6 @@ bool tarch::la::smallerEquals (
 ) {
   return lhs - rhs <= tolerance;
 }
-
 
 bool tarch::la::equals (
   double lhs,
@@ -72,31 +65,26 @@ bool tarch::la::equals (
   return std::abs(rhs - lhs) <= tolerance;
 }
 
-
 bool tarch::la::equals (
   const std::complex<double>& lhs,
   const std::complex<double>& rhs,
   double tolerance
 ) {
-  return (std::abs(rhs.real() - lhs.real()) <= tolerance) & (std::abs(rhs.imag() - lhs.imag()) <= tolerance);
+  return (std::abs(rhs.real() - lhs.real()) <= tolerance) && (std::abs(rhs.imag() - lhs.imag()) <= tolerance);
 }
-
 
 int tarch::la::sign (double number, double tolerance) {
   if ( greater(number, tolerance) ) {
      return 1;
-  }
-  else if ( greater(tolerance, number) ) {
+  } else if ( greater(tolerance, number) ) {
      return -1;
   }
   return 0;
 }
 
-
 int tarch::la::round(double value) {
   return static_cast<int>(std::floor(value+0.5));
 }
-
 
 int tarch::la::round(float value) {
   return static_cast<int>(std::floor(value+0.5));

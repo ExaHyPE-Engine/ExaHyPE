@@ -1,6 +1,5 @@
 #include "UnitTests.h"
 
-
 #include "peano4/grid/tests/SpacetreeTest.h"
 #include "peano4/grid/tests/GridControlEventTest.h"
 #include "peano4/grid/tests/GridTraversalEventGeneratorTest.h"
@@ -8,7 +7,6 @@
 #include "peano4/parallel/tests/PingPongTest.h"
 
 #include "tarch/tests/TreeTestCaseCollection.h"
-
 
 tarch::tests::TestCase* peano4::getUnitTests() {
   tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();

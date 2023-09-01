@@ -40,12 +40,13 @@
 #include "toolbox/blockstructured/UnitTests.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
 
-// #ifdef UseFenv
-// #include "tarch/FenvWrapper.h"
-// #endif
+{% if FENV_ARGS is defined and FENV_ARGS != "" -%}
+#include <fenv.h>
+#pragma float_control(precise, on)
+#pragma STDC FENV_ACCESS ON
+{% endif -%}
 
 using namespace {{NAMESPACE | join("::")}};
-
 
 tarch::logging::Log _log("::");
 
@@ -121,7 +122,7 @@ bool selectNextAlgorithmicStep() {
       addGridSweepWithoutGridRefinementNext = true;
       globalNumberOfTrees                   = repositories::loadBalancer.getGlobalNumberOfTrees();
     }
-    else if (  
+    else if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
       and
       // ensure that a proper creation has been ran before, so the mesh had the opportunity
@@ -473,9 +474,9 @@ int main(int argc, char** argv) {
 
   repositories::DataRepository::initDatatypes();
 
-  // #ifdef UseFenv
-  // tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-  // #endif
+  {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
+  feenableexcept({{FENV_ARGS}} );
+  {% endif -%}
 
 #if PeanoDebug >= 2
   tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection();

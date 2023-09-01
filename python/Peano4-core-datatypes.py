@@ -1,12 +1,9 @@
 """
-
  This Python script uses/invokes DaStGen2 to generate all the datatypes
  required by the core.
-
 """
 import dastgen2
 import peano4.dastgen2
-
 
 #
 # tarch::mpi::IntegerMessage
@@ -19,7 +16,6 @@ integer_message.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamode
 integer_message.write_header_file("../src/tarch/mpi/IntegerMessage.h")
 integer_message.write_implementation_file("../src/tarch/mpi/IntegerMessage.cpp")
 
-
 #
 # tarch::mpi::DoubleMessage
 #
@@ -30,7 +26,6 @@ double_message.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamodel
 
 double_message.write_header_file("../src/tarch/mpi/DoubleMessage.h")
 double_message.write_implementation_file("../src/tarch/mpi/DoubleMessage.cpp")
-
 
 #
 # peano4::parallel::TreeManagementMessage
@@ -49,9 +44,6 @@ tree_management_message.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.
 tree_management_message.write_header_file("../src/peano4/parallel/TreeManagementMessage.h")
 tree_management_message.write_implementation_file("../src/peano4/parallel/TreeManagementMessage.cpp")
 
-
-
-
 #
 # peano4::parallel::TreeEntry
 #
@@ -68,9 +60,6 @@ tree_management_message.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.
 tree_management_message.write_header_file("../src/peano4/parallel/TreeEntry.h")
 tree_management_message.write_implementation_file("../src/peano4/parallel/TreeEntry.cpp")
 
-
-
-
 #
 # peano4::parallel::StartTraversalMessage
 #
@@ -83,10 +72,6 @@ start_traversal_message.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.
 
 start_traversal_message.write_header_file("../src/peano4/parallel/StartTraversalMessage.h")
 start_traversal_message.write_implementation_file("../src/peano4/parallel/StartTraversalMessage.cpp")
-
-
-
-
 
 #
 # peano4::grid::GridControlEvent
@@ -103,10 +88,6 @@ grid_control_event.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datam
 
 grid_control_event.write_header_file("../src/peano4/grid/GridControlEvent.h")
 grid_control_event.write_implementation_file("../src/peano4/grid/GridControlEvent.cpp")
-
-
-
-
 
 #
 # peano4::grid::GridStatistics
@@ -136,9 +117,6 @@ grid_statistics.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamode
 grid_statistics.write_header_file("../src/peano4/grid/GridStatistics.h")
 grid_statistics.write_implementation_file("../src/peano4/grid/GridStatistics.cpp")
 
-
-
-
 #
 # peano4::grid::AutomatonState
 #
@@ -162,11 +140,6 @@ automaton_state.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamode
 
 automaton_state.write_header_file("../src/peano4/grid/AutomatonState.h")
 automaton_state.write_implementation_file("../src/peano4/grid/AutomatonState.cpp")
-
-
-
-
-
 
 #
 # peano4::grid::GridTraversalEvent
@@ -220,8 +193,6 @@ grid_traversal_event.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.dat
 grid_traversal_event.write_header_file("../src/peano4/grid/GridTraversalEvent.h")
 grid_traversal_event.write_implementation_file("../src/peano4/grid/GridTraversalEvent.cpp")
 
-
-
 #
 # peano4::grid::GridVertex
 #
@@ -253,5 +224,3 @@ grid_vertex.add_aspect( peano4.dastgen2.MPIAndStorageAspect( peano4.datamodel.Do
 
 grid_vertex.write_header_file("../src/peano4/grid/GridVertex.h")
 grid_vertex.write_implementation_file("../src/peano4/grid/GridVertex.cpp")
-
-

@@ -26,13 +26,11 @@
 #define MPISupportsSingleSidedCommunication
 #endif
 
-
 #if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
 #define UseManualInlining
 #endif
 
 #define LittleEndian
-
 
 /**
  * Clang requires us to put a static keyword in front of header file implementations,
@@ -42,6 +40,7 @@
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions
 
 #define OpenMPTaskGroup
-#define PRAGMA_PUSH
-#define SILENCE_UNKNOWN_ATTRIBUTE
-#define PRAGMA_POP
+
+#define PragmaPush _Pragma("GCC diagnostic push")
+#define SilenceUnknownAttribute _Pragma("GCC diagnostic ignored \"-Wattributes\"")
+#define PragmaPop _Pragma("GCC diagnostic pop")
