@@ -60,7 +60,7 @@ namespace tarch {
       int       _priority;
 
     public:
-      static constexpr int DefaultPriority = 0;
+      static constexpr int DefaultPriority = 1024;
       static constexpr int Host            = -1;
       static constexpr int DontFuse        = -1;
 
@@ -71,8 +71,9 @@ namespace tarch {
        *        type and fuse/batch them into one task call. However, if you don't
        *        want Peano to even thing about task fusion, pass in DontFuse as
        *        argument.
+       *
        * @param priority Integer value that indicates what priority you want to
-       *        assign a task. Not all tasking backends support priorities.
+       *        assign a task. Value has to be non-negative.
        */
       Task(int taskType, int priority);
 
@@ -80,6 +81,12 @@ namespace tarch {
 
       int  getTaskType() const;
       int  getPriority() const;
+
+      /**
+       * Set priority
+       *
+       * @param priority Has to be non-negative
+       */
       void setPriority(int priority);
 
       /**
