@@ -140,4 +140,11 @@ class MatrixGeneratorBase:
       output += 0.25 * w * eval2d
     return output * factor
 
+  @abstractmethod
+  def getCellCellSystemMatrix(self):
+    raise NotImplementedError
+  
+  @abstractmethod
+  def getCellCellMassMatrix(self):
+    raise NotImplementedError
 
