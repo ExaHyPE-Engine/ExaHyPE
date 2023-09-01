@@ -12,10 +12,11 @@ void applications::exahype2::avalanche::SWESolver::initialCondition(
   const tarch::la::Vector<Dimensions, double>& volumeH,
   bool                                         gridIsConstructred
 ) {
-  const bool nearCentre = tarch::la::norm2(volumeCentre) < 0.20;
+  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {0.15,0.35};
+  const bool nearCentre = tarch::la::norm2(volumeCentre-granularMaterialCenter) < 0.10;
 
-  Q[0] = (nearCentre ? 1.1 : 1.0 ); // Water height (h)
-  Q[1] = 0.0; // x-momentum (hu)
+  Q[0] = (nearCentre ? 0.008 : 0.000001 ); // Water height (h)
+  Q[1] = 0.00001; // x-momentum (hu)
   Q[2] = 0.0; // y-momentum (hv)
   Q[3] = 0.0;
   Q[4] = 0.0;
@@ -178,51 +179,51 @@ void applications::exahype2::avalanche::SWESolver::nonconservativeProduct(
   }
 }
 
-// void applications::exahype2::avalanche::SWESolver::sourceTerm(
-//   const double* __restrict__ Q,
-//   const tarch::la::Vector<Dimensions, double>& volumeCentre,
-//   const tarch::la::Vector<Dimensions, double>& volumeH,
-//   double                                       t,
-//   double                                       dt,
-//   double* __restrict__ S
-// ) {
-//   const double ih = 1.0 / Q[0];
-//   const double u  = ih * Q[1];
-//   const double v  = ih * Q[2];
-//   // const double ubar = sqrt(Q[1] * Q[1] + Q[2] * Q[2]) * ih;
-//   const double ubar = sqrt(Q[1] * Q[1] + Q[2] * Q[2]) * ih;
+void applications::exahype2::avalanche::SWESolver::sourceTerm(
+  const double* __restrict__ Q,
+  const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  const tarch::la::Vector<Dimensions, double>& volumeH,
+  double                                       t,
+  double                                       dt,
+  double* __restrict__ S
+) {
+  const double ih = 1.0 / Q[0];
+  const double u  = ih * Q[1];
+  const double v  = ih * Q[2];
+  // const double ubar = sqrt(Q[1] * Q[1] + Q[2] * Q[2]) * ih;
+  const double ubar = sqrt(Q[1] * Q[1] + Q[2] * Q[2]) * ih;
 
-//   const double Fr       = ubar / sqrt(Gravity * Q[0] * cos(Zeta));
-//   const double Tau      = Beta * Q[0] / Hstop - Fr;
-//   const double Betastar = Beta * (Mu2 + Mu3 - 2 * Mu1) / ((Mu2 - Mu3) * (Mu2 - Mu3)) - Tau;
-//   const double Hstar    = (Betastar + Tau) * Hstop / Beta;
-//   double       Mu       = 1.0;
+  const double Fr       = ubar / sqrt(Gravity * Q[0] * cos(Zeta));
+  const double Tau      = Beta * Q[0] / Hstop - Fr;
+  const double Betastar = Beta * (Mu2 + Mu3 - 2 * Mu1) / ((Mu2 - Mu3) * (Mu2 - Mu3)) - Tau;
+  const double Hstar    = (Betastar + Tau) * Hstop / Beta;
+  double       Mu       = 1.0;
 
-//   if (Fr > Betastar) {
-//     const double vstop  = (Q[0] * Beta) / (Fr + Tau);
-//     const double Mustop = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
-//     Mu                  = Mustop;
-//   }
+  if (Fr > Betastar) {
+    const double vstop  = (Q[0] * Beta) / (Fr + Tau);
+    const double Mustop = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
+    Mu                  = Mustop;
+  }
 
-//   else if (Fr > 0 && Fr <= Betastar) {
-//     const double vstart  = Q[0];
-//     const double vstop   = Q[0] * Beta / (Betastar + Tau);
-//     const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
-//     const double Mustop  = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
-//     const double T       = Mustart + (Mustop - Mustart) * (Fr / Betastar);
-//     Mu                   = T;
-//   }
+  else if (Fr > 0 && Fr <= Betastar) {
+    const double vstart  = Q[0];
+    const double vstop   = Q[0] * Beta / (Betastar + Tau);
+    const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
+    const double Mustop  = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
+    const double T       = Mustart + (Mustop - Mustart) * (Fr / Betastar);
+    Mu                   = T;
+  }
 
-//   else if (Fr == 0) {
-//     const double vstart  = Q[0];
-//     const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
-//     Mu                   = Mustart;
-//   }
+  else if (Fr == 0) {
+    const double vstart  = Q[0];
+    const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
+    Mu                   = Mustart;
+  }
 
-//   S[0] = 0.0;
-//   S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (u / ubar) * Q[0] * Gravity * cos(Zeta);
-//   S[2] = -Mu * (v / ubar) * Q[0] * Gravity * cos(Zeta);
-// }
+  S[0] = 0.0;
+  S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (u / ubar) * Q[0] * Gravity * cos(Zeta);
+  S[2] = -Mu * (v / ubar) * Q[0] * Gravity * cos(Zeta);
+}
 
 ::exahype2::RefinementCommand applications::exahype2::avalanche::SWESolver::refinementCriterion(
   const double* __restrict__ Q, // Q[3+1]
@@ -231,7 +232,7 @@ void applications::exahype2::avalanche::SWESolver::nonconservativeProduct(
   double                                       t
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-  const bool nearCentre = tarch::la::norm2(volumeX) < 0.30;
-  result = nearCentre ? ::exahype2::RefinementCommand::Refine : result;
+  // const bool nearCentre = tarch::la::norm2(volumeX) < 0.30;
+  // result = nearCentre ? ::exahype2::RefinementCommand::Refine : result;
   return result;
 }

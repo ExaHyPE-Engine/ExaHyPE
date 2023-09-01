@@ -109,6 +109,15 @@ public:
     double* __restrict__ BTimesDeltaQ // BTimesDeltaQ[3]
   ) override;
 
+  virtual void sourceTerm(
+    const double* __restrict__ Q,
+    const tarch::la::Vector<Dimensions, double>& volumeCentre,
+    const tarch::la::Vector<Dimensions, double>& volumeH,
+    double                                       t,
+    double                                       dt,
+    double* __restrict__ S
+  ) override;
+
   static inline void extrapolateHalo(double* __restrict__ oldQWithHalo) {
     // extrapolation
     tarch::la::Vector<Dimensions, int> topLeftCell     = {0, NumberOfFiniteVolumesPerAxisPerPatch + 1};

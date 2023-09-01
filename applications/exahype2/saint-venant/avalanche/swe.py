@@ -6,7 +6,7 @@ import sys
 # The generator is located in the /Peano/python folder and needs to therefore added to PYTHONPATH.
 # You can either set PYTHONPATH on the command line yourself or insert it here in the script.
 #
-sys.path.insert(0, os.path.abspath("../../../python"))
+sys.path.insert(0, os.path.abspath("../../../../python"))
 
 #
 # We import the required modules for this project.
@@ -56,7 +56,7 @@ my_solver.set_implementation(
   ncp                   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   flux                  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   refinement_criterion  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  # source_term           = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  source_term           = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
 )
 
 #
@@ -66,12 +66,12 @@ my_solver.set_implementation(
 ## Independent Constants
 my_solver.add_solver_constants("static constexpr double Gravity = {}; // [m/s^2]".format(9.81))
 my_solver.add_solver_constants("static constexpr double Pi = {};".format(3.14159))
-my_solver.add_solver_constants("static constexpr double Zeta = Pi/4.0;")
-my_solver.add_solver_constants("static constexpr double Zeta1 = Pi/3.0;")
-my_solver.add_solver_constants("static constexpr double Zeta2 = Pi/12.0;")
-my_solver.add_solver_constants("static constexpr double Zeta3 = Pi/15.0;")
-my_solver.add_solver_constants("static constexpr double Beta = {};".format(1.0))
-my_solver.add_solver_constants("static constexpr double FrictionLengthScale = {};".format(1.0))
+my_solver.add_solver_constants("static constexpr double Zeta = 23*Pi/180;") # Pouliquen and Forterre
+my_solver.add_solver_constants("static constexpr double Zeta1 = 21*Pi/180;") # Pouliquen and Forterre
+my_solver.add_solver_constants("static constexpr double Zeta2 = 30.7*Pi/180;") # Pouliquen and Forterre
+my_solver.add_solver_constants("static constexpr double Zeta3 = 22.2*Pi/180;") # Pouliquen and Forterre
+my_solver.add_solver_constants("static constexpr double Beta = {};".format(0.136)) # Pouliquen main paper
+my_solver.add_solver_constants("static constexpr double FrictionLengthScale = {};".format(0.00065)) # Pouliquen and Forterre
 
 ## Dependent Constants
 my_solver.add_solver_constants("static constexpr double Mu1 = tan(Zeta1);")
@@ -93,10 +93,10 @@ my_project.add_solver( my_solver )
 #
 my_project.set_global_simulation_parameters(
   dimensions            = 2,
-  size                  = [2.0, 2.0],
-  offset                = [-1.0, -1.0],
-  min_end_time          = 0.020,
-  max_end_time          = 0.020,
+  size                  = [2.0, 0.7],
+  offset                = [0.0, 0.0],
+  min_end_time          = 2.0,
+  max_end_time          = 2.0,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = 0.005, # snapshot interval
   periodic_BC           = [False, False, False]
@@ -123,7 +123,7 @@ my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "
 # Additionally, we specify the build mode which you can also change to a different mode.
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-my_project.set_Peano4_installation( "../../../", mode=peano4.output.CompileMode.Release )
+my_project.set_Peano4_installation( "../../../../", mode=peano4.output.CompileMode.Release )
 
 #
 # We generate and grab the underlying core project of 'Peano4'.
@@ -154,5 +154,5 @@ print("Clean object files via 'make clean'")
 print("Recompile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
 print("Regenerate all code by running 'python3 swe.py' again")
-print("Convert any output via python3 ../../../python/peano4/visualisation/render.py solution/solution-SWESolver.peano-patch-file")
+print("Convert any output via python3 ../../../../python/peano4/visualisation/render.py solution/solution-SWESolver.peano-patch-file")
 print("Then you can open the generated .pvd file in a tool of your choice (e.g., ParaView)")
