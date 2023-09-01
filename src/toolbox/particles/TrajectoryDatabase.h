@@ -42,10 +42,18 @@ private:
   const int _deltaBetweenTwoDatabaseFlushes;
   int       _thresholdForNextDatabaseFlush;
   int       _precision;
+
   /**
+   * Flag that indicates if we erase the database after a flush
+   *
+   * If not set, each dump consists all particle data ever recorded. If set,
+   * you will potentially get a huge set of data files, and you will have to
+   * concatenate them before you interpret the data.
+   *
    * @see TrajectoryDatabase()
+   * @see clearDatabaseAfterFlush()
    */
-  const bool _clearDatabaseAfterFlush;
+  bool _clearDatabaseAfterFlush;
 
   bool _deltasAreRelative;
 
@@ -135,7 +143,8 @@ public:
    * by more than  dataDelta in one of its components, we write a new snapshot of
    * this particle (even though it might not have moved).
    *
-   * <h2> Flushing the database </h2>
+   *
+   * ## Flushing the database
    *
    * Please read the documentation of clearDatabaseAfterFlush and
    * growthBetweenTwoDatabaseFlushes below first. If you flush a database every
@@ -149,22 +158,62 @@ public:
    *
    *
    * @param clearDatabaseAfterFlush If this flag is set, each flush of the database
-   *   will go into a separte file, and the code will clear the database after the
+   *   will go into a separate file, and the code will clear the database after the
    *   flush. As a consequence, the database will never exceed the memory. However,
    *   you'll get a lot of files that you have to merge afterwards.
-   * @param growthBetweenTwoDatabaseFlushes Whenver a database has been added more
-   *   than growthBetweenTwoDatabaseFlushes entries, we dump a snapshot. This can be
-   *   growthBetweenTwoDatabaseFlushes different particles, or growthBetweenTwoDatabaseFlushes
-   *   updates for only one single particle. In both cases, we flush.
-   * @param positionDelta The code dumps a new particle if and only if it is not in
-   *   the database or if its position differs from the last positon tracked by more
-   *   than positionDelta.
-   * @param dataDelta See positionDelta, but this time we analyse the data held by
-   *   the particle.
+   *
+   * @param growthBetweenTwoDatabaseFlushes Number of entries that we dump into
+   *   the database before it is flushed the next time. Set it to max of an
+   *   integer or zero to disable on-the-fly dumps. In this case, the database
+   *   is only flushed when the simulation terminates. So, the thresholds
+   *   for the data and position deltas determine how often entries and up in
+   *   the database, and growthBetweenTwoDatabaseFlushes determines how often
+   *   this database is written into a file.
+   *
+   * @param positionDelta The code dumps a new particle if and only if it is
+   *   not in the database or if its position differs from the last position
+   *   tracked by more than positionDelta.  Therefore, the flag is similar to
+   *   dataDelta but this time it is not the difference in the data that
+   *   triggers a dump into the database, but a change of position. Obviously,
+   *   these things can be totally independent (and also can be combined), as
+   *   particles that move with the domain might not change their value, as
+   *   they are tracers, while stationary seismograms usually do not change
+   *   their position at all.
+   *
+   *   If you work with stationary particles, you can set this parameter to
+   *   literally anything, as it will never become relevant. If you want the
+   *   dump to write a snapshot only after fixed time intervals, set this value
+   *   to a very high threshold, so it never kicks in and triggers a data dump.
+   *   In this case, only the time stamp differences will issue data writes.
+   *
+   *   This flag has no impact whatsoever how often the data is dumped into a
+   *   file. The frequency of datafile writes is solely controlled via
+   *   growthBetweenTwoDatabaseFlushes.
+   *
+   * @param dataDelta Compare to positionDelta, but this time we analyse the
+   *   data held by the particle. A particle is dumped into the database if it
+   *   has switched the domain partition or its position has changed more then
+   *   delta_between_two_snapshots. See
+   *   toolbox::particles::TrajectoryDatabase::getAction() for a description
+   *   how the C++ code interprets this threshold, but it is usually the max
+   *   norm that is used here. If you set it to a very small number, you'll
+   *   get a lot of entries in your database.
+   *
+   *   This flag has no impact whatsoever how often the data is dumped into a
+   *   file. The frequency of datafile writes is solely controlled via
+   *   growthBetweenTwoDatabaseFlushes.
+   *
    * @param timeDelta this parameter ask the code to dump particle into database after certain time
    *   interval of time_delta_between_two_snapsots, even data and position do not change
    *   during this time interval. You can set the two parameter above to be extremely big
    *   to enforce code dump particle with (roughly) regular time interval.
+   *
+   *
+   *   This flag has no impact whatsoever how often the data is dumped into a
+   *   file. The frequency of datafile writes is solely controlled via
+   *   growthBetweenTwoDatabaseFlushes.
+   *
+   *
    * @param deltasAreRelative By default (flag is false), we take the absolute deltas
    *   of the position or data to make a decision if to dump a particle or not. If
    *   this flag is set however, we track the maximum of the deltas, and we dump
@@ -213,6 +262,8 @@ public:
   void setDataDeltaBetweenTwoSnapshots(double value, bool deltasAreRelative = false);
   void setPositionDeltaBetweenTwoSnapshots(double value, bool deltasAreRelative = false);
   void setTimeDeltaBetweenTwoSnapshots(double value);
+
+  void clearDatabaseAfterFlush(bool value);
 
   /**
    * Add particle snapshot

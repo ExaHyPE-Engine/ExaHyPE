@@ -270,7 +270,8 @@ class AbstractCCZ4Solver(object):
           number_of_entries_between_two_db_flushes=number_of_entries_between_two_db_flushes,
           output_precision=10,
           data_delta_between_two_snapsots = data_delta_between_two_snapsots,
-          time_delta_between_two_snapsots = time_delta_between_two_snapsots
+          time_delta_between_two_snapsots = time_delta_between_two_snapsots,
+          clearDatabaseAfterFlush         = True,
           ))
         ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -631,6 +632,7 @@ def add_tracer_to_FV_solver(
         output_precision=10,
         data_delta_between_two_snapsots = data_delta_between_two_snapsots,
         time_delta_between_two_snapsots = time_delta_between_two_snapsots,
+        clearDatabaseAfterFlush         = True,
     )
     dump_into_database_action_set.priority = solver._action_set_update_cell.priority + 2
     project.add_action_set_to_timestepping(dump_into_database_action_set)
@@ -702,6 +704,7 @@ def add_tracer_to_FD4_solver(
         output_precision=10,
         data_delta_between_two_snapsots = data_delta_between_two_snapsots,
         time_delta_between_two_snapsots = time_delta_between_two_snapsots,
+        clearDatabaseAfterFlush         = True,
     )
     dump_into_database_action_set.priority = (
         solver._action_set_compute_final_linear_combination.priority + 2
@@ -1173,6 +1176,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
             output_precision=10,
             data_delta_between_two_snapsots = data_delta_between_two_snapsots,
             time_delta_between_two_snapsots = time_delta_between_two_snapsots,
+            clearDatabaseAfterFlush         = True,
         )
         dump_into_database_action_set.priority = (
             self._action_set_compute_final_linear_combination.priority + 2
@@ -1357,6 +1361,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
             output_precision=10,
             data_delta_between_two_snapsots = data_delta_between_two_snapsots,
             time_delta_between_two_snapsots = time_delta_between_two_snapsots,
+            clearDatabaseAfterFlush         = True,
         )
         dump_into_database_action_set.priority = (
             self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.priority

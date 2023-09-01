@@ -180,6 +180,10 @@ void toolbox::particles::TrajectoryDatabase::setOutputPrecision( int precision )
   _precision = precision;
 }
 
+void toolbox::particles::TrajectoryDatabase::clearDatabaseAfterFlush(bool value) {
+  _clearDatabaseAfterFlush = value;
+}
+
 void toolbox::particles::TrajectoryDatabase::setDataDeltaBetweenTwoSnapshots( double value, bool deltasAreRelative ) {
   assertion(value>=0.0);
   _dataDelta = value;

@@ -35,6 +35,7 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
         position_delta_between_two_snapsots=1e-8,
         time_delta_between_two_snapsots=0,
         output_precision=8,
+        clearDatabaseAfterFlush=True,
         use_relative_deltas=False,
         initial_record_time=-1,
         last_record_time=1e8,
@@ -44,55 +45,33 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
         Constructor
 
         data_delta_between_two_snapsots: Float
-         A particle is dumped into the database if it has switched the domain
-         partition or its position has changed more then 
-         delta_between_two_snapshots. See 
-         toolbox::particles::TrajectoryDatabase::getAction() for a description
-         how the C++ code interprets this threshold, but it is usually the max 
-         norm that is used here. If you set it to a very small number, you'll 
-         get a lot of entries in your database. 
-         
+         See toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(). The 
+         argument maps 1:1 to the constructor's argument dataDelta.
+                  
          This flag has no impact whatsoever how often the data is dumped into a 
          file. The frequency of datafile writes is solely controlled via 
          number_of_entries_between_two_db_flushes.
 
         position_delta_between_two_snapsots: Float
-         Similar to data_delta_between_two_snapsots but this time it is not the
-         difference in the data that triggers a dump into the database, but a change
-         of position. Obviously, these things can be totally independent (and also can
-         be combined), as particles that move with the domain might not change their
-         value, as theyare tracer, while stationary seismograms usually do not change
-         their position at all.
-
-         If you work with stationary particles, you can set this parameter to literally
-         anything, as it will never become relevant. If you want the dump to write a
-         snapshot only after fixed time intervals, set this value to a very high
-         threshold, so it never kicks in and triggers a data dump. In this case, only
-         the time stamp differences will issue data writes.
+         See toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(). The 
+         argument maps 1:1 to the constructor's argument positionDelta.
          
          This flag has no impact whatsoever how often the data is dumped into a 
          file. The frequency of datafile writes is solely controlled via 
          number_of_entries_between_two_db_flushes.
 
         time_delta_between_two_snapsots: Float
-         this parameter ask the code to dump particle into database after certain time
-         interval of time_delta_between_two_snapsots, even if data and position do not change
-         during this time interval. You can set the two parameter above to be extremely big
-         to enforce code dump particle with (roughly) regular time interval.
-         set it as 0 to switch this feature off.
+         See toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(). The 
+         argument maps 1:1 to the constructor's argument timeDelta.
          
          This flag has no impact whatsoever how often the data is dumped into a 
          file. The frequency of datafile writes is solely controlled via 
          number_of_entries_between_two_db_flushes.
 
         number_of_entries_between_two_db_flushes: Int
-          Number of entries that we dump into the database before it is flushed the next
-          time. Set it to max of an integer or zero to disable on-the-fly dumps. In this
-          case, the database is only flushed when the simulation terminates. So, the
-          thresholds data_delta_between_two_snapsots and position_delta_between_two_snapsots
-          determine how often entries and up in the database, and number_of_entries_between_two_db_flushes
-          determines how often this database is written into a file.
-
+          See toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(). The 
+          argument maps 1:1 to the constructor's argument growthBetweenTwoDatabaseFlushes.
+        
         use_relative_deltas: Boolean
           See description of C++ class in toolbox::particles::TrajectoryDatabase
 
@@ -101,6 +80,8 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
 
         last_record_time: Float
           you can specify at when does the tracer stop dumping data to files.
+          
+        clearDatabaseAfterFlush: Boolean
         """
         super(DumpTracerIntoDatabase, self).__init__(priority=1, parallel=False)
         self.d = {}
@@ -117,6 +98,11 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
             self.d["USE_RELATIVE_DELTAS"] = "true"
         else:
             self.d["USE_RELATIVE_DELTAS"] = "false"
+        if clearDatabaseAfterFlush:
+            self.d["CLEAR_DATABASE_AFTER_FLUSH"] = "true"
+        else:
+            self.d["CLEAR_DATABASE_AFTER_FLUSH"] = "false"
+
         self.d["INI_RECORD"] = initial_record_time
         self.d["LAST_RECORD"] = last_record_time
 
@@ -181,6 +167,7 @@ if (
   _database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}} );
   _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}}, {{USE_RELATIVE_DELTAS}} );
   _database.setTimeDeltaBetweenTwoSnapshots( {{TIME_DELTA}} );
+  _database.clearDatabaseAfterFlush( {{CLEAR_DATABASE_AFTER_FLUSH}} );
 """
         )
         return template.render(**self.d)
