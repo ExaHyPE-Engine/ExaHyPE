@@ -93,7 +93,7 @@ my_project.add_solver( my_solver )
 #
 my_project.set_global_simulation_parameters(
   dimensions            = 2,
-  size                  = [2.0, 0.7],
+  size                  = [2.0, 2.0],
   offset                = [0.0, 0.0],
   min_end_time          = 2.0,
   max_end_time          = 2.0,
@@ -139,6 +139,7 @@ my_project = my_project.generate_Peano4_project(verbose=True)
 # As you want to have your own custom C++ file tracked by Git.
 #
 my_project.output.makefile.add_cpp_file( "SWESolver.cpp" )
+my_project.output.makefile.add_h_file( "SWESolver.h" )
 
 #
 # Finally, we want to build our project.

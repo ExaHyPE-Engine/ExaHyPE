@@ -12,11 +12,11 @@ void applications::exahype2::avalanche::SWESolver::initialCondition(
   const tarch::la::Vector<Dimensions, double>& volumeH,
   bool                                         gridIsConstructred
 ) {
-  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {0.15,0.35};
+  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {0.15,1.0};
   const bool nearCentre = tarch::la::norm2(volumeCentre-granularMaterialCenter) < 0.10;
 
   Q[0] = (nearCentre ? 0.008 : 0.000001 ); // Water height (h)
-  Q[1] = 0.00001; // x-momentum (hu)
+  Q[1] = 0.0; // x-momentum (hu)
   Q[2] = 0.0; // y-momentum (hv)
   Q[3] = 0.0;
   Q[4] = 0.0;
@@ -65,6 +65,7 @@ double applications::exahype2::avalanche::SWESolver::maxEigenvalue(
   double                                       dt,
   int                                          normal
 ) {
+
   assertion(Q[0] > 0);
   double       result = 1.0;
   const double ih     = 1.0 / Q[0]; // Inverse water height
@@ -220,9 +221,17 @@ void applications::exahype2::avalanche::SWESolver::sourceTerm(
     Mu                   = Mustart;
   }
 
-  S[0] = 0.0;
-  S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (u / ubar) * Q[0] * Gravity * cos(Zeta);
-  S[2] = -Mu * (v / ubar) * Q[0] * Gravity * cos(Zeta);
+  if(tarch::la::equals(ubar,0.0)){
+    S[0] = 0.0;
+    S[1] = Q[0] * Gravity * sin(Zeta) - Mu * Q[0] * Gravity * cos(Zeta);
+    S[2] = 0.0;
+  }
+  else if(tarch::la::greater(ubar,0.0)){
+    S[0] = 0.0;
+    S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (u / ubar) * Q[0] * Gravity * cos(Zeta);
+    S[2] = -Mu * (v / ubar) * Q[0] * Gravity * cos(Zeta);
+  }
+  
 }
 
 ::exahype2::RefinementCommand applications::exahype2::avalanche::SWESolver::refinementCriterion(
