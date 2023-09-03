@@ -1,9 +1,11 @@
 #include "Riemann.h"
+
+#include "exahype2/VolumeIndex.h"
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
+
 #include "peano4/utils/Loop.h"
 #include "peano4/datamanagement/FaceMarker.h"
-
 
 void exahype2::dg::interpolateRiemannSolution(
   const peano4::datamanagement::FaceMarker&  marker,
@@ -64,7 +66,6 @@ void exahype2::dg::interpolateRiemannSolution(
   }
 }
 
-
 void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
   const peano4::datamanagement::FaceMarker&  marker,
   int                                        order,
@@ -88,10 +89,10 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
   );
 
   #if Dimensions==2
-  const int totalNumberOfValues = (order+1) * (numberOfProjectedQuantities*2) * (unknowns+auxiliaryVariables);
+  [[maybe_unused]] const int totalNumberOfValues = (order+1) * (numberOfProjectedQuantities*2) * (unknowns+auxiliaryVariables);
   const int RestrictionMatrixDimensions = (order+1);   // no of rows/cols
   #else
-  const int totalNumberOfValues = (order+1) * (order+1) * (numberOfProjectedQuantities*2) * (unknowns+auxiliaryVariables);
+  [[maybe_unused]] const int totalNumberOfValues = (order+1) * (order+1) * (numberOfProjectedQuantities*2) * (unknowns+auxiliaryVariables);
   const int RestrictionMatrixDimensions = (order+1)*(order+1);
   #endif
 
@@ -133,8 +134,6 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
   }
 }
 
-
-
 void exahype2::dg::clearSolutionProjection(
   int                           order,
   int                           unknowns,
@@ -151,7 +150,6 @@ void exahype2::dg::clearSolutionProjection(
   std::fill_n( faceQ, numberOfDoubles, 0.0 );
 }
 
-
 void exahype2::dg::clearRiemannResult(
   int                           order,
   int                           unknowns,
@@ -166,170 +164,186 @@ void exahype2::dg::clearRiemannResult(
   );
 }
 
-
 void exahype2::dg::projectVolumetricDataOntoFaces(
-  const double* __restrict__          cellQ,
-  int                                 order,
-  int                                 unknowns,
-  int                                 auxiliaryVariables,
-  const double* const __restrict__    BasisFunctionValuesLeft,
-  double* const __restrict__          faceQLeft,
-  double* const __restrict__          faceQRight,
-  double* const __restrict__          faceQBottom,
-  double* const __restrict__          faceQUp
+  [[maybe_unused]] const double* __restrict__          cellQ,
+  [[maybe_unused]] int                                 order,
+  [[maybe_unused]] int                                 unknowns,
+  [[maybe_unused]] int                                 auxiliaryVariables,
+  [[maybe_unused]] const double* const __restrict__    BasisFunctionValuesLeft,
+  [[maybe_unused]] double* const __restrict__          faceQLeft,
+  [[maybe_unused]] double* const __restrict__          faceQRight,
+  [[maybe_unused]] double* const __restrict__          faceQBottom,
+  [[maybe_unused]] double* const __restrict__          faceQUp
 ) {
-  assertion(Dimensions==2);
-
+#if Dimensions==2
   exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,1,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,1,unknowns,auxiliaryVariables);
 
-  // project left/right
-  for (int y=0; y<order+1; y++)
+  // Project left/right
+  for (int y=0; y<order+1; y++) {
+    const auto left = volumeIndex2d(1, y);
+    const auto right = volumeIndex2d(0, y);
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-    faceQLeft [ leftRightFaceEnumerator({1,y},unknown) ] = 0.0;
-    faceQRight[ leftRightFaceEnumerator({0,y},unknown) ] = 0.0;
-  }
+    faceQLeft [ leftRightFaceEnumerator(left,unknown) ] = 0.0;
+    faceQRight[ leftRightFaceEnumerator(right,unknown) ] = 0.0;
+  }}
 
-  for (int y=0; y<order+1; y++)
-  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++) {
+    const auto left = volumeIndex2d(1, y);
+    const auto right = volumeIndex2d(0, y);
+  for (int x=0; x<order+1; x++) {
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-    faceQLeft [ leftRightFaceEnumerator({1,y},unknown) ] += BasisFunctionValuesLeft[x]       * cellQ[ cellEnumerator(0,{x,y},unknown) ];
-    faceQRight[ leftRightFaceEnumerator({0,y},unknown) ] += BasisFunctionValuesLeft[order-x] * cellQ[ cellEnumerator(0,{x,y},unknown) ];
-  }
+    faceQLeft [ leftRightFaceEnumerator(left,unknown) ] += BasisFunctionValuesLeft[x]       * cellQ[ cellEnumerator(0,{x,y},unknown) ];
+    faceQRight[ leftRightFaceEnumerator(right,unknown) ] += BasisFunctionValuesLeft[order-x] * cellQ[ cellEnumerator(0,{x,y},unknown) ];
+  }}}
 
-  // project up/down
-  for (int x=0; x<order+1; x++)
+  // Project up/down
+  for (int x=0; x<order+1; x++) {
+    const auto bottom = volumeIndex2d(x, 1);
+    const auto up = volumeIndex2d(x, 0);
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-    faceQBottom [ bottomTopFaceEnumerator({x,1},unknown) ] = 0.0;
-    faceQUp     [ bottomTopFaceEnumerator({x,0},unknown) ] = 0.0;
-  }
+    faceQBottom [ bottomTopFaceEnumerator(bottom,unknown) ] = 0.0;
+    faceQUp     [ bottomTopFaceEnumerator(up,unknown) ] = 0.0;
+  }}
 
-  for (int y=0; y<order+1; y++)
-  for (int x=0; x<order+1; x++)
+  for (int x=0; x<order+1; x++) {
+    const auto bottom = volumeIndex2d(x, 1);
+    const auto up = volumeIndex2d(x, 0);
+  for (int y=0; y<order+1; y++) {
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-    faceQBottom [ bottomTopFaceEnumerator({x,1},unknown) ] += BasisFunctionValuesLeft[y]       * cellQ[ cellEnumerator(0,{x,y},unknown) ];
-    faceQUp     [ bottomTopFaceEnumerator({x,0},unknown) ] += BasisFunctionValuesLeft[order-y] * cellQ[ cellEnumerator(0,{x,y},unknown) ];
-  }
-
+    faceQBottom [ bottomTopFaceEnumerator(bottom,unknown) ] += BasisFunctionValuesLeft[y]       * cellQ[ cellEnumerator(0,{x,y},unknown) ];
+    faceQUp     [ bottomTopFaceEnumerator(up,unknown) ] += BasisFunctionValuesLeft[order-y] * cellQ[ cellEnumerator(0,{x,y},unknown) ];
+  }}}
+#endif
 }
 
-
 void exahype2::dg::projectVolumetricDataOntoFaces(
-  const double* __restrict__          cellQ,
-  int                                 order,
-  int                                 unknowns,
-  int                                 auxiliaryVariables,
-  const double* const __restrict__    BasisFunctionValuesLeft,
-  double* const __restrict__          faceQLeft,
-  double* const __restrict__          faceQRight,
-  double* const __restrict__          faceQBottom,
-  double* const __restrict__          faceQUp,
-  double* const __restrict__          faceQFront,
-  double* const __restrict__          faceQBack
+  [[maybe_unused]] const double* __restrict__          cellQ,
+  [[maybe_unused]] int                                 order,
+  [[maybe_unused]] int                                 unknowns,
+  [[maybe_unused]] int                                 auxiliaryVariables,
+  [[maybe_unused]] const double* const __restrict__    BasisFunctionValuesLeft,
+  [[maybe_unused]] double* const __restrict__          faceQLeft,
+  [[maybe_unused]] double* const __restrict__          faceQRight,
+  [[maybe_unused]] double* const __restrict__          faceQBottom,
+  [[maybe_unused]] double* const __restrict__          faceQUp,
+  [[maybe_unused]] double* const __restrict__          faceQFront,
+  [[maybe_unused]] double* const __restrict__          faceQBack
 ) {
-  assertion(Dimensions==3);
-
+#if Dimensions==3
   exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,1,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,1,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator frontBackFaceEnumerator(2,order+1,1,unknowns,auxiliaryVariables);
 
-  // project left/right
-  for (int y=0; y<order+1; y++)
-  for (int z=0; z<order+1; z++)
+  // Project left/right
+  for (int y=0; y<order+1; y++) {
+  for (int z=0; z<order+1; z++) {
+    const auto left = volumeIndex3d(1, y, z);
+    const auto right = volumeIndex3d(0, y, z);
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-    faceQLeft   [ leftRightFaceEnumerator({1,y,z},unknown) ] = 0.0;
-    faceQRight  [ leftRightFaceEnumerator({0,y,z},unknown) ] = 0.0;
-  }
+    faceQLeft   [ leftRightFaceEnumerator(left,unknown) ] = 0.0;
+    faceQRight  [ leftRightFaceEnumerator(right,unknown) ] = 0.0;
+  }}}
 
-  for (int x=0; x<order+1; x++)
-  for (int y=0; y<order+1; y++)
-  for (int z=0; z<order+1; z++)
+  for (int y=0; y<order+1; y++) {
+  for (int z=0; z<order+1; z++) {
+    const auto left = volumeIndex3d(1, y, z);
+    const auto right = volumeIndex3d(0, y, z);
+  for (int x=0; x<order+1; x++) {
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-    faceQLeft   [ leftRightFaceEnumerator({1,y,z},unknown) ] += BasisFunctionValuesLeft[x]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
-    faceQRight  [ leftRightFaceEnumerator({0,y,z},unknown) ] += BasisFunctionValuesLeft[order-x] * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
-  }
+    faceQLeft   [ leftRightFaceEnumerator(left,unknown) ] += BasisFunctionValuesLeft[x]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+    faceQRight  [ leftRightFaceEnumerator(right,unknown) ] += BasisFunctionValuesLeft[order-x] * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+  }}}}
 
-  // project down/up
-  for (int x=0; x<order+1; x++)
-  for (int z=0; z<order+1; z++)
+  // Project down/up
+  for (int x=0; x<order+1; x++) {
+  for (int z=0; z<order+1; z++) {
+    const auto bottom = volumeIndex3d(x, 1, z);
+    const auto up = volumeIndex3d(x, 0, z);
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-    faceQBottom [ bottomTopFaceEnumerator({x,1,z},unknown) ] = 0.0;
-    faceQUp     [ bottomTopFaceEnumerator({x,0,z},unknown) ] = 0.0;
-  }
+    faceQBottom [ bottomTopFaceEnumerator(bottom,unknown) ] = 0.0;
+    faceQUp     [ bottomTopFaceEnumerator(up,unknown) ] = 0.0;
+  }}}
 
-  for (int x=0; x<order+1; x++)
-  for (int y=0; y<order+1; y++)
-  for (int z=0; z<order+1; z++)
+  for (int x=0; x<order+1; x++) {
+  for (int z=0; z<order+1; z++) {
+    const auto bottom = volumeIndex3d(x, 1, z);
+    const auto up = volumeIndex3d(x, 0, z);
+  for (int y=0; y<order+1; y++) {
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-    faceQBottom [ bottomTopFaceEnumerator({x,1,z},unknown) ] += BasisFunctionValuesLeft[y]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
-    faceQUp     [ bottomTopFaceEnumerator({x,0,z},unknown) ] += BasisFunctionValuesLeft[order-y] * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
-  }
+    faceQBottom [ bottomTopFaceEnumerator(bottom,unknown) ] += BasisFunctionValuesLeft[y]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+    faceQUp     [ bottomTopFaceEnumerator(up,unknown) ] += BasisFunctionValuesLeft[order-y] * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+  }}}}
 
-  // project front/back
-  for (int x=0; x<order+1; x++)
-  for (int y=0; y<order+1; y++)
+  // Project front/back
+  for (int x=0; x<order+1; x++) {
+  for (int y=0; y<order+1; y++) {
+    const auto front = volumeIndex3d(x, y, 1);
+    const auto back = volumeIndex3d(x, y, 0);
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-    faceQFront [ frontBackFaceEnumerator({x,y,1},unknown) ] = 0.0;
-    faceQBack  [ frontBackFaceEnumerator({x,y,0},unknown) ] = 0.0;
-  }
-  for (int x=0; x<order+1; x++)
-  for (int y=0; y<order+1; y++)
-  for (int z=0; z<order+1; z++)
+    faceQFront [ frontBackFaceEnumerator(front,unknown) ] = 0.0;
+    faceQBack  [ frontBackFaceEnumerator(back,unknown) ] = 0.0;
+  }}}
+
+  for (int x=0; x<order+1; x++) {
+  for (int y=0; y<order+1; y++) {
+    const auto front = volumeIndex3d(x, y, 1);
+    const auto back = volumeIndex3d(x, y, 0);
+  for (int z=0; z<order+1; z++) {
   for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-    faceQFront [ frontBackFaceEnumerator({x,y,1},unknown) ] += BasisFunctionValuesLeft[z]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
-    faceQBack  [ frontBackFaceEnumerator({x,y,0},unknown) ] += BasisFunctionValuesLeft[order-z] * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
-  }
+    faceQFront [ frontBackFaceEnumerator(front,unknown) ] += BasisFunctionValuesLeft[z]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+    faceQBack  [ frontBackFaceEnumerator(back,unknown) ]  += BasisFunctionValuesLeft[order-z] * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+  }}}}
+#endif
 }
 
-
 void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
-  const double* __restrict__          cellQ,
-  int                                 order,
-  int                                 unknowns,
-  int                                 auxiliaryVariables,
-  const double* const __restrict__    BasisFunctionValuesLeft,
-  double* const __restrict__          faceQLeft,
-  double* const __restrict__          faceQRight,
-  double* const __restrict__          faceQBottom,
-  double* const __restrict__          faceQUp
+  [[maybe_unused]] const double* __restrict__          cellQ,
+  [[maybe_unused]] int                                 order,
+  [[maybe_unused]] int                                 unknowns,
+  [[maybe_unused]] int                                 auxiliaryVariables,
+  [[maybe_unused]] const double* const __restrict__    BasisFunctionValuesLeft,
+  [[maybe_unused]] double* const __restrict__          faceQLeft,
+  [[maybe_unused]] double* const __restrict__          faceQRight,
+  [[maybe_unused]] double* const __restrict__          faceQBottom,
+  [[maybe_unused]] double* const __restrict__          faceQUp
 ) {
   assertionMsg(false, "not implemented yet");
 }
 
-
 void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
-  const double* __restrict__          cellQ,
-  int                                 order,
-  int                                 unknowns,
-  int                                 auxiliaryVariables,
-  const double* const __restrict__    BasisFunctionValuesLeft,
-  double* const __restrict__          faceQLeft,
-  double* const __restrict__          faceQRight,
-  double* const __restrict__          faceQBottom,
-  double* const __restrict__          faceQUp,
-  double* const __restrict__          faceQFront,
-  double* const __restrict__          faceQBack
+  [[maybe_unused]] const double* __restrict__          cellQ,
+  [[maybe_unused]] int                                 order,
+  [[maybe_unused]] int                                 unknowns,
+  [[maybe_unused]] int                                 auxiliaryVariables,
+  [[maybe_unused]] const double* const __restrict__    BasisFunctionValuesLeft,
+  [[maybe_unused]] double* const __restrict__          faceQLeft,
+  [[maybe_unused]] double* const __restrict__          faceQRight,
+  [[maybe_unused]] double* const __restrict__          faceQBottom,
+  [[maybe_unused]] double* const __restrict__          faceQUp,
+  [[maybe_unused]] double* const __restrict__          faceQFront,
+  [[maybe_unused]] double* const __restrict__          faceQBack
 ) {
   assertionMsg(false, "not implemented yet");
 }
-
 
 void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-  const double* const __restrict__    faceQLeft,
-  const double* const __restrict__    faceQRight,
-  const double* const __restrict__    faceQBottom,
-  const double* const __restrict__    faceQUp,
-  int                                 order,
-  int                                 unknowns,
-  const int                           auxiliaryVariables,
-  const tarch::la::Vector<2,double>&  cellSize,
-  const double* const __restrict__    BasisFunctionValuesLeft,
-  const double* __restrict__          MassMatrixDiagonal1d,
-  double* __restrict__                cellQ
-){
-  const int strideQ = unknowns+auxiliaryVariables;
+  [[maybe_unused]] const double* const __restrict__    faceQLeft,
+  [[maybe_unused]] const double* const __restrict__    faceQRight,
+  [[maybe_unused]] const double* const __restrict__    faceQBottom,
+  [[maybe_unused]] const double* const __restrict__    faceQUp,
+  [[maybe_unused]] int                                 order,
+  [[maybe_unused]] int                                 unknowns,
+  [[maybe_unused]] const int                           auxiliaryVariables,
+  [[maybe_unused]] const tarch::la::Vector<2,double>&  cellSize,
+  [[maybe_unused]] const double* const __restrict__    BasisFunctionValuesLeft,
+  [[maybe_unused]] const double* __restrict__          MassMatrixDiagonal1d,
+  [[maybe_unused]] double* __restrict__                cellQ
+) {
+#if Dimensions==2
+  [[maybe_unused]] const int strideQ = unknowns + auxiliaryVariables;
 
   exahype2::enumerator::AoSLexicographicEnumerator QEnumerator(
     1,           // number of cells in one memory chunk
@@ -369,25 +383,25 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
         - coeffUp     * faceQUp     [upperFaceEnumerator( upperDoF, var)];
     }
   }
+#endif
 }
 
-
-
 void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-  const double* const __restrict__    faceQLeft,
-  const double* const __restrict__    faceQRight,
-  const double* const __restrict__    faceQBottom,
-  const double* const __restrict__    faceQUp,
-  const double* const __restrict__    faceQFront,
-  const double* const __restrict__    faceQBack,
-  int                                 order,
-  int                                 unknowns,
-  const int                           auxiliaryVariables,
-  const tarch::la::Vector<3,double>&  cellSize,
-  const double* const __restrict__    BasisFunctionValuesLeft,
-  const double* __restrict__          MassMatrixDiagonal1d,
-  double* __restrict__                cellQ
-  ){
+  [[maybe_unused]] const double* const __restrict__    faceQLeft,
+  [[maybe_unused]] const double* const __restrict__    faceQRight,
+  [[maybe_unused]] const double* const __restrict__    faceQBottom,
+  [[maybe_unused]] const double* const __restrict__    faceQUp,
+  [[maybe_unused]] const double* const __restrict__    faceQFront,
+  [[maybe_unused]] const double* const __restrict__    faceQBack,
+  [[maybe_unused]] int                                 order,
+  [[maybe_unused]] int                                 unknowns,
+  [[maybe_unused]] const int                           auxiliaryVariables,
+  [[maybe_unused]] const tarch::la::Vector<3,double>&  cellSize,
+  [[maybe_unused]] const double* const __restrict__    BasisFunctionValuesLeft,
+  [[maybe_unused]] const double* __restrict__          MassMatrixDiagonal1d,
+  [[maybe_unused]] double* __restrict__                cellQ
+) {
+#if Dimensions==3
   exahype2::enumerator::AoSLexicographicEnumerator QEnumerator(
     1,           // number of cells in one memory chunk
     order+1,     // numberOfDoFsPerAxisInCell
@@ -438,4 +452,5 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
         - coeffBack   * faceQBack   [backFaceEnumerator  (backDoF,  var)];
     }
   }
+#endif
 }

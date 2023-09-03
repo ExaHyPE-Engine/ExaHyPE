@@ -2,7 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 from enum import Enum
 
-
 class SolverVariant(Enum):
   WithVirtualFunctions = 0
   Stateless            = 1
@@ -35,10 +34,8 @@ class KernelVariant(Enum):
 
 def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(solver):
   """
-  
   This is a straightforward modification of ReconstructPatchAndApplyFunctor._Template_TouchCellFirstTime_Fill_Halos
   in the blockstructured toolkit.
-  
   """
   return """
     //

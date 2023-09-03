@@ -2,21 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #ifdef Parallel
 #include <mpi.h>
 #endif
+
 #include <iostream>
 #include <fstream>
 #include <set>
 #include <stack>
 
-
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/logging/Log.h"
-
-
 
 namespace tarch {
   namespace logging {
@@ -52,7 +49,7 @@ class tarch::logging::NVTXLogger {
   private:
     static Log _log;
 
-    static NVTXLogger  _singleton;
+    static NVTXLogger _singleton;
 
     tarch::multicore::BooleanSemaphore _semaphore;
 
@@ -60,13 +57,13 @@ class tarch::logging::NVTXLogger {
      * Declared private since assignment does not make sense for an output
      * class (output information mismatch).
      */
-    NVTXLogger& operator=(const CommandLineLogger& rhs) = delete;
+    NVTXLogger& operator=(const CommandLineLogger&) = delete;
 
     /**
      * Declared private since copying does not make sense for an output
      * class (output information mismatch).
      */
-    NVTXLogger(const NVTXLogger& param) = delete;
+    NVTXLogger(const NVTXLogger&) = delete;
 
     /**
      * Construct message string
@@ -94,6 +91,7 @@ class tarch::logging::NVTXLogger {
     NVTXLogger();
 
     std::string getTimeStampHumanReadable( long int timestampNanoseconds ) const;
+
   public:
     ~NVTXLogger();
 
@@ -181,4 +179,3 @@ class tarch::logging::NVTXLogger {
 
     void close();
 };
-

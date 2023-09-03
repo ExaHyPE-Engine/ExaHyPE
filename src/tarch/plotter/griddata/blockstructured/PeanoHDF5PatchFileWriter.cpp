@@ -21,7 +21,7 @@ const std::string tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileW
 
 
 tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::PeanoHDF5PatchFileWriter(
-  int dimensions, const std::string& filename, bool append, bool compress
+  int dimensions, const std::string& filename, [[maybe_unused]] bool append, [[maybe_unused]] bool compress
 ):
   _dimensions(dimensions),
   _compress(compress) {
@@ -435,4 +435,5 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::addMet
          << metaData << std::endl
          << "end meta-data" << std::endl << std::endl;
   */
+  (void)metaData;
 }

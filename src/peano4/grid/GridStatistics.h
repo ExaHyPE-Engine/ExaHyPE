@@ -10,10 +10,9 @@
 
 #include <string>
 
-
 #ifdef Parallel
-  #include <mpi.h>
-  #include <functional>
+#include <mpi.h>
+#include <functional>
 #endif
 
 #include "tarch/la/Vector.h"
@@ -27,20 +26,14 @@
 
 namespace peano4{
 namespace grid{
-
   struct GridStatistics;
 }
 }
 
-
-
 struct peano4::grid::GridStatistics {
   public:
-
-
     GridStatistics() {}
     GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, bool  __removedEmptySubtree, tarch::la::Vector<Dimensions,double>  __minH);
-
 
     int   getNumberOfLocalUnrefinedCells() const;
     void   setNumberOfLocalUnrefinedCells(int value);
@@ -64,6 +57,8 @@ struct peano4::grid::GridStatistics {
 
 
     #ifdef Parallel
+    PragmaPush
+    SilenceUnknownAttribute
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -83,7 +78,7 @@ struct peano4::grid::GridStatistics {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-
+    PragmaPop
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -140,6 +135,8 @@ struct peano4::grid::GridStatistics {
     std::string toString() const;
 
   private:
+    PragmaPush
+    SilenceUnknownAttribute
     [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _numberOfLocalUnrefinedCells;
     [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _numberOfRemoteUnrefinedCells;
     [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _numberOfLocalRefinedCells;
@@ -148,12 +145,11 @@ struct peano4::grid::GridStatistics {
     [[clang::pack]]  bool   _coarseningHasBeenVetoed;
     [[clang::pack]]  bool   _removedEmptySubtree;
     tarch::la::Vector<Dimensions,double>   _minH;
-
-
+    PragmaPop
 
     #ifdef Parallel
     private:
-      int                  _senderDestinationRank;
+      int _senderDestinationRank;
 
       #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
       /**
@@ -169,7 +165,3 @@ struct peano4::grid::GridStatistics {
 
 
 };
-
-  
-
-

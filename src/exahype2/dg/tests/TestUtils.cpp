@@ -1,14 +1,13 @@
-#include "../../dg/tests/TestUtils.h"
-
+#include "TestUtils.h"
 
 void exahype2::dg::tests::eulerFlux(
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * __restrict__                        F
-      ){
+  [[maybe_unused]] const double * __restrict__                  Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal,
+  [[maybe_unused]] double * __restrict__                        F
+) {
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
@@ -22,14 +21,13 @@ void exahype2::dg::tests::eulerFlux(
   F[4] = velocity*(Q[4]+p);
 }
 
-
 void exahype2::dg::tests::eulerSource(
-      const double * __restrict__                  Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      double                                       dt,
-      double * __restrict__                        S
-    ){
+  [[maybe_unused]] const double * __restrict__                  Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] double * __restrict__                        S
+) {
   S[0] = 0.0;
   S[1] = 0.0;
   S[2] = 0.0;
@@ -37,13 +35,12 @@ void exahype2::dg::tests::eulerSource(
   S[4] = 0.0;
 }
 
-
 double exahype2::dg::tests::eulerEigenvalue(
-      const double * __restrict__                 Q,
-      const tarch::la::Vector<Dimensions,double>& x,
-      double                                      t,
-      double                                       dt,
-      int                                          normal
+  [[maybe_unused]] const double * __restrict__                 Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
+  [[maybe_unused]] double                                      t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal
 ) {
   assertion8( Q[0]>0.0, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
   const double irho = 1.0/Q[0];
@@ -67,18 +64,16 @@ double exahype2::dg::tests::eulerEigenvalue(
     result = std::max( std::abs(Q[3] * irho - c), std::abs(Q[3] * irho + c) );
   }
   return result;
-
 }
 
-
 void exahype2::dg::tests::eulerBoundaryConditions(
-        const double * __restrict__                  Qinside,
-        double * __restrict__                         Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ){
+  [[maybe_unused]] const double * __restrict__                  Qinside,
+  [[maybe_unused]] double * __restrict__                         Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal
+) {
   Qoutside[0] = Qinside[0];
   Qoutside[1] = Qinside[1];
   Qoutside[2] = Qinside[2];
@@ -86,22 +81,18 @@ void exahype2::dg::tests::eulerBoundaryConditions(
   Qoutside[4] = Qinside[4];
 }
 
-
 void exahype2::dg::tests::eulerInitial(
-    double* __restrict__  Q,
-    int                   node
-    ){
-
+  [[maybe_unused]] double* __restrict__  Q,
+  [[maybe_unused]] int                   node
+) {
   Q[0] = 1.00000000000000;
   Q[1] = 0.100000000000000;
   Q[2] = 0.200000000000000;
   Q[3] = 0.300000000000000;
   Q[4] = 2.57000000000000;
-
 }
 
-
-void exahype2::dg::tests::elasticInitial(double * __restrict__ Q){
+void exahype2::dg::tests::elasticInitial(double * __restrict__ Q) {
   for(int i=0; i<9; i++){
     Q[i] = 1.0; //6 stresses, 3 velocities
   }
@@ -111,15 +102,14 @@ void exahype2::dg::tests::elasticInitial(double * __restrict__ Q){
   Q[11] = 2.6; //cs
 }
 
-
 void exahype2::dg::tests::elasticFlux(
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * __restrict__                        F
-      ){
+  [[maybe_unused]] const double * __restrict__                  Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal,
+  [[maybe_unused]] double * __restrict__                        F
+) {
   //stresses
   for(int i=0; i<6; i++){
     F[i] = 0;
@@ -143,18 +133,15 @@ void exahype2::dg::tests::elasticFlux(
     F[8] = Q[2]; //zz
     break;
   }
-
 }
 
-
 void exahype2::dg::tests::elasticSource(
-      const double * __restrict__                  Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      double                                       dt,
-      double * __restrict__                        S
-    ){
-
+  [[maybe_unused]] const double * __restrict__                  Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] double * __restrict__                        S
+) {
   S[0] = 1.0;
   S[1] = 1.0;
   S[2] = 1.0;
@@ -164,33 +151,27 @@ void exahype2::dg::tests::elasticSource(
   S[6] = 1.0;
   S[7] = 1.0;
   S[8] = 1.0;
-
 }
-
 
 double exahype2::dg::tests::elasticEigenvalue(
-    const double * __restrict__                 Q,
-    const tarch::la::Vector<Dimensions,double>& x,
-    double                                      t,
-    double                                       dt,
-    int                                          normal
-    ){
-
+  [[maybe_unused]] const double * __restrict__                 Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
+  [[maybe_unused]] double                                      t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal
+) {
   double result = std::max(std::abs(Q[10]), std::abs(Q[11]));
   return result;
-
 }
 
-
 void exahype2::dg::tests::elasticBoundaryConditions(
-        const double * __restrict__                  Qinside,
-        double * __restrict__                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ){
-
+  [[maybe_unused]] const double * __restrict__                  Qinside,
+  [[maybe_unused]] double * __restrict__                        Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal
+) {
   Qoutside[0] = Qinside[0];
   Qoutside[1] = Qinside[1];
   Qoutside[2] = Qinside[2];
@@ -203,19 +184,17 @@ void exahype2::dg::tests::elasticBoundaryConditions(
   Qoutside[9] = Qinside[9];
   Qoutside[10] = Qinside[10];
   Qoutside[11] = Qinside[11];
-
 }
 
-
 void exahype2::dg::tests::elasticNonConservativeProduct(
-    const double * __restrict__                  Q,
-    const double * __restrict__                  deltaQ,
-    const tarch::la::Vector<Dimensions,double>&  faceCentre,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
-    double * __restrict__                        BgradQ // BgradQ[9]
-  ){
+  [[maybe_unused]] const double * __restrict__                  Q,
+  [[maybe_unused]] const double * __restrict__                  deltaQ,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal,
+  [[maybe_unused]] double * __restrict__                        BgradQ // BgradQ[9]
+) {
   //Lamé parameters
   double mu = Q[9] * Q[11] * Q[11]; //rho*cs^2
   double lambda = Q[9] * Q[10] * Q[10] - 2 * mu; //rho*cp^2 - 2 mu
@@ -254,58 +233,41 @@ void exahype2::dg::tests::elasticNonConservativeProduct(
   BgradQ[8] = 0;
 }
 
-
-
-
 void exahype2::dg::tests::testBoundaryConditions(
-        const double * __restrict__                  Qinside,
-        double * __restrict__                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ){
-
+  [[maybe_unused]] const double * __restrict__                  Qinside,
+  [[maybe_unused]] double * __restrict__                        Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal
+) {
   Qoutside[0] = Qinside[0];
   Qoutside[1] = x[0];
   Qoutside[2] = t;
   Qoutside[3] = normal;
-
 }
-
-
 
 double exahype2::dg::tests::testEigenvalue(
-    const double * __restrict__                 Q,
-    const tarch::la::Vector<Dimensions,double>& x,
-    double                                      t,
-    double                                      dt,
-    int                                         normal
-    ){
-
+  [[maybe_unused]] const double * __restrict__                 Q,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>& x,
+  [[maybe_unused]] double                                      t,
+  [[maybe_unused]] double                                      dt,
+  [[maybe_unused]] int                                         normal
+) {
   double result = Q[0]*normal;
   return result;
-
 }
 
-
-
-
 void exahype2::dg::tests::secondTestBoundaryConditions(
-        const double * __restrict__                  Qinside,
-        double * __restrict__                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ){
-
+  [[maybe_unused]] const double * __restrict__                  Qinside,
+  [[maybe_unused]] double * __restrict__                        Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          normal
+) {
   Qoutside[0] = 1.0;
   Qoutside[1] = 2.0;
   Qoutside[2] = 3.0;
   Qoutside[3] = 4.0;
-
 }
-
-
-

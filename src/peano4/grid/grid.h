@@ -72,11 +72,11 @@ namespace peano4 {
     /**
      * Forward declaration
      */
-    class GridStatistics;
-    class GridControlEvent;
+    struct GridStatistics;
+    struct GridControlEvent;
 
-    class AutomatonState;
-    class GridControlEvent;
+    struct AutomatonState;
+    struct GridControlEvent;
 
     class GridVertex;
 

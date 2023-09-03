@@ -2,17 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #ifdef Parallel
 #include <mpi.h>
 #endif
+
 #include <iostream>
 #include <fstream>
 #include <set>
 #include <stack>
 #include <map>
 #include <string>
-
 
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/multicore.h"
@@ -56,25 +55,25 @@ class tarch::logging::ScorePLogger {
   private:
     static Log _log;
 
-    static ScorePLogger  _singleton;
+    static ScorePLogger _singleton;
 
     tarch::multicore::BooleanSemaphore _semaphore;
 
     #ifdef UseScoreP
-    std::map< std::string, SCOREP_User_RegionHandle >       _scorePHandles;
+    std::map< std::string, SCOREP_User_RegionHandle > _scorePHandles;
     #endif
 
     /**
      * Declared private since assignment does not make sense for an output
      * class (output information mismatch).
      */
-    ScorePLogger& operator=(const CommandLineLogger& rhs) = delete;
+    ScorePLogger& operator=(const CommandLineLogger&) = delete;
 
     /**
      * Declared private since copying does not make sense for an output
      * class (output information mismatch).
      */
-    ScorePLogger(const ScorePLogger& param) = delete;
+    ScorePLogger(const ScorePLogger&) = delete;
 
     /**
      * Construct message string
@@ -102,6 +101,7 @@ class tarch::logging::ScorePLogger {
     ScorePLogger();
 
     std::string getTimeStampHumanReadable( long int timestampNanoseconds ) const;
+
   public:
     ~ScorePLogger();
 
@@ -189,4 +189,3 @@ class tarch::logging::ScorePLogger {
 
     void close();
 };
-

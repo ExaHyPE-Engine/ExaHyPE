@@ -13,9 +13,8 @@ import os
 
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
-from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import (
-    ReconstructPatchAndApplyFunctor,
-)
+from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     Template = """

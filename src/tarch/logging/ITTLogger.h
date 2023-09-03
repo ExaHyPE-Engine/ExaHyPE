@@ -2,17 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #ifdef Parallel
 #include <mpi.h>
 #endif
+
 #include <iostream>
 #include <fstream>
 #include <set>
 #include <stack>
 #include <map>
 #include <string>
-
 
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/multicore.h"
@@ -21,8 +20,6 @@
 #ifdef UseITT
 #include <ittnotify.h>
 #endif
-
-
 
 namespace tarch {
   namespace logging {
@@ -62,12 +59,12 @@ class tarch::logging::ITTLogger {
   private:
     static Log _log;
 
-    static ITTLogger  _singleton;
+    static ITTLogger _singleton;
 
     tarch::multicore::BooleanSemaphore _semaphore;
 
     #ifdef UseITT
-    std::map< std::string, __itt_event >       _ittHandles;
+    std::map< std::string, __itt_event > _ittHandles;
     #endif
 
     bool _firstTraceWritten;
@@ -76,13 +73,13 @@ class tarch::logging::ITTLogger {
      * Declared private since assignment does not make sense for an output
      * class (output information mismatch).
      */
-    ITTLogger& operator=(const CommandLineLogger& rhs) = delete;
+    ITTLogger& operator=(const CommandLineLogger&) = delete;
 
     /**
      * Declared private since copying does not make sense for an output
      * class (output information mismatch).
      */
-    ITTLogger(const ITTLogger& param) = delete;
+    ITTLogger(const ITTLogger&) = delete;
 
     /**
      * Construct message string
@@ -114,6 +111,7 @@ class tarch::logging::ITTLogger {
     ITTLogger();
 
     std::string getTimeStampHumanReadable( long int timestampNanoseconds ) const;
+
   public:
     ~ITTLogger();
 
@@ -207,4 +205,3 @@ class tarch::logging::ITTLogger {
     void suspendTrace();
     void continueTrace();
 };
-

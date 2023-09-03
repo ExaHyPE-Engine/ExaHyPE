@@ -24,13 +24,11 @@ peano4::parallel::SpacetreeSet peano4::parallel::SpacetreeSet::_singleton;
 
 tarch::multicore::BooleanSemaphore peano4::parallel::SpacetreeSet::_semaphore;
 
-
 peano4::parallel::SpacetreeSet::SpacetreeSet():
   _state(SpacetreeSetState::Waiting) {}
 
 
 peano4::parallel::SpacetreeSet& peano4::parallel::SpacetreeSet::getInstance() { return _singleton; }
-
 
 void peano4::parallel::SpacetreeSet::init(
   const tarch::la::Vector<Dimensions, double>& offset,
@@ -63,7 +61,6 @@ void peano4::parallel::SpacetreeSet::init(
   }
 }
 
-
 void peano4::parallel::SpacetreeSet::shutdown() {
   peano4::grid::Spacetree::_vertexStack.clear();
   tarch::services::ServiceRepository::getInstance().removeService(this);
@@ -87,7 +84,6 @@ std::string peano4::parallel::SpacetreeSet::toString(SpacetreeSetState state) {
   }
   return "undef";
 }
-
 
 void peano4::parallel::SpacetreeSet::answerQuestions() {
 #ifdef Parallel
@@ -197,7 +193,6 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
 #endif
 }
 
-
 void peano4::parallel::SpacetreeSet::receiveDanglingMessages() {
 #ifdef Parallel
 
@@ -265,7 +260,6 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
   logTraceOut("addSpacetree(int,int)");
 }
 
-
 peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
   peano4::grid::Spacetree&         tree,
   SpacetreeSet&                    set,
@@ -310,14 +304,14 @@ void peano4::parallel::SpacetreeSet::createObserverCloneIfRequired(
   );
 }
 
-
 void peano4::parallel::SpacetreeSet::streamLocalVertexInformationToMasterThroughVerticalStacks(
-  int spacetreeId, int parentId, const std::set<int>& joiningIds
+  [[maybe_unused]] int spacetreeId,
+  [[maybe_unused]] int parentId,
+  [[maybe_unused]] const std::set<int>& joiningIds
 ) {
   logTraceInWith2Arguments("streamLocalVertexInformationToMasterThroughVerticalStacks(...)", spacetreeId, parentId);
 
   /*
-
   const int destinationRank  = Node::getInstance().getRank( parentId );
   const int sourceRank       = Node::getInstance().getRank( spacetreeId );
   const int destinationStack = Node::getInstance().getInputStackNumberForVerticalDataExchange( spacetreeId );
