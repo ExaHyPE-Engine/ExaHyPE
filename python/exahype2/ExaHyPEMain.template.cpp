@@ -46,6 +46,10 @@
 #pragma STDC FENV_ACCESS ON
 {% endif -%}
 
+{% for INCLUDE in ADDITIONAL_INCLUDES %}
+#include "{{INCLUDE}}"
+{% endfor %}
+
 using namespace {{NAMESPACE | join("::")}};
 
 tarch::logging::Log _log("::");
@@ -460,14 +464,26 @@ int main(int argc, char** argv) {
 
   peano4::initSingletons(DomainOffset, DomainSize, PeriodicBC);
 
+  {% if LOG_FILTER_FILE!="" %}
+  if ( not tarch::logging::LogFilterFileReader::parsePlainTextFile( {{LOG_FILTER_FILE}} ) ) {
+    // manual selection, as log filters are not there yet
+    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+      logWarning( "main()", "no {{LOG_FILTER_FILE}} file found or file has been corrupted. Use default logging configuration" );
+    }
+    setDefaultLogStatements();
+  }
+  {% else %}
+  setDefaultLogStatements();
+  {% endif %}
+
+
+  tarch::multicore::Core::getInstance().configure( {{NUMBER_OF_THREADS}} );
+  tarch::accelerator::Device::getInstance().configure( { {{GPUS|join(",")}} } );
+  tarch::multicore::setOrchestration( {{MULTICORE_ORCHESTRATION}} );
+
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
     logError("main()", "MPI runs without multithreading are not supported currently.");
     return ExitCodeInvalidBuild;
-  }
-
-  if (not exahype2::parseCommandLineArguments(argc, argv)) {
-    logError("main()", "Invalid command line arguments.");
-    return ExitCodeInvalidArguments;
   }
 
   peano4::runTestsAndBenchmarks();
