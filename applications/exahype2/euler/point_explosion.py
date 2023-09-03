@@ -12,7 +12,7 @@ class PointExplosion:
           from pde import PDE
           self.pde = PDE(unknowns=unknowns, auxiliary_variables=auxiliary_variables, dimensions=dimensions)
 
-          self.pde.initial_values[0] = 0.1 # rho
+          self.pde.initial_values[0] = 1 # rho
           self.pde.initial_values[1] = 0 # u
           self.pde.initial_values[2] = 0 # v
 
@@ -32,7 +32,7 @@ class PointExplosion:
             return self.pde.implementation_of_initial_conditions()
         else:
             return """
-            Q[0] = 0.1;
+            Q[0] = 1.0;
             Q[1] = 0;
             Q[2] = 0;
             #if Dimensions == 2
