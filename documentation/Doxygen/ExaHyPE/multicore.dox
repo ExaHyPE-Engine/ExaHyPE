@@ -1,7 +1,8 @@
 /**
 
- @page page_exahype_multicore "Multicore configuration"
+ @page page_exahype_multicore Multicore configuration
  
+  
  ExaHyPE's multicore parallelism requires user to follow three steps:
  
  1. @ref page_installation "Configure" Peano with multithreading support.
