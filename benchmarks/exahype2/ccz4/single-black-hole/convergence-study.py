@@ -29,7 +29,7 @@ from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionS
 BlackHoleRegion = 0.1
 
 
-def construct_FV_limiter_for_FD4():
+def construct_FV_limiter_for_FD4(amend_priorities: bool):
     """!
 
     Construct the Finite Volume (limiter) scheme
@@ -49,10 +49,10 @@ def construct_FV_limiter_for_FD4():
     class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         SubPatchSize = int(FD4PatchSize * 4 * 4)
 
-        def __init__(
-            self,
-            name,
-        ):
+        def __init__(self,
+                     name,
+                     amend_priorities: bool,
+                     ):
             """!
 
             Construct the limiter
@@ -80,7 +80,8 @@ def construct_FV_limiter_for_FD4():
 #include "toolbox/blockstructured/Interpolation.h"        
 """
 
-            self.enclave_task_priority = "2*tarch::multicore::Task::DefaultPriority"
+            if amend_priorities:
+              self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority+1"
 
         def _store_cell_data_default_guard(self):
             """!
@@ -157,9 +158,9 @@ def construct_FV_limiter_for_FD4():
                 self._action_set_merge_enclave_task_outcome.guard, self._name
             )
 
-    my_solver = Limiter(
-        name="CCZ4SBH",
-    )
+    my_solver = Limiter(name             = "CCZ4SBH",
+                        amend_priorities = amend_priorities,
+                        )
 
     my_solver.set_implementation(
         initial_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -711,6 +712,14 @@ if __name__ == "__main__":
         help="Switch on plotting",
     )
     parser.add_argument(
+        "-no-prio",
+        "--disable-higher-priority-for-FV-tasks",
+        dest="enable_higher_priority_for_FV_tasks",
+        action="store_false",
+        default=True,
+        help="By default, Finite Volume tasks have higher task priorities than FD4 tasks. This switch changes this behaviour",
+    )
+    parser.add_argument(
         "-s",
         "--solver",
         dest="solver",
@@ -749,7 +758,7 @@ if __name__ == "__main__":
         my_primary_solver = construct_limited_FD4_solver(min_cell_size = args.cell_size, 
                                                          max_cell_size = max_cell_size
                                                          )
-        my_secondary_solver = construct_FV_limiter_for_FD4()
+        my_secondary_solver = construct_FV_limiter_for_FD4(args.enable_higher_priority_for_FV_tasks)
         project.add_solver(my_primary_solver)
         project.add_solver(my_secondary_solver)
         added_limiter = True
