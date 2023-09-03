@@ -21,6 +21,7 @@
 {# Comment to ensure that jinja2 adds a new line#}
 {% endfor %}
 
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 {%- endfor %}
@@ -108,6 +109,11 @@
   bool isLastGridSweepOfTimeStep();
 
   void suspendSolversForOneGridSweep();
+
+  void initLogFilters();
+
+  void initSharedMemoryAndGPUEnvironment();
+  void initSharedMemoryAndGPUEnvironment();
 
 {% for item in NAMESPACE -%}
   }

@@ -48,9 +48,12 @@ class Project(object):
         self._load_balancer_arguments = ""
         self._log_filter_file         = "exahype.log-filter"
         self._number_of_threads       = "tarch::multicore::Core::UseDefaultNumberOfThreads"
-        self._multicore_orchestration = "tarch::multicore::orchestration::StrategyFactory::createDefaultStrategy()"
+        self._multicore_orchestration = "tarch::multicore::orchestration::createDefaultStrategy()"
         self._gpus                    = []
-        self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h", "tarch/multicore/orchestration/StrategyFactory.h"]
+        self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h", 
+                                          "tarch/multicore/orchestration/StrategyFactory.h",
+                                          "tarch/accelerator/Device.h"
+                                        ]
         self._Peano_src_directory     = "."
         self._build_mode = peano4.output.CompileMode.Asserts
         self._executable_name = executable
@@ -121,7 +124,7 @@ class Project(object):
         """! Set GPUs to be used
         
         value is a list of integers or the empty list if you want the code to 
-        use all GPUs that are visible to a rank.
+        use all GPUs that are visible to a rank. 
         
         """
         self._gpus                    = value
@@ -346,6 +349,11 @@ thus appreciate any citation of the original release paper
             "LOAD_BALANCER_ARGUMENTS":  self._load_balancer_arguments,
             "PLOT_FILTER":              self._plot_filters,
             "TRACERS":                  [x.name for x in self._tracer_particles],
+            "LOG_FILTER_FILE":          self._log_filter_file,
+            "NUMBER_OF_THREADS":        self._number_of_threads,
+            "MULTICORE_ORCHESTRATION":  self._multicore_orchestration,
+            "GPUS":                     self._gpus,
+            "ADDITIONAL_INCLUDES":      self._additional_includes,
         }
 
         for solver in self._solvers:
@@ -635,7 +643,7 @@ thus appreciate any citation of the original release paper
 
         self.__generate_solver_repository()
 
-        self._project.main = exahype2.ExaHyPEMain(self._project, self)
+        self._project.main = exahype2.ExaHyPEMain(self._project)
 
         # maybe use ..
         self.__configure_makefile()
