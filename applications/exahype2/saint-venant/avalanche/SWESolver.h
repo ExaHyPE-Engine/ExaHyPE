@@ -184,7 +184,7 @@ public:
 
   static inline void calculateDerivatives(double* __restrict__ oldQWithHalo) {
     // derivative calculation
-    // central difference for single derivatives
+    // backward difference for single derivatives
     // central difference for double derivatives
     const int totalVariables = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
@@ -223,61 +223,49 @@ public:
           xRightYRightNeighbourCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
         );
 
-        const double uCurrentCell = oldQWithHalo[currentCellSerialized * totalVariables + hu]
-                                    / oldQWithHalo[currentCellSerialized * totalVariables + h];
-        const double vCurrentCell = oldQWithHalo[currentCellSerialized * totalVariables + hv]
-                                    / oldQWithHalo[currentCellSerialized * totalVariables + h];
+        const double uCurrentCell = (tarch::la::greater(oldQWithHalo[currentCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[currentCellSerialized * totalVariables + hu]/oldQWithHalo[currentCellSerialized * totalVariables + h] : 0.0);
+        const double vCurrentCell = (tarch::la::greater(oldQWithHalo[currentCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[currentCellSerialized * totalVariables + hv]/oldQWithHalo[currentCellSerialized * totalVariables + h] : 0.0);
 
-        const double uXLeftNeighbourCell = oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + hu]
-                                           / oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + h];
-        const double vXLeftNeighbourCell = oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + hv]
-                                           / oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + h];
+        const double uXLeftNeighbourCell = (tarch::la::greater(oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + hu]/oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + h] : 0.0);
+        const double vXLeftNeighbourCell = (tarch::la::greater(oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + h] : 0.0);
 
-        const double uXRightNeighbourCell = oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + hu]
-                                            / oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + h];
-        const double vXRightNeighbourCell = oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + hv]
-                                            / oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + h];
+        const double uXRightNeighbourCell = (tarch::la::greater(oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + hu]/oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + h] : 0.0);
+                                           
+        const double vXRightNeighbourCell = (tarch::la::greater(oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + h] : 0.0);
 
-        const double uYLeftNeighbourCell = oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + hu]
-                                           / oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + h];
-        const double vYLeftNeighbourCell = oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + hv]
-                                           / oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + h];
+        const double uYLeftNeighbourCell = (tarch::la::greater(oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + hu]/oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + h] : 0.0);
+        const double vYLeftNeighbourCell = (tarch::la::greater(oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + h] : 0.0);
 
-        const double uYRightNeighbourCell = oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + hu]
-                                            / oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + h];
-        const double vYRightNeighbourCell = oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + hv]
-                                            / oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + h];
+        const double uYRightNeighbourCell = (tarch::la::greater(oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + hu]/oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + h] : 0.0);
+                                           
+        const double vYRightNeighbourCell = (tarch::la::greater(oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + h] : 0.0);
 
-        const double uXLeftYLeftNeighbourCell = oldQWithHalo[xLeftYLeftNeighbourCellSerialized * totalVariables + hu]
-                                                / oldQWithHalo[xLeftYLeftNeighbourCellSerialized * totalVariables + h];
-        const double vXLeftYLeftNeighbourCell = oldQWithHalo[xLeftYLeftNeighbourCellSerialized * totalVariables + hv]
-                                                / oldQWithHalo[xLeftYLeftNeighbourCellSerialized * totalVariables + h];
+        const double uXLeftYLeftNeighbourCell = (tarch::la::greater(oldQWithHalo[xLeftYLeftNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xLeftYLeftNeighbourCellSerialized * totalVariables + hu]/oldQWithHalo[xLeftYLeftNeighbourCellSerialized * totalVariables + h] : 0.0);
+        const double vXLeftYLeftNeighbourCell = (tarch::la::greater(oldQWithHalo[xLeftYLeftNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xLeftYLeftNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[xLeftYLeftNeighbourCellSerialized * totalVariables + h] : 0.0);
 
-        const double uXLeftYRightNeighbourCell = oldQWithHalo[xLeftYRightNeighbourCellSerialized * totalVariables + hu]
-                                                 / oldQWithHalo[xLeftYRightNeighbourCellSerialized * totalVariables + h];
-        const double vXLeftYRightNeighbourCell = oldQWithHalo[xLeftYRightNeighbourCellSerialized * totalVariables + hv]
-                                                 / oldQWithHalo[xLeftYRightNeighbourCellSerialized * totalVariables + h];
+        const double uXLeftYRightNeighbourCell = (tarch::la::greater(oldQWithHalo[xLeftYRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xLeftYRightNeighbourCellSerialized * totalVariables + hu]/oldQWithHalo[xLeftYRightNeighbourCellSerialized * totalVariables + h] : 0.0);
+                                                 
+        const double vXLeftYRightNeighbourCell = (tarch::la::greater(oldQWithHalo[xLeftYRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xLeftYRightNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[xLeftYRightNeighbourCellSerialized * totalVariables + h] : 0.0);
+                                                 
 
-        const double uXRightYLeftNeighbourCell = oldQWithHalo[xRightYLeftNeighbourCellSerialized * totalVariables + hu]
-                                                 / oldQWithHalo[xRightYLeftNeighbourCellSerialized * totalVariables + h];
-        const double vXRightYLeftNeighbourCell = oldQWithHalo[xRightYLeftNeighbourCellSerialized * totalVariables + hv]
-                                                 / oldQWithHalo[xRightYLeftNeighbourCellSerialized * totalVariables + h];
+        const double uXRightYLeftNeighbourCell = (tarch::la::greater(oldQWithHalo[xRightYLeftNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xRightYLeftNeighbourCellSerialized * totalVariables + hu]/oldQWithHalo[xRightYLeftNeighbourCellSerialized * totalVariables + h] : 0.0);
+                                                
+        const double vXRightYLeftNeighbourCell = (tarch::la::greater(oldQWithHalo[xRightYLeftNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xRightYLeftNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[xRightYLeftNeighbourCellSerialized * totalVariables + h] : 0.0);
+                                                
 
-        const double uXRightYRightNeighbourCell = oldQWithHalo[xRightYRightNeighbourCellSerialized * totalVariables + hu]
-                                                  / oldQWithHalo
-                                                    [xRightYRightNeighbourCellSerialized * totalVariables + h];
-        const double vXRightYRightNeighbourCell = oldQWithHalo[xRightYRightNeighbourCellSerialized * totalVariables + hv]
-                                                  / oldQWithHalo
-                                                    [xRightYRightNeighbourCellSerialized * totalVariables + h];
+        const double uXRightYRightNeighbourCell = (tarch::la::greater(oldQWithHalo[xRightYRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xRightYRightNeighbourCellSerialized * totalVariables + hu]/oldQWithHalo[xRightYRightNeighbourCellSerialized * totalVariables + h] : 0.0);
+                                                  
+        const double vXRightYRightNeighbourCell = (tarch::la::greater(oldQWithHalo[xRightYRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xRightYRightNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[xRightYRightNeighbourCellSerialized * totalVariables + h] : 0.0);
+                                                  
 
 
         // u_x
         oldQWithHalo[currentCellSerialized * totalVariables + NumberOfUnknowns + u_x]
-          = (uXRightNeighbourCell - uXLeftNeighbourCell);
+          = (uCurrentCell - uXLeftNeighbourCell);
 
         // u_y
         oldQWithHalo[currentCellSerialized * totalVariables + NumberOfUnknowns + u_y]
-          = (uYRightNeighbourCell - uYLeftNeighbourCell);
+          = (uCurrentCell - uYLeftNeighbourCell);
 
         // u_xx
         oldQWithHalo[currentCellSerialized * totalVariables + NumberOfUnknowns + u_xx]
@@ -293,11 +281,11 @@ public:
 
         // v_x
         oldQWithHalo[currentCellSerialized * totalVariables + NumberOfUnknowns + v_x]
-          = (vXRightNeighbourCell - vXLeftNeighbourCell);
+          = (vCurrentCell - vXLeftNeighbourCell);
 
         // v_y
         oldQWithHalo[currentCellSerialized * totalVariables + NumberOfUnknowns + v_y]
-          = (vYRightNeighbourCell - vYLeftNeighbourCell);
+          = (vCurrentCell - vYLeftNeighbourCell);
 
         // v_xx
         oldQWithHalo[currentCellSerialized * totalVariables + NumberOfUnknowns + v_xx]

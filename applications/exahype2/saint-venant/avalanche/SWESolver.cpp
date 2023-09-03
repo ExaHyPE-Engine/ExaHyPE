@@ -12,10 +12,10 @@ void applications::exahype2::avalanche::SWESolver::initialCondition(
   const tarch::la::Vector<Dimensions, double>& volumeH,
   bool                                         gridIsConstructred
 ) {
-  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {0.15,1.0};
-  const bool nearCentre = tarch::la::norm2(volumeCentre-granularMaterialCenter) < 0.10;
+  const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {0.15,0.35};
+  const bool nearCentre = tarch::la::norm2(volumeCentre-granularMaterialCenter) < 0.1;
 
-  Q[0] = (nearCentre ? 0.008 : 0.000001 ); // Water height (h)
+  Q[0] = (nearCentre ? 0.008 : 0.0 ); // Water height (h)
   Q[1] = 0.0; // x-momentum (hu)
   Q[2] = 0.0; // y-momentum (hv)
   Q[3] = 0.0;
@@ -66,27 +66,30 @@ double applications::exahype2::avalanche::SWESolver::maxEigenvalue(
   int                                          normal
 ) {
 
-  assertion(Q[0] > 0);
-  double       result = 1.0;
-  const double ih     = 1.0 / Q[0]; // Inverse water height
-  const double c      = std::sqrt(Gravity * cos(Zeta) * Q[0]);
-  double       u      = 0.0;
+  if(tarch::la::greater(Q[0],0.0)){
+    assertion(Q[0] > 0);
+    double       result = 1.0;
+    const double ih     = 1.0 / Q[0]; // Inverse water height
+    const double c      = std::sqrt(Gravity * cos(Zeta) * Q[0]);
+    double       u      = 0.0;
 
-  switch (normal) {
-  case 0: // x
-          // Q[1] is the momentum in x-direction but we need the velocity
-          // here. Therefore, multiply by the inverse water height (i.e., we
-          // divide by the height).
-    u      = ih * Q[1];
-    result = std::max(std::abs(u - c), std::abs(u + c));
-    break;
-  case 1: // y
-    u      = ih * Q[2];
-    result = std::max(std::abs(u - c), std::abs(u + c));
-    break;
+    switch (normal) {
+    case 0: // x
+            // Q[1] is the momentum in x-direction but we need the velocity
+            // here. Therefore, multiply by the inverse water height (i.e., we
+            // divide by the height).
+      u      = ih * Q[1];
+      result = std::max(std::abs(u - c), std::abs(u + c));
+      break;
+    case 1: // y
+      u      = ih * Q[2];
+      result = std::max(std::abs(u - c), std::abs(u + c));
+      break;
+    }
+    return result;
   }
 
-  return result;
+  return 0.0;
 }
 
 void applications::exahype2::avalanche::SWESolver::flux(
@@ -98,19 +101,53 @@ void applications::exahype2::avalanche::SWESolver::flux(
   int                                          normal,
   double* __restrict__ F // F[3]
 ) {
-  const double ih = 1.0 / Q[0];
+  if(tarch::la::greater(Q[0],0.0)){
+    const double ih = 1.0 / Q[0];
 
-  switch (normal) {
-  case 0:
-    F[0] = Q[1];                                                       // hu_1
-    F[1] = ih * Q[1] * Q[1] + 0.5 * Gravity * cos(Zeta) * Q[0] * Q[0]; // h(u_1)^2 + 0.5*g*h**2
-    F[2] = ih * Q[1] * Q[2];                                           // hu_1u_2
-    break;
-  case 1:
-    F[0] = Q[2];                                                       // hu_2
-    F[1] = ih * Q[2] * Q[1];                                           // hu_1u_2
-    F[2] = ih * Q[2] * Q[2] + 0.5 * Gravity * cos(Zeta) * Q[0] * Q[0]; // h(u_2)^2 + 0.5*g*h**2
-    break;
+    switch (normal) {
+    case 0:
+      F[0] = Q[1];                                                       // hu_1
+      F[1] = ih * Q[1] * Q[1] + 0.5 * Gravity * cos(Zeta) * Q[0] * Q[0]; // h(u_1)^2 + 0.5*g*h**2
+      F[2] = ih * Q[1] * Q[2];                                           // hu_1u_2
+      break;
+    case 1:
+      F[0] = Q[2];                                                       // hu_2
+      F[1] = ih * Q[2] * Q[1];                                           // hu_1u_2
+      F[2] = ih * Q[2] * Q[2] + 0.5 * Gravity * cos(Zeta) * Q[0] * Q[0]; // h(u_2)^2 + 0.5*g*h**2
+      break;
+    }
+
+    // including ncp terms in flux itself
+    // const double ux = Q[NumberOfUnknowns + u_x]/volumeH(0);
+    // const double uy = Q[NumberOfUnknowns + u_y]/volumeH(1);
+    // const double vx = Q[NumberOfUnknowns + v_x]/volumeH(0);
+    // const double vy = Q[NumberOfUnknowns + v_y]/volumeH(1);
+    // switch (normal) {
+    // case 0:
+    //   F[0] = Q[1];                                                       // hu_1
+    //   F[1] = ih * Q[1] * Q[1] + 0.5 * Gravity * cos(Zeta) * Q[0] * Q[0] - Nu * sqrt(Q[0])*Q[0]*(ux); // h(u_1)^2 + 0.5*g*h**2
+    //   F[2] = ih * Q[1] * Q[2] - 0.5 * Nu * sqrt(Q[0]) * Q[0] * (uy + vx);                                           // hu_1u_2
+    //   break;
+    // case 1:
+    //   F[0] = Q[2];                                                       // hu_2
+    //   F[1] = ih * Q[2] * Q[1] - 0.5 * Nu * sqrt(Q[0]) * Q[0] * (uy + vx);                                           // hu_1u_2
+    //   F[2] = ih * Q[2] * Q[2] + 0.5 * Gravity * cos(Zeta) * Q[0] * Q[0] - Nu * sqrt(Q[0])*Q[0]*(vy); // h(u_2)^2 + 0.5*g*h**2
+    //   break;
+    // }
+  }
+  else{
+    switch (normal) {
+    case 0:
+      F[0] = 0.0;                                                       // hu_1
+      F[1] = 0.0; // h(u_1)^2 + 0.5*g*h**2
+      F[2] = 0.0;                                           // hu_1u_2
+      break;
+    case 1:
+      F[0] = 0.0;                                                       // hu_2
+      F[1] = 0.0;                                           // hu_1u_2
+      F[2] = 0.0; // h(u_2)^2 + 0.5*g*h**2
+      break;
+    }
   }
 }
 
@@ -127,20 +164,14 @@ void applications::exahype2::avalanche::SWESolver::nonconservativeProduct(
   // std::cout<<"t = "<<t<<std::endl;
   // std::cout<<"dt = "<<dt<<std::endl;
   // std::cout<<"coordinates: "<<faceCentre<<std::endl;
-  enum derivatives{u_x=1,u_y,u_xx,u_yy,u_xy,v_x,v_y,v_xx,v_yy,v_xy};
-  const double h_centre = Q[0];
+  // enum derivatives{u_x=1,u_y,u_xx,u_yy,u_xy,v_x,v_y,v_xx,v_yy,v_xy};
+  // const double h_centre = Q[0];
 
 
 
-  // Partial Derivatives of unknowns
+  
 
-  // u
-  const double ux  = (Q[NumberOfUnknowns + u_x] - 0.5*deltaQ[NumberOfUnknowns + u_x]) / (2 * volumeH(0));
-  const double uy  = (Q[NumberOfUnknowns + u_y] - 0.5*deltaQ[NumberOfUnknowns + u_y]) / (2 * volumeH(1));
-  const double uxx = (Q[NumberOfUnknowns + u_xx] - 0.5*deltaQ[NumberOfUnknowns + u_xx]) / (volumeH(0) * volumeH(0));
-  const double uyy = (Q[NumberOfUnknowns + u_yy] - 0.5*deltaQ[NumberOfUnknowns + u_yy]) / (volumeH(1) * volumeH(1));
-  const double uxy = (Q[NumberOfUnknowns + u_xy] - 0.5*deltaQ[NumberOfUnknowns + u_xy]) / (4 * volumeH(0) * volumeH(1));
-
+  
   // std::cout<<"u_x "<<ux<<std::endl;
   // std::cout<<"u_y "<<uy<<std::endl;
   // std::cout<<"u_xx "<<uxx<<std::endl;
@@ -148,12 +179,7 @@ void applications::exahype2::avalanche::SWESolver::nonconservativeProduct(
   // std::cout<<"u_yy "<<uyy<<std::endl;
   // std::cout<<"\n";
 
-  // v
-  const double vx  = (Q[NumberOfUnknowns + v_x] - 0.5*deltaQ[NumberOfUnknowns + v_x]) / (2 * volumeH(0));
-  const double vy  = (Q[NumberOfUnknowns + v_y] - 0.5*deltaQ[NumberOfUnknowns + v_y]) / (2 * volumeH(1));
-  const double vxx = (Q[NumberOfUnknowns + v_xx] - 0.5*deltaQ[NumberOfUnknowns + v_xx]) / (volumeH(0) * volumeH(0));
-  const double vyy = (Q[NumberOfUnknowns + v_yy] - 0.5*deltaQ[NumberOfUnknowns + v_yy]) / (volumeH(1) * volumeH(1));
-  const double vxy = (Q[NumberOfUnknowns + v_xy] - 0.5*deltaQ[NumberOfUnknowns + v_xy]) / (4 * volumeH(0) * volumeH(1));
+
   // std::cout<<"v_x "<<vx<<std::endl;
   // std::cout<<"v_y "<<vy<<std::endl;
   // std::cout<<"v_xx "<<vxx<<std::endl;
@@ -162,21 +188,58 @@ void applications::exahype2::avalanche::SWESolver::nonconservativeProduct(
   // std::cout<<"\n";
   // std::cout<<"\n";
   // std::cout<<"\n";
-  if(t==0.0){
-    std::cout<<Nu<<std::endl;
+  // if(t==0.0){
+  //   std::cout<<Nu<<std::endl;
+  // }
+
+  
+
+  if(tarch::la::greater(Q[0],0.0)){
+    const double ih = 1.0 / Q[0];
+
+    // Partial Derivatives of unknowns
+
+    // u
+    const double ux  = (Q[NumberOfUnknowns + u_x] - 0.5*deltaQ[NumberOfUnknowns + u_x]) / (2 * volumeH(0));
+    const double uy  = (Q[NumberOfUnknowns + u_y] - 0.5*deltaQ[NumberOfUnknowns + u_y]) / (2 * volumeH(1));
+    const double uxx = (Q[NumberOfUnknowns + u_xx] - 0.5*deltaQ[NumberOfUnknowns + u_xx]) / (volumeH(0) * volumeH(0));
+    const double uyy = (Q[NumberOfUnknowns + u_yy] - 0.5*deltaQ[NumberOfUnknowns + u_yy]) / (volumeH(1) * volumeH(1));
+    const double uxy = (Q[NumberOfUnknowns + u_xy] - 0.5*deltaQ[NumberOfUnknowns + u_xy]) / (4 * volumeH(0) * volumeH(1));
+
+    // v
+    const double vx  = (Q[NumberOfUnknowns + v_x] - 0.5*deltaQ[NumberOfUnknowns + v_x]) / (2 * volumeH(0));
+    const double vy  = (Q[NumberOfUnknowns + v_y] - 0.5*deltaQ[NumberOfUnknowns + v_y]) / (2 * volumeH(1));
+    const double vxx = (Q[NumberOfUnknowns + v_xx] - 0.5*deltaQ[NumberOfUnknowns + v_xx]) / (volumeH(0) * volumeH(0));
+    const double vyy = (Q[NumberOfUnknowns + v_yy] - 0.5*deltaQ[NumberOfUnknowns + v_yy]) / (volumeH(1) * volumeH(1));
+    const double vxy = (Q[NumberOfUnknowns + v_xy] - 0.5*deltaQ[NumberOfUnknowns + v_xy]) / (4 * volumeH(0) * volumeH(1));
+
+    switch (normal) {
+    case 0: // x
+      BTimesDeltaQ[0] = -(volumeH(0) * 0.0);
+      BTimesDeltaQ[1] = -(volumeH(0) * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * ux + Q[0] * uxx));
+      BTimesDeltaQ[2] = -(volumeH(0) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * (uy + vx) + Q[0] * (uxy + vxx)));
+      break;
+    case 1: // y
+      BTimesDeltaQ[0] = -(volumeH(1) * 0.0);
+      BTimesDeltaQ[1] = -(volumeH(1) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * (uy + vx) + Q[0] * (uyy + vxy)));
+      BTimesDeltaQ[2] = -(volumeH(1) * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * vy + Q[0] * vyy));
+      break;
+    }
   }
 
-  switch (normal) {
-  case 0: // x
-    BTimesDeltaQ[0] = -(volumeH(0) * 0.0);
-    BTimesDeltaQ[1] = -(volumeH(0) * Nu * sqrt(h_centre) * (1.5 * deltaQ[0] * ux + h_centre * uxx));
-    BTimesDeltaQ[2] = -(volumeH(0) * 0.5 * Nu * sqrt(h_centre) * (1.5 * deltaQ[0] * (uy + vx) + h_centre * (uxy + vxx)));
-    break;
-  case 1: // y
-    BTimesDeltaQ[0] = -(volumeH(1) * 0.0);
-    BTimesDeltaQ[1] = -(volumeH(1) * 0.5 * Nu * sqrt(h_centre) * (1.5 * deltaQ[0] * (uy + vx) + h_centre * (uyy + vxy)));
-    BTimesDeltaQ[2] = -(volumeH(1) * Nu * sqrt(h_centre) * (1.5 * deltaQ[0] * vy + h_centre * vyy));
-    break;
+  else{
+    switch (normal) {
+    case 0: // x
+      BTimesDeltaQ[0] = 0.0;
+      BTimesDeltaQ[1] = 0.0;
+      BTimesDeltaQ[2] = 0.0;
+      break;
+    case 1: // y
+      BTimesDeltaQ[0] = 0.0;
+      BTimesDeltaQ[1] = 0.0;
+      BTimesDeltaQ[2] = 0.0;
+      break;
+    }
   }
 }
 
@@ -188,48 +251,55 @@ void applications::exahype2::avalanche::SWESolver::sourceTerm(
   double                                       dt,
   double* __restrict__ S
 ) {
-  const double ih = 1.0 / Q[0];
-  const double u  = ih * Q[1];
-  const double v  = ih * Q[2];
-  // const double ubar = sqrt(Q[1] * Q[1] + Q[2] * Q[2]) * ih;
-  const double ubar = sqrt(Q[1] * Q[1] + Q[2] * Q[2]) * ih;
+  if(tarch::la::greater(Q[0],0.0)){
+    const double ih = 1.0 / Q[0];
+    const double u  = ih * Q[1];
+    const double v  = ih * Q[2];
+    // const double ubar = sqrt(Q[1] * Q[1] + Q[2] * Q[2]) * ih;
+    const double ubar = sqrt(Q[1] * Q[1] + Q[2] * Q[2]) * ih;
 
-  const double Fr       = ubar / sqrt(Gravity * Q[0] * cos(Zeta));
-  const double Tau      = Beta * Q[0] / Hstop - Fr;
-  const double Betastar = Beta * (Mu2 + Mu3 - 2 * Mu1) / ((Mu2 - Mu3) * (Mu2 - Mu3)) - Tau;
-  const double Hstar    = (Betastar + Tau) * Hstop / Beta;
-  double       Mu       = 1.0;
+    const double Fr       = ubar / sqrt(Gravity * Q[0] * cos(Zeta));
+    const double Tau      = Beta * Q[0] / Hstop - Fr;
+    const double Betastar = Beta * (Mu2 + Mu3 - 2 * Mu1) / ((Mu2 - Mu3) * (Mu2 - Mu3)) - Tau;
+    const double Hstar    = (Betastar + Tau) * Hstop / Beta;
+    double       Mu       = 1.0;
 
-  if (Fr > Betastar) {
-    const double vstop  = (Q[0] * Beta) / (Fr + Tau);
-    const double Mustop = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
-    Mu                  = Mustop;
+    if (Fr > Betastar) {
+      const double vstop  = (Q[0] * Beta) / (Fr + Tau);
+      const double Mustop = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
+      Mu                  = Mustop;
+    }
+
+    else if (Fr > 0 && Fr <= Betastar) {
+      const double vstart  = Q[0];
+      const double vstop   = Q[0] * Beta / (Betastar + Tau);
+      const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
+      const double Mustop  = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
+      const double T       = Mustart + (Mustop - Mustart) * (Fr / Betastar);
+      Mu                   = T;
+    }
+
+    else if (Fr == 0) {
+      const double vstart  = Q[0];
+      const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
+      Mu                   = Mustart;
+    }
+
+    if(tarch::la::equals(ubar,0.0)){
+      S[0] = 0.0;
+      S[1] = Q[0] * Gravity * sin(Zeta) - Mu * Q[0] * Gravity * cos(Zeta);
+      S[2] = 0.0;
+    }
+    else if(tarch::la::greater(ubar,0.0)){
+      S[0] = 0.0;
+      S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (u / ubar) * Q[0] * Gravity * cos(Zeta);
+      S[2] = -Mu * (v / ubar) * Q[0] * Gravity * cos(Zeta);
+    }
   }
-
-  else if (Fr > 0 && Fr <= Betastar) {
-    const double vstart  = Q[0];
-    const double vstop   = Q[0] * Beta / (Betastar + Tau);
-    const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
-    const double Mustop  = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
-    const double T       = Mustart + (Mustop - Mustart) * (Fr / Betastar);
-    Mu                   = T;
-  }
-
-  else if (Fr == 0) {
-    const double vstart  = Q[0];
-    const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
-    Mu                   = Mustart;
-  }
-
-  if(tarch::la::equals(ubar,0.0)){
+  else{
     S[0] = 0.0;
-    S[1] = Q[0] * Gravity * sin(Zeta) - Mu * Q[0] * Gravity * cos(Zeta);
+    S[1] = 0.0;
     S[2] = 0.0;
-  }
-  else if(tarch::la::greater(ubar,0.0)){
-    S[0] = 0.0;
-    S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (u / ubar) * Q[0] * Gravity * cos(Zeta);
-    S[2] = -Mu * (v / ubar) * Q[0] * Gravity * cos(Zeta);
   }
   
 }

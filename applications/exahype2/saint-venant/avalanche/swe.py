@@ -93,7 +93,7 @@ my_project.add_solver( my_solver )
 #
 my_project.set_global_simulation_parameters(
   dimensions            = 2,
-  size                  = [2.0, 2.0],
+  size                  = [2.0, 0.70],
   offset                = [0.0, 0.0],
   min_end_time          = 2.0,
   max_end_time          = 2.0,
@@ -123,7 +123,7 @@ my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "
 # Additionally, we specify the build mode which you can also change to a different mode.
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-my_project.set_Peano4_installation( "../../../../", mode=peano4.output.CompileMode.Release )
+my_project.set_Peano4_installation( "../../../../", mode=peano4.output.CompileMode.Release)
 
 #
 # We generate and grab the underlying core project of 'Peano4'.
