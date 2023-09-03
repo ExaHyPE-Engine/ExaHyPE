@@ -3,24 +3,23 @@
 #include "peano4/utils/Loop.h"
 #include "Rusanov.h"
 
-
 void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
-  ::exahype2::dg::Flux                         flux,
-  ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
-  ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  cellSize,
-  double                                       t,
-  double                                       dt,
-  int                                          order,
-  int                                          unknowns,
-  int                                          auxiliaryVariables,
-  int                                          faceNumber,
-  const double* __restrict__                   quadraturePoints,
-  bool                                         evaluateFlux,
-  bool                                         evaluateNonconservativeProduct,
-  const double* __restrict__                   projectedValues,
-  double* __restrict__                         solution
+  [[maybe_unused]] ::exahype2::dg::Flux                         flux,
+  [[maybe_unused]] ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
+  [[maybe_unused]] ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  cellSize,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          order,
+  [[maybe_unused]] int                                          unknowns,
+  [[maybe_unused]] int                                          auxiliaryVariables,
+  [[maybe_unused]] int                                          faceNumber,
+  [[maybe_unused]] const double* __restrict__                   quadraturePoints,
+  [[maybe_unused]] bool                                         evaluateFlux,
+  [[maybe_unused]] bool                                         evaluateNonconservativeProduct,
+  [[maybe_unused]] const double* __restrict__                   projectedValues,
+  [[maybe_unused]] double* __restrict__                         solution
 ) {
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * cellSize;
   faceOffset(faceNumber%Dimensions) += 0.5 * cellSize(faceNumber%Dimensions);
@@ -125,24 +124,23 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
   delete[] ncpValues;
 }
 
-
 void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ_with_gradient_projection(
-  ::exahype2::dg::Flux                         flux,
-  ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
-  ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  cellSize,
-  double                                       t,
-  double                                       dt,
-  int                                          order,
-  int                                          unknowns,
-  int                                          auxiliaryVariables,
-  int                                          faceNumber,
-  const double* __restrict__                   quadraturePoints,
-  bool                                         evaluateFlux,
-  bool                                         evaluateNonconservativeProduct,
-  const double* __restrict__                   projectedValues,
-  double* __restrict__                         solution
+  [[maybe_unused]] ::exahype2::dg::Flux                         flux,
+  [[maybe_unused]] ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
+  [[maybe_unused]] ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  cellSize,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt,
+  [[maybe_unused]] int                                          order,
+  [[maybe_unused]] int                                          unknowns,
+  [[maybe_unused]] int                                          auxiliaryVariables,
+  [[maybe_unused]] int                                          faceNumber,
+  [[maybe_unused]] const double* __restrict__                   quadraturePoints,
+  [[maybe_unused]] bool                                         evaluateFlux,
+  [[maybe_unused]] bool                                         evaluateNonconservativeProduct,
+  [[maybe_unused]] const double* __restrict__                   projectedValues,
+  [[maybe_unused]] double* __restrict__                         solution
 ) {
   assertionMsg(false, "not implemented yet");
 }

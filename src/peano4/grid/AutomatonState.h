@@ -10,10 +10,9 @@
 
 #include <string>
 
-
 #ifdef Parallel
-  #include <mpi.h>
-  #include <functional>
+#include <mpi.h>
+#include <functional>
 #endif
 
 #include "tarch/la/Vector.h"
@@ -27,20 +26,26 @@
 
 namespace peano4{
 namespace grid{
-
   struct AutomatonState;
 }
 }
 
-
-
 struct peano4::grid::AutomatonState {
   public:
+    AutomatonState() = default;
+    AutomatonState(
+      int __level,
+      tarch::la::Vector<Dimensions, double> __x,
+      tarch::la::Vector<Dimensions, double> __h,
+      bool __inverted,
+      std::bitset<Dimensions> __evenFlags,
+      tarch::la::Vector<DimensionsTimesTwo, int> __accessNumber
+    );
 
+    AutomatonState(const AutomatonState& copy);
+    AutomatonState& operator = (const AutomatonState& assign);
 
-    AutomatonState() {}
-    AutomatonState(int  __level, tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, bool  __inverted, std::bitset<Dimensions>  __evenFlags, tarch::la::Vector<DimensionsTimesTwo,int>  __accessNumber);
-
+    ~AutomatonState() = default;
 
     int   getLevel() const;
     void   setLevel(int value);
@@ -63,10 +68,10 @@ struct peano4::grid::AutomatonState {
     void   setAccessNumber(const tarch::la::Vector<DimensionsTimesTwo,int>& value);
     int   getAccessNumber(int index) const;
     void   setAccessNumber(int index, int value);
-    AutomatonState(const AutomatonState& copy);
-
 
     #ifdef Parallel
+    PragmaPush
+    SilenceUnknownAttribute
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -86,7 +91,7 @@ struct peano4::grid::AutomatonState {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-
+    PragmaPop
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -143,6 +148,8 @@ struct peano4::grid::AutomatonState {
     std::string toString() const;
 
   private:
+    PragmaPush
+    SilenceUnknownAttribute
     [[clang::pack_range(0,63)]]  int   _level;
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
     [[clang::truncate_mantissa(23)]]  double   _x[Dimensions];
@@ -169,12 +176,11 @@ struct peano4::grid::AutomatonState {
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<DimensionsTimesTwo,int>   _accessNumber;
 #endif
-
-
+    PragmaPop
 
     #ifdef Parallel
     private:
-      int                  _senderDestinationRank;
+      int _senderDestinationRank;
 
       #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
       /**
@@ -190,7 +196,3 @@ struct peano4::grid::AutomatonState {
 
 
 };
-
-  
-
-

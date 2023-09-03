@@ -44,6 +44,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     logDebug( "timeStepWithRusanov_sequential(...)", "evaluate source terms and/or copy solution over" );
+
     if (Dimensions==2 and evaluateSource) {
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {

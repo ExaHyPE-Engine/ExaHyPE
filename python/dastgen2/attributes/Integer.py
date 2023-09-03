@@ -42,12 +42,12 @@ class Integer(Attribute):
 
         elif self._is_const_static:
             if for_declaration:
-                getter = ("get" + accessor_name + "()", "const static int")
+                getter = ("get" + accessor_name + "()", "static int")
             else:
-                getter = ("get" + accessor_name + "()", "const int")
+                getter = ("get" + accessor_name + "()", "int")
 
         elif self._is_const:
-            getter = ("get" + accessor_name + "()", "const int")
+            getter = ("get" + accessor_name + "()", "int")
 
         elif self._is_constexpr:
             getter = ("get" + accessor_name + "()", "constexpr int")

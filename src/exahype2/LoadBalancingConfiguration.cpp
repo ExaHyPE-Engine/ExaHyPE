@@ -29,7 +29,7 @@ exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
 }
 
 
-bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::loadbalancing::State state) {
+bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::loadbalancing::State) {
   return false;
 }
 
@@ -38,11 +38,9 @@ int exahype2::LoadBalancingConfiguration::translateSetMaxNumberOfTreesIntoRealNu
   int result = -1;
   if (value==UseNumberOfThreads) {
     result = tarch::multicore::Core::getInstance().getNumberOfThreads();
-  }
-  else if (value==UseTwiceTheNumberOfThreads) {
+  } else if (value==UseTwiceTheNumberOfThreads) {
     result = tarch::multicore::Core::getInstance().getNumberOfThreads() * 2;
-  }
-  else {
+  } else {
     assertion(value>0);
     result = value;
   }
@@ -59,14 +57,13 @@ int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadb
     state==toolbox::loadbalancing::State::IntraRankDistribution
   ) {
     return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTreesThroughoutInitialDistribution);
-  }
-  else {
+  } else {
     return translateSetMaxNumberOfTreesIntoRealNumberOfTrees(_maxNumberOfTrees);
   }
 }
 
 
-double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::State state) {
+double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::State) {
   return _loadBalancingQuality;
 }
 
@@ -78,8 +75,7 @@ int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing:
     state==toolbox::loadbalancing::State::IntraRankDistribution
   ) {
     return 0;
-  }
-  else {
+  } else {
     return _minSizeOfTree;
   }
 }
@@ -95,5 +91,3 @@ std::string exahype2::LoadBalancingConfiguration::toString() const {
       << ")";
   return msg.str();
 }
-
-

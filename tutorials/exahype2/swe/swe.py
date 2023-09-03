@@ -121,6 +121,11 @@ my_project.set_Peano4_installation("../../../", mode=peano4.output.CompileMode.R
 my_project = my_project.generate_Peano4_project(verbose=True)
 
 #
+# Optional: Set an floating-point exception handler to the Peano4 project.
+#
+my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+
+#
 # We add our custom C++ solver file here.
 # This allows us to call 'make distclean' without deleting this file as it is not generated.
 # This step is optional and only required if 'make distclean' is used.
