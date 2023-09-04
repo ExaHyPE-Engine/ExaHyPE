@@ -24,6 +24,7 @@ export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 
 python3 convergence-study.py -cs 2 -plot -s fd4-rk1-limited-ps-6
 ~~~~~~~~~~~~~~~~~~~~~~~
+@todo The call above is not valid anymore. See benchmark docu further down which works.
 
 As always, the parameter --help makes the Python script yield further info,
 while the sections below enlist characteristic choices of the parameters.
@@ -93,17 +94,18 @@ where SCHEDULER and PS are to be chosen accordingly. Please note that the code
 also has an adaptive mesh refinement (AMR) option which you can toggle on/off.
 
 
-Name (AMR experiment; patch size 3) | Scheduler | Runtime (TBB) | Runtime (OpenMP) | Runtime (SYCL)
+Name (AMR experiment; patch size 3; omp 8) | Scheduler | Runtime (TBB) | Runtime (OpenMP) | Runtime (SYCL)
 -------------------------------|----------------|--------------:|-----------------:|---------------:
-Native tasking w/o priorities  | native-no-priorities |     368 |              384 |              x
-Native tasking with priorities |               native |     370 |               |              x
-Tailored tasking               |             tailored |     364 |                x |              x
-Parallel for                   | tailored-parallel-for |    160 |                x |              x
-Subtasks                       | tailored-subtasks     |    153 |                x |              x
+Native tasking w/o priorities  |  native-no-priorities |    368 |              384 |              x
+Native tasking with priorities |                native |    370 |              441 |              x
+Tailored tasking               |              tailored |    364 |              385 |              x
+Parallel for                   | tailored-parallel-for |    160 |              383 |              x
+Subtasks                       | tailored-subtasks     |    153 |              383 |              x
 
 
 Dann noch was ohne AMR. Das oben hat schon ein wenig AMR
 
+subtasks mit 6 thrads: 490. 
 
 
 
@@ -132,6 +134,7 @@ Medium test with vis |  0.5  | 6                  | 60.0     | yes     | 3 (h_mi
 Large test with vis  |  0.1  | 6                  | 60.0     | yes     | 4 (h_min=0.0123457) / 33 | 1 (around 30% of mem)* | python3 convergence-study.py -plot -cs 0.1 -s fd4-rk1-limited-ps-6 -et 60.0
 ---------------------|-------|--------------------|----------|---------|--------------------------|------------------------|--------
 Production test 0    | 0.05  | 6                  | 60.0     | yes     |                      4   |                     x  | python3 convergence-study.py -cs 0.05 -s fd4-rk1-limited-ps-6 -et 60.0
+@todo The calls above are not valid anymore. See benchmark docu further down which works.
  
 
 * It is clear that the excessive use of AMR here ensures that no enclave tasks 

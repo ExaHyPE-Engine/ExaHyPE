@@ -62,12 +62,18 @@ if __name__ == "__main__":
         help="End of simulation",
     )
     parser.add_argument(
-        "-t",
         "--threads",
         dest="threads",
         type=int,
         default=0,
         help="Thread count (0 picks system default)",
+    )
+    parser.add_argument(
+        "--trees",
+        dest="trees",
+        type=int,
+        required=True,
+        help="Number of trees (subpartitions) per rank",
     )
     parser.add_argument(
         "-cs",
@@ -237,7 +243,7 @@ if __name__ == "__main__":
     # project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
     project.set_load_balancing(
         "toolbox::loadbalancing::SpreadOutHierarchically",
-        "(new ::exahype2::LoadBalancingConfiguration(0.98, 100, 8))",
+        "(new ::exahype2::LoadBalancingConfiguration(0.98, 100, " + str(args.trees) + "))"
     )
 
     peano4_project = project.generate_Peano4_project(verbose=args.verbose)
