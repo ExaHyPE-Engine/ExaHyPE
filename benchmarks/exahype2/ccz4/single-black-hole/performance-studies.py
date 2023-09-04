@@ -46,6 +46,13 @@ if __name__ == "__main__":
         help="Peano4 directory",
     )
     parser.add_argument(
+        "-o",
+        "--output",
+        dest="output",
+        default="peano_sbh",
+        help="Executable name (output)",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         dest="verbose",
@@ -73,8 +80,8 @@ if __name__ == "__main__":
         "--cell-size",
         dest="cell_size",
         type=float,
-        default=2.0,
-        help="Cell size (default 2.0)",
+        default=1.8,
+        help="Minimal cell size (AMR) or regular mesh cell size (without AMR)",
     )
     parser.add_argument(
         "-asserts",
@@ -129,7 +136,7 @@ if __name__ == "__main__":
     project = exahype2.Project(
         ["benchmarks", "exahype2", "ccz4"],
         "ccz4",
-        executable="peano_sbh",
+        executable=args.output,
     )
 
     dimensions = 3

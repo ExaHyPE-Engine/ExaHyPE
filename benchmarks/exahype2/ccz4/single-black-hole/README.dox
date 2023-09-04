@@ -166,15 +166,13 @@ for SCHEDULER in native-no-priorities native tailored tailored-parallel-for tail
 do
   for TREES in 6 8 12
   do
-    python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler $SCHEDULER --trees $TREES 
     OUTPUT=$PREFIX-without-amr-$SCHEDULER-$TREES-trees
-    ./peano_sbh > results/$OUTPUT.txt
-    mv peano_sbh $OUTPUT
-
+    python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler $SCHEDULER --trees $TREES --output $OUTPUT
+    ./$OUTPUT > results/$OUTPUT.txt
+    
     OUTPUT=$PREFIX-with-amr-$SCHEDULER-$TREES-trees
-    python3 performance-studies.py -s fd4-rk1-limited-ps-3 --amr --scheduler $SCHEDULER --trees $TREES
-    ./peano_sbh > results/$OUTPUT.txt
-    mv peano_sbh $OUTPUT
+    python3 performance-studies.py -s fd4-rk1-limited-ps-3 --amr --scheduler $SCHEDULER --trees $TREES --output $OUTPUT
+    ./$OUTPUT > results/$OUTPUT.txt  
   done
 done
 
