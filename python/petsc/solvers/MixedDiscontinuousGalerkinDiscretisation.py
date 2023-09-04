@@ -204,10 +204,10 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
         }
 
     dictionary["MATRIX_GETTERS_HEADER"] = f"""
-    tarch::la::Matrix < {self.cellCellMassMatrix.shape[0]}, {self.cellCellMassMatrix.shape[1]}, double >  _cellCellMassMatrix = {self.convertMatrixToInitList(self.cellCellMassMatrix)};
-    tarch::la::Matrix < {self.cellCellSystemMatrix.shape[0]}, {self.cellCellSystemMatrix.shape[1]}, double >  _cellCellSystemMatrix = {self.convertMatrixToInitList(self.cellCellSystemMatrix)};
-    tarch::la::Matrix < {self.cellToFaceMatrix.shape[0]}, {self.cellToFaceMatrix.shape[1]}, double >  _cellToFaceMatrix = {self.convertMatrixToInitList(self.cellToFaceMatrix)};
-    tarch::la::Matrix < {self.FaceFaceMatrix.shape[0]}, {self.FaceFaceMatrix.shape[1]}, double >  _faceFaceMatrix = {self.convertMatrixToInitList(self.FaceFaceMatrix)};
+    const tarch::la::Matrix < {self.cellCellMassMatrix.shape[0]}, {self.cellCellMassMatrix.shape[1]}, double >  _cellCellMassMatrix = {self.convertMatrixToInitList(self.cellCellMassMatrix)};
+    const tarch::la::Matrix < {self.cellCellSystemMatrix.shape[0]}, {self.cellCellSystemMatrix.shape[1]}, double >  _cellCellSystemMatrix = {self.convertMatrixToInitList(self.cellCellSystemMatrix)};
+    const tarch::la::Matrix < {self.cellToFaceMatrix.shape[0]}, {self.cellToFaceMatrix.shape[1]}, double >  _cellToFaceMatrix = {self.convertMatrixToInitList(self.cellToFaceMatrix)};
+    const tarch::la::Matrix < {self.FaceFaceMatrix.shape[0]}, {self.FaceFaceMatrix.shape[1]}, double >  _faceFaceMatrix = {self.convertMatrixToInitList(self.FaceFaceMatrix)};
     """
 
 

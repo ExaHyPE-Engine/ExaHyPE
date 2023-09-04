@@ -423,8 +423,8 @@ class AssemblePETSCMatrixForMixed(ActionSet):
 
     //scale mass matrix down by h**2
     std::transform( repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.data(), repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.data() + size,
-                    repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.data(), // get data from both matrices, combine them together in the lambda
-                    tempMatrix,                                //write result to temp array
+                    repositories::{{SOLVER_INSTANCE}}._cellCellSystemMatrix.data(), // get data from both matrices, combine them together in the lambda
+                    tempMatrix,                                                     // write result to temp array
                     [&](double m, double s){return m*marker.h()[0]*marker.h()[1] + s*marker.h()[0]*0.5;} ); //scale mass matrix by h**2, system matrix by 0.5h, sum the result
 
     //send to petsc
