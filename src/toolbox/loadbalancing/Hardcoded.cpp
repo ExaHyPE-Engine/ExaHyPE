@@ -72,13 +72,13 @@ void toolbox::loadbalancing::Hardcoded::finishStep() {
         );
       }
       else if (
-        split.destinationRank == tarch::mpi::Rank::getInstance().getRank() 
+        split.destinationRank == tarch::mpi::Rank::getInstance().getRank()
         and
         _handOutOnePartitionPerCore
-        and 
-       peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= tarch::multicore::Core::getInstance().getNumberOfThreads()
+        and
+        static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()) >= tarch::multicore::Core::getInstance().getNumberOfThreads()
       ) {
-        logWarning( 
+        logWarning(
           "finishStep()", "ignore instruction to split rank further by  cutting of " << split.numberOfCells << 
           ", as lb is told not to overbook local cores"
         );
@@ -102,5 +102,4 @@ void toolbox::loadbalancing::Hardcoded::finishStep() {
 }
 
 
-void toolbox::loadbalancing::Hardcoded::finishSimulation() {
-}
+void toolbox::loadbalancing::Hardcoded::finishSimulation() {}

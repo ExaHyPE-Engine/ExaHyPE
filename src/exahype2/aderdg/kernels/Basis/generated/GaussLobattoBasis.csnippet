@@ -56,9 +56,9 @@ double* kernels::lobatto::fineGridProjector_2_0[0+1]={
 };
 double** kernels::lobatto::fineGridProjector_0[3]={fineGridProjector_0_0,fineGridProjector_1_0,fineGridProjector_2_0};
 
-double kernels::lobatto::basisFunction_0_0(const double& s) {  return 1;}
-double kernels::lobatto::basisFunctionFirstDerivative_0_0(const double& s) {  return 0;}
-double kernels::lobatto::basisFunctionSecondDerivative_0_0(const double& s) {  return 0;}
+double kernels::lobatto::basisFunction_0_0([[maybe_unused]] const double& s) {  return 1;}
+double kernels::lobatto::basisFunctionFirstDerivative_0_0([[maybe_unused]] const double& s) {  return 0;}
+double kernels::lobatto::basisFunctionSecondDerivative_0_0([[maybe_unused]] const double& s) {  return 0;}
 kernels::UnivariateFunction kernels::lobatto::basisFunction_0[0+1]={
   basisFunction_0_0
 };
@@ -172,12 +172,12 @@ double* kernels::lobatto::fineGridProjector_2_1[1+1]={
 };
 double** kernels::lobatto::fineGridProjector_1[3]={fineGridProjector_0_1,fineGridProjector_1_1,fineGridProjector_2_1};
 
-double kernels::lobatto::basisFunction_1_0(const double& s) {  return 1.0*s;}
-double kernels::lobatto::basisFunction_1_1(const double& s) {  return -1.0*s + 1.0;}
-double kernels::lobatto::basisFunctionFirstDerivative_1_0(const double& s) {  return 1.000000000000000000000000000000000000000000000000000000000000000;}
-double kernels::lobatto::basisFunctionFirstDerivative_1_1(const double& s) {  return -1.000000000000000000000000000000000000000000000000000000000000000;}
-double kernels::lobatto::basisFunctionSecondDerivative_1_0(const double& s) {  return 0;}
-double kernels::lobatto::basisFunctionSecondDerivative_1_1(const double& s) {  return 0;}
+double kernels::lobatto::basisFunction_1_0([[maybe_unused]] const double& s) {  return 1.0*s;}
+double kernels::lobatto::basisFunction_1_1([[maybe_unused]] const double& s) {  return -1.0*s + 1.0;}
+double kernels::lobatto::basisFunctionFirstDerivative_1_0([[maybe_unused]] const double& s) {  return 1.000000000000000000000000000000000000000000000000000000000000000;}
+double kernels::lobatto::basisFunctionFirstDerivative_1_1([[maybe_unused]] const double& s) {  return -1.000000000000000000000000000000000000000000000000000000000000000;}
+double kernels::lobatto::basisFunctionSecondDerivative_1_0([[maybe_unused]] const double& s) {  return 0;}
+double kernels::lobatto::basisFunctionSecondDerivative_1_1([[maybe_unused]] const double& s) {  return 0;}
 kernels::UnivariateFunction kernels::lobatto::basisFunction_1[1+1]={
   basisFunction_1_0,
   basisFunction_1_1
@@ -354,15 +354,15 @@ double* kernels::lobatto::fineGridProjector_2_2[2+1]={
 };
 double** kernels::lobatto::fineGridProjector_2[3]={fineGridProjector_0_2,fineGridProjector_1_2,fineGridProjector_2_2};
 
-double kernels::lobatto::basisFunction_2_0(const double& s) {  return s*(2.0*s - 1.0);}
-double kernels::lobatto::basisFunction_2_1(const double& s) {  return 4.0*s*(-s + 1);}
-double kernels::lobatto::basisFunction_2_2(const double& s) {  return 1.0*(s - 1)*(2.0*s - 1.0);}
-double kernels::lobatto::basisFunctionFirstDerivative_2_0(const double& s) {  return 4.0*s - 1.0;}
-double kernels::lobatto::basisFunctionFirstDerivative_2_1(const double& s) {  return -8.0*s + 4.0;}
-double kernels::lobatto::basisFunctionFirstDerivative_2_2(const double& s) {  return 4.0*s - 3.0;}
-double kernels::lobatto::basisFunctionSecondDerivative_2_0(const double& s) {  return 4.000000000000000000000000000000000000000000000000000000000000000;}
-double kernels::lobatto::basisFunctionSecondDerivative_2_1(const double& s) {  return -8.000000000000000000000000000000000000000000000000000000000000000;}
-double kernels::lobatto::basisFunctionSecondDerivative_2_2(const double& s) {  return 4.000000000000000000000000000000000000000000000000000000000000000;}
+double kernels::lobatto::basisFunction_2_0([[maybe_unused]] const double& s) {  return s*(2.0*s - 1.0);}
+double kernels::lobatto::basisFunction_2_1([[maybe_unused]] const double& s) {  return 4.0*s*(-s + 1);}
+double kernels::lobatto::basisFunction_2_2([[maybe_unused]] const double& s) {  return 1.0*(s - 1)*(2.0*s - 1.0);}
+double kernels::lobatto::basisFunctionFirstDerivative_2_0([[maybe_unused]] const double& s) {  return 4.0*s - 1.0;}
+double kernels::lobatto::basisFunctionFirstDerivative_2_1([[maybe_unused]] const double& s) {  return -8.0*s + 4.0;}
+double kernels::lobatto::basisFunctionFirstDerivative_2_2([[maybe_unused]] const double& s) {  return 4.0*s - 3.0;}
+double kernels::lobatto::basisFunctionSecondDerivative_2_0([[maybe_unused]] const double& s) {  return 4.000000000000000000000000000000000000000000000000000000000000000;}
+double kernels::lobatto::basisFunctionSecondDerivative_2_1([[maybe_unused]] const double& s) {  return -8.000000000000000000000000000000000000000000000000000000000000000;}
+double kernels::lobatto::basisFunctionSecondDerivative_2_2([[maybe_unused]] const double& s) {  return 4.000000000000000000000000000000000000000000000000000000000000000;}
 kernels::UnivariateFunction kernels::lobatto::basisFunction_2[2+1]={
   basisFunction_2_0,
   basisFunction_2_1,

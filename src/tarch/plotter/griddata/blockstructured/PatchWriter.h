@@ -15,7 +15,6 @@ namespace tarch {
 } // namespace tarch
 
 
-
 /**
  * Abstract base class for a patch plotter
  *

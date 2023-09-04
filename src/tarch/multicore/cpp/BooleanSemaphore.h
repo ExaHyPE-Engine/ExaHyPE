@@ -29,12 +29,12 @@ class tarch::multicore::BooleanSemaphore {
     /**
      * You may not copy a semaphore
      */
-    inline BooleanSemaphore([[maybe_unused]] const BooleanSemaphore& semaphore) {}
+    inline BooleanSemaphore(const BooleanSemaphore&) {}
 
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore& operator = ([[maybe_unused]] const BooleanSemaphore& semaphore) { return *this; }
+    BooleanSemaphore& operator = (const BooleanSemaphore&) { return *this; }
 
   public:
     BooleanSemaphore();
