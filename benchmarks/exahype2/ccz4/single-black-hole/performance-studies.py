@@ -86,11 +86,23 @@ if __name__ == "__main__":
         help="Switch on assertions",
     )
     parser.add_argument(
+        "-amr",
+        "--amr",
+        dest="amr",
+        action="store_true",
+        default=False,
+        help="Enable AMR",
+    )
+    parser.add_argument(
         "-sched",
         "--scheduler",
         dest="scheduler",
         choices=[
             "native-no-priorities",
+            "native",
+            "tailored",
+            "tailored-parallel-for",
+            "tailored-subtasks",
         ],
         required=True,
         help="Task scheduler flavours",
@@ -118,17 +130,49 @@ if __name__ == "__main__":
     project = exahype2.Project(
         ["benchmarks", "exahype2", "ccz4"],
         "ccz4",
-        executable="peano_sbh_" + str(args.cell_size),
+        executable="peano_sbh_" + args.solver + "_" + str(args.cell_size) + "_" + args.scheduler,
     )
 
     dimensions = 3
     offset = [-9, -9, -9]
     domain_size = [18, 18, 18]
 
-    max_cell_size = domain_size[0]/3.0
-    
-    enable_higher_priority_for_FV_tasks = not ("no-priorities" in args.scheduler)
+    if args.amr:
+      max_cell_size = domain_size[0]/3.0
+    else:
+      max_cell_size = args.cell_size
+       
+    ########################################################################################
+    # Configure run
+    ########################################################################################
+    if args.scheduler == "native-no-priorities":
+        project.set_load_balancing( "tarch::multicore::orchestration::Hardcoded::createNative()" )
+        enable_higher_priority_for_FV_tasks = False
+        parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.NONE
+    elif args.scheduler == "native":
+        project.set_load_balancing( "tarch::multicore::orchestration::Hardcoded::createNative()" )
+        enable_higher_priority_for_FV_tasks = True
+        parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.NONE
+    elif args.scheduler == "tailored":
+        project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
+        enable_higher_priority_for_FV_tasks = True
+        parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.NONE
+    elif args.scheduler == "tailored-parallel-for":
+        project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
+        enable_higher_priority_for_FV_tasks = True
+        parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.PARALLEL_FOR
+    elif args.scheduler == "tailored-subtasks":
+        project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
+        enable_higher_priority_for_FV_tasks = True
+        parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.SUBTASKS
+    else:
+        assert False, "not supported yet"
 
+
+      
+    if args.threads > 0:
+        project.set_number_of_threads( args.threads )
+    
     added_limiter = False
     if "fd4-rk1-ps-" in args.solver:
         FD4PatchSize = int(args.solver[-1])
@@ -145,11 +189,12 @@ if __name__ == "__main__":
                                                  patch_size    = FD4PatchSize,
                                                  min_cell_size = args.cell_size, 
                                                  max_cell_size = max_cell_size,
+                                                 parallelisation_of_interpolation = parallelise_interpolation
                                                  )
         
-        my_secondary_solver = Limiter(name             = "CCZ4SBH",
-                                      patch_size       = FD4PatchSize,
-                                      amend_priorities = enable_higher_priority_for_FV_tasks,
+        my_secondary_solver = Limiter(name                      = "CCZ4SBH",
+                                      patch_size                = FD4PatchSize,
+                                      amend_priorities          = enable_higher_priority_for_FV_tasks,
                                       )
         project.add_solver(my_primary_solver)
         project.add_solver(my_secondary_solver)
@@ -158,14 +203,6 @@ if __name__ == "__main__":
         raise "unknown solver type {}".format(args.solver)
 
 
-    ########################################################################################
-    # Configure multicore
-    ########################################################################################
-    if args.scheduler == "native-no-priorities":
-        project.set_load_balancing( "tarch::multicore::orchestration::Hardcoded::createNative()" )
-      
-    if args.threads > 0:
-        project.set_number_of_threads( args.threads )
       
     ########################################################################################
     # Build the project

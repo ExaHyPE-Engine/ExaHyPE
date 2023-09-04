@@ -32,6 +32,15 @@
 namespace peano4 {
   namespace utils {
     /**
+     * Control loop-level parallelism
+     */
+    enum class LoopParallelism {
+      None,
+      ParallelFor,
+      Subtasks
+    };
+
+    /**
      * Is used by the z-loop. See macro dforz.
      */
     typedef std::bitset<Dimensions> LoopDirection;
@@ -152,7 +161,7 @@ namespace peano4 {
      * The d-linear loops are used mainly on the host, but I provide a SYCL
      * implementation of d-linear, too. SYCL does not really distinguish the
      * host queue from the accelerator queue at the moment. I therefore have to
-     * mark the dLinearised() routine as GPU offloadable. See parallel_dfor
+     * mark the dLinearised() routine as GPU offloadable. See parallelDfor
      * for a discussion of when this is required.
      *
      * Once annotated, we might still get errors if we use SYCL on the host and
@@ -282,8 +291,8 @@ namespace peano4 {
 /**
  * Parallel version of dfor
  *
- * Don't use a { after the parallel_dfor. It is included in the macro. Also
- * don't close it with a }. Instead, use the end_parallel_dfor macro.
+ * Don't use a { after the parallelDfor. It is included in the macro. Also
+ * don't close it with a }. Instead, use the end_parallelDfor macro.
  *
  * This macro works great on the CPU. I recommend not to use it on the GPU,
  * where you usually have specialised parallel for realisations anyway.
@@ -292,7 +301,7 @@ namespace peano4 {
  * ## OpenMP
  *
  * OpenMP relies on pragmas around the nexted for loops, which is tricky as
- * parallel_dfor itself is a pragma. I hijack the construct
+ * parallelDfor itself is a pragma. I hijack the construct
  *
  *              _Pragma( "#pragma my embedded pragma" )
  *
@@ -316,46 +325,55 @@ namespace peano4 {
  * executed on the host. Therefore, I have to mark the dLinearised() routine as
  * GPU offloadable, which is a little bit annoying.
  *
+ * SYCL is the one tasking back-end, where we cannot prescribe a minimal grain
+ * size. We also cannot run the for loop sequentially with built-in mechanisms.
+ * There is no dynamic scheduling version of the SYCL backend therefore.
+ *
  */
-#if Dimensions==2 and defined(SharedOMP)
-#define parallel_dfor(counter, max) \
-  _Pragma( "#pragma omp taskloop for collapse(2)" ) \
-  for( int counter##0 = 0; counter##0 < max; counter##0++ ) \
-  for( int counter##1 = 0; counter##1 < max; counter##1++ ) { \
-    tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1 };
+#define parallelDfor(counter, max) \
+  parallelDforWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)
 
-#define end_parallel_dfor }
+#if Dimensions==2 and defined(SharedOMP)
+#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
+    _Pragma( "#pragma omp taskloop for collapse(2) if (loopParallelism==::peano4::utils::LoopParallelism::Subtasks)" ) \
+    _Pragma( "#pragma omp parallel for collapse(2) if (loopParallelism==::peano4::utils::LoopParallelism::ParallelFor)" ) \
+    for( int counter##0 = 0; counter##0 < max; counter##0++ ) \
+    for( int counter##1 = 0; counter##1 < max; counter##1++ ) { \
+      tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1 };
+
+#define end_parallelDfor }
 #elif Dimensions==3 and defined(SharedOMP)
-#define parallel_dfor(counter, max) \
-  _Pragma( "#pragma omp taskloop for collapse(2)" ) \
+#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
+  _Pragma( "#pragma omp taskloop for collapse(3) if (loopParallelism==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  _Pragma( "#pragma omp parallel for collapse(3) if (loopParallelism==::peano4::utils::LoopParallelism::ParallelFor)" ) \
   for( int counter##0 = 0; counter##0 < max; counter##0++ ) \
   for( int counter##1 = 0; counter##1 < max; counter##1++ ) \
   for( int counter##2 = 0; counter##2 < max; counter##2++ ) { \
     tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1, counter##2 };
 
-#define end_parallel_dfor }
+#define end_parallelDfor }
 #elif Dimensions==2 and defined(SharedTBB)
-#define parallel_dfor(counter, max) \
+#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   tbb::parallel_for( \
     tbb::blocked_range2d<int>( \
-      0, max, \
-      0, max \
+      0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1, \
+      0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1 \
   ), \
   [&]( const tbb::blocked_range2d<int>&  range ) { \
     for( int counter##1 = range.rows().begin();  counter##1 < range.rows().end();  counter##1++ ) \
     for( int counter##2 = range.cols().begin();  counter##2 < range.cols().end();  counter##2++ ) { \
       tarch::la::Vector<Dimensions, int> counter = { counter##1, counter##2 };
 
-#define end_parallel_dfor \
+#define end_parallelDfor \
     } \
   });
 #elif Dimensions==3 and defined(SharedTBB)
-#define parallel_dfor(counter, max) \
+#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   tbb::parallel_for( \
     tbb::blocked_range3d<int>( \
-      0, max, \
-      0, max, \
-      0, max \
+      0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1, \
+      0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1, \
+      0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1 \
   ), \
   [&]( const tbb::blocked_range3d<int>&  range ) { \
     for( int counter##0 = range.pages().begin(); counter##0 < range.pages().end(); counter##0++ ) \
@@ -363,11 +381,11 @@ namespace peano4 {
     for( int counter##2 = range.cols().begin();  counter##2 < range.cols().end();  counter##2++ ) { \
       tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1, counter##2 };
 
-#define end_parallel_dfor \
+#define end_parallelDfor \
     } \
   });
 #elif Dimensions==2 and defined(SharedSYCL)
-#define parallel_dfor(counter, max) \
+#define parallelDfor(counter, max) \
   std::size_t counter##Range = max; \
   tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
     handle.parallel_for( \
@@ -375,12 +393,12 @@ namespace peano4 {
       [=](sycl::id<2> counter##Iterator) { \
         tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]) };
 
-#define end_parallel_dfor \
+#define end_parallelDfor \
       } \
     ); \
   }).wait();
 #elif Dimensions==3 and defined(SharedSYCL)
-#define parallel_dfor(counter, max) \
+#define parallelDfor(counter, max) \
   std::size_t counter##Range = max; \
   tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
     handle.parallel_for( \
@@ -389,16 +407,16 @@ namespace peano4 {
         tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]), static_cast<int>(counter##Iterator[2]) };
 
 
-#define end_parallel_dfor \
+#define end_parallelDfor \
       } \
     ); \
   }).wait();
 #else
-#define parallel_dfor(counter, max) \
+#define parallelDfor(counter, max) \
   for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \
        peano4::utils::dInc(counter, max))
 
-#define end_parallel_dfor }
+#define end_parallelDfor }
 #endif
 
 

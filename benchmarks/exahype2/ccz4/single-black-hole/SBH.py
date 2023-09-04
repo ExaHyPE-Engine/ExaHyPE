@@ -173,6 +173,10 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         )
 
 
+
+from enum import Enum
+
+
 class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking):
     """!
 
@@ -193,13 +197,21 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
 
     """
 
+    class InterpolationParallelisation(Enum):
+        NONE         = "::peano4::utils::LoopParallelism::None"
+        PARALLEL_FOR = "::peano4::utils::LoopParallelism::ParallelFor"
+        SUBTASKS     = "::peano4::utils::LoopParallelism::Subtasks"
+
+
     def __init__(self, 
                  name, 
                  patch_size,
                  min_cell_size, 
                  max_cell_size,
+                 parallelisation_of_interpolation: InterpolationParallelisation
                  ):
-        self._name_without_FD4_extension = name
+        self._name_without_FD4_extension       = name
+        self._parallelisation_of_interpolation = parallelisation_of_interpolation
 
         CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(
               self,
@@ -227,7 +239,7 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
             boundary_conditions=exahype2.solvers.fv.PDETerms.None_Implementation,
         )
         self.add_all_solver_constants()
-
+        
         update_solver_parameters_for_single_black_hole(self)
   
   
@@ -362,7 +374,8 @@ double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
             + self._name_without_FD4_extension
             + """_FV.NumberOfAuxiliaryVariables,
   oldQWithHalo, 
-  interpolatedFVDataWithHalo
+  interpolatedFVDataWithHalo,
+  """ + str(self._parallelisation_of_interpolation.value) + """
 );
 
 ::toolbox::blockstructured::projectPatchHaloOntoFaces(

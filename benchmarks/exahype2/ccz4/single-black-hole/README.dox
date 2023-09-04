@@ -83,15 +83,32 @@ is only active in a tiny cross-shaped region within.
 Benchmarking the single black hole is not easy, as it is a rather complex setup
 already with a rather long initialisation and grid construction phase. However,
 it is possible to benchmark it once you disable plots, the tracers, and you use
-an unreasonable coarse mesh. Here are my default profiling setups that I use.
-The upper one tests "only" FD4, the lower one profiles a limited setup. 
+an unreasonable coarse mesh. Below are my default profiling setups that I use.
+
+~~~~~~~~~~~~~~~~~~~~~~~
+python3 performance-studies.py -cs 2.0 -s fd4-rk1-limited-ps-3 --threads 8 -et 0.01  --scheduler scheduler
+~~~~~~~~~~~~~~~~~~~~~~~
+
+where SCHEDULER and PS are to be chosen accordingly. Please note that the code
+also has an adaptive mesh refinement (AMR) option which you can toggle on/off.
 
 
-Name                    | Cell size | Limiter patch size | End time | Call
-------------------------|-----------|--------------------|----------|----------
-Default without limiter | 2.0       | 6                  | 0.01     | python3 convergence-study.py -cs 2 -s fd4-rk1-ps-6 -no-tracer -et 0.01
-Fine with small limiter | 1.0       | 3                  | 0.01     | python3 convergence-study.py -cs 1 -s fd4-rk1-limited-ps-3 -no-tracer -et 0.01
+Name (AMR experiment; patch size 3) | Scheduler | Runtime (TBB) | Runtime (OpenMP) | Runtime (SYCL)
+-------------------------------|----------------|--------------:|-----------------:|---------------:
+Native tasking w/o priorities  | native-no-priorities |     368 |              384 |              x
+Native tasking with priorities |               native |     370 |               |              x
+Tailored tasking               |             tailored |     364 |                x |              x
+Parallel for                   | tailored-parallel-for |    160 |                x |              x
+Subtasks                       | tailored-subtasks     |    153 |                x |              x
 
+
+Dann noch was ohne AMR. Das oben hat schon ein wenig AMR
+
+
+
+
+The above measurements are done on my eight core laptop with the Intel oneAPI 
+toolchain.
 
 
 

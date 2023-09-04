@@ -940,10 +940,12 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
   int                                       haloDestinationPatch,
   int                                       unknowns,
   const double* __restrict__                sourceValues,
-  double* __restrict__                      destinationValues
+  double* __restrict__                      destinationValues,
+  ::peano4::utils::LoopParallelism          parallelisation
 ) {
   assertion( numberOfDoFsPerAxisInDestinationPatch>numberOfDoFsPerAxisInSourcePatch );
-  parallel_dfor( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch )
+
+  parallelDforWithDynamicScheduling( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch, parallelisation )
     const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch) * unknowns;
     for (int unknown=0; unknown<unknowns; unknown++) {
       destinationValues[baseIndexDestination+unknown] = 0.0;
@@ -996,7 +998,7 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
         destinationValues[baseIndexDestination+unknown] += weight * sourceValues[baseIndexSource+unknown];
       }
     }
-  end_parallel_dfor
+  end_parallelDfor
 }
 
 

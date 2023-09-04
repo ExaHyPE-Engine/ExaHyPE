@@ -60,7 +60,7 @@ to the default value specified in the macro.
 ### parallel d-dimensional loops
 
 There is a parallel version of the d-for loop which is independent of the
-chosen multicore backend. It is called parallel_dfor and is used similar
+chosen multicore backend. It is called parallelDfor and is used similar
 to dfor. The difference is that you don't use the bracket { to 
 start your code block. Further to this, you have to use a special macro
 to mark the end of the loop.
