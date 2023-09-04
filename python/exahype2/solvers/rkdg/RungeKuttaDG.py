@@ -41,7 +41,6 @@ class Storage(Enum):
 
 class RungeKuttaDG(object):
     """!
-
     An abstract class for any RKDG solver of any order
 
     This is the base class of all Runge-Kutta DG solvers. It defines what kind of action
@@ -148,7 +147,7 @@ class RungeKuttaDG(object):
       source code, but you have to feed an instruction into the solver how to determine a time step
       size for a cell.
 
-    self._compute_new_time_step_size          = "const double newTimeStepSize = timeStepSize;"
+    self._compute_new_time_step_size = "const double newTimeStepSize = timeStepSize;"
 
 
     ## Semantics of FaceLabel
@@ -164,10 +163,7 @@ class RungeKuttaDG(object):
 
     - We set the updated flag if and only if we have finished the
       last Runge-Kutta step.
-
-
     """
-
     def __init__(
         self,
         name,
@@ -182,7 +178,6 @@ class RungeKuttaDG(object):
         baseline_action_set_priority=0,
     ):
         """
-
         Constructor of the Runge-Kutta Discontinuous Galerkin solver
 
         :: Arguments
@@ -400,7 +395,7 @@ Real type of this solver: """
 
 We assume that you use a domain size of (0,"""
             + str(domain_size)
-            + """)^d. Peano 4 will cut this domain equidistantly 
+            + """)^d. Peano 4 will cut this domain equidistantly
 and recursively into three parts along each coordinate axis. This yields a spacetree.
 
 The spacetree will at least have """
@@ -412,10 +407,10 @@ The spacetree will at most have """
 
 The spacetree will thus span at least """
             + str(self.get_coarsest_number_of_cells(domain_size))
-            + """ cells per coordinate axis. 
+            + """ cells per coordinate axis.
 The spacetree will thus span at most """
             + str(self.get_finest_number_of_cells(domain_size))
-            + """ cells per coordinate axis. 
+            + """ cells per coordinate axis.
 
 We use RK("""
             + str(self._rk_order)
@@ -427,45 +422,36 @@ We use RK("""
     @property
     def user_action_set_includes(self):
         """
-
         Add further includes to this property, if your action sets require some additional
         routines from other header files.
-
         """
         return self._user_action_set_includes
 
     @property
     def user_solver_includes(self):
         """
-
         Add further includes to this property, if your solver requires some additional
         routines from other header files.
-
         """
         return self._user_solver_includes
 
     def add_user_action_set_includes(self, value):
         """
-
         Add further includes to this property, if your action sets require some additional
         routines from other header files.
-
         """
         self._user_action_set_includes += value
 
     def add_user_solver_includes(self, value):
         """
-
         Add further includes to this property, if your solver requires some additional
         routines from other header files.
-
         """
         self._user_solver_includes += value
 
     @abstractmethod
     def create_data_structures(self):
         """
-
         Recall in subclasses if you wanna change the number of unknowns
         or auxiliary variables. See class description's subsection on
         data flow.
@@ -538,8 +524,6 @@ We use RK("""
         You will have to overwrite the behaviour in subclasses. Please note that
         a face is communicated between two tree/domain partitions if and only if
         it is stored persistently and the exchange flag is set, too.
-
-
         """
         self._current_time_step = peano4.datamodel.Patch(
             (
@@ -691,10 +675,10 @@ We use RK("""
             self._load_face_data_default_guard(),
             self._store_face_data_default_guard(),
         )
-        
+
         self._estimate_projection.generator.includes += """
 #include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h" 
+#include "repositories/SolverRepository.h"
 """
         self._estimate_projection.generator.merge_method_definition = (
             peano4.toolbox.blockstructured.get_face_merge_implementation(
@@ -709,7 +693,7 @@ We use RK("""
         )
         self._old_solution_projection.generator.includes += """
 #include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h" 
+#include "repositories/SolverRepository.h"
 """
 
         self._current_time_step.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
@@ -719,7 +703,7 @@ We use RK("""
         )
         self._current_time_step.generator.includes += """
 #include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h" 
+#include "repositories/SolverRepository.h"
 """
         self._current_time_step.generator.merge_method_definition = (
             peano4.toolbox.blockstructured.get_cell_merge_implementation(
@@ -734,7 +718,7 @@ We use RK("""
         )
         self._rhs_estimates.generator.includes += """
 #include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h" 
+#include "repositories/SolverRepository.h"
 """
 
         self._rhs_estimates.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
@@ -744,7 +728,7 @@ We use RK("""
         )
         self._linear_combination_of_estimates.generator.includes += """
 #include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h" 
+#include "repositories/SolverRepository.h"
 """
 
         self._estimate_projection.generator.send_condition = "false"
@@ -759,7 +743,7 @@ We use RK("""
             self._store_face_data_default_guard(),
         )
         self._Riemann_solution.generator.includes += """
-#include "repositories/SolverRepository.h" 
+#include "repositories/SolverRepository.h"
 """
 
         self._Riemann_solution.generator.send_condition = "false"
@@ -787,7 +771,6 @@ We use RK("""
     @abstractmethod
     def create_action_sets(self):
         """
-
         Overwrite in subclasses if you wanna create different
         action sets.
 
@@ -803,7 +786,6 @@ We use RK("""
         specialised versions. So it is (logically) a top-down (general to
         specialised) run through all create_data_structure() variants
         within the inheritance tree.
-
         """
         self._action_set_initial_conditions = (
             exahype2.solvers.rkdg.actionsets.InitialCondition(
@@ -951,13 +933,11 @@ We use RK("""
                         + self._name
                         + "::SolverState::GridConstruction"
                )
-                
+
     def _store_cell_data_default_guard(self):
         """!
-
         Extend the guard via ands only. Never use an or, as subclasses might
         extend it as well, and they will append further ends.
-
         """
         return (
             "not marker.willBeRefined() "
@@ -970,10 +950,8 @@ We use RK("""
 
     def _load_cell_data_default_guard(self):
         """!
-
         Extend the guard via ands only. Never use an or, as subclasses might
         extend it as well, and they will append further ends.
-
         """
         return (
             "not marker.hasBeenRefined() "
@@ -991,10 +969,8 @@ We use RK("""
 
     def _store_face_data_default_guard(self):
         """!
-
         Extend the guard via ands only. Never use an or, as subclasses might
         extend it as well, and they will append further ends.
-
         """
         return (
             "not marker.willBeRefined() "
@@ -1007,10 +983,8 @@ We use RK("""
 
     def _load_face_data_default_guard(self):
         """!
-
         Extend the guard via ands only. Never use an or, as subclasses might
         extend it as well, and they will append further ends.
-
         """
         return (
             "not marker.hasBeenRefined() "
@@ -1034,10 +1008,8 @@ We use RK("""
 
     def add_to_Peano4_datamodel(self, datamodel, verbose):
         """
-
         Add all required data to the Peano4 project's datamodel
         so it is properly built up
-
         """
         if verbose:
             print("Patch data")
@@ -1065,7 +1037,6 @@ We use RK("""
         Inform Peano4 step which data are to be moved around via the
         use_cell and use_face commands. This operation is generic from
         ExaHyPE's point of view, i.e. I use it for all grid sweep types.
-
         """
         step.use_cell(self._cell_label)
         step.use_cell(self._current_time_step)
@@ -1078,7 +1049,7 @@ We use RK("""
 
     def _get_default_includes(self):
         return """
-#include "tarch/la/Vector.h" 
+#include "tarch/la/Vector.h"
 
 #include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"
@@ -1106,8 +1077,6 @@ We use RK("""
         This is what we want to achieve:
 
         - Restrict the data to the coarser level if we are on a hanging face.
-
-
         """
         step.add_action_set(self._action_set_preprocess_solution)
         step.add_action_set(self._action_set_initial_conditions)
@@ -1118,12 +1087,9 @@ We use RK("""
 
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
         """
-
         @todo:
-
          The boundary information is set only once. It is therefore important that
          we ues the face label and initialise it properly.
-
         """
         step.add_action_set(self._action_set_initial_conditions_for_grid_construction)
         step.add_action_set(self._action_set_update_face_label)
@@ -1135,17 +1101,14 @@ We use RK("""
 
     def set_plot_description(self, description):
         """
-
         Use this one to set a description within the output patch file that tells
         the vis solver what the semantics of the entries are. Typicallly, I use
         a comma-separated list here.
-
         """
         self.plot_description = description
 
     def add_actions_to_plot_solution(self, step, output_path):
         """!
-
         Dump snapshot of solution
 
         Consult the discussion in add_actions_to_init_grid() around the order
@@ -1162,7 +1125,6 @@ We use RK("""
 
         To make the restriction work, we have to project the solutions onto the
         faces.
-
         """
         d = {}
         self._init_dictionary_with_default_parameters(d)
@@ -1220,7 +1182,6 @@ We use RK("""
 
     def add_actions_to_perform_time_step(self, step):
         """
-
         The tricky part here is that we have to get the order right.
 
         - Update of the labels: This can be done as very first step, as it
@@ -1247,7 +1208,6 @@ We use RK("""
         If we use enclave tasking, we have to be careful when we insert the merger.
         See SeparateSweepsWithEnclaveTasking.add_actions_to_perform_time_step() for
         a discussion of the details.
-
         """
         d = {}
         self._init_dictionary_with_default_parameters(d)
@@ -1277,14 +1237,12 @@ We use RK("""
 
     def add_implementation_files_to_project(self, namespace, output, dimensions):
         """
-
         The ExaHyPE2 project will call this operation when it sets
         up the overall environment.
 
         This routine is typically not invoked by a user.
 
         output: peano4.output.Output
-
         """
         templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
 
@@ -1327,7 +1285,9 @@ We use RK("""
 
         output.add(generated_abstract_header_file)
         output.add(generated_solver_files)
+        output.makefile.add_h_file( "Abstract" + self._name + ".h", generated=True )
         output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
+        output.makefile.add_h_file(self._name + ".h", generated=True)
         output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
 
     def set_solver_constants(self, datastring):
@@ -1338,15 +1298,12 @@ We use RK("""
 
     def _init_dictionary_with_default_parameters(self, d):
         """
-
         This one is called by all algorithmic steps before I invoke
         add_entries_to_text_replacement_dictionary().
 
         See the remarks on set_postprocess_updated_cell_kernel to understand why
         we have to apply the (partially befilled) dictionary to create a new entry
         for this very dictionary.
-
-
         """
         d["DG_ORDER"] = self._basis.order
         d["RK_ORDER"] = self._rk_order
@@ -1463,22 +1420,12 @@ We use RK("""
         ).render(**d)
 
     @property
-    def patch_size(self):
-        return self._patch_size
-
-    @property
     def unknowns(self):
         return self._unknowns
 
     @property
     def auxiliary_variables(self):
         return self._auxiliary_variables
-
-    @patch_size.setter
-    def patch_size(self, value):
-        self._patch_size = value
-        self.create_data_structures()
-        self.create_action_sets()
 
     @unknowns.setter
     def unknowns(self, value):
@@ -1555,7 +1502,6 @@ We use RK("""
     @postprocess_updated_cell_after_Runge_Kutta_step.setter
     def postprocess_updated_cell_after_Runge_Kutta_step(self, kernel):
         """
-
         Define a postprocessing routine over the data
 
         This routine allows you to update the patch data immediately after the
@@ -1597,7 +1543,6 @@ We use RK("""
         ## Runge-Kutta steps
 
         This postprocessing is called after each and every Runge-Kutta step.
-
         """
         self._postprocess_updated_cell_after_Runge_Kutta_step = kernel
         self.create_data_structures()
@@ -1606,7 +1551,6 @@ We use RK("""
     @postprocess_updated_cell_after_final_linear_combination.setter
     def postprocess_updated_cell_after_final_linear_combination(self, kernel):
         """
-
         Define a postprocessing routine over the data
 
         This routine allows you to update the patch data immediately after the
@@ -1646,7 +1590,6 @@ We use RK("""
         ## Runge-Kutta steps
 
         This postprocessing is called after each and every Runge-Kutta step.
-
         """
         self._postprocess_updated_cell_after_final_linear_combination = kernel
         self.create_data_structures()
@@ -1658,16 +1601,14 @@ We use RK("""
         face_data_storage: Storage,
     ):
         """
-
         By default, we hold all data on the call stacks. You can explicitly switch
         to storage on the heap via smart pointers.
 
         @see create_data_structures()
-
         """
         assert isinstance(cell_data_storage, Storage)
         assert isinstance(face_data_storage, Storage)
-        
+
         self._cell_data_storage = cell_data_storage
         self._face_data_storage = face_data_storage
 

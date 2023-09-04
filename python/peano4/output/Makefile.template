@@ -149,6 +149,7 @@ distclean:
 	rm -f Constants.h
 	rm -f README-*
 	rm -f .gitignore
+	rm -f Makefile
 	{% if USING_CMAKE %}rm -f CMakeLists.txt{% endif %}
 	{% if USING_CMAKE %}rm -f {{GENERATED_SUBDIRECTORY_FULLPATH}}{% endif %}
 

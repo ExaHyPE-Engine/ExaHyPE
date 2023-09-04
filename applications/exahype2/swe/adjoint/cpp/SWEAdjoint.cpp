@@ -138,14 +138,6 @@ applications::exahype2::swe::adjoint::SWEAdjoint::SWEAdjoint(
         }
     }
 
-    //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 0 -et 0.01 -bf netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_bath.nc -df netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_displ.nc --guided-amr --gamr-area-of-interest [-100000,100000] [-200000,200000]
-    //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 0 -et 0.01 -bf netCDFInputs/gebco_2023_n65.0_s10.0_w-180.0_e-120.0.nc -df netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_displ.nc --guided-amr --gamr-area-of-interest [-124.19083,41.74111], [1.0,inf] -nc-key-bath-x lon -nc-key-bath-y lat -nc-key-bath-bath elevation
-    //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 0 -maxh 0.05 -et 3600 -bf netCDFInputs/gebco_2023_n65.0_s10.0_w-180.0_e-120.0.nc -df netCDFInputs/tohoku_gebco_ucsb3_2000m_hawaii_displ.nc --guided-amr --gamr-area-of-interest [-124.19083,41.74111], [1.0,inf] -nc-key-bath-x lon -nc-key-bath-y lat -nc-key-bath-bath elevation --adjoint-only
-    // Artificial Tsunami
-    //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 3 -et 0.725 --guided-amr --gamr-area-of-interest [-4800,0] [50,inf] -bf netCDFInputs/artificialtsunami_bathymetry_1000.nc -df netCDFInputs/artificialtsunami_displ_1000.nc --gamr-checkpoints 60 --adjoint-only
-    //python3 swe.py -sc Tsunami -s FVRusanovGlobalAdaptive -amr 3 -et 0.725 --guided-amr --gamr-file ./swe-application-2d-solver-name-SWESolverFVRusanovGlobalAdaptive-scenario-Tsunami-patch-size-4-amr-3-cell-size-0.100000-end-time-0.725000-adjoint.nc -bf netCDFInputs/artificialtsunami_bathymetry_1000.nc -df netCDFInputs/artificialtsunami_displ_1000.nc --no-dynamic-h
-
-
     // delete topology parser, no longer needed
     delete topology_parser_;
 

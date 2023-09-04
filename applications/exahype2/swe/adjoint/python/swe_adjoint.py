@@ -36,8 +36,6 @@ class SWE_Adjoint_Solver():
         nc_key_bathymetry:      Key for bathymetry in bathymetry file, defaults to 'z'
         """
 
-        # TODO How does the start time affect the simulation?
-
         self.cell_size = cell_size
         self.end_time = end_time
         self.start_time = start_time
@@ -66,30 +64,6 @@ class SWE_Adjoint_Solver():
             # Put values of bathymetry file into simulation arrays
             self.b.T[1:self.ny+1, 1:self.nx+1] = bathymetry_nc[nc_key_bathymetry][index_list_bathymetry_y, index_list_bathymetry_x]
             self.h[1:self.nx+1, 1:self.ny+1] = np.maximum(-self.b[1:self.nx+1, 1:self.ny+1], 0)
-            
-            """
-            This is how the displacement could be read in python but it is not needed for adjoint simulations
-            with netCDF4.Dataset(displacement_file_path, "r") as displacement_nc:
-                # read out coordinate variables of the different files
-                bath_x = bathymetry_nc['x']
-                bath_y = bathymetry_nc['y']
-                displ_x = displacement_nc['x']
-                displ_y = displacement_nc['y']
-
-                # Define indices for splicing (again). 
-                # These lines describe the section of the bathymetry, that the displacement shall be added to.
-                left_x_start, left_x_end = np.arange(1, self.nx+1)[np.isin(bath_x[index_list_bathymetry_x], displ_x)][[0, -1]]
-                left_x_end = left_x_end + 1
-                left_y_start, left_y_end = np.arange(1, self.ny+1)[np.isin(bath_y[index_list_bathymetry_y], displ_y)][[0, -1]]
-                left_y_end = left_y_end + 1
-                # Include all displacement values, whose x and y coordinate are also in our reduced bathymetry array
-                right_x_start, right_x_end = np.arange(0, len(displ_x))[np.isin(displ_x, bath_x[index_list_bathymetry_x])][[0, -1]]
-                right_x_end = right_x_end + 1
-                right_y_start, right_y_end = np.arange(0, len(displ_y))[np.isin(displ_y, bath_y[index_list_bathymetry_y])][[0, -1]]
-                right_y_end = right_y_end + 1
-                # add displacement to bathymetry array
-                self.b.T[left_y_start:left_y_end, left_x_start:left_x_end] += displacement_nc['z'][right_y_start:right_y_end:mesh_width_y, right_x_start:right_x_end:mesh_width_x]
-            """
 
         # https://github.com/clawpack/geoclaw/blob/master/src/2d/shallow/qinit_module.f90
         self.h[1:self.nx+1, 1:self.ny+1] += np.array([[(hump_criterion(x,y) and self.b[x, y] < 0) * 1 for y in range(1, self.ny+1)] for x in range(1, self.nx+1)])
@@ -194,15 +168,3 @@ def transform_index_simulation_to_cdf(z, max_z, min_z, max_z_cdf, min_z_cdf):
     b = min_z_cdf - m * min_z
     ret = m * z + b
     return ret
-        
-solver = SWE_Adjoint_Solver(
-    output_file_name="test.nc", 
-    bathymetry_file_path="../../netCDFInputs/gebco_2023_n65.0_s10.0_w-180.0_e-120.0.nc", 
-    width=[10,10], cell_size=0.1, 
-    area_of_interest= [[-124.19083, 41.74111], [1.0, float('inf')]], # [[-124.19083, 41.74111], [1.0, float('inf')]]
-    end_time = 0.1,
-    nc_key_x='lon', # lon
-    nc_key_y='lat', # lat
-    nc_key_bathymetry='elevation' # elevation
-    )
-solver.run_simulation()

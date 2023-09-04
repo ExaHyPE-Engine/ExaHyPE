@@ -2,6 +2,7 @@ import scenarios.template_scenario, sympy
 
 class Sea_At_Rest(scenarios.template_scenario.Template_Scenario):
     """
+    Scenario consisting of just a bathymetry discontinuity whilst maintaining a flat free surface.
     There should not be any waves being artificially created in this scenario iff the shallow water equations are 
     implemented and solved correctly. 
     """

@@ -2,6 +2,9 @@ import scenarios.template_scenario, sympy
 
 
 class Radial_Bathymetry_Dam_Break(scenarios.template_scenario.Template_Scenario):
+    """
+    Scenario similar to the radial dam break scenario, but creating the initial flux with a bathymetry discontinuity.
+    """
     def __init__(self, width, refinement_tolerance):
         super().__init__(refinement_tolerance)
 
