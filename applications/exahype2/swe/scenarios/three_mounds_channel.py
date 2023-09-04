@@ -5,6 +5,7 @@ import sympy
 class Three_Mounds_Channel(scenarios.template_scenario.Template_Scenario): 
     """
     Taken from https://doi.org/10.48550/arXiv.1607.04547
+    Not tested yet.
     """
     def __init__(self, refinement_tolerance):
         super().__init__(refinement_tolerance)

@@ -945,12 +945,12 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
   assertion( numberOfDoFsPerAxisInDestinationPatch>numberOfDoFsPerAxisInSourcePatch );
 
   #if Dimensions==2 and defined(SharedOMP)
-  #pragma omp taskloop for collapse(2)
+  #pragma omp taskloop collapse(2)
   for( int destinationVolume0 = 0; destinationVolume0 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume0++ )
   for( int destinationVolume1 = 0; destinationVolume1 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume1++ ) {
     tarch::la::Vector<Dimensions, int> destinationVolume = { destinationVolume0, destinationVolume1 };
   #elif Dimensions==3 and defined(SharedOMP)
-  #pragma omp taskloop for collapse(3)
+  #pragma omp taskloop collapse(3)
   for( int destinationVolume0 = 0; destinationVolume0 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume0++ )
   for( int destinationVolume1 = 0; destinationVolume1 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume1++ )
   for( int destinationVolume2 = 0; destinationVolume2 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume2++ ) {

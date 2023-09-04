@@ -2,6 +2,10 @@ import scenarios.template_scenario, sympy
 
 
 class Radial_Dam_Break(scenarios.template_scenario.Template_Scenario):
+    """
+    A radial dam break scenario, where within the center of the domain, there is a perturbation in the free surface.
+    This perturbation leads to a circular wave moving from the center to the edges of the domain.
+    """
     def __init__(self, width, refinement_tolerance):
         super().__init__(refinement_tolerance)
 
