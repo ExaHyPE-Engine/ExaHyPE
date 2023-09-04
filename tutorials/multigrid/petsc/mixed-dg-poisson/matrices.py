@@ -24,25 +24,30 @@ class MixedGenerator(MatrixGeneratorBase):
   def getCellCellMassMatrix(self):
     '''
     needs to be scaled by h**2
-
-    we make 3 different 4*4 matrices and spread them out amongst the 12*12 matrix
     '''
     dim    = self.celldofs * self.unknowns_per_cell_dof
     output = np.zeros((dim,dim))
     for i in range( self.celldofs ):
       for j in range( self.celldofs ):
-        output[3*i,3*j] += self.evaluateIntegral2d(functions2d=[ self.getPoly2d(i), self.getPoly2d(j) ])
+        output[3*i+1, 3*j+1] += self.evaluateIntegral2d(functions2d=[ self.getPoly2d(i), self.getPoly2d(j) ]) # phi_x-phi_x coupling 
+        output[3*i+2, 3*j+2] += self.evaluateIntegral2d(functions2d=[ self.getPoly2d(i), self.getPoly2d(j) ]) # phi_y-phi_y coupling
     return output
 
   def getCellCellSystemMatrix(self):
     '''
-    needs to be scaled 0.5*h, but we include 0.5 factor
-    already in evaluateIntegral.
+    needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
     so normalise by h
     '''
     dim    = self.celldofs * self.unknowns_per_cell_dof
     output = np.zeros((dim,dim))
-
+    for i in range( self.celldofs ):
+      for j in range( self.celldofs ):
+        # They are all the same, but they don't have to be!
+        # We should have different getDeriv2d, getPoly2d for different fields: u, phi_x, phi_y
+        output[3*i+1, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # phi_x-u coupling
+        output[3*i+2, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # phi_y-u coupling
+        output[3*i, 3*j+1] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # u-phi_x coupling
+        output[3*i, 3*j+2] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # u-phi_y coupling
     return output
 
   def getCellToFaceMatrix(self):
