@@ -18,7 +18,7 @@ from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
 from petsc.actionsets.InitPetsc                 import SendDofsToVertices
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScCellSolutionOnVerticesBackOntoMesh
-from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMP
+# from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMP
 
 from abc import abstractmethod
 
@@ -246,12 +246,6 @@ class HybridDiscontinuousGalerkinDiscretisation(Solver):
   def number_of_face_unknowns(self):
     return self._face_unknowns
   
-  def convertMatrixToInitList(self, matrix):
-    output = "{ " + str(matrix[0,0])
-    for el in matrix.flatten():
-      output += f", {str(el)}"
-    output += "}"
-    return output
 
   def get_solver_repository_snippets(self):
 

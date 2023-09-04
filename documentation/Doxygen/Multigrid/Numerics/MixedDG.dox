@@ -268,7 +268,8 @@ onto the face, then solve the equation there, and afterwards project the outcome
 back into the cell's degrees of freedom. However, faces so far do not hold any
 data. To argue about the solution over the face, we have to know
 the solution there first. Therefore, we introduce 
-@f$ 2K \cdot (p+1)^{d-1} @f$ unknowns per face: 
+@f$ 2\hat K \cdot (p+1)^{d-1} @f$ unknowns per face (here @f$ \hat K @f$ is the
+number of unknowns per face dof): 
 
 - We work with polynomials over the face which are drawn from the same shape
   space as our volumetric shape functions, but restricted to the face. 

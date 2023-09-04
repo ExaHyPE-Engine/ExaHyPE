@@ -232,3 +232,10 @@ Return the name of the object that will be created for this solver.
 
     return points, weights, coeffs
 
+  def convertMatrixToInitList(self, matrix):
+    output = "{ " + str(matrix[0,0])
+    for el in matrix.flatten():
+      output += f", {str(el)}"
+    output += "}"
+    return output
+

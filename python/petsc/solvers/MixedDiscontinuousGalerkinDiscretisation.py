@@ -18,7 +18,7 @@ from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
 from petsc.actionsets.InitPetsc                 import SendDofsToVertices
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScCellSolutionOnVerticesBackOntoMesh
-from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixWithQuadratures
+from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMixed
 
 from abc import abstractmethod
 
@@ -35,6 +35,10 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
                unknowns_per_cell_dof,
                min_h,
                max_h,
+               cellCellMassMatrix,
+               cellCellSystemMatrix,
+               cellToFaceMatrix,
+               faceFaceMatrix,
                ):
     """!
    
@@ -51,6 +55,11 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
     self.dimensions            = dimensions
     self.unknowns_per_cell_dof = unknowns_per_cell_dof
     self.unknowns_per_face_dof = self.unknowns_per_cell_dof - 1 #only one of them points in the right direction
+
+    self.cellCellMassMatrix    = cellCellMassMatrix
+    self.cellCellSystemMatrix  = cellCellSystemMatrix
+    self.cellToFaceMatrix      = cellToFaceMatrix
+    self.FaceFaceMatrix        = faceFaceMatrix
 
     self._cell_unknowns = ((polynomial_degree + 1) ** dimensions)       * self.unknowns_per_cell_dof
     self._face_unknowns = ((polynomial_degree + 1) **( dimensions -1 )) * self.unknowns_per_face_dof
@@ -139,7 +148,7 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
   
   
   def add_to_assemble(self, observer):
-    observer.add_action_set( AssemblePETSCMatrixWithQuadratures(self) )
+    observer.add_action_set( AssemblePETSCMatrixForMixed(self) )
     pass
 
   def add_to_init_petsc(self, observer):
@@ -193,6 +202,14 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
         "FACE_CARDINALITY":   self._face_unknowns,
         "POLYNOMIAL_DEGREE":  self.polynomial_degree,
         }
+
+    dictionary["MATRIX_GETTERS_HEADER"] = f"""
+    tarch::la::Matrix < {self.cellCellMassMatrix.shape[0]}, {self.cellCellMassMatrix.shape[1]}, double >  _cellCellMassMatrix = {self.convertMatrixToInitList(self.cellCellMassMatrix)};
+    tarch::la::Matrix < {self.cellCellSystemMatrix.shape[0]}, {self.cellCellSystemMatrix.shape[1]}, double >  _cellCellSystemMatrix = {self.convertMatrixToInitList(self.cellCellSystemMatrix)};
+    tarch::la::Matrix < {self.cellToFaceMatrix.shape[0]}, {self.cellToFaceMatrix.shape[1]}, double >  _cellToFaceMatrix = {self.convertMatrixToInitList(self.cellToFaceMatrix)};
+    tarch::la::Matrix < {self.FaceFaceMatrix.shape[0]}, {self.FaceFaceMatrix.shape[1]}, double >  _faceFaceMatrix = {self.convertMatrixToInitList(self.FaceFaceMatrix)};
+    """
+
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".Abstract.template.h",

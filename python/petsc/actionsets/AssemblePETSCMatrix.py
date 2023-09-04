@@ -392,7 +392,7 @@ Consult petsc.Project for details
 """
 
 
-class AssemblePETSCMatrixForMP(ActionSet):
+class AssemblePETSCMatrixForMixed(ActionSet):
   ## add templates
   
   templateTCFT = """
@@ -416,14 +416,14 @@ class AssemblePETSCMatrixForMP(ActionSet):
     
     //we want to scale the matrix down
     //make a copy
-    const int rows = repositories::cellCellMassMatrix.rows();
-    const int cols = repositories::cellCellMassMatrix.cols();
+    const int rows = repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.rows();
+    const int cols = repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.cols();
     const int size = rows * cols;
     double tempMatrix[ rows*cols ];
 
     //scale mass matrix down by h**2
-    std::transform( repositories::cellCellMassMatrix.data(), repositories::cellCellMassMatrix.data() + size,
-                    repositories::cellCellSystemMatrix.data(), // get data from both matrices, combine them together in the lambda
+    std::transform( repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.data(), repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.data() + size,
+                    repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.data(), // get data from both matrices, combine them together in the lambda
                     tempMatrix,                                //write result to temp array
                     [&](double m, double s){return m*marker.h()[0]*marker.h()[1] + s*marker.h()[0]*0.5;} ); //scale mass matrix by h**2, system matrix by 0.5h, sum the result
 
@@ -433,7 +433,7 @@ class AssemblePETSCMatrixForMP(ActionSet):
   """
 
   def __init__(self, solver):
-    super( AssemblePETSCMatrixForMP, self ).__init__()
+    super( AssemblePETSCMatrixForMixed, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()

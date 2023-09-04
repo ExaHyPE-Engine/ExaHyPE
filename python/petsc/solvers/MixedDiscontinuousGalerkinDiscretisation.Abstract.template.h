@@ -13,6 +13,7 @@
 
 
 #include "tarch/la/Vector.h"
+#include "tarch/la/Matrix.h"
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/accelerator/accelerator.h"
@@ -44,6 +45,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
 
+    {{MATRIX_GETTERS_HEADER}}
+    
     /**
      * Initialise a vertex degree of freedom
      */
@@ -101,6 +104,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     ::petsc::LocalToGlobalMap  _faceLocalToGlobalMap;
     ::petsc::LocalToGlobalMap  _cellLocalToGlobalMap;
     ::petsc::LocalToGlobalMap  _vertexLocalToGlobalMap;
+
 };
 
 
