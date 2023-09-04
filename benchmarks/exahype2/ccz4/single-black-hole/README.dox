@@ -109,7 +109,7 @@ python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored-subt
 
 Name                           | Trees | Scheduler              | Python script call                                                                                        |   TBB   |  OpenMP |   SYCL 
 -------------------------------|------:|:-----------------------|:----------------------------------------------------------------------------------------------------------|--------:|--------:|--------:
-Native tasking w/o priorities  |     6 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6         |       x |       x |       x 
+Native tasking w/o priorities  |     6 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6         |       x |     489 |       x 
 Native tasking with priorities |     6 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native --trees 6                       |       x |       x |       x 
 Tailored task scheduling       |     6 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored --trees 6                     |       x |       x |       x 
 Parallel for                   |     6 |  tailored-parallel-for | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored-parallel-for --trees 6        |       x |       x |       x 
@@ -167,12 +167,17 @@ do
   for TREES in 6 8 12
   do
     python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler $SCHEDULER --trees $TREES 
-    ./peano_sbh > results/$PREFIX-without-amr-$SCHEDULER-$TREES-trees.txt
+    OUTPUT=$PREFIX-without-amr-$SCHEDULER-$TREES-trees
+    ./peano_sbh > results/$OUTPUT.txt
+    mv peano_sbh $OUTPUT
 
-    python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler $SCHEDULER --trees $TREES > results/$PREFIX-without-amr-$SCHEDULER-$TREES-trees.txt
-    ./peano_sbh > results/$PREFIX-with-amr-$SCHEDULER-$TREES-trees.txt
+    OUTPUT=$PREFIX-with-amr-$SCHEDULER-$TREES-trees
+    python3 performance-studies.py -s fd4-rk1-limited-ps-3 --amr --scheduler $SCHEDULER --trees $TREES
+    ./peano_sbh > results/$OUTPUT.txt
+    mv peano_sbh $OUTPUT
   done
 done
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -360,7 +365,7 @@ should go straight onto a core or the GPU. To re-prioritise, we add
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-  self.enclave_task_priority = "2*tarch::multicore::Task::DefaultPriority"
+  self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority+1"
 ~~~~~~~~~~~~~~~~~~~~~~~
       
 to the constructor.

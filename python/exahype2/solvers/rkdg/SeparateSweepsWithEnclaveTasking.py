@@ -87,7 +87,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
     task. This value can either be a string that C++ can evaluate into a 
     priority or a plain numerical value. I set it to 
     
-           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority"
+           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority-1"
                
     by default.
     
@@ -135,7 +135,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         self._fused_volumetric_kernel_call_cpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_cpu in your Python solver class."
         self._fused_volumetric_kernel_call_gpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_gpu in your Python solver class."
 
-        self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority"
+        self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority-1"
 
         self.create_action_sets()
         self.create_data_structures()
