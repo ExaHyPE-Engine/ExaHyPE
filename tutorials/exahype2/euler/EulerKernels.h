@@ -14,19 +14,31 @@ namespace exahype2::euler {
     const double* __restrict__ Qinside,
     double* __restrict__ Qoutside,
     const tarch::la::Vector<Dimensions, double>& faceCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
     double                                       t,
     int                                          normal,
     int                                          numberOfUnknowns,
     int                                          numberOfAuxiliaryVariables
   ) InlineMethod {
 #ifdef GPUOffloadingOff
-    nonCriticalAssertion5(Qinside[0] > 1e-12, faceCentre, volumeH, t, normal, Qinside[0]);
+    nonCriticalAssertion4(Qinside[0] > 1e-12, faceCentre, t, normal, Qinside[0]);
 #endif
 
     for (int i = 0; i < numberOfUnknowns + numberOfAuxiliaryVariables; i++) {
       Qoutside[i] = Qinside[i];
     }
+  }
+
+  static void neumannBoundaryConditions(
+    const double* __restrict__ Qinside,
+    double* __restrict__ Qoutside,
+    const tarch::la::Vector<Dimensions, double>& faceCentre,
+    const tarch::la::Vector<Dimensions, double>& volumeH,
+    double                                       t,
+    int                                          normal,
+    int                                          numberOfUnknowns,
+    int                                          numberOfAuxiliaryVariables
+  ) InlineMethod {
+    neumannBoundaryConditions(Qinside, Qoutside, faceCentre, t, normal, numberOfUnknowns, numberOfAuxiliaryVariables);
   }
 
   /**
@@ -38,7 +50,6 @@ namespace exahype2::euler {
   static double maxEigenvalue(
     const double* __restrict__ Q,
     const tarch::la::Vector<Dimensions, double>& faceCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal,
@@ -68,9 +79,7 @@ namespace exahype2::euler {
 #endif
 
 #ifdef GPUOffloadingOff
-    nonCriticalAssertion9(
-      tarch::la::greaterEquals(p, 0.0), Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal
-    );
+    nonCriticalAssertion8(tarch::la::greaterEquals(p, 0.0), Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, t, normal);
 #endif
     const double c = std::sqrt(gamma * std::abs(p) * irho);
 
@@ -78,10 +87,24 @@ namespace exahype2::euler {
     const double result = std::max(std::abs(u_n - c), std::abs(u_n + c));
 
 #ifdef GPUOffloadingOff
-    nonCriticalAssertion9(result >= 0.0, result, p, u_n, irho, c, faceCentre, volumeH, t, normal);
+    nonCriticalAssertion8(result >= 0.0, result, p, u_n, irho, c, faceCentre, t, normal);
 #endif
 
     return result;
+  }
+
+  static double maxEigenvalue(
+    const double* __restrict__ Q,
+    const tarch::la::Vector<Dimensions, double>& faceCentre,
+    const tarch::la::Vector<Dimensions, double>& volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    int                                          numberOfUnknowns,
+    int                                          numberOfAuxiliaryVariables,
+    double                                       gamma = 1.4
+  ) InlineMethod {
+    return maxEigenvalue(Q, faceCentre, t, dt, normal, numberOfUnknowns, numberOfAuxiliaryVariables, gamma);
   }
 
   /**
@@ -93,7 +116,6 @@ namespace exahype2::euler {
   static void flux(
     const double* __restrict__ Q,
     const tarch::la::Vector<Dimensions, double>& faceCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal,
@@ -103,8 +125,8 @@ namespace exahype2::euler {
     double gamma = 1.4
   ) InlineMethod {
 #ifdef GPUOffloadingOff
-    assertion4(normal >= 0, faceCentre, volumeH, t, normal);
-    assertion4(normal < Dimensions, faceCentre, volumeH, t, normal);
+    assertion3(normal >= 0, faceCentre, t, normal);
+    assertion3(normal < Dimensions, faceCentre, t, normal);
 #endif
 
     const double irho = 1.0 / Q[0];
@@ -126,5 +148,20 @@ namespace exahype2::euler {
 #else
     F[3]           = coeff * Q[3] + coeff * p;
 #endif
+  }
+
+  static void flux(
+    const double* __restrict__ Q,
+    const tarch::la::Vector<Dimensions, double>& faceCentre,
+    const tarch::la::Vector<Dimensions, double>& volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    int                                          numberOfUnknowns,
+    int                                          numberOfAuxiliaryVariables,
+    double* __restrict__ F,
+    double gamma = 1.4
+  ) InlineMethod {
+    flux(Q, faceCentre, t, dt, normal, numberOfUnknowns, numberOfAuxiliaryVariables, F, gamma);
   }
 } // namespace exahype2::euler

@@ -46,7 +46,7 @@ class GaussianExplosion:
             return self.pde.implementation_of_homogeneous_Neumann_BC()
         else:
             return """
-            ::exahype2::euler::neumannBoundaryConditions(Qinside, Qoutside, faceCentre, volumeH, t, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+            ::exahype2::euler::neumannBoundaryConditions(Qinside, Qoutside, faceCentre, t, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);
             """
 
 
@@ -55,7 +55,7 @@ class GaussianExplosion:
             return self.pde.implementation_of_flux()
         else:
             return """
-            ::exahype2::euler::flux(Q, faceCentre, volumeH, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables, F);
+            ::exahype2::euler::flux(Q, faceCentre, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables, F);
             """
 
 
@@ -64,7 +64,7 @@ class GaussianExplosion:
             return self.pde.implementation_of_max_eigenvalue()
         else:
             return """
-            return ::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+            return ::exahype2::euler::maxEigenvalue(Q, faceCentre, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);
             """
 
 
