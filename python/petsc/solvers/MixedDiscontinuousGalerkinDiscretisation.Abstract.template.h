@@ -45,7 +45,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
 
-    {{MATRIX_GETTERS_HEADER}}
+    {{MATRICES}}
     
     /**
      * Initialise a vertex degree of freedom

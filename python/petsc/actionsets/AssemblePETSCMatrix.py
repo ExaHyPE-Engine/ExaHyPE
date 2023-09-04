@@ -405,12 +405,12 @@ class AssemblePETSCMatrixForMixed(ActionSet):
     int globalIndex =  repositories::getGlobalCellIndex( localIndex );
 
     //construct the list of row indices we want to use:
-    int rowIndices [{{CELL_CARDINALITY}}];
+    int rowIndices[{{CELL_CARDINALITY}}];
     //fill this vector up, starting with our global index
     std::iota(rowIndices, rowIndices + {{CELL_CARDINALITY}}, globalIndex);
 
     //repeat for the colIndices
-    int colIndices [{{CELL_CARDINALITY}}];
+    int colIndices[{{CELL_CARDINALITY}}];
     //fill this vector up, starting with our global index
     std::iota(colIndices, colIndices + {{CELL_CARDINALITY}}, globalIndex);
     
@@ -425,7 +425,7 @@ class AssemblePETSCMatrixForMixed(ActionSet):
     std::transform( repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.data(), repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.data() + size,
                     repositories::{{SOLVER_INSTANCE}}._cellCellSystemMatrix.data(), // get data from both matrices, combine them together in the lambda
                     tempMatrix,                                                     // write result to temp array
-                    [&](double m, double s){return m*marker.h()[0]*marker.h()[1] + s*marker.h()[0]*0.5;} ); //scale mass matrix by h**2, system matrix by 0.5h, sum the result
+                    [&](double m, double s){return m*marker.h()[0]*marker.h()[1] + s*marker.h()[0];} ); //scale mass matrix by h**2, system matrix by h, sum the result
 
     //send to petsc
     repositories::instanceOfPetsc.insertLocalMatrix( rows, rowIndices, cols, colIndices, tempMatrix );

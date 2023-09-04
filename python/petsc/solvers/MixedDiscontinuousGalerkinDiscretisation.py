@@ -30,8 +30,8 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
   """
   def __init__(self,
                name,
-               dimensions,
                polynomial_degree,
+               dimensions,
                unknowns_per_cell_dof,
                min_h,
                max_h,
@@ -203,13 +203,12 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
         "POLYNOMIAL_DEGREE":  self.polynomial_degree,
         }
 
-    dictionary["MATRIX_GETTERS_HEADER"] = f"""
+    dictionary["MATRICES"] = f"""
     const tarch::la::Matrix < {self.cellCellMassMatrix.shape[0]}, {self.cellCellMassMatrix.shape[1]}, double >  _cellCellMassMatrix = {self.convertMatrixToInitList(self.cellCellMassMatrix)};
     const tarch::la::Matrix < {self.cellCellSystemMatrix.shape[0]}, {self.cellCellSystemMatrix.shape[1]}, double >  _cellCellSystemMatrix = {self.convertMatrixToInitList(self.cellCellSystemMatrix)};
     const tarch::la::Matrix < {self.cellToFaceMatrix.shape[0]}, {self.cellToFaceMatrix.shape[1]}, double >  _cellToFaceMatrix = {self.convertMatrixToInitList(self.cellToFaceMatrix)};
     const tarch::la::Matrix < {self.FaceFaceMatrix.shape[0]}, {self.FaceFaceMatrix.shape[1]}, double >  _faceFaceMatrix = {self.convertMatrixToInitList(self.FaceFaceMatrix)};
     """
-
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".Abstract.template.h",
