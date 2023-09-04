@@ -84,34 +84,96 @@ is only active in a tiny cross-shaped region within.
 Benchmarking the single black hole is not easy, as it is a rather complex setup
 already with a rather long initialisation and grid construction phase. However,
 it is possible to benchmark it once you disable plots, the tracers, and you use
-an unreasonable coarse mesh. Below are my default profiling setups that I use.
+an unreasonable coarse mesh. 
+
+
+Below are some performance data which I collected on my local workstation. They 
+provide a first look-n-feel. The Python script for these performance studies 
+differs from our production script in multiple ways:
+
+1. AMR can be switched on/off.
+2. You can configure the number of subpartitions per rank that are used by the
+   load balancing.
+3. The default runtime is very short.
+4. You can pick various schedulers for the tasking bit.
+
+
+An example invocation is
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-python3 performance-studies.py -cs 2.0 -s fd4-rk1-limited-ps-3 --threads 8 -et 0.01  --scheduler scheduler
+python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored-subtasks -amr --trees 8
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-where SCHEDULER and PS are to be chosen accordingly. Please note that the code
-also has an adaptive mesh refinement (AMR) option which you can toggle on/off.
+
+### No AMR
+
+Name                           | Trees | Scheduler              | Python script call                                                                                        |   TBB   |  OpenMP |   SYCL 
+-------------------------------|------:|:-----------------------|:----------------------------------------------------------------------------------------------------------|--------:|--------:|--------:
+Native tasking w/o priorities  |     6 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6         |       x |       x |       x 
+Native tasking with priorities |     6 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native --trees 6                       |       x |       x |       x 
+Tailored task scheduling       |     6 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored --trees 6                     |       x |       x |       x 
+Parallel for                   |     6 |  tailored-parallel-for | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored-parallel-for --trees 6        |       x |       x |       x 
+Subtasks                       |     6 |  tailored-subtasks     | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored-subtasks --trees 6            |       x |       x |       x 
+Native tasking w/o priorities  |     8 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 8         |       x |       x |       x 
+Native tasking with priorities |     8 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native --trees 8                       |       x |       x |       x 
+Tailored task scheduling       |     8 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored --trees 8                     |       x |       x |       x 
+Parallel for                   |     8 |  tailored-parallel-for | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored-parallel-for --trees 8        |       x |       x |       x 
+Subtasks                       |     8 |  tailored-subtasks     | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored-subtasks --trees 8            |       x |       x |       x 
+Native tasking w/o priorities  |    12 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 12        |       x |       x |       x 
+Native tasking with priorities |    12 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native --trees 12                      |       x |       x |       x 
+Tailored task scheduling       |    12 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored --trees 12                    |       x |       x |       x 
+Parallel for                   |    12 |  tailored-parallel-for | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored-parallel-for --trees 12       |       x |       x |       x 
+Subtasks                       |    12 |  tailored-subtasks     | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored-subtasks --trees 12           |       x |       x |       x 
 
 
-Name (AMR experiment; patch size 3; omp 8) | Scheduler | Runtime (TBB) | Runtime (OpenMP) | Runtime (SYCL)
--------------------------------|----------------|--------------:|-----------------:|---------------:
-Native tasking w/o priorities  |  native-no-priorities |    368 |              384 |              x
-Native tasking with priorities |                native |    370 |              441 |              x
-Tailored tasking               |              tailored |    364 |              385 |              x
-Parallel for                   | tailored-parallel-for |    160 |              383 |              x
-Subtasks                       | tailored-subtasks     |    153 |              383 |              x
+### With adaptive mesh refinement
 
-
-Dann noch was ohne AMR. Das oben hat schon ein wenig AMR
-
-subtasks mit 6 thrads: 490. 
-
+Name                           | Trees | Scheduler              | Python script call                                                                                        |   TBB   |  OpenMP |   SYCL 
+-------------------------------|------:|:-----------------------|:----------------------------------------------------------------------------------------------------------|--------:|--------:|--------:
+Native tasking w/o priorities  |     6 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native-no-priorities --trees 6    |       x |       x |       x 
+Native tasking with priorities |     6 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native --trees 6                  |       x |       x |       x 
+Tailored task scheduling       |     6 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored --trees 6                |       x |       x |       x 
+Parallel for                   |     6 |  tailored-parallel-for | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored-parallel-for --trees 6   |       x |       x |       x 
+Subtasks                       |     6 |  tailored-subtasks     | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored-subtasks --trees 6       |       x |       x |       x 
+Native tasking w/o priorities  |     8 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native-no-priorities --trees 8    |       x |       x |       x 
+Native tasking with priorities |     8 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native --trees 8                  |       x |       x |       x 
+Tailored task scheduling       |     8 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored --trees 8                |       x |       x |       x 
+Parallel for                   |     8 |  tailored-parallel-for | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored-parallel-for --trees 8   |       x |       x |       x 
+Subtasks                       |     8 |  tailored-subtasks     | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored-subtasks --trees 8       |       x |       x |       x 
+Native tasking w/o priorities  |    12 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native-no-priorities --trees 12   |       x |       x |       x 
+Native tasking with priorities |    12 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native --trees 12                 |       x |       x |       x 
+Tailored task scheduling       |    12 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored --trees 12               |       x |       x |       x 
+Parallel for                   |    12 |  tailored-parallel-for | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored-parallel-for --trees 12  |       x |       x |       x 
+Subtasks                       |    12 |  tailored-subtasks     | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored-subtasks --trees 12      |       x |       x |       x 
 
 
 The above measurements are done on my eight core laptop with the Intel oneAPI 
 toolchain.
 
+
+### Script to create all data
+
+
+Below is a script that creates all data points in one go. You will have to 
+amend the prefix accordingly.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PREFIX=tbb
+
+mkdir results
+
+for SCHEDULER in native-no-priorities native tailored tailored-parallel-for tailored-subtasks
+do
+  for TREES in 6 8 12
+  do
+    python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler $SCHEDULER --trees $TREES 
+    ./peano_sbh > results/$PREFIX-without-amr-$SCHEDULER-$TREES-trees.txt
+
+    python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler $SCHEDULER --trees $TREES > results/$PREFIX-without-amr-$SCHEDULER-$TREES-trees.txt
+    ./peano_sbh > results/$PREFIX-with-amr-$SCHEDULER-$TREES-trees.txt
+  done
+done
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 

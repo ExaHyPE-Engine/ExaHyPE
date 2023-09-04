@@ -58,15 +58,8 @@ if __name__ == "__main__":
         "--end-time",
         dest="end_time",
         type=float,
-        default=1.0,
+        default=0.01,
         help="End of simulation",
-    )
-    parser.add_argument(
-        "--threads",
-        dest="threads",
-        type=int,
-        default=0,
-        help="Thread count (0 picks system default)",
     )
     parser.add_argument(
         "--trees",
@@ -80,8 +73,8 @@ if __name__ == "__main__":
         "--cell-size",
         dest="cell_size",
         type=float,
-        default=0.5,
-        help="Cell size (default 0.5)",
+        default=2.0,
+        help="Cell size (default 2.0)",
     )
     parser.add_argument(
         "-asserts",
@@ -136,7 +129,7 @@ if __name__ == "__main__":
     project = exahype2.Project(
         ["benchmarks", "exahype2", "ccz4"],
         "ccz4",
-        executable="peano_sbh_" + args.solver + "_" + str(args.cell_size) + "_" + args.scheduler,
+        executable="peano_sbh",
     )
 
     dimensions = 3
@@ -176,9 +169,6 @@ if __name__ == "__main__":
 
 
       
-    if args.threads > 0:
-        project.set_number_of_threads( args.threads )
-    
     added_limiter = False
     if "fd4-rk1-ps-" in args.solver:
         FD4PatchSize = int(args.solver[-1])
