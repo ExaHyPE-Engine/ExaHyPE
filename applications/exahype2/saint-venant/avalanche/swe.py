@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 
 #
 # We use our code Python generator to generate additional glue code.
@@ -64,23 +65,40 @@ my_solver.set_implementation(
 # we want to use in our solver implementations multiple times.
 #
 ## Independent Constants
-my_solver.add_solver_constants("static constexpr double Gravity = {}; // [m/s^2]".format(9.81))
-my_solver.add_solver_constants("static constexpr double Pi = {};".format(3.14159))
-my_solver.add_solver_constants("static constexpr double Zeta = 23*Pi/180;") # Pouliquen and Forterre
-my_solver.add_solver_constants("static constexpr double Zeta1 = 21*Pi/180;") # Pouliquen and Forterre
-my_solver.add_solver_constants("static constexpr double Zeta2 = 30.7*Pi/180;") # Pouliquen and Forterre
-my_solver.add_solver_constants("static constexpr double Zeta3 = 22.2*Pi/180;") # Pouliquen and Forterre
-my_solver.add_solver_constants("static constexpr double Beta = {};".format(0.136)) # Pouliquen main paper
-my_solver.add_solver_constants("static constexpr double FrictionLengthScale = {};".format(0.00065)) # Pouliquen and Forterre
+Gravity = 9.81
+Pi = math.pi
+Zeta = 23*Pi/180
+Zeta1 = 21*Pi/180
+Zeta2 = 30.7*Pi/180
+Zeta3 = 22.2*Pi/180
+Beta = 0.136
+FrictionLengthScale = 0.00065
+Mu1 = math.tan(Zeta1)
+Mu2 = math.tan(Zeta2)
+Mu3 = math.tan(Zeta3)
+Nu = (2.0/9.0)*(FrictionLengthScale/Beta)*(Gravity*math.sin(Zeta)/math.sqrt(Gravity*math.cos(Zeta)))*(((Mu2-Mu1)/(math.tan(Zeta)-Mu1))-1)
+Hstart = FrictionLengthScale*(((Mu2-Mu1)/(math.tan(Zeta)-Mu3))-1)
+Hstop = FrictionLengthScale*(((Mu2-Mu1)/(math.tan(Zeta)-Mu1))-1)
+
+
+
+my_solver.add_solver_constants("static constexpr double Gravity = {}; // [m/s^2]".format(Gravity))
+my_solver.add_solver_constants("static constexpr double Pi = {};".format(Pi))
+my_solver.add_solver_constants("static constexpr double Zeta = {};".format(Zeta)) # Pouliquen and Forterre
+my_solver.add_solver_constants("static constexpr double Zeta1 = {};".format(Zeta1)) # Pouliquen and Forterre
+my_solver.add_solver_constants("static constexpr double Zeta2 = {};".format(Zeta2)) # Pouliquen and Forterre
+my_solver.add_solver_constants("static constexpr double Zeta3 = {};".format(Zeta3)) # Pouliquen and Forterre
+my_solver.add_solver_constants("static constexpr double Beta = {};".format(Beta)) # Pouliquen main paper
+my_solver.add_solver_constants("static constexpr double FrictionLengthScale = {};".format(FrictionLengthScale)) # Pouliquen and Forterre
 
 ## Dependent Constants
-my_solver.add_solver_constants("static constexpr double Mu1 = tan(Zeta1);")
-my_solver.add_solver_constants("static constexpr double Mu2 = tan(Zeta2);")
-my_solver.add_solver_constants("static constexpr double Mu3 = tan(Zeta3);")
-my_solver.add_solver_constants("static constexpr double Nu = (2.0/9.0)*(FrictionLengthScale/Beta)*(Gravity*sin(Zeta)/sqrt(Gravity*cos(Zeta)))*(((Mu2-Mu1)/(tan(Zeta)-Mu1))-1); //Granular Viscosity Coefficient")
+my_solver.add_solver_constants("static constexpr double Mu1 = {};".format(Mu1))
+my_solver.add_solver_constants("static constexpr double Mu2 = {};".format(Mu2))
+my_solver.add_solver_constants("static constexpr double Mu3 = {};".format(Mu3))
+my_solver.add_solver_constants("static constexpr double Nu = {}; //Granular Viscosity Coefficient".format(Nu))
 # my_solver.add_solver_constants("static constexpr double Nu = 0.0;")
-my_solver.add_solver_constants("static constexpr double Hstart = FrictionLengthScale*(((Mu2-Mu1)/(tan(Zeta)-Mu3))-1) ;")
-my_solver.add_solver_constants("static constexpr double Hstop = FrictionLengthScale*(((Mu2-Mu1)/(tan(Zeta)-Mu1))-1) ;")
+my_solver.add_solver_constants("static constexpr double Hstart = {} ;".format(Hstart))
+my_solver.add_solver_constants("static constexpr double Hstop = {} ;".format(Hstop))
 #
 
 #
@@ -123,7 +141,7 @@ my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "
 # Additionally, we specify the build mode which you can also change to a different mode.
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-my_project.set_Peano4_installation( "../../../../", mode=peano4.output.CompileMode.Release)
+my_project.set_Peano4_installation( "../../../../", mode=peano4.output.CompileMode.Debug)
 
 #
 # We generate and grab the underlying core project of 'Peano4'.

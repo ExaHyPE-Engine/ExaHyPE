@@ -72,6 +72,7 @@ double applications::exahype2::avalanche::SWESolver::maxEigenvalue(
     const double ih     = 1.0 / Q[0]; // Inverse water height
     const double c      = std::sqrt(Gravity * cos(Zeta) * Q[0]);
     double       u      = 0.0;
+    // std::cout<<"max eigenvalue h>0 at t="<<t<<std::endl;
 
     switch (normal) {
     case 0: // x
@@ -88,7 +89,7 @@ double applications::exahype2::avalanche::SWESolver::maxEigenvalue(
     }
     return result;
   }
-
+  // std::cout<<"max eigenvalue h=0 at t="<<t<<std::endl;
   return 0.0;
 }
 
@@ -103,6 +104,7 @@ void applications::exahype2::avalanche::SWESolver::flux(
 ) {
   if(tarch::la::greater(Q[0],0.0)){
     const double ih = 1.0 / Q[0];
+    // std::cout<<"Flux h>0 at t="<<t<<std::endl;
 
     switch (normal) {
     case 0:
@@ -117,25 +119,9 @@ void applications::exahype2::avalanche::SWESolver::flux(
       break;
     }
 
-    // including ncp terms in flux itself
-    // const double ux = Q[NumberOfUnknowns + u_x]/volumeH(0);
-    // const double uy = Q[NumberOfUnknowns + u_y]/volumeH(1);
-    // const double vx = Q[NumberOfUnknowns + v_x]/volumeH(0);
-    // const double vy = Q[NumberOfUnknowns + v_y]/volumeH(1);
-    // switch (normal) {
-    // case 0:
-    //   F[0] = Q[1];                                                       // hu_1
-    //   F[1] = ih * Q[1] * Q[1] + 0.5 * Gravity * cos(Zeta) * Q[0] * Q[0] - Nu * sqrt(Q[0])*Q[0]*(ux); // h(u_1)^2 + 0.5*g*h**2
-    //   F[2] = ih * Q[1] * Q[2] - 0.5 * Nu * sqrt(Q[0]) * Q[0] * (uy + vx);                                           // hu_1u_2
-    //   break;
-    // case 1:
-    //   F[0] = Q[2];                                                       // hu_2
-    //   F[1] = ih * Q[2] * Q[1] - 0.5 * Nu * sqrt(Q[0]) * Q[0] * (uy + vx);                                           // hu_1u_2
-    //   F[2] = ih * Q[2] * Q[2] + 0.5 * Gravity * cos(Zeta) * Q[0] * Q[0] - Nu * sqrt(Q[0])*Q[0]*(vy); // h(u_2)^2 + 0.5*g*h**2
-    //   break;
-    // }
   }
   else{
+    // std::cout<<"Flux h=0 at t="<<t<<std::endl;
     switch (normal) {
     case 0:
       F[0] = 0.0;                                                       // hu_1
@@ -196,19 +182,21 @@ void applications::exahype2::avalanche::SWESolver::nonconservativeProduct(
 
   if(tarch::la::greater(Q[0],0.0)){
     const double ih = 1.0 / Q[0];
+    // std::cout<<"ncp h>0 at t="<<t<<std::endl;
 
     // Partial Derivatives of unknowns
+    // Retrieving true value from average value and deltaQ
 
     // u
-    const double ux  = (Q[NumberOfUnknowns + u_x] - 0.5*deltaQ[NumberOfUnknowns + u_x]) / (2 * volumeH(0));
-    const double uy  = (Q[NumberOfUnknowns + u_y] - 0.5*deltaQ[NumberOfUnknowns + u_y]) / (2 * volumeH(1));
+    const double ux  = (Q[NumberOfUnknowns + u_x] - 0.5*deltaQ[NumberOfUnknowns + u_x]) / (1 * volumeH(0));
+    const double uy  = (Q[NumberOfUnknowns + u_y] - 0.5*deltaQ[NumberOfUnknowns + u_y]) / (1 * volumeH(1));
     const double uxx = (Q[NumberOfUnknowns + u_xx] - 0.5*deltaQ[NumberOfUnknowns + u_xx]) / (volumeH(0) * volumeH(0));
     const double uyy = (Q[NumberOfUnknowns + u_yy] - 0.5*deltaQ[NumberOfUnknowns + u_yy]) / (volumeH(1) * volumeH(1));
     const double uxy = (Q[NumberOfUnknowns + u_xy] - 0.5*deltaQ[NumberOfUnknowns + u_xy]) / (4 * volumeH(0) * volumeH(1));
 
     // v
-    const double vx  = (Q[NumberOfUnknowns + v_x] - 0.5*deltaQ[NumberOfUnknowns + v_x]) / (2 * volumeH(0));
-    const double vy  = (Q[NumberOfUnknowns + v_y] - 0.5*deltaQ[NumberOfUnknowns + v_y]) / (2 * volumeH(1));
+    const double vx  = (Q[NumberOfUnknowns + v_x] - 0.5*deltaQ[NumberOfUnknowns + v_x]) / (1 * volumeH(0));
+    const double vy  = (Q[NumberOfUnknowns + v_y] - 0.5*deltaQ[NumberOfUnknowns + v_y]) / (1 * volumeH(1));
     const double vxx = (Q[NumberOfUnknowns + v_xx] - 0.5*deltaQ[NumberOfUnknowns + v_xx]) / (volumeH(0) * volumeH(0));
     const double vyy = (Q[NumberOfUnknowns + v_yy] - 0.5*deltaQ[NumberOfUnknowns + v_yy]) / (volumeH(1) * volumeH(1));
     const double vxy = (Q[NumberOfUnknowns + v_xy] - 0.5*deltaQ[NumberOfUnknowns + v_xy]) / (4 * volumeH(0) * volumeH(1));
@@ -228,6 +216,7 @@ void applications::exahype2::avalanche::SWESolver::nonconservativeProduct(
   }
 
   else{
+    // std::cout<<"ncp h=0 at t="<<t<<std::endl;
     switch (normal) {
     case 0: // x
       BTimesDeltaQ[0] = 0.0;
@@ -241,6 +230,19 @@ void applications::exahype2::avalanche::SWESolver::nonconservativeProduct(
       break;
     }
   }
+
+  // switch (normal) {
+  //   case 0: // x
+  //     BTimesDeltaQ[0] = 0.0;
+  //     BTimesDeltaQ[1] = 0.0;
+  //     BTimesDeltaQ[2] = 0.0;
+  //     break;
+  //   case 1: // y
+  //     BTimesDeltaQ[0] = 0.0;
+  //     BTimesDeltaQ[1] = 0.0;
+  //     BTimesDeltaQ[2] = 0.0;
+  //     break;
+  // }
 }
 
 void applications::exahype2::avalanche::SWESolver::sourceTerm(
@@ -252,6 +254,7 @@ void applications::exahype2::avalanche::SWESolver::sourceTerm(
   double* __restrict__ S
 ) {
   if(tarch::la::greater(Q[0],0.0)){
+    // std::cout<<"sourceTerm h>0 at t="<<t<<std::endl;
     const double ih = 1.0 / Q[0];
     const double u  = ih * Q[1];
     const double v  = ih * Q[2];
@@ -286,21 +289,28 @@ void applications::exahype2::avalanche::SWESolver::sourceTerm(
     }
 
     if(tarch::la::equals(ubar,0.0)){
+      // std::cout<<"sourceTerm h>0 and ubar=0 at t="<<t<<std::endl;
       S[0] = 0.0;
       S[1] = Q[0] * Gravity * sin(Zeta) - Mu * Q[0] * Gravity * cos(Zeta);
       S[2] = 0.0;
     }
     else if(tarch::la::greater(ubar,0.0)){
+      // std::cout<<"sourceTerm h>0 ubar>0 at t="<<t<<std::endl;
       S[0] = 0.0;
       S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (u / ubar) * Q[0] * Gravity * cos(Zeta);
       S[2] = -Mu * (v / ubar) * Q[0] * Gravity * cos(Zeta);
     }
   }
   else{
+    // std::cout<<"sourceTerm h=0 at t="<<t<<std::endl;
     S[0] = 0.0;
     S[1] = 0.0;
     S[2] = 0.0;
   }
+
+  // S[0] = 0.0;
+  // S[1] = 0.0;
+  // S[2] = 0.0;
   
 }
 
