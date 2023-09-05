@@ -945,24 +945,7 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
 ) {
   assertion( numberOfDoFsPerAxisInDestinationPatch>numberOfDoFsPerAxisInSourcePatch );
 
-<<<<<<< HEAD
   parallelDforWithDynamicScheduling( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch, parallelisation )
-=======
-  #if Dimensions==2 and defined(SharedOMP)
-  #pragma omp taskloop collapse(2)
-  for( int destinationVolume0 = 0; destinationVolume0 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume0++ )
-  for( int destinationVolume1 = 0; destinationVolume1 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume1++ ) {
-    tarch::la::Vector<Dimensions, int> destinationVolume = { destinationVolume0, destinationVolume1 };
-  #elif Dimensions==3 and defined(SharedOMP)
-  #pragma omp taskloop collapse(3)
-  for( int destinationVolume0 = 0; destinationVolume0 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume0++ )
-  for( int destinationVolume1 = 0; destinationVolume1 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume1++ )
-  for( int destinationVolume2 = 0; destinationVolume2 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume2++ ) {
-    tarch::la::Vector<Dimensions, int> destinationVolume = { destinationVolume0, destinationVolume1, destinationVolume2 };
-  #else
-  dfor( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch ) {
-  #endif
->>>>>>> refs/remotes/origin/applications
     const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch) * unknowns;
     for (int unknown=0; unknown<unknowns; unknown++) {
       destinationValues[baseIndexDestination+unknown] = 0.0;
