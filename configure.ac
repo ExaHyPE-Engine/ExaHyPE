@@ -481,29 +481,6 @@ if test "$use_libxsmm" == true; then
   AC_DEFINE([UseLibXSMM], [UseLibXSMM], [UseLibXSMM])
 fi
 
-
-
-#
-# ===============================================================
-# Floating-point exception handling
-# ===============================================================
-#
-
-AC_ARG_WITH(fenv,
-  AS_HELP_STRING([--with-fenv],[build with floating-point exception handling [default=false]]),
-  [ AC_MSG_CHECKING(for fenv)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);    use_fenv=false ;;
-      *)     AC_MSG_RESULT(yes);   use_fenv=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for fenv); AC_MSG_RESULT(no); use_fenv=false ])
-AM_CONDITIONAL([UseFenv],[test "x$use_fenv" = xtrue])
-
-if test "$use_fenv" == true; then
-  AC_DEFINE([UseFenv], [UseFenv], [UseFenv])
-fi
-
-
 #
 # ===============================================================
 # Tailored toolchains

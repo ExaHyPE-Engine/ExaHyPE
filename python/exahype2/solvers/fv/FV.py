@@ -220,7 +220,7 @@ class FV(object):
         self._user_solver_includes = ""
 
         if min_volume_h > max_volume_h:
-            print(
+            raise Exception(
                 "Error: min_volume_h ("
                 + str(min_volume_h)
                 + ") is bigger than max_volume_h ("

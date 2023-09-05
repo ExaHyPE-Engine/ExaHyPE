@@ -2,19 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <string>
 
-
 #include "tarch/logging/Log.h"
-
 
 namespace tarch {
   namespace logging {
     class LogFilterFileReader;
   }
 }
-
 
 /**
  * Read log filter spec file
@@ -46,7 +42,6 @@ debug  my::full::qualified::class::name    43     white
 
 \endcode
 
-
 \endcode
  *
  * @author Tobias Weinzierl, Kristof Unterweger
@@ -66,6 +61,7 @@ class tarch::logging::LogFilterFileReader {
     static bool parseLine(std::ifstream& file, const std::string& filename, const std::string& line, int linenumber);
 
     static std::string trimLine( const std::string& line );
+
   public:
     /**
      * Tries to parse a simple text file where each line contains an entry
@@ -81,4 +77,3 @@ class tarch::logging::LogFilterFileReader {
      */
     static bool parsePlainTextFile( const std::string& filename );
 };
-

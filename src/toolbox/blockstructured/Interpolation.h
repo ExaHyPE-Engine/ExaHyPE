@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
 
@@ -179,11 +178,6 @@
  *
  *
  */
-
-
-
-
-
 namespace toolbox {
   namespace blockstructured {
     /**
@@ -529,6 +523,29 @@ namespace toolbox {
      * contributions which do not sum up to 1.0.
      *
      *
+     * ## Optimisation
+     *
+     * This routine can be quite time consuming, which is annoying if it is
+     * used for volumetric coupling. ExaHyPE's limiting is such a process.
+     * I therefore tried to optimise the routine in various ways:
+     *
+     * - The dfor loops in general cannot be vectorised. So I replaced the
+     *   inner one with nested loops - hoping that this would allow the
+     *   compiler to vectorise. However, it does not do so. This is likely
+     *   due to the fact that there is an accumulation in there.
+     * - Intel's vectorisation reports claim that the loop manipulating
+     *   outsidePatchAlongCoordinateAxis is not worth vectorising. I tried
+     *   the variant where I comment out some lines. This does not work. It
+     *   still claims it were not worth it.
+     * - I replaced the destination dfor loop with nested normal for loops
+     *   and added a collapse and parallel statement (for OpenMP). This
+     *   parallelisation is valid, as we split up the destination index and
+     *   hence do not introduce any race conditions when we accumulate the
+     *   destination value. However, I have to use an OpenMP taskloop to
+     *   parallelise the code, as this routine is usually used within tasks,
+     *   i.e. a parallel for would be tied to the single core that's given
+     *   to the task.
+     *
      *
      * @param haloSourcePatch
      * @param haloDestinationPatch Note that we only interpolate into the
@@ -793,7 +810,7 @@ namespace toolbox {
         int overlap;
         int normal;
 
-        FaceInterpolationOperatorKey(
+        inline FaceInterpolationOperatorKey(
           int numberOfDoFsPerAxisInPatch_,
           int overlap_,
           int normal_
@@ -802,13 +819,12 @@ namespace toolbox {
           overlap(overlap_),
           normal(normal_) {}
 
-        bool operator<( const FaceInterpolationOperatorKey&  otherKey ) const {
-          return this->numberOfDoFsPerAxisInPatch < otherKey.numberOfDoFsPerAxisInPatch
-              or this->numberOfDoFsPerAxisInPatch == otherKey.numberOfDoFsPerAxisInPatch and this->overlap < otherKey.overlap
-              or this->numberOfDoFsPerAxisInPatch == otherKey.numberOfDoFsPerAxisInPatch and this->overlap == otherKey.overlap and this->normal < otherKey.normal;
+        inline bool operator < ( const FaceInterpolationOperatorKey& otherKey ) const {
+          return (this->numberOfDoFsPerAxisInPatch < otherKey.numberOfDoFsPerAxisInPatch)
+              or (this->numberOfDoFsPerAxisInPatch == otherKey.numberOfDoFsPerAxisInPatch and this->overlap < otherKey.overlap)
+              or (this->numberOfDoFsPerAxisInPatch == otherKey.numberOfDoFsPerAxisInPatch and this->overlap == otherKey.overlap and this->normal < otherKey.normal);
         }
       };
-
 
       /**
        * @see CellInterpolationMap
@@ -816,16 +832,13 @@ namespace toolbox {
       struct CellInterpolationOperatorKey {
         int numberOfDoFsPerAxisInPatch;
 
-        CellInterpolationOperatorKey(
-          int numberOfDoFsPerAxisInPatch_
-        ):
+        inline CellInterpolationOperatorKey(int numberOfDoFsPerAxisInPatch_):
           numberOfDoFsPerAxisInPatch(numberOfDoFsPerAxisInPatch_) {}
 
-        bool operator<( const CellInterpolationOperatorKey&  otherKey ) const {
+        inline bool operator < ( const CellInterpolationOperatorKey& otherKey ) const {
           return this->numberOfDoFsPerAxisInPatch < otherKey.numberOfDoFsPerAxisInPatch;
         }
       };
-
 
       typedef std::map< FaceInterpolationOperatorKey, tarch::la::DynamicMatrix* >  FaceInterpolationMap;
 
@@ -841,5 +854,3 @@ namespace toolbox {
     }
   }
 }
-
-

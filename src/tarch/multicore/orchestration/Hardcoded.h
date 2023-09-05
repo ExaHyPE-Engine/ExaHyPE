@@ -25,7 +25,6 @@ private:
   int  _maxTasksToFuse;
   int  _deviceForFusedTasks;
   bool _fuseTasksImmediatelyWhenSpawned;
-  bool _processPendingTasksWhileWaiting;
   int  _maxNestedConcurrency;
 
 public:
@@ -74,16 +73,15 @@ public:
     int  maxTasksToFuse,
     int  deviceForFusedTasks,
     bool fuseTasksImmediatelyWhenSpawned,
-    bool processPendingTasksWhileWaiting,
     int  maxNestedConcurrency
   );
   virtual ~Hardcoded() = default;
 
   virtual void            startBSPSection(int nestedParallelismLevel) override;
   virtual void            endBSPSection(int nestedParallelismLevel) override;
-  virtual int             getNumberOfTasksToHoldBack() override;
-  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice() override;
-  virtual bool            fuseTasksImmediatelyWhenSpawned() override;
+  virtual int             getNumberOfTasksToHoldBack(int taskType) override;
+  virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice(int taskType) override;
+  virtual bool            fuseTasksImmediatelyWhenSpawned(int taskType) override;
   virtual ExecutionPolicy paralleliseForkJoinSection(int nestedParallelismLevel, int numberOfTasks, int taskType)
     override;
 };

@@ -1,5 +1,6 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/compiler/CompilerSpecificSettings.h"
-
 
 template <class InType>
 InType tarch::plotter::byteSwap(const InType inVal) {
@@ -12,9 +13,8 @@ InType tarch::plotter::byteSwap(const InType inVal) {
   for(int i = 0; i < size; i++)
     returnVal[i] = toConvert[size - 1 - i];
 
-  return retVal;	
+  return retVal;
 }
-
 
 template <class InType>
 InType tarch::plotter::byteSwapForParaviewBinaryFiles(const InType inVal) {

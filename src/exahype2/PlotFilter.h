@@ -2,18 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "peano4/datamanagement/CellMarker.h"
 
-
 #include <vector>
-
-
 
 namespace exahype2 {
   class PlotFilter;
 }
-
 
 class exahype2::PlotFilter {
   private:
@@ -31,16 +26,9 @@ class exahype2::PlotFilter {
       int                                  frequency;
       int                                  nextPlot;
     };
-/*
-    typedef std::tuple<
-      tarch::la::Vector<Dimensions,double>,
-      tarch::la::Vector<Dimensions,double>,
-      int,
-      int
-    > FilterEntry;
-    */
-    
+
     std::vector< FilterEntry > _filterEntries;
+
   public:
     typedef std::tuple<
       tarch::la::Vector<Dimensions,double>,
@@ -49,12 +37,8 @@ class exahype2::PlotFilter {
     > FilterEntryTuple;
 
     void addFilter( FilterEntryTuple newEntry );
-    
+
     bool plotPatch(const peano4::datamanagement::CellMarker& marker);
-    
+
     void finishPlottingStep();
 };
-  
-  
-  
- 

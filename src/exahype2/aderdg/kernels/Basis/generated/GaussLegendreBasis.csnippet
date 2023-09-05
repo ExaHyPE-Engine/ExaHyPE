@@ -56,9 +56,9 @@ double* kernels::legendre::fineGridProjector_2_0[0+1]={
 };
 double** kernels::legendre::fineGridProjector_0[3]={fineGridProjector_0_0,fineGridProjector_1_0,fineGridProjector_2_0};
 
-double kernels::legendre::basisFunction_0_0(const double& s) {  return 1;}
-double kernels::legendre::basisFunctionFirstDerivative_0_0(const double& s) {  return 0;}
-double kernels::legendre::basisFunctionSecondDerivative_0_0(const double& s) {  return 0;}
+double kernels::legendre::basisFunction_0_0([[maybe_unused]] const double& s) {  return 1;}
+double kernels::legendre::basisFunctionFirstDerivative_0_0([[maybe_unused]] const double& s) {  return 0;}
+double kernels::legendre::basisFunctionSecondDerivative_0_0([[maybe_unused]] const double& s) {  return 0;}
 kernels::UnivariateFunction kernels::legendre::basisFunction_0[0+1]={
   basisFunction_0_0
 };
@@ -172,12 +172,12 @@ double* kernels::legendre::fineGridProjector_2_1[1+1]={
 };
 double** kernels::legendre::fineGridProjector_1[3]={fineGridProjector_0_1,fineGridProjector_1_1,fineGridProjector_2_1};
 
-double kernels::legendre::basisFunction_1_0(const double& s) {  return -1.732050807568877293527446341505872366942805253810380628055806979*s + 1.36602540378443864676372317075293618347140262690519031402790349;}
-double kernels::legendre::basisFunction_1_1(const double& s) {  return 1.732050807568877293527446341505872366942805253810380628055806979*s - 0.3660254037844386467637231707529361834714026269051903140279034897;}
-double kernels::legendre::basisFunctionFirstDerivative_1_0(const double& s) {  return -1.732050807568877293527446341505872366942805253810380628055806979;}
-double kernels::legendre::basisFunctionFirstDerivative_1_1(const double& s) {  return 1.732050807568877293527446341505872366942805253810380628055806979;}
-double kernels::legendre::basisFunctionSecondDerivative_1_0(const double& s) {  return 0;}
-double kernels::legendre::basisFunctionSecondDerivative_1_1(const double& s) {  return 0;}
+double kernels::legendre::basisFunction_1_0([[maybe_unused]] const double& s) {  return -1.732050807568877293527446341505872366942805253810380628055806979*s + 1.36602540378443864676372317075293618347140262690519031402790349;}
+double kernels::legendre::basisFunction_1_1([[maybe_unused]] const double& s) {  return 1.732050807568877293527446341505872366942805253810380628055806979*s - 0.3660254037844386467637231707529361834714026269051903140279034897;}
+double kernels::legendre::basisFunctionFirstDerivative_1_0([[maybe_unused]] const double& s) {  return -1.732050807568877293527446341505872366942805253810380628055806979;}
+double kernels::legendre::basisFunctionFirstDerivative_1_1([[maybe_unused]] const double& s) {  return 1.732050807568877293527446341505872366942805253810380628055806979;}
+double kernels::legendre::basisFunctionSecondDerivative_1_0([[maybe_unused]] const double& s) {  return 0;}
+double kernels::legendre::basisFunctionSecondDerivative_1_1([[maybe_unused]] const double& s) {  return 0;}
 kernels::UnivariateFunction kernels::legendre::basisFunction_1[1+1]={
   basisFunction_1_0,
   basisFunction_1_1
@@ -354,15 +354,15 @@ double* kernels::legendre::fineGridProjector_2_2[2+1]={
 };
 double** kernels::legendre::fineGridProjector_2[3]={fineGridProjector_0_2,fineGridProjector_1_2,fineGridProjector_2_2};
 
-double kernels::legendre::basisFunction_2_0(const double& s) {  return (1.290994448735805628393088466594133203610973901763863608862524589*s - 1.145497224367902814196544233297066601805486950881931804431262294)*(2.581988897471611256786176933188266407221947803527727217725049177*s - 1.290994448735805628393088466594133203610973901763863608862524589);}
-double kernels::legendre::basisFunction_2_1(const double& s) {  return -6.666666666666666666666666666666666666666666666666666666666666667*pow2(s) + 6.666666666666666666666666666666666666666666666666666666666666667*s - 0.6666666666666666666666666666666666666666666666666666666666666667;}
-double kernels::legendre::basisFunction_2_2(const double& s) {  return (1.290994448735805628393088466594133203610973901763863608862524589*s - 0.1454972243679028141965442332970666018054869508819318044312622944)*(2.581988897471611256786176933188266407221947803527727217725049177*s - 1.290994448735805628393088466594133203610973901763863608862524589);}
-double kernels::legendre::basisFunctionFirstDerivative_2_0(const double& s) {  return 6.666666666666666666666666666666666666666666666666666666666666667*s - 4.624327782069138961726421799927466536944307235097196942195857922;}
-double kernels::legendre::basisFunctionFirstDerivative_2_1(const double& s) {  return -13.33333333333333333333333333333333333333333333333333333333333333*s + 6.666666666666666666666666666666666666666666666666666666666666667;}
-double kernels::legendre::basisFunctionFirstDerivative_2_2(const double& s) {  return 6.666666666666666666666666666666666666666666666666666666666666667*s - 2.042338884597527704940244866739200129722359431569469724470808745;}
-double kernels::legendre::basisFunctionSecondDerivative_2_0(const double& s) {  return 6.666666666666666666666666666666666666666666666666666666666666667;}
-double kernels::legendre::basisFunctionSecondDerivative_2_1(const double& s) {  return -13.33333333333333333333333333333333333333333333333333333333333333;}
-double kernels::legendre::basisFunctionSecondDerivative_2_2(const double& s) {  return 6.666666666666666666666666666666666666666666666666666666666666667;}
+double kernels::legendre::basisFunction_2_0([[maybe_unused]] const double& s) {  return (1.290994448735805628393088466594133203610973901763863608862524589*s - 1.145497224367902814196544233297066601805486950881931804431262294)*(2.581988897471611256786176933188266407221947803527727217725049177*s - 1.290994448735805628393088466594133203610973901763863608862524589);}
+double kernels::legendre::basisFunction_2_1([[maybe_unused]] const double& s) {  return -6.666666666666666666666666666666666666666666666666666666666666667*pow2(s) + 6.666666666666666666666666666666666666666666666666666666666666667*s - 0.6666666666666666666666666666666666666666666666666666666666666667;}
+double kernels::legendre::basisFunction_2_2([[maybe_unused]] const double& s) {  return (1.290994448735805628393088466594133203610973901763863608862524589*s - 0.1454972243679028141965442332970666018054869508819318044312622944)*(2.581988897471611256786176933188266407221947803527727217725049177*s - 1.290994448735805628393088466594133203610973901763863608862524589);}
+double kernels::legendre::basisFunctionFirstDerivative_2_0([[maybe_unused]] const double& s) {  return 6.666666666666666666666666666666666666666666666666666666666666667*s - 4.624327782069138961726421799927466536944307235097196942195857922;}
+double kernels::legendre::basisFunctionFirstDerivative_2_1([[maybe_unused]] const double& s) {  return -13.33333333333333333333333333333333333333333333333333333333333333*s + 6.666666666666666666666666666666666666666666666666666666666666667;}
+double kernels::legendre::basisFunctionFirstDerivative_2_2([[maybe_unused]] const double& s) {  return 6.666666666666666666666666666666666666666666666666666666666666667*s - 2.042338884597527704940244866739200129722359431569469724470808745;}
+double kernels::legendre::basisFunctionSecondDerivative_2_0([[maybe_unused]] const double& s) {  return 6.666666666666666666666666666666666666666666666666666666666666667;}
+double kernels::legendre::basisFunctionSecondDerivative_2_1([[maybe_unused]] const double& s) {  return -13.33333333333333333333333333333333333333333333333333333333333333;}
+double kernels::legendre::basisFunctionSecondDerivative_2_2([[maybe_unused]] const double& s) {  return 6.666666666666666666666666666666666666666666666666666666666666667;}
 kernels::UnivariateFunction kernels::legendre::basisFunction_2[2+1]={
   basisFunction_2_0,
   basisFunction_2_1,
