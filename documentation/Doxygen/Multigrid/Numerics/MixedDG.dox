@@ -1,14 +1,19 @@
 /**
+ 
+ @page page_multigrid_numerics_Mixed_Galerkin Mixed Discontinuous Galerkin formulations
+ 
+ 
+Discussion of normal mixed formalism for Poisson equation with discontinuous continuous Galerkin.
+ 
+As ever, we aim to solve
 
-@page benchmark_multigrid_petsc_hdg_discretisation Mixed, hybridised Poisson equation with PETSc
+@f$ -\Delta u \ = \ f @f$.
 
-<!-- Add this one for href links to subitems -->
-\tableofcontents
-
-
-This is a brief discussion of key ideas behind a mixed formulation for the 
-Poisson equation. We discuss the steps involved in running the file hdg.py.
-While we discuss some of the mathematics behind the solver, the text mainly 
+This is a brief discussion of key ideas behind a DG formulation for the 
+Poisson equation. While we discuss some of the mathematics behind DG, the focus
+of this text is informal (from a maths point of view) with a special emphsis
+on how numerical concepts are mapped onto Peano's data structures and mesh 
+traversal. 
 focuses on how to build the code. Build here means that we assemble a global 
 matrix and hand it over to PETSc. For information on how to build Peano with 
 PETSc, see \ref multigrid_home.
@@ -53,15 +58,19 @@ We can write the second and third line as one with the gradient:
 Nothing has been gained so far, despite the fact that the gradient is now 
 explicitly available in our formulation. Some codes can use this for their 
 algorithm. We have indeed "lost" a little bit of efficiency. In the normal
-@ref tutorials_multigrid_petsc_poisson "continuous Galerkin case", we have
+@ref tutorials_multigrid_petsc_continuous_galerkin_poisson "continuous Galerkin case", for example, 
+or in the @ref page_multigrid_numerics_Continuous_Galerkin "numerical discussion" once applied to the Poisson equation, we have
 only one unknown, i.e. a scalar, per degree of freedom. This time, we have 
 have to maintain three unknowns.
 
 
-Later on, we will use a value unknowns_per_cell_dof. This is 
+This means, we might have had 
 
+           unknowns_per_cell_dof = 1
 
-           unknowns_per_cell_dof = 3
+in a continuous Galerkin setup for the Poisson equation, but now we need to use
+
+           unknowns_per_cell_dof = 1+Dimensions
 
 
 ## Discontinuous Galerkin formulation: the geometric arrangement
@@ -71,10 +80,10 @@ Our intention is to puzzle the solution together from very primitive small
 shape functions:
 We want to construct a solution to our system by concatenating the scaled 
 shape functions over the domain into one solution. In 1d, this looked, 
-for the @ref tutorials_multigrid_petsc_poisson "continuous case with linear shape functions"
+for the @ref tutorials_multigrid_petsc_continuous_galerkin_poisson "continuous case with linear shape functions"
 similar to 
 
-@image html ../poisson/testFunction.png
+@image html continuous_shape_functions.png
 
 Each "hat functions" above is scaled by a weight @f$ u_i @f$ and then we add 
 them all up, constructing a piece-wise linear continuous solution. 
@@ -87,52 +96,70 @@ We drop this continuous requirement. Our intention/rationale is that we could ge
 by using piecewise functions that don't "connect" with each other.
 This means that we need more weights:
 
-@image html documentation/piecewise.png
+@image html piecewise_discontinuous_shape_functions.png
 
-Previously, we had one weight per vertex. Now, we need two weights per cell to 
-construct the blue lines: If we associate the weights still with the vertices,
-we have a left value and a right one. 
+Previously, we had one weight per vertex. Now, we need two weights per cell (per dimension) to 
+construct the green lines: If we associate the weights still with the vertices,
+we have a left value and a right one. We never do this in the code.
 
 In summary, this discontinuous Galerkin approach implies that we need (in 1d) 
 twice the number of weights as we have jumps, and we need three scalars instead
 of one, as we work with a mixed, first-order formulation. 
 
-We have quite some freedom to arrange these weights. For the remainder, we use
-Gauss-Lobatto, which means that we place the weights exactly at the cell 
-corners. There are other schemes like Gauss-Legendre, where the weights do not
-have to be in the corner. 
-So for Gauss-Lobatto, we have arrangements such as the ones below:
+We have quite some freedom to arrange these weights.
+We depict two arrangements here:
 
+@image html gaussLobatto.png
 
-@image html documentation/gaussLobatto.png
+We show a scheme for both Gauss-Legendre (above) and Gauss-Lobatto (below).
+We focus exclusively on the cell dofs (blue) from here onwards.
+We note that for Lobatto, some cell dofs coincide spatially with the faces,
+but logically we hold everything in the cells. Each cell dof
+holds a value for @f$ u, \ \phi_x \ \text{and } \phi_y @f$.  We show also how these unknowns
+are arranged in memory for the cells. For each cell, we store an array of doubles, with
+length @f$ K (p+1)^d @f$, K being the number of unknowns per cell dof.
 
-The left side uses a polynomial degree of one in line with our 1d examples 
-above. This means, we need four degrees of freedom per cell, but then each 
-degree of freedom carries three functions, as we have three PDEs. The right
-examples showcases an example with @f$p=2@f$. In general, we need @f$ (p+1)^d @f$
-degrees of freedom per cell and have @f$ 3 \cdot (p+1)^d @f$ unknowns per 
+For Poisson, we have 3 PDEs. The sketches above show
+an example with @f$p=2@f$ on the right hand side. In general, we need, for a
+scalar PDE given in second order formulation, @f$ (p+1)^d @f$
+degrees of freedom per cell and have @f$ (d+1) \cdot (p+1)^d @f$ unknowns per 
 cell.
-
-In the code, we expect the user to specify the number of unknowns equired
-per cell plus the polynomial order:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver = petsc.solvers.MixedPoisson("MP",
-                                    polynomial_degree = 2,
-                                    unknowns_per_cell_dof = 3,
-                                    [...]
-                                    )
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The code takes this information, runs through the mesh and allocates (from
-PETSc) @f$ 3 \cdot (2+1)^d @f$ unknown indices. That means, so far, we are
-trying to solve a system 
+In this case, we will obtain a system 
 
 @f$ A x = b @f$
 
-where x has @f$ 3 |\mathbf{C}| \cdot (p+1)^d @f$ entries. This is not the 
-end of the story. Only a start. 
+where x has @f$ (d+1) |\mathbb{C}| \cdot (p+1)^d @f$ entries, where @f$ \mathbb{C}  @f$ 
+is set of cells in the mesh.
 
+<!--
+For the remainder, we use
+Gauss-Lobatto, which means that we place the weights exactly at the cell 
+corners.
+Each face dof holds a value for 
+@f$ u, \ \text{and } \phi_x @f$ for each vertical face, and 
+@f$ u, \ \text{and } \phi_y @f$ for each horizontal face.
+-->
+
+If we implement the scheme above for Poisson, we end up with a code similar to
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver = petsc.solvers.MixedDiscontinuousGalerkinDiscretisation("Poisson",
+                                    degree = 1,
+                                    unknowns_per_cell_dof = 3, 
+                                    [...]
+                                    args.meshsize,
+                                    args.meshsize,
+                                    dimensions = 2,
+                                    [...]
+                                    )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which 
+
+- allocates 12 doubles per cell, which hold the solution. We need this to visualise the outcome. 
+- allocates 12 doubles per cell, which hold the right hand side within the degrees of freedom. This information will later be used to construct the RHS @f$ b @f$ of the linear equation system.
+- constructs the matrix @f$ A @f$ (eventually we will work with an augmented system. For the time being, we can assume that it is square with @f$ 12 \mathbb{C} @f$) rows.
+- assign each unknown a global index. Since we have 12 unknowns per cell, it is sufficient to store the first index of an unknown within the cell, as the dofs/unknowns within the cell are enumerated consecutively. 
 
 
 # The weak formulation
@@ -189,11 +216,11 @@ The above equations mean that we have to traverse all cells of the domain, and i
 
 
 The first and the third term can be added up into a ***system matrix***, 
-while the second term forms a ***mass matrix***. Our code expects them 
-
+while the second term forms a ***mass matrix***. 
+A typically code for the two-dimensional Poisson equation then looks similar to 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver = petsc.solvers.MixedPoisson("MP",
+solver = petsc.solvers.MixedDiscontinuousGalerkinDiscretisation("Poisson",
                                     degree = 1,
                                     unknowns_per_cell_dof = 3, 
                                     [...]
@@ -232,32 +259,43 @@ face terms.
 ## Data storage
 
 Peano does not support global data access. That is, you cannot access cell data
-from faces, and you cannot access data from neighbouring cells. Instead, cell
-and face data are strictly separated. To solve the face terms, we want to 
-formalise some equations on the faces. However, faces so far do not hold any
-data. We will argue about the solution over the face, but we do not even know
-the solution there at the moment. Therefore, we introduce 
-@f$ 2K \cdot (p+1)^{d-1} @f$ unknowns per face: 
+from faces, and you cannot access data from neighbouring cells within a cell
+either. You can access the faces of a cell within a cell, but cell
+and face data are strictly separated. 
+
+To solve the equations over the faces, we therefore have to project the solution
+onto the face, then solve the equation there, and afterwards project the outcome
+back into the cell's degrees of freedom. However, faces so far do not hold any
+data. To argue about the solution over the face, we have to know
+the solution there first. Therefore, we introduce 
+@f$ 2\hat K \cdot (p+1)^{d-1} @f$ unknowns per face (here @f$ \hat K @f$ is the
+number of unknowns per face dof): 
 
 - We work with polynomials over the face which are drawn from the same shape
   space as our volumetric shape functions, but restricted to the face. 
   We get the @f$ (p+1) @f$ for the polynomial and the @f$ -1 @f$ in the 
-  exponent, as we work only on the faces.
+  exponent, as we work only on the faces, i.e. a submanifold.
 - We note that @f$ \phi @f$ does not exist on the face. This is because our 
   approximate solution to @f$ u @f$ is discontinuous, meaning we have a jump. 
   See the blue line below or the grey one. We'll discuss the other formalism
   later:
-  @image html documentation/phiHat.png
-  Therefore, we have two solutions per degree of freedom: The one from the 
+  @image html average_gradient.png
+  Therefore, we have two solutions per degree of freedom on the face: The one from the 
   left and the one from the right. This is the factor of two.
 - Finally, we already said that we will store two quantities per degree of 
   freedom: We will have to handle solution jumps in @f$ u @f$ along the face
   and we will have to discuss the normal component of @f$ (n, \phi ) @f$. So
   this gives us an additional factor of two.
   
-The enumeration of the degrees of freedom on the face is discussed in @ref tbd.
-The Python API only has to know that we deal with two quantities of interest, 
-i.e. @f$ u @f$ and @f$ (n, \phi ) @f$. It can then compute the actual number of 
+We use the term ***degree of freedom on a face***, but this is not 100% right: 
+Indeed, we argue over dofs on the face, but they are not "free" - they follow
+the solution strictly.
+The enumeration of the degrees of freedom on the face is discussed in @ref multigrid_enumeration.
+
+
+The Python API of typical mixed formulation DG solvers has to know that we deal 
+with two quantities of interest, 
+i.e. @f$ u @f$ and @f$ (n, \phi ) @f$. Given this numer of two, it can then compute the actual number of 
 unknowns per face automatically:
 
 
@@ -276,6 +314,45 @@ solver = petsc.solvers.MixedPoisson("MP",
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
+The code above creates additional degrees of freedom for the faces. We will
+deal with the fact that they are not free later on. This means that we solve
+an augmented system
+
+@f$ Ax=b @f$
+
+where @f$ A \in \mathbb{R}^{ K |\mathbb{C}| \cdot (p+1)^d + 2 \hat K |\mathbb{F}| \cdot (p+1)^{d-1} \times K |\mathbb{C}| \cdot (p+1)^d + 2 \hat K |\mathbb{F}| \cdot (p+1)^{d-1} } @f$.
+The "new" quantity @f$ \mathbb{F} @f$ denotes the set of faces.
+
+
+For the Poisson equation, @f$ K = d+1 @f$ continues to denote the number of
+unknowns per cell dof, while @f$ \hat K = 2 @f$ encodes that we have to project
+the solution and the derivative along the normal onto each face.
+When we solver allocated @f$ A @f$, it assigns each face a set of indices. 
+Different to the cells, there's no need to assign the face any double values, 
+i.e. each face only stores one integer which encodes the first dof number.  
+
+
+Mathematically, the system now has been extended into 
+
+@f$ 
+ Ax = 
+ \begin{bmatrix}
+ A_{cc} & A_{fc} \\
+ A_{cf} & id \\
+ \end{bmatrix}
+ \begin{bmatrix}
+ x_{c} \\ x_f
+ \end{bmatrix}
+ = 
+ \begin{bmatrix}
+ b_{c} \\ 0
+ \end{bmatrix}
+@f$ 
+
+where we have to specify the involved matrices further. We will also discuss 
+a realisation below which introduces even further helper dofs.
+
+
 
 ## Projection
 
@@ -289,7 +366,7 @@ This is a projection from the cell onto the face.
 
 We highlight what this projection matrix looks like for Gauss-Lobatto.
 
-@image html cellFlat.png
+@image html degree_of_freedom_semantics_Lobatto.png
 
 Gauss-Lobatto is trivial, as some cell dofs coincide spatially with the 
 face dofs. This is not necessary: Users can use Gauss-Legendre for
@@ -408,7 +485,7 @@ do so.
 We note explicitly that the three unknowns per cell dof are @f$ u @f$,
 @f$ \phi_x @f$ and @f$ \phi_y @f$.
 
-@image html documentation/projection.png
+@image html projection.png
 
 
 
@@ -438,6 +515,13 @@ formulation. This is not what we typically do, but it is possible within our
 framework and a nice sanity check. Furthermore, we need exactly this technique
 for a weak continuity enforcement later.
 
+Below is a schematic for how we glue these dofs together. When looking locally,
+we always enumerate with the familiar pattern (beginning bottom left). Obviously,
+the numbering shown is merely an indicator, and will not match the global
+indices of these dofs, but this should not concern the user. 
+
+@image html face_to_face_projection.png
+
 If both @f$ u @f$ and @f$ \phi @f$ are continuous, then their values on the
 faces exist. They have to be the same. Our code introduces a face-to-face
 coupling matrix. It is from @f$ \mathbb{R}^{ 2K \cdot (p+1)^{d-1} \times 2K \cdot (p+1)^{d-1} } @f$ 
@@ -447,6 +531,7 @@ for a face with the normal along x. The matrices for all other faces result from
 a permutation which is handled within the Python API. For a continuous setup and
 @f$ p=1 @f$, the matrix is  
 
+@todo Currently we state that this matrix is square (See sentence starting "it is from...") but we draw a matrix which is not square. Either could be correct
 
 \f{eqnarray*}{
   \begin{pmatrix}
@@ -525,6 +610,11 @@ the non-existing values through the averages from left and right:
   \int _{\partial \text{cell}_{\psi _u}}  (u^- + u^+) \cdot ( n, \psi _u ) dS(x)
 \f}
 
+The image below illustrates this for the gradient @f$ \phi @f$:
+
+  @image html average_gradient.png
+
+The gradient does not exist at the cell boundaries, but we can simply average it.
 
 
 There are two ways to implement this scheme:
@@ -540,9 +630,9 @@ take into account the sign of the normal.
 
 
 The second variant is more sophsticiated, yet allows users later to implement
-more sophisticated schemes and notably the hybridised variant. For this one,
+more sophisticated schemes aka Riemann solvers. For this one,
 we assume that a face has explicit values @f$ (\lambda _u, \lambda _\phi) @f$ 
-which represent these averages. So the face has the left and the right projection,
+(the sketch above denotes them as @f$ \lambda _\phi = \hat \phi @f$) which represent these averages. So the face has the left and the right projection,
 but also a value which explicitly computes this arising approximation. We model
 this by
 
@@ -556,7 +646,7 @@ which is an overkill here.
 3. The unknown 2 represents this @f$ [[u]] @f$ value;
 4. The unknown 3 represents the @f$ [[(\phi, n)]] = [[\phi_ x]] @f$ value;
 5. The next one (unknown 5) 2 is the solution projection from the right;
-6. Then we have @f$\phi _x @f$ projection from the left;
+6. Then we have @f$\phi _x @f$ projection from the right;
 7. We store @f$ [[u]] @f$ once again, which is redundant;
 8. The 7th unknown the @f$ [[(\phi, n)]] = -[[\phi_ x]] @f$ value, so again a redundant quantity subject to an inverted sign;
 9. ...
@@ -597,100 +687,13 @@ The third line averages the @f$ u @f$ values from left and right, the
 fourth line addresses the normal projections of @f$ \phi @f$. 
 
 
+## Matrix arrangement
 
-# Hybridised DG
+Currently, the code enumerates cell dofs first, and then face dofs after.
+We expect the number of cell dofs to be 
 
-
-Hybridised DG is, from a data structure point of view, very similar to the 
-Discontinuous Galerkin scheme as presented above. Let
-
-@f$
-\lambda_u := [[u]]  \qquad \text{and} \qquad \lambda_\phi := [[ (n,\phi) ]]
-@f$ 
-
-denote the additional variables, i.e.
-
-        unknowns_per_face_dof = 4
-
-Again, the left and right @f$ \lambda _u @f$ are the same and 
-@f$ \lambda _\phi ^+ @f$ and @f$ \lambda _\phi ^- @f$ differ only by their 
-sign, but we keep the information redundantly.
-Next, we assume that we know the 
-@f$ \lambda _u @f$ (which other manuscript also call @f$ \hat{u} @f$) somehow. 
-If so, we can evaluate 
-
-
-@f$
-  \int _{\partial \text{cell}_{\psi _u}}  \lambda _u \cdot (n, \psi _u) dS(x)
-@f$
-
-within the face-to-cell projection. 
-Furthermore, we fix a magic constant @f$ \gamma > @f$ and enforce
-
-
-
-\f{eqnarray*}{
- \pm \lambda _\phi & := & [[ (n,\phi) ]] + \gamma \left( [[u]] - \lambda _u \right) \\
-   & = & \frac{1}{2} (n,\phi)^+ + \frac{1}{2} (n,\phi)^- \pm \frac{\gamma}{2} u^+ \pm \frac{\gamma}{2} u^- - \gamma \cdot \pm \lambda _u
-\f}
-
-
-
-This means, the very moment we have computed @f$ \lambda _u @f$, we can derive
-@f$ \lambda _\phi @f$ and throw the face integrals back into the cells.
-All that is left now is a rule how to determine this @f$ \lambda _u @f$.
-
-
-
-In HDG, the @f$ \lambda _u @f$ is really an additional degree of freedom, not
-just a mere average of the @f$ u @f$s. The @f$ \lambda _\phi @f$ which we restrict later into 
-the cell in contrast remains a helper variable, which results directly from
-other quantities. HDG's idea is that we allow the code to 
-pick this @f$ \lambda _u @f$ quite freely, as long as the jumps between the 
-@f$ \phi @f$ along the normals disappear weakly:
-
-
-\f{eqnarray*}{
-  \int _{face} [[ (n,\phi) ]] \cdot \psi _f dS(x) & = & 0 \quad \forall \quad \psi _f
-  \\
-  \Rightarrow
-  \int _{face} \lambda _u \cdot \psi _f dS(x) & = & \int _{face} \frac{1}{2} \left( \frac{1}{\gamma} (n,\phi)^+ + \frac{1}{\gamma} (n,\phi)^- + u^+ + u^- \right) \psi _f dS(x) \quad \forall \quad \psi _f.
-\f}
-
-
-Hence, the @f$ \lambda @f$ is now really an additional degree of freedom which
-we obtain by solving a new equation system. This equation 
-system is represented by the face-to-face matrix. 
-
-The rationale behind the construction of @f$ \lambda _u @f$ is not too difficult:
-
-- We can pick it @f$ \lambda _u @f$ arbitrarily, but we want the jump in 
-  @f$ (n,\phi) @f$ to disappear weakly. 
-- Note that the @f$ (n,\phi) @f$ represents the derivative of @f$ u @f$ along 
-  the normal. What we therefore really want is that this derivative does not
-  jump around, i.e. the solution should not kink and be relatively smooth as we
-  cross a face.
-- The @f$ (n,\phi) @f$ at the face is obviously a value somewhere in-between 
-  the gradient of @f$ u @f$ from the left and the right. By default, we just
-  take the average of the @f$ (n,\phi) @f$. 
-- However, this new @f$ \lambda _u @f$ somehow also determines how the kink behaves.
-  If it equals the average of the solution left and right, then using the average
-  of @f$ (n,\phi) @f$ alone yields a reasonable estimate for @f$ [[(n,\phi)]] @f$.
-
-
-My argument goes as follows: If we walk from the left cell to the right, then the
-average gradient in the sketch
-
-@image html phiHat.png
-
-is the average of two blue lines. However, if we do an intermediate step into some 
-@f$ \lambda _u @f$ which is very high (higher than any blue line), then we have 
-afterwards to step down onto the blue line again. The average derivative appears
-to be smaller than the average of the blue lines.
-How much effect the jump has compared to the change 
-  from left to right derivative is controlled via @f$ \gamma @f$. 
-
-
-
-*/
-
+@todo Tobias has to think about non-linear Riemann solvers, where we cannot use 
+ a matrix anymore, i.e. do not have a face-to-face operator
+ 
+ */
+ 

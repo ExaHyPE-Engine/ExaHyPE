@@ -187,3 +187,25 @@ I wanna see if this one applies to the solver or hte init
   @property
   def number_of_vertex_unknowns(self):
     return self._number_of_vertex_unknowns
+  
+  def get_solver_repository_snippets(self):
+    # nothing extra needed
+    header="""
+
+"""
+    cpp = """
+void {{NAMESPACE | join("::")}}::repositories::computeLocalToGlobalMapsForAllSolvers() {
+  {% for SOLVER in SOLVER_INSTANCES %}
+  {{SOLVER[1]}}.getLocalToGlobalMap().computeLocalToGlobalMap();
+  {% endfor %}
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
+"""
+    return header, cpp

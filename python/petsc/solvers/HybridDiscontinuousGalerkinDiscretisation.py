@@ -18,12 +18,12 @@ from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
 from petsc.actionsets.InitPetsc                 import SendDofsToVertices
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScCellSolutionOnVerticesBackOntoMesh
-from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMP
+# from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMP
 
 from abc import abstractmethod
 
 
-class MixedPoisson(Solver):
+class HybridDiscontinuousGalerkinDiscretisation(Solver):
   """!
    
   this is a copy of the HdgFirstDiscretisation. 
@@ -52,7 +52,7 @@ class MixedPoisson(Solver):
     
    
     """
-    super( MixedPoisson, self ).__init__( name,
+    super( HybridDiscontinuousGalerkinDiscretisation, self ).__init__( name,
                                               min_h,
                                               max_h
                                               )
@@ -63,6 +63,8 @@ class MixedPoisson(Solver):
     self.cellCellSystemMatrix  = cellCellSystemMatrix
     self.cellToFaceMatrix      = cellToFaceMatrix
     self.FaceFaceMatrix        = FaceFaceMatrix
+
+    assert cellCellMassMatrix.shape == cellCellSystemMatrix.shape, "shapes don't match. perform some padding"
 
     #this code below is somewhat redundant 
     self.quadrature_points, self.weights, self.poly_coeffs = \
@@ -244,31 +246,6 @@ class MixedPoisson(Solver):
   def number_of_face_unknowns(self):
     return self._face_unknowns
   
-  '''
-  use numpy/scipy to calculate gaussian quadratures correctly
-  returns: points, weights and an (n+1) * (n+1) array of 
-    polynomial coefficients
-  '''
-  def initGaussLobatto(self):
-    #construct poly coeffs first
-    coeffs = []
-    x = np.linspace(-1,1, self.polynomial_degree + 1)
-    for j in range(self.polynomial_degree + 1):
-      y = np.zeros_like(x)
-      y[j] = 1.0
-      coeffs.append( list( lagrange(x,y).coeffs ) )
-    
-    #finally construct the points and weights
-    points, weights = leggauss( self.polynomial_degree + 1 )
-
-    return points, weights, coeffs
-
-  def convertMatrixToInitList(self, matrix):
-    output = "{ " + str(matrix[0,0])
-    for el in matrix.flatten():
-      output += f", {str(el)}"
-    output += "}"
-    return output
 
   def get_solver_repository_snippets(self):
 
@@ -276,7 +253,7 @@ class MixedPoisson(Solver):
     # OBJECT TO PASTE ALL THE CODE THAT WE WANT INSIDE
 
     header = """
-      int getTotalFaceDofs();
+    int getTotalFaceDofs();
     int getTotalCellDofs();
     int getTotalVertexDofs();
 
@@ -356,13 +333,19 @@ class MixedPoisson(Solver):
     #let's add to the header. 
     #time to insert the extra matrices we generated
 
-    for name, mat in self.generated_matrices.items():
-      shape  = mat[0]
-      matrix = mat[1]
-      header += f"""
-    inline tarch::la::Matrix< {shape[0]}, {shape[1]}, double > {name} = {matrix};
-      """
+    # for name, mat in self.generated_matrices.items():
+    #   shape  = mat[0]
+    #   matrix = mat[1]
+    #   header += f"""
+    # inline tarch::la::Matrix< {shape[0]}, {shape[1]}, double > {name} = {matrix};
+    #   """
 
+    header += f"""
+    inline tarch::la::Matrix< {self.cellCellMassMatrix.shape[0]}, {self.cellCellMassMatrix.shape[1]}, double > cellCellMassMatrix = {self.convertMatrixToInitList(self.cellCellMassMatrix)};
+    inline tarch::la::Matrix< {self.cellCellSystemMatrix.shape[0]}, {self.cellCellSystemMatrix.shape[1]}, double > cellCellSystemMatrix = {self.convertMatrixToInitList(self.cellCellSystemMatrix)};
+    inline tarch::la::Matrix< {self.cellToFaceMatrix.shape[0]}, {self.cellToFaceMatrix.shape[1]}, double > cellToFaceMatrix = {self.convertMatrixToInitList(self.cellToFaceMatrix)};
+    inline tarch::la::Matrix< {self.FaceFaceMatrix.shape[0]}, {self.FaceFaceMatrix.shape[1]}, double > FaceFaceMatrix = {self.convertMatrixToInitList(self.FaceFaceMatrix)};
+"""
 
     cpp = """
 int {{NAMESPACE | join("::")}}::repositories::getTotalFaceDofs() {

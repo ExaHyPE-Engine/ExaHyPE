@@ -18,99 +18,75 @@ from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
 from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
 from petsc.actionsets.InitPetsc                 import SendDofsToVertices
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScCellSolutionOnVerticesBackOntoMesh
-from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixWithQuadratures
+from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMixed
 
 from abc import abstractmethod
 
 
-class HdgFirstDiscretisation(Solver):
+class MixedDiscontinuousGalerkinDiscretisation(Solver):
   """!
    
-  this is a copy of the CollocatedLowOrderDiscretisation, but we rewrite
-  to capture DoFs on faces and cells.
-
-  We reuse some of the files from the first attempt at doing the Poisson problem.
-  A quick summary of the ones we reuse and the ones we rewrite:
-
-  Reuse, with the use of jinja if statements to 
-  add the functionality we need:
-    - Project.* in top level
-    - PETScMain.* in top level
-    - AssemblePETScMatrix.py in action sets
-    - ProjectPETScSolutionOnVerticesBackOntoMesh.py
-    - Solver.py
-    - petscData/* (all the routines for PETSc matrices and solvers etc)
-
-  Rewrite:
-    - EnumerateCellsAndFaces.py
-    - InitFaceAndCellDoFs.py
-    - All the templates in the solver directory
   
   """
   def __init__(self,
                name,
                polynomial_degree,
-               cell_dofs,
-               face_dofs,
+               dimensions,
+               unknowns_per_cell_dof,
                min_h,
                max_h,
-               dimensions):
+               cellCellMassMatrix,
+               cellCellSystemMatrix,
+               cellToFaceMatrix,
+               faceFaceMatrix,
+               ):
     """!
    
  Test comment (C)
     
    
     """
-    super( HdgFirstDiscretisation, self ).__init__( name,
+    super( MixedDiscontinuousGalerkinDiscretisation, self ).__init__( name,
                                                     min_h,
                                                     max_h
                                                   )
 
-    self.polynomial_degree = polynomial_degree
-    self.dimensions        = dimensions
+    self.polynomial_degree     = polynomial_degree
+    self.dimensions            = dimensions
+    self.unknowns_per_cell_dof = unknowns_per_cell_dof
+    self.unknowns_per_face_dof = self.unknowns_per_cell_dof - 1 #only one of them points in the right direction
+
+    self.cellCellMassMatrix    = cellCellMassMatrix
+    self.cellCellSystemMatrix  = cellCellSystemMatrix
+    self.cellToFaceMatrix      = cellToFaceMatrix
+    self.FaceFaceMatrix        = faceFaceMatrix
+
+    self._cell_unknowns = ((polynomial_degree + 1) ** dimensions)       * self.unknowns_per_cell_dof
+    self._face_unknowns = ((polynomial_degree + 1) **( dimensions -1 )) * self.unknowns_per_face_dof
 
     self.quadrature_points, self.weights, self.poly_coeffs = \
       self.initGaussLobatto()
-
-    #hardcode one unknown on vertices for now
-    self._vertex_unknowns = 2 ** ( self.dimensions ) ## will be same as number of cells surrounding each vertex
+    
+    self._vertex_unknowns = 1
     self._vertexDof = peano4.datamodel.DaStGen2( name )
-
-    '''
-     ---   ---
-    |   | |   |
-    | 2 | | 3 |
-     ---   ---
-         v
-     ---   ---
-    |   | |   |
-    | 0 | | 1 |
-     ---   ---
-
-     the vertex v needs to store the top-right    dof for cell 0, 
-                                 the top-left     dof for cell 1, 
-                                 the bottom-right dof for cell 2, 
-                                 the bottom-left  dof for cell 3, 
-    '''
-    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4IntegerArray( "dofIndices",  str(self._vertex_unknowns) ) )
+    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self._vertex_unknowns) ) )
+    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(self._vertex_unknowns) ) )
     self._vertexDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._vertexDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
 
-    self._cell_unknowns = cell_dofs
     ## add in all the attributes we need for a cell dofs
     self._cellDof = peano4.datamodel.DaStGen2( name )
-    self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(cell_dofs) ) )
-    self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(cell_dofs) ) )
+    self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self._cell_unknowns) ) )
+    self._cellDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(self._cell_unknowns) ) )
     
     self._cellDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._cellDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
 
     #add in some unknowns for the faces 
     #our aim is to have multiple dofs per face, but we just store the starting index in "number"
-    self._face_unknowns = face_dofs
     self._faceDof = peano4.datamodel.DaStGen2( name )
-    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(face_dofs) ) )
-    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs"  ,  str(face_dofs) ) )
+    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self._face_unknowns) ) )
+    self._faceDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs"  ,  str(self._face_unknowns) ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
     self._faceDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     
@@ -172,12 +148,11 @@ class HdgFirstDiscretisation(Solver):
   
   
   def add_to_assemble(self, observer):
-    observer.add_action_set( AssemblePETSCMatrixWithQuadratures(self) )
+    observer.add_action_set( AssemblePETSCMatrixForMixed(self) )
     pass
 
   def add_to_init_petsc(self, observer):
-    observer.add_action_set( SendDofsToVertices(self) )
-  
+    pass
 
   def add_to_map_solution_onto_mesh(self, observer):
     observer.add_action_set( ProjectPETScCellSolutionOnVerticesBackOntoMesh(self) )
@@ -228,6 +203,13 @@ class HdgFirstDiscretisation(Solver):
         "POLYNOMIAL_DEGREE":  self.polynomial_degree,
         }
 
+    dictionary["MATRICES"] = f"""
+    const tarch::la::Matrix < {self.cellCellMassMatrix.shape[0]}, {self.cellCellMassMatrix.shape[1]}, double >  _cellCellMassMatrix = {self.convertMatrixToInitList(self.cellCellMassMatrix)};
+    const tarch::la::Matrix < {self.cellCellSystemMatrix.shape[0]}, {self.cellCellSystemMatrix.shape[1]}, double >  _cellCellSystemMatrix = {self.convertMatrixToInitList(self.cellCellSystemMatrix)};
+    const tarch::la::Matrix < {self.cellToFaceMatrix.shape[0]}, {self.cellToFaceMatrix.shape[1]}, double >  _cellToFaceMatrix = {self.convertMatrixToInitList(self.cellToFaceMatrix)};
+    const tarch::la::Matrix < {self.FaceFaceMatrix.shape[0]}, {self.FaceFaceMatrix.shape[1]}, double >  _faceFaceMatrix = {self.convertMatrixToInitList(self.FaceFaceMatrix)};
+    """
+
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".Abstract.template.h",
       templatefile_prefix + ".Abstract.template.cpp",
@@ -266,26 +248,6 @@ class HdgFirstDiscretisation(Solver):
   @property
   def number_of_face_unknowns(self):
     return self._face_unknowns
-  
-
-  '''
-  use numpy/scipy to calculate gaussian quadratures correctly
-  returns: points, weights and an (n+1) * (n+1) array of 
-    polynomial coefficients
-  '''
-  def initGaussLobatto(self):
-    #construct poly coeffs first
-    coeffs = []
-    x = np.linspace(-1,1, self.polynomial_degree + 1)
-    for j in range(self.polynomial_degree + 1):
-      y = np.zeros_like(x)
-      y[j] = 1.0
-      coeffs.append( list( lagrange(x,y).coeffs ) )
-    
-    #finally construct the points and weights
-    points, weights = leggauss( self.polynomial_degree + 1 )
-
-    return points, weights, coeffs
 
   def get_solver_repository_snippets(self):
     header = """
@@ -366,6 +328,22 @@ class HdgFirstDiscretisation(Solver):
      );
 """
     cpp = """
+void {{NAMESPACE | join("::")}}::repositories::computeLocalToGlobalMapsForAllSolvers() {
+  {% for SOLVER in SOLVER_INSTANCES %}
+  {{SOLVER[1]}}.getFaceLocalToGlobalMap().computeLocalToGlobalMap();
+  {{SOLVER[1]}}.getCellLocalToGlobalMap().computeLocalToGlobalMap();
+  {% endfor %}
+} 
+
+int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getTotalNumberOfIndices();
+  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
+
 int {{NAMESPACE | join("::")}}::repositories::getTotalFaceDofs() {
   int result = 0;
   {% for SOLVER in SOLVER_INSTANCES %}

@@ -11,6 +11,7 @@ import os, sys
 import argparse
 import peano4
 import petsc
+from   matrices import MatrixGenerator
 
 print( """
 
@@ -25,32 +26,36 @@ parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
-parser.add_argument("-deg", "--degree",             dest="degree",         type=int, default=2, help="Polynomial degree")
+parser.add_argument("-deg", "--degree",             dest="degree",         type=int, default=1, help="Polynomial degree")
+parser.add_argument("-upcd","--unknowns_per_cell_dof", dest="unknowns_per_cell_dof",     type=int, default=3, help="unknowns per cell dof")
+parser.add_argument("-upfd","--unknowns_per_face_dof", dest="unknowns_per_face_dof",     type=int, default=2, help="unknowns per face dof")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.1, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
-'''
-set the number of cell and face dofs
-'''
+assert args.degree == 1, "not ready for degree 2 yet"
+assert args.dimensions == 2, "not ready for 3d yet"
 
-#below is only temporary
-cellDofs = (args.degree + 1) **  args.dimensions 
-faceDofs = (args.degree + 1) ** (args.dimensions - 1)
-
-project = petsc.Project(project_name = "HDG", 
-                        namespace = [ "benchmarks", "multigrid", "petsc", "hdg" ]
+project = petsc.Project(project_name = "hybridPoisson", 
+                        namespace = [ "benchmarks", "multigrid", "petsc", "hp" ]
                         ) 
+
+matrices = MatrixGenerator(args.dimensions, args.degree, args.unknowns_per_cell_dof, args.unknowns_per_face_dof)
+
+exit()                      
                         
-                        
-solver = petsc.solvers.HdgFirstDiscretisation("HDG",
-                                              args.degree,
-                                              cellDofs,
-                                              faceDofs,
-                                              args.meshsize,
-                                              args.meshsize,
-                                              args.dimensions,
-                                              )
+solver = petsc.solvers.HybridDiscontinuousGalerkinDiscretisation("HP",
+                                    args.degree,
+                                    args.unknowns_per_cell_dof, # should be 3
+                                    args.unknowns_per_face_dof, # should be 2
+                                    args.meshsize,
+                                    args.meshsize,
+                                    args.dimensions,
+                                    matrices.getCellCellMassMatrix(),     #12x12
+                                    matrices.getCellCellSystemMatrix(),   #12x12
+                                    matrices.getCellToFaceMatrix(),       #16x12
+                                    matrices.getFaceFaceMatrix(),         #8x8
+                                    )
 
 project.add_solver( solver )
                         
@@ -82,10 +87,10 @@ project.set_Peano4_installation( args.peanodir, build_mode )
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.generate()
 
-os.system( "make clean" )
-if args.j>0:
-  os.system( "make -j{}".format(args.j) )
-else:
-  os.system( "make -j" )
+# os.system( "make clean" )
+# if args.j>0:
+#   os.system( "make -j{}".format(args.j) )
+# else:
+#   os.system( "make -j" )
   
 print("Done")

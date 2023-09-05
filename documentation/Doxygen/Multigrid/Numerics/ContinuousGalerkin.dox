@@ -2,6 +2,8 @@
  
  @page page_multigrid_numerics_Continuous_Galerkin Continuous Galerkin
 
+Discussion of normal continuous Galerkin formalism for Poisson equation.
+
 As ever we aim to solve
 
 @f$ -\Delta u \ = \ f @f$.
@@ -25,7 +27,7 @@ the following situation:
 
 What we aim to do here is to show how we update @f$ u @f$, based on our formulation.
 
-@image html testFunction.png
+@image html continuous_shape_functions.png
 
 From here onwards, we pick our @f$ u @f$ to be a member of some space of polynomials, and we label the coefficients/weights
 as the @f$ u_i @f$. Concretely:

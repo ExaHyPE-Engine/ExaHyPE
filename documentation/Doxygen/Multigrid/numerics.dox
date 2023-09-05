@@ -3,7 +3,8 @@
  @page page_multigrid_numerics Numerical remarks
 
  \li @subpage page_multigrid_numerics_Continuous_Galerkin
- 
+ \li @subpage page_multigrid_numerics_Mixed_Galerkin
+ \li @subpage page_multigrid_numerics_Hybrid_DG
   
  This subsection collects general information regarding the numerics. Some of
  the remarks are kind of quick starts into mathematics, i.e. less formalised 

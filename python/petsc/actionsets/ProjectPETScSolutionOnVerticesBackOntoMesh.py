@@ -21,8 +21,11 @@ corresponding entry in the solution vector reads like.
   
   
   TemplateInitVertex = """
-{% if SOLVER_NAME=="Poisson" %}
-  if ( not marker.willBeRefined() ) { 
+  if ( not marker.willBeRefined()
+      and
+      // we only gave it an index if it was not on the boundary
+      fineGridVertexPoisson.getType() != vertexdata::Poisson::Type::Dirichlet 
+   ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
 
     for (int i=0; i<{{VERTEX_CARDINALITY}}; i++) {
@@ -31,14 +34,12 @@ corresponding entry in the solution vector reads like.
 
       // ask our instance of Petsc the value stored in the solution vector here.
       double val = repositories::instanceOfPetsc.getX(globalIndex);
-      //fineGridVertex{{SOLVER_NAME}}.getValue().data()[i] = val;
       fineGridVertex{{SOLVER_NAME}}.setValue(0, val);
 
     }
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   }
-{% endif %}
 """
   
   def __init__(self,
