@@ -10,6 +10,9 @@ import numpy as np
 
 import jinja2
 
+
+from enum import Enum
+
 # See comments in README.dox
 # export PYTHONPATH=$PYTHONPATH:~/Peano/applications/exahype2/ccz4
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
@@ -119,7 +122,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
             + self._name
             + ".isCellOverlappingWithBHImpactArea(marker) )"
         )
-            
+           
     def _provide_cell_data_to_compute_kernels_default_guard(self):
         return (
             """("""
@@ -128,13 +131,13 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
             + self._name
             + ".isCellOverlappingWithBHImpactArea(marker) )"
         )
-       
+      
     def _provide_face_data_to_compute_kernels_default_guard(self):
         return "{} and repositories::InstanceOf{}.isOneAdjacentCellOverlappingWithBHImpactArea(marker)" .format(
                 super(Limiter,self)._provide_face_data_to_compute_kernels_default_guard(),
                 self._name
             )
-
+        
     def _store_face_data_default_guard(self):
         return "({} and repositories::InstanceOf{}.areBothAdjacentCellsOverlappingWithBHImpactArea(marker))".format(
                 super(Limiter, self)._store_face_data_default_guard(),
@@ -171,10 +174,6 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
         self._action_set_merge_enclave_task_outcome.guard = "({} and repositories::InstanceOf{}.isCellOverlappingWithBHImpactArea(marker))".format(
             self._action_set_merge_enclave_task_outcome.guard, self._name
         )
-
-
-
-from enum import Enum
 
 
 class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking):
