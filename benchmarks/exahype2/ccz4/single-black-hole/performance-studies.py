@@ -107,8 +107,8 @@ if __name__ == "__main__":
             "native-no-priorities",
             "native",
             "tailored",
-            "tailored-parallel-for",
-            "tailored-subtasks",
+            "parallel-for",
+            "subtasks",
         ],
         required=True,
         help="Task scheduler flavours",
@@ -163,11 +163,11 @@ if __name__ == "__main__":
         project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
         enable_higher_priority_for_FV_tasks = True
         parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.NONE
-    elif args.scheduler == "tailored-parallel-for":
+    elif args.scheduler == "parallel-for":
         project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
         enable_higher_priority_for_FV_tasks = True
         parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.PARALLEL_FOR
-    elif args.scheduler == "tailored-subtasks":
+    elif args.scheduler == "subtasks":
         project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
         enable_higher_priority_for_FV_tasks = True
         parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.SUBTASKS
