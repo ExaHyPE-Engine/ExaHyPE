@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "tarch/logging/Log.h"
+
 namespace tarch::accelerator {
   /**
    * Vector of strings representing various properties.

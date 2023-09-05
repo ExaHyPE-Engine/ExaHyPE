@@ -84,6 +84,7 @@ find_package(Slurm)
 find_package(Threads REQUIRED)
 include(CTest)
 enable_testing()
+include(CMakeDependentOption)
 # https://stackoverflow.com/questions/31355692/how-do-i-enable-link-time-optimization-lto-with-cmake
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
