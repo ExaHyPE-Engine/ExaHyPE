@@ -1,9 +1,23 @@
 /**
  
- @page page_multigrid_numerics_Continuous_Galerkin Continuous Galerkin
+@page page_multigrid_numerics_Continuous_Galerkin Continuous Galerkin
 
-Discussion of normal continuous Galerkin formalism for Poisson equation.
+A brief, informal discussion of numerical concepts behind continuous Galerkin methods plus some examples how to solve such equations.
 
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+This is a brief discussion of key ideas behind the Continuous Galerkin method, 
+i.e. what most people learn as standard Finite Elements in lectures. 
+While we discuss some of the mathematics behind FEM, the focus
+of this text is informal (from a maths point of view) but puts special emphasis
+on how numerical concepts are mapped onto Peano's data structures and mesh 
+traversal. 
+
+
+
+# Example: the Poisson equation
+ 
 As ever we aim to solve
 
 @f$ -\Delta u \ = \ f @f$.
@@ -55,6 +69,12 @@ Next, let's discretise. Rather than taking an integral across the whole domain, 
 \f{eqnarray*}{
   = \sum_{i, \ k} \ \int_{c_k} \ (\nabla \phi_i, \ \nabla \phi) dx \ \ \ \forall \phi
 \f}
+
+## A Galerkin Finite Element solver for the Poisson equation with PETSc
+
+@todo Sean, your turn
+
+
 
 */
 

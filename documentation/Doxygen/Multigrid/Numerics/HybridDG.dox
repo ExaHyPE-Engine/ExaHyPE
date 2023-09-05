@@ -1,6 +1,14 @@
 /**
  
- @page page_multigrid_numerics_Hybrid_DG Hybrid DG
+@page page_multigrid_numerics_Hybrid_DG Hybrid DG
+
+A brief, informal discussion of hybrid DG methods plus some examples how to solve such equations.
+
+This is a brief discussion of key ideas behind the Hybrid Discontinuous Galerkin (DG) method. 
+While we discuss some of the mathematics behind hybridised DG, the focus
+of this text is informal (from a maths point of view) but puts special emphasis
+on how numerical concepts are mapped onto Peano's data structures and mesh 
+traversal. 
 
 
 We discuss the realisation of hybrid (mixed) DG formalisms by mean of the Poisson equation.

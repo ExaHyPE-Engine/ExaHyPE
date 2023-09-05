@@ -1,0 +1,28 @@
+/**
+ 
+@page page_multigrid_numerics_Disontinuous_Galerkin Discontinuous Galerkin
+
+A brief, informal discussion of numerical concepts behind discontinuous Galerkin methods plus some examples how to solve such equations.
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+This is a brief discussion of key ideas behind the Discontinuous Galerkin (DG) method. 
+While we discuss some of the mathematics behind DG, the focus
+of this text is informal (from a maths point of view) but puts special emphasis
+on how numerical concepts are mapped onto Peano's data structures and mesh 
+traversal. 
+
+
+# Example: the Poisson equation
+
+
+
+# Example: the advection equation
+
+
+# Realisation with PETSc
+
+
+ */
+ 

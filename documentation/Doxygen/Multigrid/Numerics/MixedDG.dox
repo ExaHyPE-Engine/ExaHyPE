@@ -1,7 +1,24 @@
 /**
  
- @page page_multigrid_numerics_Mixed_Galerkin Mixed Discontinuous Galerkin formulations
+@page page_multigrid_numerics_Mixed_Galerkin Mixed Galerkin formulations
  
+A brief, informal discussion of mixed Galerkin methods.
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+This is a brief discussion of key ideas behind Mixed Galerkin (DG) methods. 
+While we discuss some of the mathematics behind mixed formulations, the focus
+of this text is informal (from a maths point of view) but puts special emphasis
+on how numerical concepts are mapped onto Peano's data structures and mesh 
+traversal. 
+We focus notably on the combination of mixed methods with 
+@ref page_multigrid_numerics_Disontinuous_Galerkin "Discontinous Galerkin" methods.
+One can use mixed continuous Galerkin methods, but they are not particular 
+widespread due to multiple numerical issues.
+
+
+
  
 Discussion of normal mixed formalism for Poisson equation with discontinuous continuous Galerkin.
  
@@ -9,11 +26,6 @@ As ever, we aim to solve
 
 @f$ -\Delta u \ = \ f @f$.
 
-This is a brief discussion of key ideas behind a DG formulation for the 
-Poisson equation. While we discuss some of the mathematics behind DG, the focus
-of this text is informal (from a maths point of view) with a special emphsis
-on how numerical concepts are mapped onto Peano's data structures and mesh 
-traversal. 
 focuses on how to build the code. Build here means that we assemble a global 
 matrix and hand it over to PETSc. For information on how to build Peano with 
 PETSc, see \ref multigrid_home.
