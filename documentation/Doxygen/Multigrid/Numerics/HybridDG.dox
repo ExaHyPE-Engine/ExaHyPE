@@ -11,15 +11,74 @@ on how numerical concepts are mapped onto Peano's data structures and mesh
 traversal. 
 
 
-We discuss the realisation of hybrid (mixed) DG formalisms by mean of the Poisson equation.
+Before we dive into details, it is important to study 
+@ref page_multigrid_numerics_Disontinuous_Galerkin "Discontinous Galerkin" methods first, 
+as we generalise some ideas from there. 
+We onte that it is reasonable to skip the Poisson equation example - our 
+all-time classic - for this particular method, as the advection problem is 
+easier to digest.
 
-Before we dive into details, it is important to study @ref page_multigrid_numerics_Mixed_Galerkin "the mixed DG discussion"
-which lays the foundations of the present discussion. Hybridised DG is, from a 
-data structure point of view, very similar to the Discontinuous Galerkin scheme
-as presented above. 
+
+# Method
+
+Take an arbitrary elliptic equation such as the Poisson equation
+
+@f$ - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u = f, @f$
+
+and discretise it via a DG method. Due to the use of the DG shape functions, 
+we will obtain some face integrals. 
+
+- Add something on idea that we introduce a new equation and make this a real degree of freedom
+- Add remark that we are better than before, as we can couple the individual Riemann problems, i.e. anticipate their interplay
 
 
-# Mathematical approach
+
+
+# Example: the Poisson equation
+
+Before we discuss this example, it is reasonable to read
+@ref page_multigrid_numerics_Mixed_Galerkin "the mixed DG discussion",
+which lays the foundations of the present discussion. 
+
+
+
+If we implement the scheme above for Poisson, we end up with a code similar to
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver = petsc.solvers.DiscontinuousGalerkinDiscretisation("Poisson",
+                                    degree = 1,
+                                    unknowns_per_cell_dof = 1, 
+                                    [...]
+                                    args.meshsize,
+                                    args.meshsize,
+                                    dimensions = 2,
+                                    [...]
+                                    )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which 
+
+- allocates 12 doubles per cell, which hold the solution. We need this to visualise the outcome. 
+- allocates 12 doubles per cell, which hold the right hand side within the degrees of freedom. This information will later be used to construct the RHS @f$ b @f$ of the linear equation system.
+- constructs the matrix @f$ A @f$ (eventually we will work with an augmented system. For the time being, we can assume that it is square with @f$ 12 \mathbb{C} @f$) rows.
+- assign each unknown a global index. Since we have 12 unknowns per cell, it is sufficient to store the first index of an unknown within the cell, as the dofs/unknowns within the cell are enumerated consecutively. 
+
+
+
+
+# Example: the advection equation
+ 
+# Realisation with PETSc
+ 
+As ever, we use the Poisson equation 
+
+
+@f$ -\Delta u \ = \ f @f$.
+
+as example of how to build the code. Build here means that we assemble a global 
+matrix and hand it over to PETSc. For information on how to build Peano with 
+PETSc, see \ref multigrid_home.
+
 
 Let
 

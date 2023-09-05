@@ -15,8 +15,13 @@ on how numerical concepts are mapped onto Peano's data structures and mesh
 traversal. 
 
 
+# Method
+
+@todo This has to be reworked almost from scratch
 
 # Example: the Poisson equation
+
+@todo This has to be reworked almost from scratch
  
 As ever we aim to solve
 
