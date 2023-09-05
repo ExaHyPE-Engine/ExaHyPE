@@ -363,6 +363,9 @@ namespace tarch {
     namespace native {
       /**
        * Spawn a ready task into the runtime system of choice.
+       *
+       * The responsibility to destroy task is handed over to the runtime of
+       * choice.
        */
       void spawnTask(Task* task);
 
@@ -376,6 +379,9 @@ namespace tarch {
        * orchestration. If the subtasks enqueue tasks into the thread-local
        * queue, they will remain there. This routine does not touch the
        * thread-local queue.
+       *
+       * The responsibility for the pointers in tasks is handed over to the
+       * runtime of choice, i.e. you don't have to delete them.
        *
        * @param tasks Set of tasks. Is guaranteed to be non-empty.
        */
