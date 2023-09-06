@@ -3,6 +3,7 @@
  @page page_multigrid_numerics Numerical remarks
 
  \li @subpage page_multigrid_numerics_Continuous_Galerkin
+ \li @subpage page_multigrid_numerics_Disontinuous_Galerkin
  \li @subpage page_multigrid_numerics_Mixed_Galerkin
  \li @subpage page_multigrid_numerics_Hybrid_DG
   

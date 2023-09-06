@@ -1,31 +1,28 @@
 /**
  
- @page page_multigrid_numerics_Mixed_Galerkin Mixed Discontinuous Galerkin formulations
+@page page_multigrid_numerics_Mixed_Galerkin Mixed Galerkin formulations
  
- 
-Discussion of normal mixed formalism for Poisson equation with discontinuous continuous Galerkin.
- 
-As ever, we aim to solve
+A brief, informal discussion of mixed Galerkin methods.
 
-@f$ -\Delta u \ = \ f @f$.
+<!-- Add this one for href links to subitems -->
+\tableofcontents
 
-This is a brief discussion of key ideas behind a DG formulation for the 
-Poisson equation. While we discuss some of the mathematics behind DG, the focus
-of this text is informal (from a maths point of view) with a special emphsis
+This is a brief discussion of key ideas behind Mixed Galerkin (DG) methods. 
+While we discuss some of the mathematics behind mixed formulations, the focus
+of this text is informal (from a maths point of view) but puts special emphasis
 on how numerical concepts are mapped onto Peano's data structures and mesh 
 traversal. 
-focuses on how to build the code. Build here means that we assemble a global 
-matrix and hand it over to PETSc. For information on how to build Peano with 
-PETSc, see \ref multigrid_home.
+We focus notably on the combination of mixed methods with 
+@ref page_multigrid_numerics_Disontinuous_Galerkin "Discontinous Galerkin" methods.
+One can use mixed continuous Galerkin methods, but they are not particular 
+widespread due to multiple numerical issues.
 
 
-# Background
+# Method
 
-## A first-order formulation
+Assume we aim to solve
 
-As ever, we aim to solve:
-
-@f$ - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u = f @f$
+@f$ - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u = f, @f$
 
 which is a second-order equation. Let us first introduce a helper vector @f$ \phi = (\phi _x, \phi _y) @f$, so we can instead 
 write in a first-order formulation:
@@ -59,8 +56,7 @@ Nothing has been gained so far, despite the fact that the gradient is now
 explicitly available in our formulation. Some codes can use this for their 
 algorithm. We have indeed "lost" a little bit of efficiency. In the normal
 @ref tutorials_multigrid_petsc_continuous_galerkin_poisson "continuous Galerkin case", for example, 
-or in the @ref page_multigrid_numerics_Continuous_Galerkin "numerical discussion" once applied to the Poisson equation, we have
-only one unknown, i.e. a scalar, per degree of freedom. This time, we have 
+we have only one unknown, i.e. a scalar, per degree of freedom. This time, we have 
 have to maintain three unknowns.
 
 
@@ -68,107 +64,25 @@ This means, we might have had
 
            unknowns_per_cell_dof = 1
 
-in a continuous Galerkin setup for the Poisson equation, but now we need to use
+in a continuous Galerkin setup for a scalar equation, but now we need to use
 
            unknowns_per_cell_dof = 1+Dimensions
 
 
-## Discontinuous Galerkin formulation: the geometric arrangement
+## The weak formulation
+
+If we want to solve the arising system of equations (with multiple equations due
+to the mixed approach), we have to 
+test both the first, second, third, ... line. 
+We draw test functions from the solution space (the original PDE) and 
+from the helper spaces. Let us call them @f$ v_u @f$ and @f$ v_\phi @f$.
+
+Assume we start from a scalar PDE such as the Poisson equation.
+In this example, one tests against u and one tests against the gradient space. 
+Therefore, @f$ \psi _u: \Omega \mapsto \mathbb{R}^2 @f$ and @f$ \psi _\phi: \Omega \mapsto \mathbb{R} @f$, as the latter tests the scalar equation.
 
 
-Our intention is to puzzle the solution together from very primitive small 
-shape functions:
-We want to construct a solution to our system by concatenating the scaled 
-shape functions over the domain into one solution. In 1d, this looked, 
-for the @ref tutorials_multigrid_petsc_continuous_galerkin_poisson "continuous case with linear shape functions"
-similar to 
-
-@image html continuous_shape_functions.png
-
-Each "hat functions" above is scaled by a weight @f$ u_i @f$ and then we add 
-them all up, constructing a piece-wise linear continuous solution. 
-Consequently, we end up with one unknown per vertex in our mesh: We have to
-know the right scaling.
-
-
-In the present project, we make things more complicated: 
-We drop this continuous requirement. Our intention/rationale is that we could get a more accurate solution
-by using piecewise functions that don't "connect" with each other.
-This means that we need more weights:
-
-@image html piecewise_discontinuous_shape_functions.png
-
-Previously, we had one weight per vertex. Now, we need two weights per cell (per dimension) to 
-construct the green lines: If we associate the weights still with the vertices,
-we have a left value and a right one. We never do this in the code.
-
-In summary, this discontinuous Galerkin approach implies that we need (in 1d) 
-twice the number of weights as we have jumps, and we need three scalars instead
-of one, as we work with a mixed, first-order formulation. 
-
-We have quite some freedom to arrange these weights.
-We depict two arrangements here:
-
-@image html gaussLobatto.png
-
-We show a scheme for both Gauss-Legendre (above) and Gauss-Lobatto (below).
-We focus exclusively on the cell dofs (blue) from here onwards.
-We note that for Lobatto, some cell dofs coincide spatially with the faces,
-but logically we hold everything in the cells. Each cell dof
-holds a value for @f$ u, \ \phi_x \ \text{and } \phi_y @f$.  We show also how these unknowns
-are arranged in memory for the cells. For each cell, we store an array of doubles, with
-length @f$ K (p+1)^d @f$, K being the number of unknowns per cell dof.
-
-For Poisson, we have 3 PDEs. The sketches above show
-an example with @f$p=2@f$ on the right hand side. In general, we need, for a
-scalar PDE given in second order formulation, @f$ (p+1)^d @f$
-degrees of freedom per cell and have @f$ (d+1) \cdot (p+1)^d @f$ unknowns per 
-cell.
-In this case, we will obtain a system 
-
-@f$ A x = b @f$
-
-where x has @f$ (d+1) |\mathbb{C}| \cdot (p+1)^d @f$ entries, where @f$ \mathbb{C}  @f$ 
-is set of cells in the mesh.
-
-<!--
-For the remainder, we use
-Gauss-Lobatto, which means that we place the weights exactly at the cell 
-corners.
-Each face dof holds a value for 
-@f$ u, \ \text{and } \phi_x @f$ for each vertical face, and 
-@f$ u, \ \text{and } \phi_y @f$ for each horizontal face.
--->
-
-If we implement the scheme above for Poisson, we end up with a code similar to
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver = petsc.solvers.MixedDiscontinuousGalerkinDiscretisation("Poisson",
-                                    degree = 1,
-                                    unknowns_per_cell_dof = 3, 
-                                    [...]
-                                    args.meshsize,
-                                    args.meshsize,
-                                    dimensions = 2,
-                                    [...]
-                                    )
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-which 
-
-- allocates 12 doubles per cell, which hold the solution. We need this to visualise the outcome. 
-- allocates 12 doubles per cell, which hold the right hand side within the degrees of freedom. This information will later be used to construct the RHS @f$ b @f$ of the linear equation system.
-- constructs the matrix @f$ A @f$ (eventually we will work with an augmented system. For the time being, we can assume that it is square with @f$ 12 \mathbb{C} @f$) rows.
-- assign each unknown a global index. Since we have 12 unknowns per cell, it is sufficient to store the first index of an unknown within the cell, as the dofs/unknowns within the cell are enumerated consecutively. 
-
-
-# The weak formulation
-
-If we want to solve our system of equations (with three equations), we have to 
-test both the first and the second line (if we assume that the first one is 
-scalar and the second one over a vector). Once we switch to a weak formulation, we hence need tests for both
-equations. In math words, we draw test functions from the solution space and 
-from the helper space. Let us call them @f$ \psi _u @f$ and @f$ \psi _\phi @f$.
+Let us call them @f$ \psi _u @f$ and @f$ \psi _\phi @f$.
 One tests against u and one tests against the gradient space. 
 Therefore, @f$ \psi _u: \Omega \mapsto \mathbb{R}^2 @f$ and @f$ \psi _\phi: \Omega \mapsto \mathbb{R} @f$, as the latter tests the scalar equation.
 
@@ -204,496 +118,66 @@ At this point, we only note that some terms here do not exist:
 - @f$ u @f$ does not exist on the faces of a cell. It jumps. The term  @f$ \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x) @f$ in the second weak formulation therefore does not make sense. 
 
 
-## Cell operations
+We obtain a system 
 
-The above equations mean that we have to traverse all cells of the domain, and insert the following terms: 
+@f$ A x = b @f$
+
+where x has @f$ K |\mathbb{C}| \cdot (p+1)^d @f$ entries, where @f$ \mathbb{C}  @f$ 
+is set of cells in the mesh.
+
+
+
+# Example: the Poisson equation
+
+Let the linear operator @f$ \mathcal{L}(u) @f$ denote the Laplace operator. 
+The Poisson equation then yields 
+
 
 \f{eqnarray*}{
-   && \int _{\text{cell}_{\psi _\phi }} ( \phi \nabla \psi _\phi ) dx \\
-   && \int _{\text{cell}_{\psi _u}} ( \phi, \psi _u ) dx \\
-   && \int _{\text{cell}_{\psi _u}}  u \cdot \text{div} \psi _u dx
+  \int _\Omega ( -\text{div} \ \phi, \psi _\phi ) dx &=& \int_{\text{cell}_\phi} ( -\text{div} \ \phi, \psi _\phi ) dx  \ \ \ \forall \psi _\phi 
+  \\  
+   &=& \int_{\text{cell}_{\psi _\phi }} ( \phi \nabla \psi _\phi ) dx - \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x)  
+   = \int_{\text{cell}_{\psi _\phi }} f \cdot \psi _\phi dx,
 \f}
 
-
-The first and the third term can be added up into a ***system matrix***, 
-while the second term forms a ***mass matrix***. 
-A typically code for the two-dimensional Poisson equation then looks similar to 
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver = petsc.solvers.MixedDiscontinuousGalerkinDiscretisation("Poisson",
-                                    degree = 1,
-                                    unknowns_per_cell_dof = 3, 
-                                    [...]
-                                    args.meshsize,
-                                    args.meshsize,
-                                    dimensions = 2,
-                                    cellCellMassMatrix,   #12x12
-                                    cellCellSystemMatrix,   #12x12
-                                    [...]
-                                    )
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-That is, the user has to pass in those two matrices to our Python API. In 
-the present example, both matrices are from @f$ \mathbb{R}^{12 \times 12} @f$
-in the example above, where we have two dimensions, two degrees of freedom
-per coordinate axis, and three unknowns per degree of freedom.
-The code expects the matrices over the unit square or cube and will 
-internally scale them with @f$ h^d @f$ for the mass matrix and @f$ h^{d-1} @f$
-for the system matrix before it fills in the entries into the global PETSc
-matrix.
-
-
-The elegance of this approach is that Peano's HDG classes do not know anything
-about the degree of freedom layout. You can pick Gauss-Legendre or 
-Gauss-Lobatto or really any polynomial space, as long as its fit to the
-polynomial degree, is constructed in a tensor product way, and each dof hosts
-unknowns_per_cell_dof unknowns. Just hand in the right matrices.
-
-
-# Face terms and realisation
-
-Once all volumetric terms are handled, we are left with a discussion of the 
-face terms.
-
-
-## Data storage
-
-Peano does not support global data access. That is, you cannot access cell data
-from faces, and you cannot access data from neighbouring cells within a cell
-either. You can access the faces of a cell within a cell, but cell
-and face data are strictly separated. 
-
-To solve the equations over the faces, we therefore have to project the solution
-onto the face, then solve the equation there, and afterwards project the outcome
-back into the cell's degrees of freedom. However, faces so far do not hold any
-data. To argue about the solution over the face, we have to know
-the solution there first. Therefore, we introduce 
-@f$ 2\hat K \cdot (p+1)^{d-1} @f$ unknowns per face (here @f$ \hat K @f$ is the
-number of unknowns per face dof): 
-
-- We work with polynomials over the face which are drawn from the same shape
-  space as our volumetric shape functions, but restricted to the face. 
-  We get the @f$ (p+1) @f$ for the polynomial and the @f$ -1 @f$ in the 
-  exponent, as we work only on the faces, i.e. a submanifold.
-- We note that @f$ \phi @f$ does not exist on the face. This is because our 
-  approximate solution to @f$ u @f$ is discontinuous, meaning we have a jump. 
-  See the blue line below or the grey one. We'll discuss the other formalism
-  later:
-  @image html average_gradient.png
-  Therefore, we have two solutions per degree of freedom on the face: The one from the 
-  left and the one from the right. This is the factor of two.
-- Finally, we already said that we will store two quantities per degree of 
-  freedom: We will have to handle solution jumps in @f$ u @f$ along the face
-  and we will have to discuss the normal component of @f$ (n, \phi ) @f$. So
-  this gives us an additional factor of two.
-  
-We use the term ***degree of freedom on a face***, but this is not 100% right: 
-Indeed, we argue over dofs on the face, but they are not "free" - they follow
-the solution strictly.
-The enumeration of the degrees of freedom on the face is discussed in @ref multigrid_enumeration.
-
-
-The Python API of typical mixed formulation DG solvers has to know that we deal 
-with two quantities of interest, 
-i.e. @f$ u @f$ and @f$ (n, \phi ) @f$. Given this numer of two, it can then compute the actual number of 
-unknowns per face automatically:
-
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver = petsc.solvers.MixedPoisson("MP",
-                                    degree = 1,
-                                    unknowns_per_cell_dof = 3, 
-                                    unknowns_per_face_dof = 2, 
-                                    args.meshsize,
-                                    args.meshsize,
-                                    dimensions = 2,
-                                    cellCellMassMatrix,   #12x12
-                                    cellCellSystemMatrix,   #12x12
-                                    [...]
-                                    )
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-The code above creates additional degrees of freedom for the faces. We will
-deal with the fact that they are not free later on. This means that we solve
-an augmented system
-
-@f$ Ax=b @f$
-
-where @f$ A \in \mathbb{R}^{ K |\mathbb{C}| \cdot (p+1)^d + 2 \hat K |\mathbb{F}| \cdot (p+1)^{d-1} \times K |\mathbb{C}| \cdot (p+1)^d + 2 \hat K |\mathbb{F}| \cdot (p+1)^{d-1} } @f$.
-The "new" quantity @f$ \mathbb{F} @f$ denotes the set of faces.
-
-
-For the Poisson equation, @f$ K = d+1 @f$ continues to denote the number of
-unknowns per cell dof, while @f$ \hat K = 2 @f$ encodes that we have to project
-the solution and the derivative along the normal onto each face.
-When we solver allocated @f$ A @f$, it assigns each face a set of indices. 
-Different to the cells, there's no need to assign the face any double values, 
-i.e. each face only stores one integer which encodes the first dof number.  
-
-
-Mathematically, the system now has been extended into 
-
-@f$ 
- Ax = 
- \begin{bmatrix}
- A_{cc} & A_{fc} \\
- A_{cf} & id \\
- \end{bmatrix}
- \begin{bmatrix}
- x_{c} \\ x_f
- \end{bmatrix}
- = 
- \begin{bmatrix}
- b_{c} \\ 0
- \end{bmatrix}
-@f$ 
-
-where we have to specify the involved matrices further. We will also discuss 
-a realisation below which introduces even further helper dofs.
-
-
-
-## Projection
-
-Our code creates degrees of freedom on the faces. That means, it really
-holds @f$ 2K \cdot (p+1)^{d-1} @f$ unknowns per face. These unknowns are
-given entries in the PETSc solution vector. However, they are not real 
-unknowns: They merely hold the solution values on the face. We therefore
-have to "eliminate" them, i.e. tell PETSc how to determine their value.
-This is a projection from the cell onto the face.
-
-
-We highlight what this projection matrix looks like for Gauss-Lobatto.
-
-@image html degree_of_freedom_semantics_Lobatto.png
-
-Gauss-Lobatto is trivial, as some cell dofs coincide spatially with the 
-face dofs. This is not necessary: Users can use Gauss-Legendre for
-example. Again, our Python API does not care - just hand in a different
-projection matrix from the cell onto the faces that suits your dof
-arrangement. Independent of the dof layout, our projection matrix is from
-@f$ \mathbb{R}^{2d \cdot 2\cdot 2 \cdot (p+1)^{d-1} \times 3 \cdot (p+1)^{d} } @f$.
-The additional 2d here stems from the fact that each cell has 2d faces.
-
-
-Let @f$ p=1 @f$, then the projection matrix for 
-Gauss-Lobatto equals (the left vector is simply a row enumeration, for ease of reading)
+for the first equation where the @f$ n @f$ is the outer normal of the cell. The
+second equation gives us 
 
 \f{eqnarray*}{
-
-  \begin{bmatrix}
-  0\\
-  1\\
-  2\\
-  3\\
-  4\\
-  5\\
-  6\\
-  7\\
-  8\\
-  9\\
-  10\\
-  11\\
-  12\\
-  13\\
-  14\\
-  15\\
-  16\\
-  17\\
-  18\\
-  19\\
-  20\\
-  21\\
-  22\\
-  23\\
-  24\\
-  25\\
-  26\\
-  27\\
-  28\\
-  29\\
-  30\\
-  31\\
-\end{bmatrix}
-
-
-  \begin{pmatrix}
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-  \end{pmatrix}
+  \int _\Omega ( \phi, \psi _u ) dx - \int _\Omega ( \nabla u, \psi _u ) dx
+   &=& \int _{\text{cell}_{\psi _u}} ( \phi, \psi _u ) dx - \int _{\text{cell}_{\psi _u}} ( \nabla u, \psi _u ) dx
+  \\  
+   &=& \int _{\text{cell}_{\psi _u}} ( \phi, \psi _u ) dx + \int _{\text{cell}_{\psi _u}}  u \cdot \text{div} \psi _u dx
+    - \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x) = 0.
 \f}
 
-Dof 0 on the left face holds the data from the cell left of the face of 
-interest. That's none of our business here. Therefore, the first two 
-lines in the matrix are empty. The dof 1 on the left face holds two
-degrees of freedom: The first one is the u value, which can be copied
-directly (1 in column 1). The second is the @f$ (\phi, n) @f$ value, 
-i.e. @f$ \phi @f$ along the normal which is @f$ \phi _x @f$ and hence
-yields a 1 in column 2. The next two lines in the matrix affect dof
-2 on the left face, which again are values we have nothing to contribute
-from the current cell. This way, we befill the four dofs of the left face,
-i.e. construct the first eight rows of the projection matrix.
+In the first line, we exploit the fact that the support of the test function is 
+localised. Even though the integral originally spanned the whole domain, it 
+boils down to an integral over one cell only.
+After that, we use standard integration by parts. 
+At this point, we only note that some terms here do not exist:
 
-
-The next eight lines determine how to project the solution onto the bottom
-face, and so forth. One could only use the projection to the left face and 
-then construct the other three matrices through permutations. We do not go
-down this route and instead expect the user to hand in the projection 
-matrix for all faces in one go. 
-
-Below we demonstrate how the rows and columns of the projection matrix 
-should be enumerated. For each pink dot, we have two indices. This is
-because each point holds the @f$ u @f$ value and the @f$ (\phi, n) @f$.
-We are viewing this situation from the perspective of the central cell,
-meaning that some of these indices are unavailable to us. In particular,
-the (pink) face indices 0,1, 4, 5, 8, 9, 10, 11, 18, 19, 22, 23, 28, 29,
-30 and 31 are all situated on neighbouring cells. We do not project onto
-these, and leave it until later, when we are actually in these cells to 
-do so.
-
-We note explicitly that the three unknowns per cell dof are @f$ u @f$,
-@f$ \phi_x @f$ and @f$ \phi_y @f$.
-
-@image html projection.png
+- @f$ (n, \phi ) @f$ does not exist on the faces of a cell. It jumps. The term  @f$ \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x) @f$ in the first weak formulation therefore does not make sense.
+- @f$ u @f$ does not exist on the faces of a cell. It jumps. The term  @f$ \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x) @f$ in the second weak formulation therefore does not make sense. 
 
 
 
-# Continuous Galerkin
-
-With the projection matrix, we now know what the solution components on the 
-face look like. With this knowledge, we can realise the missing terms from
-the weak formulation:
-
-\f$
-  \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x)  
-\f$
-
-and 
-
-\f$
-  \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
-\f$
-
-both have been neglected so far, and both do not exist:
-@f$ (n, \phi ) @f$ and @f$ u @f$ do not exist as 
-the solution has jumps. 
-
-The simplest way to fix this is to ensure that the 
-solution does not have jumps, i.e. to switch to a continuous Galerkin
-formulation. This is not what we typically do, but it is possible within our
-framework and a nice sanity check. Furthermore, we need exactly this technique
-for a weak continuity enforcement later.
-
-Below is a schematic for how we glue these dofs together. When looking locally,
-we always enumerate with the familiar pattern (beginning bottom left). Obviously,
-the numbering shown is merely an indicator, and will not match the global
-indices of these dofs, but this should not concern the user. 
-
-@image html face_to_face_projection.png
-
-If both @f$ u @f$ and @f$ \phi @f$ are continuous, then their values on the
-faces exist. They have to be the same. Our code introduces a face-to-face
-coupling matrix. It is from @f$ \mathbb{R}^{ 2K \cdot (p+1)^{d-1} \times 2K \cdot (p+1)^{d-1} } @f$ 
-and describes how the face degrees of freedom (these are the projections of the 
-solution onto the face) interact. We expect this matrix to describe the interaction
-for a face with the normal along x. The matrices for all other faces result from
-a permutation which is handled within the Python API. For a continuous setup and
-@f$ p=1 @f$, the matrix is  
-
-@todo Currently we state that this matrix is square (See sentence starting "it is from...") but we draw a matrix which is not square. Either could be correct
-
-\f{eqnarray*}{
-  \begin{pmatrix}
-  1 & 0 &    -1 & 0 &     0 & 0 &    0 & 0 \\
-  0 & 1 &     0 & -1 &    0 & 0 &    0 & 0 \\
-  0 & 0 &     0 & 0 &     1 & 0 &   -1 & 0 \\
-  0 & 0 &     0 & 0 &     0 & 1 &    0 & -1    
-  \end{pmatrix}
-\f}
-
-This matrix, supplemented with a zero right-hand side, glues the solution together.
-It might be surprising that we only have four equations with eight unknowns on the
-face. However, it is important to note that these "unknown" are not really unknowns.
-They are projections. Since they are projections, they always follow the solution 
-within the cells (as discussed in the section before). This means, they are helper
-variables which just represent the solution on the face. As we impose four additional
-equations per face, we actually take an (almost) well-defined system, and we add an
-additional constraint. We kind of create a saddle point problem, where the solution
-is subject to additional face-constraint equations.
+# Example: the advection equation
 
 
-In the code, we hand the constraint equation in, and the mesh traversal will evaluate
-it, i.e. insert the corresponding lines, into the system matrix. 
-
-
-Once the values are uniquely defined on the face, we have to add the missing terms 
-
-@f$ 
-  \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x)  
-  \quad \text{and} \quad 
-  \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
-@f$
-
-back to the equation. For this, we expect the user to hand in the face-to-cell 
-projection matrix. It is from @f$ \mathbb{R}^{ 2K \cdot (p+1)^{d-1} \times 2K \cdot (p+1)^{d-1} } @f$
-and takes the @f$ u @f$ and @f$ n \cdot \phi @f$ value (it is not unique if you want to 
-pick the left or right one; choose either as they are the same due to the 
-constraints above), tests them against the corresponding test function restricted
-to the face, and adds the result back to the linear equation system line that 
-determines the value of the cell dof.
-
-
-While the projection onto the face is "direct" in the sense that we sample a 
-polynomial at a point (for Gauss-Lobatto is degenerates to pick a value), the 
-projection back is slightly more involved, as it comprises an integral over the
-face. Again, we assume that the user hands in the matrix over the unit face, 
-and Peano internally scales it then with @f$ h^{d-1} @f$. 
-
+# Realisation with PETSc
  
-# Discontinuous Galerkin formulations
+As ever, we use the Poisson equation 
 
-The above discussion strongly enforces continuity. This is neither clever - we 
-give away the freedom that we have gained through the introduction of 
-cell-wise continuous shapes - nor does it guarantee a (good) solution. After all,
-we glue the functions where tightly together and hence avoid that they wobble 
-around freely and approximate the real solution. Notably for low orders p, 
-the function space now might not be able anymore to approximate the real solution.
+@f$ -\Delta u \ = \ f @f$.
 
-A natural solution to this is to allow the functions within the cell to be 
-discontinuous along the faces, but not too much. A "simple" idea is to approximate
-the non-existing values through the averages from left and right:
-
-\f{eqnarray*}{
-  \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x)  
-  & \approx & 
-  \int_{\partial \text{cell}_{\psi _\phi }} [[ (\phi,n) ]] \psi _\phi dS(x)  
-  =
-  \pm
-  \frac{1}{2} \int_{\partial \text{cell}_{\psi _\phi }} \left( \phi ^+ + \phi ^- \right) \psi _\phi dS(x)  
-  \\
-  \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
-  & \approx & 
-  \int _{\partial \text{cell}_{\psi _u}}  [[u]] \cdot (n, \psi _u) dS(x)
-  = 
-  \frac{1}{2}
-  \int _{\partial \text{cell}_{\psi _u}}  (u^- + u^+) \cdot ( n, \psi _u ) dS(x)
-\f}
-
-The image below illustrates this for the gradient @f$ \phi @f$:
-
-  @image html average_gradient.png
-
-The gradient does not exist at the cell boundaries, but we can simply average it.
+as example of how to build the code. Build here means that we assemble a global 
+matrix and hand it over to PETSc. For information on how to build Peano with 
+PETSc, see \ref multigrid_home.
 
 
-There are two ways to implement this scheme:
-
-1. We don't use any constraint equation (see continuous case), but let the 
-   face-to-cell projection use the average of left and right value.
-2. We introduce a helper dof.
-
-The first variant is close-to-trivial and certainly a good sanity check. The 
-face-to-face matrix here is empty/zero, but the user has to take the averaging
-into account within the projection matrix. The projection matrix also has to 
-take into account the sign of the normal.
 
 
-The second variant is more sophsticiated, yet allows users later to implement
-more sophisticated schemes aka Riemann solvers. For this one,
-we assume that a face has explicit values @f$ (\lambda _u, \lambda _\phi) @f$ 
-(the sketch above denotes them as @f$ \lambda _\phi = \hat \phi @f$) which represent these averages. So the face has the left and the right projection,
-but also a value which explicitly computes this arising approximation. We model
-this by
 
-        unknowns_per_face_dof = 4
-
-which is an overkill here. 
-
-
-1. The unknown 0 on a vertical face is the  solution projection from the left;
-2. Unknown 1 is the @f$\phi _x@f$ projection from the left;
-3. The unknown 2 represents this @f$ [[u]] @f$ value;
-4. The unknown 3 represents the @f$ [[(\phi, n)]] = [[\phi_ x]] @f$ value;
-5. The next one (unknown 5) 2 is the solution projection from the right;
-6. Then we have @f$\phi _x @f$ projection from the right;
-7. We store @f$ [[u]] @f$ once again, which is redundant;
-8. The 7th unknown the @f$ [[(\phi, n)]] = -[[\phi_ x]] @f$ value, so again a redundant quantity subject to an inverted sign;
-9. ...
-
-This redundancy could be avoided, but there are PDEs which yield non-symmetric
-approximations, i.e. the magnitude of @f$ [[u]] @f$ depends on
-wheather we look from the left or the right side onto the face. We want our data
-structures to be well-prepared for this and hence hold the values redundantly.
-
-With the doubled unknowns per face degree of freedom, we have to amend our 
-projection matrices. This means adding a whole lot of additional zero rows, as 
-the new values are not determined by the projection at all. The face-to-cell
-projection also has to be added way more zero rows. This time, it takes the two
-additional unknowns and maps them back onto the cell solution. If we encode the 
-normal within the @f$ \lambda _\phi @f$, we can omit any normal sign changes 
-within the projection matrix.
-
-This leaves us with the task to determine the values of the new unknowns. For
-this, we hand a new face-to-face matrix over to the API which computes the 
-average into the new unknowns: 
-
-
-\f{eqnarray*}{
-  \begin{pmatrix}
-  0 & 0 & 0 & 0     & 0 & 0 & 0 & 0     & 0 & 0 & 0 & 0     & 0 & 0 & 0 & 0 \\
-  0 & 0 & 0 & 0     & 0 & 0 & 0 & 0     & 0 & 0 & 0 & 0     & 0 & 0 & 0 & 0 \\
-  -\frac{1}{2} & 0 & 0 & 0     & -\frac{1}{2} & 0 & 0 & 0     & 0 & 0 & 0 & 0   & 0 & 0 & 0 & 0 \\
-  0 & \frac{1}{2} & 0 & 0     & 0 & \frac{1}{2} & 0 & 0     & 0 & 0 & 0 & 0   & 0 & 0 & 0 & 0 \\
-  \dots
-  \end{pmatrix}
-\f}
-
-
-The first two rows refer to projected values from the left. They are sole 
-input values (should be brought to the right by the solver in this context) 
-and hence not subject to any additional equations.
-The third line averages the @f$ u @f$ values from left and right, the
-fourth line addresses the normal projections of @f$ \phi @f$. 
-
-
-## Matrix arrangement
-
-Currently, the code enumerates cell dofs first, and then face dofs after.
-We expect the number of cell dofs to be 
-
-@todo Tobias has to think about non-linear Riemann solvers, where we cannot use 
- a matrix anymore, i.e. do not have a face-to-face operator
- 
  */
  
