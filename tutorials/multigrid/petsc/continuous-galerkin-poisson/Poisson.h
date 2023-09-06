@@ -42,7 +42,7 @@ class benchmarks::multigrid::petsc::poisson::Poisson: public benchmarks::multigr
      *
      * @todo Please add your documentation here
      */
-    void init(
+    virtual void vertexInit(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       

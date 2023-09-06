@@ -58,14 +58,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellInit(
   for (int i=0; i<Dimensions; i++)
     cellSize *= h[i];
 
-  //set entries of "value" to 0
+  //set all entries to 0 by default. might not be necessary
   for (int i=0; i<{{CELL_CARDINALITY}}; i++)
+  {
     value[i] = 0;
+    rhs[i]   = 0;
+  }
   
   const int nPlusOne = {{POLYNOMIAL_DEGREE}}+1; ///polynomial degree + 1
   //proper loop for rhs construction
   //we loop over point i in the mesh:
-  for (int i=0; i<{{CELL_CARDINALITY}}; i++)
+  for (int i=0; i<{{CELL_DOFS}}; i++)
   {
     //we take the integral over the whole cell
     double integral=0;
@@ -79,7 +82,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellInit(
 
       integral += 0.25 * cellSize * localQuadWeight * repositories::evalPoly(i, localQuadPoint) * f(quadPointInCell);
     }
-    rhs[i] = integral;
+    /*
+    this i runs over the number of dofs in this cell. ie we don't have the
+    required multicplicity here. 
+    we want to set all the u values with this integral. at time of writing
+    we have no policy for setting phi_x and phi_y. so we multiply by
+    number of dofs per cell to "push" this further.
+    */
+    rhs[i * {{CELL_DOF_UNKNOWNS}}] = integral;
   }
 
 }

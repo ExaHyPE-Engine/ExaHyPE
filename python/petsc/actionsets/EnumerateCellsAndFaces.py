@@ -16,7 +16,7 @@ class EnumerateCellsAndFaces(ActionSet):
   if ( not marker.willBeRefined() ){
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
 
-    fineGridCell{{SOLVER_NAME}}.setNumber( _localCellMap.reserveIndex( {{CELL_CARDINALITY}} ) )
+    fineGridCell{{SOLVER_NAME}}.setNumber( _localCellMap.reserveIndex( {{CELL_CARDINALITY}} ) );
 
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   }
@@ -27,7 +27,7 @@ class EnumerateCellsAndFaces(ActionSet):
   if ( not marker.willBeRefined() ){
     logTraceIn( "touchFaceFirstTime(...)---InitialCondition" );
 
-    fineGridFace{{SOLVER_NAME}}.setNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) )
+    fineGridFace{{SOLVER_NAME}}.setNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) );
 
     logTraceOut( "touchFaceFirstTime(...)---InitialCondition" );
   }
