@@ -184,11 +184,9 @@ We introduce a few operators (functions) to break down the overall computational
 scheme into a sequence/set of computations:
 
 - The operator @f$ A_{cc} @f$ takes the dofs within a cell and computes the term
-  @f$ - \int _{\text{cell}_v} \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx @f$.
-
-
+  @f$ - \int _{\text{cell}_v} \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx @f$
    
-  + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(\hat u )) v dS(x)
+  @f$ + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(\hat u )) v dS(x) @f$.
 
 
 # Example: the Poisson equation
