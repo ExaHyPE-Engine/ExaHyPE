@@ -180,6 +180,16 @@ into small tasks. These tasks will be found 1:1 in the code later on. Furthermor
 we gain some freedom by breaking things down into tiny bits and pieces: We can
 alter individual ones or puzzle them together in various ways.
 
+We introduce a few operators (functions) to break down the overall computational 
+scheme into a sequence/set of computations:
+
+- The operator @f$ A_{cc} @f$ takes the dofs within a cell and computes the term
+  @f$ - \int _{\text{cell}_v} \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx @f$.
+
+
+   
+  + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(\hat u )) v dS(x)
+
 
 # Example: the Poisson equation
 
@@ -189,15 +199,26 @@ Our weak formulation becomes
 
 
 \f{eqnarray*}{
-  \int _\Omega \mathcal{L}(u) \cdot v dx 
+  \int _\Omega \mathcal{L}(u) \cdot v \ dx 
   &=& 
-  \int _\Omega \u) (- \partial_x^2 u - \partial_y^2 u) \cdot v dx
+  \int _\Omega ( -\Delta u) \cdot v \ dx
   \\ 
   &=& 
-  \int _\Omega \u) (- \partial_x^2 u - \partial_y^2 u) \cdot v dx
+  \int _{\text{cell}_v} (- \Delta u) \cdot v \ dx
+  \\ 
+  &=& 
+  \int _{\text{cell}_v} (\nabla u, \nabla v) \ dx
+  - 
+  \int _{\partial \text{cell}_v} (\hat u,n) \cdot v \ dx
   =
   \int _\Omega \mathcal{L}(u) \cdot v dx 
 \f}
+
+
+We see that 
+
+- @f$ \tilde{\mathcal{L}}(u) = \nabla u @f$ is the operator under the cell integral
+  with a reduced highest derivative.
 
 
   - \int _\Omega \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx 
