@@ -204,4 +204,31 @@ use the projection from left and right and might, in the future, not be linear.
 This means, that we first have to project the solution and then use it to 
 construct the right-hand side.
 
+
+For this one,
+we assume that a face has explicit values @f$ (\lambda _u, \lambda _\phi) @f$ 
+(the sketch above denotes them as @f$ \lambda _\phi = \hat \phi @f$) which represent these averages. So the face has the left and the right projection,
+but also a value which explicitly computes this arising approximation. We model
+this by
+
+        unknowns_per_face_dof = 4
+
+which is an overkill here. 
+
+
+1. The unknown 0 on a vertical face is the  solution projection from the left;
+2. Unknown 1 is the @f$\phi _x@f$ projection from the left;
+3. The unknown 2 represents this @f$ [[u]] @f$ value;
+4. The unknown 3 represents the @f$ [[(\phi, n)]] = [[\phi_ x]] @f$ value;
+5. The next one (unknown 5) 2 is the solution projection from the right;
+6. Then we have @f$\phi _x @f$ projection from the right;
+7. We store @f$ [[u]] @f$ once again, which is redundant;
+8. The 7th unknown the @f$ [[(\phi, n)]] = -[[\phi_ x]] @f$ value, so again a redundant quantity subject to an inverted sign;
+9. ...
+
+This redundancy could be avoided, but there are PDEs which yield non-symmetric
+approximations, i.e. the magnitude of @f$ [[u]] @f$ depends on
+wheather we look from the left or the right side onto the face. We want our data
+structures to be well-prepared for this and hence hold the values redundantly.
+
   */
