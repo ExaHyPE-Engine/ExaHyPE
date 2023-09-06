@@ -113,6 +113,12 @@ python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler subtasks -amr
 
 Name                           | Trees | Scheduler              | Python script call                                                                                        |   TBB   |  OpenMP |   SYCL 
 -------------------------------|------:|:-----------------------|:----------------------------------------------------------------------------------------------------------|--------:|--------:|--------:
+(Almost) No parallel task producers | | | | | | |
+Native tasking w/o priorities  |     x |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 1         |       x |     423 |       x 
+Native tasking with priorities |     x |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native --trees 1                       |       x |     421 |       x 
+Tailored task scheduling       |     x |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored --trees 1                     |       x |     422 |       x 
+Parallel for                   |     x |  parallel-for          | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler parallel-for --trees 1                 |       x |     423 |       x 
+Subtasks                       |     x |  subtasks              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler subtasks --trees 1                     |       x |     420 |       x 
 Fewer BSP sections than threads | | | | | | |
 Native tasking w/o priorities  |     6 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6         |       x |     423 |       x 
 Native tasking with priorities |     6 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native --trees 6                       |       x |     421 |       x 
@@ -137,6 +143,12 @@ Subtasks                       |    12 |  subtasks              | python3 perfor
 
 Name                           | Trees | Scheduler              | Python script call                                                                                        |   TBB   |  OpenMP |   SYCL 
 -------------------------------|------:|:-----------------------|:----------------------------------------------------------------------------------------------------------|--------:|--------:|--------:
+(Almost) No parallel task producers | | | | | | |
+Native tasking w/o priorities  |     x |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native-no-priorities --trees 1    |       x |     389 |       x 
+Native tasking with priorities |     x |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native --trees 1                  |       x |     391 |       x 
+Tailored task scheduling       |     x |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored --trees 1                |       x |     391 |       x 
+Parallel for                   |     x |  parallel-for          | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler parallel-for --trees 1            |       x |     387 |       x 
+Subtasks                       |     x |  subtasks              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler subtasks --trees 1                |       x |     390 |       x 
 Fewer BSP sections than threads | | | | | | |
 Native tasking w/o priorities  |     6 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native-no-priorities --trees 6    |       x |     389 |       x 
 Native tasking with priorities |     6 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native --trees 6                  |       x |     391 |       x 
@@ -168,13 +180,13 @@ Below is a script that creates all data points in one go. You will have to
 amend the prefix accordingly.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-export PREFIX=tbb
+export PREFIX=tbb or openmp or sycl
 
 mkdir results
 
 for SCHEDULER in native-no-priorities native tailored parallel-for subtasks
 do
-  for TREES in 6 8 12
+  for TREES in 1 6 8 12
   do
     OUTPUT=$PREFIX-without-amr-$SCHEDULER-$TREES-trees
     python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler $SCHEDULER --trees $TREES --output $OUTPUT
