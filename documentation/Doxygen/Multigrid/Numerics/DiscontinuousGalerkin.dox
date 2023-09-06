@@ -35,19 +35,25 @@ know the right scaling.
 
 
 In the present project, we make things more complicated: 
-We drop this continuous requirement. Our intention/rationale is that we could get a more accurate solution
+We drop the continuity requirement. Our intention/rationale is that we could get a more accurate solution
 by using piecewise functions that don't "connect" with each other.
-This means that we need more weights:
+This means that we need more weights.
+The example below still uses linear shape functions (now in 2d):
 
 @image html piecewise_discontinuous_shape_functions.png
 
-Previously, we had one weight per vertex. Now, we need two weights per cell (per dimension) to 
-construct the green lines: If we associate the weights still with the vertices,
-we have a left value and a right one. We never do this in the code.
-
+Previously, we had one weight per vertex. 
+The shape functions then yield a linear interpolation between the individual vertices.
+Now, we need two weights per cell per dimension to 
+construct the green shapes.
 In summary, this discontinuous Galerkin approach implies that we need (in 1d) 
-twice the number of weights as we have jumps, and we need three scalars instead
-of one, as we work with a mixed, first-order formulation. 
+twice the number of weights as we have jumps.
+It intuitively is clear why DG gives us often "better" solution:
+We use more weights, i.e. we approximate things finer, and we give the shapes 
+more freedom to approximate a solution, as they are not tightly glued together.
+ 
+ 
+## Geometric arrangement
 
 We have quite some freedom to arrange these weights.
 We depict two arrangements here:
@@ -58,25 +64,40 @@ We show a scheme for both Gauss-Legendre (above) and Gauss-Lobatto (below).
 We focus exclusively on the cell dofs (blue) from here onwards.
 We note that for Lobatto, some cell dofs coincide spatially with the faces,
 but logically we hold everything in the cells. Each cell dof
-holds a value for @f$ u, \ \phi_x \ \text{and } \phi_y @f$.  We show also how these unknowns
-are arranged in memory for the cells. For each cell, we store an array of doubles, with
-length @f$ K (p+1)^d @f$, K being the number of unknowns per cell dof.
+holds one value (weight) for each PDE in our setup.  
+We call these weights ***unknowns*** whereas the set of unknowns in one
+point per cell are called ***degree of freedom***.
+For a scalar equation such as Poisson, we only have one unknown
+As we store all the unknowns of all degrees of freedom per cell in one 
+huge array per cell, we end up with an array of doubles of size 
+@f$ K (p+1)^d @f$, K being the number of unknowns per cell dof.
 
 
-# The weak formulation
+## The weak formulation
 
-To translate our setup into an equation system, we express the solution 
+To translate our PDE into an equation system, we express the solution 
 
 @f$ u = \sum _i u_i \phi _i @f$
 
-as sum over shape functions @f$ \phi _i @f$. This time, the shape functions
+as sum over shape functions @f$ \phi _i @f$. 
+As discussed above, the shape functions
 themselves are locally continuous, but their linear combination is not.
-We test this setup against a function @f$ v @f$ which is actually any of the 
+We test this setup against test functions @f$ v @f$.
+Each test function is actually any of the 
 shape functions @f$ \phi _i @f$.
 Drawing both shapes and test functions from the same function space means that
-we follow a Ritz-Galerkin approach.
+we follow a ***Ritz-Galerkin*** approach.
 
 
+Let @f$ \mathcal{L}(u) @f$ be the differential operator on the left-hand side
+of the PDE, i.e. let's assume that we solve
+
+@f$
+  \mathcal{L}(u) = f.
+@f$
+
+A weak formulation means that we multiple both sides with a test function and 
+then integrate over the whole thing.
 As we take all these tests from the same function space as the shape functions,
 we know that they all have local support. 
 Consequently, our test integral "shrinks" down to the support of the test function
@@ -98,12 +119,12 @@ get an expression of the form
 \f{eqnarray*}{
   \int _\Omega \mathcal{L}(u) \cdot v dx 
   &=& 
-  - \int _\Omega \tilde{\mathcal{L}}(u) \cdot \nabla v dx 
+  - \int _\Omega \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx 
   + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(u)) v dS(x)
   \\
   &=& 
-  - \int _\Omega \tilde{\mathcal{L}}(u) \cdot \nabla v dx 
-  + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}([[u]])) v dS(x)
+  - \int _{\text{cell}_v} \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx 
+  + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(\hat u )) v dS(x)
   \\
   & = & \int _{\text{cell}_v} f \cdot v dx.
 \f}
@@ -129,8 +150,10 @@ We conclude that
 2. Even worse, they refer to a value @f$ u @f$ which technically does not 
    exist, as there is no (unique) solution along the face. We only have a 
    left @f$ u^- @f$ and a right @f$ u^+ @f$ solution. Therefore, I explicitly
-   write @f$ [[u]] @f$ in the equation above.
-    
+   write @f$ \hat u @f$ in the equation above. It denotes that we haven't yet
+   decided what the function looks like along the face.
+3. We now have cell integrals to evaluate, and there are additional face 
+   integrals. The latter ones couple neighbouring cells.    
 
 We end up with a linear equation system 
 
@@ -149,9 +172,42 @@ Each face dof holds a value for
 -->
 
 
+## An operator language
+
+Before we dive into examples or discuss how to map this formalism onto code, we 
+introduce an operator language. That is, we break down the overall computation
+into small tasks. These tasks will be found 1:1 in the code later on. Furthermore,
+we gain some freedom by breaking things down into tiny bits and pieces: We can
+alter individual ones or puzzle them together in various ways.
+
+
 # Example: the Poisson equation
 
-For Poisson, @f$ \mathcal{L}(u) = - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u @f$.
+For Poisson, @f$ \mathcal{L}(u) = -\Delta u = - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u @f$.
+The extension to higher dimensions is straightforward.
+Our weak formulation becomes
+
+
+\f{eqnarray*}{
+  \int _\Omega \mathcal{L}(u) \cdot v dx 
+  &=& 
+  \int _\Omega \u) (- \partial_x^2 u - \partial_y^2 u) \cdot v dx
+  \\ 
+  &=& 
+  \int _\Omega \u) (- \partial_x^2 u - \partial_y^2 u) \cdot v dx
+  =
+  \int _\Omega \mathcal{L}(u) \cdot v dx 
+\f}
+
+
+  - \int _\Omega \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx 
+  + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(u)) v dS(x)
+  \\
+  &=& 
+  - \int _\Omega \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx 
+  + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(\hat u )) v dS(x)
+  \\
+  & = & \int _{\text{cell}_v} f \cdot v dx.
 
 
 # Example: the advection equation
