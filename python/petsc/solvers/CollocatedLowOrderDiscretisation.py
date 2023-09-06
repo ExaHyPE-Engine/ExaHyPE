@@ -7,7 +7,7 @@ import dastgen2
 import os
 
 from .Solver                                    import Solver
-from petsc.actionsets.EnumerateVertices         import EnumerateVertices
+from petsc.actionsets.EnumerateDofs             import EnumerateVertices
 from petsc.actionsets.InitDofs                  import InitVertexDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
 from petsc.actionsets.AssemblePETSCMatrix       import AssemblePetscMatrixOnVertices
