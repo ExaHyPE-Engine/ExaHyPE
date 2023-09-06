@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
 namespace exahype2 {
   bool parseCommandLineArguments(int argc, char** argv);
 
@@ -11,6 +9,3 @@ namespace exahype2 {
 
   void setDefaultLogStatements();
 }
-
-
-

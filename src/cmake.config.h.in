@@ -10,6 +10,9 @@
 /* GPUOffloadingSYCL */
 #cmakedefine GPUOffloadingSYCL @GPUOffloadingSYCL@
 
+/* GPUOffloadingCUDA */
+#cmakedefine GPUOffloadingCUDA @GPUOffloadingCUDA@
+
 /* Define to 1 if you have the <CL/sycl.hpp> header file. */
 #cmakedefine HAVE_CL_SYCL_HPP @HAVE_CL_SYCL_HPP@
 
