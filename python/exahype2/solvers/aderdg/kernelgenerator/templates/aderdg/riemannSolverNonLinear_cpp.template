@@ -47,7 +47,7 @@ void {{codeNamespace}}::riemannSolver(
   __assume_aligned(QR, {{alignmentSize}});
 #endif
 
-  {{m.allocateArray('tmp_bnd', nVarPad*nDof*nDof3D) | indent(2)}}{##}
+  {{m.allocateArray('tmp_bnd', nVarPad*nDof*nDof3D, precision="cCompType") | indent(2)}}{##}
   cCompType QavL[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
   cCompType QavR[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
   
@@ -97,7 +97,8 @@ void {{codeNamespace}}::riemannSolver(
     }
   }
   
-  #pragma omp simd aligned(FL,FR,tmp_bnd:{{alignmentSize}})
+//  #pragma omp simd aligned(FL,FR,tmp_bnd:{{alignmentSize}})
+  #pragma omp simd aligned(tmp_bnd:{{alignmentSize}})
   for (int xyn = 0; xyn < {{nVarPad*nDof*nDof3D}}; xyn++) {
     FL[xyn] = 0.5 * (FL[xyn] + FR[xyn] + tmp_bnd[xyn]);
   }
