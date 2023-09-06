@@ -73,8 +73,8 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
     self.cellToFaceMatrix      = cellToFaceMatrix
     self.FaceFaceMatrix        = faceFaceMatrix
 
-    self._cell_dofs             = ((polynomial_degree + 1) ** dimensions)
-    self._cell_unknowns         = self._cell_dofs * self.unknowns_per_cell_dof
+    self._cell_dofs     = ((polynomial_degree + 1) ** dimensions)
+    self._cell_unknowns = self._cell_dofs * self.unknowns_per_cell_dof
     self._face_dofs     = ((polynomial_degree + 1) **( dimensions -1 ))
     '''
                           double it to account for the fact that we have two separate "entities" 
