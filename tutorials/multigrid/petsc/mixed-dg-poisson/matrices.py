@@ -57,5 +57,5 @@ class MixedGenerator(MatrixGeneratorBase):
   
   def getFaceFaceMatrix(self):
     dim = self.facedofs * self.unknowns_per_face_dof * 2 # * 2 at the end since we are glueing together 2 faces
-    return np.zeros((dim,dim))
+    return np.eye(dim,dim)
   

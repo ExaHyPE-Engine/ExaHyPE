@@ -398,7 +398,7 @@ class AssemblePETSCMatrixForMixed(ActionSet):
   templateTCFT = """
   if (not marker.willBeRefined())
   {
-    //send precomputed cell-cell matrix to petsc!
+    //send precomputed cell-cell matrices to petsc!
 
     //global index
     std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}.getNumber() );
@@ -432,12 +432,40 @@ class AssemblePETSCMatrixForMixed(ActionSet):
   }
   """
 
+  templateTFFT="""
+  if (not marker.willBeRefined())
+  {
+    //send pre-computed face-face glue matrix to petsc
+
+    //global index
+    std::pair<int,int> localIndex( _spacetreeId, fineGridFace{{SOLVER_NAME}}.getNumber() );
+    int globalIndex =  repositories::getGlobalFaceIndex( localIndex );
+
+    //construct the list of row indices we want to use:
+    int rowIndices[{{FACE_CARDINALITY}}];
+    //fill this vector up, starting with our global index
+    std::iota(rowIndices, rowIndices + {{FACE_CARDINALITY}}, globalIndex);
+
+    //repeat for the colIndices
+    int colIndices[{{FACE_CARDINALITY}}];
+    //fill this vector up, starting with our global index
+    std::iota(colIndices, colIndices + {{FACE_CARDINALITY}}, globalIndex);
+
+    const int rows = repositories::{{SOLVER_INSTANCE}}._faceFaceMatrix.rows();
+    const int cols = repositories::{{SOLVER_INSTANCE}}._faceFaceMatrix.cols();
+
+    //finally, send to petsc
+    repositories::instanceOfPetsc.insertLocalMatrix( rows, rowIndices, cols, colIndices, repositories::{{SOLVER_INSTANCE}}._faceFaceMatrix.data() );
+  }
+"""
+
   def __init__(self, solver):
     super( AssemblePETSCMatrixForMixed, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
     self.d["CELL_CARDINALITY"]   = solver.number_of_cell_unknowns
+    self.d["FACE_CARDINALITY"]   = solver.number_of_face_unknowns
 
   def get_constructor_body(self):
     return f"""
@@ -453,8 +481,8 @@ class AssemblePETSCMatrixForMixed(ActionSet):
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTCFT).render(**self.d)
       pass 
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      # result = jinja2.Template(self.templateTVFT).render(**self.d)
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      result = jinja2.Template(self.templateTFFT).render(**self.d)
       pass
 
     return result

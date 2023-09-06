@@ -12,11 +12,8 @@ from numpy.polynomial.legendre  import leggauss
 from scipy.interpolate import lagrange
 
 from .Solver                                    import Solver
-from petsc.actionsets.EnumerateCellsAndFaces    import EnumerateCellsAndFaces
-from petsc.actionsets.EnumerateVertices         import EnumerateVerticesGeneral
-from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
-from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
-from petsc.actionsets.InitPetsc                 import SendDofsToVertices
+from petsc.actionsets.EnumerateDofs             import EnumerateVerticesGeneral, EnumerateCellsAndFaces
+from petsc.actionsets.InitDofs                  import InitVertexDoFs, InitFaceAndCellDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScCellSolutionOnVerticesBackOntoMesh
 from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMixed
 
@@ -26,6 +23,21 @@ from abc import abstractmethod
 class MixedDiscontinuousGalerkinDiscretisation(Solver):
   """!
    
+  we have a few different pieces of degree-of-freedom
+  terminology here. 
+
+  CELL_DOFS - this will be our jinja template expression
+    the number of physical degrees of freedom within a 
+    cell. this should be (poly_degree + 1) ** dimensions
+
+  CELL_DOF_UNKNOWNS - this will be our jinja expression
+    for the number of different unknonws that we associate
+    with a physica degree of freedom. here we take this to
+    be 3 (u, @f$ \phi_x, \ \phi_y @f$)
+  
+  CELL_CARDINALITY - the product of the above two.
+
+
   
   """
   def __init__(self,
@@ -61,8 +73,17 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
     self.cellToFaceMatrix      = cellToFaceMatrix
     self.FaceFaceMatrix        = faceFaceMatrix
 
-    self._cell_unknowns = ((polynomial_degree + 1) ** dimensions)       * self.unknowns_per_cell_dof
-    self._face_unknowns = ((polynomial_degree + 1) **( dimensions -1 )) * self.unknowns_per_face_dof
+    self._cell_dofs     = ((polynomial_degree + 1) ** dimensions)
+    self._cell_unknowns = self._cell_dofs * self.unknowns_per_cell_dof
+    self._face_dofs     = ((polynomial_degree + 1) **( dimensions -1 ))
+    '''
+                          double it to account for the fact that we have two separate "entities" 
+                          meeting here. ie we want to treat the left face of one cell as being
+                          different from the right face of the other. but this is not possible
+                          in Peano. we allot twice as many spaces as we need for one face, and
+                          then use clever indexing later
+    '''
+    self._face_unknowns = 2 * self.unknowns_per_face_dof * self._face_dofs
 
     self.quadrature_points, self.weights, self.poly_coeffs = \
       self.initGaussLobatto()
@@ -198,8 +219,12 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
         "MIN_H": self.min_h,
         "MAX_H": self.max_h,
         "VERTEX_CARDINALITY": self._vertex_unknowns,
-        "CELL_CARDINALITY":   self._cell_unknowns,
-        "FACE_CARDINALITY":   self._face_unknowns,
+        "CELL_CARDINALITY"  : self._cell_unknowns,
+        "CELL_DOFS"         : self._cell_dofs,
+        "CELL_DOF_UNKNOWNS" : self.unknowns_per_cell_dof,
+        "FACE_CARDINALITY"  : self._face_unknowns,
+        "FACE_DOFS"         : self._face_dofs,
+        "FACE_DOF_UNKNOWNS" : self.unknowns_per_face_dof,
         "POLYNOMIAL_DEGREE":  self.polynomial_degree,
         }
 
@@ -246,8 +271,22 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
     return self._cell_unknowns
   
   @property
+  def number_of_cell_dofs(self):
+    return self._cell_dofs
+  
+  '''
+  not adding property for unknowns_per_cell_dof
+  or unknowns_per_face_dof. these are exposed
+  already.
+  '''
+  
+  @property
   def number_of_face_unknowns(self):
     return self._face_unknowns
+
+  @property
+  def number_of_face_dofs(self):
+    return self._face_dofs
 
   def get_solver_repository_snippets(self):
     header = """

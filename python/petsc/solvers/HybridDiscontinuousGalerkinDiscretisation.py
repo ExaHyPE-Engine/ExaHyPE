@@ -12,11 +12,8 @@ from numpy.polynomial.legendre  import leggauss
 from scipy.interpolate import lagrange
 
 from .Solver                                    import Solver
-from petsc.actionsets.EnumerateCellsAndFaces    import EnumerateCellsAndFaces
-from petsc.actionsets.EnumerateVertices         import EnumerateVerticesGeneral
-from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
-from petsc.actionsets.InitFaceAndCellDoFs       import InitFaceAndCellDoFs
-from petsc.actionsets.InitPetsc                 import SendDofsToVertices
+from petsc.actionsets.EnumerateDofs             import EnumerateVerticesGeneral, EnumerateCellsAndFaces
+from petsc.actionsets.InitDofs                  import InitVertexDoFs, InitFaceAndCellDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScCellSolutionOnVerticesBackOntoMesh
 # from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMP
 
