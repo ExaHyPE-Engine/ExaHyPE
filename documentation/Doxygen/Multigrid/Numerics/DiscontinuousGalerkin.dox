@@ -16,7 +16,7 @@ Although not required, it is reasonable to study @ref page_multigrid_numerics_Co
 methods first.
 
 
-# Idea
+# Method
 
 
 Our intention is to puzzle the solution together from very primitive small 
@@ -183,7 +183,6 @@ alter individual ones or puzzle them together in various ways.
 We introduce a few operators (functions) to break down the overall computational 
 scheme into a sequence/set of computations:
 
-<<<<<<< HEAD
 - The operator @f$ A_{cc} @f$ takes the dofs within a cell and computes the 
   term @f$ - \int _{\text{cell}_v} \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx @f$.
   It takes the @f$ K (p+1)^d @f$ values per cell and yields @f$ K (p+1)^d @f$
@@ -213,12 +212,7 @@ from each other. Furthermore
 (ii) we can never read data from neighbouring cells within a cell;
 (iii) we can never access adjacent cell data from a face.
 </div>
-=======
-- The operator @f$ A_{cc} @f$ takes the dofs within a cell and computes the term
-  @f$ - \int _{\text{cell}_v} \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx @f$
-   
-  @f$ + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(\hat u )) v dS(x) @f$.
->>>>>>> branch 'multigrid-documentation' of https://gitlab.lrz.de/hpcsoftware/Peano.git
+
 
 
 The overall scheme in operator notation thus reads
@@ -259,6 +253,15 @@ Effectively, our approach blows up the equation system to solve into
  \end{bmatrix}
  \begin{bmatrix}
  x_{c} \\ x_\pm \\ x_f
+ \end{bmatrix}
+ = 
+ \begin{bmatrix}
+  A_{cc}  & A_{fc}  & 0 \\
+       0  & A_{ff}  & -id \\
+ -A_{cf}  & 0  & id      \\
+ \end{bmatrix}
+ \begin{bmatrix}
+ x_{c} \\ x_f \\ x_\pm
  \end{bmatrix}
  = 
  \begin{bmatrix}
@@ -369,6 +372,23 @@ The above snippet stores
 - We make each face hold another @f$ (p+1)^{d-1} @f$ indices for the outcome
   of the Riemann problem, i.e. the averages.
   
+  
+## Workflow
+
+Peano's PETSc port runs through the mesh and performs the following steps:
+
+- Construct the grid
+- Assign each cell and each face PETSc unknowns (indices) as per description above
+- Allocate the matrix and the right-hand side
+- Walk through the mesh
+  - per cell, insert the matrix-matrix coupling terms from @f$ A_{cc} @f$ into the PETSc matrix
+  - per cell, evaluate the right-hand side side of the PDE and assemble the @f$ b_c @f$ entries
+  - per cell, insert the @f$ A_{cf} @f$ and the @f$ A_{fc} @f$ entries into the PETSc matrix
+  - per face, insert the @f$ A_{ff} @f$ entries into the matrix
+- Solve
+- Walk through the mesh. In each cell, write the solution values @f$ x_c @f$ back into the mesh dofs
+- Dump data in @ref tarch_patch_files "Peano's patch file format"
+
 
 # Operators
 

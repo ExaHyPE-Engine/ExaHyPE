@@ -158,6 +158,98 @@ fundamental "plug-in" point for @ref page_multigrid_numerics_Hybrid_DG "hybrid D
 We however stick to details on mixed Galerkin on this page.
 
 
+# Realisation with PETSc
+
+The above equations for the Poisson equation mean that we have to traverse all 
+cells of the domain, and insert the following terms: 
+
+\f{eqnarray*}{
+   && \int _{\text{cell}_{v _\phi }} ( \phi \nabla v _\phi ) dx \\
+   && \int _{\text{cell}_{v _u}} ( \phi, v _u ) dx \\
+   && \int _{\text{cell}_{v _u}}  u \cdot \text{div} v _u dx
+\f}
+
+
+The first and the third term can be added up into a ***system matrix***, 
+while the second term forms a ***mass matrix***. 
+In general, the mixed formulation often means that we have to work with 
+matrices which have different scalings. 
+A typically code for the two-dimensional Poisson equation therefore looks similar to 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver = petsc.solvers.MixedDiscontinuousGalerkinDiscretisation("Poisson",
+                                    degree = 1,
+                                    unknowns_per_cell_dof = 3, 
+                                    unknowns_per_face_dof = 2, 
+                                    [...]
+                                    args.meshsize,
+                                    args.meshsize,
+                                    dimensions = 2,
+                                    cellCellMassMatrix,   #12x12
+                                    cellCellSystemMatrix,   #12x12
+                                    [...]
+                                    )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+That is, the user has to pass in those two matrices to our Python API. In 
+the present example, both matrices are from @f$ \mathbb{R}^{12 \times 12} @f$
+in the example above, where we have two dimensions, two degrees of freedom
+per coordinate axis, and three unknowns per degree of freedom.
+The code expects the matrices over the unit square or cube and will 
+internally scale them with @f$ h^d @f$ for the mass matrix and @f$ h^{d-1} @f$
+for the system matrix before it fills in the entries into the global PETSc
+matrix.
+
+
+The elegance of this approach is that Peano's HDG classes do not know anything
+about the degree of freedom layout. You can pick Gauss-Legendre or 
+Gauss-Lobatto or really any polynomial space, as long as its fit to the
+polynomial degree, is constructed in a tensor product way, and each dof hosts
+unknowns_per_cell_dof unknowns. Just hand in the right matrices.
+
+ 
+
+## Data storage
+
+Peano does not support global data access. That is, you cannot access cell data
+from faces, and you cannot access data from neighbouring cells within a cell
+either. You can access the faces of a cell within a cell, but cell
+and face data are strictly separated. 
+
+To solve the equations over the faces, we therefore have to project the solution
+onto the face, then solve the equation there, and afterwards project the outcome
+back into the cell's degrees of freedom. However, faces so far do not hold any
+data. To argue about the solution over the face, we have to know
+the solution there first. Therefore, we introduce 
+
+
+- @f$ K (p+1)^d @f$ unknowns (doubles) for the solution. @f$ K=3 @f$ in the
+  snippet above. This data is only 
+  required for visualisation purposes. It is not directly used. Typically,
+  @f$ K = k(1+d) @f$ where @f$ k @f$ is the number of equations in the 
+  underlying second-order formulation.
+- One index per cell. We obviously have @f$ K(p+1)^d @f$ unknowns per cell, but 
+  as we enumerate them continuously, we only store the first index.
+- We make each face hold another @f$ \hat K 2(p+1)^{d-1} @f$ indices. Again, we hold them 
+  continuously, and it therefore is sufficient to store only the first index.
+  @f$ \hat K = 2 @f$ in the example above as we store the solution left
+  and right of the face as well as the solution's gradient along the face normal. 
+
+  We work with polynomials over the face which are drawn from the same shape
+  space as our volumetric shape functions, but restricted to the face. 
+  We get the @f$ (p+1) @f$ for the polynomial and the @f$ -1 @f$ in the 
+  exponent, as we work only on the faces, i.e. a submanifold.
+- We make each face hold another @f$ \hat K(p+1)^{d-1} @f$ indices for the outcome
+  of the Riemann problem, i.e. the averages.
+  
+We use the term ***degree of freedom on a face***, but this is not 100% right: 
+Indeed, we argue over dofs on the face, but they are not "free" - they follow
+the solution strictly.
+The enumeration of the degrees of freedom on the face is discussed in @ref multigrid_enumeration.
+
+
+
+
 # Operators
 
 The operators involved in a mixed DG code in Peano are either matrices, which have to
@@ -381,133 +473,6 @@ The third line averages the @f$ u @f$ values from left and right, the
 fourth line addresses the normal projections of @f$ \phi @f$. 
 
  */
- 
-
- 
- 
-
-## Cell operations
-
-The above equations mean that we have to traverse all cells of the domain, and insert the following terms: 
-
-\f{eqnarray*}{
-   && \int _{\text{cell}_{v _\phi }} ( \phi \nabla v _\phi ) dx \\
-   && \int _{\text{cell}_{v _u}} ( \phi, v _u ) dx \\
-   && \int _{\text{cell}_{v _u}}  u \cdot \text{div} v _u dx
-\f}
-
-
-The first and the third term can be added up into a ***system matrix***, 
-while the second term forms a ***mass matrix***. 
-A typically code for the two-dimensional Poisson equation then looks similar to 
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver = petsc.solvers.MixedDiscontinuousGalerkinDiscretisation("Poisson",
-                                    degree = 1,
-                                    unknowns_per_cell_dof = 3, 
-                                    [...]
-                                    args.meshsize,
-                                    args.meshsize,
-                                    dimensions = 2,
-                                    cellCellMassMatrix,   #12x12
-                                    cellCellSystemMatrix,   #12x12
-                                    [...]
-                                    )
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-That is, the user has to pass in those two matrices to our Python API. In 
-the present example, both matrices are from @f$ \mathbb{R}^{12 \times 12} @f$
-in the example above, where we have two dimensions, two degrees of freedom
-per coordinate axis, and three unknowns per degree of freedom.
-The code expects the matrices over the unit square or cube and will 
-internally scale them with @f$ h^d @f$ for the mass matrix and @f$ h^{d-1} @f$
-for the system matrix before it fills in the entries into the global PETSc
-matrix.
-
-
-The elegance of this approach is that Peano's HDG classes do not know anything
-about the degree of freedom layout. You can pick Gauss-Legendre or 
-Gauss-Lobatto or really any polynomial space, as long as its fit to the
-polynomial degree, is constructed in a tensor product way, and each dof hosts
-unknowns_per_cell_dof unknowns. Just hand in the right matrices.
-
- 
-
-## Data storage
-
-Peano does not support global data access. That is, you cannot access cell data
-from faces, and you cannot access data from neighbouring cells within a cell
-either. You can access the faces of a cell within a cell, but cell
-and face data are strictly separated. 
-
-To solve the equations over the faces, we therefore have to project the solution
-onto the face, then solve the equation there, and afterwards project the outcome
-back into the cell's degrees of freedom. However, faces so far do not hold any
-data. To argue about the solution over the face, we have to know
-the solution there first. Therefore, we introduce 
-@f$ 2\hat K \cdot (p+1)^{d-1} @f$ unknowns per face (here @f$ \hat K @f$ is the
-number of unknowns per face dof): 
-
-- We work with polynomials over the face which are drawn from the same shape
-  space as our volumetric shape functions, but restricted to the face. 
-  We get the @f$ (p+1) @f$ for the polynomial and the @f$ -1 @f$ in the 
-  exponent, as we work only on the faces, i.e. a submanifold.
-- We note that @f$ \phi @f$ does not exist on the face. This is because our 
-  approximate solution to @f$ u @f$ is discontinuous, meaning we have a jump. 
-  See the blue line below or the grey one. We'll discuss the other formalism
-  later:
-  @image html average_gradient.png
-  Therefore, we have two solutions per degree of freedom on the face: The one from the 
-  left and the one from the right. This is the factor of two.
-- Finally, we already said that we will store two quantities per degree of 
-  freedom: We will have to handle solution jumps in @f$ u @f$ along the face
-  and we will have to discuss the normal component of @f$ (n, \phi ) @f$. So
-  this gives us an additional factor of two.
-  
-We use the term ***degree of freedom on a face***, but this is not 100% right: 
-Indeed, we argue over dofs on the face, but they are not "free" - they follow
-the solution strictly.
-The enumeration of the degrees of freedom on the face is discussed in @ref multigrid_enumeration.
-
-
-The Python API of typical mixed formulation DG solvers has to know that we deal 
-with two quantities of interest, 
-i.e. @f$ u @f$ and @f$ (n, \phi ) @f$. Given this numer of two, it can then compute the actual number of 
-unknowns per face automatically:
-
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver = petsc.solvers.MixedPoisson("MP",
-                                    degree = 1,
-                                    unknowns_per_cell_dof = 3, 
-                                    unknowns_per_face_dof = 2, 
-                                    args.meshsize,
-                                    args.meshsize,
-                                    dimensions = 2,
-                                    cellCellMassMatrix,   #12x12
-                                    cellCellSystemMatrix,   #12x12
-                                    [...]
-                                    )
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-The code above creates additional degrees of freedom for the faces. We will
-deal with the fact that they are not free later on. This means that we solve
-an augmented system
-
-@f$ Ax=b @f$
-
-where @f$ A \in \mathbb{R}^{ K |\mathbb{C}| \cdot (p+1)^d + 2 \hat K |\mathbb{F}| \cdot (p+1)^{d-1} \times K |\mathbb{C}| \cdot (p+1)^d + 2 \hat K |\mathbb{F}| \cdot (p+1)^{d-1} } @f$.
-The "new" quantity @f$ \mathbb{F} @f$ denotes the set of faces.
-
-
-For the Poisson equation, @f$ K = d+1 @f$ continues to denote the number of
-unknowns per cell dof, while @f$ \hat K = 2 @f$ encodes that we have to project
-the solution and the derivative along the normal onto each face.
-When we solver allocated @f$ A @f$, it assigns each face a set of indices. 
-Different to the cells, there's no need to assign the face any double values, 
-i.e. each face only stores one integer which encodes the first dof number.  
-
 
 
 
