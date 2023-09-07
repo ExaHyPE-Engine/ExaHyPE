@@ -67,8 +67,8 @@ class {{NAMESPACE | join("::")}}::PetscData{
 
       IMPLEMENTATION IS IN THE HEADER SO THE TEMPLATES WORK
     */
-    template <int rows, int columns>
-    void insertLocalMatrix( const std::vector< int >& rowIndices, const std::vector< int >& colIndices, const tarch::la::Matrix<rows,columns,double>& stencil ){
+    template <int rows, int cols>
+    void insertLocalMatrix( const std::vector< int >& rowIndices, const std::vector< int >& colIndices, const tarch::la::Matrix<rows,cols,double>& stencil ){
 
   /**
   in order of appearance, the params are:
@@ -98,6 +98,22 @@ class {{NAMESPACE | join("::")}}::PetscData{
       MatSetValues( _A, rows, rowIndices, cols, colIndices, values, ADD_VALUES );
     }
 
+    /*
+    adding an overload to take away the need to provide the whole array
+    of indices. instead, just pass in the index where you want to begin
+    the top left of this mini matrix you insert.
+    */
+    template <int rows, int cols>
+    void insertLocalMatrix( const int startRow, const int startCol, const tarch::la::Matrix<rows,cols,double>& localMatrix)
+    {
+      //get indices we want to send to petsc
+      int rowIndices[localMatrix.rows()]; std::iota( rowIndices, rowIndices + localMatrix.rows(), startRow );
+      int colIndices[localMatrix.cols()]; std::iota( colIndices, colIndices + localMatrix.cols(), startCol );
+
+      //use the other overload
+      insertLocalMatrix( localMatrix.rows(), rowIndices, localMatrix.cols(), colIndices, localMatrix.data() );
+
+    }
 
   /**
     inserting a vector of doubles into our rhs vector
