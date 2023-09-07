@@ -529,3 +529,168 @@ Consult petsc.Project for details
     return f"""
   int _spacetreeId;
 """
+
+
+
+class AssemblePETSCMatrixForDG(ActionSet):
+  ## add templates
+  
+  templateTCFT = """
+  if (not marker.willBeRefined())
+  {
+    //first, insert cell matrix
+    
+    //global index
+    std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}.getNumber() );
+    int globalIndex =  repositories::getGlobalCellIndex( localIndex );
+
+    //construct the list of row indices we want to use:
+    int rowIndices[{{CELL_CARDINALITY}}];
+    //fill this vector up, starting with our global index
+    std::iota(rowIndices, rowIndices + {{CELL_CARDINALITY}}, globalIndex);
+
+    //repeat for the colIndices
+    int colIndices[{{CELL_CARDINALITY}}];
+    //fill this vector up, starting with our global index
+    std::iota(colIndices, colIndices + {{CELL_CARDINALITY}}, globalIndex);
+    
+    //we want to scale the matrix down
+    //make a copy
+    const int rows = repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.rows();
+    const int cols = repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.cols();
+    const int size = rows * cols;
+    double tempMatrix[ rows*cols ];
+
+    //scale mass matrix down by h**2
+    std::transform( repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.data(), repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.data() + size,
+                    repositories::{{SOLVER_INSTANCE}}._cellCellSystemMatrix.data(), // get data from both matrices, combine them together in the lambda
+                    tempMatrix,                                                     // write result to temp array
+                    [&](double m, double s){return m*marker.h()[0]*marker.h()[1] + s*marker.h()[0];} ); //scale mass matrix by h**2, system matrix by h, sum the result
+
+    //send to petsc
+    repositories::instanceOfPetsc.insertLocalMatrix( rows, rowIndices, cols, colIndices, tempMatrix );
+
+   
+  }
+  """
+
+  templateTFFT="""
+  if (not marker.willBeRefined())
+  {
+    //send pre-computed face-face glue matrix to petsc
+
+    //global index
+    std::pair<int,int> localIndex( _spacetreeId, fineGridFace{{SOLVER_NAME}}.getNumber() );
+    int globalIndex =  repositories::getGlobalFaceIndex( localIndex );
+
+    //send to petsc
+    repositories::instanceOfPetsc.insertLocalMatrix( globalIndex, globalIndex, repositories::{{SOLVER_INSTANCE}}._faceFaceMatrix );
+  }
+"""
+
+  templateEndTraversal="""
+  /*
+  need to fill the matrix with the id blocks we haven't added yet
+  A_cc A_fc    0  
+  0    A_ff  -id
+ -A_cf    0   id
+
+  we probably have to force treenumber to be 0
+
+  no need to add the zero blocks. any entries
+  in petsc are 0 by default
+  */
+
+  /*
+  first id blocks should have the same number of rows
+  as the A_ff block, and the same number of cols as 
+  the x_\pm part
+  */
+
+  int    tempRowArray[1];
+  int    tempColArray[1];  
+  double val[1]; val[0] = -1;
+
+  //need to start in the top left of the -id block
+  tempRowArray[0] = repositories::getTotalCellDofs();
+  tempColArray[0] = repositories::getTotalCellDofs() + repositories::getTotalFaceDofs();
+
+  /*
+  LEAVING IT AS IS FOR NOW. THE SIZES DON'T MATCH, SO WE CAN'T CONTINUE
+  */
+
+
+
+
+"""
+
+  def __init__(self, solver):
+    super( AssemblePETSCMatrixForDG, self ).__init__()
+    self.d = {}
+    self.d["SOLVER_INSTANCE"]    = solver.instance_name()
+    self.d["SOLVER_NAME"]        = solver.typename()
+    self.d["CELL_CARDINALITY"]   = solver.number_of_cell_unknowns
+    self.d["FACE_CARDINALITY"]   = solver.number_of_face_unknowns
+
+  def get_constructor_body(self):
+    return f"""
+    _spacetreeId = treeNumber;
+"""
+
+
+  def get_body_of_operation(self, operation_name):
+    """!
+    for now, only touch cell first time
+    """
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      pass 
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      result = jinja2.Template(self.templateTFFT).render(**self.d)
+      pass
+
+    return result
+
+  def get_action_set_name(self):
+    """!
+    
+    Configure name of generated C++ action set
+    
+    This action set will end up in the directory observers with a name that
+    reflects how the observer (initialisation) is mapped onto this action 
+    set. The name pattern is ObserverName2ActionSetIdentifier where this
+    routine co-determines the ActionSetIdentifier. We make is reflect the
+    Python class name.
+     
+    """
+    return __name__.replace(".py", "").replace(".", "_")
+  
+  def user_should_modify_template(self):
+    """!
+    
+    The action set that Peano will generate that corresponds to this class
+    should not be modified by users and can safely be overwritten every time
+    we run the Python toolkit.
+    
+    """
+    return False
+
+  def get_includes(self):
+    """!
+   
+Consult petsc.Project for details
+    
+"""    
+    return """
+#include "repositories/SolverRepository.h"
+#include <numeric>   //for std::iota
+#include <algorithm> //for std::transform and fill_n
+"""
+  def get_attributes(self):
+    """!
+    """
+
+    return f"""
+  int _spacetreeId;
+"""

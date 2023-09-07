@@ -3,3 +3,4 @@
 from .CollocatedLowOrderDiscretisation          import CollocatedLowOrderDiscretisation
 from .MixedDiscontinuousGalerkinDiscretisation  import MixedDiscontinuousGalerkinDiscretisation
 from .HybridDiscontinuousGalerkinDiscretisation import HybridDiscontinuousGalerkinDiscretisation
+from .DiscontinuousGalerkinDiscretisation  import DiscontinuousGalerkinDiscretisation
