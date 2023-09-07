@@ -41,6 +41,11 @@ private:
   double _accumulatedValue;
 
   /**
+   * We store the last value.
+   */
+  double _lastValue;
+
+  /**
    * To compute the standard deviation, we rely on the formula
    *
    * sigma = sqrt(E(x^2) - E(x)^2)
@@ -67,10 +72,20 @@ public:
   ~Measurement() = default;
 
   /**
-   * @return Averaged value (mean value) of all measurements.
+   * @return Averaged value (mean value) of all measurements. If you have not
+   *   yet added a value, it returns 0.
    */
   double getValue() const;
 
+  /**
+   * @return Last value added. If there's none so far, the routine returns 0.
+   *   If you've only added one value so far, the result equals getValue().
+   */
+  double getMostRecentValue() const;
+
+  /**
+   * @return Sum over all values measured so far.
+   */
   double getAccumulatedValue() const;
 
   /**

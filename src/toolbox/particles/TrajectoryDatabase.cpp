@@ -51,10 +51,11 @@ toolbox::particles::TrajectoryDatabase::TrajectoryDatabase( int growthBetweenTwo
   _maxPositionDelta(0.0),
   _numberOfDataPointsPerParticle(0),
   _deltaBetweenTwoDatabaseFlushes(growthBetweenTwoDatabaseFlushes),
-  _thresholdForNextDatabaseFlush(growthBetweenTwoDatabaseFlushes==0 ? std::numeric_limits<int>::max() : _deltaBetweenTwoDatabaseFlushes),
+  _thresholdForNextDatabaseFlush(growthBetweenTwoDatabaseFlushes==0 ? std::numeric_limits<int>::max() : 0),
   _clearDatabaseAfterFlush(clearDatabaseAfterFlush),
   _deltasAreRelative(deltasAreRelative),
-  _rank(-1) {
+  _rank(-1),
+  _maxTimestamp( -std::numeric_limits<double>::max() )  {
 }
 
 
@@ -179,6 +180,10 @@ void toolbox::particles::TrajectoryDatabase::setOutputPrecision( int precision )
   _precision = precision;
 }
 
+void toolbox::particles::TrajectoryDatabase::clearDatabaseAfterFlush(bool value) {
+  _clearDatabaseAfterFlush = value;
+}
+
 void toolbox::particles::TrajectoryDatabase::setDataDeltaBetweenTwoSnapshots( double value, bool deltasAreRelative ) {
   assertion(value>=0.0);
   _dataDelta = value;
@@ -287,7 +292,7 @@ bool toolbox::particles::TrajectoryDatabase::dumpDatabaseSnapshot() {
   for (auto p: _data) {
     totalSize += p.second.size();
   }
-  return totalSize >= _thresholdForNextDatabaseFlush;
+  return tarch::la::greater(_maxTimestamp,0.0) and totalSize >= _thresholdForNextDatabaseFlush;
 }
 
 
@@ -301,6 +306,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   }
 
   tarch::multicore::Lock lock(_semaphore);
+  _maxTimestamp = std::max(_maxTimestamp,timestamp);
   switch ( getAction(number,x,timestamp) ) {
     case AddSnapshotAction::Ignore:
       break;
@@ -356,6 +362,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   }
 
   tarch::multicore::Lock lock(_semaphore);
+  _maxTimestamp = std::max(_maxTimestamp,timestamp);
   switch ( getAction(number,x,timestamp,numberOfDataEntries,data) ) {
     case AddSnapshotAction::Ignore:
       break;

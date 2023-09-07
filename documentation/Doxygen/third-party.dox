@@ -3,7 +3,7 @@
 \page page_third_party Optional third-party tools and libraries
 
 
-/\li \subpage tarch_multicore_otter
+\li \subpage tarch_multicore_otter
 
 
 <!-- Add this one for href links to subitems -->

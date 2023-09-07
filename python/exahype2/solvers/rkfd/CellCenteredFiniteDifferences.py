@@ -337,12 +337,12 @@ The finest possible mesh will consist of """
 
 The coarsest mesh width of """
             + str(self.get_coarsest_compute_grid_cell_size(domain_size))
-            + """ is thus just smaller than the maximum volume size """
+            + """ is thus just smaller than the maximum mesh size """
             + str(self._max_meshcell_h)
             + """.
 The finest mesh width of """
             + str(self.get_finest_compute_grid_cell_size(domain_size))
-            + """ is thus just smaller than the minimum volume size """
+            + """ is thus just smaller than the minimum mesh size """
             + str(self._min_meshcell_h)
             + """.
 

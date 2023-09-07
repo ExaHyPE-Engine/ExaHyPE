@@ -18,8 +18,6 @@ class NetCDF_Writer():
         self.nc_file.start_time = start_time
         self.nc_file.end_time = end_time
 
-        #TODO Write t_f and t_s to netCDF
-
         self.nc_dim_time = self.nc_file.createDimension("time", number_of_checkpoints)
         self.nc_dim_x = self.nc_file.createDimension("x", self.nx)
         self.nc_dim_y = self.nc_file.createDimension("y", self.ny)

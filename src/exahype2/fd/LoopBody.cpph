@@ -162,6 +162,8 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
       QOutEnumerator(patchIndex,volumeIndex,unknown)
     );
   }
+
+  delete[] QAlgebraicSourceGathered;
 }
 
 template <class QOutEnumeratorType>

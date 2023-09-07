@@ -13,7 +13,7 @@ dimensions            = 2 # this is fixed to 2 in pde.py
 width                 = [10, 10]
 offset                = [0, 0] # this is fixed to [0, 0]
 end_time              = 0.02
-time_step_relaxation  = 0.4 
+time_step_relaxation  = 0.4
 plot_interval         = 0.005 # taken from tutorial
 patch_size            = 4 # 32
 maximum_cell_size     = 0.1
@@ -450,7 +450,7 @@ if args.scenario == "Tsunami":
 # Set up exahype2 project               #
 #########################################
 
-my_project = exahype2.Project( ["applications", "exahype2", "swe"], "SWEApplication", ".", executable=executable_name)
+my_project = exahype2.Project( namespace=["applications", "exahype2", "swe"], project_name="SWEApplication", executable=executable_name)
 my_project.add_solver( my_solver )
 #my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")

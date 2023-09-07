@@ -85,8 +85,6 @@ double applications::exahype2::swe::parser::AdjointParser::max_inner_product(dou
         else
             break;
     }
-    if(false && tarch::la::greater(max_inner_product, 0.0))
-        std::cout << "max_inner_product: " << max_inner_product << std::endl;
     return max_inner_product;
 }
 

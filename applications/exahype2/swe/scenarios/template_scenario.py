@@ -10,7 +10,7 @@ from exahype2.solvers.fv.PDETerms import PDETerms
 
 class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     """
-    This class provides a template swe implementation that relies on a non-conservative product to model the bed slope.
+    This class provides a template SWE implementation that relies on a non-conservative product to model the bed slope.
     All scenarios that do not rely on their own source terms and boundary condition may extend this class.
     In all other cases, please extend scenario.py and pde.py, and implement the required given methods.
     """

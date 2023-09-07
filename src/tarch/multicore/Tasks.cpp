@@ -220,13 +220,18 @@ bool tarch::multicore::TaskComparison::operator()(Task* lhs, Task* rhs) const { 
 
 tarch::multicore::Task::Task(int taskType, int priority):
   _taskType(taskType),
-  _priority(priority) {}
+  _priority(priority) {
+  assertion2( priority>=0, taskType, priority );
+}
 
 bool tarch::multicore::Task::canFuse() const { return _taskType != DontFuse; }
 
 int tarch::multicore::Task::getPriority() const { return _priority; }
 
-void tarch::multicore::Task::setPriority(int priority) { _priority = priority; }
+void tarch::multicore::Task::setPriority(int priority) {
+  assertion3( priority>=0, _taskType, _priority, priority );
+  _priority = priority;
+}
 
 int tarch::multicore::Task::getTaskType() const { return _taskType; }
 
