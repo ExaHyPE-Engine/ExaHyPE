@@ -10,7 +10,8 @@
 #include "tarch/la/Vector.h"
 #include "tarch/accelerator/accelerator.h"
 
-#include "../config.h"
+#include "config.h"
+
 #if defined(SharedTBB)
 #include <oneapi/tbb/parallel_for.h>
 #include <oneapi/tbb/blocked_range.h>

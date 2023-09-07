@@ -113,7 +113,6 @@
   void initLogFilters();
 
   void initSharedMemoryAndGPUEnvironment();
-  void initSharedMemoryAndGPUEnvironment();
 
 {% for item in NAMESPACE -%}
   }
